@@ -42,8 +42,8 @@ from .type_conversion import ConvertSpec
 
 _MAPPING_COLORS = {
     "entity": QColor(223, 194, 125),
-    "parameter value": QColor(1, 133, 113),
-    "parameter extra dimension": QColor(128, 205, 193),
+    "parameter value": QColor(21, 153, 133),
+    "parameter extra dimension": QColor(178, 255, 243),
     "parameter name": QColor(128, 205, 193),
     "entity class": QColor(166, 97, 26),
 }
@@ -528,8 +528,9 @@ class MappingSpecModel(QAbstractTableModel):
             display_name.append("Parameter values")
             mappings.append(self._model.parameters.value)
         if isinstance(self._model.parameters, ParameterMapMapping):
-            display_name.append("Parameter map index")
-            mappings.append(self._model.parameters.extra_dimensions[0])
+            for i, dimension in enumerate(self._model.parameters.extra_dimensions):
+                display_name.append(f"Parameter index {i + 1}")
+                mappings.append(dimension)
         if isinstance(self._model.parameters, ParameterTimeSeriesMapping):
             display_name.append("Parameter time index")
             mappings.append(self._model.parameters.extra_dimensions[0])
@@ -576,7 +577,7 @@ class MappingSpecModel(QAbstractTableModel):
             prepend_str = mapping.prepend_str
         return prepend_str
 
-    def data(self, index, role):
+    def data(self, index, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole):
             name = self._display_names[index.row()]
             m = self._mappings[index.row()]
@@ -603,7 +604,8 @@ class MappingSpecModel(QAbstractTableModel):
                     return issue
                 return None
 
-    def data_color(self, display_name):
+    @staticmethod
+    def data_color(display_name):
         if display_name == "Relationship class names":
             return _MAPPING_COLORS["entity class"]
         if "Object class" in display_name:
@@ -612,7 +614,9 @@ class MappingSpecModel(QAbstractTableModel):
             return _MAPPING_COLORS["entity"]
         if display_name == "Parameter names":
             return _MAPPING_COLORS["parameter name"]
-        if display_name in ["Parameter map index", "Parameter time index", "Parameter time pattern index"]:
+        if display_name in ("Parameter time index", "Parameter time pattern index") or display_name.startswith(
+            "Parameter index"
+        ):
             return _MAPPING_COLORS["parameter extra dimension"]
         if display_name == "Parameter values":
             return _MAPPING_COLORS["parameter value"]
@@ -639,8 +643,9 @@ class MappingSpecModel(QAbstractTableModel):
             return self._model.parameters.names_issues()
         if row == 3 + extra_relationship_rows:
             return self._model.parameters.values_issues(self._model.is_pivoted())
-        if row == 4 + extra_relationship_rows:
-            return self._model.parameters.indexes_issues()
+        if row >= 4 + extra_relationship_rows:
+            index_index = row - 4 - extra_relationship_rows
+            return self._model.parameters.indexes_issues(index_index)
         return ""
 
     def rowCount(self, index=None):
@@ -653,7 +658,7 @@ class MappingSpecModel(QAbstractTableModel):
             return 0
         return 3
 
-    def headerData(self, section, orientation, role):
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
                 return ["Target", "Source type", "Source ref.", "Prepend string", "Append string"][section]
@@ -686,7 +691,7 @@ class MappingSpecModel(QAbstractTableModel):
             return editable
         return editable
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role=Qt.DisplayRole):
         name = self._display_names[index.row()]
         if index.column() == 1:
             return self.set_type(name, value)
@@ -757,26 +762,30 @@ class MappingSpecModel(QAbstractTableModel):
         if not self._model:
             return None
         if name in ("Relationship class names", "Object class names"):
-            mapping = self._model.name
-        elif name == "Object names":
-            mapping = self._model.objects
-        elif "Object class " in name:
-            index = [int(s) - 1 for s in name.split() if s.isdigit()]
-            if index:
-                mapping = self._model.object_classes[index[0]]
-        elif "Object " in name:
-            index = [int(s) - 1 for s in name.split() if s.isdigit()]
-            if index:
-                mapping = self._model.objects[index[0]]
-        elif name == "Parameter names":
-            mapping = self._model.parameters.name
-        elif name == "Parameter values":
-            mapping = self._model.parameters.value
-        elif name in ("Parameter map index", "Parameter time index", "Parameter time pattern index"):
-            mapping = self._model.parameters.extra_dimensions[0]
-        else:
-            return None
-        return mapping
+            return self._model.name
+        if name == "Object names":
+            return self._model.objects
+        if name.startswith("Object class"):
+            # Not to be confused with name == 'Object class names'.
+            _, number = name.rsplit(" ", 1)
+            index = int(number) - 1
+            return self._model.object_classes[index]
+        if name.startswith("Object"):
+            # Not to be confused with name == 'Object class names' or name == 'Object class X'.
+            _, number = name.split(" ", 1)
+            index = int(number - 1)
+            return self._model.objects[index]
+        if name == "Parameter names":
+            return self._model.parameters.name
+        if name == "Parameter values":
+            return self._model.parameters.value
+        if name in ("Parameter time index", "Parameter time pattern index"):
+            return self._model.parameters.extra_dimensions[0]
+        if name.startswith("Parameter index"):
+            _, number = name.rsplit(" ", 1)
+            index = int(number) - 1
+            return self._model.parameters.extra_dimensions[index]
+        return None
 
     def set_mapping_from_name(self, name, mapping):
         if name in ("Relationship class names", "Object class names"):
@@ -795,8 +804,12 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.parameters.name = mapping
         elif name == "Parameter values":
             self._model.parameters.value = mapping
-        elif name in ("Parameter map index", "Parameter time index", "Parameter time pattern index"):
+        elif name in ("Parameter time index", "Parameter time pattern index"):
             self._model.parameters.extra_dimensions = [mapping]
+        elif name.startswith("Parameter index"):
+            _, number = name.rsplit(" ", 1)
+            index = int(number) - 1
+            self._model.parameters.extra_dimensions[index] = mapping
         else:
             return False
 
@@ -818,6 +831,35 @@ class MappingSpecModel(QAbstractTableModel):
             return
         self._model.parameters.options.repeat = repeat
         self.dataChanged.emit(0, 0, [])
+
+    @Slot(int)
+    def set_map_dimensions(self, dimensions):
+        if self._model is None or not isinstance(self._model.parameters, ParameterMapMapping):
+            return
+        previous_dimensions = len(self._model.parameters.extra_dimensions)
+        if dimensions == previous_dimensions:
+            return
+        self._model.parameters.set_number_of_extra_dimensions(dimensions)
+        first_dimension_row = 0
+        for name in self._display_names:
+            if name.startswith("Parameter index"):
+                break
+            first_dimension_row += 1
+        if previous_dimensions < dimensions:
+            first = first_dimension_row + previous_dimensions
+            last = first_dimension_row + dimensions - 1
+            self.beginInsertRows(QModelIndex(), first, last)
+            for index in range(previous_dimensions, dimensions):
+                self._display_names.append(f"Parameter index {index + 1}")
+            self._mappings += self._model.parameters.extra_dimensions[previous_dimensions:]
+            self.endInsertRows()
+        else:
+            first = first_dimension_row + dimensions
+            last = first_dimension_row + previous_dimensions - 1
+            self.beginRemoveRows(QModelIndex(), first, last)
+            self._display_names = self._display_names[:first]
+            self._mappings = self._mappings[:first]
+            self.endRemoveRows()
 
     def model_parameters(self):
         """Returns the mapping's parameters."""

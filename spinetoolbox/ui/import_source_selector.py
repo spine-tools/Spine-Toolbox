@@ -10,29 +10,41 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_source_selector.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_source_selector.ui' applies.
-#
-# Created: Thu Feb 13 11:54:05 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'import_source_selector.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_ImportSourceSelector(object):
     def setupUi(self, ImportSourceSelector):
-        ImportSourceSelector.setObjectName("ImportSourceSelector")
+        if not ImportSourceSelector.objectName():
+            ImportSourceSelector.setObjectName(u"ImportSourceSelector")
         ImportSourceSelector.resize(400, 300)
-        self.verticalLayout = QtWidgets.QVBoxLayout(ImportSourceSelector)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.source_list = QtWidgets.QListWidget(ImportSourceSelector)
-        self.source_list.setObjectName("source_list")
+        self.verticalLayout = QVBoxLayout(ImportSourceSelector)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.source_list = QListWidget(ImportSourceSelector)
+        self.source_list.setObjectName(u"source_list")
+
         self.verticalLayout.addWidget(self.source_list)
 
+
         self.retranslateUi(ImportSourceSelector)
-        QtCore.QMetaObject.connectSlotsByName(ImportSourceSelector)
+
+        QMetaObject.connectSlotsByName(ImportSourceSelector)
+    # setupUi
 
     def retranslateUi(self, ImportSourceSelector):
-        ImportSourceSelector.setWindowTitle(QtWidgets.QApplication.translate("ImportSourceSelector", "Form", None, -1))
+        ImportSourceSelector.setWindowTitle(QCoreApplication.translate("ImportSourceSelector", u"Form", None))
+    # retranslateUi
 

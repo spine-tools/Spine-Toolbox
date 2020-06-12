@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>862</width>
-    <height>791</height>
+    <width>860</width>
+    <height>602</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -126,8 +126,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>862</width>
-     <height>28</height>
+     <width>860</width>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -771,8 +771,8 @@
   </action>
   <action name="actionAdd_Importer">
    <property name="icon">
-    <iconset>
-     <normaloff>:/icons/project_item_icons/map-solid.svg</normaloff>:/icons/project_item_icons/map-solid.svg</iconset>
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
    </property>
    <property name="text">
     <string>Add Importer</string>

@@ -17,7 +17,7 @@ ImportMappingOptions widget.
 """
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QWidget
-from spinedb_api import RelationshipClassMapping, ParameterTimeSeriesMapping
+from spinedb_api import RelationshipClassMapping, ParameterMapMapping, ParameterTimeSeriesMapping
 from ...widgets.custom_menus import SimpleFilterMenu
 
 
@@ -34,7 +34,7 @@ class ImportMappingOptions(QWidget):
 
         # state
         self._model = None
-
+        self._block_signals = False
         # ui
         self._ui = Ui_ImportMappingOptions()
         self._ui.setupUi(self)
@@ -68,6 +68,10 @@ class ImportMappingOptions(QWidget):
             self._ui.time_series_repeat_check_box.toggled.disconnect()
         except RuntimeError:
             pass
+        try:
+            self._ui.map_dimension_spin_box.valueChanged.disconnect()
+        except RuntimeError:
+            pass
         if self._model:
             if self._model_reset_signal:
                 self._model.modelReset.disconnect(self.update_ui)
@@ -80,6 +84,7 @@ class ImportMappingOptions(QWidget):
             self._model_reset_signal = self._model.modelReset.connect(self.update_ui)
             self._model_data_signal = self._model.dataChanged.connect(self.update_ui)
             self._ui.time_series_repeat_check_box.toggled.connect(self._model.set_time_series_repeat)
+            self._ui.map_dimension_spin_box.valueChanged.connect(self._model.set_map_dimensions)
         self.update_ui()
 
     def update_ui(self):
@@ -91,7 +96,7 @@ class ImportMappingOptions(QWidget):
             return
 
         self.show()
-        self.block_signals = True
+        self._block_signals = True
         if self._model.map_type == RelationshipClassMapping:
             self._ui.dimension_label.show()
             self._ui.dimension_spin_box.show()
@@ -126,27 +131,27 @@ class ImportMappingOptions(QWidget):
         self._ui.start_read_row_spin_box.setValue(self._model.read_start_row)
 
         self._update_time_series_options()
-
-        self.block_signals = False
+        self._update_map_options()
+        self._block_signals = False
 
     def change_class(self, new_class):
-        if self._model and not self.block_signals:
+        if self._model and not self._block_signals:
             self._model.change_model_class(new_class)
 
     def change_dimension(self, dim):
-        if self._model and not self.block_signals:
+        if self._model and not self._block_signals:
             self._model.set_dimension(dim)
 
     def change_parameter(self, par):
-        if self._model and not self.block_signals:
+        if self._model and not self._block_signals:
             self._model.change_parameter_type(par)
 
     def change_import_objects(self, state):
-        if self._model and not self.block_signals:
+        if self._model and not self._block_signals:
             self._model.set_import_objects(state)
 
     def change_read_start_row(self, row):
-        if self._model and not self.block_signals:
+        if self._model and not self._block_signals:
             self._model.set_read_start_row(row)
 
     def _update_time_series_options(self):
@@ -158,3 +163,11 @@ class ImportMappingOptions(QWidget):
         self._ui.time_series_repeat_check_box.setCheckState(
             Qt.Checked if is_time_series and par.options.repeat else Qt.Unchecked
         )
+
+    def _update_map_options(self):
+        if self._model is None:
+            return
+        mapping = self._model.model_parameters()
+        is_map = isinstance(mapping, ParameterMapMapping)
+        self._ui.map_dimension_spin_box.setEnabled(is_map)
+        self._ui.map_dimension_spin_box.setValue(len(mapping.extra_dimensions) if is_map else 1)

@@ -18,7 +18,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
+    <width>506</width>
     <height>204</height>
    </rect>
   </property>
@@ -157,6 +157,20 @@
           </property>
           <property name="text">
            <string>Repeat time series</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="map_dimension_spin_box">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="map_dimensions_label">
+          <property name="text">
+           <string>Map dimensions:</string>
           </property>
          </widget>
         </item>

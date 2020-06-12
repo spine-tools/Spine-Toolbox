@@ -15,7 +15,7 @@ Contains the TreeViewMixin class.
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import Signal, Slot, QTimer
 from PySide2.QtWidgets import QInputDialog
 from .add_items_dialogs import (
     AddAlternativesDialog,
@@ -24,7 +24,9 @@ from .add_items_dialogs import (
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
+    AddObjectGroupDialog,
     ManageRelationshipsDialog,
+    ManageObjectGroupDialog,
 )
 from .edit_or_remove_items_dialogs import (
     EditScenariosDialog,
@@ -210,19 +212,29 @@ class TreeViewMixin:
 
     @Slot(bool)
     def show_add_object_classes_form(self, checked=False):
-        """Shows dialog to let user select preferences for new object classes."""
+        """Shows dialog to add new object classes."""
         dialog = AddObjectClassesDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
     @Slot(bool)
     def show_add_objects_form(self, checked=False, class_name=""):
-        """Shows dialog to let user select preferences for new objects."""
+        """Shows dialog to add new objects."""
         dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps, class_name=class_name)
+        dialog.show()
+
+    def show_add_object_group_form(self, object_class_item):
+        """Shows dialog to add new object group."""
+        dialog = AddObjectGroupDialog(self, object_class_item, self.db_mngr, *self.db_maps)
+        dialog.show()
+
+    def show_manage_object_group_form(self, object_item):
+        """Shows dialog to manage an object group."""
+        dialog = ManageObjectGroupDialog(self, object_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     @Slot(bool)
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
-        """Shows dialog to let user select preferences for new relationship class."""
+        """Shows dialog to add new relationship class."""
         dialog = AddRelationshipClassesDialog(
             self, self.db_mngr, *self.db_maps, object_class_one_name=object_class_one_name
         )
@@ -241,7 +253,7 @@ class TreeViewMixin:
         dialog.show()
 
     def show_add_relationships_form(self, checked=False, relationship_class_key=None, object_names_by_class_name=None):
-        """Shows dialog to let user select preferences for new relationships."""
+        """Shows dialog to add new relationships."""
         dialog = AddRelationshipsDialog(
             self,
             self.db_mngr,
@@ -388,6 +400,11 @@ class TreeViewMixin:
         super().receive_scenarios_updated(db_map_data)
         self.alternative_tree_model.update_scenario_alternatives(db_map_data)
 
+    def receive_entity_groups_added(self, db_map_data):
+        super().receive_entity_groups_added(db_map_data)
+        self.object_tree_model.raise_entity_groups(db_map_data)
+        self.ui.treeView_object.refresh_active_member_indexes()
+
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
         self.object_tree_model.update_object_classes(db_map_data)
@@ -435,3 +452,7 @@ class TreeViewMixin:
         super().receive_relationships_removed(db_map_data)
         self.object_tree_model.remove_relationships(db_map_data)
         self.relationship_tree_model.remove_relationships(db_map_data)
+
+    def receive_entity_groups_removed(self, db_map_data):
+        super().receive_entity_groups_removed(db_map_data)
+        QTimer.singleShot(0, self.ui.treeView_object.refresh_active_member_indexes)

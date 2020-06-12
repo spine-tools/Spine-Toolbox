@@ -10,37 +10,53 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_errors.ui',
-# licensing of 'C:\data\GIT\SPINETOOLBOX\bin\..\spinetoolbox\ui\import_errors.ui' applies.
-#
-# Created: Thu Feb 13 11:53:59 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'import_errors.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_ImportErrors(object):
     def setupUi(self, ImportErrors):
-        ImportErrors.setObjectName("ImportErrors")
+        if not ImportErrors.objectName():
+            ImportErrors.setObjectName(u"ImportErrors")
         ImportErrors.resize(400, 300)
-        self.verticalLayout = QtWidgets.QVBoxLayout(ImportErrors)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.error_count_label = QtWidgets.QLabel(ImportErrors)
-        self.error_count_label.setObjectName("error_count_label")
+        self.verticalLayout = QVBoxLayout(ImportErrors)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.error_count_label = QLabel(ImportErrors)
+        self.error_count_label.setObjectName(u"error_count_label")
+
         self.verticalLayout.addWidget(self.error_count_label)
-        self.import_count_label = QtWidgets.QLabel(ImportErrors)
-        self.import_count_label.setObjectName("import_count_label")
+
+        self.import_count_label = QLabel(ImportErrors)
+        self.import_count_label.setObjectName(u"import_count_label")
+
         self.verticalLayout.addWidget(self.import_count_label)
-        self.error_list = QtWidgets.QListWidget(ImportErrors)
-        self.error_list.setObjectName("error_list")
+
+        self.error_list = QListWidget(ImportErrors)
+        self.error_list.setObjectName(u"error_list")
+
         self.verticalLayout.addWidget(self.error_list)
 
+
         self.retranslateUi(ImportErrors)
-        QtCore.QMetaObject.connectSlotsByName(ImportErrors)
+
+        QMetaObject.connectSlotsByName(ImportErrors)
+    # setupUi
 
     def retranslateUi(self, ImportErrors):
-        ImportErrors.setWindowTitle(QtWidgets.QApplication.translate("ImportErrors", "Form", None, -1))
-        self.error_count_label.setText(QtWidgets.QApplication.translate("ImportErrors", "Number of errors:", None, -1))
-        self.import_count_label.setText(QtWidgets.QApplication.translate("ImportErrors", "Number of imports:", None, -1))
+        ImportErrors.setWindowTitle(QCoreApplication.translate("ImportErrors", u"Form", None))
+        self.error_count_label.setText(QCoreApplication.translate("ImportErrors", u"Number of errors:", None))
+        self.import_count_label.setText(QCoreApplication.translate("ImportErrors", u"Number of imports:", None))
+    # retranslateUi
 

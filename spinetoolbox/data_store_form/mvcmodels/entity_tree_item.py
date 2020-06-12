@@ -505,6 +505,21 @@ class ScenarioClassItem(MultiDBTreeItem):
 class EntityClassItem(MultiDBTreeItem):
     """An entity class item."""
 
+    def __init__(self, *args, **kwargs):
+        """Overridden method to declare group_child_count attribute."""
+        super().__init__(*args, **kwargs)
+        self._group_child_count = 0
+
+    @property
+    def display_icon(self):
+        """Returns class icon."""
+        return self._display_icon()
+
+    def _display_icon(self, for_group=False):
+        return self.db_mngr.entity_class_icon(
+            self.first_db_map, self.item_type, self.db_map_id(self.first_db_map), for_group=for_group
+        )
+
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
         if role == Qt.ToolTipRole:
@@ -522,16 +537,59 @@ class EntityClassItem(MultiDBTreeItem):
         """See base class"""
         raise NotImplementedError()
 
+    def fetch_more(self):
+        """Fetches children from all associated databases and raises group children.
+        """
+        super().fetch_more()
+        rows = [row for row, child in enumerate(self.children) if child.is_group()]
+        self._raise_group_children_by_row(rows)
+
+    def raise_group_children_by_id(self, db_map_ids):
+        """
+        Moves group children to the top of the list.
+
+        Args:
+            db_map_ids (dict): set of ids corresponding to newly inserted group children,
+                keyed by DiffDatabaseMapping
+        """
+        rows = set(row for db_map, ids in db_map_ids.items() for row in self.find_rows_by_id(db_map, *ids))
+        self._raise_group_children_by_row(rows)
+
+    def _raise_group_children_by_row(self, rows):
+        """
+        Moves group children to the top of the list.
+
+        Args:
+            rows (set, list): collection of rows corresponding to newly inserted group children
+        """
+        rows = [row for row in rows if row >= self._group_child_count]
+        if not rows:
+            return
+        self.model.layoutAboutToBeChanged.emit()
+        group_children = list(reversed([self.children.pop(row) for row in sorted(rows, reverse=True)]))
+        self.insert_children(self._group_child_count, *group_children)
+        self._group_child_count += len(group_children)
+        self._refresh_child_map()
+        self.model.layoutChanged.emit()
+
+    def remove_children(self, position, count):
+        """
+        Overriden method to keep the group child count up to date.
+        """
+        if not super().remove_children(position, count):
+            return False
+        first_group_child = position
+        last_group_child = min(self._group_child_count - 1, position + count - 1)
+        removed_child_count = last_group_child - first_group_child + 1
+        if removed_child_count > 0:
+            self._group_child_count -= removed_child_count
+        return True
+
 
 class ObjectClassItem(EntityClassItem):
     """An object class item."""
 
     item_type = "object class"
-
-    @property
-    def display_icon(self):
-        """Returns the object class icon."""
-        return self.db_mngr.entity_class_icon(self.first_db_map, "object class", self.db_map_id(self.first_db_map))
 
     @property
     def child_item_type(self):
@@ -552,13 +610,6 @@ class RelationshipClassItem(EntityClassItem):
 
     visual_key = ["name", "object_class_name_list"]
     item_type = "relationship class"
-
-    @property
-    def display_icon(self):
-        """Returns relationship class icon."""
-        return self.db_mngr.entity_class_icon(
-            self.first_db_map, "relationship class", self.db_map_id(self.first_db_map)
-        )
 
     @property
     def child_item_type(self):
@@ -589,10 +640,39 @@ class RelationshipClassItem(EntityClassItem):
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
+    @property
+    def display_icon(self):
+        """Returns corresponding class icon."""
+        return self.parent_item._display_icon(for_group=self.is_group())
+
+    def db_map_member_ids(self, db_map):
+        return set(x["member_id"] for x in self.db_map_entity_groups(db_map))
+
+    def db_map_entity_groups(self, db_map):
+        return self.db_mngr.get_items_by_field(db_map, "entity group", "entity_id", self.db_map_id(db_map))
+
+    @property
+    def member_ids(self):
+        return {db_map: self.db_map_member_ids(db_map) for db_map in self.db_maps}
+
+    @property
+    def member_rows(self):
+        return set(
+            row
+            for db_map in self.db_maps
+            for row in self.parent_item.find_rows_by_id(db_map, *self.db_map_member_ids(db_map))
+        )
+
+    def is_group(self):
+        return any(self.member_ids.values())
+
     def data(self, column, role=Qt.DisplayRole):
-        """Returns data for given column and role."""
         if role == Qt.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
+        if role == Qt.BackgroundRole and column == 0 and self.model.is_active_member_index(self.index()):
+            color = qApp.palette().highlight().color()
+            color.setAlphaF(0.2)
+            return color
         return super().data(column, role)
 
     def _get_children_ids(self, db_map):
@@ -600,7 +680,7 @@ class EntityItem(MultiDBTreeItem):
         raise NotImplementedError()
 
 
-class AlternativeItem(EntityItem):
+class AlternativeItem(MultiDBTreeItem):
     item_type = "alternative"
 
     def __init__(self, *args, **kwargs):
@@ -629,7 +709,7 @@ class AlternativeItem(EntityItem):
         raise NotImplementedError()
 
 
-class ScenarioItem(EntityItem):
+class ScenarioItem(MultiDBTreeItem):
     item_type = "scenario"
 
     def __init__(self, *args, **kwargs):
@@ -766,7 +846,7 @@ class ScenarioItem(EntityItem):
         self.db_mngr.add_scenario_alternatives(new_items)
 
 
-class ScenarioAlternativeItem(EntityItem):
+class ScenarioAlternativeItem(MultiDBTreeItem):
     item_type = "scenario_alternative"
 
     def __init__(self, *args, **kwargs):
@@ -824,11 +904,6 @@ class ObjectItem(EntityItem):
         """Returns RelationshipClassItem."""
         return RelationshipClassItem
 
-    @property
-    def display_icon(self):
-        """Returns the object class icon."""
-        return self.parent_item.display_icon
-
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
@@ -873,11 +948,6 @@ class RelationshipItem(EntityItem):
     @property
     def edit_data(self):
         return self.object_name_list
-
-    @property
-    def display_icon(self):
-        """Returns relationship class icon."""
-        return self.parent_item.display_icon
 
     def has_children(self):
         """Returns false, this item never has children."""

@@ -10,89 +10,129 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\array_editor.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\ui\array_editor.ui' applies.
-#
-# Created: Fri Mar 27 09:28:15 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'array_editor.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
-
-class Ui_Form(object):
-    def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.resize(569, 420)
-        self.verticalLayout_4 = QtWidgets.QVBoxLayout(Form)
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.splitter = QtWidgets.QSplitter(Form)
-        self.splitter.setOrientation(QtCore.Qt.Horizontal)
-        self.splitter.setObjectName("splitter")
-        self.verticalLayoutWidget = QtWidgets.QWidget(self.splitter)
-        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
-        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.formLayout = QtWidgets.QFormLayout()
-        self.formLayout.setObjectName("formLayout")
-        self.label_2 = QtWidgets.QLabel(self.verticalLayoutWidget)
-        self.label_2.setObjectName("label_2")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label_2)
-        self.value_type_combo_box = QtWidgets.QComboBox(self.verticalLayoutWidget)
-        self.value_type_combo_box.setObjectName("value_type_combo_box")
-        self.value_type_combo_box.addItem("")
-        self.value_type_combo_box.addItem("")
-        self.value_type_combo_box.addItem("")
-        self.value_type_combo_box.addItem("")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.value_type_combo_box)
-        self.verticalLayout_3.addLayout(self.formLayout)
-        self.array_table_view = CopyPasteTableView(self.verticalLayoutWidget)
-        self.array_table_view.setObjectName("array_table_view")
-        self.verticalLayout_3.addWidget(self.array_table_view)
-        self.plot_widget_stack = QtWidgets.QStackedWidget(self.splitter)
-        self.plot_widget_stack.setObjectName("plot_widget_stack")
-        self.cannot_plot_page = QtWidgets.QWidget()
-        self.cannot_plot_page.setObjectName("cannot_plot_page")
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.cannot_plot_page)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem1)
-        self.label = QtWidgets.QLabel(self.cannot_plot_page)
-        self.label.setObjectName("label")
-        self.horizontalLayout.addWidget(self.label)
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem2)
-        self.verticalLayout_2.addLayout(self.horizontalLayout)
-        spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem3)
-        self.plot_widget_stack.addWidget(self.cannot_plot_page)
-        self.plot_page = QtWidgets.QWidget()
-        self.plot_page.setObjectName("plot_page")
-        self.verticalLayout = QtWidgets.QVBoxLayout(self.plot_page)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.plot_widget = PlotWidget(self.plot_page)
-        self.plot_widget.setObjectName("plot_widget")
-        self.verticalLayout.addWidget(self.plot_widget)
-        self.plot_widget_stack.addWidget(self.plot_page)
-        self.verticalLayout_4.addWidget(self.splitter)
-
-        self.retranslateUi(Form)
-        self.plot_widget_stack.setCurrentIndex(1)
-        QtCore.QMetaObject.connectSlotsByName(Form)
-
-    def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
-        self.label_2.setText(QtWidgets.QApplication.translate("Form", "Value type:", None, -1))
-        self.value_type_combo_box.setItemText(0, QtWidgets.QApplication.translate("Form", "Float", None, -1))
-        self.value_type_combo_box.setItemText(1, QtWidgets.QApplication.translate("Form", "Datetime", None, -1))
-        self.value_type_combo_box.setItemText(2, QtWidgets.QApplication.translate("Form", "Duration", None, -1))
-        self.value_type_combo_box.setItemText(3, QtWidgets.QApplication.translate("Form", "String", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Form", "Cannot plot this data type.", None, -1))
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.plot_widget import PlotWidget
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
+
+
+class Ui_Form(object):
+    def setupUi(self, Form):
+        if not Form.objectName():
+            Form.setObjectName(u"Form")
+        Form.resize(569, 420)
+        self.verticalLayout_4 = QVBoxLayout(Form)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.splitter = QSplitter(Form)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Horizontal)
+        self.verticalLayoutWidget = QWidget(self.splitter)
+        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
+        self.verticalLayout_3 = QVBoxLayout(self.verticalLayoutWidget)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.formLayout = QFormLayout()
+        self.formLayout.setObjectName(u"formLayout")
+        self.label_2 = QLabel(self.verticalLayoutWidget)
+        self.label_2.setObjectName(u"label_2")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label_2)
+
+        self.value_type_combo_box = QComboBox(self.verticalLayoutWidget)
+        self.value_type_combo_box.addItem("")
+        self.value_type_combo_box.addItem("")
+        self.value_type_combo_box.addItem("")
+        self.value_type_combo_box.addItem("")
+        self.value_type_combo_box.setObjectName(u"value_type_combo_box")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.value_type_combo_box)
+
+
+        self.verticalLayout_3.addLayout(self.formLayout)
+
+        self.array_table_view = CopyPasteTableView(self.verticalLayoutWidget)
+        self.array_table_view.setObjectName(u"array_table_view")
+
+        self.verticalLayout_3.addWidget(self.array_table_view)
+
+        self.splitter.addWidget(self.verticalLayoutWidget)
+        self.plot_widget_stack = QStackedWidget(self.splitter)
+        self.plot_widget_stack.setObjectName(u"plot_widget_stack")
+        self.cannot_plot_page = QWidget()
+        self.cannot_plot_page.setObjectName(u"cannot_plot_page")
+        self.verticalLayout_2 = QVBoxLayout(self.cannot_plot_page)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_2.addItem(self.verticalSpacer)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+        self.label = QLabel(self.cannot_plot_page)
+        self.label.setObjectName(u"label")
+
+        self.horizontalLayout.addWidget(self.label)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer_2)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
+
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_2.addItem(self.verticalSpacer_2)
+
+        self.plot_widget_stack.addWidget(self.cannot_plot_page)
+        self.plot_page = QWidget()
+        self.plot_page.setObjectName(u"plot_page")
+        self.verticalLayout = QVBoxLayout(self.plot_page)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.plot_widget = PlotWidget(self.plot_page)
+        self.plot_widget.setObjectName(u"plot_widget")
+
+        self.verticalLayout.addWidget(self.plot_widget)
+
+        self.plot_widget_stack.addWidget(self.plot_page)
+        self.splitter.addWidget(self.plot_widget_stack)
+
+        self.verticalLayout_4.addWidget(self.splitter)
+
+
+        self.retranslateUi(Form)
+
+        self.plot_widget_stack.setCurrentIndex(1)
+
+
+        QMetaObject.connectSlotsByName(Form)
+    # setupUi
+
+    def retranslateUi(self, Form):
+        Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
+        self.label_2.setText(QCoreApplication.translate("Form", u"Value type:", None))
+        self.value_type_combo_box.setItemText(0, QCoreApplication.translate("Form", u"Float", None))
+        self.value_type_combo_box.setItemText(1, QCoreApplication.translate("Form", u"Datetime", None))
+        self.value_type_combo_box.setItemText(2, QCoreApplication.translate("Form", u"Duration", None))
+        self.value_type_combo_box.setItemText(3, QCoreApplication.translate("Form", u"String", None))
+
+        self.label.setText(QCoreApplication.translate("Form", u"Cannot plot this data type.", None))
+    # retranslateUi
+

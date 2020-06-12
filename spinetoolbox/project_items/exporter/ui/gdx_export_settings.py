@@ -10,139 +10,214 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# Form implementation generated from reading ui file 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui',
-# licensing of 'C:\data\src\toolbox\bin\..\spinetoolbox\project_items\exporter\ui\gdx_export_settings.ui' applies.
-#
-# Created: Mon May 11 15:50:20 2020
-#      by: pyside2-uic  running on PySide2 5.11.2
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'gdx_export_settings.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.2
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
+from PySide2.QtWidgets import *
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
-        Form.setObjectName("Form")
-        Form.setWindowModality(QtCore.Qt.WindowModal)
+        if not Form.objectName():
+            Form.setObjectName(u"Form")
+        Form.setWindowModality(Qt.WindowModal)
         Form.resize(603, 406)
-        self.verticalLayout_4 = QtWidgets.QVBoxLayout(Form)
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.splitter = QtWidgets.QSplitter(Form)
-        self.splitter.setOrientation(QtCore.Qt.Horizontal)
-        self.splitter.setObjectName("splitter")
-        self.set_group_box = QtWidgets.QGroupBox(self.splitter)
-        self.set_group_box.setObjectName("set_group_box")
-        self.horizontalLayout = QtWidgets.QHBoxLayout(self.set_group_box)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.set_list_view = QtWidgets.QListView(self.set_group_box)
-        self.set_list_view.setObjectName("set_list_view")
+        self.verticalLayout_4 = QVBoxLayout(Form)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.splitter = QSplitter(Form)
+        self.splitter.setObjectName(u"splitter")
+        self.splitter.setOrientation(Qt.Horizontal)
+        self.set_group_box = QGroupBox(self.splitter)
+        self.set_group_box.setObjectName(u"set_group_box")
+        self.horizontalLayout = QHBoxLayout(self.set_group_box)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.set_list_view = QListView(self.set_group_box)
+        self.set_list_view.setObjectName(u"set_list_view")
+
         self.horizontalLayout.addWidget(self.set_list_view)
-        self.verticalLayout = QtWidgets.QVBoxLayout()
-        self.verticalLayout.setObjectName("verticalLayout")
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem)
-        self.set_move_up_button = QtWidgets.QPushButton(self.set_group_box)
-        self.set_move_up_button.setObjectName("set_move_up_button")
+
+        self.verticalLayout = QVBoxLayout()
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer)
+
+        self.set_move_up_button = QPushButton(self.set_group_box)
+        self.set_move_up_button.setObjectName(u"set_move_up_button")
+
         self.verticalLayout.addWidget(self.set_move_up_button)
-        self.set_move_down_button = QtWidgets.QPushButton(self.set_group_box)
-        self.set_move_down_button.setObjectName("set_move_down_button")
+
+        self.set_move_down_button = QPushButton(self.set_group_box)
+        self.set_move_down_button.setObjectName(u"set_move_down_button")
+
         self.verticalLayout.addWidget(self.set_move_down_button)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem1)
+
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer_2)
+
+
         self.horizontalLayout.addLayout(self.verticalLayout)
-        self.contents_group_box = QtWidgets.QGroupBox(self.splitter)
-        self.contents_group_box.setObjectName("contents_group_box")
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.contents_group_box)
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.record_list_view = QtWidgets.QListView(self.contents_group_box)
-        self.record_list_view.setObjectName("record_list_view")
+
+        self.splitter.addWidget(self.set_group_box)
+        self.contents_group_box = QGroupBox(self.splitter)
+        self.contents_group_box.setObjectName(u"contents_group_box")
+        self.horizontalLayout_2 = QHBoxLayout(self.contents_group_box)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.record_list_view = QListView(self.contents_group_box)
+        self.record_list_view.setObjectName(u"record_list_view")
+
         self.horizontalLayout_2.addWidget(self.record_list_view)
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout()
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem2)
-        self.record_sort_alphabetic = QtWidgets.QPushButton(self.contents_group_box)
-        self.record_sort_alphabetic.setObjectName("record_sort_alphabetic")
+
+        self.verticalLayout_2 = QVBoxLayout()
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_2.addItem(self.verticalSpacer_3)
+
+        self.record_sort_alphabetic = QPushButton(self.contents_group_box)
+        self.record_sort_alphabetic.setObjectName(u"record_sort_alphabetic")
+
         self.verticalLayout_2.addWidget(self.record_sort_alphabetic)
-        self.record_move_up_button = QtWidgets.QPushButton(self.contents_group_box)
-        self.record_move_up_button.setObjectName("record_move_up_button")
+
+        self.record_move_up_button = QPushButton(self.contents_group_box)
+        self.record_move_up_button.setObjectName(u"record_move_up_button")
+
         self.verticalLayout_2.addWidget(self.record_move_up_button)
-        self.record_move_down_button = QtWidgets.QPushButton(self.contents_group_box)
-        self.record_move_down_button.setObjectName("record_move_down_button")
+
+        self.record_move_down_button = QPushButton(self.contents_group_box)
+        self.record_move_down_button.setObjectName(u"record_move_down_button")
+
         self.verticalLayout_2.addWidget(self.record_move_down_button)
-        spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem3)
+
+        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_2.addItem(self.verticalSpacer_4)
+
+
         self.horizontalLayout_2.addLayout(self.verticalLayout_2)
+
+        self.splitter.addWidget(self.contents_group_box)
+
         self.verticalLayout_4.addWidget(self.splitter)
-        self.misc_control_holder = QtWidgets.QWidget(Form)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+
+        self.misc_control_holder = QWidget(Form)
+        self.misc_control_holder.setObjectName(u"misc_control_holder")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.misc_control_holder.sizePolicy().hasHeightForWidth())
         self.misc_control_holder.setSizePolicy(sizePolicy)
-        self.misc_control_holder.setObjectName("misc_control_holder")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.misc_control_holder)
-        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        self.open_indexed_parameter_settings_button = QtWidgets.QPushButton(self.misc_control_holder)
-        self.open_indexed_parameter_settings_button.setObjectName("open_indexed_parameter_settings_button")
+        self.verticalLayout_3 = QVBoxLayout(self.misc_control_holder)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.horizontalLayout_4 = QHBoxLayout()
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.open_indexed_parameter_settings_button = QPushButton(self.misc_control_holder)
+        self.open_indexed_parameter_settings_button.setObjectName(u"open_indexed_parameter_settings_button")
+
         self.horizontalLayout_4.addWidget(self.open_indexed_parameter_settings_button)
-        self.indexing_status_label = QtWidgets.QLabel(self.misc_control_holder)
-        self.indexing_status_label.setText("")
-        self.indexing_status_label.setTextFormat(QtCore.Qt.RichText)
-        self.indexing_status_label.setObjectName("indexing_status_label")
+
+        self.indexing_status_label = QLabel(self.misc_control_holder)
+        self.indexing_status_label.setObjectName(u"indexing_status_label")
+        self.indexing_status_label.setTextFormat(Qt.RichText)
+
         self.horizontalLayout_4.addWidget(self.indexing_status_label)
-        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_4.addItem(spacerItem4)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_4.addItem(self.horizontalSpacer_2)
+
+
         self.verticalLayout_3.addLayout(self.horizontalLayout_4)
-        self.horizontalLayout_5 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_5.setObjectName("horizontalLayout_5")
-        self.open_parameter_merging_settings_button = QtWidgets.QPushButton(self.misc_control_holder)
-        self.open_parameter_merging_settings_button.setObjectName("open_parameter_merging_settings_button")
+
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.open_parameter_merging_settings_button = QPushButton(self.misc_control_holder)
+        self.open_parameter_merging_settings_button.setObjectName(u"open_parameter_merging_settings_button")
+
         self.horizontalLayout_5.addWidget(self.open_parameter_merging_settings_button)
-        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_5.addItem(spacerItem5)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_5.addItem(self.horizontalSpacer_3)
+
+
         self.verticalLayout_3.addLayout(self.horizontalLayout_5)
-        self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.formLayout = QtWidgets.QFormLayout()
-        self.formLayout.setObjectName("formLayout")
-        self.label = QtWidgets.QLabel(self.misc_control_holder)
-        self.label.setObjectName("label")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
-        self.global_parameters_combo_box = QtWidgets.QComboBox(self.misc_control_holder)
-        self.global_parameters_combo_box.setObjectName("global_parameters_combo_box")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.global_parameters_combo_box)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.formLayout = QFormLayout()
+        self.formLayout.setObjectName(u"formLayout")
+        self.label = QLabel(self.misc_control_holder)
+        self.label.setObjectName(u"label")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
+
+        self.global_parameters_combo_box = QComboBox(self.misc_control_holder)
+        self.global_parameters_combo_box.setObjectName(u"global_parameters_combo_box")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.global_parameters_combo_box)
+
+
         self.horizontalLayout_3.addLayout(self.formLayout)
-        spacerItem6 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_3.addItem(spacerItem6)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer)
+
+
         self.verticalLayout_3.addLayout(self.horizontalLayout_3)
+
+
         self.verticalLayout_4.addWidget(self.misc_control_holder)
-        self.button_box = QtWidgets.QDialogButtonBox(Form)
-        self.button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok|QtWidgets.QDialogButtonBox.RestoreDefaults)
-        self.button_box.setObjectName("button_box")
+
+        self.button_box = QDialogButtonBox(Form)
+        self.button_box.setObjectName(u"button_box")
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok|QDialogButtonBox.RestoreDefaults)
+
         self.verticalLayout_4.addWidget(self.button_box)
 
+
         self.retranslateUi(Form)
-        QtCore.QMetaObject.connectSlotsByName(Form)
+
+        QMetaObject.connectSlotsByName(Form)
+    # setupUi
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Gdx Export Settings", None, -1))
-        self.set_group_box.setTitle(QtWidgets.QApplication.translate("Form", "Sets", None, -1))
-        self.set_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
-        self.set_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
-        self.contents_group_box.setTitle(QtWidgets.QApplication.translate("Form", "Set Contents", None, -1))
-        self.record_sort_alphabetic.setToolTip(QtWidgets.QApplication.translate("Form", "Sort set contents alphabetically.", None, -1))
-        self.record_sort_alphabetic.setText(QtWidgets.QApplication.translate("Form", "Alphabetic", None, -1))
-        self.record_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
-        self.record_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
-        self.open_indexed_parameter_settings_button.setToolTip(QtWidgets.QApplication.translate("Form", "Set up indexing for time series and other indexed parameters.", None, -1))
-        self.open_indexed_parameter_settings_button.setText(QtWidgets.QApplication.translate("Form", "Indexed Parameters...", None, -1))
-        self.open_parameter_merging_settings_button.setToolTip(QtWidgets.QApplication.translate("Form", "Merge multiple parameters into one.", None, -1))
-        self.open_parameter_merging_settings_button.setText(QtWidgets.QApplication.translate("Form", "Parameter Merging...", None, -1))
-        self.label.setToolTip(QtWidgets.QApplication.translate("Form", "Selected domain\'s parameters are exported as GAMS scalars.\n"
-"The domain itself is not exported.", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Form", "Global parameters domain:", None, -1))
+        Form.setWindowTitle(QCoreApplication.translate("Form", u"Gdx Export Settings", None))
+        self.set_group_box.setTitle(QCoreApplication.translate("Form", u"Sets", None))
+        self.set_move_up_button.setText(QCoreApplication.translate("Form", u"Move Up", None))
+        self.set_move_down_button.setText(QCoreApplication.translate("Form", u"Move Down", None))
+        self.contents_group_box.setTitle(QCoreApplication.translate("Form", u"Set Contents", None))
+#if QT_CONFIG(tooltip)
+        self.record_sort_alphabetic.setToolTip(QCoreApplication.translate("Form", u"Sort set contents alphabetically.", None))
+#endif // QT_CONFIG(tooltip)
+        self.record_sort_alphabetic.setText(QCoreApplication.translate("Form", u"Alphabetic", None))
+        self.record_move_up_button.setText(QCoreApplication.translate("Form", u"Move Up", None))
+        self.record_move_down_button.setText(QCoreApplication.translate("Form", u"Move Down", None))
+#if QT_CONFIG(tooltip)
+        self.open_indexed_parameter_settings_button.setToolTip(QCoreApplication.translate("Form", u"Set up indexing for time series and other indexed parameters.", None))
+#endif // QT_CONFIG(tooltip)
+        self.open_indexed_parameter_settings_button.setText(QCoreApplication.translate("Form", u"Indexed Parameters...", None))
+        self.indexing_status_label.setText("")
+#if QT_CONFIG(tooltip)
+        self.open_parameter_merging_settings_button.setToolTip(QCoreApplication.translate("Form", u"Merge multiple parameters into one.", None))
+#endif // QT_CONFIG(tooltip)
+        self.open_parameter_merging_settings_button.setText(QCoreApplication.translate("Form", u"Parameter Merging...", None))
+#if QT_CONFIG(tooltip)
+        self.label.setToolTip(QCoreApplication.translate("Form", u"Selected domain's parameters are exported as GAMS scalars.\n"
+"The domain itself is not exported.", None))
+#endif // QT_CONFIG(tooltip)
+        self.label.setText(QCoreApplication.translate("Form", u"Global parameters domain:", None))
+    # retranslateUi
 

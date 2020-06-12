@@ -183,7 +183,7 @@ class TitleWidgetAction(CustomWidgetAction):
         layout.setSpacing(self.V_MARGIN)
         label = QLabel(title, widget)
         fm = QFontMetrics(label.font())
-        label.setFixedWidth(fm.width(title))
+        label.setFixedWidth(fm.horizontalAdvance(title))
         lines = QFrame(widget), QFrame(widget)
         for line in lines:
             line.setFrameShape(QFrame.HLine)
