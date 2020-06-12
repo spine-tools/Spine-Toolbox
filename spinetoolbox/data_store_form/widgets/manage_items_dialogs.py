@@ -17,11 +17,15 @@ Classes for custom QDialogs to add edit and remove database items.
 """
 
 from functools import reduce
-from PySide2.QtWidgets import QDialog, QGridLayout, QDialogButtonBox, QHeaderView
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QCheckBox, QWidget, QGridLayout, QHBoxLayout
 from PySide2.QtCore import Slot, Qt
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...helpers import busy_effect
+from ...mvcmodels.minimal_table_model import MinimalTableModel
+from ...mvcmodels.empty_row_model import EmptyRowModel
+from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
+from .custom_delegates import ManageParameterTagsDelegate
 
 
 class ManageItemsDialogBase(QDialog):
@@ -149,15 +153,6 @@ class GetObjectsMixin:
             for db_map in self.db_maps
         }
 
-    def make_db_map_rel_cls_lookup(self):
-        return {
-            db_map: {
-                (x["name"], x["object_class_name_list"]): x
-                for x in self.db_mngr.get_items(db_map, "relationship class")
-            }
-            for db_map in self.db_maps
-        }
-
     def object_name_list(self, row, column):
         """Return a list of object names present in all databases selected for given row.
         Used by `ManageRelationshipsDelegate`.
@@ -182,6 +177,20 @@ class GetObjectsMixin:
         return list(reduce(lambda x, y: set(x) & set(y), object_name_lists))
 
 
+class GetRelationshipClassesMixin:
+    """Provides a method to retrieve relationships for AddRelationshipsDialog and EditRelationshipsDialog.
+    """
+
+    def make_db_map_rel_cls_lookup(self):
+        return {
+            db_map: {
+                (x["name"], x["object_class_name_list"]): x
+                for x in self.db_mngr.get_items(db_map, "relationship class")
+            }
+            for db_map in self.db_maps
+        }
+
+
 class ShowIconColorEditorMixin:
     """Provides methods to show an `IconColorEditor` upon request.
     """
@@ -199,3 +208,131 @@ class ShowIconColorEditorMixin:
             return None
         object_class_name = index.data(Qt.DisplayRole)
         return self.db_mngr.icon_mngr[db_map].create_object_pixmap(object_class_name)
+
+
+class ManageParameterTagsDialog(ManageItemsDialog):
+    """A dialog to query user's preferences for managing parameter tags.
+    """
+
+    def __init__(self, parent, db_mngr, *db_maps):
+        """Init class.
+
+        Args:
+            parent (DataStoreForm): data store widget
+            db_mngr (SpineDBManager): the manager to do the removal
+            db_maps (iter): DiffDatabaseMapping instances
+        """
+        super().__init__(parent, db_mngr)
+        self.db_maps = db_maps
+        self.keyed_db_maps = {db_map.codename: db_map for db_map in db_maps}
+        self.setWindowTitle("Manage parameter tags")
+        header = ['parameter tag', 'description', 'databases', 'remove']
+        self.model = CompoundWithEmptyTableModel(self, header=header)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(ManageParameterTagsDelegate(self))
+        self.connect_signals()
+        self.orig_data = list()
+        model_data = list()
+        tag_dict = {}
+        for db_map in self.db_maps:
+            for parameter_tag in self.db_mngr.get_items(db_map, "parameter tag"):
+                tag_dict.setdefault(parameter_tag["tag"], {})[db_map] = parameter_tag
+        self.items = list(tag_dict.values())
+        for item in self.items:
+            parameter_tag = list(item.values())[0]
+            tag = parameter_tag["tag"]
+            description = parameter_tag["description"]
+            remove = None
+            db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in item])
+            row_data = [tag, description]
+            self.orig_data.append(row_data.copy())
+            row_data.extend([db_names, remove])
+            model_data.append(row_data)
+        db_names = ",".join(self.keyed_db_maps.keys())
+        self.filled_model = MinimalTableModel(self, header=header)
+        self.empty_model = EmptyRowModel(self, header=header)
+        self.model.sub_models += [self.filled_model, self.empty_model]
+        self.model.connect_model_signals()
+        self.filled_model.reset_model(model_data)
+        self.empty_model.set_default_row(**{'databases': db_names})
+        # Create checkboxes
+        column = self.model.header.index('remove')
+        for row in range(0, self.filled_model.rowCount()):
+            index = self.model.index(row, column)
+            check_box = QCheckBox(self)
+            widget = QWidget(self)
+            layout = QHBoxLayout(widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.addStretch()
+            layout.addWidget(check_box)
+            layout.addStretch()
+            self.table_view.setIndexWidget(index, widget)
+        self._handle_model_reset()
+
+    def all_databases(self, row):
+        """Returns a list of db names available for a given row.
+        Used by delegates.
+        """
+        if row < self.filled_model.rowCount():
+            item = self.items[row]
+            return [db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in item]
+        return self.keyed_db_maps.keys()
+
+    @Slot()
+    def accept(self):
+        """Collect info from dialog and try to update, remove, add items."""
+        # Update and remove
+        db_map_data_to_upd = {}
+        db_map_typed_data_to_rm = {}
+        for i in range(self.filled_model.rowCount()):
+            tag, description, db_names, _ = self.filled_model.row_data(i)
+            if db_names is None:
+                db_names = ""
+            db_name_list = db_names.split(",")
+            try:
+                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
+            except KeyError as e:
+                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                return
+            # Remove
+            check_box = self.table_view.indexWidget(self.model.index(i, self.model.header.index('remove')))
+            if check_box.isChecked():
+                for db_map in db_maps:
+                    parameter_tag = self.items[i][db_map]
+                    db_map_typed_data_to_rm.setdefault(db_map, {}).setdefault("parameter tag", []).append(parameter_tag)
+                continue
+            if not tag:
+                self.parent().msg_error.emit("Tag missing at row {}".format(i + 1))
+                return
+            # Update
+            if [tag, description] != self.orig_data[i]:
+                for db_map in db_maps:
+                    parameter_tag = self.items[i][db_map]
+                    item = {'id': parameter_tag["id"], 'tag': tag, 'description': description}
+                    db_map_data_to_upd.setdefault(db_map, []).append(item)
+        # Insert
+        db_map_data_to_add = {}
+        offset = self.filled_model.rowCount()
+        for i in range(self.empty_model.rowCount() - 1):  # last row will always be empty
+            tag, description, db_names, _ = self.empty_model.row_data(i)
+            if db_names is None:
+                db_names = ""
+            db_name_list = db_names.split(",")
+            try:
+                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
+            except KeyError as e:
+                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, offset + i + 1))
+                return
+            if not tag:
+                self.parent().msg_error.emit("Tag missing at row {0}".format(offset + i + 1))
+                return
+            for db_map in db_maps:
+                item = {'tag': tag, 'description': description}
+                db_map_data_to_add.setdefault(db_map, []).append(item)
+        if db_map_typed_data_to_rm:
+            self.db_mngr.remove_items(db_map_typed_data_to_rm)
+        if db_map_data_to_upd:
+            self.db_mngr.update_parameter_tags(db_map_data_to_upd)
+        if db_map_data_to_add:
+            self.db_mngr.add_parameter_tags(db_map_data_to_add)
+        super().accept()

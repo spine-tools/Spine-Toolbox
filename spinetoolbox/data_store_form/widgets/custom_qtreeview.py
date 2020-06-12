@@ -78,6 +78,12 @@ class EntityTreeView(CopyTreeView):
         self.collapsed.connect(self._resize_first_column_to_contents)
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
 
+    def rowsInserted(self, parent, start, end):
+        self._refresh_selected_indexes()
+
+    def rowsRemoved(self, parent, start, end):
+        self._refresh_selected_indexes()
+
     @Slot("QModelIndex")
     def _resize_first_column_to_contents(self, _index=None):
         self.resizeColumnToContents(0)
@@ -85,17 +91,31 @@ class EntityTreeView(CopyTreeView):
     @Slot("QItemSelection", "QItemSelection")
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
+        self._refresh_selected_indexes()
+        if not self.selectionModel().hasSelection():
+            return
+        self.refresh_active_member_indexes()
+        parents = set(ind.parent() for ind in deselected)
+        self.model().emit_data_changed_for_column(0, parents)
+        self.tree_selection_changed.emit(self.selected_indexes)
+
+    def _refresh_selected_indexes(self):
         self.selected_indexes.clear()
         model = self.model()
         indexes = self.selectionModel().selectedIndexes()
         for index in indexes:
             if not index.isValid() or index.column() != 0:
                 continue
-            item_type = model.item_from_index(index).item_type
-            self.selected_indexes.setdefault(item_type, {})[index] = None
-        if not indexes:
-            return
-        self.tree_selection_changed.emit(self.selected_indexes)
+            item = model.item_from_index(index)
+            self.selected_indexes.setdefault(item.item_type, {})[index] = None
+
+    def refresh_active_member_indexes(self):
+        active_member_indexes = set(
+            index.sibling(row, 0)
+            for index in self.selected_indexes.get("object", ())
+            for row in index.internalPointer().member_rows
+        )
+        self.model().set_active_member_indexes(active_member_indexes)
 
     @Slot("QModelIndex", "EditTrigger", "QEvent")
     def edit(self, index, trigger, event):
@@ -204,15 +224,19 @@ class ObjectTreeView(EntityTreeView):
         super().__init__(parent=parent)
         self.add_objects_action = None
         self.add_object_classes_action = None
-        self.find_next_action = None
+        self.add_object_group_action = None
+        self.manage_object_group_action = None
         self.duplicate_object_action = None
+        self.find_next_action = None
 
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)
         self.add_object_classes_action.setVisible(item.item_type == "root")
         self.add_objects_action.setVisible(item.item_type == "object class")
+        self.add_object_group_action.setVisible(item.item_type == "object class")
         self.add_relationship_classes_action.setVisible(item.item_type == "object class")
         self.add_relationships_action.setVisible(item.item_type == "relationship class")
+        self.manage_object_group_action.setVisible(item.item_type == "object" and item.is_group())
         self.duplicate_object_action.setVisible(item.item_type == "object")
         self.find_next_action.setVisible(item.item_type == "relationship")
 
@@ -223,6 +247,7 @@ class ObjectTreeView(EntityTreeView):
         self.add_objects_action = self._menu.addAction(
             self._data_store_form.ui.actionAdd_objects.icon(), "Add objects", self.add_objects
         )
+        self.add_object_group_action = self._menu.addAction("Add object group", self.add_object_group)
         self.add_relationship_classes_action = self._menu.addAction(
             self._data_store_form.ui.actionAdd_object_classes.icon(),
             "Add relationship classes",
@@ -235,6 +260,7 @@ class ObjectTreeView(EntityTreeView):
         self.find_next_action = self._menu.addAction(
             QIcon(":/icons/menu_icons/ellipsis-h.png"), "Find next", self.find_next_relationship
         )
+        self.manage_object_group_action = self._menu.addAction("Manage object group", self.manage_object_group)
         self.duplicate_object_action = self._menu.addAction(
             self._data_store_form.ui.actionAdd_objects.icon(), "Duplicate object", self.duplicate_object
         )
@@ -282,6 +308,16 @@ class ObjectTreeView(EntityTreeView):
         """Duplicate the object at the current index using the connected data store form."""
         index = self.currentIndex()
         self._data_store_form.duplicate_object(index)
+
+    def add_object_group(self):
+        index = self.currentIndex()
+        item = index.internalPointer()
+        self._data_store_form.show_add_object_group_form(item)
+
+    def manage_object_group(self):
+        index = self.currentIndex()
+        item = index.internalPointer()
+        self._data_store_form.show_manage_object_group_form(item)
 
 
 class RelationshipTreeView(EntityTreeView):
