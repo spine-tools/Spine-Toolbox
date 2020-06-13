@@ -79,9 +79,11 @@ class EntityTreeView(CopyTreeView):
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
 
     def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
 
     def rowsRemoved(self, parent, start, end):
+        super().rowsRemoved(parent, start, end)
         self._refresh_selected_indexes()
 
     @Slot("QModelIndex")

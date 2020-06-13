@@ -122,7 +122,7 @@ class TreeItem:
         bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
         if bad_types:
             raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
-        if position < 0 or position > self.child_count() + 1:
+        if position < 0 or position > self.child_count():
             return False
         children = list(children)
         for child in children:

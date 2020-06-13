@@ -48,8 +48,8 @@ class SpineDBFetcher(QObject):
         self.listener = listener
         self.db_maps = db_maps
         self._thread = QThread()
-        self.moveToThread(self._thread)
         # NOTE: by moving this to another thread, all the slots defined below are called on that thread too
+        self.moveToThread(self._thread)
         self._thread.start()
         self.connect_signals()
 
