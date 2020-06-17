@@ -37,8 +37,8 @@ from .edit_or_remove_items_dialogs import (
     EditRelationshipsDialog,
     RemoveEntitiesDialog,
 )
-from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel, AlternativeTreeModel
-from ...helpers import busy_effect
+from ..mvcmodels.alternative_tree_models import AlternativeTreeModel
+from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
 from ...spine_db_parcel import SpineDBParcel
 
 
