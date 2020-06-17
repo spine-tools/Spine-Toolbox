@@ -20,6 +20,7 @@ import os
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL, make_url
+from spine_engine import ExecutionDirection
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.helpers import create_dir
 from ..shared.commands import UpdateCancelOnErrorCommand
@@ -133,6 +134,23 @@ class Combiner(ProjectItem):
         """see base class"""
         self._update_references_list(resources)
         return True
+
+    @Slot()
+    def handle_execution_successful(self, execution_direction, engine_state):
+        """Notifies Toolbox of successful database import."""
+        if execution_direction != ExecutionDirection.FORWARD:
+            return
+        successors = self._project.direct_successors(self)
+        committed_db_maps = set()
+        for successor in successors:
+            if successor.item_type() == "Data Store":
+                url = successor.sql_alchemy_url()
+                database_map = self._project.db_mngr.get_db_map(url, self._logger)
+                if database_map is not None:
+                    committed_db_maps.add(database_map)
+        if committed_db_maps:
+            cookie = self
+            self._project.db_mngr.session_committed.emit(committed_db_maps, cookie)
 
     def _do_handle_dag_changed(self, resources):
         """Update the list of references that this item is viewing."""

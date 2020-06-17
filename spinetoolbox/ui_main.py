@@ -1011,9 +1011,9 @@ class ToolboxUI(QMainWindow):
             row (int): Row in ProjectItemSpecFactoryModel
             ask_verification (bool): If True, displays a dialog box asking user to verify the removal
         """
-        tool_spec = self.specification_model.specification(row)
+        specification = self.specification_model.specification(row)
         if ask_verification:
-            message = "Remove Specification <b>{0}</b> from Project?".format(tool_spec.name)
+            message = "Remove Specification <b>{0}</b> from Project?".format(specification.name)
             message_box = QMessageBox(
                 QMessageBox.Question,
                 "Remove Specification",
@@ -1025,10 +1025,18 @@ class ToolboxUI(QMainWindow):
             answer = message_box.exec_()
             if answer != QMessageBox.Ok:
                 return
+        items_with_removed_spec = list(self._get_specific_items(specification))
         if not self.specification_model.removeRow(row):
-            self.msg_error.emit("Error in removing specification <b>{0}</b>".format(tool_spec.name))
+            self.msg_error.emit("Error in removing specification <b>{0}</b>".format(specification.name))
             return
         self.msg_success.emit("Specification removed")
+        for project_item in items_with_removed_spec:
+            project_item.do_set_specification(None)
+            self.msg.emit(
+                "Specification <b>{0}</b> successfully removed from Item <b>{1}</b>".format(
+                    specification.name, project_item.name
+                )
+            )
 
     @Slot()
     def remove_all_items(self):

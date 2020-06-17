@@ -184,7 +184,7 @@ class AddSpecificationPopupMenu(CustomPopupMenu):
             # Pass item_type as keyword argument so it's not a cell variable
             self.add_action(
                 f"Create {item_type} Specification...",
-                lambda item_type=item_type, specification=None: parent.show_specification_form(
+                lambda checked=False, item_type=item_type: parent.show_specification_form(
                     item_type, specification=None
                 ),
             )

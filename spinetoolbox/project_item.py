@@ -194,7 +194,7 @@ class ProjectItem(MetaObject):
         """Creates project item's execution counterpart."""
         raise NotImplementedError()
 
-    def executed_successfully(self, execution_direction, engine_state):
+    def handle_execution_successful(self, execution_direction, engine_state):
         """Performs item dependent actions after the execution item has finished successfully."""
 
     # pylint: disable=no-self-use

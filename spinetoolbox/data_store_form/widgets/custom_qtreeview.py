@@ -79,9 +79,11 @@ class EntityTreeView(CopyTreeView):
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
 
     def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
 
     def rowsRemoved(self, parent, start, end):
+        super().rowsRemoved(parent, start, end)
         self._refresh_selected_indexes()
 
     @Slot("QModelIndex")
@@ -249,12 +251,12 @@ class ObjectTreeView(EntityTreeView):
         )
         self.add_object_group_action = self._menu.addAction("Add object group", self.add_object_group)
         self.add_relationship_classes_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_object_classes.icon(),
+            self._data_store_form.ui.actionAdd_relationship_classes.icon(),
             "Add relationship classes",
             self.add_relationship_classes,
         )
         self.add_relationships_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_objects.icon(), "Add relationships", self.add_relationships
+            self._data_store_form.ui.actionAdd_relationships.icon(), "Add relationships", self.add_relationships
         )
         self._menu.addSeparator()
         self.find_next_action = self._menu.addAction(
@@ -325,12 +327,12 @@ class RelationshipTreeView(EntityTreeView):
 
     def add_middle_actions(self):
         self.add_relationship_classes_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_object_classes.icon(),
+            self._data_store_form.ui.actionAdd_relationship_classes.icon(),
             "Add relationship classes",
             self.add_relationship_classes,
         )
         self.add_relationships_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_objects.icon(), "Add relationships", self.add_relationships
+            self._data_store_form.ui.actionAdd_relationships.icon(), "Add relationships", self.add_relationships
         )
 
     def update_actions_visibility(self, item):
