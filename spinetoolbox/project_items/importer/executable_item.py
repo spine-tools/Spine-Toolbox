@@ -95,10 +95,10 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._worker_thread = QThread()
         self._worker.moveToThread(self._worker_thread)
         self._worker.finished.connect(self._handle_worker_finished)
-        self._worker.finished.connect(lambda _: loop.quit())
-        self._worker_thread.started.connect(loop.exec_)
-        self._worker_thread.started.connect(self._worker.do_work)
+        self._worker.finished.connect(loop.quit)
+        self._worker_thread.started.connect(self._worker.run)
         self._worker_thread.start()
+        loop.exec_()
         if not self._worker_succeded:
             self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
         else:

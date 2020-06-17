@@ -62,7 +62,7 @@ class ImporterWorker(QObject):
         self._logger = logger
 
     @Slot()
-    def do_work(self):
+    def run(self):
         """Does the work and emits finished or failed when done.
         """
         all_data = []
