@@ -21,35 +21,34 @@ from PySide2.QtGui import QCursor
 
 
 class SpineDBFetcher(QObject):
-    """Fecthes content from a Spine database and 'sends' them to another thread (via a signal-slot mechanism of course),
+    """Fetches content from a Spine database and 'sends' them to another thread (via a signal-slot mechanism of course),
     so contents can be processed in that thread without affecting the UI."""
 
-    scenarios_fetched = Signal(object)
-    alternatives_fetched = Signal(object)
-    scenario_alternatives_fetched = Signal(object)
-    object_classes_fetched = Signal(object)
-    objects_fetched = Signal(object)
-    relationship_classes_fetched = Signal(object)
-    relationships_fetched = Signal(object)
-    entity_groups_fetched = Signal(object)
-    parameter_definitions_fetched = Signal(object)
-    parameter_values_fetched = Signal(object)
-    parameter_value_lists_fetched = Signal(object)
-    parameter_tags_fetched = Signal(object)
-    done = Signal()
+    finished = Signal(object)
+    _ready_to_finish = Signal()
+    _scenarios_fetched = Signal(object)
+    _alternatives_fetched = Signal(object)
+    _scenario_alternatives_fetched = Signal(object)
+    _object_classes_fetched = Signal(object)
+    _objects_fetched = Signal(object)
+    _relationship_classes_fetched = Signal(object)
+    _relationships_fetched = Signal(object)
+    _entity_groups_fetched = Signal(object)
+    _parameter_definitions_fetched = Signal(object)
+    _parameter_values_fetched = Signal(object)
+    _parameter_value_lists_fetched = Signal(object)
+    _parameter_tags_fetched = Signal(object)
 
-    def __init__(self, db_mngr, listener, *db_maps):
+    def __init__(self, db_mngr, listener):
         """Initializes the fetcher object.
 
         Args:
             db_mngr (SpineDBManager)
             listener (DataStoreForm)
-            db_maps (DiffDatabaseMapping)
         """
         super().__init__()
-        self.db_mngr = db_mngr
-        self.listener = listener
-        self.db_maps = db_maps
+        self._db_mngr = db_mngr
+        self._listener = listener
         self._thread = QThread()
         # NOTE: by moving this to another thread, all the slots defined below are called on that thread too
         self.moveToThread(self._thread)
@@ -58,115 +57,121 @@ class SpineDBFetcher(QObject):
 
     def connect_signals(self):
         """Connects signals."""
-        self.alternatives_fetched.connect(self.receive_alternatives_fetched)
-        self.scenarios_fetched.connect(self.receive_scenarios_fetched)
-        self.scenario_alternatives_fetched.connect(self.receive_scenario_alternatives_fetched)
-        self.object_classes_fetched.connect(self.receive_object_classes_fetched)
-        self.objects_fetched.connect(self.receive_objects_fetched)
-        self.relationship_classes_fetched.connect(self.receive_relationship_classes_fetched)
-        self.relationships_fetched.connect(self.receive_relationships_fetched)
-        self.entity_groups_fetched.connect(self.receive_entity_groups_fetched)
-        self.parameter_definitions_fetched.connect(self.receive_parameter_definitions_fetched)
-        self.parameter_values_fetched.connect(self.receive_parameter_values_fetched)
-        self.parameter_value_lists_fetched.connect(self.receive_parameter_value_lists_fetched)
-        self.parameter_tags_fetched.connect(self.receive_parameter_tags_fetched)
-        self.destroyed.connect(lambda: self.clean_up())  # pylint: disable=unnecessary-lambda
-        qApp.aboutToQuit.connect(self._thread.quit)  # pylint: disable=undefined-variable
+        self._ready_to_finish.connect(self._emit_finished_signal)
+        self._alternatives_fetched.connect(self._receive_alternatives_fetched)
+        self._scenarios_fetched.connect(self._receive_scenarios_fetched)
+        self._scenario_alternatives_fetched.connect(self._receive_scenario_alternatives_fetched)
+        self._object_classes_fetched.connect(self._receive_object_classes_fetched)
+        self._objects_fetched.connect(self._receive_objects_fetched)
+        self._relationship_classes_fetched.connect(self._receive_relationship_classes_fetched)
+        self._relationships_fetched.connect(self._receive_relationships_fetched)
+        self._entity_groups_fetched.connect(self._receive_entity_groups_fetched)
+        self._parameter_definitions_fetched.connect(self._receive_parameter_definitions_fetched)
+        self._parameter_values_fetched.connect(self._receive_parameter_values_fetched)
+        self._parameter_value_lists_fetched.connect(self._receive_parameter_value_lists_fetched)
+        self._parameter_tags_fetched.connect(self._receive_parameter_tags_fetched)
 
-    def start(self):
+    def fetch(self, db_maps):
         """Fetches items from the database and emit fetched signals.
         """
-        self.listener.setCursor(QCursor(Qt.BusyCursor))
-        self.listener.silenced = True
-        object_classes = {x: self.db_mngr.get_object_classes(x) for x in self.db_maps}
-        relationship_classes = {x: self.db_mngr.get_relationship_classes(x) for x in self.db_maps}
-        parameter_definitions = {x: self.db_mngr.get_parameter_definitions(x) for x in self.db_maps}
-        objects = {x: self.db_mngr.get_objects(x) for x in self.db_maps}
-        relationships = {x: self.db_mngr.get_relationships(x) for x in self.db_maps}
-        entity_groups = {x: self.db_mngr.get_entity_groups(x) for x in self.db_maps}
-        parameter_values = {x: self.db_mngr.get_parameter_values(x) for x in self.db_maps}
-        parameter_value_lists = {x: self.db_mngr.get_parameter_value_lists(x) for x in self.db_maps}
-        parameter_tags = {x: self.db_mngr.get_parameter_tags(x) for x in self.db_maps}
-        alternatives = {x: self.db_mngr.get_alternatives(x) for x in self.db_maps}
-        scenarios = {x: self.db_mngr.get_scenarios(x) for x in self.db_maps}
-        scenario_alternatives = {x: self.db_mngr.get_scenario_alternatives(x) for x in self.db_maps}
-        self.object_classes_fetched.emit(object_classes)
-        self.relationship_classes_fetched.emit(relationship_classes)
-        self.parameter_definitions_fetched.emit(parameter_definitions)
-        self.objects_fetched.emit(objects)
-        self.relationships_fetched.emit(relationships)
-        self.entity_groups_fetched.emit(entity_groups)
-        self.parameter_values_fetched.emit(parameter_values)
-        self.parameter_value_lists_fetched.emit(parameter_value_lists)
-        self.parameter_tags_fetched.emit(parameter_tags)
-        self.alternatives_fetched.emit(alternatives)
-        self.scenarios_fetched.emit(scenarios)
-        self.scenario_alternatives_fetched.emit(scenario_alternatives)
-        self.done.emit()
-        self.deleteLater()
+        self._listener.setCursor(QCursor(Qt.BusyCursor))
+        self._listener.silenced = True
+        object_classes = {x: self._db_mngr.get_object_classes(x) for x in db_maps}
+        self._object_classes_fetched.emit(object_classes)
+        relationship_classes = {x: self._db_mngr.get_relationship_classes(x) for x in db_maps}
+        self._relationship_classes_fetched.emit(relationship_classes)
+        parameter_definitions = {x: self._db_mngr.get_parameter_definitions(x) for x in db_maps}
+        self._parameter_definitions_fetched.emit(parameter_definitions)
+        objects = {x: self._db_mngr.get_objects(x) for x in db_maps}
+        self._objects_fetched.emit(objects)
+        relationships = {x: self._db_mngr.get_relationships(x) for x in db_maps}
+        self._relationships_fetched.emit(relationships)
+        entity_groups = {x: self._db_mngr.get_entity_groups(x) for x in db_maps}
+        self._entity_groups_fetched.emit(entity_groups)
+        parameter_values = {x: self._db_mngr.get_parameter_values(x) for x in db_maps}
+        self._parameter_values_fetched.emit(parameter_values)
+        parameter_value_lists = {x: self._db_mngr.get_parameter_value_lists(x) for x in db_maps}
+        self._parameter_value_lists_fetched.emit(parameter_value_lists)
+        parameter_tags = {x: self._db_mngr.get_parameter_tags(x) for x in db_maps}
+        self._parameter_tags_fetched.emit(parameter_tags)
+        alternatives = {x: self._db_mngr.get_alternatives(x) for x in db_maps}
+        self._alternatives_fetched.emit(alternatives)
+        scenarios = {x: self._db_mngr.get_scenarios(x) for x in db_maps}
+        self._scenarios_fetched.emit(scenarios)
+        scenario_alternatives = {x: self._db_mngr.get_scenario_alternatives(x) for x in db_maps}
+        self._scenario_alternatives_fetched.emit(scenario_alternatives)
+        self._ready_to_finish.emit()
 
     def clean_up(self):
+        self._listener.silenced = False
+        self._listener.unsetCursor()
+        self.quit()
+
+    def quit(self):
         self._thread.quit()
-        self.listener.silenced = False
-        self.listener.unsetCursor()
+        self._thread.wait()
 
     @Slot(object)
-    def receive_alternatives_fetched(self, db_map_data):
-        self.db_mngr.cache_items("alternative", db_map_data)
-        self.listener.receive_alternatives_added(db_map_data)
+    def _receive_alternatives_fetched(self, db_map_data):
+        self._db_mngr.cache_items("alternative", db_map_data)
+        self._listener.receive_alternatives_added(db_map_data)
 
     @Slot(object)
-    def receive_scenarios_fetched(self, db_map_data):
-        self.db_mngr.cache_items("scenario", db_map_data)
-        self.listener.receive_scenarios_added(db_map_data)
+    def _receive_scenarios_fetched(self, db_map_data):
+        self._db_mngr.cache_items("scenario", db_map_data)
+        self._listener.receive_scenarios_added(db_map_data)
 
     @Slot(object)
-    def receive_scenario_alternatives_fetched(self, db_map_data):
-        self.db_mngr.cache_items("scenario_alternative", db_map_data)
-        self.listener.receive_scenario_alternatives_added(db_map_data)
+    def _receive_scenario_alternatives_fetched(self, db_map_data):
+        self._db_mngr.cache_items("scenario_alternative", db_map_data)
+        self._listener.receive_scenario_alternatives_added(db_map_data)
 
     @Slot(object)
-    def receive_object_classes_fetched(self, db_map_data):
-        self.db_mngr.cache_items("object class", db_map_data)
-        self.db_mngr.update_icons(db_map_data)
-        self.listener.receive_object_classes_fetched(db_map_data)
+    def _receive_object_classes_fetched(self, db_map_data):
+        self._db_mngr.cache_items("object class", db_map_data)
+        self._db_mngr.update_icons(db_map_data)
+        self._listener.receive_object_classes_fetched(db_map_data)
 
     @Slot(object)
-    def receive_objects_fetched(self, db_map_data):
-        self.db_mngr.cache_items("object", db_map_data)
-        self.listener.receive_objects_fetched(db_map_data)
+    def _receive_objects_fetched(self, db_map_data):
+        self._db_mngr.cache_items("object", db_map_data)
+        self._listener.receive_objects_fetched(db_map_data)
 
     @Slot(object)
-    def receive_relationship_classes_fetched(self, db_map_data):
-        self.db_mngr.cache_items("relationship class", db_map_data)
-        self.listener.receive_relationship_classes_fetched(db_map_data)
+    def _receive_relationship_classes_fetched(self, db_map_data):
+        self._db_mngr.cache_items("relationship class", db_map_data)
+        self._listener.receive_relationship_classes_fetched(db_map_data)
 
     @Slot(object)
-    def receive_relationships_fetched(self, db_map_data):
-        self.db_mngr.cache_items("relationship", db_map_data)
-        self.listener.receive_relationships_fetched(db_map_data)
+    def _receive_relationships_fetched(self, db_map_data):
+        self._db_mngr.cache_items("relationship", db_map_data)
+        self._listener.receive_relationships_fetched(db_map_data)
 
     @Slot(object)
-    def receive_entity_groups_fetched(self, db_map_data):
-        self.db_mngr.cache_items("entity group", db_map_data)
-        self.listener.receive_entity_groups_fetched(db_map_data)
+    def _receive_entity_groups_fetched(self, db_map_data):
+        self._db_mngr.cache_items("entity group", db_map_data)
+        self._listener.receive_entity_groups_fetched(db_map_data)
 
     @Slot(object)
-    def receive_parameter_definitions_fetched(self, db_map_data):
-        self.db_mngr.cache_items("parameter definition", db_map_data)
-        self.listener.receive_parameter_definitions_fetched(db_map_data)
+    def _receive_parameter_definitions_fetched(self, db_map_data):
+        self._db_mngr.cache_items("parameter definition", db_map_data)
+        self._listener.receive_parameter_definitions_fetched(db_map_data)
 
     @Slot(object)
-    def receive_parameter_values_fetched(self, db_map_data):
-        self.db_mngr.cache_items("parameter value", db_map_data)
-        self.listener.receive_parameter_values_fetched(db_map_data)
+    def _receive_parameter_values_fetched(self, db_map_data):
+        self._db_mngr.cache_items("parameter value", db_map_data)
+        self._listener.receive_parameter_values_fetched(db_map_data)
 
     @Slot(object)
-    def receive_parameter_value_lists_fetched(self, db_map_data):
-        self.db_mngr.cache_items("parameter value list", db_map_data)
-        self.listener.receive_parameter_value_lists_fetched(db_map_data)
+    def _receive_parameter_value_lists_fetched(self, db_map_data):
+        self._db_mngr.cache_items("parameter value list", db_map_data)
+        self._listener.receive_parameter_value_lists_fetched(db_map_data)
 
     @Slot(object)
-    def receive_parameter_tags_fetched(self, db_map_data):
-        self.db_mngr.cache_items("parameter tag", db_map_data)
-        self.listener.receive_parameter_tags_fetched(db_map_data)
+    def _receive_parameter_tags_fetched(self, db_map_data):
+        self._db_mngr.cache_items("parameter tag", db_map_data)
+        self._listener.receive_parameter_tags_fetched(db_map_data)
+
+    @Slot()
+    def _emit_finished_signal(self):
+        self.finished.emit(self)
