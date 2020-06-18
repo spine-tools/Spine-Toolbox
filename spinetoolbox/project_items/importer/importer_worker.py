@@ -17,7 +17,7 @@ Contains importer_program script.
 """
 
 import os
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide2.QtCore import Signal, QThread
 import spinedb_api
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
@@ -27,9 +27,9 @@ from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 from ..shared.helpers import create_log_file_timestamp
 
 
-class ImporterWorker(QObject):
+class ImporterWorker(QThread):
 
-    finished = Signal(int)
+    import_finished = Signal(int)
     """Emitted when work is finished with 0 if successful, -1 otherwise."""
 
     def __init__(
@@ -61,10 +61,8 @@ class ImporterWorker(QObject):
         self._cancel_on_error = cancel_on_error
         self._logger = logger
 
-    @Slot()
     def run(self):
-        """Does the work and emits finished or failed when done.
-        """
+        """Does the work and emits import_finished or failed when done."""
         all_data = []
         all_errors = []
         for source in self._checked_files:
@@ -86,7 +84,7 @@ class ImporterWorker(QObject):
                 connector.connect_to_source(source)
             except IOError as error:
                 self._logger.msg_error.emit(f"Failed to connect to source: {error}")
-                self.finished.emit(-1)
+                self.import_finished.emit(-1)
             table_mappings = {
                 name: mapping
                 for name, mapping in settings.get("table_mappings", {}).items()
@@ -113,7 +111,7 @@ class ImporterWorker(QObject):
             except spinedb_api.InvalidMapping as error:
                 self._logger.msg_error.emit(f"Failed to import '{source}': {error}")
                 if self._cancel_on_error:
-                    self.finished.emit(-1)
+                    self.import_finished.emit(-1)
                 else:
                     continue
             self._logger.msg_success.emit(
@@ -133,19 +131,19 @@ class ImporterWorker(QObject):
                 "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
             )
 
-            self._logger.msg_error("Import errors. Logfile: {0}".format(logfile_anchor))
+            self._logger.msg_error.emit("Import errors. Logfile: {0}".format(logfile_anchor))
             if self._cancel_on_error:
-                self.finished.emit(-1)
+                self.import_finished.emit(-1)
         if all_data:
             for url in self._urls_downstream:
                 self._import(all_data, url)
-        self.finished.emit(0)
+        self.import_finished.emit(0)
 
     def _import(self, all_data, url):
         try:
             db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
         except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
-            self._logger.msg_error(
+            self._logger.msg_error.emit(
                 "Unable to create database mapping, all import operations will be omitted: {0}".format(err)
             )
             return
@@ -158,7 +156,7 @@ class ImporterWorker(QObject):
                     db_map.rollback_session()
             elif import_num:
                 db_map.commit_session("Import data by Spine Toolbox Importer")
-                self._logger.msg_success(
+                self._logger.msg_success.emit(
                     "Inserted {0} data with {1} errors into {2}".format(import_num, len(import_errors), url)
                 )
         db_map.connection.close()
@@ -174,4 +172,4 @@ class ImporterWorker(QObject):
                 "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
             )
             rollback_text = ", rolling back" if self._cancel_on_error else ""
-            self._logger.msg_error("Import errors{0}. Logfile: {1}".format(rollback_text, logfile_anchor))
+            self._logger.msg_error.emit("Import errors{0}. Logfile: {1}".format(rollback_text, logfile_anchor))

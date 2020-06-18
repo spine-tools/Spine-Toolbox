@@ -50,8 +50,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._cancel_on_error = cancel_on_error
         self._resources_from_downstream = list()
         self._worker = None
-        self._worker_thread = None
-        self._worker_succeded = None
+        self._worker_succeeded = None
 
     @staticmethod
     def item_type():
@@ -61,9 +60,12 @@ class ExecutableItem(ExecutableItemBase, QObject):
     def stop_execution(self):
         """Stops executing this ImporterExecutable."""
         super().stop_execution()
-        if self._importer_process is None:
+        if not self._worker:
             return
-        self._importer_process.kill()
+        self._worker.quit()
+        self._worker.wait()
+        self._worker.deleteLater()
+        self._worker = None
 
     def _execute_backward(self, resources):
         """See base class."""
@@ -81,8 +83,8 @@ class ExecutableItem(ExecutableItemBase, QObject):
             if absolute_path is not None:
                 absolute_path_settings[absolute_path] = self._settings[label]
         source_settings = {"GdxConnector": {"gams_directory": self._gams_system_directory()}}
-        loop = QEventLoop()
         self._destroy_current_worker()
+        loop = QEventLoop()
         self._worker = ImporterWorker(
             list(absolute_paths.values()),
             absolute_path_settings,
@@ -92,35 +94,32 @@ class ExecutableItem(ExecutableItemBase, QObject):
             self._cancel_on_error,
             self._logger,
         )
-        self._worker_thread = QThread()
-        self._worker.moveToThread(self._worker_thread)
-        self._worker.finished.connect(self._handle_worker_finished)
         self._worker.finished.connect(loop.quit)
-        self._worker_thread.started.connect(self._worker.run)
-        self._worker_thread.start()
+        self._worker.finished.connect(self._worker.deleteLater)
+        self._worker.import_finished.connect(self._handle_worker_finished)
+        self._worker.start()
         loop.exec_()
-        if not self._worker_succeded:
+        if not self._worker_succeeded:
             self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
         else:
             self._logger.msg_success.emit(f"Executing Importer {self.name} finished")
-        return self._worker_succeded
+        return self._worker_succeeded
 
     @Slot(int)
     def _handle_worker_finished(self, exit_code):
         self._destroy_current_worker()
-        self._worker_succeded = exit_code == 0
+        self._worker_succeeded = exit_code == 0
 
     def _destroy_current_worker(self):
         """Runs when starting execution and after worker finishes.
-        Destroys current worker and quits thread, if any.
+        Destroys current worker if present.
         """
         if self._worker:
+            self._worker.quit()
             self._worker.deleteLater()
             self._worker = None
-        if self._worker_thread:
-            self._worker_thread.quit()
-            self._worker_thread.wait()
-            self._worker_thread = None
+        # if self.loop:
+        #     self.loop.quit()
 
     def _gams_system_directory(self):
         """Returns GAMS system path or None if GAMS default is to be used."""
