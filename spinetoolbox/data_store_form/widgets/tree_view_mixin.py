@@ -15,7 +15,7 @@ Contains the TreeViewMixin class.
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
-from PySide2.QtCore import Signal, Slot, QTimer
+from PySide2.QtCore import Slot, QTimer
 from PySide2.QtWidgets import QInputDialog
 from .add_items_dialogs import (
     AddAlternativesDialog,
