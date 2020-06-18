@@ -129,7 +129,7 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self.icon_mngr = {}
         self.signaller = SpineDBSignaller(self)
-        self.fetchers = []
+        self._fetchers = []
         self.connect_signals()
 
     @property
@@ -317,13 +317,35 @@ class SpineDBManager(QObject):
         """Fetches given db_map for given listener.
 
         Args:
-            db_map (DiffDatabaseMapping)
             listener (DataStoreForm)
+            *db_maps: database maps to fetch
         """
-        fetcher = SpineDBFetcher(self, listener, *db_maps)
-        self.fetchers.append(fetcher)
-        fetcher.done.connect(lambda fetcher=fetcher: self.fetchers.remove(fetcher))
-        fetcher.start()
+        fetcher = SpineDBFetcher(self, listener)
+        fetcher.finished.connect(self._clean_up_fetcher)
+        self._fetchers.append(fetcher)
+        fetcher.fetch(db_maps)
+
+    @Slot(object)
+    def _clean_up_fetcher(self, fetcher):
+        """
+        Cleans up things after fetcher has finished working.
+
+        Args:
+            fetcher (SpineDBFetcher): the fetcher to clean up
+        """
+        fetcher.clean_up()
+        fetcher.deleteLater()
+        self._fetchers.remove(fetcher)
+
+    @Slot()
+    def _stop_fetchers(self):
+        """
+        Quits all fetchers and deletes them.
+        """
+        for fetcher in self._fetchers:
+            fetcher.quit()
+            fetcher.deleteLater()
+        self._fetchers.clear()
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set()
@@ -547,6 +569,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
+        qApp.aboutToQuit.connect(self._stop_fetchers)  # pylint: disable=undefined-variable
 
     def error_msg(self, db_map_error_log):
         db_msgs = []
