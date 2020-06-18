@@ -185,7 +185,7 @@ class ObjectTreeModel(MultiDBTreeModel):
         pos = object_ids.index(obj_id) - 1
         object_id = object_ids[pos]
         object_class_id = object_class_ids[pos]
-        # Return first node that passes all cascade fiters
+        # Return first node that passes all cascade filters
         for parent_item in self.find_items(db_map, (object_class_id, object_id, rel_cls_id), fetch=True):
             for item in parent_item.find_children(lambda child: child.display_id == rel_item.display_id):
                 return self.index_from_item(item)

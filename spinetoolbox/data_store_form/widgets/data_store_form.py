@@ -905,7 +905,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_parameter_value_list,
         ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.2 * width, 0.4 * width, 0.2 * width], Qt.Horizontal)
         self.end_style_change()
 
     @Slot(bool)
