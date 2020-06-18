@@ -683,6 +683,7 @@ class TabularViewMixin:
                 self.clear_pivot_table()
                 break
 
+    @Slot(object)
     def receive_alternatives_added(self, db_map_data):
         """Reacts to alternatives added event."""
         super().receive_alternatives_added(db_map_data)

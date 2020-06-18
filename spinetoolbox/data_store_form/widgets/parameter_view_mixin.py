@@ -319,15 +319,18 @@ class ParameterViewMixin:
         self.object_parameter_value_model.receive_alternatives_updated(db_map_data)
         self.relationship_parameter_value_model.receive_alternatives_updated(db_map_data)
 
+    @Slot(object)
     def receive_parameter_tags_fetched(self, db_map_data):
         super().receive_parameter_tags_fetched(db_map_data)
         self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
 
+    @Slot(object)
     def receive_parameter_definitions_fetched(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
         self.relationship_parameter_definition_model.receive_parameter_data_added(db_map_data)
 
+    @Slot(object)
     def receive_parameter_values_fetched(self, db_map_data):
         super().receive_parameter_values_added(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_added(db_map_data)

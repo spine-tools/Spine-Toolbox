@@ -603,48 +603,51 @@ class DataStoreFormBase(QMainWindow):
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
 
+    @Slot(object)
     def receive_scenarios_added(self, db_map_data):
         self.notify_items_changed("added", "scenarios", db_map_data)
 
+    @Slot(object)
     def receive_scenario_alternatives_added(self, db_map_data):
         self.notify_items_changed("added", "scenario alternatives", db_map_data)
 
+    @Slot(object)
     def receive_alternatives_added(self, db_map_data):
         self.notify_items_changed("added", "alternatives", db_map_data)
 
-    def receive_scenarios_fetched(self, db_map_data):
-        pass
-
-    def receive_scenario_alternatives_fetched(self, db_map_data):
-        pass
-
-    def receive_alternatives_fetched(self, db_map_data):
-        pass
-
+    @Slot(object)
     def receive_object_classes_fetched(self, db_map_data):
         pass
 
+    @Slot(object)
     def receive_objects_fetched(self, db_map_data):
         pass
 
+    @Slot(object)
     def receive_relationship_classes_fetched(self, db_map_data):
         pass
 
+    @Slot(object)
     def receive_relationships_fetched(self, db_map_data):
         pass
 
+    @Slot(object)
     def receive_entity_groups_fetched(self, db_map_data):
         pass
 
+    @Slot(object)
     def receive_parameter_definitions_fetched(self, db_map_data):
         pass
 
+    @Slot(object)
     def receive_parameter_values_fetched(self, db_map_data):
         pass
 
+    @Slot(object)
     def receive_parameter_value_lists_fetched(self, db_map_data):
         self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
 
+    @Slot(object)
     def receive_parameter_tags_fetched(self, db_map_data):
         pass
 
