@@ -100,7 +100,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._worker.start()
         loop.exec_()
         if not self._worker_succeeded:
-            self._logger.msg_error.emit(f"Executing Importer {self.name} failed.")
+            self._logger.msg_error.emit(f"Executing Importer {self.name} failed")
         else:
             self._logger.msg_success.emit(f"Executing Importer {self.name} finished")
         return self._worker_succeeded
@@ -118,8 +118,6 @@ class ExecutableItem(ExecutableItemBase, QObject):
             self._worker.quit()
             self._worker.deleteLater()
             self._worker = None
-        # if self.loop:
-        #     self.loop.quit()
 
     def _gams_system_directory(self):
         """Returns GAMS system path or None if GAMS default is to be used."""
