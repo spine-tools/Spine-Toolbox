@@ -166,7 +166,7 @@ class ImporterWorker(QThread):
             logfilepath = os.path.abspath(os.path.join(self._logs_dir, timestamp + "_error.log"))
             with open(logfilepath, 'w') as f:
                 for err in all_import_errors:
-                    f.write("{0}\n".format(err.msg))
+                    f.write("{0}\n".format(err))
             # Make error log file anchor with path as tooltip
             logfile_anchor = (
                 "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
