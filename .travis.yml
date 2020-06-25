@@ -16,7 +16,7 @@ jobs:
       cache: pip
       install:
         - pip install -r requirements.txt
-        - pip install coveralls
+        - pip install coverage
       script:
         - QT_QPA_PLATFORM=offscreen coverage run -m unittest discover --verbose
 
@@ -32,10 +32,9 @@ jobs:
       cache: pip
       install:
         - pip install -r requirements.txt
-        - pip install coveralls
+        - pip install coverage
       script:
         - coverage run -m unittest discover --verbose
 after_success:
   coveralls
-  bash <(curl -s https://codecov.io/bash)
-
+  codecov
