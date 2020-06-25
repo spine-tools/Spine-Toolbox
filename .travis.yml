@@ -13,11 +13,8 @@ jobs:
       - sudo apt-get install -y unixodbc-dev  # Install to get sql.h headers
       services:
       - xvfb  # X Virtual Framebuffer for tests that require display
-      cache: pip
-      install:
-        - pip install -r requirements.txt
       script:
-        - QT_QPA_PLATFORM=offscreen python -m unittest discover --verbose
+        - QT_QPA_PLATFORM=offscreen coverage run -m unittest discover --verbose
 
     - name: "Unit tests with Python 3.7 on Windows"
       os: windows
@@ -28,8 +25,13 @@ jobs:
       env:
         - PATH=/c/Python37:/c/Python37/Scripts:$PATH
         - PYTHONUTF8=1  # gdxcc fails to install without this
-      cache: pip
-      install:
-        - pip install -r requirements.txt
       script:
-        - python -m unittest discover --verbose
+        - coverage run -m unittest discover --verbose
+
+cache: pip
+install:
+  - pip install -r requirements.txt
+  - pip install coverage
+  - pip install codecov
+after_success:
+  - codecov
