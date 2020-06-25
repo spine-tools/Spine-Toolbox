@@ -18,18 +18,13 @@ Contains Combiner's executable item as well as support utilities.
 
 import os
 import pathlib
-from PySide2.QtCore import QObject, QEventLoop, Signal, Slot
+from PySide2.QtCore import QObject, QEventLoop, Slot, QThread
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from .item_info import ItemInfo
-from . import combiner_program
-from ..shared.helpers import make_python_process
+from .combiner_worker import CombinerWorker
 
 
 class ExecutableItem(ExecutableItemBase, QObject):
-
-    recombination_finished = Signal()
-    """Emitted after the separate combiner process has finished executing."""
-
     def __init__(self, name, logs_dir, python_path, cancel_on_error, logger):
         """
         Args:
@@ -45,8 +40,8 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._logs_dir = logs_dir
         self._python_path = python_path
         self._cancel_on_error = cancel_on_error
-        self._combiner_process = None
-        self._combiner_process_successful = None
+        self._worker = None
+        self._worker_thread = None
 
     @staticmethod
     def item_type():
@@ -78,51 +73,28 @@ class ExecutableItem(ExecutableItemBase, QObject):
         if not from_urls or not to_urls:
             # Moving on...
             return True
-        combiner_args = [from_urls, to_urls, self._logs_dir, self._cancel_on_error]
-        if not self._prepare_combiner_program(combiner_args):
-            self._logger.msg_error.emit(f"Executing Combiner {self.name} failed.")
-            return False
-        self._combiner_process.start_execution()
         loop = QEventLoop()
-        self.recombination_finished.connect(loop.quit)
-        # Wait for finished right here
-        loop.exec_()
-        # This should be executed after the import process has finished
-        if not self._combiner_process_successful:
-            self._logger.msg_error.emit(f"Executing Combiner {self.name} failed.")
-        else:
-            self._logger.msg_success.emit(f"Executing Combiner {self.name} finished")
-        return self._combiner_process_successful
-
-    def _prepare_combiner_program(self, combiner_args):
-        """Prepares an execution manager instance for running
-        combiner_program.py in a QProcess.
-
-        Args:
-            importer_args (list): Arguments for the combiner_program. From urls, to urls, logs directory
-
-        Returns:
-            bool: True if preparing the program succeeded, False otherwise.
-
-        """
-        self._combiner_process = make_python_process(
-            combiner_program.__file__, combiner_args, self._python_path, self._logger
-        )
-        if self._combiner_process is None:
-            return False
-        self._combiner_process.execution_finished.connect(self._handle_combiner_program_process_finished)
+        self._destroy_current_worker()
+        self._worker = CombinerWorker(from_urls, to_urls, self._logs_dir, self._cancel_on_error, self._logger)
+        self._worker_thread = QThread()
+        self._worker.moveToThread(self._worker_thread)
+        self._worker.finished.connect(self._destroy_current_worker)  # Not *truly* needed, but anyways...
+        self._worker.finished.connect(loop.quit)
+        self._worker_thread.started.connect(loop.exec_)
+        self._worker_thread.started.connect(self._worker.do_work)
+        self._worker_thread.start()
+        self._logger.msg_success.emit(f"Executing Combiner {self.name} finished")
         return True
 
-    @Slot(int)
-    def _handle_combiner_program_process_finished(self, exit_code):
-        """Handles the return value from combiner_program.py when it has finished.
-        Emits a signal to indicate that this Combiner has been executed.
-
-        Args:
-            exit_code (int): Process return value. 0: success, !0: failure
+    @Slot()
+    def _destroy_current_worker(self):
+        """Runs when starting execution and after worker finishes.
+        Destroys current worker and quits thread, if any.
         """
-        self._combiner_process.execution_finished.disconnect()
-        self._combiner_process.deleteLater()
-        self._combiner_process = None
-        self._combiner_process_successful = exit_code == 0
-        self.recombination_finished.emit()
+        if self._worker:
+            self._worker.deleteLater()
+            self._worker = None
+        if self._worker_thread:
+            self._worker_thread.quit()
+            self._worker_thread.wait()
+            self._worker_thread = None

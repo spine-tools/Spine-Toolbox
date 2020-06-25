@@ -78,6 +78,7 @@ class SpineDBManager(QObject):
     objects_added = Signal(object)
     relationship_classes_added = Signal(object)
     relationships_added = Signal(object)
+    entity_groups_added = Signal(object)
     parameter_definitions_added = Signal(object)
     parameter_values_added = Signal(object)
     parameter_value_lists_added = Signal(object)
@@ -87,6 +88,7 @@ class SpineDBManager(QObject):
     objects_removed = Signal(object)
     relationship_classes_removed = Signal(object)
     relationships_removed = Signal(object)
+    entity_groups_removed = Signal(object)
     parameter_definitions_removed = Signal(object)
     parameter_values_removed = Signal(object)
     parameter_value_lists_removed = Signal(object)
@@ -127,7 +129,7 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self.icon_mngr = {}
         self.signaller = SpineDBSignaller(self)
-        self.fetchers = []
+        self._fetchers = []
         self.connect_signals()
 
     @property
@@ -315,12 +317,35 @@ class SpineDBManager(QObject):
         """Fetches given db_map for given listener.
 
         Args:
-            db_map (DiffDatabaseMapping)
             listener (DataStoreForm)
+            *db_maps: database maps to fetch
         """
-        fetcher = SpineDBFetcher(self, listener, *db_maps)
-        self.fetchers.append(fetcher)
-        fetcher.run()
+        fetcher = SpineDBFetcher(self, listener)
+        fetcher.finished.connect(self._clean_up_fetcher)
+        self._fetchers.append(fetcher)
+        fetcher.fetch(db_maps)
+
+    @Slot(object)
+    def _clean_up_fetcher(self, fetcher):
+        """
+        Cleans up things after fetcher has finished working.
+
+        Args:
+            fetcher (SpineDBFetcher): the fetcher to clean up
+        """
+        fetcher.clean_up()
+        fetcher.deleteLater()
+        self._fetchers.remove(fetcher)
+
+    @Slot()
+    def _stop_fetchers(self):
+        """
+        Quits all fetchers and deletes them.
+        """
+        for fetcher in self._fetchers:
+            fetcher.quit()
+            fetcher.deleteLater()
+        self._fetchers.clear()
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set()
@@ -474,6 +499,7 @@ class SpineDBManager(QObject):
         self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_added.connect(lambda db_map_data: self.cache_items("relationship class", db_map_data))
         self.relationships_added.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
+        self.entity_groups_added.connect(lambda db_map_data: self.cache_items("entity group", db_map_data))
         self.parameter_definitions_added.connect(
             lambda db_map_data: self.cache_items("parameter definition", db_map_data)
         )
@@ -534,6 +560,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("relationship class", db_map_data)
         )
         self.relationships_removed.connect(lambda db_map_data: self.uncache_items("relationship", db_map_data))
+        self.entity_groups_removed.connect(lambda db_map_data: self.uncache_items("entity group", db_map_data))
         self.parameter_definitions_removed.connect(
             lambda db_map_data: self.uncache_items("parameter definition", db_map_data)
         )
@@ -542,6 +569,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.uncache_items("parameter value list", db_map_data)
         )
         self.parameter_tags_removed.connect(lambda db_map_data: self.uncache_items("parameter tag", db_map_data))
+        qApp.aboutToQuit.connect(self._stop_fetchers)  # pylint: disable=undefined-variable
 
     def error_msg(self, db_map_error_log):
         db_msgs = []
@@ -611,7 +639,7 @@ class SpineDBManager(QObject):
         for db_map, object_classes in db_map_data.items():
             self.icon_mngr.setdefault(db_map, IconManager()).setup_object_pixmaps(object_classes)
 
-    def entity_class_icon(self, db_map, entity_type, entity_class_id):
+    def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an appropriate icon for a given entity class.
 
         Args:
@@ -626,6 +654,8 @@ class SpineDBManager(QObject):
         if not entity_class:
             return None
         if entity_type == "object class":
+            if for_group:
+                return self.icon_mngr[db_map].group_object_icon(entity_class["name"])
             return self.icon_mngr[db_map].object_icon(entity_class["name"])
         if entity_type == "relationship class":
             return self.icon_mngr[db_map].relationship_icon(entity_class["object_class_name_list"])
@@ -805,8 +835,8 @@ class SpineDBManager(QObject):
         return None
 
     @staticmethod
-    def get_db_items(query, order_by_fields):
-        return sorted((x._asdict() for x in query), key=lambda x: tuple(x[f] for f in order_by_fields))
+    def get_db_items(query, key=lambda x: x["id"]):
+        return sorted((x._asdict() for x in query), key=key)
 
     @staticmethod
     def _make_query(db_map, sq_name, ids=()):
@@ -825,7 +855,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "object_class_sq", ids=ids), ("name",))
+        return self.get_db_items(self._make_query(db_map, "object_class_sq", ids=ids), key=lambda x: x["name"])
 
     def get_objects(self, db_map, ids=()):
         """Returns objects from database.
@@ -836,7 +866,9 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "ext_object_sq", ids=ids), ("class_id", "name"))
+        return self.get_db_items(
+            self._make_query(db_map, "ext_object_sq", ids=ids), key=lambda x: (x["class_id"], x["name"])
+        )
 
     def get_relationship_classes(self, db_map, ids=()):
         """Returns relationship classes from database.
@@ -847,7 +879,9 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "wide_relationship_class_sq", ids=ids), ("name",))
+        return self.get_db_items(
+            self._make_query(db_map, "wide_relationship_class_sq", ids=ids), key=lambda x: x["name"]
+        )
 
     def get_relationships(self, db_map, ids=()):
         """Returns relationships from database.
@@ -859,8 +893,20 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         return self.get_db_items(
-            self._make_query(db_map, "wide_relationship_sq", ids=ids), ("class_id", "object_name_list")
+            self._make_query(db_map, "wide_relationship_sq", ids=ids),
+            key=lambda x: (x["class_id"], x["object_name_list"]),
         )
+
+    def get_entity_groups(self, db_map, ids=()):
+        """Returns entity groups from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
+        """
+        return self.get_db_items(self._make_query(db_map, "entity_group_sq", ids=ids))
 
     def get_object_parameter_definitions(self, db_map, ids=()):
         """Returns object parameter definitions from database.
@@ -872,7 +918,8 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         items = self.get_db_items(
-            self._make_query(db_map, "object_parameter_definition_sq", ids=ids), ("object_class_name", "parameter_name")
+            self._make_query(db_map, "object_parameter_definition_sq", ids=ids),
+            key=lambda x: (x["object_class_name"], x["parameter_name"]),
         )
         return items
 
@@ -887,7 +934,7 @@ class SpineDBManager(QObject):
         """
         return self.get_db_items(
             self._make_query(db_map, "relationship_parameter_definition_sq", ids=ids),
-            ("relationship_class_name", "parameter_name"),
+            key=lambda x: (x["relationship_class_name"], x["parameter_name"]),
         )
 
     def get_parameter_definitions(self, db_map, ids=()):
@@ -914,7 +961,7 @@ class SpineDBManager(QObject):
         """
         return self.get_db_items(
             self._make_query(db_map, "object_parameter_value_sq", ids=ids),
-            ("object_class_name", "object_name", "parameter_name"),
+            key=lambda x: (x["object_class_name"], x["object_name"], x["parameter_name"]),
         )
 
     def get_relationship_parameter_values(self, db_map, ids=()):
@@ -928,7 +975,7 @@ class SpineDBManager(QObject):
         """
         return self.get_db_items(
             self._make_query(db_map, "relationship_parameter_value_sq", ids=ids),
-            ("relationship_class_name", "object_name_list", "parameter_name"),
+            key=lambda x: (x["relationship_class_name"], x["object_name_list"], x["parameter_name"]),
         )
 
     def get_parameter_values(self, db_map, ids=()):
@@ -953,7 +1000,9 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "wide_parameter_value_list_sq", ids=ids), ("name",))
+        return self.get_db_items(
+            self._make_query(db_map, "wide_parameter_value_list_sq", ids=ids), key=lambda x: x["name"]
+        )
 
     def get_parameter_tags(self, db_map, ids=()):
         """Get parameter tags from database.
@@ -964,7 +1013,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "parameter_tag_sq", ids=ids), ("tag",))
+        return self.get_db_items(self._make_query(db_map, "parameter_tag_sq", ids=ids), key=lambda x: x["tag"])
 
     def get_parameter_definition_tags(self, db_map, ids=()):
         """Returns parameter definition tags from database.
@@ -975,7 +1024,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "wide_parameter_definition_tag_sq", ids=ids), ("id",))
+        return self.get_db_items(self._make_query(db_map, "wide_parameter_definition_tag_sq", ids=ids))
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -996,11 +1045,14 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(import_command)
             for item_type, (to_add, to_update, import_error_log) in get_data_for_import(db_map, **data):
                 error_log[db_map] = [str(x) for x in import_error_log]
-                add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
-                upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=import_command)
-                add_cmd.redo()
-                upd_cmd.redo()
-                child_cmds += [add_cmd, upd_cmd]
+                if to_add:
+                    add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
+                    add_cmd.redo()
+                    child_cmds.append(add_cmd)
+                if to_update:
+                    upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=import_command)
+                    upd_cmd.redo()
+                    child_cmds.append(upd_cmd)
             if all([cmd.isObsolete() for cmd in child_cmds]):
                 # Nothing imported. Set the command obsolete and call undo() on the stack to removed it
                 import_command.setObsolete(True)
@@ -1065,6 +1117,24 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "relationship"))
+
+    def add_object_groups(self, db_map_data):
+        """Adds object groups to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object group"))
+
+    def add_entity_groups(self, db_map_data):
+        """Adds entity groups to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "entity group"))
 
     def add_parameter_definitions(self, db_map_data):
         """Adds parameter definitions to db.
@@ -1240,6 +1310,7 @@ class SpineDBManager(QObject):
         db_map_objects = dict()
         db_map_relationship_classes = dict()
         db_map_relationships = dict()
+        db_map_entity_groups = dict()
         db_map_parameter_definitions = dict()
         db_map_parameter_values = dict()
         db_map_parameter_value_lists = dict()
@@ -1250,6 +1321,7 @@ class SpineDBManager(QObject):
             objects = items_per_type.get("object", ())
             relationship_classes = items_per_type.get("relationship class", ())
             relationships = items_per_type.get("relationship", ())
+            entity_groups = items_per_type.get("entity group", ())
             parameter_definitions = items_per_type.get("parameter definition", ())
             parameter_values = items_per_type.get("parameter value", ())
             parameter_value_lists = items_per_type.get("parameter value list", ())
@@ -1260,6 +1332,7 @@ class SpineDBManager(QObject):
                     object_ids={x['id'] for x in objects},
                     relationship_class_ids={x['id'] for x in relationship_classes},
                     relationship_ids={x['id'] for x in relationships},
+                    entity_group_ids={x['id'] for x in entity_groups},
                     parameter_definition_ids={x['id'] for x in parameter_definitions},
                     parameter_value_ids={x['id'] for x in parameter_values},
                     parameter_value_list_ids={x['id'] for x in parameter_value_lists},
@@ -1272,6 +1345,7 @@ class SpineDBManager(QObject):
             db_map_objects[db_map] = objects
             db_map_relationship_classes[db_map] = relationship_classes
             db_map_relationships[db_map] = relationships
+            db_map_entity_groups[db_map] = entity_groups
             db_map_parameter_definitions[db_map] = parameter_definitions
             db_map_parameter_values[db_map] = parameter_values
             db_map_parameter_value_lists[db_map] = parameter_value_lists
@@ -1286,6 +1360,8 @@ class SpineDBManager(QObject):
             self.relationship_classes_removed.emit(db_map_relationship_classes)
         if any(db_map_relationships.values()):
             self.relationships_removed.emit(db_map_relationships)
+        if any(db_map_entity_groups.values()):
+            self.entity_groups_removed.emit(db_map_entity_groups)
         if any(db_map_parameter_definitions.values()):
             self.parameter_definitions_removed.emit(db_map_parameter_definitions)
         if any(db_map_parameter_values.values()):

@@ -26,7 +26,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from .edit_or_remove_items_dialogs import ManageParameterTagsDialog
+from .manage_items_dialogs import ManageParameterTagsDialog
 
 
 class ParameterViewMixin:

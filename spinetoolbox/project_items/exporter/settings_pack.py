@@ -109,6 +109,7 @@ class SettingsPack(QObject):
             logger.msg_error.emit(
                 f"Failed to fully restore Exporter settings. Error while reading database '{database_url}': {error}"
             )
+            pack.state = SettingsState.ERROR
             return pack
         else:
             db_map.connection.close()

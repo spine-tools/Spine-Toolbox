@@ -495,7 +495,7 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
-        self.engine.dag_node_execution_finished.connect(self._notify_item_for_finished_execution)
+        self.engine.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
         self.dag_execution_about_to_start.emit(self.engine)
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
@@ -506,7 +506,7 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
-        self.engine.dag_node_execution_finished.disconnect(self._notify_item_for_finished_execution)
+        self.engine.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
@@ -628,12 +628,13 @@ class SpineToolboxProject(MetaObject):
         return self._settings
 
     @Slot(str, "QVariant", "QVariant")
-    def _notify_item_for_finished_execution(self, item_name, execution_direction, engine_state):
-        """Notifies a project item that its execution counterpart has been executed successfully."""
+    def _handle_dag_node_execution_finished(self, item_name, execution_direction, engine_state):
+        """Handles successful execution of a dag node.
+        Performs post successful execution actions in corresponding project item."""
         item = self._project_item_model.get_item(item_name)
         if item is None:
             return
-        item.project_item.executed_successfully(execution_direction, engine_state)
+        item.project_item.handle_execution_successful(execution_direction, engine_state)
 
     def direct_successors(self, item):
         """Returns a list of direct successor nodes for given project item."""

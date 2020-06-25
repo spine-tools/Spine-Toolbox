@@ -94,7 +94,7 @@ class Tool(ProjectItem):
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_tool_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
-        s[self._properties_ui.comboBox_tool.currentTextChanged] = self.update_specification
+        s[self._properties_ui.comboBox_tool.textActivated] = self.update_specification
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
         s[self._properties_ui.lineEdit_tool_args.editingFinished] = self.update_tool_cmd_line_args
         return s
@@ -133,7 +133,7 @@ class Tool(ProjectItem):
         """Update Tool specification according to selection in the specification comboBox.
 
         Args:
-            row (int): Selected row in the comboBox
+            text (str): Tool specification name in the comboBox
         """
         spec = self._toolbox.specification_model.find_specification(text)
         if spec is None:
@@ -192,12 +192,14 @@ class Tool(ProjectItem):
             self._properties_ui.lineEdit_tool_spec_args.setText("")
             self.do_update_execution_mode(True)
             spec_model_index = None
+            self._properties_ui.toolButton_tool_specification.setEnabled(False)
         else:
             self._properties_ui.comboBox_tool.setCurrentText(self.specification().name)
             self._properties_ui.lineEdit_tool_spec_args.setText(" ".join(self.specification().cmdline_args))
             spec_model_index = self._toolbox.specification_model.specification_index(self.specification().name)
-        self.specification_options_popup_menu = ToolSpecificationMenu(self._toolbox, spec_model_index)
-        self._properties_ui.toolButton_tool_specification.setMenu(self.specification_options_popup_menu)
+            self.specification_options_popup_menu = ToolSpecificationMenu(self._toolbox, spec_model_index)
+            self._properties_ui.toolButton_tool_specification.setEnabled(True)
+            self._properties_ui.toolButton_tool_specification.setMenu(self.specification_options_popup_menu)
         self._properties_ui.treeView_specification.expandAll()
         self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
 
