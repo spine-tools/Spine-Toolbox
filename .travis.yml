@@ -1,5 +1,4 @@
-job1:
-  name: "Unit tests with Python 3.7 on Ubuntu Xenial"
+Unit tests with Python 3.7 on Ubuntu Xenial:
   os: linux
   dist: xenial  # Use Ubuntu 16.04 (Xenial Xerus)
   language: python
@@ -14,8 +13,7 @@ job1:
   script:
     - QT_QPA_PLATFORM=offscreen python -m unittest discover --verbose
 
-job2:
-  name: "Unit tests with Python 3.7 on Windows"
+Unit tests with Python 3.7 on Windows:
   os: windows
   language: shell  # No native Python support on Windows.
   before_install:
