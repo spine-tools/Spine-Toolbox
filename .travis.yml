@@ -1,3 +1,7 @@
+os: linux
+dist: xenial
+language: python
+
 jobs:
   include:
     - name: "Unit tests with Python 3.7 on Ubuntu Xenial"
