@@ -40,5 +40,5 @@ jobs:
       script:
         - coverage run -m unittest discover --verbose
 after_success:
-  coveralls
-  codecov
+  - coveralls
+  - codecov
