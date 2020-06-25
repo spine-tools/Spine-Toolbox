@@ -13,12 +13,6 @@ jobs:
       - sudo apt-get install -y unixodbc-dev  # Install to get sql.h headers
       services:
       - xvfb  # X Virtual Framebuffer for tests that require display
-      cache: pip
-      install:
-        - pip install -r requirements.txt
-        - pip install coverage
-        - pip install coveralls
-        - pip install codecov
       script:
         - QT_QPA_PLATFORM=offscreen coverage run -m unittest discover --verbose
 
@@ -31,14 +25,13 @@ jobs:
       env:
         - PATH=/c/Python37:/c/Python37/Scripts:$PATH
         - PYTHONUTF8=1  # gdxcc fails to install without this
-      cache: pip
-      install:
-        - pip install -r requirements.txt
-        - pip install coverage
-        - pip install coveralls
-        - pip install codecov
       script:
         - coverage run -m unittest discover --verbose
+
+cache: pip
+install:
+  - pip install -r requirements.txt
+  - pip install coverage
+  - pip install codecov
 after_success:
-  - coveralls
   - codecov
