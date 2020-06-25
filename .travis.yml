@@ -1,3 +1,7 @@
+os: linux
+dist: xenial
+language: python
+
 jobs:
   include:
     - name: "Unit tests with Python 3.7 on Ubuntu Xenial"
@@ -9,17 +13,23 @@ jobs:
       - sudo apt-get install -y unixodbc-dev  # Install to get sql.h headers
       services:
       - xvfb  # X Virtual Framebuffer for tests that require display
+      cache: pip
+      install:
+        - pip install -r requirements.txt
+      script:
+        - QT_QPA_PLATFORM=offscreen python -m unittest discover --verbose
+
     - name: "Unit tests with Python 3.7 on Windows"
       os: windows
-      language: shell  # No native support for Python on Windows yet.
+      language: shell  # No native Python support on Windows.
       before_install:
         - choco install python --version=3.7.5  # chocolatey package manager is available
         - python -m pip install --upgrade pip
       env:
         - PATH=/c/Python37:/c/Python37/Scripts:$PATH
         - PYTHONUTF8=1  # gdxcc fails to install without this
-cache: pip
-install:
-  - pip install -r requirements.txt
-script:
-  - python -m unittest discover --verbose
+      cache: pip
+      install:
+        - pip install -r requirements.txt
+      script:
+        - python -m unittest discover --verbose
