@@ -16,8 +16,9 @@ jobs:
       cache: pip
       install:
         - pip install -r requirements.txt
+        - pip install coveralls
       script:
-        - QT_QPA_PLATFORM=offscreen python -m unittest discover --verbose
+        - QT_QPA_PLATFORM=offscreen coverage run -m unittest discover --verbose
 
     - name: "Unit tests with Python 3.7 on Windows"
       os: windows
@@ -31,5 +32,8 @@ jobs:
       cache: pip
       install:
         - pip install -r requirements.txt
+        - pip install coveralls
       script:
-        - python -m unittest discover --verbose
+        - coverage run -m unittest discover --verbose
+after_success:
+  coveralls
