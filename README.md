@@ -4,7 +4,7 @@
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://img.shields.io/travis/Spine-project/Spine-Toolbox/master.svg?label=master)](https://travis-ci.com/Spine-project/Spine-Toolbox.svg?branch=master)
 [![Build Status](https://img.shields.io/travis/Spine-project/Spine-Toolbox/dev.svg?label=dev)](https://travis-ci.com/Spine-project/Spine-Toolbox.svg?branch=dev)
-[![codecov](https://codecov.io/gh/PekkaSavolainen/Spine-Toolbox/branch/dev/graph/badge.svg)](https://codecov.io/gh/PekkaSavolainen/Spine-Toolbox)
+[![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/dev/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
 
 An application to define, manage, and execute various energy system simulation models.
 

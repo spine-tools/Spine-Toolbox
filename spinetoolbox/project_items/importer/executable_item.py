@@ -30,13 +30,12 @@ class ExecutableItem(ExecutableItemBase, QObject):
     importing_finished = Signal()
     """Emitted after the separate import process has finished executing."""
 
-    def __init__(self, name, settings, logs_dir, python_path, gams_path, cancel_on_error, logger):
+    def __init__(self, name, settings, logs_dir, gams_path, cancel_on_error, logger):
         """
         Args:
             name (str): Importer's name
             settings (dict): import mappings
             logs_dir (str): path to the directory where logs should be stored
-            python_path (str): path to the system's python executable
             gams_path (str): path to system's GAMS executable or empty string for the default path
             cancel_on_error (bool): if True, revert changes on error and quit
             logger (LoggerInterface): a logger
@@ -45,7 +44,6 @@ class ExecutableItem(ExecutableItemBase, QObject):
         QObject.__init__(self)
         self._settings = settings
         self._logs_dir = logs_dir
-        self._python_path = python_path
         self._gams_path = gams_path
         self._cancel_on_error = cancel_on_error
         self._resources_from_downstream = list()
@@ -134,10 +132,9 @@ class ExecutableItem(ExecutableItemBase, QObject):
         settings = deserialize_mappings(item_dict["mappings"], project_dir)
         data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
         logs_dir = os.path.join(data_dir, "logs")
-        python_path = app_settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = app_settings.value("appSettings/gamsPath", defaultValue=None)
         cancel_on_error = item_dict["cancel_on_error"]
-        return cls(name, settings, logs_dir, python_path, gams_path, cancel_on_error, logger)
+        return cls(name, settings, logs_dir, gams_path, cancel_on_error, logger)
 
 
 def _files_from_resources(resources):
