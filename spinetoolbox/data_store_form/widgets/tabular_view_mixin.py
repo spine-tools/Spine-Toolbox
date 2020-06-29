@@ -670,7 +670,8 @@ class TabularViewMixin:
             return
         alt_ids = [a["id"] for a in db_map_data.get(self.db_map, set())]
         data = self.load_empty_parameter_value_data(alternative_ids=alt_ids)
-        self.receive_data_added_or_removed(data, action)
+        if self.pivot_table_model is not None:
+            self.pivot_table_model.receive_data_added_or_removed(data, action)
 
     def receive_classes_removed(self, db_map_data):
         if not self.pivot_table_model:
