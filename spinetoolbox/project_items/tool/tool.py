@@ -133,7 +133,7 @@ class Tool(ProjectItem):
         """Update Tool specification according to selection in the specification comboBox.
 
         Args:
-            row (int): Selected row in the comboBox
+            text (str): Tool specification name in the comboBox
         """
         spec = self._toolbox.specification_model.find_specification(text)
         if spec is None:

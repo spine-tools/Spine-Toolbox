@@ -137,7 +137,7 @@ class TestTool(unittest.TestCase):
         tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
         self._assert_is_no_tool(tool)
-        tool._properties_ui.comboBox_tool.setCurrentIndex(0)  # Set the simple_exec tool specification
+        tool._properties_ui.comboBox_tool.textActivated.emit("simple_exec")  # Set the simple_exec tool specification
         self._assert_is_simple_exec_tool(tool)
         tool.deactivate()
         tool.activate()

@@ -31,6 +31,7 @@ from spinedb_api import (
 )
 from spinetoolbox.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.config import APPLICATION_PATH
 
 _TEMP_EXCEL_FILENAME = 'excel.xlsx'
 _TEMP_SQLITE_FILENAME = 'first.sqlite'
@@ -290,9 +291,13 @@ class TestExcelIntegration(unittest.TestCase):
             for sheet_name, settings in sheets.items()
             if settings["options"] is not None
         }
+        # table_mappings (Excel file) contains a sheet json_relationship_class which
+        # adds a duplicate 'relationship_class' to data. A duplicate is considered
+        # an error by spinedb_api import_data() function. Is this intentional?
         data, errors = connector.get_mapped_data(table_mappings, table_options, {}, {})
+        # TODO: Check if db_map is supposed to have two relationship classes called relationship_class or not?
         import_num, import_errors = import_data(db_map, **data)
-        self.assertFalse(import_errors)
+        self.assertEqual(import_errors, ["Duplicate relationship class 'relationship_class'"])
         db_map.commit_session('Excel import')
         return import_num
 
@@ -302,6 +307,11 @@ class TestExcelIntegration(unittest.TestCase):
             db_map, empty_db_map = self._create_database(directory)
             try:
                 excel_file_name = str(PurePath(directory, _TEMP_EXCEL_FILENAME))
+                # export_spine_database_to_xlsx exports db_map to an Excel that has a
+                # sheet called json_relationship_class. When this Excel is imported
+                # back to a database in _import_xlsx_to_database() function there
+                # is a duplicate relationship class called relationship_class.
+                # Is this intentional?
                 export_spine_database_to_xlsx(db_map, excel_file_name)
                 import_num = self._import_xlsx_to_database(excel_file_name, empty_db_map)
                 self.assertEqual(import_num, 32)

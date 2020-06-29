@@ -124,10 +124,9 @@ class Importer(ProjectItem):
             if not settings:
                 continue
             selected_settings[label] = settings
-        python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         executable = ExecutableItem(
-            self.name, selected_settings, self.logs_dir, python_path, gams_path, self.cancel_on_error, self._logger
+            self.name, selected_settings, self.logs_dir, gams_path, self.cancel_on_error, self._logger
         )
         return executable
 

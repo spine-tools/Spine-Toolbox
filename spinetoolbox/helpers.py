@@ -830,9 +830,9 @@ def get_save_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, f
 
     Returns:
         str: filename
-        str: selecte filter
+        str: selected filter
     """
-    dir_ = qsettings.value(key, default=given_dir)
+    dir_ = qsettings.value(key, defaultValue=given_dir)
     filename, selected_filter = QFileDialog.getSaveFileName(parent, caption, dir_, filter_)
     if filename:
         qsettings.setValue(key, os.path.dirname(filename))
@@ -840,7 +840,7 @@ def get_save_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, f
 
 
 def get_open_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, filter_=""):
-    dir_ = qsettings.value(key, default=given_dir)
+    dir_ = qsettings.value(key, defaultValue=given_dir)
     filename, selected_filter = QFileDialog.getOpenFileName(parent, caption, dir_, filter_)
     if filename:
         qsettings.setValue(key, os.path.dirname(filename))
