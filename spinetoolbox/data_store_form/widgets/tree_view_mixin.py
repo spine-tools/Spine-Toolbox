@@ -15,7 +15,7 @@ Contains the TreeViewMixin class.
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
-from PySide2.QtCore import Slot, QTimer
+from PySide2.QtCore import Signal, Slot, QTimer
 from PySide2.QtWidgets import QInputDialog
 from .add_items_dialogs import (
     AddAlternativesDialog,
@@ -45,6 +45,12 @@ from ...spine_db_parcel import SpineDBParcel
 class TreeViewMixin:
     """Provides object and relationship trees for the data store form.
     """
+
+    _object_classes_added = Signal()
+    _relationship_classes_added = Signal()
+    _object_classes_fetched = Signal()
+    _relationship_classes_fetched = Signal()
+    """Emitted from fetcher thread, connected to Slots in GUI thread."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -80,6 +86,12 @@ class TreeViewMixin:
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
         self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
+        self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
+        self._object_classes_fetched.connect(lambda: self.ui.treeView_object.expand(self.object_tree_model.root_index))
+        self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
+        self._relationship_classes_fetched.connect(
+            lambda: self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
+        )
 
     def init_models(self):
         """Initializes models."""
@@ -336,35 +348,30 @@ class TreeViewMixin:
         super().notify_items_changed(action, item_type, db_map_data)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
-    @Slot(object)
     def receive_alternatives_added(self, db_map_data):
         super().receive_alternatives_added(db_map_data)
         self.alternative_tree_model.add_alternatives(db_map_data)
 
-    @Slot(object)
     def receive_scenarios_added(self, db_map_data):
         super().receive_scenarios_added(db_map_data)
         self.alternative_tree_model.add_scenarios(db_map_data)
 
-    @Slot(object)
     def receive_scenario_alternatives_added(self, db_map_data):
-        super().receive_scenario_alternatives_added(db_map_data)
+        super().receive_scenarios_added(db_map_data)
         self.alternative_tree_model.add_scenario_alternatives(db_map_data)
 
-    @Slot(object)
     def receive_object_classes_fetched(self, db_map_data):
         super().receive_object_classes_fetched(db_map_data)
-        self.ui.treeView_object.expand(self.object_tree_model.root_index)
+        self._object_classes_fetched.emit()
 
-    @Slot(object)
     def receive_relationship_classes_fetched(self, db_map_data):
-        super().receive_relationship_classes_fetched(db_map_data)
-        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
+        super().receive_object_classes_fetched(db_map_data)
+        self._relationship_classes_fetched.emit()
 
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
         self.object_tree_model.add_object_classes(db_map_data)
-        self.ui.treeView_object.resizeColumnToContents(0)
+        self._object_classes_added.emit()
 
     def receive_objects_added(self, db_map_data):
         super().receive_objects_added(db_map_data)
@@ -374,7 +381,7 @@ class TreeViewMixin:
         super().receive_relationship_classes_added(db_map_data)
         self.object_tree_model.add_relationship_classes(db_map_data)
         self.relationship_tree_model.add_relationship_classes(db_map_data)
-        self.ui.treeView_relationship.resizeColumnToContents(0)
+        self._relationship_classes_added.emit()
 
     def receive_relationships_added(self, db_map_data):
         super().receive_relationships_added(db_map_data)

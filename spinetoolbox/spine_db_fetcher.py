@@ -27,29 +27,17 @@ class SpineDBFetcher(QObject):
     finished = Signal(object)
     _ready_to_finish = Signal()
     _scenarios_fetched = Signal(object)
-    _scenarios_cached = Signal(object)
     _alternatives_fetched = Signal(object)
-    _alternatives_cached = Signal(object)
     _scenario_alternatives_fetched = Signal(object)
-    _scenario_alternatives_cached = Signal(object)
     _object_classes_fetched = Signal(object)
-    _object_classes_cached = Signal(object)
     _objects_fetched = Signal(object)
-    _objects_cached = Signal(object)
     _relationship_classes_fetched = Signal(object)
-    _relationship_classes_cached = Signal(object)
     _relationships_fetched = Signal(object)
-    _relationships_cached = Signal(object)
     _entity_groups_fetched = Signal(object)
-    _entity_groups_cached = Signal(object)
     _parameter_definitions_fetched = Signal(object)
-    _parameter_definitions_cached = Signal(object)
     _parameter_values_fetched = Signal(object)
-    _parameter_values_cached = Signal(object)
     _parameter_value_lists_fetched = Signal(object)
-    _parameter_value_lists_cached = Signal(object)
     _parameter_tags_fetched = Signal(object)
-    _parameter_tags_cached = Signal(object)
 
     def __init__(self, db_mngr, listener):
         """Initializes the fetcher object.
@@ -70,30 +58,18 @@ class SpineDBFetcher(QObject):
     def connect_signals(self):
         """Connects signals."""
         self._ready_to_finish.connect(self._emit_finished_signal)
-        self._alternatives_fetched.connect(self._cache_alternatives)
-        self._alternatives_cached.connect(self._listener.receive_alternatives_added)
-        self._scenarios_fetched.connect(self._cache_scenarios)
-        self._scenarios_cached.connect(self._listener.receive_scenarios_added)
-        self._scenario_alternatives_fetched.connect(self._cache_scenario_alternatives)
-        self._scenario_alternatives_cached.connect(self._listener.receive_scenario_alternatives_added)
-        self._object_classes_fetched.connect(self._cache_object_classes)
-        self._object_classes_cached.connect(self._listener.receive_object_classes_fetched)
-        self._objects_fetched.connect(self._cache_objects)
-        self._objects_cached.connect(self._listener.receive_objects_fetched)
-        self._relationship_classes_fetched.connect(self._cache_relationship_classes)
-        self._relationship_classes_cached.connect(self._listener.receive_relationship_classes_fetched)
-        self._relationships_fetched.connect(self._cache_relationships)
-        self._relationships_cached.connect(self._listener.receive_relationships_fetched)
-        self._entity_groups_fetched.connect(self._cache_entity_groups)
-        self._entity_groups_cached.connect(self._listener.receive_entity_groups_fetched)
-        self._parameter_definitions_fetched.connect(self._cache_parameter_definitions)
-        self._parameter_definitions_cached.connect(self._listener.receive_parameter_definitions_fetched)
-        self._parameter_values_fetched.connect(self._cache_parameter_values)
-        self._parameter_values_cached.connect(self._listener.receive_parameter_values_fetched)
-        self._parameter_value_lists_fetched.connect(self._cache_parameter_value_lists)
-        self._parameter_value_lists_cached.connect(self._listener.receive_parameter_value_lists_fetched)
-        self._parameter_tags_fetched.connect(self._cache_parameter_tags)
-        self._parameter_tags_cached.connect(self._listener.receive_parameter_tags_fetched)
+        self._alternatives_fetched.connect(self._receive_alternatives_fetched)
+        self._scenarios_fetched.connect(self._receive_scenarios_fetched)
+        self._scenario_alternatives_fetched.connect(self._receive_scenario_alternatives_fetched)
+        self._object_classes_fetched.connect(self._receive_object_classes_fetched)
+        self._objects_fetched.connect(self._receive_objects_fetched)
+        self._relationship_classes_fetched.connect(self._receive_relationship_classes_fetched)
+        self._relationships_fetched.connect(self._receive_relationships_fetched)
+        self._entity_groups_fetched.connect(self._receive_entity_groups_fetched)
+        self._parameter_definitions_fetched.connect(self._receive_parameter_definitions_fetched)
+        self._parameter_values_fetched.connect(self._receive_parameter_values_fetched)
+        self._parameter_value_lists_fetched.connect(self._receive_parameter_value_lists_fetched)
+        self._parameter_tags_fetched.connect(self._receive_parameter_tags_fetched)
 
     def fetch(self, db_maps):
         """Fetches items from the database and emit fetched signals.
@@ -136,65 +112,65 @@ class SpineDBFetcher(QObject):
         self._thread.wait()
 
     @Slot(object)
-    def _cache_alternatives(self, db_map_data):
+    def _receive_alternatives_fetched(self, db_map_data):
         self._db_mngr.cache_items("alternative", db_map_data)
-        self._alternatives_cached.emit(db_map_data)
+        self._listener.receive_alternatives_added(db_map_data)
 
     @Slot(object)
-    def _cache_scenarios(self, db_map_data):
+    def _receive_scenarios_fetched(self, db_map_data):
         self._db_mngr.cache_items("scenario", db_map_data)
-        self._scenarios_cached.emit(db_map_data)
+        self._listener.receive_scenarios_added(db_map_data)
 
     @Slot(object)
-    def _cache_scenario_alternatives(self, db_map_data):
+    def _receive_scenario_alternatives_fetched(self, db_map_data):
         self._db_mngr.cache_items("scenario_alternative", db_map_data)
-        self._scenario_alternatives_cached.emit(db_map_data)
+        self._listener.receive_scenario_alternatives_added(db_map_data)
 
     @Slot(object)
-    def _cache_object_classes(self, db_map_data):
+    def _receive_object_classes_fetched(self, db_map_data):
         self._db_mngr.cache_items("object class", db_map_data)
         self._db_mngr.update_icons(db_map_data)
-        self._object_classes_cached.emit(db_map_data)
+        self._listener.receive_object_classes_fetched(db_map_data)
 
     @Slot(object)
-    def _cache_objects(self, db_map_data):
+    def _receive_objects_fetched(self, db_map_data):
         self._db_mngr.cache_items("object", db_map_data)
-        self._objects_cached.emit(db_map_data)
+        self._listener.receive_objects_fetched(db_map_data)
 
     @Slot(object)
-    def _cache_relationship_classes(self, db_map_data):
+    def _receive_relationship_classes_fetched(self, db_map_data):
         self._db_mngr.cache_items("relationship class", db_map_data)
-        self._relationship_classes_cached.emit(db_map_data)
+        self._listener.receive_relationship_classes_fetched(db_map_data)
 
     @Slot(object)
-    def _cache_relationships(self, db_map_data):
+    def _receive_relationships_fetched(self, db_map_data):
         self._db_mngr.cache_items("relationship", db_map_data)
-        self._relationships_cached(db_map_data)
+        self._listener.receive_relationships_fetched(db_map_data)
 
     @Slot(object)
-    def _cache_entity_groups(self, db_map_data):
+    def _receive_entity_groups_fetched(self, db_map_data):
         self._db_mngr.cache_items("entity group", db_map_data)
-        self._entity_groups_cached.emit(db_map_data)
+        self._listener.receive_entity_groups_fetched(db_map_data)
 
     @Slot(object)
-    def _cache_parameter_definitions(self, db_map_data):
+    def _receive_parameter_definitions_fetched(self, db_map_data):
         self._db_mngr.cache_items("parameter definition", db_map_data)
-        self._parameter_definitions_cached.emit(db_map_data)
+        self._listener.receive_parameter_definitions_fetched(db_map_data)
 
     @Slot(object)
-    def _cache_parameter_values(self, db_map_data):
+    def _receive_parameter_values_fetched(self, db_map_data):
         self._db_mngr.cache_items("parameter value", db_map_data)
-        self._parameter_values_cached.emit(db_map_data)
+        self._listener.receive_parameter_values_fetched(db_map_data)
 
     @Slot(object)
-    def _cache_parameter_value_lists(self, db_map_data):
+    def _receive_parameter_value_lists_fetched(self, db_map_data):
         self._db_mngr.cache_items("parameter value list", db_map_data)
-        self._parameter_value_lists_cached.emit(db_map_data)
+        self._listener.receive_parameter_value_lists_fetched(db_map_data)
 
     @Slot(object)
-    def _cache_parameter_tags(self, db_map_data):
+    def _receive_parameter_tags_fetched(self, db_map_data):
         self._db_mngr.cache_items("parameter tag", db_map_data)
-        self._parameter_tags_cached.emit(db_map_data)
+        self._listener.receive_parameter_tags_fetched(db_map_data)
 
     @Slot()
     def _emit_finished_signal(self):
