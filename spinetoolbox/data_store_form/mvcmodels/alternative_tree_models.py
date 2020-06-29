@@ -28,6 +28,16 @@ class AlternativeTreeModel(MultiDBTreeModel):
         self._scenario_root = None
 
     @property
+    def alternative_root_index(self):
+        """Index of the root of the alternative branch of the tree."""
+        return self.index_from_item(self._alternative_root)
+
+    @property
+    def scenario_root_index(self):
+        """Index of the root of the scenario branch of the tree."""
+        return self.index_from_item(self._scenario_root)
+
+    @property
     def root_item_type(self):
         return AlternativeRootItem
 

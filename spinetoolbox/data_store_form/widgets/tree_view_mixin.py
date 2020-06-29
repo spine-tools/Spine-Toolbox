@@ -46,6 +46,8 @@ class TreeViewMixin:
     """Provides object and relationship trees for the data store form.
     """
 
+    _alternatives_fetched = Signal()
+    _scenarios_fetched = Signal()
     _object_classes_added = Signal()
     _relationship_classes_added = Signal()
     _object_classes_fetched = Signal()
@@ -86,6 +88,12 @@ class TreeViewMixin:
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
         self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
+        self._alternatives_fetched.connect(
+            lambda: self.ui.treeView_alternative.expand(self.alternative_tree_model.alternative_root_index)
+        )
+        self._scenarios_fetched.connect(
+            lambda: self.ui.treeView_alternative.expand(self.alternative_tree_model.scenario_root_index)
+        )
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
         self._object_classes_fetched.connect(lambda: self.ui.treeView_object.expand(self.object_tree_model.root_index))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
@@ -352,9 +360,17 @@ class TreeViewMixin:
         super().receive_alternatives_added(db_map_data)
         self.alternative_tree_model.add_alternatives(db_map_data)
 
+    def receive_alternatives_fetched(self, db_map_data):
+        super().receive_alternatives_fetched(db_map_data)
+        self._alternatives_fetched.emit()
+
     def receive_scenarios_added(self, db_map_data):
         super().receive_scenarios_added(db_map_data)
         self.alternative_tree_model.add_scenarios(db_map_data)
+
+    def receive_scenarios_fetched(self, db_map_data):
+        super().receive_scenarios_fetched(db_map_data)
+        self._scenarios_fetched.emit()
 
     def receive_scenario_alternatives_added(self, db_map_data):
         super().receive_scenarios_added(db_map_data)

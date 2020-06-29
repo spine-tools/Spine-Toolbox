@@ -114,17 +114,17 @@ class SpineDBFetcher(QObject):
     @Slot(object)
     def _receive_alternatives_fetched(self, db_map_data):
         self._db_mngr.cache_items("alternative", db_map_data)
-        self._listener.receive_alternatives_added(db_map_data)
+        self._listener.receive_alternatives_fetched(db_map_data)
 
     @Slot(object)
     def _receive_scenarios_fetched(self, db_map_data):
         self._db_mngr.cache_items("scenario", db_map_data)
-        self._listener.receive_scenarios_added(db_map_data)
+        self._listener.receive_scenarios_fetched(db_map_data)
 
     @Slot(object)
     def _receive_scenario_alternatives_fetched(self, db_map_data):
         self._db_mngr.cache_items("scenario_alternative", db_map_data)
-        self._listener.receive_scenario_alternatives_added(db_map_data)
+        self._listener.receive_scenario_alternatives_fetched(db_map_data)
 
     @Slot(object)
     def _receive_object_classes_fetched(self, db_map_data):
