@@ -906,7 +906,7 @@ class SpineDBManager(QObject):
             list: dictionary items
         """
         return self.get_db_items(
-            self._make_query(db_map, "scenario_alternatives_sq", ids=ids), key=lambda x: (x["scenario_id"], x["rank"])
+            self._make_query(db_map, "scenario_alternative_sq", ids=ids), key=lambda x: (x["scenario_id"], x["rank"])
         )
 
     def get_object_classes(self, db_map, ids=()):
