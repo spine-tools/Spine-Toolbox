@@ -33,6 +33,35 @@
      </attribute>
     </widget>
    </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="convert_leaves_button">
+       <property name="toolTip">
+        <string>Converts leaf maps to time series.
+Requires that all indexes are DateTimes
+and values are floats.</string>
+       </property>
+       <property name="text">
+        <string>Convert Leaves to Time Series</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
   </layout>
  </widget>
  <resources/>

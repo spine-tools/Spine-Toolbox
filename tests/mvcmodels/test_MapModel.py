@@ -18,7 +18,7 @@ Unit tests for MapModel class.
 
 import unittest
 from PySide2.QtCore import Qt
-from spinedb_api import Map, ParameterValueFormatError
+from spinedb_api import DateTime, Map, ParameterValueFormatError
 from spinetoolbox.mvcmodels.map_model import MapModel
 
 
@@ -45,6 +45,16 @@ class TestMapModel(unittest.TestCase):
         map_value = Map(["A", "B"], [-1.1, nested_map])
         model = MapModel(map_value)
         self.assertEqual(model.columnCount(), 3)
+
+    def test_convert_leaf_maps(self):
+        nested_map = Map([DateTime("2020-07-03 12:00:00"), DateTime("2020-07-03 12:00:00")], [22.2, 23.3])
+        map_ = Map([1.0], [nested_map])
+        model = MapModel(map_)
+        model.convert_leaf_maps()
+        self.assertEqual(model.columnCount(), 2)
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(), 1.0)
+        self.assertEqual(model.index(0, 1).data(), "Time series")
 
     def test_data_DisplayRole(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
