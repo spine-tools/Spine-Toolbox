@@ -173,10 +173,6 @@ class SingleParameterModel(MinimalTableModel):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
-            if role == Qt.ToolTipRole:
-                description = self._get_field_item(field, id_).get("description", None)
-                if description not in (None, ""):
-                    return description
             if field in self.json_fields:
                 return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
@@ -242,9 +238,8 @@ class SingleParameterModel(MinimalTableModel):
         return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
 
     def _get_field_item(self, field, id_):
-        """Returns a item from the db_mngr.get_item depending on the
-        field. If a field doesn't correspond to a item in the database then
-        an empty dict is returned.
+        """Returns a item from the db_mngr.get_item depending on the field.
+        If a field doesn't correspond to a item in the database then an empty dict is returned.
         """
         data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
         header_to_id = {
