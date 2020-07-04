@@ -31,11 +31,11 @@ class ValueListTreeItem(TreeItem):
 
     def insert_children(self, position, *children):
         """Fetches the children as they become parented."""
-        result = super().insert_children(position, *children)
-        if result:
-            for child in children:
-                child.fetch_more()
-        return result
+        if not super().insert_children(position, *children):
+            return False
+        for child in children:
+            child.fetch_more()
+        return True
 
 
 class EditableMixin:
@@ -106,7 +106,7 @@ class DBItem(AppendEmptyChildMixin, ValueListTreeItem):
         """Shows Spine icon for fun."""
         if role == Qt.DecorationRole:
             return QIcon(":/symbols/Spine_symbol.png")
-        if role == Qt.DisplayRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             return f"root ({self.db_map.codename})"
 
 
@@ -138,7 +138,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
         return ValueItem("Type new list value here...")
 
     def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             return self.name
         return super().data(column, role)
 
@@ -220,7 +220,7 @@ class ValueItem(GrayFontMixin, EditableMixin, ValueListTreeItem):
         self._fetched = True
 
     def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             return self.value
         return super().data(column, role)
 
