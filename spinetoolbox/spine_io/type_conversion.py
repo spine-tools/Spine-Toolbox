@@ -74,6 +74,7 @@ def value_to_convert_spec(value):
             "duration": DurationConvertSpec,
             "float": FloatConvertSpec,
             "string": StringConvertSpec,
+            "boolean": BooleanConvertSpec,
         }.get(value)
         return spec()
     if isinstance(value, dict):
@@ -118,6 +119,24 @@ class FloatConvertSpec(ConvertSpec):
 class StringConvertSpec(ConvertSpec):
     DISPLAY_NAME = "string"
     RETURN_TYPE = str
+
+
+class BooleanConvertSpec(ConvertSpec):
+    DISPLAY_NAME = "boolean"
+    RETURN_TYPE = bool
+
+    def convert_function(self):
+        constructor = self.RETURN_TYPE
+
+        def convert(value):
+            try:
+                # NOTE: This is so the string "0" is converted to False, as it's most expected
+                value = int(value)
+            except ValueError:
+                pass
+            return constructor(value)
+
+        return convert
 
 
 class IntegerSequenceDateTimeConvertSpec(ConvertSpec):

@@ -18,7 +18,7 @@ Contains a class template for a data source connector used in import ui.
 
 from spinedb_api import read_with_mapping, DateTime, Duration, ParameterValueFormatError
 
-TYPE_STRING_TO_CLASS = {"string": str, "datetime": DateTime, "duration": Duration, "float": float}
+TYPE_STRING_TO_CLASS = {"string": str, "datetime": DateTime, "duration": Duration, "float": float, "boolean": bool}
 
 TYPE_CLASS_TO_STRING = {type_class: string for string, type_class in TYPE_STRING_TO_CLASS.items()}
 

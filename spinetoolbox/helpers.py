@@ -637,7 +637,7 @@ class CharIconEngine(QIconEngine):
         painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, self.char)
         painter.restore()
 
-    def pixmap(self, size, mode=None, state=None):
+    def pixmap(self, size=QSize(512, 512), mode=None, state=None):
         pm = QPixmap(size)
         pm.fill(Qt.transparent)
         self.paint(QPainter(pm), QRect(QPoint(0, 0), size), mode, state)

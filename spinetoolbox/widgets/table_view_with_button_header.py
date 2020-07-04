@@ -18,16 +18,18 @@ Classes for handling models in PySide2's model/view framework.
 from collections import namedtuple
 from collections.abc import Iterable
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtGui import QCursor, QFont
+from PySide2.QtGui import QCursor, QFont, QIcon
 from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
 from ..spine_io.io_api import TYPE_STRING_TO_CLASS
 from ..spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
+from spinetoolbox.helpers import CharIconEngine
 
 _ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
 _ALLOWED_TYPES.append("integer sequence datetime")
 
 _TYPE_TO_FONT_AWESOME_ICON = {
     "integer sequence datetime": chr(int('f073', 16)),
+    "boolean": chr(int('f6ad', 16)),
     "string": chr(int('f031', 16)),
     "datetime": chr(int('f073', 16)),
     "duration": chr(int('f017', 16)),
@@ -364,6 +366,9 @@ def _create_allowed_types_menu(parent, trigger_slot):
     """
     menu = QMenu(parent)
     for at in _ALLOWED_TYPES:
-        menu.addAction(at)
+        icon_char = _TYPE_TO_FONT_AWESOME_ICON[at]
+        engine = CharIconEngine(icon_char, 0)
+        icon = QIcon(engine.pixmap())
+        menu.addAction(icon, at)
     menu.triggered.connect(trigger_slot)
     return menu
