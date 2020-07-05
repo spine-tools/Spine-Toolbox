@@ -409,19 +409,19 @@ class ParameterValueListTreeView(CopyTreeView):
                             {"id": list_item.id, "name": list_item.name}
                         )
                         continue
-                    curr_value_list = list_item.compile_value_list()
-                    value_list = [
+                    curr_value_list = list_item.value_list
+                    new_value_list = [
                         value
                         for value_item, value in zip(list_item.children, curr_value_list)
                         if value_item not in items
                     ]
-                    if not value_list:
+                    if not new_value_list:
                         db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
                             {"id": list_item.id, "name": list_item.name}
                         )
                         continue
-                    if value_list != curr_value_list:
-                        item = {"id": list_item.id, "value_list": value_list}
+                    if new_value_list != curr_value_list:
+                        item = {"id": list_item.id, "value_list": new_value_list}
                         db_map_data_to_upd[db_item.db_map].append(item)
                 else:
                     # WIP lists, just remove everything selected

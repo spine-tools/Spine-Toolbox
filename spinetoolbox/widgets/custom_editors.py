@@ -202,8 +202,7 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
-        data = self.first_index.data(Qt.EditRole)
-        return data
+        return self.first_index.data(Qt.EditRole)
 
     @Slot("QString")
     def _handle_delegate_text_edited(self, text):
