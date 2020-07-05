@@ -94,7 +94,6 @@ class EmptyParameterModel(EmptyRowModel):
     def data(self, index, role=Qt.DisplayRole):
         if self.header[index.column()] in self.json_fields and role in (
             Qt.DisplayRole,
-            Qt.EditRole,
             Qt.ToolTipRole,
             Qt.TextAlignmentRole,
             PARSED_ROLE,

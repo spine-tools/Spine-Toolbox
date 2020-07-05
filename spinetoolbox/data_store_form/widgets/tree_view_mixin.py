@@ -53,8 +53,8 @@ class TreeViewMixin:
         self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
-        self.ui.treeView_object.connect_data_Store_form(self)
-        self.ui.treeView_relationship.connect_data_Store_form(self)
+        self.ui.treeView_object.connect_data_store_form(self)
+        self.ui.treeView_relationship.connect_data_store_form(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""

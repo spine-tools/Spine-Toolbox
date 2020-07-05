@@ -39,7 +39,7 @@ class EntityTreeView(CopyTreeView):
         self.fully_collapse_action = None
         self._data_store_form = None
 
-    def connect_data_Store_form(self, data_store_form):
+    def connect_data_store_form(self, data_store_form):
         """Connects a data store form to work with this view.
 
         Args:
@@ -354,9 +354,44 @@ class ParameterValueListTreeView(CopyTreeView):
     """Custom QTreeView class for parameter value list in DataStoreForm.
     """
 
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self._data_store_form = None
+        self._menu = QMenu(self)
+        self.open_in_editor_action = None
+
     def connect_data_store_form(self, data_store_form):
-        self.addAction(data_store_form.ui.actionCopy)
-        self.addAction(data_store_form.ui.actionRemove_selected)
+        self._data_store_form = data_store_form
+        self.create_context_menu()
+
+    def create_context_menu(self):
+        """Creates a context menu for this view."""
+        self._menu.addAction(self._data_store_form.ui.actionCopy)
+        self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
+        self.open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
+
+    def open_in_editor(self):
+        """Opens the parameter value editor for the first selected cell."""
+        index = self.currentIndex()
+        self._data_store_form.show_parameter_value_editor(index)
+
+    def update_actions_visibility(self, item):
+        """Updates the visible property of actions according to whether or not they apply to given item."""
+        self.open_in_editor_action.setVisible(item.item_type == "value")
+
+    def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
+        index = self.indexAt(event.pos())
+        if index.column() != 0:
+            return
+        item = index.model().item_from_index(index)
+        self.update_actions_visibility(item)
+        self._menu.exec_(event.globalPos())
 
     def remove_selected(self):
         if not self.selectionModel().hasSelection():

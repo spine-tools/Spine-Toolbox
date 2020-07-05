@@ -226,7 +226,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         value_list = self._get_value_list(index, db_map)
         if value_list:
             editor = SearchBarEditor(self.parent(), parent)
-            value_list = [from_database(x) for x in value_list.split(",")]
+            value_list = [from_database(x) for x in value_list.split(";")]
             editor.set_data(index.data(PARSED_ROLE), value_list)
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor

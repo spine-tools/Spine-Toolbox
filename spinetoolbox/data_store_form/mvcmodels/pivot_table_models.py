@@ -769,7 +769,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             value_list = param_val_list.get("value_list")
             if not value_list:
                 continue
-            value_lists[par_def_id] = value_list.split(",")
+            value_lists[par_def_id] = value_list.split(";")
         checked_items = []
         for item in items:
             par_def_id = item["parameter_definition_id"]

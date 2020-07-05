@@ -18,12 +18,22 @@ A tree model for parameter value lists.
 
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
-from spinedb_api import to_database, from_database
-from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from spinedb_api import to_database
+from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from spinetoolbox.mvcmodels.shared import PARSED_ROLE
+from spinetoolbox.helpers import try_number_from_string
 
 
 class ValueListTreeItem(TreeItem):
     """A tree item that can fetch its children."""
+
+    @property
+    def item_type(self):
+        raise NotImplementedError()
+
+    @property
+    def db_mngr(self):
+        return self.model.db_mngr
 
     def can_fetch_more(self):
         """Disables lazy loading by returning False."""
@@ -91,8 +101,8 @@ class DBItem(AppendEmptyChildMixin, ValueListTreeItem):
         self.db_map = db_map
 
     @property
-    def db_mngr(self):
-        return self.model.db_mngr
+    def item_type(self):
+        return "db"
 
     def fetch_more(self):
         empty_child = self.empty_child()
@@ -121,21 +131,21 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
         self.value_list = value_list
 
     @property
-    def db_mngr(self):
-        return self.model.db_mngr
+    def item_type(self):
+        return "list"
 
     def fetch_more(self):
-        children = [ValueItem(from_database(value)) for value in self.value_list]
+        children = [ValueItem(value) for value in self.value_list]
         empty_child = self.empty_child()
         self.append_children(*children, empty_child)
         self._fetched = True
 
     def compile_value_list(self):
-        return [to_database(child.value) for child in self.children[:-1]]
+        return [child.value for child in self.children[:-1]]
 
     # pylint: disable=no-self-use
     def empty_child(self):
-        return ValueItem("Type new list value here...")
+        return ValueItem(is_empty=True)
 
     def data(self, column, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole):
@@ -170,7 +180,6 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
 
     def update_value_list_in_db(self, child, value):
         value_list = self.compile_value_list()
-        value = to_database(value)
         try:
             value_list[child.child_number()] = value
         except IndexError:
@@ -208,24 +217,60 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             removed_count = curr_value_count - value_count
             self.remove_children(value_count, removed_count)
         for child, value in zip(self.children, value_list):
-            child.value = from_database(value)
+            child.value = value
 
 
 class ValueItem(GrayFontMixin, EditableMixin, ValueListTreeItem):
     """A value item."""
 
-    def __init__(self, value=None):
+    def __init__(self, value=None, is_empty=False):
         super().__init__()
-        self.value = value
+        self._value = None
+        self._parsed_value = None
         self._fetched = True
+        self._is_empty = is_empty
+        if is_empty:
+            value = "Enter new list value here..."
+        self.value = value
+
+    @property
+    def item_type(self):
+        return "value"
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        self._value = value
+        self._parsed_value = None
+
+    @property
+    def parsed_value(self):
+        if self._parsed_value is None and not self._is_empty:
+            self._parsed_value = self.db_mngr.parse_value(self.value)
+        return self._parsed_value
 
     def data(self, column, role=Qt.DisplayRole):
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role == Qt.EditRole:
             return self.value
+        if role in (Qt.DisplayRole, Qt.ToolTipRole, PARSED_ROLE):
+            if self._is_empty:
+                return {PARSED_ROLE: self._parsed_value}.get(role, self._value)
+            return self.db_mngr.format_value(self.parsed_value, role)
         return super().data(column, role)
 
     def set_data(self, column, value):
-        return self.parent_item.set_child_data(self, value)
+        value = try_number_from_string(value)
+        value = to_database(value)
+        if not self.set_data_in_db(value):
+            return False
+        self._is_empty = False
+        return True
+
+    def set_data_in_db(self, db_value):
+        return self.parent_item.set_child_data(self, db_value)
 
 
 class ParameterValueListModel(MinimalTreeModel):
@@ -255,10 +300,10 @@ class ParameterValueListModel(MinimalTreeModel):
                 item = items.pop(list_item.name, None)
                 if not item:
                     continue
-                list_item.handle_added_to_db(identifier=item["id"], value_list=item["value_list"].split(","))
+                list_item.handle_added_to_db(identifier=item["id"], value_list=item["value_list"].split(";"))
             # Now append the ones added externally
             children = [
-                ListItem(db_item.db_map, item["id"], item["name"], item["value_list"].split(","))
+                ListItem(db_item.db_map, item["id"], item["name"], item["value_list"].split(";"))
                 for item in items.values()
             ]
             db_item.insert_children(db_item.child_count() - 1, *children)
@@ -274,7 +319,7 @@ class ParameterValueListModel(MinimalTreeModel):
                 item = items.get(list_item.id)
                 if not item:
                     continue
-                list_item.handle_updated_in_db(name=item["name"], value_list=item["value_list"].split(","))
+                list_item.handle_updated_in_db(name=item["name"], value_list=item["value_list"].split(";"))
         self.layoutChanged.emit()
 
     def receive_parameter_value_lists_removed(self, db_map_data):
@@ -304,3 +349,19 @@ class ParameterValueListModel(MinimalTreeModel):
         """Returns the number of columns under the given parent. Always 1.
         """
         return 1
+
+    def index_name(self, index):
+        return self.data(index.parent(), role=Qt.DisplayRole)
+
+    def get_set_data_delayed(self, index):
+        """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
+        even if the model changes.
+
+        Args:
+            index (QModelIndex)
+
+        Returns:
+            function
+        """
+        item = self.item_from_index(index)
+        return lambda value, item=item: item.set_data_in_db(value)

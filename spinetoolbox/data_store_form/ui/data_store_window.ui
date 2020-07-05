@@ -204,7 +204,7 @@
      <item>
       <widget class="ParameterValueListTreeView" name="treeView_parameter_value_list">
        <property name="contextMenuPolicy">
-        <enum>Qt::ActionsContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="accessibleName">
         <string>parameter value list</string>
@@ -1205,7 +1205,7 @@
     <string>User guide</string>
    </property>
    <property name="shortcut">
-    <string>F2</string>
+    <string>F1</string>
    </property>
   </action>
  </widget>
