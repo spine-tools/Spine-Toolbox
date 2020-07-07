@@ -35,6 +35,7 @@ class EntityTreeView(CopyTreeView):
         self._menu = QMenu(self)
         self.add_relationship_classes_action = None
         self.add_relationships_action = None
+        self.manage_relationships_action = None
         self.fully_expand_action = None
         self.fully_collapse_action = None
         self._data_store_form = None
@@ -53,6 +54,21 @@ class EntityTreeView(CopyTreeView):
         """Adds action at the middle of the context menu.
         Subclasses can reimplement at will.
         """
+
+    def add_relationship_actions(self):
+        self.add_relationship_classes_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_relationship_classes.icon(),
+            "Add relationship classes",
+            self.add_relationship_classes,
+        )
+        self.add_relationships_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_relationships.icon(), "Add relationships", self.add_relationships
+        )
+        self.manage_relationships_action = self._menu.addAction(
+            self._data_store_form.ui.actionManage_relationships.icon(),
+            "Manage relationships",
+            self.manage_relationships,
+        )
 
     def create_context_menu(self):
         """Creates a context menu for this view."""
@@ -171,10 +187,18 @@ class EntityTreeView(CopyTreeView):
         """Edits all selected indexes using the connected data store form."""
         self._data_store_form.edit_entity_tree_items(self.selected_indexes)
 
+    def manage_relationships(self):
+        index = self.currentIndex()
+        item = index.internalPointer()
+        relationship_class_key = item.display_id
+        self._data_store_form.show_manage_relationships_form(relationship_class_key=relationship_class_key)
+
     def update_actions_visibility(self, item):
         """Updates the visible property of actions according to whether or not they apply to given item."""
         self.fully_expand_action.setVisible(item.has_children())
         self.fully_collapse_action.setVisible(item.has_children())
+        self.add_relationships_action.setVisible(item.item_type == "relationship class")
+        self.manage_relationships_action.setVisible(item.item_type == "relationship class")
 
     def contextMenuEvent(self, event):
         """Shows context menu.
@@ -237,7 +261,6 @@ class ObjectTreeView(EntityTreeView):
         self.add_objects_action.setVisible(item.item_type == "object class")
         self.add_object_group_action.setVisible(item.item_type == "object class")
         self.add_relationship_classes_action.setVisible(item.item_type == "object class")
-        self.add_relationships_action.setVisible(item.item_type == "relationship class")
         self.manage_object_group_action.setVisible(item.item_type == "object" and item.is_group())
         self.duplicate_object_action.setVisible(item.item_type == "object")
         self.find_next_action.setVisible(item.item_type == "relationship")
@@ -250,14 +273,7 @@ class ObjectTreeView(EntityTreeView):
             self._data_store_form.ui.actionAdd_objects.icon(), "Add objects", self.add_objects
         )
         self.add_object_group_action = self._menu.addAction("Add object group", self.add_object_group)
-        self.add_relationship_classes_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_relationship_classes.icon(),
-            "Add relationship classes",
-            self.add_relationship_classes,
-        )
-        self.add_relationships_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_relationships.icon(), "Add relationships", self.add_relationships
-        )
+        self.add_relationship_actions()
         self._menu.addSeparator()
         self.find_next_action = self._menu.addAction(
             QIcon(":/icons/menu_icons/ellipsis-h.png"), "Find next", self.find_next_relationship
@@ -326,19 +342,11 @@ class RelationshipTreeView(EntityTreeView):
     """Custom QTreeView class for the relationship tree in DataStoreForm."""
 
     def add_middle_actions(self):
-        self.add_relationship_classes_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_relationship_classes.icon(),
-            "Add relationship classes",
-            self.add_relationship_classes,
-        )
-        self.add_relationships_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_relationships.icon(), "Add relationships", self.add_relationships
-        )
+        self.add_relationship_actions()
 
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)
         self.add_relationship_classes_action.setVisible(item.item_type == "root")
-        self.add_relationships_action.setVisible(item.item_type == "relationship class")
 
     def add_relationship_classes(self):
         self._data_store_form.show_add_relationship_classes_form()

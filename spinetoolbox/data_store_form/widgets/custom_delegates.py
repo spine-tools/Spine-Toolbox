@@ -226,7 +226,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             return next(iter(value_list_ids))
 
     def createEditor(self, parent, option, index):
-        """If the parameter has associated a value list, returns a SearchBarEditor .
+        """If the parameter has associated a value list, returns a SearchBarEditor.
         Otherwise returns or requests a dedicated parameter value editor.
         """
         db_map = self._get_db_map(index)

@@ -203,8 +203,10 @@ class TreeViewMixin:
         dialog.show()
 
     @Slot(bool)
-    def show_manage_relationships_form(self, checked=False):
-        dialog = ManageRelationshipsDialog(self, self.db_mngr, *self.db_maps)
+    def show_manage_relationships_form(self, checked=False, relationship_class_key=None):
+        dialog = ManageRelationshipsDialog(
+            self, self.db_mngr, *self.db_maps, relationship_class_key=relationship_class_key
+        )
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):
