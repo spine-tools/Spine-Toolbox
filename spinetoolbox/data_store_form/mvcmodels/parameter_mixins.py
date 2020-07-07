@@ -121,7 +121,9 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         Returns:
             list: error log
         """
-        value_list_name = item.pop("value_list_name", None)
+        if "value_list_name" not in item:
+            return []
+        value_list_name = item.pop("value_list_name")
         if value_list_name:
             value_list = self._db_map_value_list_lookup.get(db_map, {}).get(value_list_name)
             if not value_list:
