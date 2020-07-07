@@ -50,7 +50,6 @@ from ...helpers import (
     format_string_list,
     open_url,
 )
-from .import_dialog import ImportDialog
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.settings_widget import DataStoreSettingsWidget
 from ...spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -139,7 +138,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.import_file)
-        self.ui.actionMapping_import.triggered.connect(self.show_mapping_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.show_get_items_for_export_dialog)
         self.ui.actionExport_session.triggered.connect(self.export_session)
         self.ui.actionCopy.triggered.connect(self.copy)
@@ -249,12 +247,6 @@ class DataStoreFormBase(QMainWindow):
     def paste(self, checked=False):
         """Pastes data from clipboard."""
         self._call_on_focused_widget("paste")
-
-    @Slot(bool)
-    def show_mapping_import_file_dialog(self, checked=False):
-        """Shows dialog to allow user to select a file to import."""
-        dialog = ImportDialog(self.qsettings, parent=self)
-        dialog.exec()
 
     @Slot(dict)
     def import_data(self, data):
