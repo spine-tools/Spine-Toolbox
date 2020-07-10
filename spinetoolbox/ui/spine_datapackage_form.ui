@@ -66,8 +66,6 @@
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
-    <addaction name="actionSave_datapackage"/>
-    <addaction name="separator"/>
     <addaction name="actionSave_All"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
@@ -318,17 +316,6 @@
     </layout>
    </widget>
   </widget>
-  <action name="actionSave_datapackage">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Save 'datapackage.json'</string>
-   </property>
-   <property name="toolTip">
-    <string>Save as 'datapackage.json'</string>
-   </property>
-  </action>
   <action name="actionClose">
    <property name="icon">
     <iconset>
@@ -351,18 +338,6 @@
    </property>
    <property name="toolTip">
     <string>Remove selected foreign keys.</string>
-   </property>
-  </action>
-  <action name="actionExport_to_spine">
-   <property name="icon">
-    <iconset>
-     <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>
-   </property>
-   <property name="text">
-    <string>Export to Spine format</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+E</string>
    </property>
   </action>
   <action name="actionCopy">

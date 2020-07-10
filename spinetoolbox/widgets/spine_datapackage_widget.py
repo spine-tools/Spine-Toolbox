@@ -20,7 +20,7 @@ in Data Connection item.
 import glob
 import os
 import csv
-from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QUndoStack, QAction
+from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, QUndoStack, QUndoGroup
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon, QKeySequence
 from datapackage import Package
@@ -33,7 +33,7 @@ from ..mvcmodels.data_package_models import (
     DatapackageResourceDataModel,
 )
 from ..helpers import ensure_window_is_on_screen
-from ..config import STATUSBAR_SS
+from ..config import STATUSBAR_SS, MAINWINDOW_SS
 
 
 class SpineDatapackageWidget(QMainWindow):
@@ -66,15 +66,18 @@ class SpineDatapackageWidget(QMainWindow):
         self.err_msg = QErrorMessage(self)
         self.remove_row_icon = QIcon(":/icons/minus.png")
         self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
-        self.undo_stack = QUndoStack(self)
+        self.undo_group = QUndoGroup(self)
+        self.undo_stacks = {}
         self._save_resource_actions = []
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.takeCentralWidget()
+        self._before_save_all = self.ui.menuFile.insertSeparator(self.ui.actionSave_All)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.restore_ui()
         self.add_menu_actions()
+        self.setStyleSheet(MAINWINDOW_SS)
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
@@ -97,14 +100,18 @@ class SpineDatapackageWidget(QMainWindow):
             )
         )
 
+    @property
+    def undo_stack(self):
+        return self.undo_group.activeStack()
+
     def add_menu_actions(self):
         """Add extra menu actions."""
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_resources.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_data.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_fields.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_foreign_keys.toggleViewAction())
-        undo_action = self.undo_stack.createUndoAction(self)
-        redo_action = self.undo_stack.createRedoAction(self)
+        undo_action = self.undo_group.createUndoAction(self)
+        redo_action = self.undo_group.createRedoAction(self)
         undo_action.setShortcuts(QKeySequence.Undo)
         redo_action.setShortcuts(QKeySequence.Redo)
         undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
@@ -122,15 +129,12 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionClose.triggered.connect(self.close)
-        self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
         self.ui.actionSave_All.triggered.connect(self.save_all)
         self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuView.aboutToShow.connect(self._handle_menu_about_to_show)
-        self.resources_model.resource_dirty_changed.connect(self._handle_resource_dirty_changed)
-        self.resource_data_model.resource_data_changed.connect(self.resources_model.update_dirty)
         self.fields_model.dataChanged.connect(self._handle_fields_data_changed)
-        self.undo_stack.cleanChanged.connect(self.update_window_modified)
+        self.undo_group.cleanChanged.connect(self.update_window_modified)
         checkbox_delegate = CheckBoxDelegate(self)
         checkbox_delegate.data_committed.connect(self.fields_model.setData)
         self.ui.tableView_fields.setItemDelegateForColumn(2, checkbox_delegate)
@@ -140,14 +144,24 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_resources.selectionModel().currentChanged.connect(self._handle_current_resource_changed)
 
     @Slot(bool)
-    def update_window_modified(self, clean):
+    def update_window_modified(self, _clean=None):
         """Updates window modified status and save actions depending on the state of the undo stack."""
+        clean = all(stack.isClean() for stack in self.undo_stacks.values())
         try:
             self.setWindowModified(not clean)
         except RuntimeError:
             pass
-        self.ui.actionSave_datapackage.setDisabled(clean)
         self.ui.actionSave_All.setDisabled(clean)
+        for idx, action in enumerate(self._save_resource_actions):
+            dirty = self.is_resource_dirty(idx)
+            action.setEnabled(dirty)
+            self.resources_model.update_resource_dirty(idx, dirty)
+
+    def is_resource_dirty(self, resource_index):
+        try:
+            return not self.undo_stacks[resource_index].isClean()
+        except KeyError:
+            return False
 
     def showEvent(self, e):
         """Called when the form shows. Init datapackage
@@ -183,7 +197,6 @@ class SpineDatapackageWidget(QMainWindow):
         # TODO: Mark resources corresponding to removed files as dirty (*)
 
     def append_save_resource_actions(self):
-        before = self.ui.actionSave_datapackage
         new_actions = []
         for resource_index in range(len(self._save_resource_actions), len(self.datapackage.resources)):
             resource = self.datapackage.resources[resource_index]
@@ -193,7 +206,7 @@ class SpineDatapackageWidget(QMainWindow):
                 lambda checked=False, resource_index=resource_index: self.save_resource(resource_index)
             )
             new_actions.append(action)
-        self.ui.menuFile.insertActions(before, new_actions)
+        self.ui.menuFile.insertActions(self._before_save_all, new_actions)
         self._save_resource_actions += new_actions
 
     def restore_ui(self):
@@ -269,30 +282,19 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot(bool)
     def save_all(self, checked=False):
-        resource_paths = {
-            k: r.source for k, r in enumerate(self.datapackage.resources) if self.datapackage.is_resource_dirty(k)
-        }
+        resource_paths = {k: r.source for k, r in enumerate(self.datapackage.resources) if self.is_resource_dirty(k)}
         datapackage_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
         all_paths = list(resource_paths.values()) + [datapackage_path]
         if not self.get_permission(*all_paths):
             return
-        self._save_datapackage()
         for k, path in resource_paths.items():
             self._save_resource(k, path)
+        self._save_datapackage(datapackage_path)
 
-    @Slot(bool)
-    def save_datapackage(self, checked=False):
-        """Saves datapackage to file 'datapackage.json' in data directory."""
-        filepath = os.path.join(self._data_connection.data_dir, "datapackage.json")
-        if not self.get_permission(filepath):
-            return
-        self._save_datapackage()
-
-    def _save_datapackage(self):
-        if self.datapackage.save(os.path.join(self._data_connection.data_dir, 'datapackage.json')):
+    def _save_datapackage(self, datapackage_path):
+        if self.datapackage.save(datapackage_path):
             msg = '"datapackage.json" saved in {}'.format(self._data_connection.data_dir)
             self.msg.emit(msg)
-            self.undo_stack.setClean()
             return
         msg = 'Failed to save "datapackage.json" in {}'.format(self._data_connection.data_dir)
         self.msg_error.emit(msg)
@@ -300,9 +302,11 @@ class SpineDatapackageWidget(QMainWindow):
     def save_resource(self, resource_index):
         resource = self.datapackage.resources[resource_index]
         filepath = resource.source
-        if not self.get_permission(filepath):
+        datapackage_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
+        if not self.get_permission(filepath, datapackage_path):
             return
         self._save_resource(resource_index, filepath)
+        self._save_datapackage(datapackage_path)
 
     def _save_resource(self, resource_index, filepath):
         headers = self.datapackage.resources[resource_index].schema.field_names
@@ -311,8 +315,8 @@ class SpineDatapackageWidget(QMainWindow):
             writer.writerow(headers)
             for row in self.datapackage.resource_data(resource_index):
                 writer.writerow(row)
-        self.datapackage.clear_resource_data_backup(resource_index)
-        self.resources_model.update_dirty(resource_index)
+        self.undo_stacks[resource_index].setClean()
+        self.update_window_modified()
 
     def get_permission(self, *filepaths):
         start_dir = self._data_connection.data_dir
@@ -354,16 +358,13 @@ class SpineDatapackageWidget(QMainWindow):
         if current.column() != 0 or current.row() == self.selected_resource_index:
             return
         self.selected_resource_index = current.row()
+        self.undo_stacks.setdefault(self.selected_resource_index, QUndoStack(self.undo_group)).setActive()
         self.resource_data_model.refresh_model(self.selected_resource_index)
         self.fields_model.refresh_model(self.selected_resource_index)
         self.foreign_keys_model.refresh_model(self.selected_resource_index)
         self.ui.tableView_resource_data.resizeColumnsToContents()
         self.ui.tableView_fields.resizeColumnsToContents()
         self.ui.tableView_foreign_keys.resizeColumnsToContents()
-
-    @Slot(int, bool)
-    def _handle_resource_dirty_changed(self, resource_index, dirty):
-        self._save_resource_actions[resource_index].setEnabled(dirty)
 
     @Slot("QModelIndex", "QModelIndex", list)
     def _handle_fields_data_changed(self, top_left, bottom_right, roles=()):
@@ -397,25 +398,12 @@ class CustomPackage(Package):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._resource_data = [resource.read(cast=False) for resource in self.resources]
-        self._resource_data_backup = {}
 
     def set_resource_data(self, resource_index, row, column, value):
-        data_backup = self._resource_data_backup.setdefault(resource_index, {})
-        if (row, column) not in data_backup:
-            data_backup[row, column] = self._resource_data[resource_index][row][column]
         self._resource_data[resource_index][row][column] = value
 
     def resource_data(self, resource_index):
         return self._resource_data[resource_index]
-
-    def is_resource_dirty(self, resource_index):
-        return any(
-            self._resource_data[resource_index][row][column] != value
-            for (row, column), value in self._resource_data_backup.get(resource_index, {}).items()
-        )
-
-    def clear_resource_data_backup(self, resource_index):
-        self._resource_data_backup.pop(resource_index, None)
 
     def add_resource(self, descriptor):
         resource = super().add_resource(descriptor)

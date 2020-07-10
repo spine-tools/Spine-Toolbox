@@ -18,18 +18,22 @@ Classes for models dealing with Data Packages.
 
 import os
 from copy import deepcopy
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtWidgets import QUndoCommand
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QFont
 from datapackage.exceptions import DataPackageException
 from .minimal_table_model import MinimalTableModel
 from .empty_row_model import EmptyRowModel
+from ..data_package_commands import (
+    UpdateResourceNameCommand,
+    UpdateResourceDataCommand,
+    UpdateFieldNameCommand,
+    UpdatePrimaryKeyCommand,
+    AddForeignKeyCommandCommand,
+    UpdateForeignKeyCommandCommand,
+)
 
 
 class DatapackageResourcesModel(MinimalTableModel):
-
-    resource_dirty_changed = Signal(int, bool)
-
     def __init__(self, parent, datapackage):
         """A model of datapackage resource data, used by SpineDatapackageWidget.
 
@@ -42,7 +46,7 @@ class DatapackageResourcesModel(MinimalTableModel):
         self.set_horizontal_header_labels(["name", "source"])
 
     def refresh_model(self):
-        data = [self.datapackage.is_resource_dirty(i) for i in range(len(self.datapackage.resources))]
+        data = [self._parent.is_resource_dirty(i) for i in range(len(self.datapackage.resources))]
         self.reset_model(data)
 
     def data(self, index, role=Qt.DisplayRole):
@@ -54,14 +58,11 @@ class DatapackageResourcesModel(MinimalTableModel):
         dirty = self._main_data[index.row()]
         return os.path.basename(resource.source) + ("*" if dirty else "")
 
-    def update_dirty(self, resource_index):
-        dirty = self.datapackage.is_resource_dirty(resource_index)
-        if dirty == self._main_data[resource_index]:
+    def update_resource_dirty(self, idx, dirty):
+        if dirty == self._main_data[idx]:
             return
-        self._main_data[resource_index] = dirty
-        index = self.index(resource_index, 1)
-        self.dataChanged.emit(index, index, [Qt.DisplayRole])
-        self.resource_dirty_changed.emit(resource_index, dirty)
+        self._main_data[idx] = dirty
+        self.dataChanged.emit(self.index(idx, 1), self.index(idx, 1), [Qt.DisplayRole])
 
     def setData(self, index, value, role=Qt.EditRole):
         if not value or role != Qt.EditRole:
@@ -86,9 +87,6 @@ class DatapackageResourcesModel(MinimalTableModel):
 
 
 class DatapackageResourceDataModel(MinimalTableModel):
-
-    resource_data_changed = Signal(int)
-
     def __init__(self, parent, datapackage):
         """A model of datapackage field data, used by SpineDatapackageWidget.
 
@@ -124,7 +122,6 @@ class DatapackageResourceDataModel(MinimalTableModel):
 
     def update_resource_data(self, resource_index, row, column, new_value):
         self.datapackage.set_resource_data(resource_index, row, column, new_value)
-        self.resource_data_changed.emit(resource_index)
         if resource_index == self.resource_index:
             index = self.index(row, column)
             self.dataChanged.emit(index, index, [Qt.DisplayRole])
@@ -322,137 +319,3 @@ class DatapackageForeignKeysModel(EmptyRowModel):
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right, roles)
-
-
-class UpdateResourceNameCommand(QUndoCommand):
-    def __init__(self, model, resource_index, old_name, new_name):
-        """Command to update a resource's name.
-
-        Args:
-
-        """
-        super().__init__()
-        self.model = model
-        self.resource_index = resource_index
-        self.old_name = old_name
-        self.new_name = new_name
-        self.setText(f"rename {old_name} to {new_name}")
-
-    def redo(self):
-        self.model.update_resource_name(self.resource_index, self.new_name)
-
-    def undo(self):
-        self.model.update_resource_name(self.resource_index, self.old_name)
-
-
-class UpdateResourceDataCommand(QUndoCommand):
-    def __init__(self, model, resource_index, row, column, old_value, new_value):
-        """Command to update resource data.
-
-        Args:
-
-        """
-        super().__init__()
-        self.model = model
-        self.resource_index = resource_index
-        self.row = row
-        self.column = column
-        self.new_value = new_value
-        self.old_value = old_value
-        self.setText(f"update {old_value} to {new_value}")
-
-    def redo(self):
-        self.model.update_resource_data(self.resource_index, self.row, self.column, self.new_value)
-
-    def undo(self):
-        self.model.update_resource_data(self.resource_index, self.row, self.column, self.old_value)
-
-
-class UpdateFieldNameCommand(QUndoCommand):
-    def __init__(self, model, resource_index, field_index, old_name, new_name):
-        """Command to update a resource's name.
-
-        Args:
-
-        """
-        super().__init__()
-        self.model = model
-        self.resource_index = resource_index
-        self.field_index = field_index
-        self.old_name = old_name
-        self.new_name = new_name
-        self.setText(f"rename {old_name} to {new_name}")
-
-    def redo(self):
-        self.model.update_field_name(self.resource_index, self.field_index, self.old_name, self.new_name)
-
-    def undo(self):
-        self.model.update_field_name(self.resource_index, self.field_index, self.new_name, self.old_name)
-
-
-class UpdatePrimaryKeyCommand(QUndoCommand):
-    def __init__(self, model, resource_index, field_index, status):
-        """Command to update a resource's name.
-
-        Args:
-
-        """
-        super().__init__()
-        self.model = model
-        self.resource_index = resource_index
-        self.field_index = field_index
-        self.status = status
-        field_name = self.model.index(self.field_index, 0).data()
-        action = f"add {field_name} to" if self.status else f"remove {field_name} from"
-        self.setText(f"{action} primary key")
-
-    def redo(self):
-        self.model.update_primary_key(self.resource_index, self.field_index, self.status)
-
-    def undo(self):
-        self.model.update_primary_key(self.resource_index, self.field_index, not self.status)
-
-
-class AddForeignKeyCommandCommand(QUndoCommand):
-    def __init__(self, model, resource_index, foreign_key):
-        """Command to update a resource's name.
-
-        Args:
-
-        """
-        super().__init__()
-        self.model = model
-        self.resource_index = resource_index
-        self.foreign_key = foreign_key
-        self.fk_index = len(model.foreign_keys)
-        resource_name = self.model.datapackage.resources[self.resource_index].name
-        self.setText(f"add foreign key to {resource_name}")
-
-    def redo(self):
-        self.model.add_foreign_key(self.resource_index, self.foreign_key)
-
-    def undo(self):
-        self.model.remove_foreign_key(self.resource_index, self.fk_index)
-
-
-class UpdateForeignKeyCommandCommand(QUndoCommand):
-    def __init__(self, model, resource_index, fk_index, foreign_key):
-        """Command to update a resource's name.
-
-        Args:
-
-        """
-        super().__init__()
-        self.model = model
-        self.resource_index = resource_index
-        self.fk_index = fk_index
-        self.foreign_key = foreign_key
-        self.old_foreign_key = self.model.foreign_keys[fk_index]
-        resource_name = self.model.datapackage.resources[self.resource_index].name
-        self.setText(f"update foreign key of {resource_name}")
-
-    def redo(self):
-        self.model.update_foreign_key(self.resource_index, self.fk_index, self.foreign_key)
-
-    def undo(self):
-        self.model.update_foreign_key(self.resource_index, self.fk_index, self.old_foreign_key)
