@@ -20,7 +20,7 @@ from numbers import Number
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtWidgets import QItemDelegate
 from PySide2.QtGui import QIcon
-from spinedb_api import from_database, to_database
+from spinedb_api import to_database
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate
