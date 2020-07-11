@@ -147,12 +147,14 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot(bool)
     def update_window_modified(self, _clean=None):
         """Updates window modified status and save actions depending on the state of the undo stack."""
-        dirty_resource_indexes = {idx for idx in range(len(self.datapackage.resources)) if self.is_resource_dirty(idx)}
-        dirty = any(dirty_resource_indexes)
         try:
+            dirty_resource_indexes = {
+                idx for idx in range(len(self.datapackage.resources)) if self.is_resource_dirty(idx)
+            }
+            dirty = bool(dirty_resource_indexes)
             self.setWindowModified(dirty)
         except RuntimeError:
-            pass
+            return
         self.ui.actionSave_All.setEnabled(dirty)
         for idx, action in enumerate(self._save_resource_actions):
             dirty = idx in dirty_resource_indexes
@@ -349,7 +351,7 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot("QPoint")
     def show_foreign_keys_context_menu(self, pos):
         index = self.ui.tableView_foreign_keys.indexAt(pos)
-        if not index.isValid():
+        if not index.isValid() or index.row() == index.model().rowCount() - 1:
             return
         global_pos = self.ui.tableView_foreign_keys.viewport().mapToGlobal(pos)
         self._foreign_keys_context_menu.popup(global_pos)
@@ -542,7 +544,7 @@ class CustomPackage(Package):
         """Updates this package's schema from other package's."""
         if not os.path.isfile(descriptor_filepath):
             return
-        other_datapackage = Package(descriptor_filepath)
+        other_datapackage = Package(descriptor_filepath, unsafe=True)
         for resource in self.descriptor["resources"]:
             other_resource = other_datapackage.get_resource(resource["name"])
             if other_resource is None:
