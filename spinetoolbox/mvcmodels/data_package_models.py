@@ -27,8 +27,9 @@ from ..data_package_commands import (
     UpdateResourceDataCommand,
     UpdateFieldNamesCommand,
     UpdatePrimaryKeysCommand,
-    AddForeignKeyCommandCommand,
+    AppendForeignKeyCommandCommand,
     UpdateForeignKeyCommandCommand,
+    RemoveForeignKeyCommandCommand,
 )
 from ..helpers import format_string_list
 
@@ -326,11 +327,11 @@ class DatapackageForeignKeysModel(EmptyRowModel):
         column = index.column()
         self._main_data[fk_index][column] = value
         if fk_index >= len(self.foreign_keys):
-            self._add_foreign_key(fk_index)
+            self._append_foreign_key(fk_index)
         else:
             self._update_foreign_key(fk_index)
 
-    def _add_foreign_key(self, fk_index):
+    def _append_foreign_key(self, fk_index):
         row_data = self._main_data[fk_index]
         if not all(row_data):
             return
@@ -341,7 +342,7 @@ class DatapackageForeignKeysModel(EmptyRowModel):
         }
         if not self._check_foreign_key(foreign_key):
             return
-        self._parent.undo_stack.push(AddForeignKeyCommandCommand(self, self.resource_index, foreign_key))
+        self._parent.undo_stack.push(AppendForeignKeyCommandCommand(self, self.resource_index, foreign_key))
 
     def _update_foreign_key(self, fk_index):
         foreign_key = deepcopy(self.foreign_keys[fk_index])
@@ -358,15 +359,10 @@ class DatapackageForeignKeysModel(EmptyRowModel):
             return
         self._parent.undo_stack.push(UpdateForeignKeyCommandCommand(self, self.resource_index, fk_index, foreign_key))
 
-    def add_foreign_key(self, resource_index, foreign_key):
-        self.datapackage.add_foreign_key(resource_index, foreign_key)
+    def append_foreign_key(self, resource_index, foreign_key):
+        self.datapackage.append_foreign_key(resource_index, foreign_key)
         if resource_index == self.resource_index:
             self.insertRows(len(self.foreign_keys), 1)
-
-    def remove_foreign_key(self, resource_index, fk_index):
-        self.datapackage.remove_foreign_key(resource_index, fk_index)
-        if resource_index == self.resource_index:
-            self.removeRows(fk_index, 1)
 
     def update_foreign_key(self, resource_index, fk_index, foreign_key):
         self.datapackage.update_foreign_key(resource_index, fk_index, foreign_key)
@@ -375,6 +371,19 @@ class DatapackageForeignKeysModel(EmptyRowModel):
             top_left = self.index(fk_index, 0)
             bottom_right = self.index(fk_index, 2)
             self.dataChanged.emit(top_left, bottom_right)
+
+    def call_remove_foreign_key(self, fk_index):
+        self._parent.undo_stack.push(RemoveForeignKeyCommandCommand(self, self.resource_index, fk_index))
+
+    def remove_foreign_key(self, resource_index, fk_index):
+        self.datapackage.remove_foreign_key(resource_index, fk_index)
+        if resource_index == self.resource_index:
+            self.removeRows(fk_index, 1)
+
+    def insert_foreign_key(self, resource_index, fk_index, foreign_key):
+        self.datapackage.insert_foreign_key(resource_index, fk_index, foreign_key)
+        if resource_index == self.resource_index:
+            self.insertRows(fk_index, 1)
 
     def emit_data_changed(self, roles=None):
         """Emits dataChanged for the entire model."""

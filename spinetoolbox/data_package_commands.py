@@ -68,7 +68,7 @@ class UpdateResourceDataCommand(QUndoCommand):
 
 class UpdateFieldNamesCommand(QUndoCommand):
     def __init__(self, model, resource_index, field_indexes, old_names, new_names):
-        """Command to update a resource's name.
+        """Command to update a resource field's name.
 
         Args:
 
@@ -93,7 +93,7 @@ class UpdateFieldNamesCommand(QUndoCommand):
 
 class UpdatePrimaryKeysCommand(QUndoCommand):
     def __init__(self, model, resource_index, field_indexes, statuses):
-        """Command to update a resource's name.
+        """Command to update a resource's primary key.
 
         Args:
 
@@ -118,9 +118,9 @@ class UpdatePrimaryKeysCommand(QUndoCommand):
         self.model.update_primary_keys(self.resource_index, self.field_indexes, self.not_statuses)
 
 
-class AddForeignKeyCommandCommand(QUndoCommand):
+class AppendForeignKeyCommandCommand(QUndoCommand):
     def __init__(self, model, resource_index, foreign_key):
-        """Command to update a resource's name.
+        """Command to append a foreign key to a resource.
 
         Args:
 
@@ -131,18 +131,40 @@ class AddForeignKeyCommandCommand(QUndoCommand):
         self.foreign_key = foreign_key
         self.fk_index = len(model.foreign_keys)
         resource_name = self.model.datapackage.resources[self.resource_index].name
-        self.setText(f"add foreign key to {resource_name}")
+        self.setText(f"append foreign key to {resource_name}")
 
     def redo(self):
-        self.model.add_foreign_key(self.resource_index, self.foreign_key)
+        self.model.append_foreign_key(self.resource_index, self.foreign_key)
 
     def undo(self):
         self.model.remove_foreign_key(self.resource_index, self.fk_index)
 
 
+class RemoveForeignKeyCommandCommand(QUndoCommand):
+    def __init__(self, model, resource_index, fk_index):
+        """Command to remove a foreign key from a resource.
+
+        Args:
+
+        """
+        super().__init__()
+        self.model = model
+        self.resource_index = resource_index
+        self.fk_index = fk_index
+        self.foreign_key = self.model.foreign_keys[fk_index]
+        resource_name = self.model.datapackage.resources[self.resource_index].name
+        self.setText(f"remove foreign key from {resource_name}")
+
+    def redo(self):
+        self.model.remove_foreign_key(self.resource_index, self.fk_index)
+
+    def undo(self):
+        self.model.insert_foreign_key(self.resource_index, self.fk_index, self.foreign_key)
+
+
 class UpdateForeignKeyCommandCommand(QUndoCommand):
     def __init__(self, model, resource_index, fk_index, foreign_key):
-        """Command to update a resource's name.
+        """Command to update a foreign key in a resource.
 
         Args:
 

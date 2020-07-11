@@ -112,6 +112,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
         self.tableView_foreign_keys = CopyPasteTableView(self.dockWidgetContents_6)
         self.tableView_foreign_keys.setObjectName(u"tableView_foreign_keys")
+        self.tableView_foreign_keys.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tableView_foreign_keys.setLayoutDirection(Qt.LeftToRight)
         self.tableView_foreign_keys.setSelectionBehavior(QAbstractItemView.SelectItems)
         self.tableView_foreign_keys.setShowGrid(True)

@@ -20,7 +20,7 @@ in Data Connection item.
 import glob
 import os
 import csv
-from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, QUndoStack, QUndoGroup
+from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, QUndoStack, QUndoGroup, QMenu
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon, QKeySequence
 from datapackage import Package
@@ -66,7 +66,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.visible_rows = int(max_screen_height / self.default_row_height)
         self.err_msg = QErrorMessage(self)
         self.notification_stack = NotificationStack(self)
-        self.remove_row_icon = QIcon(":/icons/minus.png")
+        self._foreign_keys_context_menu = QMenu(self)
         self.undo_group = QUndoGroup(self)
         self.undo_stacks = {}
         self._save_resource_actions = []
@@ -138,6 +138,8 @@ class SpineDatapackageWidget(QMainWindow):
         foreign_keys_delegate.data_committed.connect(self.foreign_keys_model.setData)
         self.ui.tableView_foreign_keys.setItemDelegate(foreign_keys_delegate)
         self.ui.tableView_resources.selectionModel().currentChanged.connect(self._handle_current_resource_changed)
+        self.ui.tableView_foreign_keys.customContextMenuRequested.connect(self.show_foreign_keys_context_menu)
+        self._foreign_keys_context_menu.addAction("Remove foreign key", self._remove_foreign_key)
 
     @Slot(bool)
     def update_window_modified(self, _clean=None):
@@ -323,6 +325,21 @@ class SpineDatapackageWidget(QMainWindow):
             self.ui.tableView_resource_data.resizeColumnsToContents()
             self.foreign_keys_model.emit_data_changed()
 
+    @Slot("QPoint")
+    def show_foreign_keys_context_menu(self, pos):
+        index = self.ui.tableView_foreign_keys.indexAt(pos)
+        if not index.isValid():
+            return
+        global_pos = self.ui.tableView_foreign_keys.viewport().mapToGlobal(pos)
+        self._foreign_keys_context_menu.popup(global_pos)
+
+    @Slot(bool)
+    def _remove_foreign_key(self, checked=False):
+        index = self.ui.tableView_foreign_keys.currentIndex()
+        if not index.isValid():
+            return
+        index.model().call_remove_foreign_key(index.row())
+
     def restore_ui(self):
         """Restore UI state from previous session."""
         window_size = self.qsettings.value("dataPackageWidget/windowSize")
@@ -477,9 +494,14 @@ class CustomPackage(Package):
             return f"Foreign key already in {resource.name}'s schema."
         return None
 
-    def add_foreign_key(self, resource_index, foreign_key):
+    def append_foreign_key(self, resource_index, foreign_key):
         fks = self.descriptor['resources'][resource_index]['schema'].setdefault('foreignKeys', [])
         fks.append(foreign_key)
+        self.commit()
+
+    def insert_foreign_key(self, resource_index, fk_index, foreign_key):
+        fks = self.descriptor['resources'][resource_index]['schema'].setdefault('foreignKeys', [])
+        fks.insert(fk_index, foreign_key)
         self.commit()
 
     def update_foreign_key(self, resource_index, fk_index, foreign_key):
