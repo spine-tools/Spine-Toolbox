@@ -26,8 +26,8 @@ from .empty_row_model import EmptyRowModel
 from ..data_package_commands import (
     UpdateResourceNameCommand,
     UpdateResourceDataCommand,
-    UpdateFieldNameCommand,
-    UpdatePrimaryKeyCommand,
+    UpdateFieldNamesCommand,
+    UpdatePrimaryKeysCommand,
     AddForeignKeyCommandCommand,
     UpdateForeignKeyCommandCommand,
 )
@@ -64,14 +64,19 @@ class DatapackageResourcesModel(MinimalTableModel):
         self._main_data[idx] = dirty
         self.dataChanged.emit(self.index(idx, 1), self.index(idx, 1), [Qt.DisplayRole])
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if not value or role != Qt.EditRole:
+    def batch_set_data(self, indexes, data):
+        for index, value in zip(indexes, data):
+            self.set_data(index, value)
+
+    def set_data(self, index, value):
+        if not value:
             return False
         old_value = index.data(Qt.DisplayRole)
         if old_value == value:
             return False
         resource_index = index.row()
-        self._parent.undo_stack.push(UpdateResourceNameCommand(self, resource_index, old_value, value))
+        stack = self._parent.get_undo_stack(resource_index)
+        stack.push(UpdateResourceNameCommand(self, resource_index, old_value, value))
         return True
 
     def update_resource_name(self, resource_index, new_name):
@@ -108,23 +113,33 @@ class DatapackageResourceDataModel(MinimalTableModel):
             return None
         return self.datapackage.resources[self.resource_index].schema.field_names[section]
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
+    def batch_set_data(self, indexes, data):
+        rows = []
+        columns = []
+        new_values = []
+        old_values = []
+        for index, new_value in zip(indexes, data):
+            old_value = index.data(Qt.DisplayRole)
+            if old_value == new_value:
+                continue
+            rows.append(index.row())
+            columns.append(index.column())
+            new_values.append(new_value)
+            old_values.append(old_value)
+        if not rows:
             return False
-        old_value = index.data(Qt.DisplayRole)
-        if old_value == value:
-            return False
-        row, column = index.row(), index.column()
         self._parent.undo_stack.push(
-            UpdateResourceDataCommand(self, self.resource_index, row, column, old_value, value)
+            UpdateResourceDataCommand(self, self.resource_index, rows, columns, old_values, new_values)
         )
         return True
 
-    def update_resource_data(self, resource_index, row, column, new_value):
-        self.datapackage.set_resource_data(resource_index, row, column, new_value)
+    def update_resource_data(self, resource_index, rows, columns, new_values):
+        for row, column, new_value in zip(rows, columns, new_values):
+            self.datapackage.set_resource_data(resource_index, row, column, new_value)
         if resource_index == self.resource_index:
-            index = self.index(row, column)
-            self.dataChanged.emit(index, index, [Qt.DisplayRole])
+            top_left = self.index(min(rows), min(columns))
+            bottom_right = self.index(max(rows), max(columns))
+            self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
 
 
 class DatapackageFieldsModel(MinimalTableModel):
@@ -164,35 +179,51 @@ class DatapackageFieldsModel(MinimalTableModel):
             return flags & ~Qt.ItemIsEditable
         return flags
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if role != Qt.EditRole:
+    def batch_set_data(self, indexes, data):
+        name_indexes = []
+        pk_indexes = []
+        old_names = []
+        new_names = []
+        pk_statuses = []
+        for index, new_value in zip(indexes, data):
+            if index.column() == 0:
+                old_value = index.data(Qt.DisplayRole)
+                if not new_value or new_value == old_value:
+                    continue
+                name_indexes.append(index.row())
+                new_names.append(new_value)
+                old_names.append(old_value)
+            elif index.column() == 2:
+                pk_indexes.append(index.row())
+                pk_statuses.append(new_value)
+        if not name_indexes and not pk_indexes:
             return False
-        field_index = index.row()
-        if index.column() == 0:
-            old_value = index.data(Qt.DisplayRole)
-            if not value or value == old_value:
-                return False
+        if name_indexes:
             self._parent.undo_stack.push(
-                UpdateFieldNameCommand(self, self.resource_index, field_index, old_value, value)
+                UpdateFieldNamesCommand(self, self.resource_index, name_indexes, old_names, new_names)
             )
-        if index.column() == 2:
-            self._parent.undo_stack.push(UpdatePrimaryKeyCommand(self, self.resource_index, field_index, value))
+        if pk_indexes:
+            self._parent.undo_stack.push(UpdatePrimaryKeysCommand(self, self.resource_index, pk_indexes, pk_statuses))
         return True
 
-    def update_field_name(self, resource_index, field_index, old_name, new_name):
-        self.datapackage.rename_field(resource_index, field_index, old_name, new_name)
+    def update_field_names(self, resource_index, field_indexes, old_names, new_names):
+        for field_index, old_name, new_name in zip(field_indexes, old_names, new_names):
+            self.datapackage.rename_field(resource_index, field_index, old_name, new_name)
         if resource_index == self.resource_index:
-            index = self.index(field_index, 0)
-            self.dataChanged.emit(index, index, [Qt.DisplayRole])
+            top_left = self.index(min(field_indexes), 0)
+            bottom_right = self.index(max(field_indexes), 0)
+            self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
 
-    def update_primary_key(self, resource_index, field_index, status):
-        if status:
-            self.datapackage.append_to_primary_key(resource_index, field_index)
-        else:
-            self.datapackage.remove_from_primary_key(resource_index, field_index)
+    def update_primary_keys(self, resource_index, field_indexes, statuses):
+        for field_index, status in zip(field_indexes, statuses):
+            if status:
+                self.datapackage.append_to_primary_key(resource_index, field_index)
+            else:
+                self.datapackage.remove_from_primary_key(resource_index, field_index)
         if resource_index == self.resource_index:
-            index = self.index(field_index, 2)
-            self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+            top_left = self.index(min(field_indexes), 2)
+            bottom_right = self.index(max(field_indexes), 2)
+            self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
 
 
 class DatapackageForeignKeysModel(EmptyRowModel):

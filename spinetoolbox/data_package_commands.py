@@ -41,7 +41,7 @@ class UpdateResourceNameCommand(QUndoCommand):
 
 
 class UpdateResourceDataCommand(QUndoCommand):
-    def __init__(self, model, resource_index, row, column, old_value, new_value):
+    def __init__(self, model, resource_index, rows, columns, old_values, new_values):
         """Command to update resource data.
 
         Args:
@@ -50,21 +50,24 @@ class UpdateResourceDataCommand(QUndoCommand):
         super().__init__()
         self.model = model
         self.resource_index = resource_index
-        self.row = row
-        self.column = column
-        self.new_value = new_value
-        self.old_value = old_value
-        self.setText(f"update {old_value} to {new_value}")
+        self.rows = rows
+        self.columns = columns
+        self.new_values = new_values
+        self.old_values = old_values
+        if len(old_values) == 1:
+            self.setText(f"update {old_values[0]} to {new_values[0]}")
+        else:
+            self.setText(f"update multiple values")
 
     def redo(self):
-        self.model.update_resource_data(self.resource_index, self.row, self.column, self.new_value)
+        self.model.update_resource_data(self.resource_index, self.rows, self.columns, self.new_values)
 
     def undo(self):
-        self.model.update_resource_data(self.resource_index, self.row, self.column, self.old_value)
+        self.model.update_resource_data(self.resource_index, self.rows, self.columns, self.old_values)
 
 
-class UpdateFieldNameCommand(QUndoCommand):
-    def __init__(self, model, resource_index, field_index, old_name, new_name):
+class UpdateFieldNamesCommand(QUndoCommand):
+    def __init__(self, model, resource_index, field_indexes, old_names, new_names):
         """Command to update a resource's name.
 
         Args:
@@ -73,20 +76,23 @@ class UpdateFieldNameCommand(QUndoCommand):
         super().__init__()
         self.model = model
         self.resource_index = resource_index
-        self.field_index = field_index
-        self.old_name = old_name
-        self.new_name = new_name
-        self.setText(f"rename {old_name} to {new_name}")
+        self.field_indexes = field_indexes
+        self.old_names = old_names
+        self.new_names = new_names
+        if len(old_names) == 1:
+            self.setText(f"rename {old_names[0]} to {new_names[0]}")
+        else:
+            self.setText(f"rename multiple fields")
 
     def redo(self):
-        self.model.update_field_name(self.resource_index, self.field_index, self.old_name, self.new_name)
+        self.model.update_field_names(self.resource_index, self.field_indexes, self.old_names, self.new_names)
 
     def undo(self):
-        self.model.update_field_name(self.resource_index, self.field_index, self.new_name, self.old_name)
+        self.model.update_field_names(self.resource_index, self.field_indexes, self.new_names, self.old_names)
 
 
-class UpdatePrimaryKeyCommand(QUndoCommand):
-    def __init__(self, model, resource_index, field_index, status):
+class UpdatePrimaryKeysCommand(QUndoCommand):
+    def __init__(self, model, resource_index, field_indexes, statuses):
         """Command to update a resource's name.
 
         Args:
@@ -95,17 +101,21 @@ class UpdatePrimaryKeyCommand(QUndoCommand):
         super().__init__()
         self.model = model
         self.resource_index = resource_index
-        self.field_index = field_index
-        self.status = status
-        field_name = self.model.index(self.field_index, 0).data()
-        action = f"add {field_name} to" if self.status else f"remove {field_name} from"
-        self.setText(f"{action} primary key")
+        self.field_indexes = field_indexes
+        self.statuses = statuses
+        self.not_statuses = [not s for s in statuses]
+        if len(field_indexes) == 1:
+            field_name = self.model.index(self.field_indexes[0], 0).data()
+            action = f"add {field_name} to" if self.statuses[0] else f"remove {field_name} from"
+            self.setText(f"{action} primary key")
+        else:
+            self.setText(f"update primary key")
 
     def redo(self):
-        self.model.update_primary_key(self.resource_index, self.field_index, self.status)
+        self.model.update_primary_keys(self.resource_index, self.field_indexes, self.statuses)
 
     def undo(self):
-        self.model.update_primary_key(self.resource_index, self.field_index, not self.status)
+        self.model.update_primary_keys(self.resource_index, self.field_index, self.not_statuses)
 
 
 class AddForeignKeyCommandCommand(QUndoCommand):

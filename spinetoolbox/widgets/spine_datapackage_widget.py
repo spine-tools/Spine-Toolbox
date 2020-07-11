@@ -26,14 +26,15 @@ from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon, QKeySeque
 from datapackage import Package
 from datapackage.exceptions import DataPackageException
 from .custom_delegates import ForeignKeysDelegate, CheckBoxDelegate
+from .notification import NotificationStack
 from ..mvcmodels.data_package_models import (
     DatapackageResourcesModel,
     DatapackageFieldsModel,
     DatapackageForeignKeysModel,
     DatapackageResourceDataModel,
 )
-from ..helpers import ensure_window_is_on_screen
-from ..config import STATUSBAR_SS, MAINWINDOW_SS
+from ..helpers import ensure_window_is_on_screen, focused_widget_has_callable, call_on_focused_widget
+from ..config import MAINWINDOW_SS
 
 
 class SpineDatapackageWidget(QMainWindow):
@@ -64,8 +65,8 @@ class SpineDatapackageWidget(QMainWindow):
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
         self.err_msg = QErrorMessage(self)
+        self.notification_stack = NotificationStack(self)
         self.remove_row_icon = QIcon(":/icons/minus.png")
-        self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         self.undo_group = QUndoGroup(self)
         self.undo_stacks = {}
         self._save_resource_actions = []
@@ -78,9 +79,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.restore_ui()
         self.add_menu_actions()
         self.setStyleSheet(MAINWINDOW_SS)
-        self.ui.statusbar.setFixedHeight(20)
-        self.ui.statusbar.setSizeGripEnabled(False)
-        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.tableView_resources.setModel(self.resources_model)
         self.ui.tableView_resources.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_resource_data.setModel(self.resource_data_model)
@@ -130,9 +128,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionSave_All.triggered.connect(self.save_all)
-        self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
-        self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
-        self.ui.menuView.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.fields_model.dataChanged.connect(self._handle_fields_data_changed)
         self.undo_group.cleanChanged.connect(self.update_window_modified)
         checkbox_delegate = CheckBoxDelegate(self)
@@ -162,6 +158,11 @@ class SpineDatapackageWidget(QMainWindow):
             return not self.undo_stacks[resource_index].isClean()
         except KeyError:
             return False
+
+    def get_undo_stack(self, resource_index):
+        stack = self.undo_stacks.setdefault(resource_index, QUndoStack(self.undo_group))
+        stack.cleanChanged.connect(self.update_window_modified)
+        return stack
 
     def showEvent(self, e):
         """Called when the form shows. Init datapackage
@@ -232,34 +233,11 @@ class SpineDatapackageWidget(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
 
     @Slot()
-    def _handle_menu_about_to_show(self):
-        """Called when a menu from the menubar is about to show.
-        Adjust infer action depending on whether or not we have a datapackage.
-        Adjust copy paste actions depending on which widget has the focus.
+    def _handle_menu_edit_about_to_show(self):
+        """Adjusts copy and paste actions depending on which widget has the focus.
         """
-        # TODO Enable/disable action to save datapackage depending on status.
-        self.ui.actionCopy.setText("Copy")
-        self.ui.actionPaste.setText("Paste")
-        self.ui.actionCopy.setEnabled(False)
-        self.ui.actionPaste.setEnabled(False)
-        if self.focusWidget() != self.ui.menubar:
-            self.focus_widget = self.focusWidget()
-        if self.focus_widget == self.ui.tableView_resources:
-            focus_widget_name = "resources"
-        elif self.focus_widget == self.ui.tableView_resource_data:
-            focus_widget_name = "data"
-        elif self.focus_widget == self.ui.tableView_fields:
-            focus_widget_name = "fields"
-        elif self.focus_widget == self.ui.tableView_foreign_keys:
-            focus_widget_name = "foreign keys"
-        else:
-            return
-        if not self.focus_widget.selectionModel().selection().isEmpty():
-            self.ui.actionCopy.setText("Copy from {}".format(focus_widget_name))
-            self.ui.actionCopy.setEnabled(True)
-        if self.focus_widget.canPaste():
-            self.ui.actionPaste.setText("Paste to {}".format(focus_widget_name))
-            self.ui.actionPaste.setEnabled(True)
+        self.ui.actionCopy.setEnabled(focused_widget_has_callable(self, "copy"))
+        self.ui.actionPaste.setEnabled(focused_widget_has_callable(self, "paste"))
 
     @Slot(str)
     def add_message(self, msg):
@@ -268,8 +246,7 @@ class SpineDatapackageWidget(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
-        msg += "\t" + self.ui.statusbar.currentMessage()
-        self.ui.statusbar.showMessage(msg, 5000)
+        self.notification_stack.push(msg)
 
     @Slot(str)
     def add_error_message(self, msg):
@@ -316,7 +293,6 @@ class SpineDatapackageWidget(QMainWindow):
             for row in self.datapackage.resource_data(resource_index):
                 writer.writerow(row)
         self.undo_stacks[resource_index].setClean()
-        self.update_window_modified()
 
     def get_permission(self, *filepaths):
         start_dir = self._data_connection.data_dir
@@ -331,21 +307,13 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot(bool)
     def copy(self, checked=False):
-        """Copy data to clipboard."""
-        focus_widget = self.focusWidget()
-        try:
-            focus_widget.copy()
-        except AttributeError:
-            pass
+        """Copies data to clipboard."""
+        call_on_focused_widget(self, "copy")
 
     @Slot(bool)
     def paste(self, checked=False):
-        """Paste data from clipboard."""
-        focus_widget = self.focusWidget()
-        try:
-            focus_widget.paste()
-        except AttributeError:
-            pass
+        """Pastes data from clipboard."""
+        call_on_focused_widget(self, "paste")
 
     @Slot("QModelIndex", "QModelIndex")
     def _handle_current_resource_changed(self, current, _previous):
@@ -358,7 +326,7 @@ class SpineDatapackageWidget(QMainWindow):
         if current.column() != 0 or current.row() == self.selected_resource_index:
             return
         self.selected_resource_index = current.row()
-        self.undo_stacks.setdefault(self.selected_resource_index, QUndoStack(self.undo_group)).setActive()
+        self.get_undo_stack(self.selected_resource_index).setActive()
         self.resource_data_model.refresh_model(self.selected_resource_index)
         self.fields_model.refresh_model(self.selected_resource_index)
         self.foreign_keys_model.refresh_model(self.selected_resource_index)

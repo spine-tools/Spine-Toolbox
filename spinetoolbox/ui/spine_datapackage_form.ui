@@ -92,7 +92,6 @@
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_fields">
    <property name="allowedAreas">
     <set>Qt::AllDockWidgetAreas</set>
