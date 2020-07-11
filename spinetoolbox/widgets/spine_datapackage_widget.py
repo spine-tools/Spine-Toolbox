@@ -66,6 +66,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.notification_stack = NotificationStack(self)
         self._foreign_keys_context_menu = QMenu(self)
         self._file_watcher = QFileSystemWatcher(self)
+        self._file_watcher.addPath(self._data_connection.data_dir)
         self._changed_source_indexes = set()
         self.undo_group = QUndoGroup(self)
         self.undo_stacks = {}
@@ -97,8 +98,6 @@ class SpineDatapackageWidget(QMainWindow):
                 self._data_connection.name, self._data_connection.data_dir
             )
         )
-        if os.path.isdir(self._data_connection.data_dir):
-            self._file_watcher.addPath(self._data_connection.data_dir)
 
     @property
     def undo_stack(self):
