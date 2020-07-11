@@ -21,7 +21,7 @@ import glob
 import os
 import csv
 from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, QUndoStack, QUndoGroup, QMenu
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel, QFileSystemWatcher
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon, QKeySequence
 from datapackage import Package
 from .custom_delegates import ForeignKeysDelegate, CheckBoxDelegate
@@ -34,8 +34,6 @@ from ..mvcmodels.data_package_models import (
 )
 from ..helpers import ensure_window_is_on_screen, focused_widget_has_callable, call_on_focused_widget
 from ..config import MAINWINDOW_SS
-
-# TODO: Add support to remove foreign keys
 
 
 class SpineDatapackageWidget(QMainWindow):
@@ -67,6 +65,8 @@ class SpineDatapackageWidget(QMainWindow):
         self.err_msg = QErrorMessage(self)
         self.notification_stack = NotificationStack(self)
         self._foreign_keys_context_menu = QMenu(self)
+        self._file_watcher = QFileSystemWatcher(self)
+        self._changed_source_indexes = set()
         self.undo_group = QUndoGroup(self)
         self.undo_stacks = {}
         self._save_resource_actions = []
@@ -97,6 +97,8 @@ class SpineDatapackageWidget(QMainWindow):
                 self._data_connection.name, self._data_connection.data_dir
             )
         )
+        if os.path.isdir(self._data_connection.data_dir):
+            self._file_watcher.addPath(self._data_connection.data_dir)
 
     @property
     def undo_stack(self):
@@ -123,7 +125,8 @@ class SpineDatapackageWidget(QMainWindow):
         """Connect signals to slots."""
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
-        self._data_connection.data_dir_watcher.directoryChanged.connect(self.refresh_datapackage)
+        self._file_watcher.directoryChanged.connect(self._handle_source_dir_changed)
+        self._file_watcher.fileChanged.connect(self._handle_source_file_changed)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionClose.triggered.connect(self.close)
@@ -144,18 +147,21 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot(bool)
     def update_window_modified(self, _clean=None):
         """Updates window modified status and save actions depending on the state of the undo stack."""
-        clean = all(stack.isClean() for stack in self.undo_stacks.values())
+        dirty_resource_indexes = {idx for idx in range(len(self.datapackage.resources)) if self.is_resource_dirty(idx)}
+        dirty = any(dirty_resource_indexes)
         try:
-            self.setWindowModified(not clean)
+            self.setWindowModified(dirty)
         except RuntimeError:
             pass
-        self.ui.actionSave_All.setDisabled(clean)
+        self.ui.actionSave_All.setEnabled(dirty)
         for idx, action in enumerate(self._save_resource_actions):
-            dirty = self.is_resource_dirty(idx)
+            dirty = idx in dirty_resource_indexes
             action.setEnabled(dirty)
             self.resources_model.update_resource_dirty(idx, dirty)
 
     def is_resource_dirty(self, resource_index):
+        if resource_index in self._changed_source_indexes:
+            return True
         try:
             return not self.undo_stacks[resource_index].isClean()
         except KeyError:
@@ -182,23 +188,32 @@ class SpineDatapackageWidget(QMainWindow):
             )
             return
         self.datapackage.update_descriptor(os.path.join(self._data_connection.data_dir, "datapackage.json"))
-        self.resources_model.refresh_model()
+        self._file_watcher.addPaths(self.datapackage.sources)
         self.append_save_resource_actions()
+        self.resources_model.refresh_model()
         first_index = self.resources_model.index(0, 0)
         if not first_index.isValid():
             return
         self.ui.tableView_resources.selectionModel().setCurrentIndex(first_index, QItemSelectionModel.Select)
 
     @Slot(str)
-    def refresh_datapackage(self, _path):
+    def _handle_source_dir_changed(self, _path):
         if not self.datapackage.resources:
             self.load_datapackage()
             return
         self.datapackage.difference_infer(os.path.join(self._data_connection.data_dir, '*.csv'))
+        self._file_watcher.addPaths(self.datapackage.sources)
         self.append_save_resource_actions()
         self.resources_model.refresh_model()
         self.refresh_models()
-        # TODO: Mark resources corresponding to removed files as dirty (*)
+
+    @Slot(str)
+    def _handle_source_file_changed(self, path):
+        for idx, source in enumerate(self.datapackage.sources):
+            if os.path.normpath(source) == os.path.normpath(path):
+                self._changed_source_indexes.add(idx)
+                self.update_window_modified()
+                break
 
     def append_save_resource_actions(self):
         new_actions = []
@@ -251,11 +266,9 @@ class SpineDatapackageWidget(QMainWindow):
 
     def _save_datapackage(self, datapackage_path):
         if self.datapackage.save(datapackage_path):
-            msg = '"datapackage.json" saved in {}'.format(self._data_connection.data_dir)
-            self.msg.emit(msg)
+            self.msg.emit("'datapackage.json' succesfully saved")
             return
-        msg = 'Failed to save "datapackage.json" in {}'.format(self._data_connection.data_dir)
-        self.msg_error.emit(msg)
+        self.msg_error.emit("Failed to save 'datapackage.json'")
 
     def save_resource(self, resource_index):
         resource = self.datapackage.resources[resource_index]
@@ -268,12 +281,20 @@ class SpineDatapackageWidget(QMainWindow):
 
     def _save_resource(self, resource_index, filepath):
         headers = self.datapackage.resources[resource_index].schema.field_names
+        self._file_watcher.removePath(filepath)
         with open(filepath, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(headers)
             for row in self.datapackage.resource_data(resource_index):
                 writer.writerow(row)
-        self.undo_stacks[resource_index].setClean()
+        self.msg.emit(f"'{os.path.basename(filepath)}' succesfully saved")
+        self._file_watcher.addPath(filepath)
+        self._changed_source_indexes.discard(resource_index)
+        stack = self.undo_stacks.get(resource_index)
+        if not stack or stack.isClean():
+            self.update_window_modified()
+        elif stack:
+            stack.setClean()
 
     def get_permission(self, *filepaths):
         start_dir = self._data_connection.data_dir
@@ -384,6 +405,10 @@ class CustomPackage(Package):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._resource_data = [resource.read(cast=False) for resource in self.resources]
+
+    @property
+    def sources(self):
+        return [r.source for r in self.resources]
 
     def set_resource_data(self, resource_index, row, column, value):
         self._resource_data[resource_index][row][column] = value
