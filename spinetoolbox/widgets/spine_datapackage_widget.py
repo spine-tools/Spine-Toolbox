@@ -36,10 +36,11 @@ from ..mvcmodels.data_package_models import (
 from ..helpers import ensure_window_is_on_screen, focused_widget_has_callable, call_on_focused_widget
 from ..config import MAINWINDOW_SS
 
+# TODO: Add support to remove foreign keys
+
 
 class SpineDatapackageWidget(QMainWindow):
-    """A widget to allow user to edit a datapackage and convert it
-    to a Spine database in SQLite.
+    """A widget to edit CSV files in a Data Connection and create a tabular datapackage.
     """
 
     msg = Signal(str)
@@ -160,9 +161,10 @@ class SpineDatapackageWidget(QMainWindow):
             return False
 
     def get_undo_stack(self, resource_index):
-        stack = self.undo_stacks.setdefault(resource_index, QUndoStack(self.undo_group))
-        stack.cleanChanged.connect(self.update_window_modified)
-        return stack
+        if resource_index not in self.undo_stacks:
+            self.undo_stacks[resource_index] = stack = QUndoStack(self.undo_group)
+            stack.cleanChanged.connect(self.update_window_modified)
+        return self.undo_stacks[resource_index]
 
     def showEvent(self, e):
         """Called when the form shows. Init datapackage
@@ -209,28 +211,6 @@ class SpineDatapackageWidget(QMainWindow):
             new_actions.append(action)
         self.ui.menuFile.insertActions(self._before_save_all, new_actions)
         self._save_resource_actions += new_actions
-
-    def restore_ui(self):
-        """Restore UI state from previous session."""
-        window_size = self.qsettings.value("dataPackageWidget/windowSize")
-        window_pos = self.qsettings.value("dataPackageWidget/windowPosition")
-        window_maximized = self.qsettings.value("dataPackageWidget/windowMaximized", defaultValue='false')
-        window_state = self.qsettings.value("dataPackageWidget/windowState")
-        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
-        original_size = self.size()
-        if window_size:
-            self.resize(window_size)
-        if window_pos:
-            self.move(window_pos)
-        # noinspection PyArgumentList
-        if len(QGuiApplication.screens()) < int(n_screens):
-            # There are less screens available now than on previous application startup
-            self.move(0, 0)  # Move this widget to primary screen position (0,0)
-        ensure_window_is_on_screen(self, original_size)
-        if window_maximized == 'true':
-            self.setWindowState(Qt.WindowMaximized)
-        if window_state:
-            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
 
     @Slot()
     def _handle_menu_edit_about_to_show(self):
@@ -343,6 +323,28 @@ class SpineDatapackageWidget(QMainWindow):
             self.resource_data_model.headerDataChanged.emit(Qt.Horizontal, top, bottom)
             self.ui.tableView_resource_data.resizeColumnsToContents()
             self.foreign_keys_model.emit_data_changed()
+
+    def restore_ui(self):
+        """Restore UI state from previous session."""
+        window_size = self.qsettings.value("dataPackageWidget/windowSize")
+        window_pos = self.qsettings.value("dataPackageWidget/windowPosition")
+        window_maximized = self.qsettings.value("dataPackageWidget/windowMaximized", defaultValue='false')
+        window_state = self.qsettings.value("dataPackageWidget/windowState")
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
+        original_size = self.size()
+        if window_size:
+            self.resize(window_size)
+        if window_pos:
+            self.move(window_pos)
+        # noinspection PyArgumentList
+        if len(QGuiApplication.screens()) < int(n_screens):
+            # There are less screens available now than on previous application startup
+            self.move(0, 0)  # Move this widget to primary screen position (0,0)
+        ensure_window_is_on_screen(self, original_size)
+        if window_maximized == 'true':
+            self.setWindowState(Qt.WindowMaximized)
+        if window_state:
+            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
 
     def closeEvent(self, event=None):
         """Handle close event.

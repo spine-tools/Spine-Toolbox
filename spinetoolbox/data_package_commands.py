@@ -13,7 +13,7 @@
 Classes for models dealing with Data Packages.
 
 :authors: M. Marin (KTH)
-:date:   24.6.2018
+:date:   10.7.2020
 """
 
 from PySide2.QtWidgets import QUndoCommand
@@ -115,7 +115,7 @@ class UpdatePrimaryKeysCommand(QUndoCommand):
         self.model.update_primary_keys(self.resource_index, self.field_indexes, self.statuses)
 
     def undo(self):
-        self.model.update_primary_keys(self.resource_index, self.field_index, self.not_statuses)
+        self.model.update_primary_keys(self.resource_index, self.field_indexes, self.not_statuses)
 
 
 class AddForeignKeyCommandCommand(QUndoCommand):

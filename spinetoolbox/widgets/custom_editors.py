@@ -348,7 +348,7 @@ class CheckListEditor(QTableView):
             qitem.setData(self._blank_icon, Qt.DecorationRole)
             self._items[item] = qitem
             self.model.appendRow(qitem)
-        self._selected = checked_items
+        self._selected = [item for item in checked_items if item in items]
         for rank, item in enumerate(self._selected):
             qitem = self._items[item]
             qitem.setData(self._icons[rank], Qt.DecorationRole)
