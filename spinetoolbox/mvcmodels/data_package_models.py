@@ -286,15 +286,21 @@ class DatapackageForeignKeysModel(EmptyRowModel):
             self._parent.msg_error.emit(f"Invalid foreign key: {e}")
             return False
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if not super().setData(index, value, role):
+    def batch_set_data(self, indexes, data):
+        if not indexes or not data:
             return False
+        for index, value in zip(indexes, data):
+            self.set_data(index, value)
+        return True
+
+    def set_data(self, index, value):
         fk_index = index.row()
+        column = index.column()
+        self._main_data[fk_index][column] = value
         if fk_index >= len(self.foreign_keys):
             self._add_foreign_key(fk_index)
         else:
             self._update_foreign_key(fk_index)
-        return True
 
     def _add_foreign_key(self, fk_index):
         row_data = self._main_data[fk_index]
@@ -307,8 +313,7 @@ class DatapackageForeignKeysModel(EmptyRowModel):
         }
         if not self.check_foreign_key(foreign_key):
             return
-        if self.removeRows(fk_index, 1):
-            self._parent.undo_stack.push(AddForeignKeyCommandCommand(self, self.resource_index, foreign_key))
+        self._parent.undo_stack.push(AddForeignKeyCommandCommand(self, self.resource_index, foreign_key))
 
     def _update_foreign_key(self, fk_index):
         foreign_key = deepcopy(self.foreign_keys[fk_index])

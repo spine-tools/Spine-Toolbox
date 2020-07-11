@@ -334,11 +334,11 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_fields.resizeColumnsToContents()
         self.ui.tableView_foreign_keys.resizeColumnsToContents()
 
-    @Slot("QModelIndex", "QModelIndex", list)
-    def _handle_fields_data_changed(self, top_left, bottom_right, roles=()):
+    @Slot("QModelIndex", "QModelIndex", "QVector<int>")
+    def _handle_fields_data_changed(self, top_left, bottom_right, roles):
         top, left = top_left.row(), top_left.column()
         bottom, right = bottom_right.row(), bottom_right.column()
-        if left <= 0 <= right:
+        if left <= 0 <= right and Qt.DisplayRole in roles:
             # Fields name changed
             self.resource_data_model.headerDataChanged.emit(Qt.Horizontal, top, bottom)
             self.ui.tableView_resource_data.resizeColumnsToContents()

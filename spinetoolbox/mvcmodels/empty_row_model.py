@@ -62,7 +62,7 @@ class EmptyRowModel(MinimalTableModel):
         self._fetched = False
         super().reset_model(main_data)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector<int>")
+    @Slot(QModelIndex, QModelIndex, "QVector<int>")
     def _handle_data_changed(self, top_left, bottom_right, roles=None):
         """Insert a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
@@ -88,7 +88,7 @@ class EmptyRowModel(MinimalTableModel):
             count -= 1
         return super().removeRows(row, count, parent)
 
-    @Slot("QModelIndex", "int", "int")
+    @Slot(QModelIndex, int, int)
     def _handle_rows_inserted(self, parent, first, last):
         """Handle rowsInserted signal."""
         self.set_rows_to_default(first, last)
