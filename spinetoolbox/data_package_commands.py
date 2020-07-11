@@ -154,7 +154,7 @@ class UpdateForeignKeyCommandCommand(QUndoCommand):
         self.foreign_key = foreign_key
         self.old_foreign_key = self.model.foreign_keys[fk_index]
         resource_name = self.model.datapackage.resources[self.resource_index].name
-        self.setText(f"update foreign key of {resource_name}")
+        self.setText(f"update foreign key in {resource_name}")
 
     def redo(self):
         self.model.update_foreign_key(self.resource_index, self.fk_index, self.foreign_key)

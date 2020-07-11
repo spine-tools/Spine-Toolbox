@@ -24,7 +24,6 @@ from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, 
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon, QKeySequence
 from datapackage import Package
-from datapackage.exceptions import DataPackageException
 from .custom_delegates import ForeignKeysDelegate, CheckBoxDelegate
 from .notification import NotificationStack
 from ..mvcmodels.data_package_models import (
@@ -278,11 +277,11 @@ class SpineDatapackageWidget(QMainWindow):
         start_dir = self._data_connection.data_dir
         filepaths = [os.path.relpath(path, start_dir) for path in filepaths if os.path.isfile(path)]
         pathlist = "".join([f"<li>{path}</li>" for path in filepaths])
-        msg = f"Replacing file(s): <ul>{pathlist}</ul> in <b>{start_dir}</b>. <p>Are you sure?</p>"
+        msg = f"The following file(s) in <b>{os.path.basename(start_dir)}</b> will be replaced: <ul>{pathlist}</ul>. Are you sure?"
         message_box = QMessageBox(
-            QMessageBox.Question, "Replace file(s)", msg, QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            QMessageBox.Question, "Replacing file(s)", msg, QMessageBox.Ok | QMessageBox.Cancel, parent=self
         )
-        message_box.button(QMessageBox.Ok).setText("Replace file(s)")
+        message_box.button(QMessageBox.Ok).setText("Replace")
         return message_box.exec_() != QMessageBox.Cancel
 
     @Slot(bool)
@@ -381,6 +380,11 @@ class CustomPackage(Package):
         return resource
 
     def difference_infer(self, path):
+        """Infers only what's *new* in the given path.
+
+        Args:
+            path (str)
+        """
         current_resources = {r.source: r.name for r in self.resources}
         current_csv_files = set(glob.glob(path))
         old_resource_count = len(self.resources)
@@ -393,26 +397,35 @@ class CustomPackage(Package):
             self.descriptor['resources'][old_resource_count + k] = resource.infer()
         self.commit()
 
+    def check_resource_name(self, new_name):
+        if not new_name:
+            return "Resource name can't be empty."
+        if new_name in self.resource_names:
+            return f"A resource named {new_name} already exists."
+
     def rename_resource(self, index, new):
         self.descriptor['resources'][index]['name'] = new
         self.commit()
 
-    def rename_field(self, resource_index, field_index, old, new):
-        """Rename a field.
-        """
-        resource_dict = self.descriptor['resources'][resource_index]
-        resource_dict['schema']['fields'][field_index]['name'] = new
-        resource = self.resources[resource_index]
-        for i, field in enumerate(resource.schema.primary_key):
-            if field == old:
-                resource_dict['schema']['primaryKey'][i] = new
-        for i, foreign_key in enumerate(resource.schema.foreign_keys):
-            for j, field in enumerate(foreign_key["fields"]):
+    def valid_field_names(self, resource_index, new_names):
+        current_names = self.resources[resource_index].schema.field_names
+        return [name for name in set(new_names).difference(current_names) if name]
+
+    def rename_fields(self, resource_index, field_indexes, old_names, new_names):
+        """Renames fields."""
+        schema = self.descriptor['resources'][resource_index]['schema']
+        for field_index, old, new in zip(field_indexes, old_names, new_names):
+            schema['fields'][field_index]['name'] = new
+            for i, field in enumerate(schema["primaryKey"]):
                 if field == old:
-                    resource_dict['schema']['foreignKeys'][i]['fields'][j] = new
-            for j, field in enumerate(foreign_key['reference']['fields']):
-                if field == old:
-                    resource_dict['schema']['foreignKeys'][i]['reference']['fields'][j] = new
+                    schema['primaryKey'][i] = new
+            for i, foreign_key in enumerate(schema["foreignKeys"]):
+                for j, field in enumerate(foreign_key["fields"]):
+                    if field == old:
+                        schema['foreignKeys'][i]['fields'][j] = new
+                for j, field in enumerate(foreign_key['reference']['fields']):
+                    if field == old:
+                        schema['foreignKeys'][i]['reference']['fields'][j] = new
         self.commit()
 
     def append_to_primary_key(self, resource_index, field_index):
@@ -442,26 +455,27 @@ class CustomPackage(Package):
             fields = foreign_key["fields"]
             reference = foreign_key["reference"]
         except KeyError as e:
-            raise DataPackageException(f"{e} missing.")
+            return f"{e} missing."
         try:
             reference_resource = reference["resource"]
             reference_fields = reference["fields"]
         except KeyError as e:
-            raise DataPackageException(f"Reference {e} missing.")
+            return f"Reference {e} missing."
         if len(fields) != len(reference_fields):
-            raise DataPackageException("Both 'fields' and 'reference_fields' must have the same length.")
+            return "Both 'fields' and 'reference_fields' must have the same length."
         missing_fields = [fn for fn in fields if fn not in resource.schema.field_names]
         if missing_fields:
-            raise DataPackageException(f"Fields {missing_fields} not in {resource.name}'s schema.")
+            return f"Fields {missing_fields} not in {resource.name}'s schema."
         reference_resource_obj = self.get_resource(reference_resource)
         if not reference_resource_obj:
-            raise DataPackageException(f"Resource {reference_resource} not in datapackage")
+            return f"Resource {reference_resource} not in datapackage"
         missing_ref_fields = [fn for fn in reference_fields if fn not in reference_resource_obj.schema.field_names]
         if missing_ref_fields:
-            raise DataPackageException(f"Fields {missing_ref_fields} not in {reference_resource}'s schema.")
+            return f"Fields {missing_ref_fields} not in {reference_resource}'s schema."
         fks = self.descriptor['resources'][resource_index]['schema'].get('foreignKeys', [])
         if foreign_key in fks:
-            raise DataPackageException(f"Foreign key already in {resource.name}'s schema.")
+            return f"Foreign key already in {resource.name}'s schema."
+        return None
 
     def add_foreign_key(self, resource_index, foreign_key):
         fks = self.descriptor['resources'][resource_index]['schema'].setdefault('foreignKeys', [])

@@ -20,7 +20,6 @@ import os
 from copy import deepcopy
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QFont
-from datapackage.exceptions import DataPackageException
 from .minimal_table_model import MinimalTableModel
 from .empty_row_model import EmptyRowModel
 from ..data_package_commands import (
@@ -31,6 +30,7 @@ from ..data_package_commands import (
     AddForeignKeyCommandCommand,
     UpdateForeignKeyCommandCommand,
 )
+from ..helpers import format_string_list
 
 
 class DatapackageResourcesModel(MinimalTableModel):
@@ -54,30 +54,38 @@ class DatapackageResourcesModel(MinimalTableModel):
             return super().data(index, role=role)
         resource = self.datapackage.resources[index.row()]
         if index.column() == 0:
-            return resource.name
-        dirty = self._main_data[index.row()]
-        return os.path.basename(resource.source) + ("*" if dirty else "")
+            dirty = self._main_data[index.row()]
+            return resource.name + ("*" if dirty else "")
+        return os.path.basename(resource.source)
 
     def update_resource_dirty(self, idx, dirty):
         if dirty == self._main_data[idx]:
             return
         self._main_data[idx] = dirty
-        self.dataChanged.emit(self.index(idx, 1), self.index(idx, 1), [Qt.DisplayRole])
+        self.dataChanged.emit(self.index(idx, 0), self.index(idx, 0), [Qt.DisplayRole])
 
     def batch_set_data(self, indexes, data):
         for index, value in zip(indexes, data):
             self.set_data(index, value)
+        return True
 
     def set_data(self, index, value):
-        if not value:
-            return False
         old_value = index.data(Qt.DisplayRole)
         if old_value == value:
+            return False
+        if not self._check_resource_name(value):
             return False
         resource_index = index.row()
         stack = self._parent.get_undo_stack(resource_index)
         stack.push(UpdateResourceNameCommand(self, resource_index, old_value, value))
         return True
+
+    def _check_resource_name(self, name):
+        error = self.datapackage.check_resource_name(name)
+        if not error:
+            return True
+        self._parent.msg_error.emit(f"Unable to rename resource: {error}")
+        return False
 
     def update_resource_name(self, resource_index, new_name):
         self.datapackage.rename_resource(resource_index, new_name)
@@ -181,14 +189,14 @@ class DatapackageFieldsModel(MinimalTableModel):
 
     def batch_set_data(self, indexes, data):
         name_indexes = []
-        pk_indexes = []
-        old_names = []
         new_names = []
+        old_names = []
+        pk_indexes = []
         pk_statuses = []
         for index, new_value in zip(indexes, data):
             if index.column() == 0:
                 old_value = index.data(Qt.DisplayRole)
-                if not new_value or new_value == old_value:
+                if new_value == old_value:
                     continue
                 name_indexes.append(index.row())
                 new_names.append(new_value)
@@ -196,19 +204,40 @@ class DatapackageFieldsModel(MinimalTableModel):
             elif index.column() == 2:
                 pk_indexes.append(index.row())
                 pk_statuses.append(new_value)
+        valid_names = self._valid_field_names(new_names)
+        name_indexes = dict(zip(new_names, name_indexes))
+        name_indexes = [name_indexes[name] for name in valid_names]
+        old_names = dict(zip(new_names, old_names))
+        old_names = [old_names[name] for name in valid_names]
         if not name_indexes and not pk_indexes:
             return False
         if name_indexes:
             self._parent.undo_stack.push(
-                UpdateFieldNamesCommand(self, self.resource_index, name_indexes, old_names, new_names)
+                UpdateFieldNamesCommand(self, self.resource_index, name_indexes, old_names, valid_names)
             )
         if pk_indexes:
             self._parent.undo_stack.push(UpdatePrimaryKeysCommand(self, self.resource_index, pk_indexes, pk_statuses))
         return True
 
+    def _valid_field_names(self, new_names):
+        dups = set()
+        seen = set()
+        for name in new_names:
+            if name in seen:
+                dups.add(name)
+            seen.add(name)
+        valid_names = self.datapackage.valid_field_names(self.resource_index, new_names)
+        invalid_names = set(new_names).difference(valid_names).union(dups)
+        if invalid_names:
+            msg = (
+                "Unable to rename fields. "
+                f"The following names are invalid or already in use: {format_string_list(invalid_names)}"
+            )
+            self._parent.msg_error.emit(msg)
+        return list(valid_names)
+
     def update_field_names(self, resource_index, field_indexes, old_names, new_names):
-        for field_index, old_name, new_name in zip(field_indexes, old_names, new_names):
-            self.datapackage.rename_field(resource_index, field_index, old_name, new_name)
+        self.datapackage.rename_fields(resource_index, field_indexes, old_names, new_names)
         if resource_index == self.resource_index:
             top_left = self.index(min(field_indexes), 0)
             bottom_right = self.index(max(field_indexes), 0)
@@ -278,13 +307,12 @@ class DatapackageForeignKeysModel(EmptyRowModel):
         if index.column() == 2:
             return ",".join(foreign_key['reference']['fields'])
 
-    def check_foreign_key(self, foreign_key):
-        try:
-            self.datapackage.check_foreign_key(self.resource_index, foreign_key)
+    def _check_foreign_key(self, foreign_key):
+        error = self.datapackage.check_foreign_key(self.resource_index, foreign_key)
+        if not error:
             return True
-        except DataPackageException as e:
-            self._parent.msg_error.emit(f"Invalid foreign key: {e}")
-            return False
+        self._parent.msg_error.emit(f"Invalid foreign key: {error}")
+        return False
 
     def batch_set_data(self, indexes, data):
         if not indexes or not data:
@@ -311,7 +339,7 @@ class DatapackageForeignKeysModel(EmptyRowModel):
             "fields": fields_str.split(","),
             "reference": {"resource": reference_resource, "fields": reference_fields_str.split(",")},
         }
-        if not self.check_foreign_key(foreign_key):
+        if not self._check_foreign_key(foreign_key):
             return
         self._parent.undo_stack.push(AddForeignKeyCommandCommand(self, self.resource_index, foreign_key))
 
@@ -324,7 +352,7 @@ class DatapackageForeignKeysModel(EmptyRowModel):
             foreign_key['reference']['resource'] = reference_resource
         if reference_fields_str is not None:
             foreign_key['reference']['fields'] = reference_fields_str.split(",")
-        if not self.check_foreign_key(foreign_key):
+        if not self._check_foreign_key(foreign_key):
             return
         if foreign_key == self.foreign_keys[fk_index]:
             return

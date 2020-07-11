@@ -126,6 +126,8 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_foreign_keys)
         self.dockWidget_resources = QDockWidget(MainWindow)
         self.dockWidget_resources.setObjectName(u"dockWidget_resources")
+        self.dockWidget_resources.setFeatures(QDockWidget.NoDockWidgetFeatures)
+        self.dockWidget_resources.setAllowedAreas(Qt.LeftDockWidgetArea)
         self.dockWidgetContents = QWidget()
         self.dockWidgetContents.setObjectName(u"dockWidgetContents")
         self.verticalLayout_4 = QVBoxLayout(self.dockWidgetContents)

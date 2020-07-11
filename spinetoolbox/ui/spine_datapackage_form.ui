@@ -200,6 +200,12 @@
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_resources">
+   <property name="features">
+    <set>QDockWidget::NoDockWidgetFeatures</set>
+   </property>
+   <property name="allowedAreas">
+    <set>Qt::LeftDockWidgetArea</set>
+   </property>
    <property name="windowTitle">
     <string>Resources</string>
    </property>
