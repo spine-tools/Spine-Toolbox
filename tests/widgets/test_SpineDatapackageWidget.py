@@ -16,6 +16,7 @@ Contains unit tests for the SpineDatapackageWidget class.
 :date:   16.3.2020
 """
 
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide2.QtWidgets import QApplication
@@ -29,17 +30,20 @@ class TestSpineDatapackageWidget(unittest.TestCase):
             QApplication()
 
     def test_closeEvent(self):
-        widget = SpineDatapackageWidget(mock.MagicMock())
-        widget.qsettings = mock.NonCallableMagicMock()
-        widget.closeEvent()
-        qsettings_save_calls = widget.qsettings.setValue.call_args_list
-        self.assertEqual(len(qsettings_save_calls), 5)
-        saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
-        self.assertIn("dataPackageWidget/windowSize", saved_dict)
-        self.assertIn("dataPackageWidget/windowPosition", saved_dict)
-        self.assertIn("dataPackageWidget/windowState", saved_dict)
-        self.assertIn("dataPackageWidget/windowMaximized", saved_dict)
-        self.assertIn("dataPackageWidget/n_screens", saved_dict)
+        with TemporaryDirectory() as temp_dir:
+            mock_data_connection = mock.MagicMock()
+            mock_data_connection.data_dir = temp_dir
+            widget = SpineDatapackageWidget(mock_data_connection)
+            widget.qsettings = mock.NonCallableMagicMock()
+            widget.closeEvent()
+            qsettings_save_calls = widget.qsettings.setValue.call_args_list
+            self.assertEqual(len(qsettings_save_calls), 5)
+            saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
+            self.assertIn("dataPackageWidget/windowSize", saved_dict)
+            self.assertIn("dataPackageWidget/windowPosition", saved_dict)
+            self.assertIn("dataPackageWidget/windowState", saved_dict)
+            self.assertIn("dataPackageWidget/windowMaximized", saved_dict)
+            self.assertIn("dataPackageWidget/n_screens", saved_dict)
 
 
 if __name__ == '__main__':
