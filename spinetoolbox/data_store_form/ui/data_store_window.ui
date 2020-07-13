@@ -62,7 +62,7 @@
      <x>0</x>
      <y>0</y>
      <width>889</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -421,11 +421,11 @@
        <attribute name="verticalHeaderVisible">
         <bool>false</bool>
        </attribute>
-       <attribute name="verticalHeaderHighlightSections">
-        <bool>false</bool>
-       </attribute>
        <attribute name="verticalHeaderMinimumSectionSize">
         <number>20</number>
+       </attribute>
+       <attribute name="verticalHeaderHighlightSections">
+        <bool>false</bool>
        </attribute>
       </widget>
      </item>
@@ -608,7 +608,7 @@
         </sizepolicy>
        </property>
        <property name="contextMenuPolicy">
-        <enum>Qt::NoContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="accessibleName">
         <string>object tree</string>
