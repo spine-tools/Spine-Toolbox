@@ -637,7 +637,7 @@ class CharIconEngine(QIconEngine):
         painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, self.char)
         painter.restore()
 
-    def pixmap(self, size, mode=None, state=None):
+    def pixmap(self, size=QSize(512, 512), mode=None, state=None):
         pm = QPixmap(size)
         pm.fill(Qt.transparent)
         self.paint(QPainter(pm), QRect(QPoint(0, 0), size), mode, state)
@@ -864,3 +864,27 @@ def try_number_from_string(text):
 
 def open_url(url):
     return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+
+
+def focused_widget_has_callable(parent, callable_name):
+    """Returns True if the currently focused widget or one of its ancestors has the given callable."""
+    focus_widget = parent.focusWidget()
+    while focus_widget is not None and focus_widget is not parent:
+        if hasattr(focus_widget, callable_name):
+            method = getattr(focus_widget, callable_name)
+            if callable(method):
+                return True
+        focus_widget = focus_widget.parentWidget()
+    return False
+
+
+def call_on_focused_widget(parent, callable_name):
+    """Calls the given callable on the currently focused widget or one of its ancestors."""
+    focus_widget = parent.focusWidget()
+    while focus_widget is not None and focus_widget is not parent:
+        if hasattr(focus_widget, callable_name):
+            method = getattr(focus_widget, callable_name)
+            if callable(method):
+                method()
+                break
+        focus_widget = focus_widget.parentWidget()

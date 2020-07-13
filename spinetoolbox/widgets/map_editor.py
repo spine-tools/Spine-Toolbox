@@ -40,6 +40,11 @@ class MapEditor(QWidget):
         self._ui.map_table_view.setModel(self._model)
         self._ui.map_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.map_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.convert_leaves_button.clicked.connect(self._convert_leaves)
+
+    @Slot(bool)
+    def _convert_leaves(self, _):
+        self._model.convert_leaf_maps()
 
     @Slot("QPoint")
     def _show_table_context_menu(self, pos):

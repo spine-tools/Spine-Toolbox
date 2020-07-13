@@ -742,13 +742,14 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     """A dialog to query user's preferences for managing relationships.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
+    def __init__(self, parent, db_mngr, *db_maps, relationship_class_key=None):
         """Init class.
 
         Args:
             parent (DataStoreForm): data store widget
             db_mngr (SpineDBManager): the manager to do the removal
             db_maps (iter): DiffDatabaseMapping instances
+            relationship_class_key (str, optional): relationships class name, object class name list string.
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Manage relationships")
@@ -792,7 +793,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.new_items_model = MinimalTableModel(self, lazy=False)
         self.model.sub_models = [self.new_items_model, self.existing_items_model]
         self.db_combo_box.addItems([db_map.codename for db_map in db_maps])
-        self.reset_relationship_class_combo_box(db_maps[0].codename)
+        self.reset_relationship_class_combo_box(db_maps[0].codename, relationship_class_key)
         self.connect_signals()
 
     def make_model(self):
@@ -808,11 +809,17 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.add_button.clicked.connect(self.add_relationships)
 
     @Slot(str)
-    def reset_relationship_class_combo_box(self, database):
+    def reset_relationship_class_combo_box(self, database, relationship_class_key=None):
         self.db_map = self.keyed_db_maps[database]
         self.relationship_class_keys = list(self.db_map_rel_cls_lookup[self.db_map])
         self.rel_cls_combo_box.addItems([f"{name}" for name, _ in self.relationship_class_keys])
-        self.rel_cls_combo_box.setCurrentIndex(-1)
+        try:
+            current_index = self.relationship_class_keys.index(relationship_class_key)
+            self.reset_model(current_index)
+            self._handle_model_reset()
+        except ValueError:
+            current_index = -1
+        self.rel_cls_combo_box.setCurrentIndex(current_index)
 
     @Slot(bool)
     def add_relationships(self, checked=True):

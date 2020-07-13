@@ -39,6 +39,20 @@ class Ui_MapEditor(object):
 
         self.verticalLayout.addWidget(self.map_table_view)
 
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.convert_leaves_button = QPushButton(MapEditor)
+        self.convert_leaves_button.setObjectName(u"convert_leaves_button")
+
+        self.horizontalLayout.addWidget(self.convert_leaves_button)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout)
+
 
         self.retranslateUi(MapEditor)
 
@@ -47,5 +61,11 @@ class Ui_MapEditor(object):
 
     def retranslateUi(self, MapEditor):
         MapEditor.setWindowTitle(QCoreApplication.translate("MapEditor", u"Form", None))
+#if QT_CONFIG(tooltip)
+        self.convert_leaves_button.setToolTip(QCoreApplication.translate("MapEditor", u"Converts leaf maps to time series.\n"
+"Requires that all indexes are DateTimes\n"
+"and values are floats.", None))
+#endif // QT_CONFIG(tooltip)
+        self.convert_leaves_button.setText(QCoreApplication.translate("MapEditor", u"Convert Leaves to Time Series", None))
     # retranslateUi
 

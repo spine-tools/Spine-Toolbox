@@ -18,16 +18,18 @@ Classes for handling models in PySide2's model/view framework.
 from collections import namedtuple
 from collections.abc import Iterable
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtGui import QCursor, QFont
+from PySide2.QtGui import QCursor, QFont, QIcon
 from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
 from ..spine_io.io_api import TYPE_STRING_TO_CLASS
 from ..spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
+from spinetoolbox.helpers import CharIconEngine
 
 _ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
 _ALLOWED_TYPES.append("integer sequence datetime")
 
 _TYPE_TO_FONT_AWESOME_ICON = {
     "integer sequence datetime": chr(int('f073', 16)),
+    "boolean": chr(int('f6ad', 16)),
     "string": chr(int('f031', 16)),
     "datetime": chr(int('f073', 16)),
     "duration": chr(int('f017', 16)),
@@ -135,6 +137,7 @@ class _HeaderWithButton(QHeaderView):
         self._button.setMenu(self._menu)
         self._button.setPopupMode(QToolButton.InstantPopup)
         self._button.setFont(self._font)
+        self._button.setCursor(Qt.ArrowCursor)
         self._button.hide()
 
         self._render_button = QToolButton(parent=self)
@@ -179,10 +182,9 @@ class _HeaderWithButton(QHeaderView):
         """
         if type_str == "integer sequence datetime":
             dialog = NewIntegerSequenceDateTimeConvertSpecDialog()
-            if dialog.exec_():
-                convert_spec = dialog.get_spec()
-            else:
+            if not dialog.exec_():
                 return
+            convert_spec = dialog.get_spec()
         else:
             convert_spec = value_to_convert_spec(type_str)
         if not isinstance(sections, Iterable):
@@ -213,31 +215,34 @@ class _HeaderWithButton(QHeaderView):
             return self.height()
         return self.sectionSize(0)
 
+    def _hide_or_show_button(self, logical_index):
+        """Hides or shows the button depending on the logical index.
+
+        Args:
+            logical_index (int)
+        """
+        if logical_index in self._display_sections or self._display_all:
+            self._set_button_geometry(self._button, logical_index)
+            self._button.show()
+        else:
+            self._button.hide()
+
     def mouseMoveEvent(self, mouse_event):
         """Moves the button to the correct section so that interacting with the button works.
         """
         logical_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
-        if not self._display_all and logical_index not in self._display_sections:
-            self._button.hide()
-        elif self._button.isHidden():
-            self._set_button_geometry(self._button, logical_index)
-            self._button.show()
+        self._hide_or_show_button(logical_index)
         super().mouseMoveEvent(mouse_event)
 
-    def mousePressEvent(self, mouse_event):
-        """Move the button to the pressed location and show or hide it if button should not be shown.
-        """
-        logical_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
-        if not self._display_all and logical_index not in self._display_sections:
-            self._button.hide()
-        elif self._button.isHidden():
-            self._set_button_geometry(self._button, logical_index)
-            self._button.show()
-        super().mousePressEvent(mouse_event)
+    def enterEvent(self, event):
+        """Shows the button."""
+        mouse_position = self.mapFromGlobal(QCursor.pos())
+        logical_index = self.logicalIndexAt(mouse_position)
+        self._hide_or_show_button(logical_index)
+        super().enterEvent(event)
 
     def leaveEvent(self, event):
-        """Hide button
-        """
+        """Hides button."""
         self._button.hide()
         super().leaveEvent(event)
 
@@ -253,14 +258,14 @@ class _HeaderWithButton(QHeaderView):
             button.setGeometry(
                 self.sectionViewportPosition(index) + margin.left,
                 margin.top,
-                self.widget_width() - self._margin.left - self._margin.right,
+                self.widget_width() - margin.left - margin.right,
                 self.widget_height() - margin.top - margin.bottom,
             )
         else:
             button.setGeometry(
                 margin.left,
                 self.sectionViewportPosition(index) + margin.top,
-                self.widget_width() - self._margin.left - self._margin.right,
+                self.widget_width() - margin.left - margin.right,
                 self.widget_height() - margin.top - margin.bottom,
             )
 
@@ -361,6 +366,9 @@ def _create_allowed_types_menu(parent, trigger_slot):
     """
     menu = QMenu(parent)
     for at in _ALLOWED_TYPES:
-        menu.addAction(at)
+        icon_char = _TYPE_TO_FONT_AWESOME_ICON[at]
+        engine = CharIconEngine(icon_char, 0)
+        icon = QIcon(engine.pixmap())
+        menu.addAction(icon, at)
     menu.triggered.connect(trigger_slot)
     return menu

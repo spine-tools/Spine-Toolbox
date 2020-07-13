@@ -63,13 +63,12 @@ class TreeViewMixin:
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         self.ui.treeView_alternative.setModel(self.alternative_tree_model)
-
         self.ui.treeView_alternative.setDragEnabled(True)
         self.ui.treeView_alternative.setAcceptDrops(True)
         self.ui.treeView_alternative.setDropIndicatorShown(True)
-        self.ui.treeView_alternative.connect_data_Store_form(self)
-        self.ui.treeView_object.connect_data_Store_form(self)
-        self.ui.treeView_relationship.connect_data_Store_form(self)
+        self.ui.treeView_alternative.connect_data_store_form(self)
+        self.ui.treeView_object.connect_data_store_form(self)
+        self.ui.treeView_relationship.connect_data_store_form(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -272,8 +271,10 @@ class TreeViewMixin:
         dialog.show()
 
     @Slot(bool)
-    def show_manage_relationships_form(self, checked=False):
-        dialog = ManageRelationshipsDialog(self, self.db_mngr, *self.db_maps)
+    def show_manage_relationships_form(self, checked=False, relationship_class_key=None):
+        dialog = ManageRelationshipsDialog(
+            self, self.db_mngr, *self.db_maps, relationship_class_key=relationship_class_key
+        )
         dialog.show()
 
     @Slot(bool)

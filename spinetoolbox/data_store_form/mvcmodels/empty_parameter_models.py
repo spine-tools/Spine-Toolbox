@@ -27,7 +27,7 @@ from .parameter_mixins import (
     FillInEntityClassIdMixin,
     FillInValueListIdMixin,
 )
-
+from ...mvcmodels.shared import PARSED_ROLE
 from ...helpers import rows_to_row_count_tuples
 
 
@@ -46,6 +46,11 @@ class EmptyParameterModel(EmptyRowModel):
         self.db_mngr = db_mngr
         self.db_map = None
         self.entity_class_id = None
+
+    @property
+    def item_type(self):
+        """The item type, either 'parameter value' or 'parameter definition', required by the json_fields property."""
+        raise NotImplementedError()
 
     @property
     def entity_class_type(self):
@@ -68,6 +73,10 @@ class EmptyParameterModel(EmptyRowModel):
     def can_be_filtered(self):
         return False
 
+    @property
+    def json_fields(self):
+        return {"parameter definition": ["default_value"], "parameter value": ["value"]}[self.item_type]
+
     def accepted_rows(self):
         return list(range(self.rowCount()))
 
@@ -82,6 +91,18 @@ class EmptyParameterModel(EmptyRowModel):
         if self.header[index.column()] == "parameter_tag_list":
             flags &= ~Qt.ItemIsEditable
         return flags
+
+    def data(self, index, role=Qt.DisplayRole):
+        if self.header[index.column()] in self.json_fields and role in (
+            Qt.DisplayRole,
+            Qt.ToolTipRole,
+            Qt.TextAlignmentRole,
+            PARSED_ROLE,
+        ):
+            data = super().data(index)
+            parsed_value = self.db_mngr.parse_value(data)
+            return self.db_mngr.format_value(parsed_value, role)
+        return super().data(index, role)
 
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
@@ -144,6 +165,10 @@ class EmptyParameterDefinitionModel(
     FillInValueListIdMixin, FillInEntityClassIdMixin, FillInParameterNameMixin, EmptyParameterModel
 ):
     """An empty parameter definition model."""
+
+    @property
+    def item_type(self):
+        return "parameter definition"
 
     @property
     def entity_class_type(self):
@@ -209,6 +234,10 @@ class EmptyParameterValueModel(
     EmptyParameterModel,
 ):
     """An empty parameter value model."""
+
+    @property
+    def item_type(self):
+        return "parameter value"
 
     @property
     def entity_type(self):

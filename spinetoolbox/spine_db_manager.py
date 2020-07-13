@@ -808,22 +808,35 @@ class SpineDBManager(QObject):
         field = {"parameter value": "value", "parameter definition": "default_value"}[item_type]
         if role == Qt.EditRole:
             return item[field]
-        key = "formatted_value"
+        key = "parsed_value"
         if key not in item:
-            try:
-                item[key] = from_database(item[field])
-            except ParameterValueFormatError as error:
-                item[key] = error
+            item[key] = self.parse_value(item[field])
+        return self.format_value(item[key], role)
+
+    @staticmethod
+    def parse_value(db_value):
+        try:
+            return from_database(db_value)
+        except ParameterValueFormatError as error:
+            return error
+
+    def format_value(self, parsed_value, role=Qt.DisplayRole):
+        """Formats the given value for the given role.
+
+        Args:
+            parsed_value (object): A python object as returned by spinedb_api.from_database
+            role (int, optional)
+        """
         if role == Qt.DisplayRole:
-            return self._display_data(item[key])
+            return self._display_data(parsed_value)
         if role == Qt.ToolTipRole:
-            return self._tool_tip_data(item[key])
+            return self._tool_tip_data(parsed_value)
         if role == Qt.TextAlignmentRole:
-            if isinstance(item[key], str):
+            if isinstance(parsed_value, str):
                 return Qt.AlignLeft
             return Qt.AlignRight
         if role == PARSED_ROLE:
-            return item[key]
+            return parsed_value
         return None
 
     def get_value_indexes(self, db_map, item_type, id_):
@@ -861,6 +874,47 @@ class SpineDBManager(QObject):
         if role == PARSED_ROLE:
             return parsed_value
         return None
+
+    def _split_and_parse_value_list(self, item):
+        if "split_value_list" not in item:
+            item["split_value_list"] = item["value_list"].split(";")
+        if "split_parsed_value_list" not in item:
+            item["split_parsed_value_list"] = [self.parse_value(value) for value in item["split_value_list"]]
+
+    def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole):
+        """Returns one value item of a parameter value list.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            id_ (int): The parameter value list id
+            index (int): The value item index
+            role (int, optional)
+        """
+        item = self.get_item(db_map, "parameter value list", id_)
+        if not item:
+            return None
+        self._split_and_parse_value_list(item)
+        if index < 0 or index >= len(item["split_value_list"]):
+            return None
+        if role == Qt.EditRole:
+            return item["split_value_list"][index]
+        return self.format_value(item["split_parsed_value_list"][index], role)
+
+    def get_parameter_value_list(self, db_map, id_, role=Qt.DisplayRole):
+        """Returns a parameter value list formatted for the given role.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            id_ (int): The parameter value list id
+            role (int, optional)
+        """
+        item = self.get_item(db_map, "parameter value list", id_)
+        if not item:
+            return []
+        self._split_and_parse_value_list(item)
+        if role == Qt.EditRole:
+            return item["split_value_list"]
+        return [self.format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
 
     @staticmethod
     def get_db_items(query, key=lambda x: x["id"]):

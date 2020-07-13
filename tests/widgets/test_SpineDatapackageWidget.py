@@ -33,9 +33,8 @@ class TestSpineDatapackageWidget(unittest.TestCase):
         widget.qsettings = mock.NonCallableMagicMock()
         widget.closeEvent()
         qsettings_save_calls = widget.qsettings.setValue.call_args_list
-        self.assertEqual(len(qsettings_save_calls), 6)
+        self.assertEqual(len(qsettings_save_calls), 5)
         saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
-        self.assertIn("dataPackageWidget/splitterState", saved_dict)
         self.assertIn("dataPackageWidget/windowSize", saved_dict)
         self.assertIn("dataPackageWidget/windowPosition", saved_dict)
         self.assertIn("dataPackageWidget/windowState", saved_dict)

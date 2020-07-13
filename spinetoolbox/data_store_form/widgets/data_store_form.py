@@ -49,8 +49,9 @@ from ...helpers import (
     get_open_file_name_in_last_dir,
     format_string_list,
     open_url,
+    focused_widget_has_callable,
+    call_on_focused_widget,
 )
-from .import_dialog import ImportDialog
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.settings_widget import DataStoreSettingsWidget
 from ...spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -139,7 +140,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.import_file)
-        self.ui.actionMapping_import.triggered.connect(self.show_mapping_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.show_get_items_for_export_dialog)
         self.ui.actionExport_session.triggered.connect(self.export_session)
         self.ui.actionCopy.triggered.connect(self.copy)
@@ -225,36 +225,30 @@ class DataStoreFormBase(QMainWindow):
         """Runs when the edit menu from the main menubar is about to show.
         Enables or disables actions according to selection status."""
         # TODO: Try to also check if there's a selection to enable copy, remove, edit, etc.
-        self.ui.actionCopy.setEnabled(self._focused_widget_has_callable("copy"))
-        self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
-        self.ui.actionRemove_selected.setEnabled(self._focused_widget_has_callable("remove_selected"))
-        self.ui.actionEdit_selected.setEnabled(self._focused_widget_has_callable("edit_selected"))
+        self.ui.actionCopy.setEnabled(focused_widget_has_callable(self, "copy"))
+        self.ui.actionPaste.setEnabled(focused_widget_has_callable(self, "paste"))
+        self.ui.actionRemove_selected.setEnabled(focused_widget_has_callable(self, "remove_selected"))
+        self.ui.actionEdit_selected.setEnabled(focused_widget_has_callable(self, "edit_selected"))
 
     @Slot(bool)
     def remove_selected(self, checked=False):
         """Removes selected items."""
-        self._call_on_focused_widget("remove_selected")
+        call_on_focused_widget(self, "remove_selected")
 
     @Slot(bool)
     def edit_selected(self, checked=False):
         """Edits selected items."""
-        self._call_on_focused_widget("edit_selected")
+        call_on_focused_widget(self, "edit_selected")
 
     @Slot(bool)
     def copy(self, checked=False):
         """Copies data to clipboard."""
-        self._call_on_focused_widget("copy")
+        call_on_focused_widget(self, "copy")
 
     @Slot(bool)
     def paste(self, checked=False):
         """Pastes data from clipboard."""
-        self._call_on_focused_widget("paste")
-
-    @Slot(bool)
-    def show_mapping_import_file_dialog(self, checked=False):
-        """Shows dialog to allow user to select a file to import."""
-        dialog = ImportDialog(self.qsettings, parent=self)
-        dialog.exec()
+        call_on_focused_widget(self, "paste")
 
     @Slot(dict)
     def import_data(self, data):
@@ -801,25 +795,11 @@ class DataStoreFormBase(QMainWindow):
 
     def _focused_widget_has_callable(self, callable_name):
         """Returns True if the currently focused widget or one of its ancestors has the given callable."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not None and focus_widget is not self:
-            if hasattr(focus_widget, callable_name):
-                method = getattr(focus_widget, callable_name)
-                if callable(method):
-                    return True
-            focus_widget = focus_widget.parentWidget()
-        return False
+        return focused_widget_has_callable(self, callable_name)
 
     def _call_on_focused_widget(self, callable_name):
         """Calls the given callable on the currently focused widget or one of its ancestors."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not None and focus_widget is not self:
-            if hasattr(focus_widget, callable_name):
-                method = getattr(focus_widget, callable_name)
-                if callable(method):
-                    method()
-                    break
-            focus_widget = focus_widget.parentWidget()
+        call_on_focused_widget(self, callable_name)
 
 
 class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, DataStoreFormBase):

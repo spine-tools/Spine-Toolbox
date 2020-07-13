@@ -105,7 +105,6 @@
     </property>
     <addaction name="separator"/>
     <addaction name="actionImport"/>
-    <addaction name="actionMapping_import"/>
     <addaction name="actionExport"/>
     <addaction name="actionExport_session"/>
     <addaction name="separator"/>
@@ -265,7 +264,7 @@
      <item>
       <widget class="ParameterValueListTreeView" name="treeView_parameter_value_list">
        <property name="contextMenuPolicy">
-        <enum>Qt::ActionsContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="accessibleName">
         <string>parameter value list</string>
@@ -1149,18 +1148,6 @@
     <string>Load template...</string>
    </property>
   </action>
-  <action name="actionMapping_import">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Mapping import...</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import data from file into current urls by defining a mapping&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </action>
   <action name="actionExport_session">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
@@ -1266,7 +1253,7 @@
     <string>User guide</string>
    </property>
    <property name="shortcut">
-    <string>F2</string>
+    <string>F1</string>
    </property>
   </action>
  </widget>

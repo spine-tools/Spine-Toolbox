@@ -20,7 +20,7 @@ from numbers import Number
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtWidgets import QItemDelegate
 from PySide2.QtGui import QIcon
-from spinedb_api import from_database, to_database
+from spinedb_api import to_database
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate
@@ -202,7 +202,17 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
 class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     """A delegate for the parameter value."""
 
-    def _get_value_list(self, index, db_map):
+    def __init__(self, parent, db_mngr):
+        super().__init__(parent, db_mngr)
+        self._db_value_list_lookup = {}
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        display_value = editor.data()
+        db_value = self._db_value_list_lookup.get(display_value)
+        self.data_committed.emit(index, db_value)
+
+    def _get_value_list_id(self, index, db_map):
         """Returns a value list item for the given index and db_map."""
         h = index.model().header.index
         parameter_name = index.sibling(index.row(), h("parameter_name")).data()
@@ -213,21 +223,22 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             self.db_mngr.get_item(db_map, "parameter definition", id_).get("value_list_id") for id_ in parameter_ids
         }
         if len(value_list_ids) == 1:
-            value_list_id = next(iter(value_list_ids))
-            return self.db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")
+            return next(iter(value_list_ids))
 
     def createEditor(self, parent, option, index):
-        """If the parameter has associated a value list, returns a SearchBarEditor .
+        """If the parameter has associated a value list, returns a SearchBarEditor.
         Otherwise returns or requests a dedicated parameter value editor.
         """
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        value_list = self._get_value_list(index, db_map)
-        if value_list:
+        value_list_id = self._get_value_list_id(index, db_map)
+        if value_list_id:
+            display_value_list = self.db_mngr.get_parameter_value_list(db_map, value_list_id, Qt.DisplayRole)
+            db_value_list = self.db_mngr.get_parameter_value_list(db_map, value_list_id, Qt.EditRole)
+            self._db_value_list_lookup = dict(zip(display_value_list, db_value_list))
             editor = SearchBarEditor(self.parent(), parent)
-            value_list = [from_database(x) for x in value_list.split(",")]
-            editor.set_data(index.data(PARSED_ROLE), value_list)
+            editor.set_data(index.data(), self._db_value_list_lookup)
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor
         return self._create_or_request_parameter_value_editor(parent, option, index, db_map)

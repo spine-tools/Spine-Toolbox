@@ -149,19 +149,23 @@ class SpineDBParcel:
         """Pushes parameter definitions associated with given object classes.
         This essentially pushes the object classes and their parameter definitions.
         """
-        self._push_parameter_definition_ids(
-            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")),
-            "object",
+        param_def_ids = self.db_mngr.db_map_ids(
+            self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")
         )
+        self._push_parameter_definition_ids(param_def_ids, "object")
+        db_map_ids = {db_map: ids for db_map, ids in db_map_ids.items() if not param_def_ids[db_map]}
+        self._push_object_class_ids(db_map_ids)
 
     def push_relationship_class_ids(self, db_map_ids):
         """Pushes parameter definitions associated with given relationship classes.
         This essentially pushes the relationships classes, their parameter definitions, and their member object classes.
         """
-        self._push_parameter_definition_ids(
-            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")),
-            "relationship",
+        param_def_ids = self.db_mngr.db_map_ids(
+            self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter definition")
         )
+        self._push_parameter_definition_ids(param_def_ids, "relationship")
+        db_map_ids = {db_map: ids for db_map, ids in db_map_ids.items() if not param_def_ids[db_map]}
+        self._push_relationship_class_ids(db_map_ids)
 
     def push_object_ids(self, db_map_ids):
         """Pushes parameter values associated with objects and with any relationships involving those objects.
@@ -169,18 +173,20 @@ class SpineDBParcel:
         definitions, and lists.
         """
         self.push_relationship_ids(self.db_mngr.db_map_ids(self.db_mngr.find_cascading_relationships(db_map_ids)))
-        self._push_parameter_value_ids(
-            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "object"
-        )
+        param_val_ids = self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids))
+        self._push_parameter_value_ids(param_val_ids, "object")
+        db_map_ids = {db_map: ids for db_map, ids in db_map_ids.items() if not param_val_ids[db_map]}
+        self._push_object_ids(db_map_ids)
 
     def push_relationship_ids(self, db_map_ids):
         """Pushes parameter values associated with relationships.
         This essentially pushes relationships, their parameter values, and all the necessary classes,
         definitions, and lists.
         """
-        self._push_parameter_value_ids(
-            self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids)), "relationship"
-        )
+        param_val_ids = self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_values_by_entity(db_map_ids))
+        self._push_parameter_value_ids(param_val_ids, "relationship")
+        db_map_ids = {db_map: ids for db_map, ids in db_map_ids.items() if not param_val_ids[db_map]}
+        self._push_relationship_ids(db_map_ids)
 
     def push_inside_object_ids(self, db_map_ids):
         """Pushes object ids, cascading relationship ids, and the associated parameter values,
