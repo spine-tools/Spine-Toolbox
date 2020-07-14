@@ -93,6 +93,7 @@ class SourceConnection:
             "relationships": [],
             "relationship_parameters": [],
             "relationship_parameter_values": [],
+            "object_groups": [],
         }
         errors = []
         for table, mapping in tables_mappings.items():

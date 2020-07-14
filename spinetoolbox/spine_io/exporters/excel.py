@@ -21,7 +21,7 @@ from itertools import groupby
 from operator import itemgetter
 import numpy as np
 from openpyxl import Workbook
-from spinedb_api import from_database, TimeSeries, TimePattern, DateTime, Duration, to_database
+from spinedb_api import from_database, TimeSeries, TimePattern, DateTime, Duration, to_database, export_object_groups
 
 
 def _get_objects_and_parameters(db):
@@ -136,7 +136,7 @@ def _get_relationships_and_parameters(db):
 
 def _unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
     """Unstacks list of lists or list of tuples and creates a list of namedtuples
-    whit unstacked data (pivoted data)
+    with unstacked data (pivoted data)
 
     Args:
         data (List[List]): List of lists with data to unstack
@@ -496,7 +496,7 @@ def _write_objects_to_xlsx(wb, object_data):
 
     Args:
         wb (openpyxl.Workbook): excel workbook to write too.
-        object_data (List[List]): List of lists containing relationship data give by function get_unstacked_objects
+        object_data (List[List]): List of lists containing object data give by function get_unstacked_objects
     """
 
     for i, obj in enumerate(object_data):
@@ -532,6 +532,57 @@ def _write_objects_to_xlsx(wb, object_data):
                 ws.cell(row=start_row + r, column=start_col + c).value = val
 
 
+def _get_object_groups(db):
+    """Exports all group data from spine database into a dict.
+
+    Args:
+        db (spinedb_api.DatabaseMapping): database mapping for database
+
+    Returns:
+        dict: mapping class_name, to a list of (group_name, member_name) tuples sorted by group_name
+    """
+    d = {}
+    for class_name, group_name, member_name in export_object_groups(db):
+        d.setdefault(class_name, []).append((group_name, member_name))
+    return d
+
+
+def _write_object_groups_to_xlsx(wb, group_data):
+    """Writes classes, groups and members for object groups.
+    Writes one sheet per object class.
+
+    Args:
+        wb (openpyxl.Workbook): excel workbook to write too.
+        group_data (dict): containing group data as given by function _get_object_groups
+    """
+    for i, (class_name, group_tuples) in enumerate(group_data.items()):
+        ws = wb.create_sheet()
+
+        # try setting the sheet name to object class name
+        # sheet name can only be 31 chars log
+        title = "obj_grp_" + class_name
+        if len(title) < 32:
+            ws.title = title
+        else:
+            ws.title = "object_group_{}".format(i)
+
+        ws['A1'] = "Sheet type"
+        ws['A2'] = "object group"
+        ws['B1'] = "Data type"
+        ws['B2'] = "no data"
+        ws['C1'] = "object class name"
+        ws['C2'] = class_name
+
+        ws.cell(row=4, column=1).value = "group"
+        ws.cell(row=4, column=2).value = "member"
+
+        start_row = 5
+        start_col = 1
+        for r, tup in enumerate(group_tuples):
+            for c, item in enumerate(tup):
+                ws.cell(row=start_row + r, column=start_col + c).value = item
+
+
 def export_spine_database_to_xlsx(db, filepath):
     """Writes all data in a spine database into an excel file.
 
@@ -541,9 +592,11 @@ def export_spine_database_to_xlsx(db, filepath):
     """
     obj_data, obj_json_data, obj_ts, obj_timepattern = _get_unstacked_objects(db)
     rel_data, rel_json_data, rel_ts, rel_timepattern = _get_unstacked_relationships(db)
+    obj_grp_data = _get_object_groups(db)
     wb = Workbook()
     _write_relationships_to_xlsx(wb, rel_data)
     _write_objects_to_xlsx(wb, obj_data)
+    _write_object_groups_to_xlsx(wb, obj_grp_data)
     _write_json_array_to_xlsx(wb, obj_json_data, "object")
     _write_json_array_to_xlsx(wb, rel_json_data, "relationship")
     _write_TimeSeries_to_xlsx(wb, obj_ts, "object", "time series")
