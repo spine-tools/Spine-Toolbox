@@ -20,8 +20,8 @@ from collections.abc import Iterable
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QCursor, QFont, QIcon
 from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
-from ..spine_io.io_api import TYPE_STRING_TO_CLASS
-from ..spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
+from ...spine_io.io_api import TYPE_STRING_TO_CLASS
+from ...spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
 from spinetoolbox.helpers import CharIconEngine
 
 _ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
