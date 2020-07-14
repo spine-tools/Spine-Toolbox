@@ -356,7 +356,7 @@ class DataStoreFormBase(QMainWindow):
 
     def mass_export_items(self, db_map_item_types):
         def _ids(t, types):
-            return {True: (Anyone,), False: ()}[t in types]
+            return (Anyone,) if t in types else ()
 
         db_map_obj_cls_ids = {db_map: _ids("object class", types) for db_map, types in db_map_item_types.items()}
         db_map_rel_cls_ids = {db_map: _ids("relationship class", types) for db_map, types in db_map_item_types.items()}
