@@ -41,7 +41,7 @@ class TreeItem:
 
     @property
     def child_item_type(self):
-        """Returns the type of child items. Reimplement in subclasses to return something more meaningfull."""
+        """Returns the type of child items. Reimplement in subclasses to return something more meaningful."""
         return TreeItem
 
     @property
@@ -185,6 +185,20 @@ class TreeItem:
     def edit_data(self):
         return self.display_data
 
+    def set_data(self, column, value, role):
+        """
+        Sets data for this item.
+
+        Args:
+            column (int): column index
+            value (object): a new value
+            role (int): role of the new value
+
+        Returns:
+            bool: True if data was set successfully, False otherwise
+        """
+        raise NotImplementedError()
+
 
 class MinimalTreeModel(QAbstractItemModel):
     """Base class for all tree models."""
@@ -281,9 +295,10 @@ class MinimalTreeModel(QAbstractItemModel):
         if not index.isValid():
             return False
         item = self.item_from_index(index)
-        if role == Qt.EditRole:
-            return item.set_data(index.column(), value)
-        return False
+        if not item.set_data(index.column(), value, role):
+            return False
+        self.dataChanged.emit(index, index, [])
+        return True
 
     def flags(self, index):
         """Returns the item flags for the given index.

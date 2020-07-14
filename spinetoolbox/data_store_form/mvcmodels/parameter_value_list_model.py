@@ -161,8 +161,8 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             return self.name
         return super().data(column, role)
 
-    def set_data(self, column, name):
-        if name == self.name:
+    def set_data(self, column, name, role):
+        if role != Qt.EditRole or name == self.name:
             return False
         if self.id:
             self.update_name_in_db(name)
@@ -252,7 +252,9 @@ class ValueItem(GrayFontMixin, EditableMixin, ValueListTreeItem):
             return self.db_mngr.get_value_list_item(self.db_map, self.parent_item.id, self.child_number(), role)
         return super().data(column, role)
 
-    def set_data(self, column, value):
+    def set_data(self, column, value, role):
+        if role != Qt.EditRole:
+            return False
         value = try_number_from_string(value)
         value = to_database(value)
         return self.set_data_in_db(value)

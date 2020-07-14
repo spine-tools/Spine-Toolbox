@@ -371,17 +371,11 @@ class MultiDBTreeItem(TreeItem):
                 if row is not None:
                     yield row
 
-    def flags(self, column):
-        """Enables the item and makes it selectable."""
-        flags = super().flags(column)
-        if column == 0:
-            flags |= Qt.ItemIsUserCheckable
-        return flags
-
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
         if role == Qt.DisplayRole:
             return (self.display_data, self.display_database)[column]
+        return None
 
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""

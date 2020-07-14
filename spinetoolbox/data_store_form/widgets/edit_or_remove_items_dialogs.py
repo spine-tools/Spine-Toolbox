@@ -125,7 +125,7 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit Scenarios")
         self.model = MinimalTableModel(self)
-        self.model.set_horizontal_header_labels(['Scenario name', 'description', 'databases'])
+        self.model.set_horizontal_header_labels(['Scenario name', 'description', 'active', 'databases'])
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
         self.connect_signals()
@@ -133,7 +133,7 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
-            row_data = [item.display_name, data['description']]
+            row_data = [item.display_data, data['description'], data['active']]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
@@ -145,7 +145,7 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
         for i in range(self.model.rowCount()):
-            name, description, db_names = self.model.row_data(i)
+            name, description, active, db_names = self.model.row_data(i)
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
@@ -162,7 +162,7 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
             orig_row = self.orig_data[i]
             if [name, description] == orig_row:
                 continue
-            pre_db_item = {'name': name, 'description': description}
+            pre_db_item = {'name': name, 'description': description, 'active': bool(active)}
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
                 db_item['id'] = item.db_map_id(db_map)

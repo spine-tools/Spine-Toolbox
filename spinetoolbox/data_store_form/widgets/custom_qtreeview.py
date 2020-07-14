@@ -164,11 +164,6 @@ class ItemTreeView(CopyTreeView):
         """Removes selected indexes using the connected data store form."""
         self._data_store_form.show_remove_entity_tree_items_form(self._selected_indexes)
 
-    @Slot(bool)
-    def edit_selected(self, _checked=False):
-        """Edits all selected indexes using the connected data store form."""
-        self._data_store_form.edit_entity_tree_items(self._selected_indexes)
-
     def manage_relationships(self):
         index = self.currentIndex()
         item = index.internalPointer()
@@ -222,6 +217,10 @@ class ItemTreeView(CopyTreeView):
         )
         super().mousePressEvent(new_event)
 
+    def edit_selected(self):
+        """Edits all selected indexes."""
+        raise NotImplementedError()
+
 
 class EntityTreeView(ItemTreeView):
     """Tree view base class for object and relationship tree views."""
@@ -254,6 +253,10 @@ class EntityTreeView(ItemTreeView):
         self._add_relationships_action.setVisible(is_relationship)
         self._manage_relationships_action.setVisible(is_relationship)
         super().update_actions_visibility(item)
+
+    def edit_selected(self):
+        """Edits all selected indexes using the connected data store form."""
+        self._data_store_form.edit_entity_tree_items(self._selected_indexes)
 
 
 class ObjectTreeView(EntityTreeView):
@@ -394,6 +397,10 @@ class AlternativeScenarioTreeView(ItemTreeView):
         super().update_actions_visibility(item)
         self.add_alternative_action.setVisible(item.item_type == "alternative root")
         self.add_scenario_action.setVisible(item.item_type == "scenario root")
+
+    def edit_selected(self):
+        """Edits all selected indexes using the connected data store form."""
+        self._data_store_form.edit_alternative_scenario_items(self._selected_indexes)
 
     def add_alternatives(self):
         self._data_store_form.show_add_alternatives_form()

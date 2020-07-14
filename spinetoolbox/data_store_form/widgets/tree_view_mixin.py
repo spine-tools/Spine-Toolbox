@@ -277,16 +277,16 @@ class TreeViewMixin:
         )
         dialog.show()
 
-    @Slot(bool)
-    def show_edit_alternatives_form(self, checked=False):
-        selected = {ind.internalPointer() for ind in self.alternative_tree_model.selected_alternative_indexes}
-        dialog = EditAlternativesDialog(self, self.db_mngr, selected)
+    def show_edit_alternatives_form(self, items):
+        if not items:
+            return
+        dialog = EditAlternativesDialog(self, self.db_mngr, items)
         dialog.show()
 
-    @Slot(bool)
-    def show_edit_scenarios_form(self, checked=False):
-        selected = {ind.internalPointer() for ind in self.alternative_tree_model.selected_scenario_indexes}
-        dialog = EditScenariosDialog(self, self.db_mngr, selected)
+    def show_edit_scenarios_form(self, items):
+        if not items:
+            return
+        dialog = EditScenariosDialog(self, self.db_mngr, items)
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):
@@ -299,6 +299,13 @@ class TreeViewMixin:
         self.show_edit_objects_form(obj_items)
         self.show_edit_relationship_classes_form(rel_cls_items)
         self.show_edit_relationships_form(rel_items)
+
+    def edit_alternative_scenario_items(self, selected_indexes):
+        """Starts editing given indexes."""
+        alternatives = {ind.internalPointer() for ind in selected_indexes.get("alternative", {})}
+        scenarios = {ind.internalPointer() for ind in selected_indexes.get("scenario", {})}
+        self.show_edit_scenarios_form(scenarios)
+        self.show_edit_alternatives_form(alternatives)
 
     def show_edit_object_classes_form(self, items):
         if not items:

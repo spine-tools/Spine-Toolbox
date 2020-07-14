@@ -19,7 +19,20 @@ from PySide2.QtCore import Qt
 from .multi_db_tree_item import MultiDBTreeItem
 
 
-class AlternativeRootItem(MultiDBTreeItem):
+class ThreeColumnItemBase(MultiDBTreeItem):
+    def data(self, column, role=Qt.DisplayRole):
+        """Returns data for given column and role."""
+        if role == Qt.DisplayRole:
+            return (self.display_data, None, self.display_database)[column]
+        return None
+
+    def _get_children_ids(self, db_map):
+        """Returns a list of children ids.
+        Must be reimplemented in subclasses."""
+        raise NotImplementedError()
+
+
+class AlternativeRootItem(ThreeColumnItemBase):
     item_type = "alternative root"
 
     @property
@@ -46,7 +59,7 @@ class AlternativeRootItem(MultiDBTreeItem):
         return dict(alternative_name=self.display_name, database=self.first_db_map.codename)
 
 
-class ScenarioRootItem(MultiDBTreeItem):
+class ScenarioRootItem(ThreeColumnItemBase):
     item_type = "scenario root"
 
     @property
@@ -73,7 +86,7 @@ class ScenarioRootItem(MultiDBTreeItem):
         return dict(scenario_name=self.display_name, database=self.first_db_map.codename)
 
 
-class AlternativeItem(MultiDBTreeItem):
+class AlternativeItem(ThreeColumnItemBase):
     item_type = "alternative"
 
     def __init__(self, *args, **kwargs):
@@ -98,13 +111,20 @@ class AlternativeItem(MultiDBTreeItem):
         raise NotImplementedError()
 
 
-class ScenarioItem(MultiDBTreeItem):
+class ScenarioItem(ThreeColumnItemBase):
     item_type = "scenario"
 
     def __init__(self, *args, **kwargs):
         """Overridden method to parse some data for convenience later.
         Also make sure we never try to fetch this item."""
         super().__init__(*args, **kwargs)
+
+    def data(self, column, role=Qt.DisplayRole):
+        """Returns data for given column and role."""
+        if role == Qt.CheckStateRole and column == 1:
+            is_active = self.db_map_data_field(self.first_db_map, "active")
+            return Qt.Checked if is_active else Qt.Unchecked
+        return super().data(column, role)
 
     @property
     def child_item_type(self):
@@ -126,7 +146,10 @@ class ScenarioItem(MultiDBTreeItem):
         self._sort_children()
 
     def flags(self, column):
-        return super().flags(column) | Qt.ItemIsDropEnabled
+        flags = super().flags(column) | Qt.ItemIsDropEnabled
+        if column == 1:
+            flags = flags | Qt.ItemIsUserCheckable
+        return flags
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -230,6 +253,13 @@ class ScenarioItem(MultiDBTreeItem):
         if update_items:
             self.db_mngr.update_scenario_alternatives(update_items)
         self.db_mngr.add_scenario_alternatives(new_items)
+
+    def set_data(self, column, value, role):
+        if role != Qt.CheckStateRole or column != 1:
+            return False
+        update_data = {"name": self.display_data, "active": True if value == Qt.Checked else False}
+        self.db_mngr.update_scenario({self.first_db_map: update_data})
+        return True
 
 
 class ScenarioAlternativeItem(MultiDBTreeItem):
