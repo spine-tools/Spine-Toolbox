@@ -19,12 +19,13 @@ from PySide2.QtCore import Signal, Slot, QTimer
 from PySide2.QtWidgets import QInputDialog
 from .add_items_dialogs import (
     AddAlternativesDialog,
-    AddScenariosDialog,
     AddObjectClassesDialog,
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
     AddObjectGroupDialog,
+    AddScenariosDialog,
+    AddScenarioAlternativesDialog,
     ManageRelationshipsDialog,
     ManageObjectGroupDialog,
 )
@@ -257,6 +258,11 @@ class TreeViewMixin:
     def show_add_scenarios_form(self, checked=False):
         """Shows dialog to let user select preferences for new scenario."""
         dialog = AddScenariosDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
+
+    def show_add_scenario_alternatives_form(self, scenario_name):
+        """Shows dialog to let user select preferences for new scenario alternatives."""
+        dialog = AddScenarioAlternativesDialog(self, scenario_name, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def show_add_relationships_form(self, checked=False, relationship_class_key=None, object_names_by_class_name=None):

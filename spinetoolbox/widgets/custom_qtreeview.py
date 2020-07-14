@@ -214,7 +214,7 @@ class CustomTreeView(QTreeView):
         parent (QWidget): The parent of this view
     """
 
-    del_key_pressed = Signal(name="del_key_pressed")
+    del_key_pressed = Signal()
 
     def __init__(self, parent):
         """Initialize the view."""

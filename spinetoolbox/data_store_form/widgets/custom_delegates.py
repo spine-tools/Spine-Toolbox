@@ -425,7 +425,7 @@ class ManageAlternativesDelegate(ManageItemsDelegate):
     """
 
     def createEditor(self, parent, option, index):
-        """Return editor."""
+        """Returns an editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'databases':
             editor = self._create_database_editor(parent, option, index)

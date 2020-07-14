@@ -70,7 +70,7 @@ class EditAlternativesDialog(EditOrRemoveItemsDialog):
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
-            row_data = [item.display_name, data['description']]
+            row_data = [item.display_data, data['description']]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)

@@ -23,7 +23,7 @@ class ThreeColumnItemBase(MultiDBTreeItem):
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
         if role == Qt.DisplayRole:
-            return (self.display_data, None, self.display_database)[column]
+            return (self.display_data, None, None)[column]
         return None
 
     def _get_children_ids(self, db_map):
@@ -95,6 +95,12 @@ class AlternativeItem(ThreeColumnItemBase):
         super().__init__(*args, **kwargs)
         self._fetched = True
 
+    def data(self, column, role=Qt.DisplayRole):
+        """Returns data for given column and role."""
+        if role == Qt.DisplayRole:
+            return (self.display_data, None, self.display_database)[column]
+        return None
+
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDragEnabled
 
@@ -124,7 +130,9 @@ class ScenarioItem(ThreeColumnItemBase):
         if role == Qt.CheckStateRole and column == 1:
             is_active = self.db_map_data_field(self.first_db_map, "active")
             return Qt.Checked if is_active else Qt.Unchecked
-        return super().data(column, role)
+        if role == Qt.DisplayRole:
+            return (self.display_data, None, self.display_database)[column]
+        return None
 
     @property
     def child_item_type(self):
@@ -262,7 +270,7 @@ class ScenarioItem(ThreeColumnItemBase):
         return True
 
 
-class ScenarioAlternativeItem(MultiDBTreeItem):
+class ScenarioAlternativeItem(ThreeColumnItemBase):
     item_type = "scenario_alternative"
 
     def __init__(self, *args, **kwargs):

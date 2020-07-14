@@ -383,6 +383,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
         super().__init__(parent=parent)
         self.add_alternative_action = None
         self.add_scenario_action = None
+        self.add_scenario_alternative_action = None
 
     def _add_middle_actions(self):
         self.add_alternative_action = self._menu.addAction(
@@ -391,12 +392,18 @@ class AlternativeScenarioTreeView(ItemTreeView):
         self.add_scenario_action = self._menu.addAction(
             self._data_store_form.ui.actionAdd_objects.icon(), "Add scenarios", self.add_scenarios
         )
+        self.add_scenario_alternative_action = self._menu.addAction(
+            self._data_store_form.ui.actionAdd_relationship_classes.icon(),
+            "Add scenario alternatives",
+            self.add_scenario_alternatives,
+        )
         self._menu.addSeparator()
 
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)
         self.add_alternative_action.setVisible(item.item_type == "alternative root")
         self.add_scenario_action.setVisible(item.item_type == "scenario root")
+        self.add_scenario_alternative_action.setVisible(item.item_type == "scenario")
 
     def edit_selected(self):
         """Edits all selected indexes using the connected data store form."""
@@ -407,6 +414,11 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def add_scenarios(self):
         self._data_store_form.show_add_scenarios_form()
+
+    def add_scenario_alternatives(self):
+        index = self.currentIndex()
+        item = index.internalPointer()
+        self._data_store_form.show_add_scenario_alternatives_form(item.display_data)
 
 
 class ParameterValueListTreeView(CopyTreeView):

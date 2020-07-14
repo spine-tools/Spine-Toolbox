@@ -63,14 +63,13 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
     """A dialog to let the user add new 'ready' relationships."""
 
     def __init__(self, parent, relationships_class, relationships, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
+            parent (DataStoreForm)
             relationships_class (dict)
             relationships (list(list(str))
-            parent (DataStoreForm)
             db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
+            db_maps (iter): DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
         self.relationship_class = relationships_class
@@ -137,9 +136,8 @@ class AddItemsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for new db items."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -174,9 +172,8 @@ class AddAlternativesDialog(AddItemsDialog):
     """A dialog to query user's preferences for new alternatives."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -223,9 +220,8 @@ class AddScenariosDialog(AddItemsDialog):
     """A dialog to query user's preferences for new scenarios."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -268,13 +264,84 @@ class AddScenariosDialog(AddItemsDialog):
         super().accept()
 
 
+class AddScenarioAlternativesDialog(AddItemsDialog):
+    """A dialog to query user's preferences for new scenario alternatives."""
+
+    def __init__(self, parent, scenario_name, db_mngr, *db_maps):
+        """
+        Args:
+            parent (DataStoreForm)
+            scenario_name (str): scenario's name
+            db_mngr (SpineDBManager)
+            db_maps (iter) DiffDatabaseMapping instances
+        """
+        super().__init__(parent, db_mngr, *db_maps)
+        self.setWindowTitle("Add Scenario Alternatives")
+        self.model = EmptyRowModel(self)
+        self.table_view.setModel(self.model)
+        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.connect_signals()
+        self.model.set_horizontal_header_labels(['scenario name', 'alternative name', 'rank', 'databases'])
+        databases = ",".join(list(self.keyed_db_maps.keys()))
+        self.model.set_default_row(**{'scenario name': scenario_name, 'databases': databases})
+        self.model.clear()
+
+    @Slot(name="accept")
+    def accept(self):
+        """Collect info from dialog and try to add items."""
+        db_map_data = dict()
+        alternative_ids = {
+            db_map: {item["name"]: item["id"] for item in self.db_mngr.get_items(db_map, "alternative")}
+            for db_map in self.db_maps
+        }
+        scenario_ids = {
+            db_map: {item["name"]: item["id"] for item in self.db_mngr.get_items(db_map, "scenario")}
+            for db_map in self.db_maps
+        }
+        for i in range(self.model.rowCount() - 1):  # last row will always be empty
+            row_data = self.model.row_data(i)
+            scenario_name, alternative_name, rank, db_names = row_data
+            db_name_list = db_names.split(",")
+            try:
+                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
+            except KeyError as e:
+                self.parent().msg_error.emit(f"Invalid database {e} at row {i + 1}")
+                return
+            if not scenario_name:
+                self.parent().msg_error.emit(f"Scenario name missing at row {i + 1}")
+                return
+            if not rank:
+                self.parent().msg_error.emit(f"Rank missing at row {i + 1}")
+                return
+            item = {"rank": rank}
+            for db_map in db_maps:
+                try:
+                    alternative_id = alternative_ids[db_map][alternative_name]
+                except KeyError:
+                    self.parent().msg_error.emit(f"Alternative at row {i + 1} does not exist")
+                    return
+                item["alternative_id"] = alternative_id
+                try:
+                    scenario_id = scenario_ids[db_map][scenario_name]
+                except KeyError:
+                    self.parent().msg_error.emit(f"Scenario at row {i + 1} does not exist")
+                    return
+                item["scenario_id"] = scenario_id
+                db_map_data.setdefault(db_map, []).append(item)
+        if not db_map_data:
+            self.parent().msg_error.emit("Nothing to add")
+            return
+        self.db_mngr.add_scenario_alternatives(db_map_data)
+        super().accept()
+
+
 class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
     """A dialog to query user's preferences for new object classes."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -350,9 +417,8 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
     """
 
     def __init__(self, parent, db_mngr, *db_maps, class_name=None, force_default=False):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -418,9 +484,8 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     """A dialog to query user's preferences for new relationship classes."""
 
     def __init__(self, parent, db_mngr, *db_maps, object_class_one_name=None, force_default=False):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -562,9 +627,8 @@ class AddOrManageRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixi
     """A dialog to query user's preferences for new relationships."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -610,9 +674,8 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
     def __init__(
         self, parent, db_mngr, *db_maps, relationship_class_key=(), object_names_by_class_name=None, force_default=False
     ):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -743,8 +806,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     """
 
     def __init__(self, parent, db_mngr, *db_maps, relationship_class_key=None):
-        """Init class.
-
+        """
         Args:
             parent (DataStoreForm): data store widget
             db_mngr (SpineDBManager): the manager to do the removal
@@ -903,8 +965,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
 
 class AddOrManageObjectGroupDialog(QDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
-        """Init class.
-
+        """
         Args:
             parent (DataStoreForm): data store widget
             object_class_item (ObjectClassItem)
@@ -1030,8 +1091,7 @@ class AddOrManageObjectGroupDialog(QDialog):
 
 class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
-        """Init class.
-
+        """
         Args:
             parent (DataStoreForm): data store widget
             object_item (ObjectItem)
@@ -1079,8 +1139,7 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
 
 class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
     def __init__(self, parent, object_item, db_mngr, *db_maps):
-        """Init class.
-
+        """
         Args:
             parent (DataStoreForm): data store widget
             object_item (ObjectItem)
