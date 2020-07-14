@@ -120,12 +120,12 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
         Args:
             parent (DataStoreForm): data store widget
             db_mngr (SpineDBManager): the manager to do the update
-            selected (set): set of ObjectClassItem instances to edit
+            selected (set): set of ScenarioItem instances to edit
         """
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit Scenarios")
         self.model = MinimalTableModel(self)
-        self.model.set_horizontal_header_labels(['Scenario name', 'description', 'active', 'databases'])
+        self.model.set_horizontal_header_labels(['scenario name', 'description', 'active', 'databases'])
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
         self.connect_signals()
@@ -171,6 +171,82 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
             self.parent().msg_error.emit("Nothing to update")
             return
         self.db_mngr.update_scenarios(db_map_data)
+        super().accept()
+
+
+class EditScenarioAlternativesDialog(EditOrRemoveItemsDialog):
+    """A dialog to query user's preferences for updating scenarios alternatives."""
+
+    def __init__(self, parent, db_mngr, selected):
+        """Init class.
+
+        Args:
+            parent (DataStoreForm): data store widget
+            db_mngr (SpineDBManager): the manager to do the update
+            selected (set): set of ScenarioAlternativeItem instances to edit
+        """
+        super().__init__(parent, db_mngr)
+        self.setWindowTitle(f"Edit Scenario Alternatives")
+        self.model = MinimalTableModel(self)
+        self.model.set_horizontal_header_labels(['scenario name', 'alternative name', 'rank'])
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.connect_signals()
+        self.orig_data = list()
+        model_data = list()
+        for item in selected:
+            data = item.db_map_data(item.first_db_map)
+            scenario_id = data.get("scenario_id")
+            scenario_name = self.db_mngr.get_item(item.first_db_map, "scenario", scenario_id).get("name")
+            alternative_id = data.get("alternative_id")
+            alternative_name = self.db_mngr.get_item(item.first_db_map, "alternative", alternative_id).get("name")
+            rank = data.get("rank")
+            row_data = [scenario_name, alternative_name, rank]
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+            self.items.append(item)
+        self.model.reset_model(model_data)
+
+    @Slot(name="accept")
+    def accept(self):
+        """Collect info from dialog and try to update items."""
+        db_map_data = dict()
+        for i in range(self.model.rowCount()):
+            scenario_name, alternative_name, rank = self.model.row_data(i)
+            if not scenario_name:
+                self.parent().msg_error.emit(f"Scenario name missing at row {i + 1}")
+                return
+            if not alternative_name:
+                self.parent().msg_error.emit(f"Alternative name missing at row {i + 1}")
+                return
+            if not isinstance(rank, int) and not rank:
+                self.parent().msg_error.emit(f"Rank missing at row {i + 1}")
+                return
+            item = self.items[i]
+            orig_row = self.orig_data[i]
+            if [scenario_name, alternative_name, rank] == orig_row:
+                continue
+            scenario_item = self.db_mngr.get_item_by_field(item.first_db_map, "scenario", "name", scenario_name)
+            if not scenario_item:
+                self.parent().msg_error.emit(f"Scenario {scenario_name} at row {i + 1} not found in database")
+                return
+            alternative_item = self.db_mngr.get_item_by_field(
+                item.first_db_map, "alternative", "name", alternative_name
+            )
+            if not alternative_item:
+                self.parent().msg_error.emit(f"Alternative {alternative_name} at row {i + 1} not found in database")
+                return
+            db_item = {
+                "id": item.db_map_id(item.first_db_map),
+                "scenario_id": scenario_item["id"],
+                "alternative_id": alternative_item["id"],
+                "rank": rank,
+            }
+            db_map_data.setdefault(item.first_db_map, []).append(db_item)
+        if not db_map_data:
+            self.parent().msg_error.emit("Nothing to update")
+            return
+        self.db_mngr.update_scenario_alternatives(db_map_data)
         super().accept()
 
 

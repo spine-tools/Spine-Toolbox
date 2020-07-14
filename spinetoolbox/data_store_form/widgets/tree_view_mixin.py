@@ -30,12 +30,13 @@ from .add_items_dialogs import (
     ManageObjectGroupDialog,
 )
 from .edit_or_remove_items_dialogs import (
-    EditScenariosDialog,
     EditAlternativesDialog,
     EditObjectClassesDialog,
     EditObjectsDialog,
     EditRelationshipClassesDialog,
     EditRelationshipsDialog,
+    EditScenarioAlternativesDialog,
+    EditScenariosDialog,
     RemoveEntitiesDialog,
 )
 from ..mvcmodels.alternative_tree_models import AlternativeTreeModel
@@ -295,6 +296,12 @@ class TreeViewMixin:
         dialog = EditScenariosDialog(self, self.db_mngr, items)
         dialog.show()
 
+    def show_edit_scenario_alternatives_form(self, items):
+        if not items:
+            return
+        dialog = EditScenarioAlternativesDialog(self, self.db_mngr, items)
+        dialog.show()
+
     def edit_entity_tree_items(self, selected_indexes):
         """Starts editing given indexes."""
         obj_cls_items = {ind.internalPointer() for ind in selected_indexes.get("object class", {})}
@@ -310,8 +317,10 @@ class TreeViewMixin:
         """Starts editing given indexes."""
         alternatives = {ind.internalPointer() for ind in selected_indexes.get("alternative", {})}
         scenarios = {ind.internalPointer() for ind in selected_indexes.get("scenario", {})}
-        self.show_edit_scenarios_form(scenarios)
+        scenario_alternatives = {ind.internalPointer() for ind in selected_indexes.get("scenario_alternative", {})}
         self.show_edit_alternatives_form(alternatives)
+        self.show_edit_scenarios_form(scenarios)
+        self.show_edit_scenario_alternatives_form(scenario_alternatives)
 
     def show_edit_object_classes_form(self, items):
         if not items:

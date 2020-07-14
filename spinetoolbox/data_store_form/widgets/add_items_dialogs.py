@@ -311,7 +311,7 @@ class AddScenarioAlternativesDialog(AddItemsDialog):
             if not scenario_name:
                 self.parent().msg_error.emit(f"Scenario name missing at row {i + 1}")
                 return
-            if not rank:
+            if not isinstance(rank, int) and not rank:
                 self.parent().msg_error.emit(f"Rank missing at row {i + 1}")
                 return
             item = {"rank": rank}
