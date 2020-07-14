@@ -16,6 +16,8 @@ SpineDBParcel class.
 :date:   10.5.2020
 """
 
+from spinedb_api import Anyone
+
 
 class SpineDBParcel:
     """
@@ -44,6 +46,8 @@ class SpineDBParcel:
         return self._data
 
     def _get_fields(self, db_map, item_type, field, ids):
+        if Anyone in ids:
+            return {x.get(field) for x in self.db_mngr.get_items(db_map, item_type)}
         return {x for x in (self.db_mngr.get_item(db_map, item_type, id_).get(field) for id_ in ids) if x}
 
     def _push_object_class_ids(self, db_map_ids):
@@ -144,6 +148,18 @@ class SpineDBParcel:
                     for db_map, ids in db_map_ids.items()
                 }
             )
+
+    def _push_object_group_ids(self, db_map_ids):
+        """Pushes object group ids."""
+        for db_map, ids in db_map_ids.items():
+            self._data.setdefault(db_map, {}).setdefault("object_group_ids", set()).update(ids)
+        self._push_object_ids(
+            {
+                db_map: self._get_fields(db_map, "entity group", "entity_id", ids)
+                | self._get_fields(db_map, "entity group", "member_id", ids)
+                for db_map, ids in db_map_ids.items()
+            }
+        )
 
     def push_object_class_ids(self, db_map_ids):
         """Pushes parameter definitions associated with given object classes.

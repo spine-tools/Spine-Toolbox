@@ -1172,15 +1172,6 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "relationship"))
 
-    def add_object_groups(self, db_map_data):
-        """Adds object groups to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "object group"))
-
     def add_entity_groups(self, db_map_data):
         """Adds entity groups to db.
 
