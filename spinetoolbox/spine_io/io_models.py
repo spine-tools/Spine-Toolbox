@@ -42,19 +42,19 @@ from spinedb_api import (
     mapping_non_pivoted_columns,
 )
 from ..mvcmodels.minimal_table_model import MinimalTableModel
-from .type_conversion import ConvertSpec
+from .type_conversion import ConvertSpec, DateTimeConvertSpec, FloatConvertSpec, StringConvertSpec
 
 
 _MAPPING_COLORS = {
-    "entity_class": QColor(166, 97, 26),
+    "entity_class": QColor(196, 117, 56),
     "entity": QColor(223, 194, 125),
     "group": QColor(120, 150, 220),
-    "parameter_value": QColor(21, 153, 133),
-    "parameter extra dimension": QColor(178, 255, 243),
-    "parameter name": QColor(128, 205, 193),
-    "alternative": QColor(166, 97, 26),
+    "parameter_value": QColor(128, 205, 193),
+    "parameter_extra_dimension": QColor(41, 173, 153),
+    "parameter_name": QColor(178, 255, 243),
+    "alternative": QColor(196, 117, 56),
     "scenario": QColor(223, 194, 125),
-    "active": QColor(21, 153, 133),
+    "active": QColor(128, 205, 193),
     "before_alternative": QColor(120, 150, 220),
 }
 _ERROR_COLOR = QColor(Qt.red)
@@ -91,15 +91,17 @@ class MappingPreviewModel(MinimalTableModel):
     Highlights columns, rows, and so on, depending on Mapping specification.
     """
 
-    columnTypesUpdated = Signal()
-    rowTypesUpdated = Signal()
-    mappingChanged = Signal()
+    column_types_updated = Signal()
+    row_types_updated = Signal()
+    mapping_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self._mapping = None
         self._data_changed_signal = None
+        self._row_or_column_type_recommendation_changed_signal = None
+        self._multi_column_type_recommendation_changed_signal = None
         self._column_types = {}
         self._row_types = {}
         self._column_type_errors = {}
@@ -132,12 +134,24 @@ class MappingPreviewModel(MinimalTableModel):
             return
         if not isinstance(mapping, MappingSpecModel):
             raise TypeError(f"mapping must be instance of 'MappingSpecModel', instead got: '{type(mapping).__name__}'")
-        if self._data_changed_signal is not None and self._mapping:
-            self._mapping.dataChanged.disconnect(self._mapping_data_changed)
-            self._data_changed_signal = None
+        if self._mapping is not None:
+            if self._data_changed_signal is not None:
+                self._mapping.dataChanged.disconnect(self._mapping_data_changed)
+                self._data_changed_signal = None
+            if self._row_or_column_type_recommendation_changed_signal is not None:
+                self._mapping.row_or_column_type_recommendation_changed.disconnect(self.set_type)
+                self._row_or_column_type_recommendation_changed_signal = None
+            if self._multi_column_type_recommendation_changed_signal is not None:
+                self._mapping.multi_column_type_recommendation_changed.disconnect(self.set_all_column_types)
+                self._multi_column_type_recommendation_changed_signal = None
         self._mapping = mapping
-        if self._mapping:
-            self._data_changed_signal = self._mapping.dataChanged.connect(self._mapping_data_changed)
+        self._data_changed_signal = self._mapping.dataChanged.connect(self._mapping_data_changed)
+        self._row_or_column_type_recommendation_changed_signal = self._mapping.row_or_column_type_recommendation_changed.connect(
+            self.set_type
+        )
+        self._multi_column_type_recommendation_changed_signal = self._mapping.multi_column_type_recommendation_changed.connect(
+            self.set_all_column_types
+        )
         self._mapping_data_changed()
 
     def validate(self, section, orientation=Qt.Horizontal):
@@ -179,28 +193,46 @@ class MappingPreviewModel(MinimalTableModel):
             return self._column_types
         return self._row_types
 
+    @Slot(int, object, object)
     def set_type(self, section, section_type, orientation=Qt.Horizontal):
         if orientation == Qt.Horizontal:
             count = self.columnCount()
-            emit_signal = self.columnTypesUpdated
+            emit_signal = self.column_types_updated
             type_dict = self._column_types
         else:
             count = self.rowCount()
-            emit_signal = self.rowTypesUpdated
+            emit_signal = self.row_types_updated
             type_dict = self._row_types
         if not isinstance(section_type, ConvertSpec):
             raise TypeError(
                 f"section_type must be a instance of ConvertSpec, instead got {type(section_type).__name__}"
             )
-        if section < 0 or section > count:
-            raise ValueError("section must be within model data")
+        if section < 0 or section >= count:
+            return
         type_dict[section] = section_type
         emit_signal.emit()
         self.validate(section, orientation)
 
+    def set_types(self, sections, section_type, orientation):
+        type_dict = self._column_types if orientation == Qt.Horizontal else self._row_types
+        for section in sections:
+            type_dict[section] = section_type
+            self.validate(section, orientation)
+        if orientation == Qt.Horizontal:
+            self.column_types_updated.emit()
+        else:
+            self.row_types_updated.emit()
+
+    @Slot(object, object)
+    def set_all_column_types(self, excluded_columns, column_type):
+        for column in range(self.columnCount()):
+            if column not in excluded_columns:
+                self._column_types[column] = column_type
+        self.column_types_updated.emit()
+
     def _mapping_data_changed(self):
         self.update_colors()
-        self.mappingChanged.emit()
+        self.mapping_changed.emit()
 
     def update_colors(self):
         self.dataChanged.emit(QModelIndex, QModelIndex, [Qt.BackgroundColorRole])
@@ -266,12 +298,12 @@ class MappingPreviewModel(MinimalTableModel):
                 # parameter extra dimensions color
                 for ed in mapping.parameters.extra_dimensions:
                     if self.index_in_mapping(ed, index):
-                        return _MAPPING_COLORS["parameter extra dimension"]
+                        return _MAPPING_COLORS["parameter_extra_dimension"]
             if isinstance(mapping.parameters, ParameterDefinitionMapping) and self.index_in_mapping(
                 mapping.parameters.name, index
             ):
                 # parameter name colors
-                return _MAPPING_COLORS["parameter name"]
+                return _MAPPING_COLORS["parameter_name"]
         if not isinstance(
             mapping, (AlternativeMapping, ScenarioMapping, ScenarioAlternativeMapping)
         ) and self.index_in_mapping(mapping.name, index):
@@ -376,6 +408,11 @@ class MappingSpecModel(QAbstractTableModel):
     A model to hold a Mapping specification.
     """
 
+    row_or_column_type_recommendation_changed = Signal(int, object, object)
+    """Emitted when a change in mapping prompts for change in column or row type."""
+    multi_column_type_recommendation_changed = Signal(object, object)
+    """Emitted when all but given columns should be of given type."""
+
     def __init__(self, model, table_name, parent=None):
         super().__init__(parent)
         self._display_names = []
@@ -412,13 +449,11 @@ class MappingSpecModel(QAbstractTableModel):
     def dimension(self):
         if self._model is None:
             return 0
-        if isinstance(self._model, RelationshipClassMapping):
-            return len(self._model.objects)
-        return 1
+        return self._model.dimensions
 
     @property
     def import_objects(self):
-        if self._model is None or isinstance(self._model, ObjectClassMapping):
+        if self._model is None:
             return False
         return self._model.import_objects
 
@@ -467,7 +502,7 @@ class MappingSpecModel(QAbstractTableModel):
         self.endResetModel()
 
     def set_dimension(self, dim):
-        if self._model is None or not isinstance(self._model, RelationshipClassMapping):
+        if self._model is None or self._model.has_fixed_dimensions():
             return
         self.beginResetModel()
         if len(self._model.objects) >= dim:
@@ -668,11 +703,11 @@ class MappingSpecModel(QAbstractTableModel):
         if display_name == "Scenario active flags":
             return _MAPPING_COLORS["active"]
         if display_name == "Parameter names":
-            return _MAPPING_COLORS["parameter name"]
+            return _MAPPING_COLORS["parameter_name"]
         if display_name in ("Parameter time index", "Parameter time pattern index") or display_name.startswith(
             "Parameter index"
         ):
-            return _MAPPING_COLORS["parameter extra dimension"]
+            return _MAPPING_COLORS["parameter_extra_dimension"]
         if display_name == "Parameter values":
             return _MAPPING_COLORS["parameter_value"]
 
@@ -770,7 +805,11 @@ class MappingSpecModel(QAbstractTableModel):
         if index.column() == 1:
             return self.set_type(name, value)
         if index.column() == 2:
-            return self.set_value(name, value)
+            if self.set_value(index.row(), name, value):
+                if name in self._display_names:
+                    self.dataChanged.emit(index, index)
+                return True
+            return False
         if index.column() == 3:
             return self.set_prepend_str(name, value)
         if index.column() == 4:
@@ -796,7 +835,18 @@ class MappingSpecModel(QAbstractTableModel):
             return False
         return self.set_mapping_from_name(name, value)
 
-    def set_value(self, name, value):
+    def set_value(self, row, name, value):
+        """
+        Sets the reference for given mapping.
+
+        Args:
+            row (int): row index
+            name (str): name of the mapping
+            value (str): a new value
+
+        Returns:
+            bool: True if the reference was modified successfully, False otherwise.
+        """
         mapping = self.get_mapping_from_name(name)
         if isinstance(mapping, NoneMapping):
             # create new mapping
@@ -806,6 +856,8 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping = ConstantMapping(reference=value)
             else:
                 return False
+            index = self.index(row, 1)
+            self.dataChanged.emit(index, index)
         try:
             mapping.reference = value
         except ValueError:
@@ -855,14 +907,10 @@ class MappingSpecModel(QAbstractTableModel):
             return self._model.objects
         if name.startswith("Object class"):
             # Not to be confused with name == 'Object class names'.
-            _, number = name.rsplit(" ", 1)
-            index = int(number) - 1
-            return self._model.object_classes[index]
+            return self._model.object_classes[_name_index(name)]
         if name.startswith("Object"):
             # Not to be confused with name == 'Object class names' or name == 'Object class X'.
-            _, number = name.split(" ", 1)
-            index = int(number - 1)
-            return self._model.objects[index]
+            return self._model.objects[_name_index(name)]
         if name == "Parameter names":
             return self._model.parameters.name
         if name == "Parameter values":
@@ -870,57 +918,105 @@ class MappingSpecModel(QAbstractTableModel):
         if name in ("Parameter time index", "Parameter time pattern index"):
             return self._model.parameters.extra_dimensions[0]
         if name.startswith("Parameter index"):
-            _, number = name.rsplit(" ", 1)
-            index = int(number) - 1
-            return self._model.parameters.extra_dimensions[index]
+            return self._model.parameters.extra_dimensions[_name_index(name)]
         return None
 
     def set_mapping_from_name(self, name, mapping):
         if name in ("Relationship class names", "Object class names"):
             self._model.name = mapping
+            self._recommend_string_type(mapping)
         elif name in ("Alternative names", "Scenario names") and not isinstance(
             self._model, ScenarioAlternativeMapping
         ):
             self._model.name = mapping
+            self._recommend_string_type(mapping)
         elif name == "Scenario names":
             self._model.scenario_name = mapping
+            self._recommend_string_type(mapping)
         elif name == "Alternative names":
             self._model.alternative_name = mapping
+            self._recommend_string_type(mapping)
         elif name == "Before Alternative names":
             self._model.before_alternative_name = mapping
+            self._recommend_string_type(mapping)
         elif name == "Scenario active flags":
             self._model.active = mapping
+            self._recommend_string_type(mapping)
         elif name == "Object names":
             self._model.objects = mapping
+            self._recommend_string_type(mapping)
         elif name == "Group names":
             self._model.groups = mapping
+            self._recommend_string_type(mapping)
         elif name == "Member names":
             self._model.members = mapping
+            self._recommend_string_type(mapping)
         elif "Object class " in name:
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
             if index:
                 self._model.object_classes[index[0]] = mapping
+                self._recommend_string_type(mapping)
         elif "Object " in name:
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
             if index:
                 self._model.objects[index[0]] = mapping
+                self._recommend_string_type(mapping)
         elif name == "Parameter names":
             self._model.parameters.name = mapping
+            self._recommend_string_type(mapping)
         elif name == "Parameter values":
             self._model.parameters.value = mapping
+            self._recommend_parameter_value_mapping_reference_type_change(mapping)
         elif name in ("Parameter time index", "Parameter time pattern index"):
             self._model.parameters.extra_dimensions = [mapping]
+            if name == "Parameter time index":
+                self._recommend_datetime_type(mapping)
+            if (
+                isinstance(mapping, RowMapping)
+                and self._model.is_pivoted()
+                and isinstance(self._model.parameters.value, NoneMapping)
+            ):
+                non_pivoted_columns = self._model.non_pivoted_columns()
+                self.multi_column_type_recommendation_changed.emit(non_pivoted_columns, FloatConvertSpec())
         elif name.startswith("Parameter index"):
-            _, number = name.rsplit(" ", 1)
-            index = int(number) - 1
-            self._model.parameters.extra_dimensions[index] = mapping
+            self._model.parameters.extra_dimensions[_name_index(name)] = mapping
+            self._recommend_string_type(mapping)
         else:
             return False
-
         self.update_display_table()
         if name in self._display_names:
             self.dataChanged.emit(QModelIndex(), QModelIndex(), [])
         return True
+
+    def _recommend_string_type(self, mapping):
+        self._recommend_mapping_reference_type_change(mapping, StringConvertSpec())
+
+    def _recommend_float_type(self, mapping):
+        self._recommend_mapping_reference_type_change(mapping, FloatConvertSpec())
+
+    def _recommend_datetime_type(self, mapping):
+        self._recommend_mapping_reference_type_change(mapping, DateTimeConvertSpec())
+
+    def _recommend_mapping_reference_type_change(self, mapping, convert_spec):
+        if mapping.reference is None:
+            return
+        if isinstance(mapping, ColumnMapping):
+            self.row_or_column_type_recommendation_changed.emit(mapping.reference, convert_spec, Qt.Horizontal)
+        elif isinstance(mapping, RowMapping):
+            self.row_or_column_type_recommendation_changed.emit(mapping.reference, convert_spec, Qt.Vertical)
+
+    def _recommend_parameter_value_mapping_reference_type_change(self, mapping):
+        if isinstance(mapping, ColumnMapping):
+            if mapping.reference is not None:
+                self.row_or_column_type_recommendation_changed.emit(
+                    mapping.reference, FloatConvertSpec(), Qt.Horizontal
+                )
+        elif isinstance(mapping, RowMapping):
+            if mapping.reference is not None:
+                self.row_or_column_type_recommendation_changed.emit(mapping.reference, FloatConvertSpec(), Qt.Vertical)
+            else:
+                non_pivoted_columns = self._model.non_pivoted_columns()
+                self.multi_column_type_recommendation_changed.emit(non_pivoted_columns, FloatConvertSpec())
 
     def set_skip_columns(self, columns=None):
         if columns is None:
@@ -1046,3 +1142,17 @@ class MappingListModel(QAbstractListModel):
             if issue:
                 issues[name] = issue
         return issues
+
+
+def _name_index(name):
+    """
+    Parses an index from a string which ends with that number.
+
+    Args:
+        name (str): a string that ends with a number
+
+    Returns:
+        int: the number at the end of the given string minus one
+    """
+    _, number = name.rsplit(" ", 1)
+    return int(number) - 1

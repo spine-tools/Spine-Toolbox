@@ -90,11 +90,11 @@ class ImportEditor:
         self.mappingChanged.connect(self._ui_preview_menu.set_model)
         self.mappingChanged.connect(self.table.set_mapping)
         self.mappingDataChanged.connect(self.table.set_mapping)
-        self.table.mappingChanged.connect(self._update_display_row_types)
+        self.table.mapping_changed.connect(self._update_display_row_types)
 
         # data preview table
-        self.table.columnTypesUpdated.connect(self._new_column_types)
-        self.table.rowTypesUpdated.connect(self._new_row_types)
+        self.table.column_types_updated.connect(self._new_column_types)
+        self.table.row_types_updated.connect(self._new_row_types)
 
         # preview new preview data
         self.previewDataUpdated.connect(lambda: self.set_num_available_columns(self.table.columnCount()))

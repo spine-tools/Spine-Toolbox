@@ -21,6 +21,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QCursor, QFont, QIcon
 from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
 from ...spine_io.io_api import TYPE_STRING_TO_CLASS
+from ...spine_io.io_models import MappingPreviewModel
 from ...spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
 from spinetoolbox.helpers import CharIconEngine
 
@@ -66,6 +67,19 @@ class TableViewWithButtonHeader(QTableView):
             self._horizontal_header.fix_widget_positions()
         if dy != 0:
             self._vertical_header.fix_widget_positions()
+
+    @Slot(object)
+    def update_buttons(self, orientation):
+        """
+        Updates the header buttons for given orientation.
+
+        Args:
+            orientation (int): Qt.Horizontal or Qt.Vertical
+        """
+        if orientation == Qt.Horizontal:
+            self._horizontal_header.update_buttons()
+        else:
+            self._vertical_header.update_buttons()
 
     def _create_horizontal_header_menu(self):
         """Returns a new menu for the horizontal header"""
@@ -169,16 +183,15 @@ class _HeaderWithButton(QHeaderView):
         """Sets the data type of a row or column according to menu action."""
         logical_index = self.logicalIndexAt(self._button.pos())
         type_str = action.text()
-        self.set_data_types(logical_index, type_str, update_viewport=True)
+        self.set_data_types(logical_index, type_str)
 
-    def set_data_types(self, sections, type_str, update_viewport=True):
+    def set_data_types(self, sections, type_str):
         """
         Sets the data types of given sections (rows, columns).
 
         Args:
             sections (Iterable or int or NoneType): row/column index
             type_str (str): data type name
-            update_viewport (bool): True if the buttons need repaint
         """
         if type_str == "integer sequence datetime":
             dialog = NewIntegerSequenceDateTimeConvertSpecDialog()
@@ -190,10 +203,12 @@ class _HeaderWithButton(QHeaderView):
         if not isinstance(sections, Iterable):
             sections = [sections]
         orientation = self.orientation()
-        for section in sections:
-            self.model().set_type(section, convert_spec, orientation)
-        if update_viewport:
-            self.viewport().update()
+        self.model().set_types(sections, convert_spec, orientation)
+
+    @Slot()
+    def update_buttons(self):
+        """Updates the buttons."""
+        self.viewport().update()
 
     def widget_width(self):
         """Width of widget
@@ -352,6 +367,25 @@ class _HeaderWithButton(QHeaderView):
     def set_margins(self, margins):
         """Sets the header margins."""
         self._margin = margins
+
+    def setModel(self, model):
+        """
+        Sets the model for this view.
+
+        Args:
+            model (QAbstractItemModel): a model
+        """
+        if isinstance(model, MappingPreviewModel):
+            old_model = self.model()
+            if self.orientation() == Qt.Horizontal:
+                model.column_types_updated.connect(self.update_buttons)
+                if isinstance(old_model, MappingPreviewModel):
+                    old_model.column_types_updated.disconnect(self.update_buttons)
+            else:
+                model.row_types_updated.connect(self.update_buttons)
+                if isinstance(old_model, MappingPreviewModel):
+                    old_model.row_types_updated.disconnect(self.update_buttons)
+        super().setModel(model)
 
 
 def _create_allowed_types_menu(parent, trigger_slot):

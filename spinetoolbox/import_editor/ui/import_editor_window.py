@@ -25,7 +25,7 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
-from spinetoolbox.widgets.table_view_with_button_header import TableViewWithButtonHeader
+from spinetoolbox.import_editor.widgets.table_view_with_button_header import TableViewWithButtonHeader
 
 
 class Ui_MainWindow(object):
