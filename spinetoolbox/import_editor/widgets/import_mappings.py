@@ -17,16 +17,14 @@ ImportMappings widget.
 """
 
 from PySide2.QtCore import Signal, Slot
-from PySide2.QtWidgets import QWidget
 from ...widgets.custom_delegates import ComboBoxDelegate
 
 MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
 
-class ImportMappings(QWidget):
+class ImportMappings:
     """
-    A widget for managing Mappings (add, remove, edit, visualize, and so on).
-    Intended to be embedded in an ImportEditor.
+    Provides methods for managing Mappings (add, remove, edit, visualize, and so on).
     """
 
     mappingChanged = Signal("QVariant")
@@ -34,51 +32,38 @@ class ImportMappings(QWidget):
     mappingDataChanged = Signal("QVariant")
     """Emits the new MappingListModel."""
 
-    def __init__(self, parent=None):
-        """
-        Args:
-            parent (QWidget, optional): a parent widget
-        """
-        from ..ui.import_mappings import Ui_ImportMappings  # pylint: disable=import-outside-toplevel
-
-        super().__init__(parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # state
-        self._model = None
+        self._mappings_model = None
+        self._select_handle = None
 
+    def _init_import_mappings(self):
         # initialize interface
-        self._ui = Ui_ImportMappings()
-        self._ui.setupUi(self)
-        self._ui.table_view.setItemDelegateForColumn(1, ComboBoxDelegate(self, MAPPING_CHOICES))
-        for i in range(self._ui.mapping_splitter.count()):
-            self._ui.mapping_splitter.setCollapsible(i, False)
+        self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(self, MAPPING_CHOICES))
 
         # connect signals
-        self._select_handle = None
         self._ui.new_button.clicked.connect(self.new_mapping)
         self._ui.remove_button.clicked.connect(self.delete_selected_mapping)
-        self.mappingChanged.connect(self._ui.table_view.setModel)
-        self.mappingChanged.connect(self._ui.options.set_model)
+        self.mappingChanged.connect(self._ui.table_view_mappings.setModel)
+        self.mappingChanged.connect(self.set_mapping_options_model)
 
-    def set_data_source_column_num(self, num):
-        """Sets the number of available columns in the options widget."""
-        self._ui.options.set_num_available_columns(num)
-
-    def set_model(self, model):
+    def set_mappings_model(self, model):
         """
         Sets new model
         """
         if self._select_handle and self._ui.list_view.selectionModel():
             self._ui.list_view.selectionModel().selectionChanged.disconnect(self.select_mapping)
             self._select_handle = None
-        if self._model:
-            self._model.dataChanged.disconnect(self.data_changed)
-        self._model = model
+        if self._mappings_model:
+            self._mappings_model.dataChanged.disconnect(self.data_changed)
+        self._mappings_model = model
         self._ui.list_view.setModel(model)
         self._select_handle = self._ui.list_view.selectionModel().selectionChanged.connect(self.select_mapping)
-        self._model.dataChanged.connect(self.data_changed)
-        if self._model.rowCount() > 0:
-            self._ui.list_view.setCurrentIndex(self._model.index(0, 0))
+        self._mappings_model.dataChanged.connect(self.data_changed)
+        if self._mappings_model.rowCount() > 0:
+            self._ui.list_view.setCurrentIndex(self._mappings_model.index(0, 0))
         else:
             self._ui.list_view.clearSelection()
 
@@ -87,8 +72,8 @@ class ImportMappings(QWidget):
         """Emits the mappingDataChanged signal with the currently selected data mappings."""
         m = None
         indexes = self._ui.list_view.selectedIndexes()
-        if self._model and indexes:
-            m = self._model.data_mapping(indexes()[0])
+        if self._mappings_model and indexes:
+            m = self._mappings_model.data_mapping(indexes()[0])
         self.mappingDataChanged.emit(m)
 
     @Slot()
@@ -96,25 +81,25 @@ class ImportMappings(QWidget):
         """
         Adds new empty mapping
         """
-        if self._model:
-            self._model.add_mapping()
+        if self._mappings_model:
+            self._mappings_model.add_mapping()
             if not self._ui.list_view.selectedIndexes():
                 # if no item is selected, select the first item
-                self._ui.list_view.setCurrentIndex(self._model.index(0, 0))
+                self._ui.list_view.setCurrentIndex(self._mappings_model.index(0, 0))
 
     @Slot()
     def delete_selected_mapping(self):
         """
         deletes selected mapping
         """
-        if self._model is not None:
+        if self._mappings_model is not None:
             # get selected mapping in list
             indexes = self._ui.list_view.selectedIndexes()
             if indexes:
-                self._model.remove_mapping(indexes[0].row())
-                if self._model.rowCount() > 0:
+                self._mappings_model.remove_mapping(indexes[0].row())
+                if self._mappings_model.rowCount() > 0:
                     # select the first item
-                    self._ui.list_view.setCurrentIndex(self._model.index(0, 0))
+                    self._ui.list_view.setCurrentIndex(self._mappings_model.index(0, 0))
                     self.select_mapping(self._ui.list_view.selectionModel().selection())
                 else:
                     # no items clear selection so select_mapping is called
@@ -124,7 +109,7 @@ class ImportMappings(QWidget):
     def select_mapping(self, selection):
         """Emits mappingChanged with the selected mapping."""
         if selection.indexes():
-            m = self._model.data_mapping(selection.indexes()[0])
+            m = self._mappings_model.data_mapping(selection.indexes()[0])
         else:
             m = None
         self.mappingChanged.emit(m)
