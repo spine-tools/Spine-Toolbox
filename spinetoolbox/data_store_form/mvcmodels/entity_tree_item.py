@@ -48,6 +48,10 @@ class ObjectTreeRootItem(EntityRootItem):
         """Returns ObjectClassItem."""
         return ObjectClassItem
 
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
     def _get_children_ids(self, db_map):
         """Returns a list of object class ids."""
         return [x["id"] for x in self.db_mngr.get_items(db_map, "object class")]
@@ -60,6 +64,10 @@ class RelationshipTreeRootItem(EntityRootItem):
     def child_item_type(self):
         """Returns RelationshipClassItem."""
         return RelationshipClassItem
+
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
         """Returns a list of object class ids."""
@@ -164,6 +172,10 @@ class ObjectClassItem(EntityClassItem):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(object_class_name=self.display_data, database=self.first_db_map.codename)
 
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
     def _get_children_ids(self, db_map):
         """Returns a list of object class ids."""
         return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
@@ -183,6 +195,10 @@ class RelationshipClassItem(EntityClassItem):
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(relationship_class_name=self.display_data, database=self.first_db_map.codename)
+
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
         """Returns a list of object class ids."""
@@ -261,6 +277,10 @@ class ObjectItem(EntityItem):
             object_name=self.display_data,
             database=self.first_db_map.codename,
         )
+
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
         object_class_id = self.db_map_data_field(db_map, 'class_id')

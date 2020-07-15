@@ -723,8 +723,8 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         header = object_class_name_list + ['relationship name', 'databases']
         self.model.set_horizontal_header_labels(header)
         defaults = {'databases': db_names}
-        if self.object_names_by_class_name:
-            defaults.update({key: value for key, value in self.object_names_by_class_name.items()})
+        if self.object_names_by_class_name is not None:
+            defaults.update(self.object_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
 

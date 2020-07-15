@@ -20,7 +20,6 @@ from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
-    ConvertToDBMixin,
     FillInAlternativeNameMixin,
     FillInParameterNameMixin,
     FillInValueListIdMixin,

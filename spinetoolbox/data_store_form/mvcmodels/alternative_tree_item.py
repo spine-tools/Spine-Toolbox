@@ -45,6 +45,10 @@ class AlternativeRootItem(ThreeColumnItemBase):
         """"See super class."""
         return "Alternative"
 
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
     def _get_children_ids(self, db_map):
         """Returns a list of object ids in this class."""
         return [x["id"] for x in self.db_mngr.get_items(db_map, "alternative")]
@@ -71,6 +75,10 @@ class ScenarioRootItem(ThreeColumnItemBase):
     def display_data(self):
         """"See super class."""
         return "Scenario"
+
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
         """Returns a list of object ids in this class."""
@@ -265,7 +273,7 @@ class ScenarioItem(ThreeColumnItemBase):
     def set_data(self, column, value, role):
         if role != Qt.CheckStateRole or column != 1:
             return False
-        update_data = {"name": self.display_data, "active": True if value == Qt.Checked else False}
+        update_data = {"name": self.display_data, "active": value == Qt.Checked}
         self.db_mngr.update_scenario({self.first_db_map: update_data})
         return True
 
