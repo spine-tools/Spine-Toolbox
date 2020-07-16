@@ -628,6 +628,8 @@ class MappingSpecModel(QAbstractTableModel):
                 return self._model.class_names_issues()
         elif isinstance(self._model, ObjectGroupMapping):
             if row == 0:
+                return self._model.object_class_names_issues()
+            if row == 1:
                 return self._model.group_names_issues()
             if row == 2:
                 return self._model.member_names_issues()
