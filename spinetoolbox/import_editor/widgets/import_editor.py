@@ -233,7 +233,6 @@ class ImportEditor:
         except ValueError as error:
             self._ui_error.showMessage(f"{error}")
             return
-
         table_types = {
             tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
             for tn, cols in settings.get("table_types", {}).items()
@@ -376,7 +375,7 @@ class ImportEditor:
     def paste_mappings(self, table):
         self.table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping], table)
         if self.selected_table == table:
-            self._ui.mapper.set_model(self.table_mappings[table])
+            self.set_mappings_model(self.table_mappings[table])
 
     def paste_options(self, table):
         self.connector.set_table_options({table: deepcopy(self._copied_options.get("options", {}))})
@@ -388,8 +387,7 @@ class ImportEditor:
 
 class MappingTableMenu(QMenu):
     """
-    A menu to let users define a Mapping from a data table.
-    Used to generate the context menu for ImportPreviewWidget._ui_table
+    A context menu for the source data table, to let users define a Mapping from a data table.
     """
 
     def __init__(self, parent=None):

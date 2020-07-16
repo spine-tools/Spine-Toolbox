@@ -16,7 +16,13 @@ ImportMappingOptions widget.
 :date:   12.5.2020
 """
 from PySide2.QtCore import Qt
-from spinedb_api import RelationshipClassMapping, ParameterMapMapping, ParameterTimeSeriesMapping
+from spinedb_api import (
+    RelationshipClassMapping,
+    ObjectClassMapping,
+    ObjectGroupMapping,
+    ParameterMapMapping,
+    ParameterTimeSeriesMapping,
+)
 from ...widgets.custom_menus import SimpleFilterMenu
 
 
@@ -104,11 +110,16 @@ class ImportMappingOptions:
                 self._ui.import_objects_check_box.setCheckState(Qt.Checked)
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
-        else:
+        elif self._mapping_options_model.map_type == ObjectClassMapping:
             self._ui.import_objects_check_box.hide()
             self._ui.dimension_label.hide()
             self._ui.dimension_spin_box.hide()
             self._ui.class_type_combo_box.setCurrentIndex(0)
+        elif self._mapping_options_model.map_type == ObjectGroupMapping:
+            self._ui.import_objects_check_box.show()
+            self._ui.dimension_label.hide()
+            self._ui.dimension_spin_box.hide()
+            self._ui.class_type_combo_box.setCurrentIndex(2)
         # update parameter mapping
         self._ui.parameter_type_combo_box.setCurrentText(self._mapping_options_model.parameter_type)
 
