@@ -249,9 +249,10 @@ class EntityTreeView(ItemTreeView):
 
     def update_actions_visibility(self, item):
         """Updates the visible property of actions according to whether or not they apply to given item."""
+        is_relationship_class = item.item_type == "relationship class"
         is_relationship = item.item_type == "relationship"
-        self._add_relationships_action.setVisible(is_relationship)
-        self._manage_relationships_action.setVisible(is_relationship)
+        self._add_relationships_action.setVisible(is_relationship_class or is_relationship)
+        self._manage_relationships_action.setVisible(is_relationship or is_relationship_class)
         super().update_actions_visibility(item)
 
     def edit_selected(self):
@@ -364,6 +365,7 @@ class RelationshipTreeView(EntityTreeView):
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)
         self._add_relationship_classes_action.setVisible(item.item_type == "root")
+        self._manage_relationships_action.setVisible(True)
 
     def add_relationship_classes(self):
         self._data_store_form.show_add_relationship_classes_form()

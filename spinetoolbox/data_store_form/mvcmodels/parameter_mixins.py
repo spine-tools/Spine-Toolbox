@@ -65,7 +65,7 @@ class FillInAlternativeNameMixin(ConvertToDBMixin):
         db_map_names = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                name = item.get("alternative_id")
+                name = item.get("alternative_name")
                 db_map_names.setdefault(db_map, set()).add(name)
         # Build lookup dict
         self._db_map_alt_lookup.clear()
@@ -87,11 +87,11 @@ class FillInAlternativeNameMixin(ConvertToDBMixin):
             list: error log
         """
         item, err = super()._convert_to_db(item, db_map)
-        alt_name = item.pop("alternative_id", None)
+        alt_name = item.pop("alternative_name", None)
         alt = self._db_map_alt_lookup.get(db_map, {}).get(alt_name)
         if not alt:
             return item, [f"Unknown alternative name {alt_name}"] if alt_name else []
-        item["alternative_id"] = alt["id"]
+        item["alternative_name"] = alt["name"]
         return item, err
 
 

@@ -626,7 +626,7 @@ class CompoundObjectParameterValueModel(
     """
 
     def _make_header(self):
-        return ["object_class_name", "object_name", "parameter_name", "alternative_id", "value", "database"]
+        return ["object_class_name", "object_name", "parameter_name", "alternative_name", "value", "database"]
 
     @property
     def entity_type(self):
@@ -641,7 +641,14 @@ class CompoundRelationshipParameterValueModel(
     """
 
     def _make_header(self):
-        return ["relationship_class_name", "object_name_list", "parameter_name", "alternative_id", "value", "database"]
+        return [
+            "relationship_class_name",
+            "object_name_list",
+            "parameter_name",
+            "alternative_name",
+            "value",
+            "database",
+        ]
 
     @property
     def entity_type(self):

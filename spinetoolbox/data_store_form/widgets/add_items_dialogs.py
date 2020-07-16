@@ -689,7 +689,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.object_names_by_class_name = object_names_by_class_name
         self.relationship_class = None
         self.model.force_default = force_default
-        self.setWindowTitle("Add relationships")
+        self.setWindowTitle("Add Relationships")
         self.table_view.setItemDelegate(ManageRelationshipsDelegate(self))
         self.rel_cls_combo_box.setEnabled(not force_default)
         self.relationship_class_keys = [

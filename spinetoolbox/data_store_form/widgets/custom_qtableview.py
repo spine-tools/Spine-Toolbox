@@ -243,7 +243,7 @@ class ParameterValueTableView(ParameterTableView):
     def create_delegates(self):
         super().create_delegates()
         self._make_delegate("parameter_name", ParameterNameDelegate)
-        self._make_delegate("alternative_id", AlternativeNameDelegate)
+        self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
 
