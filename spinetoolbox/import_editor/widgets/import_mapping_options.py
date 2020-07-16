@@ -95,10 +95,10 @@ class ImportMappingOptions:
         updates ui to RelationshipClassMapping or ObjectClassMapping model
         """
         if not self._mapping_options_model:
-            self.hide()
+            self._ui.dockWidget_mapping_options.hide()
             return
 
-        self.show()
+        self._ui.dockWidget_mapping_options.show()
         self._block_signals = True
         if self._mapping_options_model.map_type == RelationshipClassMapping:
             self._ui.dimension_label.show()
@@ -120,6 +120,10 @@ class ImportMappingOptions:
             self._ui.dimension_label.hide()
             self._ui.dimension_spin_box.hide()
             self._ui.class_type_combo_box.setCurrentIndex(2)
+            if self._mapping_options_model._model.import_objects:
+                self._ui.import_objects_check_box.setCheckState(Qt.Checked)
+            else:
+                self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
         # update parameter mapping
         self._ui.parameter_type_combo_box.setCurrentText(self._mapping_options_model.parameter_type)
 
