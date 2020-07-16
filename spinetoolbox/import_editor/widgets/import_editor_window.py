@@ -19,13 +19,15 @@ Contains ImportPreviewWindow class.
 import json
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QGuiApplication
-from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QSplitter, QFileDialog
+from PySide2.QtWidgets import QMainWindow, QFileDialog, QDialogButtonBox, QDockWidget
 from ...helpers import ensure_window_is_on_screen
 from ...spine_io.connection_manager import ConnectionManager
 from .import_editor import ImportEditor
+from .import_mapping_options import ImportMappingOptions
+from .import_mappings import ImportMappings
 
 
-class ImportEditorWindow(QMainWindow):
+class ImportEditorWindow(ImportEditor, ImportMappings, ImportMappingOptions, QMainWindow):
     """A QMainWindow to let users define Mappings for an Importer item.
 
     Args:
@@ -50,20 +52,63 @@ class ImportEditorWindow(QMainWindow):
         self._connection_manager.source = filepath
         self._ui = Ui_MainWindow()
         self._ui.setupUi(self)
+        self._size = None
+        self.takeCentralWidget()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
-        self._editor = ImportEditor(self._connection_manager, parent=self)
-        self._editor.use_settings(settings)
-        self._ui.centralwidget.layout().insertWidget(0, self._editor)
         self.settings_group = "mappingPreviewWindow"
+        self.apply_classic_ui_style()
         self.restore_ui()
-        self._ui.buttonBox.button(QDialogButtonBox.Ok).clicked.connect(self.apply_and_close)
-        self._ui.buttonBox.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
+        self._button_box = QDialogButtonBox(self)
+        self._button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        self._ui.statusbar.addPermanentWidget(self._button_box)
+        self._ui.statusbar.layout().setContentsMargins(6, 6, 6, 6)
+        self._button_box.button(QDialogButtonBox.Ok).clicked.connect(self.apply_and_close)
+        self._button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
         self._ui.actionExportMappings.triggered.connect(self.export_mapping_to_file)
         self._ui.actionImportMappings.triggered.connect(self.import_mapping_from_file)
         self._ui.actionClose.triggered.connect(self.close)
         self._connection_manager.connectionReady.connect(self.show)
         self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
+        self._init_import_mapping_options()
+        self._init_import_mappings()
+        self._init_import_editor(self._connection_manager, settings)
+
+    def restore_dock_widgets(self):
+        """Docks all floating and or hidden QDockWidgets back to the window."""
+        for dock in self.findChildren(QDockWidget):
+            dock.setVisible(True)
+            dock.setFloating(False)
+            self.addDockWidget(Qt.RightDockWidgetArea, dock)
+
+    def begin_style_change(self):
+        """Begins a style change operation."""
+        self._size = self.size()
+        self.restore_dock_widgets()
+
+    def end_style_change(self):
+        """Ends a style change operation."""
+        qApp.processEvents()  # pylint: disable=undefined-variable
+        self.resize(self._size)
+
+    def apply_classic_ui_style(self):
+        """Applies the classic UI style."""
+        self.begin_style_change()
+        docks = (self._ui.dockWidget_sources, self._ui.dockWidget_mappings)
+        self.splitDockWidget(*docks, Qt.Horizontal)
+        width = sum(d.size().width() for d in docks)
+        self.resizeDocks(docks, [0.9 * width, 0.1 * width], Qt.Horizontal)
+        docks = (self._ui.dockWidget_sources, self._ui.dockWidget_source_data)
+        self.splitDockWidget(*docks, Qt.Vertical)
+        height = sum(d.size().height() for d in docks)
+        self.resizeDocks(docks, [0.1 * height, 0.9 * height], Qt.Vertical)
+        self.splitDockWidget(self._ui.dockWidget_sources, self._ui.dockWidget_source_options, Qt.Horizontal)
+        self.splitDockWidget(self._ui.dockWidget_mappings, self._ui.dockWidget_mapping_options, Qt.Vertical)
+        self.splitDockWidget(self._ui.dockWidget_mapping_options, self._ui.dockWidget_mapping_spec, Qt.Vertical)
+        docks = (self._ui.dockWidget_mapping_options, self._ui.dockWidget_mapping_spec)
+        height = sum(d.size().height() for d in docks)
+        self.resizeDocks(docks, [0.1 * height, 0.9 * height], Qt.Vertical)
+        self.end_style_change()
 
     def import_mapping_from_file(self):
         """Imports mapping spec from a user selected .json file to the preview window."""
@@ -83,7 +128,7 @@ class ImportEditorWindow(QMainWindow):
         expected_options = ("table_mappings", "table_types", "table_row_types", "table_options", "selected_tables")
         if not isinstance(settings, dict) or not any(key in expected_options for key in settings.keys()):
             self._ui.statusbar.showMessage(f"{filename[0]} does not contain mapping options", 10000)
-        self._editor.use_settings(settings)
+        self.use_settings(settings)
         self._ui.statusbar.showMessage(f"Mapping loaded from {filename[0]}", 10000)
 
     def export_mapping_to_file(self):
@@ -96,13 +141,13 @@ class ImportEditorWindow(QMainWindow):
         if not filename[0]:
             return
         with open(filename[0], 'w') as file_p:
-            settings = self._editor.get_settings_dict()
+            settings = self.get_settings_dict()
             json.dump(settings, file_p)
         self._ui.statusbar.showMessage(f"Mapping saved to: {filename[0]}", 10000)
 
     def apply_and_close(self):
         """Apply changes to mappings and close preview window."""
-        settings = self._editor.get_settings_dict()
+        settings = self.get_settings_dict()
         self.settings_updated.emit(settings)
         self.close()
 
@@ -118,9 +163,6 @@ class ImportEditorWindow(QMainWindow):
         window_state = qsettings.value("windowState")
         window_maximized = qsettings.value("windowMaximized", defaultValue='false')
         n_screens = qsettings.value("n_screens", defaultValue=1)
-        splitter_state = {}
-        for splitter in self.findChildren(QSplitter):
-            splitter_state[splitter] = qsettings.value(splitter.objectName() + "_splitterState")
         qsettings.endGroup()
         original_size = self.size()
         if window_size:
@@ -136,9 +178,6 @@ class ImportEditorWindow(QMainWindow):
         ensure_window_is_on_screen(self, original_size)
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
-        for splitter, state in splitter_state.items():
-            if state:
-                splitter.restoreState(state)
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -146,10 +185,9 @@ class ImportEditorWindow(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+        self.close_connection()
         qsettings = self._qsettings
         qsettings.beginGroup(self.settings_group)
-        for splitter in self.findChildren(QSplitter):
-            qsettings.setValue(splitter.objectName() + "_splitterState", splitter.saveState())
         qsettings.setValue("windowSize", self.size())
         qsettings.setValue("windowPosition", self.pos())
         qsettings.setValue("windowState", self.saveState(version=1))

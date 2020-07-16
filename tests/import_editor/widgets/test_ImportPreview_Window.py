@@ -41,12 +41,8 @@ class TestImportEditorWindow(unittest.TestCase):
         widget._qsettings.beginGroup.assert_called_once_with("mappingPreviewWindow")
         widget._qsettings.endGroup.assert_called_once_with()
         qsettings_save_calls = widget._qsettings.setValue.call_args_list
-        self.assertEqual(len(qsettings_save_calls), 9)
+        self.assertEqual(len(qsettings_save_calls), 5)
         saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
-        self.assertIn("main_splitter_splitterState", saved_dict)
-        self.assertIn("sources_splitter_splitterState", saved_dict)
-        self.assertIn("mapping_splitter_splitterState", saved_dict)
-        self.assertIn("top_source_splitter_splitterState", saved_dict)
         self.assertIn("windowSize", saved_dict)
         self.assertIn("windowPosition", saved_dict)
         self.assertIn("windowState", saved_dict)

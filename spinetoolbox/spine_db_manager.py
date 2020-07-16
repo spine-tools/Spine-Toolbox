@@ -1900,6 +1900,24 @@ class SpineDBManager(QObject):
             ]
         return db_map_cascading_data
 
+    def find_groups_by_entity(self, db_map_ids):
+        """Finds and returns groups for the given entity ids."""
+        db_map_group_data = dict()
+        for db_map, entity_ids in db_map_ids.items():
+            db_map_group_data[db_map] = [
+                item for item in self.get_items(db_map, "entity group") if item["entity_id"] in entity_ids
+            ]
+        return db_map_group_data
+
+    def find_groups_by_member(self, db_map_ids):
+        """Finds and returns groups for the given entity ids."""
+        db_map_group_data = dict()
+        for db_map, member_ids in db_map_ids.items():
+            db_map_group_data[db_map] = [
+                item for item in self.get_items(db_map, "entity group") if item["member_id"] in member_ids
+            ]
+        return db_map_group_data
+
     def find_cascading_parameter_values_by_alternative(self, db_map_ids):
         """Finds and returns cascading parameter values for the given parameter alternative ids."""
         db_map_cascading_data = dict()

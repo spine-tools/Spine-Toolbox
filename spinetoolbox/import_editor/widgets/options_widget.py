@@ -16,7 +16,7 @@ Contains OptionsWidget class.
 :date:   1.6.2019
 """
 
-from PySide2.QtWidgets import QLabel, QLineEdit, QComboBox, QCheckBox, QSpinBox, QWidget
+from PySide2.QtWidgets import QLabel, QLineEdit, QComboBox, QCheckBox, QSpinBox, QWidget, QFormLayout
 from PySide2.QtCore import Signal
 
 
@@ -36,16 +36,13 @@ class OptionsWidget(QWidget):
             header (str): Title of groupbox (default: {"Options"})
             parent (QWidget, None): parent of widget
         """
-        from ..ui.import_options import Ui_ImportOptions  # pylint: disable=import-outside-toplevel
-
         super().__init__(parent)
+        QFormLayout(self)
         self._options = options
 
         # ui
         self._ui_choices = {str: QLineEdit, list: QComboBox, int: QSpinBox, bool: QCheckBox}
         self._ui_elements = {}
-        self._ui = Ui_ImportOptions()
-        self._ui.setupUi(self)
         self._build_ui()
         self.set_options()
 
@@ -77,7 +74,7 @@ class OptionsWidget(QWidget):
             self._ui_elements[key] = ui_element
 
             # Add to layout:
-            self._ui.options_layout.addRow(QLabel(options['label'] + ':'), ui_element)
+            self.layout().addRow(QLabel(options['label'] + ':'), ui_element)
 
     def set_options(self, options=None, set_missing_default=True):
         """Sets state of options

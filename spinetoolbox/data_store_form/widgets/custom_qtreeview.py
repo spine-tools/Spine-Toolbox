@@ -279,7 +279,7 @@ class ObjectTreeView(EntityTreeView):
         self.add_object_group_action.setVisible(item.item_type == "object class")
         self._add_relationship_classes_action.setVisible(item.item_type == "object class")
         self.manage_object_group_action.setVisible(item.item_type == "object" and item.is_group())
-        self.duplicate_object_action.setVisible(item.item_type == "object")
+        self.duplicate_object_action.setVisible(item.item_type == "object" and not item.is_group())
         self.find_next_action.setVisible(item.item_type == "relationship")
 
     def _add_middle_actions(self):

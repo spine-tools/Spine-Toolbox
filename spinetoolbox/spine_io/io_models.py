@@ -15,9 +15,13 @@ Classes for handling models in PySide2's model/view framework.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
+from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, Signal, Slot
+from PySide2.QtGui import QColor
 from spinedb_api import (
+    EntityClassMapping,
     ObjectClassMapping,
     RelationshipClassMapping,
+    ObjectGroupMapping,
     ParameterDefinitionMapping,
     ParameterValueMapping,
     ParameterMapMapping,
@@ -34,8 +38,6 @@ from spinedb_api import (
     ParameterValueFormatError,
     mapping_non_pivoted_columns,
 )
-from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, Signal, Slot
-from PySide2.QtGui import QColor
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from .type_conversion import ConvertSpec
 
@@ -46,6 +48,7 @@ _MAPPING_COLORS = {
     "parameter extra dimension": QColor(178, 255, 243),
     "parameter name": QColor(128, 205, 193),
     "entity class": QColor(166, 97, 26),
+    "group": QColor(120, 150, 220),
 }
 _ERROR_COLOR = QColor(Qt.red)
 
@@ -239,40 +242,44 @@ class MappingPreviewModel(MinimalTableModel):
             QColor: color of index
         """
         mapping = self._mapping.model
-        if isinstance(mapping.parameters, ParameterValueMapping):
-            # parameter values color
-            if mapping.is_pivoted():
-                last_row = max(mapping.last_pivot_row(), mapping.read_start_row - 1)
-                if (
-                    last_row is not None
-                    and index.row() > last_row
-                    and index.column() not in self.mapping_column_ref_int_list()
-                ):
+        if isinstance(mapping, EntityClassMapping):
+            if isinstance(mapping.parameters, ParameterValueMapping):
+                # parameter values color
+                if mapping.is_pivoted():
+                    last_row = max(mapping.last_pivot_row(), mapping.read_start_row - 1)
+                    if (
+                        last_row is not None
+                        and index.row() > last_row
+                        and index.column() not in self.mapping_column_ref_int_list()
+                    ):
+                        return _MAPPING_COLORS["parameter value"]
+                elif self.index_in_mapping(mapping.parameters.value, index):
                     return _MAPPING_COLORS["parameter value"]
-            elif self.index_in_mapping(mapping.parameters.value, index):
-                return _MAPPING_COLORS["parameter value"]
-        if isinstance(mapping.parameters, ParameterArrayMapping) and mapping.parameters.extra_dimensions:
-            # parameter extra dimensions color
-            for ed in mapping.parameters.extra_dimensions:
-                if self.index_in_mapping(ed, index):
-                    return _MAPPING_COLORS["parameter extra dimension"]
-        if isinstance(mapping.parameters, ParameterDefinitionMapping) and self.index_in_mapping(
-            mapping.parameters.name, index
-        ):
-            # parameter name colors
-            return _MAPPING_COLORS["parameter name"]
+            if isinstance(mapping.parameters, ParameterArrayMapping) and mapping.parameters.extra_dimensions:
+                # parameter extra dimensions color
+                for ed in mapping.parameters.extra_dimensions:
+                    if self.index_in_mapping(ed, index):
+                        return _MAPPING_COLORS["parameter extra dimension"]
+            if isinstance(mapping.parameters, ParameterDefinitionMapping) and self.index_in_mapping(
+                mapping.parameters.name, index
+            ):
+                # parameter name colors
+                return _MAPPING_COLORS["parameter name"]
         if self.index_in_mapping(mapping.name, index):
-            # class name color
-            return _MAPPING_COLORS["entity class"]
+            if isinstance(mapping, ObjectGroupMapping):
+                return _MAPPING_COLORS["group"]
+            else:
+                return _MAPPING_COLORS["entity class"]
         objects = []
         classes = []
         if isinstance(mapping, ObjectClassMapping):
             objects = [mapping.objects]
-        else:
-            if mapping.objects:
-                objects = mapping.objects
-            if mapping.object_classes:
-                classes = mapping.object_classes
+        elif isinstance(mapping, ObjectGroupMapping):
+            classes = [mapping.object_classes]
+            objects = [mapping.members]
+        elif isinstance(mapping, RelationshipClassMapping):
+            objects = mapping.objects
+            classes = mapping.object_classes
         for o in objects:
             # object colors
             if self.index_in_mapping(o, index):
@@ -383,17 +390,15 @@ class MappingSpecModel(QAbstractTableModel):
     def dimension(self):
         if self._model is None:
             return 0
-        if isinstance(self._model, ObjectClassMapping):
-            return 1
-        return len(self._model.objects)
+        if isinstance(self._model, RelationshipClassMapping):
+            return len(self._model.objects)
+        return 1
 
     @property
     def import_objects(self):
-        if self._model is None:
+        if self._model is None or isinstance(self._model, ObjectClassMapping):
             return False
-        if isinstance(self._model, RelationshipClassMapping):
-            return self._model.import_objects
-        return True
+        return self._model.import_objects
 
     @property
     def parameter_type(self):
@@ -421,24 +426,21 @@ class MappingSpecModel(QAbstractTableModel):
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
 
     def set_mapping(self, mapping):
-        if not isinstance(mapping, (RelationshipClassMapping, ObjectClassMapping)):
+        if not isinstance(mapping, (RelationshipClassMapping, ObjectClassMapping, ObjectGroupMapping)):
             raise TypeError(
-                f"mapping must be of type: RelationshipClassMapping, ObjectClassMapping instead got {type(mapping)}"
+                "mapping must be of type: RelationshipClassMapping, ObjectClassMapping, ObjectGroupMapping "
+                f"instead got {type(mapping)}"
             )
         if isinstance(mapping, type(self._model)):
             return
         self.beginResetModel()
         self._model = mapping
-        if isinstance(self._model, RelationshipClassMapping):
-            if self._model.objects is None:
-                self._model.objects = [None]
-                self._model.object_classes = [None]
         self.update_display_table()
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
 
     def set_dimension(self, dim):
-        if self._model is None or isinstance(self._model, ObjectClassMapping):
+        if self._model is None or not isinstance(self._model, RelationshipClassMapping):
             return
         self.beginResetModel()
         if len(self._model.objects) >= dim:
@@ -456,27 +458,15 @@ class MappingSpecModel(QAbstractTableModel):
         Change model between Relationship and Object class
         """
         self.beginResetModel()
-        if new_class == "Object":
-            new_class = ObjectClassMapping
-        else:
-            new_class = RelationshipClassMapping
+        new_class = {
+            "Object": ObjectClassMapping,
+            "Relationship": RelationshipClassMapping,
+            "Object group": ObjectGroupMapping,
+        }[new_class]
         if self._model is None:
             self._model = new_class()
         elif not isinstance(self._model, new_class):
-            parameters = self._model.parameters
-            if new_class == RelationshipClassMapping:
-                # convert object mapping to relationship mapping
-                obj = [self._model.objects]
-                object_class = [self._model.name]
-                self._model = RelationshipClassMapping(
-                    name=None, object_classes=object_class, objects=obj, parameters=parameters
-                )
-            else:
-                # convert relationship mapping to object mapping
-                self._model = ObjectClassMapping(
-                    name=self._model.object_classes[0], objects=self._model.objects[0], parameters=parameters
-                )
-
+            self._model = new_class.from_instance(self._model)
         self.update_display_table()
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
@@ -507,6 +497,12 @@ class MappingSpecModel(QAbstractTableModel):
         self.endResetModel()
 
     def update_display_table(self):
+        if isinstance(self._model, ObjectGroupMapping):
+            display_name = ["Object class names", "Group names", "Member names"]
+            mappings = [self._model.object_classes, self._model.name, self._model.members]
+            self._display_names = display_name
+            self._mappings = mappings
+            return
         display_name = []
         mappings = [self._model.name]
         if isinstance(self._model, RelationshipClassMapping):
@@ -517,7 +513,7 @@ class MappingSpecModel(QAbstractTableModel):
             if self._model.objects:
                 display_name.extend([f"Object names {i+1}" for i, oc in enumerate(self._model.objects)])
                 mappings.extend(list(self._model.objects))
-        if isinstance(self._model, ObjectClassMapping):
+        elif isinstance(self._model, ObjectClassMapping):
             display_name.append("Object class names")
             display_name.append("Object names")
             mappings.append(self._model.objects)
@@ -612,6 +608,10 @@ class MappingSpecModel(QAbstractTableModel):
             return _MAPPING_COLORS["entity class"]
         if "Object names" in display_name:
             return _MAPPING_COLORS["entity"]
+        if "Group names" in display_name:
+            return _MAPPING_COLORS["group"]
+        if "Member names" in display_name:
+            return _MAPPING_COLORS["entity"]
         if display_name == "Parameter names":
             return _MAPPING_COLORS["parameter name"]
         if display_name in ("Parameter time index", "Parameter time pattern index") or display_name.startswith(
@@ -623,29 +623,38 @@ class MappingSpecModel(QAbstractTableModel):
 
     def _mapping_issues(self, row):
         """Returns a message string if given row contains issues, or an empty string if everything is OK."""
-        if row == 0:
-            return self._model.class_names_issues()
+        if isinstance(self._model, EntityClassMapping):
+            if row == 0:
+                return self._model.class_names_issues()
+        elif isinstance(self._model, ObjectGroupMapping):
+            if row == 0:
+                return self._model.group_names_issues()
+            if row == 2:
+                return self._model.member_names_issues()
+        parameter_name_row = None
         if isinstance(self._model, ObjectClassMapping):
             if row == 1:
                 return self._model.object_names_issues()
-            extra_relationship_rows = 0
-        else:
+            parameter_name_row = 2
+        elif isinstance(self._model, RelationshipClassMapping):
             dimensions = len(self._model.object_classes)
-            if 1 <= row < 2 * dimensions + 1:
+            parameter_name_row = 2 * dimensions + 1
+            if 1 <= row < parameter_name_row:
                 display_name = self._display_names[row]
                 mapping_name, _, mapping_number = display_name.rpartition(" ")
                 index = int(mapping_number) - 1
                 if mapping_name == "Object class names":
                     return self._model.object_class_names_issues(index)
                 return self._model.object_names_issues(index)
-            extra_relationship_rows = 2 * dimensions - 1
-        if row == 2 + extra_relationship_rows:
+        if parameter_name_row is None:
+            return ""
+        if row == parameter_name_row:
             return self._model.parameters.names_issues()
-        if row == 3 + extra_relationship_rows:
+        if row == parameter_name_row + 1:
             return self._model.parameters.values_issues(self._model.is_pivoted())
-        if row >= 4 + extra_relationship_rows:
-            index_index = row - 4 - extra_relationship_rows
-            return self._model.parameters.indexes_issues(index_index)
+        if row >= parameter_name_row + 2:
+            index = row - (parameter_name_row + 2)
+            return self._model.parameters.indexes_issues(index)
         return ""
 
     def rowCount(self, index=None):
@@ -762,7 +771,13 @@ class MappingSpecModel(QAbstractTableModel):
         if not self._model:
             return None
         if name in ("Relationship class names", "Object class names"):
+            if isinstance(self._model, ObjectGroupMapping):
+                return self._model.object_classes
             return self._model.name
+        if name == "Group names":
+            return self._model.name
+        if name == "Member names":
+            return self._model.members
         if name == "Object names":
             return self._model.objects
         if name.startswith("Object class"):
@@ -789,9 +804,16 @@ class MappingSpecModel(QAbstractTableModel):
 
     def set_mapping_from_name(self, name, mapping):
         if name in ("Relationship class names", "Object class names"):
-            self._model.name = mapping
+            if isinstance(self._model, ObjectGroupMapping):
+                self._model.object_classes = mapping
+            else:
+                self._model.name = mapping
         elif name == "Object names":
             self._model.objects = mapping
+        elif name == "Group names":
+            self._model.name = mapping
+        elif name == "Member names":
+            self._model.members = mapping
         elif "Object class " in name:
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
             if index:
@@ -863,6 +885,8 @@ class MappingSpecModel(QAbstractTableModel):
 
     def model_parameters(self):
         """Returns the mapping's parameters."""
+        if not isinstance(self._model, EntityClassMapping):
+            return None
         return self._model.parameters if self._model is not None else None
 
 
