@@ -114,6 +114,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
         """
         if self._worker:
             self._worker.quit()
+            self._worker.wait()
             self._worker.deleteLater()
             self._worker = None
 
