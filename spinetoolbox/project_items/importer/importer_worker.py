@@ -111,32 +111,47 @@ class ImporterWorker(QThread):
             except spinedb_api.InvalidMapping as error:
                 self._logger.msg_error.emit(f"Failed to import '{source}': {error}")
                 if self._cancel_on_error:
+                    self._logger.msg_error.emit("Cancel import on error has been set. Bailing out.")
                     self.import_finished.emit(-1)
+                    return
                 else:
+                    self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
                     continue
-            self._logger.msg_success.emit(
-                f"Read {sum(len(d) for d in data.values())} data from {source} with {len(errors)} errors"
-            )
+            if not errors:
+                self._logger.msg_success.emit(
+                    f"Successfully read {sum(len(d) for d in data.values())} data from {source}"
+                )
+            else:
+                self._logger.msg_warning.emit(
+                    f"Read {sum(len(d) for d in data.values())} data from {source} with {len(errors)} errors."
+                )
             all_data.append(data)
             all_errors.extend(errors)
         if all_errors:
             # Log errors in a time stamped file into the logs directory
             timestamp = create_log_file_timestamp()
-            logfilepath = os.path.abspath(os.path.join(self._logs_dir, timestamp + "_error.log"))
+            logfilepath = os.path.abspath(os.path.join(self._logs_dir, timestamp + "_read_error.log"))
             with open(logfilepath, 'w') as f:
                 for err in all_errors:
                     f.write(f"{err}\n")
             # Make error log file anchor with path as tooltip
             logfile_anchor = (
-                "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
+                "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>Error log</a>"
             )
 
-            self._logger.msg_error.emit("Import errors. Logfile: {0}".format(logfile_anchor))
+            self._logger.msg_error.emit(logfile_anchor)
             if self._cancel_on_error:
+                self._logger.msg_error.emit("Cancel import on error has been set. Bailing out.")
                 self.import_finished.emit(-1)
+                return
+            else:
+                self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
         if all_data:
             for url in self._urls_downstream:
-                self._import(all_data, url)
+                success = self._import(all_data, url)
+                if not success and self._cancel_on_error:
+                    self.import_finished.emit(-1)
+                    return
         self.import_finished.emit(0)
 
     def _import(self, all_data, url):
@@ -144,32 +159,38 @@ class ImporterWorker(QThread):
             db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
         except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
             self._logger.msg_error.emit(
-                "Unable to create database mapping, all import operations will be omitted: {0}".format(err)
+                f"Unable to create database mapping, all import operations will be omitted: {err}"
             )
             return
         all_import_errors = []
         for data in all_data:
             import_num, import_errors = spinedb_api.import_data(db_map, **data)
             all_import_errors += import_errors
-            if import_errors and self._cancel_on_error:
-                if db_map.has_pending_changes():
-                    db_map.rollback_session()
-            elif import_num:
+            if import_errors:
+                self._logger.msg_error.emit("Errors while importing a table.")
+                if self._cancel_on_error:
+                    self._logger.msg_error.emit("Cancel import on error is set. Bailing out.")
+                    if db_map.has_pending_changes():
+                        self._logger.msg_error.emit("Rolling back changes.")
+                        db_map.rollback_session()
+                    break
+                else:
+                    self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
+            if import_num:
                 db_map.commit_session("Import data by Spine Toolbox Importer")
-                self._logger.msg_success.emit(
-                    "Inserted {0} data with {1} errors into {2}".format(import_num, len(import_errors), url)
-                )
+                self._logger.msg_success.emit(f"Inserted {import_num} data with {len(import_errors)} errors into {url}")
         db_map.connection.close()
         if all_import_errors:
             # Log errors in a time stamped file into the logs directory
             timestamp = create_log_file_timestamp()
-            logfilepath = os.path.abspath(os.path.join(self._logs_dir, timestamp + "_error.log"))
+            logfilepath = os.path.abspath(os.path.join(self._logs_dir, timestamp + "_import_error.log"))
             with open(logfilepath, 'w') as f:
                 for err in all_import_errors:
-                    f.write("{0}\n".format(err))
+                    f.write(str(err) + "\n")
             # Make error log file anchor with path as tooltip
             logfile_anchor = (
-                "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>error log</a>"
+                "<a style='color:#BB99FF;' title='" + logfilepath + "' href='file:///" + logfilepath + "'>Error log</a>"
             )
-            rollback_text = ", rolling back" if self._cancel_on_error else ""
-            self._logger.msg_error.emit("Import errors{0}. Logfile: {1}".format(rollback_text, logfile_anchor))
+            self._logger.msg_error.emit(logfile_anchor)
+            return False
+        return True
