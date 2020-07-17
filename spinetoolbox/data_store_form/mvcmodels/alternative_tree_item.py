@@ -19,20 +19,7 @@ from PySide2.QtCore import Qt
 from .multi_db_tree_item import MultiDBTreeItem
 
 
-class ThreeColumnItemBase(MultiDBTreeItem):
-    def data(self, column, role=Qt.DisplayRole):
-        """Returns data for given column and role."""
-        if role == Qt.DisplayRole:
-            return (self.display_data, None, None)[column]
-        return None
-
-    def _get_children_ids(self, db_map):
-        """Returns a list of children ids.
-        Must be reimplemented in subclasses."""
-        raise NotImplementedError()
-
-
-class AlternativeRootItem(ThreeColumnItemBase):
+class AlternativeRootItem(MultiDBTreeItem):
     item_type = "alternative root"
 
     @property
@@ -63,7 +50,7 @@ class AlternativeRootItem(ThreeColumnItemBase):
         return dict(alternative_name=self.display_name, database=self.first_db_map.codename)
 
 
-class ScenarioRootItem(ThreeColumnItemBase):
+class ScenarioRootItem(MultiDBTreeItem):
     item_type = "scenario root"
 
     @property
@@ -94,7 +81,7 @@ class ScenarioRootItem(ThreeColumnItemBase):
         return dict(scenario_name=self.display_name, database=self.first_db_map.codename)
 
 
-class AlternativeItem(ThreeColumnItemBase):
+class AlternativeItem(MultiDBTreeItem):
     item_type = "alternative"
 
     def __init__(self, *args, **kwargs):
@@ -125,7 +112,7 @@ class AlternativeItem(ThreeColumnItemBase):
         raise NotImplementedError()
 
 
-class ScenarioItem(ThreeColumnItemBase):
+class ScenarioItem(MultiDBTreeItem):
     item_type = "scenario"
 
     def __init__(self, *args, **kwargs):
@@ -135,7 +122,7 @@ class ScenarioItem(ThreeColumnItemBase):
 
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
-        if role == Qt.CheckStateRole and column == 1:
+        if role == Qt.CheckStateRole and column == 0:
             is_active = self.db_map_data_field(self.first_db_map, "active")
             return Qt.Checked if is_active else Qt.Unchecked
         if role == Qt.DisplayRole:
@@ -163,8 +150,8 @@ class ScenarioItem(ThreeColumnItemBase):
 
     def flags(self, column):
         flags = super().flags(column) | Qt.ItemIsDropEnabled
-        if column == 1:
-            flags = flags | Qt.ItemIsUserCheckable
+        if column == 0:
+            flags = flags | Qt.ItemIsUserCheckable | Qt.ItemIsEditable
         return flags
 
     def default_parameter_data(self):
@@ -271,14 +258,14 @@ class ScenarioItem(ThreeColumnItemBase):
         self.db_mngr.add_scenario_alternatives(new_items)
 
     def set_data(self, column, value, role):
-        if role != Qt.CheckStateRole or column != 1:
+        if role != Qt.CheckStateRole or column != 0:
             return False
-        update_data = {"name": self.display_data, "active": value == Qt.Checked}
-        self.db_mngr.update_scenario({self.first_db_map: update_data})
+        db_map_data = {db_map: [{"id": id_, "active": value == Qt.Checked}] for db_map, id_ in self.db_map_ids.items()}
+        self.db_mngr.update_scenarios(db_map_data)
         return True
 
 
-class ScenarioAlternativeItem(ThreeColumnItemBase):
+class ScenarioAlternativeItem(MultiDBTreeItem):
     item_type = "scenario_alternative"
 
     def __init__(self, *args, **kwargs):

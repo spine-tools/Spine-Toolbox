@@ -62,7 +62,7 @@
      <x>0</x>
      <y>0</y>
      <width>889</width>
-     <height>22</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -208,11 +208,17 @@
        <property name="contextMenuPolicy">
         <enum>Qt::DefaultContextMenu</enum>
        </property>
+       <property name="acceptDrops">
+        <bool>true</bool>
+       </property>
        <property name="accessibleName">
         <string>alternative tree</string>
        </property>
        <property name="editTriggers">
         <set>QAbstractItemView::EditKeyPressed</set>
+       </property>
+       <property name="dragEnabled">
+        <bool>true</bool>
        </property>
        <property name="dragDropMode">
         <enum>QAbstractItemView::InternalMove</enum>
@@ -421,11 +427,11 @@
        <attribute name="verticalHeaderVisible">
         <bool>false</bool>
        </attribute>
-       <attribute name="verticalHeaderMinimumSectionSize">
-        <number>20</number>
-       </attribute>
        <attribute name="verticalHeaderHighlightSections">
         <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderMinimumSectionSize">
+        <number>20</number>
        </attribute>
       </widget>
      </item>

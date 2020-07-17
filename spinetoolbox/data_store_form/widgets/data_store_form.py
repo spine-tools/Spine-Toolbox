@@ -894,6 +894,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_parameter_value_list, Qt.Horizontal
         )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_relationship_tree, self.ui.dockWidget_alternative_tree, Qt.Vertical)
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -908,12 +909,11 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_frozen_table.hide()
         docks = [
             self.ui.dockWidget_object_tree,
-            self.ui.dockWidget_alternative_tree,
             self.ui.dockWidget_object_parameter_value,
             self.ui.dockWidget_parameter_value_list,
         ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.2 * width, 0.4 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
         self.end_style_change()
 
     @Slot(bool)

@@ -41,8 +41,10 @@ from PySide2.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
+from ...widgets.custom_delegates import CheckBoxDelegate
 from .custom_delegates import (
-    ManageAlternativesDelegate,
+    ManageItemsDelegate,
+    CheckDBListDelegate,
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
     ManageRelationshipClassesDelegate,
@@ -183,14 +185,14 @@ class AddAlternativesDialog(AddItemsDialog):
         self.model = EmptyRowModel(self)
         self.table_view.setModel(self.model)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
-        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.table_view.setItemDelegate(ManageItemsDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['alternative name', 'description', 'databases'])
         databases = ",".join(list(self.keyed_db_maps.keys()))
         self.model.set_default_row(**{'databases': databases})
         self.model.clear()
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
@@ -229,22 +231,28 @@ class AddScenariosDialog(AddItemsDialog):
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Add Scenarios")
         self.model = EmptyRowModel(self)
+        self.model.set_horizontal_header_labels(['scenario name', 'description', 'active', 'databases'])
         self.table_view.setModel(self.model)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
-        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.table_view.setItemDelegateForColumn(2, CheckBoxDelegate(self))
+        self.table_view.setItemDelegateForColumn(3, CheckDBListDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['scenario name', 'description', 'databases'])
         databases = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'databases': databases})
+        self.model.set_default_row(**{'databases': databases, 'active': False})
         self.model.clear()
 
-    @Slot(name="accept")
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.itemDelegateForColumn(2).data_committed.connect(self.set_model_data)
+        self.table_view.itemDelegateForColumn(3).data_committed.connect(self.set_model_data)
+
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
-            name, description, db_names = row_data
+            name, description, active, db_names = row_data
             db_name_list = db_names.split(",")
             try:
                 db_maps = [self.keyed_db_maps[x] for x in db_name_list]
@@ -254,7 +262,7 @@ class AddScenariosDialog(AddItemsDialog):
             if not name:
                 self.parent().msg_error.emit("Scenario name missing at row {0}".format(i + 1))
                 return
-            item = {'name': name, 'description': description}
+            item = {'name': name, 'description': description, 'active': active}
             for db_map in db_maps:
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
@@ -280,14 +288,14 @@ class AddScenarioAlternativesDialog(AddItemsDialog):
         self.model = EmptyRowModel(self)
         self.table_view.setModel(self.model)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
-        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.table_view.setItemDelegate(ManageItemsDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['scenario name', 'alternative name', 'rank', 'databases'])
         databases = ",".join(list(self.keyed_db_maps.keys()))
         self.model.set_default_row(**{'scenario name': scenario_name, 'databases': databases})
         self.model.clear()
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
@@ -689,7 +697,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.object_names_by_class_name = object_names_by_class_name
         self.relationship_class = None
         self.model.force_default = force_default
-        self.setWindowTitle("Add Relationships")
+        self.setWindowTitle("Add relationships")
         self.table_view.setItemDelegate(ManageRelationshipsDelegate(self))
         self.rel_cls_combo_box.setEnabled(not force_default)
         self.relationship_class_keys = [

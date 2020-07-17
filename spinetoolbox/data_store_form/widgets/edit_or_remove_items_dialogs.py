@@ -18,8 +18,10 @@ Classes for custom QDialogs to edit items in databases.
 
 from PySide2.QtCore import Slot
 from ...mvcmodels.minimal_table_model import MinimalTableModel
+from ...widgets.custom_delegates import CheckBoxDelegate
 from .custom_delegates import (
-    ManageAlternativesDelegate,
+    ManageItemsDelegate,
+    CheckDBListDelegate,
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
     ManageRelationshipClassesDelegate,
@@ -64,7 +66,7 @@ class EditAlternativesDialog(EditOrRemoveItemsDialog):
         self.model = MinimalTableModel(self)
         self.model.set_horizontal_header_labels(['alternative name', 'description', 'databases'])
         self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.table_view.setItemDelegate(ManageItemsDelegate(self))
         self.connect_signals()
         self.orig_data = list()
         model_data = list()
@@ -77,7 +79,7 @@ class EditAlternativesDialog(EditOrRemoveItemsDialog):
             self.items.append(item)
         self.model.reset_model(model_data)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
@@ -127,7 +129,8 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
         self.model = MinimalTableModel(self)
         self.model.set_horizontal_header_labels(['scenario name', 'description', 'active', 'databases'])
         self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.table_view.setItemDelegateForColumn(2, CheckBoxDelegate(self))
+        self.table_view.setItemDelegateForColumn(3, CheckDBListDelegate(self))
         self.connect_signals()
         self.orig_data = list()
         model_data = list()
@@ -140,7 +143,12 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
             self.items.append(item)
         self.model.reset_model(model_data)
 
-    @Slot(name="accept")
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.itemDelegateForColumn(2).data_committed.connect(self.set_model_data)
+        self.table_view.itemDelegateForColumn(3).data_committed.connect(self.set_model_data)
+
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
@@ -190,7 +198,7 @@ class EditScenarioAlternativesDialog(EditOrRemoveItemsDialog):
         self.model = MinimalTableModel(self)
         self.model.set_horizontal_header_labels(['scenario name', 'alternative name', 'rank'])
         self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(ManageAlternativesDelegate(self))
+        self.table_view.setItemDelegate(ManageItemsDelegate(self))
         self.connect_signals()
         self.orig_data = list()
         model_data = list()
@@ -207,7 +215,7 @@ class EditScenarioAlternativesDialog(EditOrRemoveItemsDialog):
             self.items.append(item)
         self.model.reset_model(model_data)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()

@@ -122,7 +122,7 @@ class ItemTreeView(CopyTreeView):
         """Edit all selected items."""
         if trigger == QTreeView.EditKeyPressed:
             self.edit_selected()
-        return False
+        return super().edit(index, trigger, event)
 
     def clear_any_selections(self):
         """Clears the selection if any."""

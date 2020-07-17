@@ -15,7 +15,7 @@ Models to represent alternatives, scenarios and scenario alternatives in a tree.
 :date:    17.6.2020
 """
 import json
-from PySide2.QtCore import QMimeData, QModelIndex, Qt
+from PySide2.QtCore import QMimeData, Qt
 from .alternative_tree_item import AlternativeItem, AlternativeRootItem, ScenarioItem, ScenarioRootItem
 from .multi_db_tree_model import MultiDBTreeModel
 from ...mvcmodels.minimal_tree_model import TreeItem
@@ -26,14 +26,6 @@ class AlternativeTreeModel(MultiDBTreeModel):
         super().__init__(*args, **kwargs)
         self._alternative_root = None
         self._scenario_root = None
-
-    def columnCount(self, parent=QModelIndex()):
-        return 3
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return ("name", "active", "database")[section]
-        return None
 
     @property
     def alternative_root_index(self):

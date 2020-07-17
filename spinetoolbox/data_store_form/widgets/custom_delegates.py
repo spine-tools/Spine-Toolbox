@@ -416,14 +416,6 @@ class ManageItemsDelegate(QItemDelegate):
         editor.set_data(all_databases, databases)
         return editor
 
-
-class ManageAlternativesDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in {Add/Edit}AlternativesDialog.
-
-    Attributes:
-        parent (ManageItemsDialog): parent dialog
-    """
-
     def createEditor(self, parent, option, index):
         """Returns an editor."""
         header = index.model().horizontal_header_labels()
@@ -432,6 +424,20 @@ class ManageAlternativesDelegate(ManageItemsDelegate):
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
+        self.connect_editor_signals(editor, index)
+        return editor
+
+
+class CheckDBListDelegate(ManageItemsDelegate):
+    """A delegate for the model and view in {Add/Edit}AlternativesDialog.
+
+    Attributes:
+        parent (ManageItemsDialog): parent dialog
+    """
+
+    def createEditor(self, parent, option, index):
+        """Returns an editor."""
+        editor = self._create_database_editor(parent, option, index)
         self.connect_editor_signals(editor, index)
         return editor
 
