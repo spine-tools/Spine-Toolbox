@@ -209,7 +209,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     def setModelData(self, editor, model, index):
         """Send signal."""
         display_value = editor.data()
-        db_value = self._db_value_list_lookup.get(display_value)
+        db_value = self._db_value_list_lookup.get(display_value, to_database(display_value))
         self.data_committed.emit(index, db_value)
 
     def _get_value_list_id(self, index, db_map):
