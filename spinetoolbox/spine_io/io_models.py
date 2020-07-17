@@ -266,16 +266,14 @@ class MappingPreviewModel(MinimalTableModel):
                 # parameter name colors
                 return _MAPPING_COLORS["parameter name"]
         if self.index_in_mapping(mapping.name, index):
-            if isinstance(mapping, ObjectGroupMapping):
-                return _MAPPING_COLORS["group"]
-            else:
-                return _MAPPING_COLORS["entity class"]
-        objects = []
+            return _MAPPING_COLORS["entity class"]
         classes = []
+        objects = []
         if isinstance(mapping, ObjectClassMapping):
             objects = [mapping.objects]
         elif isinstance(mapping, ObjectGroupMapping):
-            classes = [mapping.object_classes]
+            if self.index_in_mapping(mapping.groups, index):
+                return _MAPPING_COLORS["group"]
             objects = [mapping.members]
         elif isinstance(mapping, RelationshipClassMapping):
             objects = mapping.objects
@@ -497,12 +495,6 @@ class MappingSpecModel(QAbstractTableModel):
         self.endResetModel()
 
     def update_display_table(self):
-        if isinstance(self._model, ObjectGroupMapping):
-            display_name = ["Object class names", "Group names", "Member names"]
-            mappings = [self._model.object_classes, self._model.name, self._model.members]
-            self._display_names = display_name
-            self._mappings = mappings
-            return
         display_name = []
         mappings = [self._model.name]
         if isinstance(self._model, RelationshipClassMapping):
@@ -517,6 +509,12 @@ class MappingSpecModel(QAbstractTableModel):
             display_name.append("Object class names")
             display_name.append("Object names")
             mappings.append(self._model.objects)
+        elif isinstance(self._model, ObjectGroupMapping):
+            display_name.append("Object class names")
+            display_name.append("Group names")
+            mappings.append(self._model.groups)
+            display_name.append("Member names")
+            mappings.append(self._model.members)
         if isinstance(self._model.parameters, ParameterDefinitionMapping):
             display_name.append("Parameter names")
             mappings.append(self._model.parameters.name)
@@ -623,17 +621,10 @@ class MappingSpecModel(QAbstractTableModel):
 
     def _mapping_issues(self, row):
         """Returns a message string if given row contains issues, or an empty string if everything is OK."""
+        parameter_name_row = None
         if isinstance(self._model, EntityClassMapping):
             if row == 0:
                 return self._model.class_names_issues()
-        elif isinstance(self._model, ObjectGroupMapping):
-            if row == 0:
-                return self._model.object_class_names_issues()
-            if row == 1:
-                return self._model.group_names_issues()
-            if row == 2:
-                return self._model.member_names_issues()
-        parameter_name_row = None
         if isinstance(self._model, ObjectClassMapping):
             if row == 1:
                 return self._model.object_names_issues()
@@ -648,6 +639,12 @@ class MappingSpecModel(QAbstractTableModel):
                 if mapping_name == "Object class names":
                     return self._model.object_class_names_issues(index)
                 return self._model.object_names_issues(index)
+        elif isinstance(self._model, ObjectGroupMapping):
+            if row == 1:
+                return self._model.group_names_issues()
+            if row == 2:
+                return self._model.member_names_issues()
+            parameter_name_row = 3
         if parameter_name_row is None:
             return ""
         if row == parameter_name_row:
@@ -773,11 +770,9 @@ class MappingSpecModel(QAbstractTableModel):
         if not self._model:
             return None
         if name in ("Relationship class names", "Object class names"):
-            if isinstance(self._model, ObjectGroupMapping):
-                return self._model.object_classes
             return self._model.name
         if name == "Group names":
-            return self._model.name
+            return self._model.groups
         if name == "Member names":
             return self._model.members
         if name == "Object names":
@@ -806,14 +801,11 @@ class MappingSpecModel(QAbstractTableModel):
 
     def set_mapping_from_name(self, name, mapping):
         if name in ("Relationship class names", "Object class names"):
-            if isinstance(self._model, ObjectGroupMapping):
-                self._model.object_classes = mapping
-            else:
-                self._model.name = mapping
+            self._model.name = mapping
         elif name == "Object names":
             self._model.objects = mapping
         elif name == "Group names":
-            self._model.name = mapping
+            self._model.groups = mapping
         elif name == "Member names":
             self._model.members = mapping
         elif "Object class " in name:
@@ -890,6 +882,11 @@ class MappingSpecModel(QAbstractTableModel):
         if not isinstance(self._model, EntityClassMapping):
             return None
         return self._model.parameters if self._model is not None else None
+
+    def mapping_has_parameters(self):
+        """Returns True if current mapping may have parameters, False otherwise"""
+        # This method becomes more useful once we add support for alternatives and scenarios here.
+        return True
 
 
 class MappingListModel(QAbstractListModel):

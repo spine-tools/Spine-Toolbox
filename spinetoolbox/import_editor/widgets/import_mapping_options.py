@@ -125,7 +125,7 @@ class ImportMappingOptions:
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
         # update parameter mapping
-        if hasattr(self._mapping_options_model, "parameters"):
+        if self._mapping_options_model.mapping_has_parameters():
             self._ui.parameter_type_combo_box.setEnabled(True)
             self._ui.parameter_type_combo_box.setCurrentText(self._mapping_options_model.parameter_type)
         else:
