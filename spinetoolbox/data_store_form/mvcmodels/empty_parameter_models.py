@@ -21,7 +21,7 @@ from .parameter_mixins import (
     FillInParameterNameMixin,
     MakeRelationshipOnTheFlyMixin,
     InferEntityClassIdMixin,
-    FillInAlternativeNameMixin,
+    FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
@@ -227,7 +227,7 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
 
 class EmptyParameterValueModel(
     InferEntityClassIdMixin,
-    FillInAlternativeNameMixin,
+    FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,

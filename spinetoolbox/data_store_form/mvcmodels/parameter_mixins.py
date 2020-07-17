@@ -46,7 +46,7 @@ class ConvertToDBMixin:
         return item, []
 
 
-class FillInAlternativeNameMixin(ConvertToDBMixin):
+class FillInAlternativeIdMixin(ConvertToDBMixin):
     """Fills in alternative names."""
 
     def __init__(self, *args, **kwargs):
@@ -91,7 +91,7 @@ class FillInAlternativeNameMixin(ConvertToDBMixin):
         alt = self._db_map_alt_lookup.get(db_map, {}).get(alt_name)
         if not alt:
             return item, [f"Unknown alternative name {alt_name}"] if alt_name else []
-        item["alternative_name"] = alt["name"]
+        item["alternative_id"] = alt["id"]
         return item, err
 
 
