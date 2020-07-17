@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
-    FillInAlternativeIdMixin,
+    ConvertToDBMixin,
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeParameterTagMixin,
@@ -324,7 +324,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
             self.db_mngr.error_msg({self.db_map: error_log})
 
 
-class SingleParameterValueMixin(FillInAlternativeIdMixin):
+class SingleParameterValueMixin(ConvertToDBMixin):
     """A parameter value model for a single entity class."""
 
     def __init__(self, *args, **kwargs):
