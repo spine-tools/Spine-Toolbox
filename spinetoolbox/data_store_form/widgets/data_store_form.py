@@ -625,6 +625,24 @@ class DataStoreFormBase(QMainWindow):
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
 
+    def receive_scenarios_added(self, db_map_data):
+        self.notify_items_changed("added", "scenarios", db_map_data)
+
+    def receive_scenario_alternatives_added(self, db_map_data):
+        self.notify_items_changed("added", "scenario alternatives", db_map_data)
+
+    def receive_alternatives_added(self, db_map_data):
+        self.notify_items_changed("added", "alternatives", db_map_data)
+
+    def receive_scenarios_fetched(self, db_map_data):
+        pass
+
+    def receive_scenario_alternatives_fetched(self, db_map_data):
+        pass
+
+    def receive_alternatives_fetched(self, db_map_data):
+        pass
+
     def receive_object_classes_fetched(self, db_map_data):
         pass
 
@@ -680,6 +698,15 @@ class DataStoreFormBase(QMainWindow):
     def receive_parameter_tags_added(self, db_map_data):
         self.notify_items_changed("added", "parameter tag", db_map_data)
 
+    def receive_scenarios_updated(self, db_map_data):
+        self.notify_items_changed("updated", "scenarios", db_map_data)
+
+    def receive_scenario_alternatives_updated(self, db_map_data):
+        self.notify_items_changed("updated", "scenario alternatives", db_map_data)
+
+    def receive_alternatives_updated(self, db_map_data):
+        self.notify_items_changed("updated", "alternatives", db_map_data)
+
     def receive_object_classes_updated(self, db_map_data):
         self.notify_items_changed("updated", "object class", db_map_data)
 
@@ -707,6 +734,15 @@ class DataStoreFormBase(QMainWindow):
 
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter definition tag", db_map_data)
+
+    def receive_scenarios_removed(self, db_map_data):
+        self.notify_items_changed("removed", "scenarios", db_map_data)
+
+    def receive_scenario_alternatives_removed(self, db_map_data):
+        self.notify_items_changed("removed", "scenario alternatives", db_map_data)
+
+    def receive_alternatives_removed(self, db_map_data):
+        self.notify_items_changed("removed", "alternatives", db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         self.notify_items_changed("removed", "object class", db_map_data)
@@ -872,11 +908,12 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_frozen_table.hide()
         docks = [
             self.ui.dockWidget_object_tree,
+            self.ui.dockWidget_alternative_tree,
             self.ui.dockWidget_object_parameter_value,
             self.ui.dockWidget_parameter_value_list,
         ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.2 * width, 0.4 * width, 0.2 * width], Qt.Horizontal)
         self.end_style_change()
 
     @Slot(bool)

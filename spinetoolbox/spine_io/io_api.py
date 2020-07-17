@@ -94,6 +94,9 @@ class SourceConnection:
             "relationship_parameters": [],
             "relationship_parameter_values": [],
             "object_groups": [],
+            "alternatives": [],
+            "scenarios": [],
+            "scenario_alternatives": [],
         }
         errors = []
         for table, mapping in tables_mappings.items():

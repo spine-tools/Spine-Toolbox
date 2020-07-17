@@ -314,6 +314,11 @@ class ParameterViewMixin:
         self.qsettings.setValue("relParValHeaderState", h.saveState())
         self.qsettings.endGroup()
 
+    def receive_alternatives_updated(self, db_map_data):
+        super().receive_alternatives_updated(db_map_data)
+        self.object_parameter_value_model.receive_alternatives_updated(db_map_data)
+        self.relationship_parameter_value_model.receive_alternatives_updated(db_map_data)
+
     def receive_parameter_tags_fetched(self, db_map_data):
         super().receive_parameter_tags_fetched(db_map_data)
         self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)

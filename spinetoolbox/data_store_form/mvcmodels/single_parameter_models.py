@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
-    ConvertToDBMixin,
+    FillInAlternativeNameMixin,
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeParameterTagMixin,
@@ -140,6 +140,7 @@ class SingleParameterModel(MinimalTableModel):
             "value": ("id", "parameter value"),
             "default_value": ("id", "parameter definition"),
             "database": ("database", None),
+            "alternative_id": ("alternative_id", "alternative"),
         }.get(field)
 
     def get_id_key(self, field):
@@ -180,6 +181,11 @@ class SingleParameterModel(MinimalTableModel):
                 description = self.get_field_item(field, item).get("description", None)
                 if description not in (None, ""):
                     return description
+            if field == "alternative_id":
+                return self.get_field_item(field, item).get("name", None)
+
+            if field in self.json_fields:
+                return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
             data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
                 data = data.replace(",", self.db_mngr._GROUP_SEP)
@@ -306,7 +312,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
             self.db_mngr.error_msg({self.db_map: error_log})
 
 
-class SingleParameterValueMixin(ConvertToDBMixin):
+class SingleParameterValueMixin(FillInAlternativeNameMixin):
     """A parameter value model for a single entity class."""
 
     def __init__(self, *args, **kwargs):
@@ -341,6 +347,9 @@ class SingleParameterValueMixin(ConvertToDBMixin):
         """
         param_vals = list()
         error_log = list()
+        db_map_data = dict()
+        db_map_data[self.db_map] = items
+        self.build_lookup_dictionary(db_map_data)
         for item in items:
             param_val, err = self._convert_to_db(item, self.db_map)
             if param_val:

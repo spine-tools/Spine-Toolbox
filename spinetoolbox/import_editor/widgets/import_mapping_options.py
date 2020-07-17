@@ -92,7 +92,7 @@ class ImportMappingOptions:
 
     def update_ui(self):
         """
-        updates ui to RelationshipClassMapping or ObjectClassMapping model
+        updates ui to RelationshipClassMapping, ObjectClassMapping or ObjectGroupMapping model
         """
         if not self._mapping_options_model:
             self._ui.dockWidget_mapping_options.hide()
@@ -125,7 +125,11 @@ class ImportMappingOptions:
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
         # update parameter mapping
-        self._ui.parameter_type_combo_box.setCurrentText(self._mapping_options_model.parameter_type)
+        if self._mapping_options_model.mapping_has_parameters():
+            self._ui.parameter_type_combo_box.setEnabled(True)
+            self._ui.parameter_type_combo_box.setCurrentText(self._mapping_options_model.parameter_type)
+        else:
+            self._ui.parameter_type_combo_box.setEnabled(False)
 
         self._ui.ignore_columns_button.setVisible(self._mapping_options_model.is_pivoted)
         self._ui.ignore_columns_label.setVisible(self._mapping_options_model.is_pivoted)
@@ -170,6 +174,9 @@ class ImportMappingOptions:
         if self._mapping_options_model is None:
             return
         par = self._mapping_options_model.model_parameters()
+        if par is None:
+            self._ui.time_series_repeat_check_box.setEnabled(False)
+            return
         is_time_series = isinstance(par, ParameterTimeSeriesMapping)
         self._ui.time_series_repeat_check_box.setEnabled(is_time_series)
         self._ui.time_series_repeat_check_box.setCheckState(
@@ -180,6 +187,9 @@ class ImportMappingOptions:
         if self._mapping_options_model is None:
             return
         mapping = self._mapping_options_model.model_parameters()
+        if mapping is None:
+            self._ui.map_dimension_spin_box.setEnabled(False)
+            return
         is_map = isinstance(mapping, ParameterMapMapping)
         self._ui.map_dimension_spin_box.setEnabled(is_map)
         self._ui.map_dimension_spin_box.setValue(len(mapping.extra_dimensions) if is_map else 1)

@@ -15,102 +15,12 @@ Models to represent entities in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, QModelIndex
+
 from .entity_tree_item import ObjectTreeRootItem, RelationshipTreeRootItem
-from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from .multi_db_tree_model import MultiDBTreeModel
 
 
-class EntityTreeModel(MinimalTreeModel):
-    """Base class for all entity tree models."""
-
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args:
-            parent (DataStoreForm)
-            db_mngr (SpineDBManager): A manager for the given db_maps
-            db_maps (iter): DiffDatabaseMapping instances
-        """
-        super().__init__(parent)
-        self.db_mngr = db_mngr
-        self.db_maps = db_maps
-        self._root_item = None
-        self.active_member_indexes = dict()
-
-    @property
-    def root_item_type(self):
-        """Implement in subclasses to create a model specific to any entity type."""
-        raise NotImplementedError()
-
-    @property
-    def root_item(self):
-        return self._root_item
-
-    @property
-    def root_index(self):
-        return self.index_from_item(self._root_item)
-
-    def build_tree(self):
-        """Builds tree."""
-        self.beginResetModel()
-        self._invisible_root_item = TreeItem(self)
-        self.endResetModel()
-        self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
-        self._invisible_root_item.append_children(self._root_item)
-
-    def columnCount(self, parent=QModelIndex()):
-        return 2
-
-    def data(self, index, role=Qt.DisplayRole):
-        item = self.item_from_index(index)
-        if index.column() == 0:
-            if role == Qt.DecorationRole:
-                return item.display_icon
-            if role == Qt.DisplayRole:
-                return item.display_data
-            if role == Qt.EditRole:
-                return item.edit_data
-        return item.data(index.column(), role)
-
-    def headerData(self, section, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return ("name", "database")[section]
-        return None
-
-    def find_items(self, db_map, path_prefix, parent_items=(), fetch=False):
-        """Returns items at given path prefix.
-        """
-        if not parent_items:
-            # Start from the root node
-            parent_items = [self.root_item]
-        for id_ in path_prefix:
-            parent_items = [
-                child for parent_item in parent_items for child in parent_item.find_children_by_id(db_map, id_)
-            ]
-            if fetch:
-                for parent_item in parent_items:
-                    parent = self.index_from_item(parent_item)
-                    if self.canFetchMore(parent):
-                        self.fetchMore(parent)
-        return parent_items
-
-    def is_active_member_index(self, index):
-        return index in self.active_member_indexes.get(index.parent(), set())
-
-    def set_active_member_indexes(self, indexes):
-        self.active_member_indexes.clear()
-        for ind in indexes:
-            self.active_member_indexes.setdefault(ind.parent(), set()).add(ind)
-        self.emit_data_changed_for_column(0, self.active_member_indexes)
-
-    def emit_data_changed_for_column(self, column, parents):
-        for parent in parents:
-            top_left = self.index(0, column, parent)
-            bottom_right = self.index(self.rowCount(parent), column, parent)
-            self.dataChanged.emit(top_left, bottom_right)
-
-
-class ObjectTreeModel(EntityTreeModel):
+class ObjectTreeModel(MultiDBTreeModel):
     """An 'object-oriented' tree model."""
 
     @property
@@ -275,14 +185,14 @@ class ObjectTreeModel(EntityTreeModel):
         pos = object_ids.index(obj_id) - 1
         object_id = object_ids[pos]
         object_class_id = object_class_ids[pos]
-        # Return first node that passes all cascade fiters
+        # Return first node that passes all cascade filters
         for parent_item in self.find_items(db_map, (object_class_id, object_id, rel_cls_id), fetch=True):
             for item in parent_item.find_children(lambda child: child.display_id == rel_item.display_id):
                 return self.index_from_item(item)
         return None
 
 
-class RelationshipTreeModel(EntityTreeModel):
+class RelationshipTreeModel(MultiDBTreeModel):
     """A relationship-oriented tree model."""
 
     @property

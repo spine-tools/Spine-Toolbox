@@ -17,18 +17,7 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 
-from PySide2.QtCore import (
-    Qt,
-    Slot,
-    Signal,
-    QItemSelectionModel,
-    QSortFilterProxyModel,
-    QEvent,
-    QCoreApplication,
-    QModelIndex,
-    QPoint,
-    QSize,
-)
+from PySide2.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide2.QtWidgets import (
     QComboBox,
     QLineEdit,

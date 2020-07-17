@@ -119,6 +119,10 @@ class DBItem(AppendEmptyChildMixin, ValueListTreeItem):
         if role in (Qt.DisplayRole, Qt.EditRole):
             return f"root ({self.db_map.codename})"
 
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
 
 class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixin, ValueListTreeItem):
     """A list item."""
@@ -161,13 +165,13 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             return self.name
         return super().data(column, role)
 
-    def set_data(self, column, name):
-        if name == self.name:
+    def set_data(self, column, value, role):
+        if role != Qt.EditRole or value == self.name:
             return False
         if self.id:
-            self.update_name_in_db(name)
+            self.update_name_in_db(value)
             return False
-        self._name = name
+        self._name = value
         self.parent_item.append_empty_child(self.child_number())
         self.append_children(self.empty_child())
         return True
@@ -252,7 +256,9 @@ class ValueItem(GrayFontMixin, EditableMixin, ValueListTreeItem):
             return self.db_mngr.get_value_list_item(self.db_map, self.parent_item.id, self.child_number(), role)
         return super().data(column, role)
 
-    def set_data(self, column, value):
+    def set_data(self, column, value, role):
+        if role != Qt.EditRole:
+            return False
         value = try_number_from_string(value)
         value = to_database(value)
         return self.set_data_in_db(value)

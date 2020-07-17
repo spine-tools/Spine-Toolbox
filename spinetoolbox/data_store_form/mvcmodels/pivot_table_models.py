@@ -587,6 +587,37 @@ class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
         return False
 
 
+class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
+    """A top left header for parameter index."""
+
+    @property
+    def header_type(self):
+        return "alternative"
+
+    @property
+    def name(self):
+        return "alternative"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return self._get_header_data_from_db("alternative", header_id, "name", role)
+
+    def update_data(self, data):
+        if not data:
+            return False
+        self.db_mngr.update_alternatives({self.db_map: data})
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        data = []
+        for name in names:
+            item = {"name": name}
+            data.append(item)
+        self.db_mngr.add_alternatives({self.db_map: data})
+        return True
+
+
 class ParameterValuePivotTableModel(PivotTableModelBase):
     """A model for the pivot table in parameter value input type."""
 
@@ -615,7 +646,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        return header_ids[: self._object_class_count], header_ids[-1]
+        return header_ids[: self._object_class_count], header_ids[-2], header_ids[-1]
 
     def object_and_parameter_names(self, index):
         """Returns the object and parameter names corresponding to the given data index.
@@ -628,12 +659,13 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             list(str): object names
             str: parameter name
         """
-        objects_ids, parameter_id = self.object_and_parameter_ids(index)
+        objects_ids, parameter_id, alternative_id = self.object_and_parameter_ids(index)
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
         parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
             "parameter_name", ""
         )
-        return object_names, parameter_name
+        alternative_name = self.db_mngr.get_item(self.db_map, "alternative", alternative_id).get("name", "")
+        return object_names, parameter_name, alternative_name
 
     def index_name(self, index):
         """Returns a string that concatenates the object and parameter names corresponding to the given data index.
@@ -647,8 +679,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         if not self.index_in_data(index):
             return ""
-        object_names, parameter_name = self.object_and_parameter_names(index)
-        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name
+        object_names, parameter_name, alternative_name = self.object_and_parameter_names(index)
+        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name + " - " + alternative_name
 
     def column_name(self, column):
         """Returns a string that concatenates the object and parameter names corresponding to the given column.
@@ -673,6 +705,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         data = self._parent.load_parameter_value_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         top_left_headers += [TopLeftParameterHeaderItem(self)]
+        top_left_headers += [TopLeftAlternativeHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot()
@@ -702,18 +735,20 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         return dict(
             entity_class_id=self._parent.current_class_id,
             entity_id=header_ids[0],
-            parameter_definition_id=header_ids[-1],
+            parameter_definition_id=header_ids[-2],
             value=value,
+            alternative_id=header_ids[-1],
         )
 
     def _relationship_parameter_value_to_add(self, header_ids, value, rel_id_lookup):
-        object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
+        object_id_list = ",".join([str(id_) for id_ in header_ids[:-2]])
         relationship_id = rel_id_lookup[object_id_list]
         return dict(
             entity_class_id=self._parent.current_class_id,
             entity_id=relationship_id,
-            parameter_definition_id=header_ids[-1],
+            parameter_definition_id=header_ids[-2],
             value=value,
+            alternative_id=header_ids[-1],
         )
 
     def _make_parameter_value_to_add(self):
@@ -730,7 +765,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     @staticmethod
     def _parameter_value_to_update(id_, header_ids, value):
-        return {"id": id_, "value": value, "parameter_definition_id": header_ids[-1]}
+        return {"id": id_, "value": value, "parameter_definition_id": header_ids[-2], "alternative_id": header_ids[-1]}
 
     def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
         """Sets parameter values in batch."""
@@ -853,7 +888,11 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         data = self._parent.load_expanded_parameter_value_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
-        top_left_headers += [self._index_top_left_header, TopLeftParameterHeaderItem(self)]
+        top_left_headers += [
+            self._index_top_left_header,
+            TopLeftParameterHeaderItem(self),
+            TopLeftAlternativeHeaderItem(self),
+        ]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot()

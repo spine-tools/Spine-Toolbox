@@ -343,6 +343,21 @@ class ObjectNameDelegate(ParameterDelegate):
         return editor
 
 
+class AlternativeNameDelegate(ParameterDelegate):
+    """A delegate for the object name."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
+        if not db_map:
+            return None
+        editor = SearchBarEditor(self.parent(), parent)
+        name_list = [x["name"] for x in self.db_mngr.get_alternatives(db_map)]
+        editor.set_data(index.data(Qt.EditRole), name_list)
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        return editor
+
+
 class ObjectNameListDelegate(ParameterDelegate):
     """A delegate for the object name list."""
 
@@ -399,6 +414,25 @@ class ManageItemsDelegate(QItemDelegate):
         all_databases = self.parent().all_databases(index.row())
         databases = index.data(Qt.DisplayRole).split(",")
         editor.set_data(all_databases, databases)
+        return editor
+
+
+class ManageAlternativesDelegate(ManageItemsDelegate):
+    """A delegate for the model and view in {Add/Edit}AlternativesDialog.
+
+    Attributes:
+        parent (ManageItemsDialog): parent dialog
+    """
+
+    def createEditor(self, parent, option, index):
+        """Returns an editor."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'databases':
+            editor = self._create_database_editor(parent, option, index)
+        else:
+            editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
+        self.connect_editor_signals(editor, index)
         return editor
 
 

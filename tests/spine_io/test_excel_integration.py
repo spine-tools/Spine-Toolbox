@@ -108,10 +108,22 @@ class TestExcelIntegration(unittest.TestCase):
 
         # add parameter values
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p1.id, 'object_id': oc1_obj1.id, 'object_class_id': oc_1.id, 'value': '0'}
+            **{
+                'parameter_definition_id': p1.id,
+                'object_id': oc1_obj1.id,
+                'object_class_id': oc_1.id,
+                'value': '0',
+                "alternative_id": 1,
+            }
         )
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p2.id, 'object_id': oc1_obj2.id, 'object_class_id': oc_1.id, 'value': '3.5'}
+            **{
+                'parameter_definition_id': p2.id,
+                'object_id': oc1_obj2.id,
+                'object_class_id': oc_1.id,
+                'value': '3.5',
+                "alternative_id": 1,
+            }
         )
         db_map.add_parameter_value(
             **{
@@ -119,6 +131,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'object_id': oc2_obj1.id,
                 'object_class_id': oc_2.id,
                 'value': '[1, 2, 3, 4]',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -127,6 +140,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'object_id': oc2_obj2.id,
                 'object_class_id': oc_2.id,
                 'value': '[5, 6, 7]',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -135,6 +149,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'relationship_id': rel1.id,
                 'relationship_class_id': relc1.id,
                 'value': '0',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -143,6 +158,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'relationship_id': rel2.id,
                 'relationship_class_id': relc1.id,
                 'value': '4',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -151,6 +167,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'relationship_id': rel1.id,
                 'relationship_class_id': relc1.id,
                 'value': '[5, 6, 7]',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -159,6 +176,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'relationship_id': rel2.id,
                 'relationship_class_id': relc1.id,
                 'value': '[1, 2, 3, 4]',
+                "alternative_id": 1,
             }
         )
 
@@ -166,14 +184,26 @@ class TestExcelIntegration(unittest.TestCase):
         value = [1, 2, 3]
         ts_val = to_database(TimeSeriesVariableResolution(time, value, False, False))
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p5.id, 'object_id': oc3_obj1.id, 'object_class_id': oc_3.id, 'value': ts_val}
+            **{
+                'parameter_definition_id': p5.id,
+                'object_id': oc3_obj1.id,
+                'object_class_id': oc_3.id,
+                'value': ts_val,
+                "alternative_id": 1,
+            }
         )
 
         timepattern = ['m1', 'm2', 'm3']
         value = [1.1, 2.2, 3.3]
         ts_val = to_database(TimePattern(timepattern, value))
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p6.id, 'object_id': oc3_obj1.id, 'object_class_id': oc_3.id, 'value': ts_val}
+            **{
+                'parameter_definition_id': p6.id,
+                'object_id': oc3_obj1.id,
+                'object_class_id': oc_3.id,
+                'value': ts_val,
+                "alternative_id": 1,
+            }
         )
 
         # commit

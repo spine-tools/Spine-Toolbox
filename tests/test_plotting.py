@@ -48,22 +48,31 @@ def _make_pivot_proxy_model():
         data_store_widget = DataStoreForm(db_mngr, mock_db_map)
     data_store_widget.create_header_widget = lambda *args, **kwargs: None
     data_store_widget.load_parameter_value_data = lambda: {
-        ('1', 'int_col'): '-3',
-        ('2', 'int_col'): '-1',
-        ('3', 'int_col'): '2',
-        ('1', 'float_col'): '1.1',
-        ('2', 'float_col'): '1.2',
-        ('3', 'float_col'): '1.3',
-        ('1', 'time_series_col'): '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
+        ('1', 'int_col', 'base_alternative'): '-3',
+        ('2', 'int_col', 'base_alternative'): '-1',
+        ('3', 'int_col', 'base_alternative'): '2',
+        ('1', 'float_col', 'base_alternative'): '1.1',
+        ('2', 'float_col', 'base_alternative'): '1.2',
+        ('3', 'float_col', 'base_alternative'): '1.3',
+        (
+            '1',
+            'time_series_col',
+            'base_alternative',
+        ): '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
         (
             '2',
             'time_series_col',
+            'base_alternative',
         ): '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
-        ('3', 'time_series_col'): '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
+        (
+            '3',
+            'time_series_col',
+            'base_alternative',
+        ): '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
     }
     data_store_widget.pivot_table_model = model = ParameterValuePivotTableModel(data_store_widget)
     object_class_names = {"object": 1}
-    model.call_reset_model(object_class_names, pivot=(['object'], ['parameter'], [], ()))
+    model.call_reset_model(object_class_names, pivot=(['object'], ['parameter', 'alternative'], [], ()))
     model.start_fetching()
     data_store_widget.pivot_table_model = model
     data_store_widget.pivot_table_proxy.setSourceModel(model)
@@ -167,7 +176,7 @@ class TestPlotting(unittest.TestCase):
     def test_plot_pivot_selection(self):
         model = _make_pivot_proxy_model()
         selected_indexes = list()
-        for row in range(2, 5):
+        for row in range(3, 6):
             for column in range(1, 3):
                 selected_indexes.append(model.index(row, column))
         support = PivotTablePlottingHints()

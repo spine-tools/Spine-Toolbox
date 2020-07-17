@@ -570,6 +570,14 @@ class CompoundParameterValueMixin:
             if self._settattr_if_different(model, "_filter_entity_ids", entity_ids):
                 self._invalidate_filter()
 
+    def receive_alternatives_updated(self, db_map_data):
+        """Updated alternative column
+
+        Args:
+            db_map_data (dict): list of updated dict-items keyed by DiffDatabaseMapping
+        """
+        self._emit_data_changed_for_column("alternative_id")
+
 
 class CompoundObjectParameterDefinitionModel(
     CompoundObjectParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
@@ -618,7 +626,7 @@ class CompoundObjectParameterValueModel(
     """
 
     def _make_header(self):
-        return ["object_class_name", "object_name", "parameter_name", "value", "database"]
+        return ["object_class_name", "object_name", "parameter_name", "alternative_name", "value", "database"]
 
     @property
     def entity_type(self):
@@ -633,7 +641,14 @@ class CompoundRelationshipParameterValueModel(
     """
 
     def _make_header(self):
-        return ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
+        return [
+            "relationship_class_name",
+            "object_name_list",
+            "parameter_name",
+            "alternative_name",
+            "value",
+            "database",
+        ]
 
     @property
     def entity_type(self):

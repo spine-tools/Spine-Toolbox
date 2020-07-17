@@ -35,6 +35,7 @@ from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParamet
 from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterDefinitionTableView
 from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView
 from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterValueTableView
+from spinetoolbox.data_store_form.widgets.custom_qtreeview import AlternativeScenarioTreeView
 
 from spinetoolbox import resources_icons_rc
 
@@ -215,7 +216,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 889, 28))
+        self.menubar.setGeometry(QRect(0, 0, 889, 22))
         self.menubar.setNativeMenuBar(False)
         self.menuSession = QMenu(self.menubar)
         self.menuSession.setObjectName(u"menuSession")
@@ -237,6 +238,29 @@ class Ui_MainWindow(object):
         self.menuPivot_table = QMenu(self.menubar)
         self.menuPivot_table.setObjectName(u"menuPivot_table")
         MainWindow.setMenuBar(self.menubar)
+        self.dockWidget_alternative_tree = QDockWidget(MainWindow)
+        self.dockWidget_alternative_tree.setObjectName(u"dockWidget_alternative_tree")
+        self.dockWidget_alternative_tree.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self.dockWidgetContents_15 = QWidget()
+        self.dockWidgetContents_15.setObjectName(u"dockWidgetContents_15")
+        self.verticalLayout_18 = QVBoxLayout(self.dockWidgetContents_15)
+        self.verticalLayout_18.setSpacing(0)
+        self.verticalLayout_18.setObjectName(u"verticalLayout_18")
+        self.verticalLayout_18.setContentsMargins(0, 0, 0, 0)
+        self.treeView_alternative = AlternativeScenarioTreeView(self.dockWidgetContents_15)
+        self.treeView_alternative.setObjectName(u"treeView_alternative")
+        self.treeView_alternative.setContextMenuPolicy(Qt.DefaultContextMenu)
+        self.treeView_alternative.setEditTriggers(QAbstractItemView.EditKeyPressed)
+        self.treeView_alternative.setDragDropMode(QAbstractItemView.InternalMove)
+        self.treeView_alternative.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.treeView_alternative.setSelectionBehavior(QAbstractItemView.SelectItems)
+        self.treeView_alternative.setIconSize(QSize(20, 20))
+        self.treeView_alternative.setUniformRowHeights(True)
+
+        self.verticalLayout_18.addWidget(self.treeView_alternative)
+
+        self.dockWidget_alternative_tree.setWidget(self.dockWidgetContents_15)
+        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_alternative_tree)
         self.dockWidget_parameter_value_list = QDockWidget(MainWindow)
         self.dockWidget_parameter_value_list.setObjectName(u"dockWidget_parameter_value_list")
         self.dockWidgetContents = QWidget()
@@ -671,6 +695,10 @@ class Ui_MainWindow(object):
         self.menuAdd_parameter_heat_map.setTitle(QCoreApplication.translate("MainWindow", u"Add parameter heat map", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
         self.menuPivot_table.setTitle(QCoreApplication.translate("MainWindow", u"Pivot table", None))
+        self.dockWidget_alternative_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative tree", None))
+#if QT_CONFIG(accessibility)
+        self.treeView_alternative.setAccessibleName(QCoreApplication.translate("MainWindow", u"alternative tree", None))
+#endif // QT_CONFIG(accessibility)
         self.dockWidget_parameter_value_list.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter value list", None))
 #if QT_CONFIG(accessibility)
         self.treeView_parameter_value_list.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter value list", None))
