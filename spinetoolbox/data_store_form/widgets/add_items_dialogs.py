@@ -148,7 +148,8 @@ class AddItemsDialog(ManageItemsDialog):
         self.db_maps = db_maps
         self.keyed_db_maps = {x.codename: x for x in db_maps}
         self.remove_rows_button = QToolButton()
-        self.remove_rows_button.setToolTip("<p>Remove selected rows.</p>")
+        self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.remove_rows_button.setText("Remove selected rows")
         self.layout().addWidget(self.remove_rows_button, 1, 0)
         self.layout().addWidget(self.button_box, 2, 0, -1, -1)
 
@@ -181,10 +182,10 @@ class AddAlternativesDialog(AddItemsDialog):
             db_maps (iter) DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add Alternatives")
+        self.setWindowTitle("Add alternatives")
         self.model = EmptyRowModel(self)
         self.table_view.setModel(self.model)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/map-signs-minus.svg"))
         self.table_view.setItemDelegate(ManageItemsDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['alternative name', 'description', 'databases'])
@@ -229,11 +230,11 @@ class AddScenariosDialog(AddItemsDialog):
             db_maps (iter) DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add Scenarios")
+        self.setWindowTitle("Add scenarios")
         self.model = EmptyRowModel(self)
         self.model.set_horizontal_header_labels(['scenario name', 'description', 'active', 'databases'])
         self.table_view.setModel(self.model)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/film-minus.svg"))
         self.table_view.setItemDelegateForColumn(2, CheckBoxDelegate(self))
         self.table_view.setItemDelegateForColumn(3, CheckDBListDelegate(self))
         self.connect_signals()
@@ -275,19 +276,19 @@ class AddScenariosDialog(AddItemsDialog):
 class AddScenarioAlternativesDialog(AddItemsDialog):
     """A dialog to query user's preferences for new scenario alternatives."""
 
-    def __init__(self, parent, scenario_name, db_mngr, *db_maps):
+    def __init__(self, parent, db_mngr, *db_maps, scenario_name=None):
         """
         Args:
             parent (DataStoreForm)
-            scenario_name (str): scenario's name
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
+            scenario_name (str): scenario's name
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add Scenario Alternatives")
+        self.setWindowTitle("Add alternatives to scenarios")
         self.model = EmptyRowModel(self)
         self.table_view.setModel(self.model)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/film-minus.svg"))
         self.table_view.setItemDelegate(ManageItemsDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['scenario name', 'alternative name', 'rank', 'databases'])

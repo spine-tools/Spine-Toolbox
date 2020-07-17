@@ -923,6 +923,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_relationship_tree, self.ui.dockWidget_alternative_tree, Qt.Vertical)
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_object_parameter_value.hide()
         self.ui.dockWidget_object_parameter_definition.hide()
@@ -945,6 +946,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_relationship_tree, self.ui.dockWidget_alternative_tree, Qt.Vertical)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,

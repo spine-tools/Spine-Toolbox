@@ -1,16 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-######################################################################################################################
-# Copyright (C) 2017-2020 Spine project consortium
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
-######################################################################################################################
--->
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -90,6 +78,10 @@
     <addaction name="actionAdd_relationship_classes"/>
     <addaction name="actionAdd_relationships"/>
     <addaction name="actionManage_relationships"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdd_alternatives"/>
+    <addaction name="actionAdd_scenarios"/>
+    <addaction name="actionAdd_scenario_alternatives"/>
     <addaction name="separator"/>
     <addaction name="actionEdit_selected"/>
     <addaction name="separator"/>
@@ -1260,6 +1252,33 @@
    </property>
    <property name="shortcut">
     <string>F1</string>
+   </property>
+  </action>
+  <action name="actionAdd_alternatives">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/map-signs-plus.svg</normaloff>:/icons/menu_icons/map-signs-plus.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Add alternatives</string>
+   </property>
+  </action>
+  <action name="actionAdd_scenarios">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/film-plus.svg</normaloff>:/icons/menu_icons/film-plus.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Add scenarios</string>
+   </property>
+  </action>
+  <action name="actionAdd_scenario_alternatives">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/film-plus.svg</normaloff>:/icons/menu_icons/film-plus.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Add alternatives to scenarios</string>
    </property>
   </action>
  </widget>

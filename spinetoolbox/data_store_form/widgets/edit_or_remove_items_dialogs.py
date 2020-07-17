@@ -62,7 +62,7 @@ class EditAlternativesDialog(EditOrRemoveItemsDialog):
             selected (set): set of ObjectClassItem instances to edit
         """
         super().__init__(parent, db_mngr)
-        self.setWindowTitle("Edit Alternatives")
+        self.setWindowTitle("Edit alternatives")
         self.model = MinimalTableModel(self)
         self.model.set_horizontal_header_labels(['alternative name', 'description', 'databases'])
         self.table_view.setModel(self.model)
@@ -125,7 +125,7 @@ class EditScenariosDialog(EditOrRemoveItemsDialog):
             selected (set): set of ScenarioItem instances to edit
         """
         super().__init__(parent, db_mngr)
-        self.setWindowTitle("Edit Scenarios")
+        self.setWindowTitle("Edit scenarios")
         self.model = MinimalTableModel(self)
         self.model.set_horizontal_header_labels(['scenario name', 'description', 'active', 'databases'])
         self.table_view.setModel(self.model)
@@ -194,7 +194,7 @@ class EditScenarioAlternativesDialog(EditOrRemoveItemsDialog):
             selected (set): set of ScenarioAlternativeItem instances to edit
         """
         super().__init__(parent, db_mngr)
-        self.setWindowTitle(f"Edit Scenario Alternatives")
+        self.setWindowTitle(f"Edit scenario alternatives")
         self.model = MinimalTableModel(self)
         self.model.set_horizontal_header_labels(['scenario name', 'alternative name', 'rank'])
         self.table_view.setModel(self.model)

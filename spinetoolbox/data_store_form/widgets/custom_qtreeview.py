@@ -389,14 +389,14 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def _add_middle_actions(self):
         self.add_alternative_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_objects.icon(), "Add alternatives", self.add_alternatives
+            self._data_store_form.ui.actionAdd_alternatives.icon(), "Add alternatives", self.add_alternatives
         )
         self.add_scenario_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_objects.icon(), "Add scenarios", self.add_scenarios
+            self._data_store_form.ui.actionAdd_scenarios.icon(), "Add scenarios", self.add_scenarios
         )
         self.add_scenario_alternative_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_relationship_classes.icon(),
-            "Add scenario alternatives",
+            self._data_store_form.ui.actionAdd_scenario_alternatives.icon(),
+            "Add alternatives to scenarios",
             self.add_scenario_alternatives,
         )
         self._menu.addSeparator()
@@ -420,7 +420,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
     def add_scenario_alternatives(self):
         index = self.currentIndex()
         item = index.internalPointer()
-        self._data_store_form.show_add_scenario_alternatives_form(item.display_data)
+        self._data_store_form.show_add_scenario_alternatives_form(scenario_name=item.display_data)
 
 
 class ParameterValueListTreeView(CopyTreeView):

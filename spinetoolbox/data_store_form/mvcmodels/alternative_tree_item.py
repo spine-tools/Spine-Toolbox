@@ -16,7 +16,12 @@ Classes to represent alternative and scenario items in a tree.
 :date:    17.6.2020
 """
 from PySide2.QtCore import Qt
+from PySide2.QtGui import QIcon
 from .multi_db_tree_item import MultiDBTreeItem
+from ...helpers import CharIconEngine
+
+_ALTERNATIVE_ICON = "\uf277"  # map-signs
+_SCENARIO_ICON = "\uf008"  # film
 
 
 class AlternativeRootItem(MultiDBTreeItem):
@@ -30,7 +35,12 @@ class AlternativeRootItem(MultiDBTreeItem):
     @property
     def display_data(self):
         """"See super class."""
-        return "Alternative"
+        return "alternative"
+
+    @property
+    def display_icon(self):
+        engine = CharIconEngine(_ALTERNATIVE_ICON, 0)
+        return QIcon(engine.pixmap())
 
     def set_data(self, column, value, role):
         """See base class."""
@@ -61,7 +71,12 @@ class ScenarioRootItem(MultiDBTreeItem):
     @property
     def display_data(self):
         """"See super class."""
-        return "Scenario"
+        return "scenario"
+
+    @property
+    def display_icon(self):
+        engine = CharIconEngine(_SCENARIO_ICON, 0)
+        return QIcon(engine.pixmap())
 
     def set_data(self, column, value, role):
         """See base class."""
@@ -89,6 +104,10 @@ class AlternativeItem(MultiDBTreeItem):
         Also make sure we never try to fetch this item."""
         super().__init__(*args, **kwargs)
         self._fetched = True
+
+    @property
+    def display_icon(self):
+        return self.parent_item.display_icon
 
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
@@ -119,6 +138,10 @@ class ScenarioItem(MultiDBTreeItem):
         """Overridden method to parse some data for convenience later.
         Also make sure we never try to fetch this item."""
         super().__init__(*args, **kwargs)
+
+    @property
+    def display_icon(self):
+        return self.parent_item.display_icon
 
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""

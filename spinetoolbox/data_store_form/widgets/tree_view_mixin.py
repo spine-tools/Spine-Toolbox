@@ -86,6 +86,9 @@ class TreeViewMixin:
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
         self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
+        self.ui.actionAdd_alternatives.triggered.connect(self.show_add_alternatives_form)
+        self.ui.actionAdd_scenarios.triggered.connect(self.show_add_scenarios_form)
+        self.ui.actionAdd_scenario_alternatives.triggered.connect(self.show_add_scenario_alternatives_form)
         self._alternatives_fetched.connect(
             lambda: self.ui.treeView_alternative.expand(self.alternative_tree_model.alternative_root_index)
         )
@@ -258,9 +261,10 @@ class TreeViewMixin:
         dialog = AddScenariosDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_scenario_alternatives_form(self, scenario_name):
+    @Slot(bool)
+    def show_add_scenario_alternatives_form(self, checked=False, scenario_name=None):
         """Shows dialog to let user select preferences for new scenario alternatives."""
-        dialog = AddScenarioAlternativesDialog(self, scenario_name, self.db_mngr, *self.db_maps)
+        dialog = AddScenarioAlternativesDialog(self, self.db_mngr, *self.db_maps, scenario_name=scenario_name)
         dialog.show()
 
     def show_add_relationships_form(self, checked=False, relationship_class_key=None, object_names_by_class_name=None):
