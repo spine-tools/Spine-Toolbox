@@ -116,6 +116,53 @@ class ManageItemsDialog(ManageItemsDialogBase):
         self.resize_window_to_columns()
 
 
+class GetAlternativesAndScenariosMixin:
+    """Provides methods to retrieve alternatives and scenarios for AddScenarioAlternativesDialog.
+    """
+
+    def make_db_map_alternative_lookup(self):
+        return {
+            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "alternative")} for db_map in self.db_maps
+        }
+
+    def make_db_map_scenario_lookup(self):
+        return {db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "scenario")} for db_map in self.db_maps}
+
+    def alternative_name_list(self, row):
+        """Return a list of scenario names present in all databases selected for given row.
+        Used by `ManageScenarioAlternativesDelegate`.
+        """
+        db_column = self.model.header.index('databases')
+        db_names = self.model._main_data[row][db_column]
+        db_maps = iter(self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps)
+        db_map = next(db_maps, None)
+        if not db_map:
+            return []
+        # Initalize list from first db_map
+        alternative_name_list = list(self.db_map_alternative_lookup[db_map])
+        # Update list from remaining db_maps
+        for db_map in db_maps:
+            alternative_name_list = [x for x in self.db_map_alternative_lookup[db_map] if x in alternative_name_list]
+        return alternative_name_list
+
+    def scenario_name_list(self, row):
+        """Return a list of scenario names present in all databases selected for given row.
+        Used by `ManageScenarioAlternativesDelegate`.
+        """
+        db_column = self.model.header.index('databases')
+        db_names = self.model._main_data[row][db_column]
+        db_maps = iter(self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps)
+        db_map = next(db_maps, None)
+        if not db_map:
+            return []
+        # Initalize list from first db_map
+        scenario_name_list = list(self.db_map_scenario_lookup[db_map])
+        # Update list from remaining db_maps
+        for db_map in db_maps:
+            scenario_name_list = [x for x in self.db_map_scenario_lookup[db_map] if x in scenario_name_list]
+        return scenario_name_list
+
+
 class GetObjectClassesMixin:
     """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog.
     """

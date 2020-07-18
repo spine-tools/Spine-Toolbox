@@ -442,6 +442,33 @@ class CheckDBListDelegate(ManageItemsDelegate):
         return editor
 
 
+class ManageScenarioAlternativesDelegate(ManageItemsDelegate):
+    """A delegate for the model and view in {Add/Edit}ScenarioAlternativesDialog.
+
+    Attributes:
+        parent (ManageItemsDialog): parent dialog
+    """
+
+    def createEditor(self, parent, option, index):
+        """Return editor."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'scenario name':
+            editor = SearchBarEditor(parent)
+            scenario_name_list = self.parent().scenario_name_list(index.row())
+            editor.set_data(index.data(Qt.EditRole), scenario_name_list)
+        elif header[index.column()] == 'alternative name':
+            editor = SearchBarEditor(parent)
+            alternative_name_list = self.parent().alternative_name_list(index.row())
+            editor.set_data(index.data(Qt.EditRole), alternative_name_list)
+        elif header[index.column()] == 'databases':
+            editor = self._create_database_editor(parent, option, index)
+        else:
+            editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
+        self.connect_editor_signals(editor, index)
+        return editor
+
+
 class ManageObjectClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectClassesDialog.
 

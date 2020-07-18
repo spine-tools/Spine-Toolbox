@@ -45,6 +45,7 @@ from ...widgets.custom_delegates import CheckBoxDelegate
 from .custom_delegates import (
     ManageItemsDelegate,
     CheckDBListDelegate,
+    ManageScenarioAlternativesDelegate,
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
     ManageRelationshipClassesDelegate,
@@ -52,6 +53,7 @@ from .custom_delegates import (
 )
 from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
+    GetAlternativesAndScenariosMixin,
     GetObjectClassesMixin,
     GetObjectsMixin,
     GetRelationshipClassesMixin,
@@ -273,7 +275,7 @@ class AddScenariosDialog(AddItemsDialog):
         super().accept()
 
 
-class AddScenarioAlternativesDialog(AddItemsDialog):
+class AddScenarioAlternativesDialog(GetAlternativesAndScenariosMixin, AddItemsDialog):
     """A dialog to query user's preferences for new scenario alternatives."""
 
     def __init__(self, parent, db_mngr, *db_maps, scenario_name=None):
@@ -289,11 +291,21 @@ class AddScenarioAlternativesDialog(AddItemsDialog):
         self.model = EmptyRowModel(self)
         self.table_view.setModel(self.model)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/film-minus.svg"))
-        self.table_view.setItemDelegate(ManageItemsDelegate(self))
+        self.table_view.setItemDelegate(ManageScenarioAlternativesDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['scenario name', 'alternative name', 'rank', 'databases'])
-        databases = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'scenario name': scenario_name, 'databases': databases})
+        self.db_map_scenario_lookup = self.make_db_map_scenario_lookup()
+        self.db_map_alternative_lookup = self.make_db_map_alternative_lookup()
+        if scenario_name:
+            default_db_maps = [
+                db_map for db_map, names in self.db_map_scenario_lookup.items() if scenario_name in names
+            ]
+            db_names = ",".join(
+                [db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
+            )
+        else:
+            db_names = ",".join(list(self.keyed_db_maps.keys()))
+        self.model.set_default_row(**{'scenario name': scenario_name, 'databases': db_names})
         self.model.clear()
 
     @Slot()
