@@ -134,11 +134,6 @@ class AlternativeItem(MultiDBTreeItem):
 class ScenarioItem(MultiDBTreeItem):
     item_type = "scenario"
 
-    def __init__(self, *args, **kwargs):
-        """Overridden method to parse some data for convenience later.
-        Also make sure we never try to fetch this item."""
-        super().__init__(*args, **kwargs)
-
     @property
     def display_icon(self):
         return self.parent_item.display_icon
@@ -179,7 +174,7 @@ class ScenarioItem(MultiDBTreeItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
-        return dict(scenario_name=self.display_data, database=self.first_db_map.codename)
+        return dict(database=self.first_db_map.codename)
 
     def _get_children_ids(self, db_map):
         """See base class."""
@@ -289,7 +284,7 @@ class ScenarioItem(MultiDBTreeItem):
 
 
 class ScenarioAlternativeItem(MultiDBTreeItem):
-    item_type = "scenario_alternative"
+    item_type = "scenario_alternative"  # FIXME: It should be "scenario alternative" for consistency, shouldn't it?
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -297,25 +292,27 @@ class ScenarioAlternativeItem(MultiDBTreeItem):
 
     @property
     def display_id(self):
-        ids = []
-        for db_map in self.db_maps:
-            data = self.db_map_data(db_map)
-            alt_id = data.get("alternative_id")
-            alt_rank = data.get("rank")
-            alt_name = self.db_mngr.get_item(self.first_db_map, "alternative", alt_id).get("name")
-            ids.append((alt_rank, alt_name))
-
+        ids = [self._display_data(db_map) for db_map in self.db_maps]
         if len(set(ids)) != 1:
             return None
         return ids[0]
 
     @property
     def display_data(self):
-        data = self.db_map_data(self.first_db_map)
+        alt_rank, alt_name = self._display_data(self.first_db_map)
+        return f"{alt_rank}: {alt_name}"
+
+    def _display_data(self, db_map):
+        data = self.db_map_data(db_map)
         alt_id = data.get("alternative_id")
         alt_rank = data.get("rank")
         alt_name = self.db_mngr.get_item(self.first_db_map, "alternative", alt_id).get("name")
-        return f"{alt_rank}: {alt_name}"
+        return (alt_rank, alt_name)
+
+    @property
+    def display_icon(self):
+        engine = CharIconEngine(_ALTERNATIVE_ICON, 0)
+        return QIcon(engine.pixmap())
 
     def has_children(self):
         """Returns false, this item never has children."""
@@ -326,7 +323,7 @@ class ScenarioAlternativeItem(MultiDBTreeItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
-        return dict(scenario_name=self.display_data, database=self.first_db_map.codename)
+        return dict(database=self.first_db_map.codename)
 
     def _get_children_ids(self, db_map):
         """See base class."""

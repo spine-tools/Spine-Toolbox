@@ -16,7 +16,7 @@ Models to represent alternatives, scenarios and scenario alternatives in a tree.
 """
 import json
 from PySide2.QtCore import QMimeData, Qt
-from .alternative_tree_item import AlternativeItem, AlternativeRootItem, ScenarioItem, ScenarioRootItem
+from .alternative_tree_item import AlternativeRootItem, ScenarioRootItem
 from .multi_db_tree_model import MultiDBTreeModel
 from ...mvcmodels.minimal_tree_model import TreeItem
 
@@ -39,15 +39,7 @@ class AlternativeTreeModel(MultiDBTreeModel):
 
     @property
     def root_item_type(self):
-        return AlternativeRootItem
-
-    @property
-    def selected_alternative_indexes(self):
-        return self.selected_indexes.get(AlternativeItem, {})
-
-    @property
-    def selected_scenario_indexes(self):
-        return self.selected_indexes.get(ScenarioItem, {})
+        raise NotImplementedError()
 
     def supportedDropActions(self):
         return Qt.CopyAction | Qt.MoveAction
@@ -128,7 +120,7 @@ class AlternativeTreeModel(MultiDBTreeModel):
         self._invisible_root_item.append_children(self._alternative_root)
         self._invisible_root_item.append_children(self._scenario_root)
 
-    def _group_scenario_alternative_data(self, db_map_data):
+    def _parent_scenario_alternative_data(self, db_map_data):
         """Takes given object data and returns the same data keyed by parent tree-item.
 
         Args:
@@ -142,11 +134,11 @@ class AlternativeTreeModel(MultiDBTreeModel):
             # Group items by scenario id
             d = dict()
             for item in items:
-                d.setdefault(item["scenario_id"], set()).add(item["id"])
+                d.setdefault(item["scenario_id"], dict())[item["id"]] = None
             for scenario_id, ids in d.items():
-                # Find the parents corresponding the this class id and put them in the result
+                # Find the parents corresponding the this scenario id and put them in the result
                 for parent_item in self.find_items(db_map, (scenario_id,), parent_items=(self._scenario_root,)):
-                    result.setdefault(parent_item, {})[db_map] = ids
+                    result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 
     def add_scenarios(self, db_map_data):
@@ -158,7 +150,7 @@ class AlternativeTreeModel(MultiDBTreeModel):
         self._alternative_root.append_children_by_id(db_map_ids)
 
     def add_scenario_alternatives(self, db_map_data):
-        for parent_item, db_map_ids in self._group_scenario_alternative_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_scenario_alternative_data(db_map_data).items():
             parent_item.append_children_by_id(db_map_ids)
 
     def update_alternatives(self, db_map_data):
@@ -170,7 +162,7 @@ class AlternativeTreeModel(MultiDBTreeModel):
         self._scenario_root.update_children_by_id(db_map_ids)
 
     def update_scenario_alternatives(self, db_map_data):
-        for parent_item, db_map_ids in self._group_scenario_alternative_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_scenario_alternative_data(db_map_data).items():
             parent_item.update_children_by_id(db_map_ids)
 
     def remove_alternatives(self, db_map_data):
@@ -182,5 +174,5 @@ class AlternativeTreeModel(MultiDBTreeModel):
         self._scenario_root.remove_children_by_id(db_map_ids)
 
     def remove_scenario_alternatives(self, db_map_data):
-        for parent_item, db_map_ids in self._group_scenario_alternative_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_scenario_alternative_data(db_map_data).items():
             parent_item.remove_children_by_id(db_map_ids)

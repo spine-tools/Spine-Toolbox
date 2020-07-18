@@ -160,7 +160,6 @@ class ObjectTreeModel(MultiDBTreeModel):
 
     def find_next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
-        # Mildly insane? But I can't think of something better now
         if not index.isValid():
             return
         rel_item = self.item_from_index(index)
