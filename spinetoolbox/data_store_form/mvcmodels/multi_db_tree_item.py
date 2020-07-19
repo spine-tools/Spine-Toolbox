@@ -39,7 +39,6 @@ class MultiDBTreeItem(TreeItem):
             db_map_id = {}
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
-        self._checked = False
 
     @property
     def db_mngr(self):
@@ -75,13 +74,6 @@ class MultiDBTreeItem(TreeItem):
         """Returns an icon to display next to the name.
         Reimplement in subclasses to return something nice."""
         return None
-
-    def is_checked(self):
-        """"Indicates whether the item is checked or not."""
-        return self._checked
-
-    def toggle_checked(self):
-        self._checked = not self._checked
 
     @property
     def first_db_map(self):

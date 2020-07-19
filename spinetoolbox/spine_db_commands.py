@@ -382,6 +382,41 @@ class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
         self.method_name = "update_checked_parameter_values"
 
 
+class SetScenarioAlternativesCommand(SpineDBCommand):
+    def __init__(self, db_mngr, db_map, data, parent=None):
+        super().__init__(db_mngr, db_map, parent=parent)
+        self.redo_db_map_data = {db_map: data}
+        self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
+        self.method_name = "set_scenario_alternatives"
+        self.get_method_name = "get_scenarios"
+        self.completed_signal_name = "scenarios_updated"
+        self.setText(f"set scenario alternatives in '{db_map.codename}'")
+        self.completed_signal = self.db_mngr.scenarios_updated
+
+    def _undo_item(self, db_map, redo_item):
+        scenario_id = redo_item["scenario_id"]
+        return {
+            "scenario_id": scenario_id,
+            "alternative_id_list": self.db_mngr.get_field(db_map, "scenario", scenario_id, "alternative_id_list"),
+        }
+
+    @SpineDBCommand.redomethod
+    def redo(self):
+        self.db_mngr.add_or_update_items(
+            self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
+        )
+
+    @SpineDBCommand.undomethod
+    def undo(self):
+        self.db_mngr.add_or_update_items(
+            self.undo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
+        )
+
+    def data(self):
+        """See base class."""
+        raise NotImplementedError()
+
+
 class SetParameterDefinitionTagsCommand(SpineDBCommand):
     def __init__(self, db_mngr, db_map, data, parent=None):
         super().__init__(db_mngr, db_map, parent=parent)

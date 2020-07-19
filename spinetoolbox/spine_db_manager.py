@@ -20,24 +20,24 @@ from PySide2.QtCore import Qt, QObject, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox
 from PySide2.QtGui import QKeySequence, QIcon, QFontMetrics, QFont
 from spinedb_api import (
-    Array,
+    is_empty,
     create_new_spine_database,
-    DateTime,
     DiffDatabaseMapping,
+    SpineDBVersionError,
+    SpineDBAPIError,
     get_data_for_import,
     from_database,
-    IndexedValue,
-    is_empty,
-    Map,
-    ParameterValueFormatError,
+    to_database,
     relativedelta_to_duration,
-    SpineDBAPIError,
-    SpineDBVersionError,
+    ParameterValueFormatError,
+    IndexedValue,
+    Array,
+    DateTime,
     TimeSeries,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
     TimePattern,
-    to_database,
+    Map,
 )
 from .data_store_form.widgets.data_store_form import DataStoreForm
 from .helpers import IconManager, busy_effect, format_string_list
@@ -50,6 +50,7 @@ from .spine_db_commands import (
     AddCheckedParameterValuesCommand,
     UpdateItemsCommand,
     UpdateCheckedParameterValuesCommand,
+    SetScenarioAlternativesCommand,
     SetParameterDefinitionTagsCommand,
     RemoveItemsCommand,
 )
@@ -629,7 +630,7 @@ class SpineDBManager(QObject):
         """Caches parameter definition tags in the parameter definition dictionary.
 
         Args:
-            db_map_data (dict): lists of parameter definition items keyed by DiffDatabaseMapping
+            db_map_data (dict): lists of wide parameter definition tag items keyed by DiffDatabaseMapping
         """
         for db_map, items in db_map_data.items():
             for item in items:
@@ -948,19 +949,8 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "scenario_sq", ids=ids), key=lambda x: x["name"])
-
-    def get_scenario_alternatives(self, db_map, ids=()):
-        """Returns scenario alternatives from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Returns:
-            list: dictionary items
-        """
         return self.get_db_items(
-            self._make_query(db_map, "scenario_alternative_sq", ids=ids), key=lambda x: (x["scenario_id"], x["rank"])
+            self._make_query(db_map, "wide_scenario_alternative_sq", ids=ids), key=lambda x: x["name"]
         )
 
     def get_object_classes(self, db_map, ids=()):
@@ -1456,6 +1446,15 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter tag"))
 
+    def set_scenario_alternatives(self, db_map_data):
+        """Sets scenario alternatives in db.
+
+        Args:
+            db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(SetScenarioAlternativesCommand(self, db_map, data))
+
     def set_parameter_definition_tags(self, db_map_data):
         """Sets parameter definition tags in db.
 
@@ -1792,7 +1791,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self._to_ids(db_map_data))
+        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self.db_map_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         db_map_cascading_data = {

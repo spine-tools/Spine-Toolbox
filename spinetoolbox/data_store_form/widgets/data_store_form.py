@@ -637,9 +637,6 @@ class DataStoreFormBase(QMainWindow):
     def receive_scenarios_fetched(self, db_map_data):
         pass
 
-    def receive_scenario_alternatives_fetched(self, db_map_data):
-        pass
-
     def receive_alternatives_fetched(self, db_map_data):
         pass
 
@@ -894,7 +891,9 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_parameter_value_list, Qt.Horizontal
         )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_relationship_tree, self.ui.dockWidget_alternative_tree, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
+        )
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -923,7 +922,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_relationship_tree, self.ui.dockWidget_alternative_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical)
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_object_parameter_value.hide()
         self.ui.dockWidget_object_parameter_definition.hide()
@@ -933,20 +932,22 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.parameter_tag_toolbar.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
         self.end_style_change()
 
     @Slot(bool)
     def apply_graph_style(self, checked=False):
         """Applies the graph style, inspired in the former graph view."""
         self.begin_style_change()
-        self.ui.dockWidget_parameter_value_list.hide()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_parameter_value_list, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_relationship_tree, self.ui.dockWidget_alternative_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
+        )
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,
@@ -955,9 +956,13 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
                 self.ui.dockWidget_relationship_parameter_definition,
             ]
         )
-        docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph]
+        docks = [
+            self.ui.dockWidget_object_tree,
+            self.ui.dockWidget_entity_graph,
+            self.ui.dockWidget_parameter_value_list,
+        ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.3 * width, 0.7 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)

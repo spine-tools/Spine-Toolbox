@@ -657,6 +657,8 @@ class TabularViewMixin:
                 break
 
     def receive_alternatives_updates(self, db_map_data):
+        if not self.pivot_table_model:
+            return
         self.refresh_table_view(self.ui.pivot_table)
         self.refresh_table_view(self.ui.frozen_table)
         self.make_pivot_headers()

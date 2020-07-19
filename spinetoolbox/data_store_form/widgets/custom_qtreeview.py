@@ -23,8 +23,8 @@ from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect
 
 
-class ItemTreeView(CopyTreeView):
-    """Custom QTreeView class for trees in DataStoreForm."""
+class EntityTreeView(CopyTreeView):
+    """Tree view base class for object and relationship tree views."""
 
     tree_selection_changed = Signal(dict)
 
@@ -33,9 +33,12 @@ class ItemTreeView(CopyTreeView):
         super().__init__(parent=parent)
         self._selected_indexes = {}
         self._menu = QMenu(self)
+        self._data_store_form = None
         self._fully_expand_action = None
         self._fully_collapse_action = None
-        self._data_store_form = None
+        self._add_relationship_classes_action = None
+        self._add_relationships_action = None
+        self._manage_relationships_action = None
 
     def connect_data_store_form(self, data_store_form):
         """Connects a data store form to work with this view.
@@ -170,12 +173,6 @@ class ItemTreeView(CopyTreeView):
         relationship_class_key = item.display_id
         self._data_store_form.show_manage_relationships_form(relationship_class_key=relationship_class_key)
 
-    def update_actions_visibility(self, item):
-        """Updates the visible property of actions according to whether or not they apply to given item."""
-        item_has_children = item.has_children()
-        self._fully_expand_action.setVisible(item_has_children)
-        self._fully_collapse_action.setVisible(item_has_children)
-
     def contextMenuEvent(self, event):
         """Shows context menu.
 
@@ -217,21 +214,6 @@ class ItemTreeView(CopyTreeView):
         )
         super().mousePressEvent(new_event)
 
-    def edit_selected(self):
-        """Edits all selected indexes."""
-        raise NotImplementedError()
-
-
-class EntityTreeView(ItemTreeView):
-    """Tree view base class for object and relationship tree views."""
-
-    def __init__(self, parent):
-        """Initialize the view."""
-        super().__init__(parent=parent)
-        self._add_relationship_classes_action = None
-        self._add_relationships_action = None
-        self._manage_relationships_action = None
-
     def _add_relationship_actions(self):
         self._add_relationship_classes_action = self._menu.addAction(
             self._data_store_form.ui.actionAdd_relationship_classes.icon(),
@@ -249,10 +231,11 @@ class EntityTreeView(ItemTreeView):
 
     def update_actions_visibility(self, item):
         """Updates the visible property of actions according to whether or not they apply to given item."""
-        is_relationship_class = item.item_type == "relationship class"
-        self._add_relationships_action.setVisible(is_relationship_class)
-        self._manage_relationships_action.setVisible(is_relationship_class)
-        super().update_actions_visibility(item)
+        item_has_children = item.has_children()
+        self._fully_expand_action.setVisible(item_has_children)
+        self._fully_collapse_action.setVisible(item_has_children)
+        self._add_relationships_action.setVisible(item.item_type == "relationship class")
+        self._manage_relationships_action.setVisible(item.item_type == "relationship class")
 
     def edit_selected(self):
         """Edits all selected indexes using the connected data store form."""
@@ -364,7 +347,6 @@ class RelationshipTreeView(EntityTreeView):
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)
         self._add_relationship_classes_action.setVisible(item.item_type == "root")
-        self._manage_relationships_action.setVisible(item.item_type == "relationship class")
 
     def add_relationship_classes(self):
         self._data_store_form.show_add_relationship_classes_form()
@@ -376,53 +358,7 @@ class RelationshipTreeView(EntityTreeView):
         self._data_store_form.show_add_relationships_form(relationship_class_key=relationship_class_key)
 
 
-class AlternativeScenarioTreeView(ItemTreeView):
-    """Custom QTreeView class for the alternative scenario tree in DataStoreForm."""
-
-    def __init__(self, parent):
-        """Initialize the view."""
-        super().__init__(parent=parent)
-        self.add_alternative_action = None
-        self.add_scenario_action = None
-        self.add_scenario_alternative_action = None
-
-    def _add_middle_actions(self):
-        self.add_alternative_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_alternatives.icon(), "Add alternatives", self.add_alternatives
-        )
-        self.add_scenario_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_scenarios.icon(), "Add scenarios", self.add_scenarios
-        )
-        self.add_scenario_alternative_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_scenario_alternatives.icon(),
-            "Add alternatives to scenarios",
-            self.add_scenario_alternatives,
-        )
-        self._menu.addSeparator()
-
-    def update_actions_visibility(self, item):
-        super().update_actions_visibility(item)
-        self.add_alternative_action.setVisible(item.item_type == "alternative root")
-        self.add_scenario_action.setVisible(item.item_type == "scenario root")
-        self.add_scenario_alternative_action.setVisible(item.item_type == "scenario")
-
-    def edit_selected(self):
-        """Edits all selected indexes using the connected data store form."""
-        self._data_store_form.edit_alternative_scenario_items(self._selected_indexes)
-
-    def add_alternatives(self):
-        self._data_store_form.show_add_alternatives_form()
-
-    def add_scenarios(self):
-        self._data_store_form.show_add_scenarios_form()
-
-    def add_scenario_alternatives(self):
-        index = self.currentIndex()
-        item = index.internalPointer()
-        self._data_store_form.show_add_scenario_alternatives_form(scenario_name=item.display_data)
-
-
-class ParameterValueListTreeView(CopyTreeView):
+class ItemTreeView(CopyTreeView):
     """Custom QTreeView class for parameter value list in DataStoreForm.
     """
 
@@ -431,7 +367,24 @@ class ParameterValueListTreeView(CopyTreeView):
         super().__init__(parent=parent)
         self._data_store_form = None
         self._menu = QMenu(self)
-        self.open_in_editor_action = None
+        self.connect_signals()
+
+    def connect_signals(self):
+        """Connects signals."""
+        self.expanded.connect(self._resize_first_column_to_contents)
+        self.collapsed.connect(self._resize_first_column_to_contents)
+
+    @Slot("QModelIndex")
+    def _resize_first_column_to_contents(self, _index=None):
+        self.resizeColumnToContents(0)
+
+    def remove_selected(self):
+        """Removes items selected in the view."""
+        raise NotImplementedError()
+
+    def update_actions_visibility(self, item):
+        """Updates the visible property of actions according to whether or not they apply to given item."""
+        raise NotImplementedError()
 
     def connect_data_store_form(self, data_store_form):
         self._data_store_form = data_store_form
@@ -441,16 +394,6 @@ class ParameterValueListTreeView(CopyTreeView):
         """Creates a context menu for this view."""
         self._menu.addAction(self._data_store_form.ui.actionCopy)
         self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
-        self.open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
-
-    def open_in_editor(self):
-        """Opens the parameter value editor for the first selected cell."""
-        index = self.currentIndex()
-        self._data_store_form.show_parameter_value_editor(index)
-
-    def update_actions_visibility(self, item):
-        """Updates the visible property of actions according to whether or not they apply to given item."""
-        self.open_in_editor_action.setVisible(item.item_type == "value")
 
     def contextMenuEvent(self, event):
         """Shows context menu.
@@ -465,7 +408,44 @@ class ParameterValueListTreeView(CopyTreeView):
         self.update_actions_visibility(item)
         self._menu.exec_(event.globalPos())
 
+
+class AlternativeScenarioTreeView(ItemTreeView):
+    """Custom QTreeView class for the alternative scenario tree in DataStoreForm."""
+
     def remove_selected(self):
+        """See base class."""
+        raise NotImplementedError()
+
+    def update_actions_visibility(self, item):
+        """See base class."""
+        raise NotImplementedError()
+
+
+class ParameterValueListTreeView(ItemTreeView):
+    """Custom QTreeView class for parameter value list in DataStoreForm.
+    """
+
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self.open_in_editor_action = None
+
+    def create_context_menu(self):
+        """Creates a context menu for this view."""
+        super().create_context_menu()
+        self.open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
+
+    def update_actions_visibility(self, item):
+        """See base class."""
+        self.open_in_editor_action.setVisible(item.item_type == "value")
+
+    def open_in_editor(self):
+        """Opens the parameter value editor for the first selected cell."""
+        index = self.currentIndex()
+        self._data_store_form.show_parameter_value_editor(index)
+
+    def remove_selected(self):
+        """See base class."""
         if not self.selectionModel().hasSelection():
             return
         db_map_typed_data_to_rm = {}

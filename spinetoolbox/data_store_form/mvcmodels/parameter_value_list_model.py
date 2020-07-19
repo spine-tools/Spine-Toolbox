@@ -17,121 +17,38 @@ A tree model for parameter value lists.
 """
 
 from PySide2.QtCore import Qt, QModelIndex
-from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinedb_api import to_database
-from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from spinetoolbox.helpers import try_number_from_string
+from .tree_item_utility import (
+    EmptyChildMixin,
+    LastGrayMixin,
+    AllBoldMixin,
+    EditableMixin,
+    NonLazyTreeItem,
+    NonLazyDBItem,
+)
 
 
-class ValueListTreeItem(TreeItem):
-    """A tree item that can fetch its children."""
-
-    @property
-    def item_type(self):
-        raise NotImplementedError()
-
-    @property
-    def db_mngr(self):
-        return self.model.db_mngr
-
-    def can_fetch_more(self):
-        """Disables lazy loading by returning False."""
-        return False
-
-    def insert_children(self, position, *children):
-        """Fetches the children as they become parented."""
-        if not super().insert_children(position, *children):
-            return False
-        for child in children:
-            child.fetch_more()
-        return True
-
-
-class EditableMixin:
-    def flags(self, column):
-        """Makes items editable."""
-        return Qt.ItemIsEditable | super().flags(column)
-
-
-class GrayFontMixin:
-    """Paints the text gray."""
-
-    def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.ForegroundRole and self.child_number() == self.parent_item.child_count() - 1:
-            gray_color = QGuiApplication.palette().text().color()
-            gray_color.setAlpha(128)
-            gray_brush = QBrush(gray_color)
-            return gray_brush
-        return super().data(column, role)
-
-
-class BoldFontMixin:
-    """Bolds text."""
-
-    def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.FontRole:
-            bold_font = QFont()
-            bold_font.setBold(True)
-            return bold_font
-        return super().data(column, role)
-
-
-class AppendEmptyChildMixin:
-    """Provides a method to append an empty child if needed."""
-
-    def append_empty_child(self, row):
-        """Append empty child if the row is the last one."""
-        if row == self.child_count() - 1:
-            empty_child = self.empty_child()
-            self.append_children(empty_child)
-
-
-class DBItem(AppendEmptyChildMixin, ValueListTreeItem):
+class DBItem(EmptyChildMixin, NonLazyDBItem):
     """An item representing a db."""
 
-    def __init__(self, db_map):
-        """Init class.
-
-        Args
-            db_mngr (SpineDBManager)
-            db_map (DiffDatabaseMapping)
-        """
-        super().__init__()
-        self.db_map = db_map
-
-    @property
-    def item_type(self):
-        return "db"
-
-    def fetch_more(self):
-        empty_child = self.empty_child()
-        self.append_children(empty_child)
-        self._fetched = True
-
     def empty_child(self):
-        return ListItem(self.db_map)
-
-    def data(self, column, role=Qt.DisplayRole):
-        """Shows Spine icon for fun."""
-        if role == Qt.DecorationRole:
-            return QIcon(":/symbols/Spine_symbol.png")
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return f"root ({self.db_map.codename})"
-
-    def set_data(self, column, value, role):
-        """See base class."""
-        raise NotImplementedError()
+        return ListItem()
 
 
-class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixin, ValueListTreeItem):
+class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
     """A list item."""
 
-    def __init__(self, db_map, identifier=None):
+    def __init__(self, identifier=None):
         super().__init__()
-        self.db_map = db_map
         self.id = identifier
         self._name = "Type new list name here..."
+
+    @property
+    def db_map(self):
+        return self.parent_item.db_map
 
     @property
     def item_type(self):
@@ -170,7 +87,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             return False
         if self.id:
             self.update_name_in_db(value)
-            return False
+            return True
         self._name = value
         self.parent_item.append_empty_child(self.child_number())
         self.append_children(self.empty_child())
@@ -229,7 +146,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             self.remove_children(value_count, removed_count)
 
 
-class ValueItem(GrayFontMixin, EditableMixin, ValueListTreeItem):
+class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
     """A value item."""
 
     def __init__(self, is_empty=False):
@@ -296,7 +213,7 @@ class ParameterValueListModel(MinimalTreeModel):
                     continue
                 list_item.handle_added_to_db(identifier=id_)
             # Now append the ones added externally
-            children = [ListItem(db_item.db_map, id_) for id_ in ids.values()]
+            children = [ListItem(id_) for id_ in ids.values()]
             db_item.insert_children(db_item.child_count() - 1, *children)
 
     def receive_parameter_value_lists_updated(self, db_map_data):
@@ -329,7 +246,7 @@ class ParameterValueListModel(MinimalTreeModel):
     def build_tree(self):
         """Initialize the internal data structure of the model."""
         self.beginResetModel()
-        self._invisible_root_item = ValueListTreeItem(self)
+        self._invisible_root_item = NonLazyTreeItem(self)
         self.endResetModel()
         db_items = [DBItem(db_map) for db_map in self.db_maps]
         self._invisible_root_item.append_children(*db_items)

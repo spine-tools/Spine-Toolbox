@@ -28,7 +28,6 @@ class SpineDBFetcher(QObject):
     _ready_to_finish = Signal()
     _scenarios_fetched = Signal(object)
     _alternatives_fetched = Signal(object)
-    _scenario_alternatives_fetched = Signal(object)
     _object_classes_fetched = Signal(object)
     _objects_fetched = Signal(object)
     _relationship_classes_fetched = Signal(object)
@@ -60,7 +59,6 @@ class SpineDBFetcher(QObject):
         self._ready_to_finish.connect(self._emit_finished_signal)
         self._alternatives_fetched.connect(self._receive_alternatives_fetched)
         self._scenarios_fetched.connect(self._receive_scenarios_fetched)
-        self._scenario_alternatives_fetched.connect(self._receive_scenario_alternatives_fetched)
         self._object_classes_fetched.connect(self._receive_object_classes_fetched)
         self._objects_fetched.connect(self._receive_objects_fetched)
         self._relationship_classes_fetched.connect(self._receive_relationship_classes_fetched)
@@ -98,8 +96,6 @@ class SpineDBFetcher(QObject):
         self._alternatives_fetched.emit(alternatives)
         scenarios = {x: self._db_mngr.get_scenarios(x) for x in db_maps}
         self._scenarios_fetched.emit(scenarios)
-        scenario_alternatives = {x: self._db_mngr.get_scenario_alternatives(x) for x in db_maps}
-        self._scenario_alternatives_fetched.emit(scenario_alternatives)
         self._ready_to_finish.emit()
 
     def clean_up(self):
@@ -120,11 +116,6 @@ class SpineDBFetcher(QObject):
     def _receive_scenarios_fetched(self, db_map_data):
         self._db_mngr.cache_items("scenario", db_map_data)
         self._listener.receive_scenarios_fetched(db_map_data)
-
-    @Slot(object)
-    def _receive_scenario_alternatives_fetched(self, db_map_data):
-        self._db_mngr.cache_items("scenario_alternative", db_map_data)
-        self._listener.receive_scenario_alternatives_fetched(db_map_data)
 
     @Slot(object)
     def _receive_object_classes_fetched(self, db_map_data):
