@@ -91,10 +91,6 @@
     <addaction name="actionAdd_relationships"/>
     <addaction name="actionManage_relationships"/>
     <addaction name="separator"/>
-    <addaction name="actionAdd_alternatives"/>
-    <addaction name="actionAdd_scenarios"/>
-    <addaction name="actionAdd_scenario_alternatives"/>
-    <addaction name="separator"/>
     <addaction name="actionEdit_selected"/>
     <addaction name="separator"/>
     <addaction name="actionRemove_selected"/>
@@ -1272,33 +1268,6 @@
    </property>
    <property name="shortcut">
     <string>F1</string>
-   </property>
-  </action>
-  <action name="actionAdd_alternatives">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/map-signs-plus.svg</normaloff>:/icons/menu_icons/map-signs-plus.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add alternatives</string>
-   </property>
-  </action>
-  <action name="actionAdd_scenarios">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/film-plus.svg</normaloff>:/icons/menu_icons/film-plus.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add scenarios</string>
-   </property>
-  </action>
-  <action name="actionAdd_scenario_alternatives">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/film-plus.svg</normaloff>:/icons/menu_icons/film-plus.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add alternatives to scenarios</string>
    </property>
   </action>
  </widget>

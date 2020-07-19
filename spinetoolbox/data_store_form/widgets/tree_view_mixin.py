@@ -18,25 +18,19 @@ Contains the TreeViewMixin class.
 from PySide2.QtCore import Signal, Slot, QTimer
 from PySide2.QtWidgets import QInputDialog
 from .add_items_dialogs import (
-    AddAlternativesDialog,
     AddObjectClassesDialog,
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
     AddObjectGroupDialog,
-    AddScenariosDialog,
-    AddScenarioAlternativesDialog,
     ManageRelationshipsDialog,
     ManageObjectGroupDialog,
 )
 from .edit_or_remove_items_dialogs import (
-    EditAlternativesDialog,
     EditObjectClassesDialog,
     EditObjectsDialog,
     EditRelationshipClassesDialog,
     EditRelationshipsDialog,
-    EditScenarioAlternativesDialog,
-    EditScenariosDialog,
     RemoveEntitiesDialog,
 )
 from ..mvcmodels.alternative_scenario_model import AlternativeScenarioModel
@@ -86,9 +80,6 @@ class TreeViewMixin:
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
         self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
-        self.ui.actionAdd_alternatives.triggered.connect(self.show_add_alternatives_form)
-        self.ui.actionAdd_scenarios.triggered.connect(self.show_add_scenarios_form)
-        self.ui.actionAdd_scenario_alternatives.triggered.connect(self.show_add_scenario_alternatives_form)
         self._alternatives_fetched.connect(self._expand_alternative_roots)
         self._scenarios_fetched.connect(self._expand_scenario_roots)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
@@ -249,24 +240,6 @@ class TreeViewMixin:
         )
         dialog.show()
 
-    @Slot(bool)
-    def show_add_alternatives_form(self, checked=False):
-        """Shows dialog to let user select preferences for new alternative."""
-        dialog = AddAlternativesDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
-
-    @Slot(bool)
-    def show_add_scenarios_form(self, checked=False):
-        """Shows dialog to let user select preferences for new scenario."""
-        dialog = AddScenariosDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
-
-    @Slot(bool)
-    def show_add_scenario_alternatives_form(self, checked=False, scenario_name=None):
-        """Shows dialog to let user select preferences for new scenario alternatives."""
-        dialog = AddScenarioAlternativesDialog(self, self.db_mngr, *self.db_maps, scenario_name=scenario_name)
-        dialog.show()
-
     def show_add_relationships_form(self, checked=False, relationship_class_key=None, object_names_by_class_name=None):
         """Shows dialog to add new relationships."""
         dialog = AddRelationshipsDialog(
@@ -285,24 +258,6 @@ class TreeViewMixin:
         )
         dialog.show()
 
-    def show_edit_alternatives_form(self, items):
-        if not items:
-            return
-        dialog = EditAlternativesDialog(self, self.db_mngr, items)
-        dialog.show()
-
-    def show_edit_scenarios_form(self, items):
-        if not items:
-            return
-        dialog = EditScenariosDialog(self, self.db_mngr, items)
-        dialog.show()
-
-    def show_edit_scenario_alternatives_form(self, items):
-        if not items:
-            return
-        dialog = EditScenarioAlternativesDialog(self, self.db_mngr, items)
-        dialog.show()
-
     def edit_entity_tree_items(self, selected_indexes):
         """Starts editing given indexes."""
         obj_cls_items = {ind.internalPointer() for ind in selected_indexes.get("object class", {})}
@@ -313,15 +268,6 @@ class TreeViewMixin:
         self.show_edit_objects_form(obj_items)
         self.show_edit_relationship_classes_form(rel_cls_items)
         self.show_edit_relationships_form(rel_items)
-
-    def edit_alternative_scenario_items(self, selected_indexes):
-        """Starts editing given indexes."""
-        alternatives = {ind.internalPointer() for ind in selected_indexes.get("alternative", {})}
-        scenarios = {ind.internalPointer() for ind in selected_indexes.get("scenario", {})}
-        scenario_alternatives = {ind.internalPointer() for ind in selected_indexes.get("scenario_alternative", {})}
-        self.show_edit_alternatives_form(alternatives)
-        self.show_edit_scenarios_form(scenarios)
-        self.show_edit_scenario_alternatives_form(scenario_alternatives)
 
     def show_edit_object_classes_form(self, items):
         if not items:

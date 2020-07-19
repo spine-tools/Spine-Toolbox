@@ -41,11 +41,7 @@ from PySide2.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...widgets.custom_delegates import CheckBoxDelegate
 from .custom_delegates import (
-    ManageItemsDelegate,
-    CheckDBListDelegate,
-    ManageScenarioAlternativesDelegate,
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
     ManageRelationshipClassesDelegate,
@@ -53,7 +49,6 @@ from .custom_delegates import (
 )
 from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
-    GetAlternativesAndScenariosMixin,
     GetObjectClassesMixin,
     GetObjectsMixin,
     GetRelationshipClassesMixin,
@@ -171,190 +166,6 @@ class AddItemsDialog(ManageItemsDialog):
         Used by delegates.
         """
         return [x.codename for x in self.db_maps]
-
-
-class AddAlternativesDialog(AddItemsDialog):
-    """A dialog to query user's preferences for new alternatives."""
-
-    def __init__(self, parent, db_mngr, *db_maps):
-        """
-        Args:
-            parent (DataStoreForm)
-            db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
-        """
-        super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add alternatives")
-        self.model = EmptyRowModel(self)
-        self.table_view.setModel(self.model)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/map-signs-minus.svg"))
-        self.table_view.setItemDelegate(ManageItemsDelegate(self))
-        self.connect_signals()
-        self.model.set_horizontal_header_labels(['alternative name', 'description', 'databases'])
-        databases = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'databases': databases})
-        self.model.clear()
-
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to add items."""
-        db_map_data = dict()
-        for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = self.model.row_data(i)
-            name, description, db_names = row_data
-            db_name_list = db_names.split(",")
-            try:
-                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
-            except KeyError as e:
-                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
-                return
-            if not name:
-                self.parent().msg_error.emit("Alternative name missing at row {0}".format(i + 1))
-                return
-            item = {'name': name, 'description': description}
-            for db_map in db_maps:
-                db_map_data.setdefault(db_map, []).append(item)
-        if not db_map_data:
-            self.parent().msg_error.emit("Nothing to add")
-            return
-        self.db_mngr.add_alternatives(db_map_data)
-        super().accept()
-
-
-class AddScenariosDialog(AddItemsDialog):
-    """A dialog to query user's preferences for new scenarios."""
-
-    def __init__(self, parent, db_mngr, *db_maps):
-        """
-        Args:
-            parent (DataStoreForm)
-            db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
-        """
-        super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add scenarios")
-        self.model = EmptyRowModel(self)
-        self.model.set_horizontal_header_labels(['scenario name', 'description', 'active', 'databases'])
-        self.table_view.setModel(self.model)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/film-minus.svg"))
-        self.table_view.setItemDelegateForColumn(2, CheckBoxDelegate(self))
-        self.table_view.setItemDelegateForColumn(3, CheckDBListDelegate(self))
-        self.connect_signals()
-        databases = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'databases': databases, 'active': False})
-        self.model.clear()
-
-    def connect_signals(self):
-        super().connect_signals()
-        self.table_view.itemDelegateForColumn(2).data_committed.connect(self.set_model_data)
-        self.table_view.itemDelegateForColumn(3).data_committed.connect(self.set_model_data)
-
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to add items."""
-        db_map_data = dict()
-        for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = self.model.row_data(i)
-            name, description, active, db_names = row_data
-            db_name_list = db_names.split(",")
-            try:
-                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
-            except KeyError as e:
-                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
-                return
-            if not name:
-                self.parent().msg_error.emit("Scenario name missing at row {0}".format(i + 1))
-                return
-            item = {'name': name, 'description': description, 'active': active}
-            for db_map in db_maps:
-                db_map_data.setdefault(db_map, []).append(item)
-        if not db_map_data:
-            self.parent().msg_error.emit("Nothing to add")
-            return
-        self.db_mngr.add_scenarios(db_map_data)
-        super().accept()
-
-
-class AddScenarioAlternativesDialog(GetAlternativesAndScenariosMixin, AddItemsDialog):
-    """A dialog to query user's preferences for new scenario alternatives."""
-
-    def __init__(self, parent, db_mngr, *db_maps, scenario_name=None):
-        """
-        Args:
-            parent (DataStoreForm)
-            db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
-            scenario_name (str): scenario's name
-        """
-        super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add alternatives to scenarios")
-        self.model = EmptyRowModel(self)
-        self.table_view.setModel(self.model)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/film-minus.svg"))
-        self.table_view.setItemDelegate(ManageScenarioAlternativesDelegate(self))
-        self.connect_signals()
-        self.model.set_horizontal_header_labels(['scenario name', 'alternative name', 'rank', 'databases'])
-        self.db_map_scenario_lookup = self.make_db_map_scenario_lookup()
-        self.db_map_alternative_lookup = self.make_db_map_alternative_lookup()
-        if scenario_name:
-            default_db_maps = [
-                db_map for db_map, names in self.db_map_scenario_lookup.items() if scenario_name in names
-            ]
-            db_names = ",".join(
-                [db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
-            )
-        else:
-            db_names = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'scenario name': scenario_name, 'databases': db_names})
-        self.model.clear()
-
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to add items."""
-        db_map_data = dict()
-        alternative_ids = {
-            db_map: {item["name"]: item["id"] for item in self.db_mngr.get_items(db_map, "alternative")}
-            for db_map in self.db_maps
-        }
-        scenario_ids = {
-            db_map: {item["name"]: item["id"] for item in self.db_mngr.get_items(db_map, "scenario")}
-            for db_map in self.db_maps
-        }
-        for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = self.model.row_data(i)
-            scenario_name, alternative_name, rank, db_names = row_data
-            db_name_list = db_names.split(",")
-            try:
-                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
-            except KeyError as e:
-                self.parent().msg_error.emit(f"Invalid database {e} at row {i + 1}")
-                return
-            if not scenario_name:
-                self.parent().msg_error.emit(f"Scenario name missing at row {i + 1}")
-                return
-            if not isinstance(rank, int) and not rank:
-                self.parent().msg_error.emit(f"Rank missing at row {i + 1}")
-                return
-            item = {"rank": rank}
-            for db_map in db_maps:
-                try:
-                    alternative_id = alternative_ids[db_map][alternative_name]
-                except KeyError:
-                    self.parent().msg_error.emit(f"Alternative at row {i + 1} does not exist")
-                    return
-                item["alternative_id"] = alternative_id
-                try:
-                    scenario_id = scenario_ids[db_map][scenario_name]
-                except KeyError:
-                    self.parent().msg_error.emit(f"Scenario at row {i + 1} does not exist")
-                    return
-                item["scenario_id"] = scenario_id
-                db_map_data.setdefault(db_map, []).append(item)
-        if not db_map_data:
-            self.parent().msg_error.emit("Nothing to add")
-            return
-        self.db_mngr.add_scenario_alternatives(db_map_data)
-        super().accept()
 
 
 class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):

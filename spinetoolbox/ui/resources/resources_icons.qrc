@@ -13,12 +13,7 @@
   </qresource>
   <qresource prefix="/icons">
     <file>menu_icons/pivot-table.svg</file>
-    <file>menu_icons/film-minus.svg</file>
     <file>menu_icons/table.svg</file>
-    <file>menu_icons/film-plus.svg</file>
-    <file>menu_icons/film-plus.svg</file>
-    <file>menu_icons/map-signs-plus.svg</file>
-    <file>menu_icons/map-signs-minus.svg</file>
     <file>menu_icons/history.svg</file>
     <file>menu_icons/level-up-alt.svg</file>
     <file>book.svg</file>
