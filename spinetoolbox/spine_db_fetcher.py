@@ -162,7 +162,6 @@ class SpineDBFetcher(QObject):
 
     @Slot(object)
     def _receive_parameter_definition_tags_fetched(self, db_map_data):
-        print(db_map_data)
         self._db_mngr.cache_items("parameter_definition_tag", db_map_data)
 
     @Slot(object)

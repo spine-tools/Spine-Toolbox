@@ -1383,6 +1383,12 @@ class SpineDBManager(QObject):
             ids_per_type = db_map.cascading_ids(**ids_per_type)
             self.undo_stack[db_map].push(RemoveItemsCommand(self, db_map, ids_per_type))
 
+    def do_cascade_remove_items(self, db_map_typed_ids):
+        db_map_typed_ids = {
+            db_map: db_map.cascading_ids(**ids_per_type) for db_map, ids_per_type in db_map_typed_ids.items()
+        }
+        self.do_remove_items(db_map_typed_ids)
+
     @busy_effect
     def do_remove_items(self, db_map_typed_ids):
         """Removes items from database.
@@ -1395,7 +1401,7 @@ class SpineDBManager(QObject):
             try:
                 db_map.remove_items(**ids_per_type)
             except SpineDBAPIError as err:
-                error_log[db_map] = err
+                error_log[db_map] = [err]
                 continue
         if any(error_log.values()):
             self.error_msg(error_log)

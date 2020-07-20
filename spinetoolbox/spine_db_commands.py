@@ -303,7 +303,7 @@ class AddItemsCommand(SpineDBCommand):
         self.completed_signal_name = self._added_signal_name[item_type]
         self.completed_signal = getattr(db_mngr, self.completed_signal_name)
         self.setText(self._add_command_name[item_type] + f" to '{db_map.codename}'")
-        self.undo_db_map_data = None
+        self.undo_db_map_typed_ids = None
 
     @SpineDBCommand.redomethod
     def redo(self):
@@ -313,7 +313,7 @@ class AddItemsCommand(SpineDBCommand):
 
     @SpineDBCommand.undomethod
     def undo(self):
-        self.db_mngr.do_remove_items(self.undo_db_map_data)
+        self.db_mngr.do_cascade_remove_items(self.undo_db_map_typed_ids)
 
     @Slot(object)
     def receive_items_changed(self, db_map_data):
@@ -322,10 +322,12 @@ class AddItemsCommand(SpineDBCommand):
             db_map: [_cache_to_db_item(self.item_type, item) for item in data] for db_map, data in db_map_data.items()
         }
         self.method_name = self._readd_method_name[self.item_type]
-        self.undo_db_map_data = {db_map: {self.item_type: data} for db_map, data in db_map_data.items()}
+        self.undo_db_map_typed_ids = {
+            db_map: {self.item_type: {x["id"] for x in data}} for db_map, data in db_map_data.items()
+        }
 
     def data(self):
-        return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map][self.item_type]}
+        return {_format_item(self.item_type, item): [] for item in self.redo_db_map_data[self.db_map]}
 
 
 class AddCheckedParameterValuesCommand(AddItemsCommand):
