@@ -1001,8 +1001,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
                     item = relationship_to_add(header_ids)
                     to_add.append(item)
                 elif data[i][j] is not None and not values[row, column]:
-                    item = self.db_mngr.get_item(self.db_map, "relationship", data[i][j])
-                    to_remove.append(item)
+                    to_remove.append(data[i][j])
         if not to_add and not to_remove:
             return False
         if to_add:

@@ -300,8 +300,8 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             check_box = self.check_boxes[i]
             if check_box.isChecked():
                 for db_map in db_maps:
-                    parameter_tag = self.items[i][db_map]
-                    db_map_typed_data_to_rm.setdefault(db_map, {}).setdefault("parameter_tag", []).append(parameter_tag)
+                    id_ = self.items[i][db_map]["id"]
+                    db_map_typed_data_to_rm.setdefault(db_map, {}).setdefault("parameter_tag", set()).add(id_)
                 continue
             if not tag:
                 self.parent().msg_error.emit("Tag missing at row {}".format(i + 1))

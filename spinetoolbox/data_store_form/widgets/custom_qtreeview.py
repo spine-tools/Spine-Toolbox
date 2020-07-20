@@ -420,18 +420,14 @@ class AlternativeScenarioTreeView(ItemTreeView):
         db_map_scen_alt_data = {}
         items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
         for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"alternative": [], "scenario": []}
+            db_map_typed_data_to_rm[db_item.db_map] = {"alternative": set(), "scenario": set()}
             db_map_scen_alt_data[db_item.db_map] = []
             for alt_item in reversed(db_item.child(0).children[:-1]):
                 if alt_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["alternative"].append(
-                        {"id": alt_item.id, "name": alt_item.name}
-                    )
+                    db_map_typed_data_to_rm[db_item.db_map]["alternative"].add(alt_item.id)
             for scen_item in reversed(db_item.child(1).children[:-1]):
                 if scen_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["scenario"].append(
-                        {"id": scen_item.id, "name": scen_item.name}
-                    )
+                    db_map_typed_data_to_rm[db_item.db_map]["scenario"].add(scen_item.id)
                     continue
                 curr_alt_id_list = scen_item.alternative_id_list
                 new_alt_id_list = [
@@ -482,14 +478,12 @@ class ParameterValueListTreeView(ItemTreeView):
         db_map_data_to_upd = {}
         items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
         for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_value_list": []}
+            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_value_list": set()}
             db_map_data_to_upd[db_item.db_map] = []
             for list_item in reversed(db_item.children[:-1]):
                 if list_item.id:
                     if list_item in items:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].append(
-                            {"id": list_item.id, "name": list_item.name}
-                        )
+                        db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
                         continue
                     curr_value_list = list_item.value_list
                     new_value_list = [
@@ -498,9 +492,7 @@ class ParameterValueListTreeView(ItemTreeView):
                         if value_item not in items
                     ]
                     if not new_value_list:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].append(
-                            {"id": list_item.id, "name": list_item.name}
-                        )
+                        db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
                         continue
                     if new_value_list != curr_value_list:
                         item = {"id": list_item.id, "value_list": new_value_list}

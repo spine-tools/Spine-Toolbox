@@ -398,7 +398,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to remove items."""
-        db_map_data = dict()
+        db_map_typed_data = dict()
         for i in range(self.model.rowCount()):
             item_type, _, db_names = self.model.row_data(i)
             if db_names is None:
@@ -414,10 +414,10 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
             for db_map in db_maps:
-                data = item.db_map_data(db_map)
-                db_map_data.setdefault(db_map, {}).setdefault(item_type, []).append(data)
-        if not db_map_data:
+                id_ = item.db_map_id(db_map)
+                db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, set()).add(id_)
+        if not any(db_map_typed_data.values()):
             self.parent().msg_error.emit("Nothing to remove")
             return
-        self.db_mngr.remove_items(db_map_data)
+        self.db_mngr.remove_items(db_map_typed_data)
         super().accept()

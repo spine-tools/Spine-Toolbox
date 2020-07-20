@@ -122,8 +122,8 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_value": "add parameter values",
         "parameter_value_list": "add parameter_value lists",
         "parameter_tag": "add parameter tags",
-        "scenario": "add scenario",
         "alternative": "add alternative",
+        "scenario": "add scenario",
     }
     _update_command_name = {
         "object_class": "update object classes",
@@ -134,8 +134,8 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_value": "update parameter values",
         "parameter_value_list": "update parameter_value lists",
         "parameter_tag": "update parameter tags",
-        "scenario": "update scenario",
         "alternative": "update alternative",
+        "scenario": "update scenario",
     }
     _add_method_name = {
         "object_class": "add_object_classes",
@@ -147,8 +147,8 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_value": "add_parameter_values",
         "parameter_value_list": "add_wide_parameter_value_lists",
         "parameter_tag": "add_parameter_tags",
-        "scenario": "add_scenarios",
         "alternative": "add_alternatives",
+        "scenario": "add_scenarios",
     }
     _readd_method_name = {
         "object_class": "readd_object_classes",
@@ -157,11 +157,13 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship": "readd_wide_relationships",
         "entity_group": "readd_entity_groups",
         "parameter_definition": "readd_parameter_definitions",
+        "parameter_definition_tag": "readd_parameter_definition_tags",
         "parameter_value": "readd_parameter_values",
         "parameter_value_list": "readd_wide_parameter_value_lists",
         "parameter_tag": "readd_parameter_tags",
-        "scenario": "readd_scenarios",
         "alternative": "readd_alternatives",
+        "scenario": "readd_scenarios",
+        "scenario_alternative": "readd_scenario_alternatives",
     }
     _update_method_name = {
         "object_class": "update_object_classes",
@@ -172,8 +174,8 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_value": "update_parameter_values",
         "parameter_value_list": "update_wide_parameter_value_lists",
         "parameter_tag": "update_parameter_tags",
-        "scenario": "update_scenarios",
         "alternative": "update_alternatives",
+        "scenario": "update_scenarios",
     }
     _get_method_name = {
         "object_class": "get_object_classes",
@@ -182,11 +184,13 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship": "get_relationships",
         "entity_group": "get_entity_groups",
         "parameter_definition": "get_parameter_definitions",
+        "parameter_definition_tag": "get_parameter_definition_tags",
         "parameter_value": "get_parameter_values",
         "parameter_value_list": "get_parameter_value_lists",
         "parameter_tag": "get_parameter_tags",
-        "scenario": "get_scenarios",
         "alternative": "get_alternatives",
+        "scenario": "get_scenarios",
+        "scenario_alternative": "get_scenario_alternatives",
     }
     _added_signal_name = {
         "object_class": "object_classes_added",
@@ -195,11 +199,13 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship": "relationships_added",
         "entity_group": "entity_groups_added",
         "parameter_definition": "parameter_definitions_added",
+        "parameter_definition_tag": "_parameter_definition_tags_added",
         "parameter_value": "parameter_values_added",
         "parameter_value_list": "parameter_value_lists_added",
         "parameter_tag": "parameter_tags_added",
-        "scenario": "scenarios_added",
         "alternative": "alternatives_added",
+        "scenario": "scenarios_added",
+        "scenario_alternative": "_scenario_alternatives_added",
     }
     _updated_signal_name = {
         "object_class": "object_classes_updated",
@@ -210,8 +216,8 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_value": "parameter_values_updated",
         "parameter_value_list": "parameter_value_lists_updated",
         "parameter_tag": "parameter_tags_updated",
-        "scenario": "scenarios_updated",
         "alternative": "alternatives_updated",
+        "scenario": "scenarios_updated",
     }
 
     def __init__(self, db_mngr, db_map, parent=None):
@@ -415,10 +421,10 @@ class SetParameterDefinitionTagsCommand(SpineDBCommand):
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = "set_parameter_definition_tags"
-        self.get_method_name = "get_parameter_definition_tags"
-        self.completed_signal_name = "parameter_definition_tags_set"
+        self.get_method_name = "get_parameter_definitions"
+        self.completed_signal_name = "parameter_definitions_updated"
         self.setText(f"set parameter_definition tags in '{db_map.codename}'")
-        self.completed_signal = self.db_mngr.parameter_definition_tags_set
+        self.completed_signal = self.db_mngr.parameter_definitions_updated
 
     def _undo_item(self, db_map, redo_item):
         undo_item = self.db_mngr.get_item(db_map, "parameter_definition", redo_item["parameter_definition_id"])
@@ -470,12 +476,12 @@ class RemoveItemsCommand(SpineDBCommand):
             self.db_mngr.add_or_update_items(db_map_data, method_name, get_method_name, emit_signal_name)
 
     @Slot(object)
-    def receive_items_changed(self, db_map_typed_data):  # pylint: disable=arguments-differ
-        super().receive_items_changed(db_map_typed_data)
-        typed_data = db_map_typed_data.get(self.db_map, {})
-        for item_type, data in typed_data.items():
-            data = [_cache_to_db_item(item_type, item) for item in data]
-            self.undo_typed_db_map_data.setdefault(item_type, {}).setdefault(self.db_map, []).extend(data)
+    def receive_items_changed(self, typed_db_map_data):  # pylint: disable=arguments-differ
+        super().receive_items_changed(typed_db_map_data)
+        self.undo_typed_db_map_data = {
+            item_type: {self.db_map: [_cache_to_db_item(item_type, item) for item in db_map_data.get(self.db_map, [])]}
+            for item_type, db_map_data in typed_db_map_data.items()
+        }
 
     def data(self):
         return {

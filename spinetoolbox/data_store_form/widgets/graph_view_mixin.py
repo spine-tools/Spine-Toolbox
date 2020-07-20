@@ -544,8 +544,8 @@ class GraphViewMixin:
             return
         db_map_typed_data = {self.db_map: {}}
         for item in self.selected_items:
-            db_item = item.db_representation
-            db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
+            id_ = item.entity_id
+            db_map_typed_data[self.db_map].setdefault(item.entity_type, []).add(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     @Slot(bool)
@@ -603,15 +603,15 @@ class GraphViewMixin:
     @Slot(bool)
     def clear_saved_positions(self, checked=False):
         entity_ids = {x.entity_id for x in self.selected_items}
-        vals_to_remove = [
-            p
+        value_ids_to_remove = [
+            p["id"]
             for p in self.db_mngr.get_items_by_field(
                 self.db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
             )
             if p["entity_id"] in entity_ids
         ]
-        if vals_to_remove:
-            self.db_mngr.remove_items({self.db_map: {"parameter_value": vals_to_remove}})
+        if value_ids_to_remove:
+            self.db_mngr.remove_items({self.db_map: {"parameter_value": value_ids_to_remove}})
         self.build_graph()
 
     @Slot(bool)

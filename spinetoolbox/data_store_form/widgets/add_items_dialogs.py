@@ -651,7 +651,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.remove_rows_button.setToolTip("<p>Remove selected relationships.</p>")
         self.remove_rows_button.setIconSize(QSize(24, 24))
         self.db_map = db_maps[0]
-        self.relationships = dict()
+        self.relationship_ids = dict()
         layout = self.header_widget.layout()
         self.db_combo_box = QComboBox(self)
         layout.addSpacing(32)
@@ -735,7 +735,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.model.set_horizontal_header_labels(object_class_name_list)
         self.existing_items_model.set_horizontal_header_labels(object_class_name_list)
         self.new_items_model.set_horizontal_header_labels(object_class_name_list)
-        self.relationships.clear()
+        self.relationship_ids.clear()
         for db_map in self.db_maps:
             relationship_classes = self.db_map_rel_cls_lookup[db_map]
             rel_cls = relationship_classes.get((self.class_name, self.object_class_name_list), None)
@@ -743,8 +743,8 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
                 continue
             for relationship in self.db_mngr.get_items_by_field(db_map, "relationship", "class_id", rel_cls["id"]):
                 key = tuple(relationship["object_name_list"].split(","))
-                self.relationships[key] = relationship
-        existing_items = list(self.relationships)
+                self.relationship_ids[key] = relationship["id"]
+        existing_items = list(self.relationship_ids)
         self.existing_items_model.reset_model(existing_items)
         self.model.refresh()
         self.model.modelReset.emit()
@@ -787,8 +787,8 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        keys_to_remove = set(self.relationships) - set(self.existing_items_model._main_data)
-        to_remove = [self.relationships[key] for key in keys_to_remove]
+        keys_to_remove = set(self.relationship_ids) - set(self.existing_items_model._main_data)
+        to_remove = [self.relationship_ids[key] for key in keys_to_remove]
         self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
         to_add = [[self.class_name, object_name_list] for object_name_list in self.new_items_model._main_data]
         self.db_mngr.import_data({self.db_map: {"relationships": to_add}}, command_text="Add relationships")
@@ -1010,7 +1010,7 @@ class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
         db_map_typed_data_to_remove = {
             self.db_map: {
                 "entity_group": [
-                    x for x in self.object_item.db_map_entity_groups(self.db_map) if x["member_id"] in removed
+                    x["id"] for x in self.object_item.db_map_entity_groups(self.db_map) if x["member_id"] in removed
                 ]
             }
         }

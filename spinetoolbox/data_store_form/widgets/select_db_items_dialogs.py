@@ -100,7 +100,7 @@ class MassRemoveItemsDialog(SelectDBItemsDialog):
     def accept(self):
         db_map_typed_data = {
             db_map: {
-                item_type: list(self.db_mngr.get_items(db_map, item_type))
+                item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type)}
                 for item_type, check_box in self.item_check_boxes.items()
                 if check_box.isChecked()
             }

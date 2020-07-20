@@ -204,8 +204,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
                 model.empty_model.removeRow(sub_row)
             else:
                 id_ = model.item_at_row(row)
-                item = model.db_mngr.get_item(db_map, model.item_type, id_)
-                db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(item)
+                db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
 
@@ -349,32 +348,29 @@ class PivotTableView(CopyPasteTableView):
             column_mask.add(column)
         data = self.source_model.model.get_pivoted_data(row_mask, column_mask)
         ids = {item for row in data for item in row if item is not None}
-        parameter_values = [self.db_mngr.get_item(self.db_map, "parameter_value", id_) for id_ in ids]
-        db_map_typed_data = {self.db_map: {"parameter_value": parameter_values}}
+        db_map_typed_data = {self.db_map: {"parameter_value": ids}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_objects(self):
         ids = {self.source_model._header_id(index) for index in self._selected_entity_indexes}
-        objects = [self.db_mngr.get_item(self.db_map, "object", id_) for id_ in ids]
-        db_map_typed_data = {self.db_map: {"object": objects}}
+        db_map_typed_data = {self.db_map: {"object": ids}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_relationships(self):
         if self.model().sourceModel().item_type != "relationship":
             return
-        rels_by_object_ids = {rel["object_id_list"]: rel for rel in self._data_store_form._get_entities()}
-        relationships = []
+        rel_ids_by_object_ids = {rel["object_id_list"]: rel["id"] for rel in self._data_store_form._get_entities()}
+        relationship_ids = {}
         for index in self._selected_entity_indexes:
             object_ids, _ = self.source_model.object_and_parameter_ids(index)
             object_ids = ",".join([str(id_) for id_ in object_ids])
-            relationships.append(rels_by_object_ids[object_ids])
-        db_map_typed_data = {self.db_map: {"relationship": relationships}}
+            relationship_ids.add(rel_ids_by_object_ids[object_ids])
+        db_map_typed_data = {self.db_map: {"relationship": relationship_ids}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_parameters(self):
         ids = {self.source_model._header_id(index) for index in self._selected_parameter_indexes}
-        parameters = [self.db_mngr.get_item(self.db_map, "parameter_definition", id_) for id_ in ids]
-        db_map_typed_data = {self.db_map: {"parameter_definition": parameters}}
+        db_map_typed_data = {self.db_map: {"parameter_definition": ids}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def open_in_editor(self):
