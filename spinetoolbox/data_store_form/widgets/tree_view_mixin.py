@@ -352,10 +352,6 @@ class TreeViewMixin:
         super().receive_scenarios_added(db_map_data)
         self.alternative_scenario_model.add_scenarios(db_map_data)
 
-    def receive_scenario_alternatives_added(self, db_map_data):
-        super().receive_scenarios_added(db_map_data)
-        self.alternative_scenario_model.add_scenario_alternatives(db_map_data)
-
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
         self.object_tree_model.add_object_classes(db_map_data)
@@ -383,10 +379,6 @@ class TreeViewMixin:
     def receive_scenarios_updated(self, db_map_data):
         super().receive_scenarios_updated(db_map_data)
         self.alternative_scenario_model.update_scenarios(db_map_data)
-
-    def receive_scenario_alternatives_updated(self, db_map_data):
-        super().receive_scenario_alternatives_updated(db_map_data)
-        self.alternative_scenario_model.update_scenario_alternatives(db_map_data)
 
     def receive_entity_groups_added(self, db_map_data):
         super().receive_entity_groups_added(db_map_data)
@@ -418,10 +410,6 @@ class TreeViewMixin:
     def receive_scenarios_removed(self, db_map_data):
         super().receive_scenarios_removed(db_map_data)
         self.alternative_scenario_model.remove_scenarios(db_map_data)
-
-    def receive_scenario_alternatives_removed(self, db_map_data):
-        super().receive_scenarios_removed(db_map_data)
-        self.alternative_scenario_model.remove_scenario_alternatives(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         super().receive_object_classes_removed(db_map_data)

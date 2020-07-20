@@ -124,7 +124,6 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter tag": "add parameter tags",
         "scenario": "add scenario",
         "alternative": "add alternative",
-        "scenario_alternative": "add scenario alternative",
     }
     _update_command_name = {
         "object class": "update object classes",
@@ -137,7 +136,6 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter tag": "update parameter tags",
         "scenario": "update scenario",
         "alternative": "update alternative",
-        "scenario_alternative": "update scenario alternative",
     }
     _add_method_name = {
         "object class": "add_object_classes",
@@ -151,7 +149,6 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter tag": "add_parameter_tags",
         "scenario": "add_scenarios",
         "alternative": "add_alternatives",
-        "scenario_alternative": "add_scenario_alternatives",
     }
     _readd_method_name = {
         "object class": "readd_object_classes",
@@ -165,7 +162,6 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter tag": "readd_parameter_tags",
         "scenario": "readd_scenarios",
         "alternative": "readd_alternatives",
-        "scenario_alternative": "readd_scenario_alternatives",
     }
     _update_method_name = {
         "object class": "update_object_classes",
@@ -178,7 +174,6 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter tag": "update_parameter_tags",
         "scenario": "update_scenarios",
         "alternative": "update_alternatives",
-        "scenario_alternative": "update_scenario_alternatives",
     }
     _get_method_name = {
         "object class": "get_object_classes",
@@ -192,7 +187,6 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter tag": "get_parameter_tags",
         "scenario": "get_scenarios",
         "alternative": "get_alternatives",
-        "scenario_alternative": "get_scenario_alternatives",
     }
     _added_signal_name = {
         "object class": "object_classes_added",
@@ -206,7 +200,6 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter tag": "parameter_tags_added",
         "scenario": "scenarios_added",
         "alternative": "alternatives_added",
-        "scenario_alternative": "scenario_alternatives_added",
     }
     _updated_signal_name = {
         "object class": "object_classes_updated",
@@ -219,7 +212,6 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter tag": "parameter_tags_updated",
         "scenario": "scenarios_updated",
         "alternative": "alternatives_updated",
-        "scenario_alternative": "scenario_alternatives_updated",
     }
 
     def __init__(self, db_mngr, db_map, parent=None):

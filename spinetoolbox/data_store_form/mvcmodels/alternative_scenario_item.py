@@ -51,7 +51,7 @@ class RootItem(EmptyChildMixin, AllBoldMixin, NonLazyTreeItem):
     def data(self, column, role=Qt.DisplayRole):
         if column != 0:
             return None
-        if role == Qt.DisplayRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             return self.display_data
         if role == Qt.DecorationRole:
             return self.display_icon

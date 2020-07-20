@@ -52,7 +52,6 @@ class SpineDBSignaller(QObject):
         # Added
         self.db_mngr.scenarios_added.connect(self.receive_scenarios_added)
         self.db_mngr.alternatives_added.connect(self.receive_alternatives_added)
-        self.db_mngr.scenario_alternatives_added.connect(self.receive_scenario_alternatives_added)
         self.db_mngr.object_classes_added.connect(self.receive_object_classes_added)
         self.db_mngr.objects_added.connect(self.receive_objects_added)
         self.db_mngr.relationship_classes_added.connect(self.receive_relationship_classes_added)
@@ -65,7 +64,6 @@ class SpineDBSignaller(QObject):
         # Updated
         self.db_mngr.scenarios_updated.connect(self.receive_scenarios_updated)
         self.db_mngr.alternatives_updated.connect(self.receive_alternatives_updated)
-        self.db_mngr.scenario_alternatives_updated.connect(self.receive_scenario_alternatives_updated)
         self.db_mngr.object_classes_updated.connect(self.receive_object_classes_updated)
         self.db_mngr.objects_updated.connect(self.receive_objects_updated)
         self.db_mngr.relationship_classes_updated.connect(self.receive_relationship_classes_updated)
@@ -78,7 +76,6 @@ class SpineDBSignaller(QObject):
         # Removed
         self.db_mngr.scenarios_removed.connect(self.receive_scenarios_removed)
         self.db_mngr.alternatives_removed.connect(self.receive_alternatives_removed)
-        self.db_mngr.scenario_alternatives_removed.connect(self.receive_scenario_alternatives_removed)
         self.db_mngr.object_classes_removed.connect(self.receive_object_classes_removed)
         self.db_mngr.objects_removed.connect(self.receive_objects_removed)
         self.db_mngr.relationship_classes_removed.connect(self.receive_relationship_classes_removed)
@@ -103,13 +100,6 @@ class SpineDBSignaller(QObject):
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 listener.receive_scenarios_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_scenario_alternatives_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_scenario_alternatives_added(shared_db_map_data)
 
     @Slot(object)
     def receive_alternatives_added(self, db_map_data):
@@ -189,13 +179,6 @@ class SpineDBSignaller(QObject):
                 listener.receive_scenarios_updated(shared_db_map_data)
 
     @Slot(object)
-    def receive_scenario_alternatives_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_scenario_alternatives_updated(shared_db_map_data)
-
-    @Slot(object)
     def receive_alternatives_updated(self, db_map_data):
         for listener, db_maps in self.listeners.items():
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
@@ -271,13 +254,6 @@ class SpineDBSignaller(QObject):
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 listener.receive_scenarios_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_scenario_alternatives_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_scenario_alternatives_removed(shared_db_map_data)
 
     @Slot(object)
     def receive_alternatives_removed(self, db_map_data):

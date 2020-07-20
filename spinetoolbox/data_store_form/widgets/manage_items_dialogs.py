@@ -256,6 +256,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         self.filled_model.reset_model(model_data)
         self.empty_model.set_default_row(**{'databases': db_names})
         # Create checkboxes
+        self.check_boxes = []
         column = self.model.header.index('remove')
         for row in range(0, self.filled_model.rowCount()):
             index = self.model.index(row, column)
@@ -266,6 +267,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             layout.addStretch()
             layout.addWidget(check_box)
             layout.addStretch()
+            self.check_boxes.append(check_box)
             self.table_view.setIndexWidget(index, widget)
         self._handle_model_reset()
 
@@ -295,7 +297,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
                 self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
             # Remove
-            check_box = self.table_view.indexWidget(self.model.index(i, self.model.header.index('remove')))
+            check_box = self.check_boxes[i]
             if check_box.isChecked():
                 for db_map in db_maps:
                     parameter_tag = self.items[i][db_map]

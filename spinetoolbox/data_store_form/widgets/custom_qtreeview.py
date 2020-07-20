@@ -414,11 +414,41 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def remove_selected(self):
         """See base class."""
-        raise NotImplementedError()
+        if not self.selectionModel().hasSelection():
+            return
+        db_map_typed_data_to_rm = {}
+        db_map_scen_alt_data = {}
+        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
+        for db_item in self.model()._invisible_root_item.children:
+            db_map_typed_data_to_rm[db_item.db_map] = {"alternative": [], "scenario": []}
+            db_map_scen_alt_data[db_item.db_map] = []
+            for alt_item in reversed(db_item.child(0).children[:-1]):
+                if alt_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["alternative"].append(
+                        {"id": alt_item.id, "name": alt_item.name}
+                    )
+            for scen_item in reversed(db_item.child(1).children[:-1]):
+                if scen_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["scenario"].append(
+                        {"id": scen_item.id, "name": scen_item.name}
+                    )
+                    continue
+                curr_alt_id_list = scen_item.alternative_id_list
+                new_alt_id_list = [
+                    id_ for alt_item, id_ in zip(scen_item.children, curr_alt_id_list) if alt_item not in items
+                ]
+                if new_alt_id_list != curr_alt_id_list:
+                    item = {
+                        "scenario_id": scen_item.id,
+                        "alternative_id_list": ",".join([str(id_) for id_ in new_alt_id_list]),
+                    }
+                    db_map_scen_alt_data[db_item.db_map].append(item)
+        self.model().db_mngr.set_scenario_alternatives(db_map_scen_alt_data)
+        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
+        self.selectionModel().clearSelection()
 
     def update_actions_visibility(self, item):
         """See base class."""
-        raise NotImplementedError()
 
 
 class ParameterValueListTreeView(ItemTreeView):
