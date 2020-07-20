@@ -17,6 +17,7 @@ A tree model for parameter_value lists.
 """
 
 from PySide2.QtCore import Qt, QModelIndex
+from PySide2.QtGui import QIcon
 from spinedb_api import to_database
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
@@ -29,6 +30,7 @@ from .tree_item_utility import (
     NonLazyTreeItem,
     NonLazyDBItem,
 )
+from ...helpers import CharIconEngine
 
 
 class DBItem(EmptyChildMixin, NonLazyDBItem):
@@ -80,6 +82,9 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
     def data(self, column, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole):
             return self.name
+        if role == Qt.DecorationRole:
+            engine = CharIconEngine("\uf0ca", 0)
+            return QIcon(engine.pixmap())
         return super().data(column, role)
 
     def set_data(self, column, value, role):
