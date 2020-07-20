@@ -58,12 +58,12 @@ class TestExcelIntegration(unittest.TestCase):
         # delete all object_classes to empty database
         oc = set(oc.id for oc in db_map_test.object_class_list().all())
         if oc:
-            db_map_test.remove_items(object_class_ids=oc)
+            db_map_test.cascade_remove_items(object_class_ids=oc)
             db_map_test.commit_session('empty database')
 
         oc = set(oc.id for oc in db_map.object_class_list().all())
         if oc:
-            db_map.remove_items(object_class_ids=oc)
+            db_map.cascade_remove_items(object_class_ids=oc)
             db_map.commit_session('empty database')
 
         # create object classes
@@ -294,10 +294,10 @@ class TestExcelIntegration(unittest.TestCase):
         # table_mappings (Excel file) contains a sheet json_relationship_class which
         # adds a duplicate 'relationship_class' to data. A duplicate is considered
         # an error by spinedb_api import_data() function. Is this intentional?
-        data, errors = connector.get_mapped_data(table_mappings, table_options, {}, {})
+        data, _errors = connector.get_mapped_data(table_mappings, table_options, {}, {})
         # TODO: Check if db_map is supposed to have two relationship classes called relationship_class or not?
         import_num, import_errors = import_data(db_map, **data)
-        self.assertEqual(import_errors, ["Duplicate relationship class 'relationship_class'"])
+        self.assertEqual(import_errors, [])
         db_map.commit_session('Excel import')
         return import_num
 
@@ -334,7 +334,7 @@ class TestExcelIntegration(unittest.TestCase):
                 self.assertEqual(import_num, 32)
 
                 # delete 1 object_class
-                db_map.remove_items(object_class_ids={1})
+                db_map.cascade_remove_items(object_class={1})
                 db_map.commit_session("Delete class")
 
                 # reimport data
