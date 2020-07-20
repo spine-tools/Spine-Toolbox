@@ -171,7 +171,7 @@ class ExcelConnector(SourceConnection):
 
     def get_mapped_data(self, tables_mappings, options, table_types, table_row_types, max_rows=-1):
         """
-        Overrides io_api method to check for some parameter value types.
+        Overrides io_api method to check for some parameter_value types.
         """
         mapped_data, errors = super().get_mapped_data(tables_mappings, options, table_types, table_row_types, max_rows)
         for key in ("object_parameter_values", "relationship_parameter_values"):

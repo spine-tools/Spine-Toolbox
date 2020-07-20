@@ -159,9 +159,9 @@ class TreeViewMixin:
     def export_selected(self, selected_indexes):
         """Exports data from given indexes in the entity tree."""
         parcel = SpineDBParcel(self.db_mngr)
-        obj_cls_inds = set(selected_indexes.get("object class", {}).keys())
+        obj_cls_inds = set(selected_indexes.get("object_class", {}).keys())
         obj_inds = set(selected_indexes.get("object", {}).keys())
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
+        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         rel_inds = set(selected_indexes.get("relationship", {}).keys())
         db_map_obj_cls_ids = self._db_map_ids(obj_cls_inds)
         db_map_obj_ids = self._db_map_ids(obj_inds)
@@ -234,7 +234,7 @@ class TreeViewMixin:
 
     @Slot(bool)
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
-        """Shows dialog to add new relationship class."""
+        """Shows dialog to add new relationship_class."""
         dialog = AddRelationshipClassesDialog(
             self, self.db_mngr, *self.db_maps, object_class_one_name=object_class_one_name
         )
@@ -260,9 +260,9 @@ class TreeViewMixin:
 
     def edit_entity_tree_items(self, selected_indexes):
         """Starts editing given indexes."""
-        obj_cls_items = {ind.internalPointer() for ind in selected_indexes.get("object class", {})}
+        obj_cls_items = {ind.internalPointer() for ind in selected_indexes.get("object_class", {})}
         obj_items = {ind.internalPointer() for ind in selected_indexes.get("object", {})}
-        rel_cls_items = {ind.internalPointer() for ind in selected_indexes.get("relationship class", {})}
+        rel_cls_items = {ind.internalPointer() for ind in selected_indexes.get("relationship_class", {})}
         rel_items = {ind.internalPointer() for ind in selected_indexes.get("relationship", {})}
         self.show_edit_object_classes_form(obj_cls_items)
         self.show_edit_objects_form(obj_items)

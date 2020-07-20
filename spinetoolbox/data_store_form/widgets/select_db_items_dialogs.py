@@ -25,15 +25,15 @@ class SelectDBItemsDialog(QDialog):
 
     _MARGIN = 3
     _ITEM_TYPES = (
-        "object class",
-        "relationship class",
-        "parameter definition",
-        "parameter tag",
-        "parameter value list",
+        "object_class",
+        "relationship_class",
+        "parameter_definition",
+        "parameter_tag",
+        "parameter_value_list",
         "object",
         "relationship",
-        "entity group",
-        "parameter value",
+        "entity_group",
+        "parameter_value",
     )
 
     def __init__(self, parent, db_mngr, *db_maps):
@@ -127,11 +127,11 @@ class MassExportItemsDialog(SelectDBItemsDialog):
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Mass export items")
         for item_type in (
-            "object class",
-            "relationship class",
-            "parameter definition",
-            "parameter tag",
-            "parameter value list",
+            "object_class",
+            "relationship_class",
+            "parameter_definition",
+            "parameter_tag",
+            "parameter_value_list",
         ):
             self.item_check_boxes[item_type].setChecked(True)
 

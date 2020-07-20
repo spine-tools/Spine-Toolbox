@@ -81,7 +81,7 @@ class Ui_ParameterValueEditor(object):
     # setupUi
 
     def retranslateUi(self, ParameterValueEditor):
-        ParameterValueEditor.setWindowTitle(QCoreApplication.translate("ParameterValueEditor", u"Edit parameter value", None))
+        ParameterValueEditor.setWindowTitle(QCoreApplication.translate("ParameterValueEditor", u"Edit parameter_value", None))
         self.parameter_type_selector_label.setText(QCoreApplication.translate("ParameterValueEditor", u"Parameter type", None))
         self.parameter_type_selector.setItemText(0, QCoreApplication.translate("ParameterValueEditor", u"Plain value", None))
         self.parameter_type_selector.setItemText(1, QCoreApplication.translate("ParameterValueEditor", u"Map", None))

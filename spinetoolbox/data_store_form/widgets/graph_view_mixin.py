@@ -356,11 +356,11 @@ class GraphViewMixin:
             item = index.model().item_from_index(index)
             relationship_id = item.db_map_id(self.db_map)
             selected_relationship_ids.add(relationship_id)
-        for index in self.selected_tree_inds.get("object class", {}):
+        for index in self.selected_tree_inds.get("object_class", {}):
             item = index.model().item_from_index(index)
             object_ids = set(item._get_children_ids(self.db_map))
             selected_object_ids.update(object_ids)
-        for index in self.selected_tree_inds.get("relationship class", {}):
+        for index in self.selected_tree_inds.get("relationship_class", {}):
             item = index.model().item_from_index(index)
             relationship_ids = set(item._get_children_ids(self.db_map))
             selected_relationship_ids.update(relationship_ids)
@@ -420,7 +420,7 @@ class GraphViewMixin:
         parameter_positions = {
             p["entity_id"]: dict(from_database(p["value"]).value_to_database_data())
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+                self.db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
             )
         }
         if self._persistent:
@@ -556,7 +556,7 @@ class GraphViewMixin:
         pos_def_class_ids = {
             p["entity_class_id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter definition", "parameter_name", self._POS_PARAM_NAME
+                self.db_map, "parameter_definition", "parameter_name", self._POS_PARAM_NAME
             )
         }
         defs_to_add = [
@@ -568,13 +568,13 @@ class GraphViewMixin:
         pos_def_id_lookup = {
             p["entity_class_id"]: p["id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter definition", "parameter_name", self._POS_PARAM_NAME
+                self.db_map, "parameter_definition", "parameter_name", self._POS_PARAM_NAME
             )
         }
         pos_val_id_lookup = {
             (p["entity_class_id"], p["entity_id"]): p["id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+                self.db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
             )
         }
         vals_to_add = list()
@@ -606,12 +606,12 @@ class GraphViewMixin:
         vals_to_remove = [
             p
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+                self.db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
             )
             if p["entity_id"] in entity_ids
         ]
         if vals_to_remove:
-            self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
+            self.db_mngr.remove_items({self.db_map: {"parameter_value": vals_to_remove}})
         self.build_graph()
 
     @Slot(bool)
@@ -686,7 +686,7 @@ class GraphViewMixin:
         """Populates the menu 'Add parameter heat map' with parameters for currently shown items in the graph."""
         entity_class_ids = {x.entity_class_id for x in self.scene.items() if isinstance(x, EntityItem)}
         parameters = self.db_mngr.find_cascading_parameter_data(
-            {self.db_map: entity_class_ids}, "parameter definition"
+            {self.db_map: entity_class_ids}, "parameter_definition"
         )[self.db_map]
         parameters_by_class_id = {}
         for parameter in parameters:
@@ -704,7 +704,7 @@ class GraphViewMixin:
             for parameter in parameters_by_class_id.get(item.entity_class_id, ()):
                 value_id = value_ids.get((parameter["id"], item.entity_id))
                 try:
-                    value = float(self.db_mngr.get_value(self.db_map, "parameter value", value_id))
+                    value = float(self.db_mngr.get_value(self.db_map, "parameter_value", value_id))
                     pos = item.pos()
                     self._point_value_tuples_per_parameter_name.setdefault(parameter["parameter_name"], []).append(
                         (pos.x(), -pos.y(), value)

@@ -23,7 +23,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Edit parameter value</string>
+   <string>Edit parameter_value</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>

@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A model for variable resolution time series, used by the parameter value editors.
+A model for variable resolution time series, used by the parameter_value editors.
 
 :authors: A. Soininen (VTT)
 :date:   5.7.2019

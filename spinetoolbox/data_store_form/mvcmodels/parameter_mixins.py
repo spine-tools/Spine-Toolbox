@@ -141,7 +141,7 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         self._db_map_value_list_lookup.clear()
         for db_map, names in db_map_value_list_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "parameter value list", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "parameter_value_list", "name", name)
                 if item:
                     self._db_map_value_list_lookup.setdefault(db_map, {})[name] = item
 
@@ -184,7 +184,7 @@ class FillInValueListIdMixin(ConvertToDBMixin):
 
 
 class MakeParameterTagMixin(ConvertToDBMixin):
-    """Makes parameter tag items."""
+    """Makes parameter_tag items."""
 
     def __init__(self, *args, **kwargs):
         """Initializes lookup dicts."""
@@ -210,19 +210,19 @@ class MakeParameterTagMixin(ConvertToDBMixin):
         self._db_map_tag_lookup.clear()
         for db_map, tags in db_map_parameter_tags.items():
             for tag in tags:
-                item = self.db_mngr.get_item_by_field(db_map, "parameter tag", "tag", tag)
+                item = self.db_mngr.get_item_by_field(db_map, "parameter_tag", "tag", tag)
                 if item:
                     self._db_map_tag_lookup.setdefault(db_map, {})[tag] = item
 
     def _make_parameter_definition_tag(self, item, db_map):
-        """Returns a db parameter definition tag item (id-based) from the given model parameter definition item (name-based).
+        """Returns a db parameter_definition tag item (id-based) from the given model parameter_definition item (name-based).
 
         Args:
-            item (dict): the model parameter definition item
+            item (dict): the model parameter_definition item
             db_map (DiffDatabaseMapping): the database where the resulting item belongs
 
         Returns:
-            dict: the db parameter definition tag item
+            dict: the db parameter_definition tag item
             list: error log
         """
         parameter_tag_list = item.pop("parameter_tag_list", None)
@@ -241,7 +241,7 @@ class MakeParameterTagMixin(ConvertToDBMixin):
 
 
 class FillInEntityClassIdMixin(ConvertToDBMixin):
-    """Fills in entity class ids."""
+    """Fills in entity_class ids."""
 
     def __init__(self, *args, **kwargs):
         """Initializes lookup dicts."""
@@ -270,7 +270,7 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
                     self._db_map_ent_cls_lookup.setdefault(db_map, {})[name] = item
 
     def _fill_in_entity_class_id(self, item, db_map):
-        """Fills in the entity class id in the given db item.
+        """Fills in the entity_class id in the given db item.
 
         Args:
             item (dict): the db item
@@ -282,7 +282,7 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
         entity_class_name = item.pop(self.entity_class_name_key, None)
         entity_class = self._db_map_ent_cls_lookup.get(db_map, {}).get(entity_class_name)
         if not entity_class:
-            return [f"Unknown entity class {entity_class_name}"] if entity_class_name else []
+            return [f"Unknown entity_class {entity_class_name}"] if entity_class_name else []
         item[self.entity_class_id_key] = entity_class.get("id")
         return []
 
@@ -334,7 +334,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
                     self._db_map_ent_lookup.setdefault(db_map, {})[name] = items
 
     def _fill_in_entity_ids(self, item, db_map):
-        """Fills in all possible entity ids keyed by entity class id in the given db item
+        """Fills in all possible entity ids keyed by entity_class id in the given db item
         (as there can be more than one entity for the same name).
 
         Args:
@@ -368,7 +368,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
 
 
 class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
-    """Fills in parameter definition ids."""
+    """Fills in parameter_definition ids."""
 
     def __init__(self, *args, **kwargs):
         """Initializes lookup dicts."""
@@ -392,13 +392,13 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
         self._db_map_param_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                items = self.db_mngr.get_items_by_field(db_map, "parameter definition", "parameter_name", name)
+                items = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", name)
                 if items:
                     self._db_map_param_lookup.setdefault(db_map, {})[name] = items
 
     def _fill_in_parameter_ids(self, item, db_map):
-        """Fills in all possible parameter definition ids keyed by entity class id in the given db item
-        (as there can be more than one parameter definition for the same name).
+        """Fills in all possible parameter_definition ids keyed by entity_class id in the given db item
+        (as there can be more than one parameter_definition for the same name).
 
         Args:
             item (dict): the db item
@@ -431,7 +431,7 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
 
 
 class InferEntityClassIdMixin(ConvertToDBMixin):
-    """Infers object class ids."""
+    """Infers object_class ids."""
 
     def _convert_to_db(self, item, db_map):
         """Returns a db item (id-based) from the given model item (name-based).
@@ -449,9 +449,9 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
         return item, err1 + err2
 
     def _infer_and_fill_in_entity_class_id(self, item, db_map):
-        """Fills the entity class id in the given db item, by intersecting entity ids and parameter ids.
-        Then picks the correct entity id and parameter definition id.
-        Also sets the inferred entity class name in the model.
+        """Fills the entity_class id in the given db item, by intersecting entity ids and parameter ids.
+        Then picks the correct entity id and parameter_definition id.
+        Also sets the inferred entity_class name in the model.
 
         Args:
             item (dict): the db item
@@ -466,8 +466,8 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
         if self.entity_class_id_key not in item:
             entity_class_ids = {*entity_ids.keys(), *parameter_ids.keys()}
             if len(entity_class_ids) != 1:
-                # entity class id not in the item and not inferrable, good bye
-                return ["Unable to infer entity class."]
+                # entity_class id not in the item and not inferrable, good bye
+                return ["Unable to infer entity_class."]
             entity_class_id = entity_class_ids.pop()
             item[self.entity_class_id_key] = entity_class_id
             entity_class_name = self.db_mngr.get_item(db_map, self.entity_class_type, entity_class_id)["name"]
@@ -526,7 +526,7 @@ class MakeRelationshipOnTheFlyMixin:
         self._db_map_rel_cls_lookup.clear()
         for db_map, names in db_map_rel_cls_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "relationship class", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "relationship_class", "name", name)
                 if item:
                     self._db_map_rel_cls_lookup.setdefault(db_map, {})[name] = item
         self._db_map_existing_rels = {
@@ -535,10 +535,10 @@ class MakeRelationshipOnTheFlyMixin:
         }
 
     def _make_relationship_on_the_fly(self, item, db_map):
-        """Returns a database relationship item (id-based) from the given model parameter value item (name-based).
+        """Returns a database relationship item (id-based) from the given model parameter_value item (name-based).
 
         Args:
-            item (dict): the model parameter value item
+            item (dict): the model parameter_value item
             db_map (DiffDatabaseMapping): the database where the resulting item belongs
 
         Returns:
@@ -552,7 +552,7 @@ class MakeRelationshipOnTheFlyMixin:
             return None, []
         relationship_class = self._db_map_rel_cls_lookup.get(db_map, {}).get(relationship_class_name)
         if not relationship_class:
-            return None, [f"Unknown relationship class {relationship_class_name}"] if relationship_class_name else []
+            return None, [f"Unknown relationship_class {relationship_class_name}"] if relationship_class_name else []
         parsed_object_name_list = _parse_csv_list(object_name_list)
         if parsed_object_name_list is None:
             return None, [f"Unable to parse {object_name_list}"] if object_name_list else []

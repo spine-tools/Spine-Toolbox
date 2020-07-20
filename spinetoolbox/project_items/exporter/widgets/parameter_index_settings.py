@@ -314,7 +314,7 @@ class ParameterIndexSettings(QWidget):
 
 class _IndexingTableModel(QAbstractTableModel):
     """
-    A table model for parameter value indexing.
+    A table model for parameter_value indexing.
 
     First column contains the proposed new index keys.
     The rest of the columns contain the parameter values for each set of existing index keys.

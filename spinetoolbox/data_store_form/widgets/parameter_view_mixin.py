@@ -111,7 +111,7 @@ class ParameterViewMixin:
 
     @Slot("QModelIndex", "QVariant")
     def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
-        """Updates (object or relationship) parameter definition or value with newly edited data."""
+        """Updates (object or relationship) parameter_definition or value with newly edited data."""
         index.model().setData(index, new_value)
 
     @Slot("QModelIndex", int, "QVariant")
@@ -123,13 +123,13 @@ class ParameterViewMixin:
             rel_cls_id (int)
             db_map (DiffDatabaseMapping)
         """
-        relationship_class = self.db_mngr.get_item(db_map, "relationship class", rel_cls_id)
+        relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id)
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []
         object_names_lists = []
         for id_ in object_class_id_list.split(","):
             id_ = int(id_)
-            object_class_name = self.db_mngr.get_item(db_map, "object class", id_).get("name")
+            object_class_name = self.db_mngr.get_item(db_map, "object_class", id_).get("name")
             object_names_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_)]
             object_class_names.append(object_class_name)
             object_names_lists.append(object_names_list)
@@ -163,7 +163,7 @@ class ParameterViewMixin:
         set_and_apply_default_rows(self.relationship_parameter_value_model, default_data)
 
     def _get_filter_class_ids(self):
-        """Returns filter class ids by combining filter class ids from entity tree *and* parameter tag toolbar.
+        """Returns filter class ids by combining filter class ids from entity tree *and* parameter_tag toolbar.
 
         Returns:
             dict, NoneType: mapping db maps to sets of ids, or None if no filter (none shall pass)
@@ -208,9 +208,9 @@ class ParameterViewMixin:
     @Slot(dict)
     def _handle_object_tree_selection_changed(self, selected_indexes):
         """Resets filter according to object tree selection."""
-        obj_cls_inds = set(selected_indexes.get("object class", {}).keys())
+        obj_cls_inds = set(selected_indexes.get("object_class", {}).keys())
         obj_inds = set(selected_indexes.get("object", {}).keys())
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
+        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         # Compute active indexes by merging in the parents from lower levels recursively
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
@@ -232,7 +232,7 @@ class ParameterViewMixin:
     @Slot(dict)
     def _handle_relationship_tree_selection_changed(self, selected_indexes):
         """Resets filter according to relationship tree selection."""
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
+        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
         self.filter_class_ids = self._db_map_ids(active_rel_cls_inds)
@@ -241,7 +241,7 @@ class ParameterViewMixin:
 
     @Slot("QVariant", bool)
     def _handle_tag_button_toggled(self, db_map_ids, checked):
-        """Resets filter according to selection in parameter tag toolbar."""
+        """Resets filter according to selection in parameter_tag toolbar."""
         for db_map, id_ in db_map_ids:
             if checked:
                 self.filter_tag_ids.setdefault(db_map, set()).add(id_)
@@ -270,7 +270,7 @@ class ParameterViewMixin:
         dialog.show()
 
     def restore_dock_widgets(self):
-        """Restores parameter tag toolbar."""
+        """Restores parameter_tag toolbar."""
         super().restore_dock_widgets()
         self.parameter_tag_toolbar.setVisible(True)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)

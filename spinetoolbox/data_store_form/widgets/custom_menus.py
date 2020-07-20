@@ -40,8 +40,8 @@ class ParameterViewFilterMenu(FilterMenuBase):
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._filter_action)
-        self._menu_data = dict()  # Maps value to set of (db map, entity class id, item id)
-        self._inv_menu_data = dict()  # Maps tuple (db map, entity class id, item id) to value
+        self._menu_data = dict()  # Maps value to set of (db map, entity_class id, item id)
+        self._inv_menu_data = dict()  # Maps tuple (db map, entity_class id, item id) to value
         self.connect_signals()
         self.aboutToShow.connect(self._filter.set_model)
         self._source_model.refreshed.connect(self._handle_source_model_refreshed)
@@ -119,7 +119,7 @@ class ParameterViewFilterMenu(FilterMenuBase):
             valid_values (Sequence): Values accepted by the filter.
 
         Returns:
-            dict: mapping db_map, to entity_class_id, to set of accepted parameter value/definition ids
+            dict: mapping db_map, to entity_class_id, to set of accepted parameter_value/definition ids
         """
         if not self._filter.has_filter():
             return {}  # All-pass

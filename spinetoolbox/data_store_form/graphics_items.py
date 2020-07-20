@@ -108,7 +108,7 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_class_type(self):
-        return {"relationship": "relationship class", "object": "object class"}[self.entity_type]
+        return {"relationship": "relationship_class", "object": "object_class"}[self.entity_type]
 
     @property
     def entity_class_id(self):
@@ -310,7 +310,7 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_class_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship class", self.entity_class_id)["object_class_id_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship_class", self.entity_class_id)["object_class_id_list"]
 
     @property
     def object_name_list(self):
@@ -430,7 +430,7 @@ class ObjectItem(EntityItem):
             object_class_id_list = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
             if not set(object_class_id_list) <= object_class_ids_in_graph:
                 continue
-            icon = self.db_mngr.entity_class_icon(self.db_map, "relationship class", rel_cls["id"])
+            icon = self.db_mngr.entity_class_icon(self.db_map, "relationship_class", rel_cls["id"])
             action = self._add_relationships_menu.addAction(icon, rel_cls["name"])
             rel_cls = rel_cls.copy()
             rel_cls["object_class_id_list"] = object_class_id_list

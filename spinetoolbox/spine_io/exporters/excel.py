@@ -200,7 +200,7 @@ def _get_unstacked_relationships(db):
     keyfunc = lambda x: x[0]
     data_json = sorted(data_json, key=keyfunc)
     parsed_json = []
-    # json data, split by relationship class
+    # json data, split by relationship_class
     for k, v in groupby(data_json, key=keyfunc):
         json_vals = []
         for row in v:
@@ -214,7 +214,7 @@ def _get_unstacked_relationships(db):
 
     data_ts = sorted(data_ts, key=keyfunc)
     parsed_ts = []
-    # ts data, split by relationship class
+    # ts data, split by relationship_class
     for k, v in groupby(data_ts, key=keyfunc):
         ts_vals = []
         for row in v:
@@ -228,7 +228,7 @@ def _get_unstacked_relationships(db):
 
     data_timepattern = sorted(data_timepattern, key=keyfunc)
     parsed_timepattern = []
-    # ts data, split by relationship class
+    # ts data, split by relationship_class
     for k, v in groupby(data_timepattern, key=keyfunc):
         tp_vals = []
         for row in v:
@@ -240,7 +240,7 @@ def _get_unstacked_relationships(db):
             object_classes = class_2_obj_list[k]
             parsed_timepattern.append([k, object_classes, tp_vals])
 
-    # parameter data, split by relationship class
+    # parameter data, split by relationship_class
     stacked_rels = []
     data = sorted(data, key=keyfunc)
     for k, v in groupby(data, key=keyfunc):
@@ -297,7 +297,7 @@ def _get_unstacked_objects(db):
 
     data_timepattern = sorted(data_timepattern, key=keyfunc)
     parsed_timepattern = []
-    # ts data, split by object class
+    # ts data, split by object_class
     for k, v in groupby(data_timepattern, key=keyfunc):
         tp_vals = []
         for row in v:
@@ -325,7 +325,7 @@ def _get_unstacked_objects(db):
 
 def _write_relationships_to_xlsx(wb, relationship_data):
     """Writes Classes, parameter and parameter values for relationships.
-    Writes one sheet per relationship class.
+    Writes one sheet per relationship_class.
 
     Args:
         wb (openpyxl.Workbook): excel workbook to write too.
@@ -335,7 +335,7 @@ def _write_relationships_to_xlsx(wb, relationship_data):
     for rel in relationship_data:
         ws = wb.create_sheet()
 
-        # try setting the sheet name to relationship class name
+        # try setting the sheet name to relationship_class name
         # sheet name can only be 31 chars log
         title = "rel_" + rel[0]
         if len(title) < 32:
@@ -345,7 +345,7 @@ def _write_relationships_to_xlsx(wb, relationship_data):
         ws['A2'] = "relationship"
         ws['B1'] = "Data type"
         ws['B2'] = "Parameter"
-        ws['C1'] = "relationship class name"
+        ws['C1'] = "relationship_class name"
         ws['C2'] = rel[0]
         ws['D1'] = "Number of relationship dimensions"
         ws['D2'] = len(rel[2])
@@ -369,7 +369,7 @@ def _write_relationships_to_xlsx(wb, relationship_data):
 
 def _write_json_array_to_xlsx(wb, data, sheet_type):
     """Writes json array data for object classes and relationship classes.
-    Writes one sheet per relationship/object class.
+    Writes one sheet per relationship/object_class.
 
     Args:
         wb (openpyxl.Workbook): excel workbook to write too.
@@ -419,7 +419,7 @@ def _write_json_array_to_xlsx(wb, data, sheet_type):
 
 def _write_TimeSeries_to_xlsx(wb, data, sheet_type, data_type):
     """Writes spinedb_api TimeSeries data for object classes and relationship classes.
-    Writes one sheet per relationship/object class.
+    Writes one sheet per relationship/object_class.
 
     Args:
         wb (openpyxl.Workbook): excel workbook to write too.
@@ -492,7 +492,7 @@ def _write_TimeSeries_to_xlsx(wb, data, sheet_type, data_type):
 
 def _write_objects_to_xlsx(wb, object_data):
     """Writes Classes, parameter and parameter values for objects.
-    Writes one sheet per relationship/object class.
+    Writes one sheet per relationship/object_class.
 
     Args:
         wb (openpyxl.Workbook): excel workbook to write too.
@@ -502,7 +502,7 @@ def _write_objects_to_xlsx(wb, object_data):
     for i, obj in enumerate(object_data):
         ws = wb.create_sheet()
 
-        # try setting the sheet name to object class name
+        # try setting the sheet name to object_class name
         # sheet name can only be 31 chars log
         title = "obj_" + obj[0]
         if len(title) < 32:
@@ -514,7 +514,7 @@ def _write_objects_to_xlsx(wb, object_data):
         ws['A2'] = "object"
         ws['B1'] = "Data type"
         ws['B2'] = "Parameter"
-        ws['C1'] = "object class name"
+        ws['C1'] = "object_class name"
         ws['C2'] = obj[0]
 
         for c, val in enumerate(obj[2]):
@@ -549,7 +549,7 @@ def _get_object_groups(db):
 
 def _write_object_groups_to_xlsx(wb, group_data):
     """Writes classes, groups and members for object groups.
-    Writes one sheet per object class.
+    Writes one sheet per object_class.
 
     Args:
         wb (openpyxl.Workbook): excel workbook to write too.
@@ -558,7 +558,7 @@ def _write_object_groups_to_xlsx(wb, group_data):
     for i, (class_name, group_tuples) in enumerate(group_data.items()):
         ws = wb.create_sheet()
 
-        # try setting the sheet name to object class name
+        # try setting the sheet name to object_class name
         # sheet name can only be 31 chars log
         title = "obj_grp_" + class_name
         if len(title) < 32:
@@ -570,7 +570,7 @@ def _write_object_groups_to_xlsx(wb, group_data):
         ws['A2'] = "object group"
         ws['B1'] = "Data type"
         ws['B2'] = "no data"
-        ws['C1'] = "object class name"
+        ws['C1'] = "object_class name"
         ws['C2'] = class_name
 
         ws.cell(row=4, column=1).value = "group"

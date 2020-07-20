@@ -116,7 +116,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._model.set_start(new_datetime)
 
     def set_value(self, value):
-        """Sets the parameter value for editing in this widget."""
+        """Sets the parameter_value for editing in this widget."""
         self._model.reset(value)
         self._ui.start_time_edit.setText(str(self._model.value.start))
         self._ui.resolution_edit.setText(_resolution_to_text(self._model.value.resolution))
@@ -153,5 +153,5 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.plot_widget.canvas.draw()
 
     def value(self):
-        """Returns the parameter value currently being edited."""
+        """Returns the parameter_value currently being edited."""
         return self._model.value

@@ -497,14 +497,14 @@ class IconListManager:
 
 
 class IconManager:
-    """A class to manage object class icons for data store forms."""
+    """A class to manage object_class icons for data store forms."""
 
     ICON_SIZE = QSize(512, 512)
 
     def __init__(self):
-        self.obj_cls_icon_code_cache = {}  # A mapping from object class name to display icon code
+        self.obj_cls_icon_code_cache = {}  # A mapping from object_class name to display icon code
         self.icon_pixmap_cache = {}  # A mapping from display icon code to associated pixmap
-        self.rel_cls_pixmap_cache = {}  # A mapping from object class name list to associated pixmap
+        self.rel_cls_pixmap_cache = {}  # A mapping from object_class name list to associated pixmap
         self.group_obj_pixmap_cache = {}  # A mapping from class name to associated group pixmap
         self.searchterms = {}
 
@@ -521,7 +521,7 @@ class IconManager:
     def setup_object_pixmaps(self, object_classes):
         """Called after adding or updating object classes.
         Create the corresponding object pixmaps and clear obsolete entries
-        from the relationship class and entity groups pixmap caches."""
+        from the relationship_class and entity groups pixmap caches."""
         for object_class in object_classes:
             self.create_object_pixmap(object_class["display_icon"])
             self.obj_cls_icon_code_cache[object_class["name"]] = object_class["display_icon"]
@@ -533,7 +533,7 @@ class IconManager:
             self.group_obj_pixmap_cache.pop(name, None)
 
     def object_pixmap(self, object_class_name):
-        """A pixmap for the given object class."""
+        """A pixmap for the given object_class."""
         if object_class_name in self.obj_cls_icon_code_cache:
             display_icon = self.obj_cls_icon_code_cache[object_class_name]
             if display_icon in self.icon_pixmap_cache:
@@ -542,11 +542,11 @@ class IconManager:
         return engine.pixmap(self.ICON_SIZE)
 
     def object_icon(self, object_class_name):
-        """An icon for the given object class."""
+        """An icon for the given object_class."""
         return QIcon(self.object_pixmap(object_class_name))
 
     def relationship_pixmap(self, str_object_class_name_list):
-        """A pixmap for the given object class name list,
+        """A pixmap for the given object_class name list,
         created by rendering several object pixmaps next to each other."""
         if not str_object_class_name_list:
             engine = CharIconEngine("\uf1b3", 0)
@@ -576,7 +576,7 @@ class IconManager:
         return pixmap
 
     def relationship_icon(self, str_object_class_name_list):
-        """An icon for the given object class name list."""
+        """An icon for the given object_class name list."""
         return QIcon(self.relationship_pixmap(str_object_class_name_list))
 
     def group_object_pixmap(self, object_class_name):

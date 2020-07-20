@@ -53,8 +53,8 @@ class ObjectTreeRootItem(EntityRootItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object class ids."""
-        return [x["id"] for x in self.db_mngr.get_items(db_map, "object class")]
+        """Returns a list of object_class ids."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "object_class")]
 
 
 class RelationshipTreeRootItem(EntityRootItem):
@@ -70,12 +70,12 @@ class RelationshipTreeRootItem(EntityRootItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object class ids."""
-        return [x["id"] for x in self.db_mngr.get_items(db_map, "relationship class")]
+        """Returns a list of object_class ids."""
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "relationship_class")]
 
 
 class EntityClassItem(MultiDBTreeItem):
-    """An entity class item."""
+    """An entity_class item."""
 
     def __init__(self, *args, **kwargs):
         """Overridden method to declare group_child_count attribute."""
@@ -159,9 +159,9 @@ class EntityClassItem(MultiDBTreeItem):
 
 
 class ObjectClassItem(EntityClassItem):
-    """An object class item."""
+    """An object_class item."""
 
-    item_type = "object class"
+    item_type = "object_class"
 
     @property
     def child_item_type(self):
@@ -177,15 +177,15 @@ class ObjectClassItem(EntityClassItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object class ids."""
+        """Returns a list of object_class ids."""
         return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
 
 
 class RelationshipClassItem(EntityClassItem):
-    """A relationship class item."""
+    """A relationship_class item."""
 
     visual_key = ["name", "object_class_name_list"]
-    item_type = "relationship class"
+    item_type = "relationship_class"
 
     @property
     def child_item_type(self):
@@ -201,7 +201,7 @@ class RelationshipClassItem(EntityClassItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object class ids."""
+        """Returns a list of object_class ids."""
         if not isinstance(self.parent_item, ObjectItem):
             return [
                 x["id"]
@@ -229,7 +229,7 @@ class EntityItem(MultiDBTreeItem):
         return set(x["member_id"] for x in self.db_map_entity_groups(db_map))
 
     def db_map_entity_groups(self, db_map):
-        return self.db_mngr.get_items_by_field(db_map, "entity group", "entity_id", self.db_map_id(db_map))
+        return self.db_mngr.get_items_by_field(db_map, "entity_group", "entity_id", self.db_map_id(db_map))
 
     @property
     def member_ids(self):

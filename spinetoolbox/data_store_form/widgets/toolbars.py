@@ -71,7 +71,7 @@ class ParameterTagToolBar(QToolBar):
         self.db_map_ids = [[(db_map, 0) for db_map in self.db_maps]]
         tag_data = {}
         for db_map in self.db_maps:
-            for parameter_tag in self.db_mngr.get_items(db_map, "parameter tag"):
+            for parameter_tag in self.db_mngr.get_items(db_map, "parameter_tag"):
                 tag_data.setdefault(parameter_tag["tag"], {})[db_map] = parameter_tag["id"]
         for tag, db_map_data in tag_data.items():
             action = QAction(tag)

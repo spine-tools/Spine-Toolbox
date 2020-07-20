@@ -70,7 +70,7 @@ class ParameterValueEditor(QDialog):
     def __init__(self, index, parent=None):
         """
         Args:
-            index (QModelIndex): an index to a parameter value in parent_model
+            index (QModelIndex): an index to a parameter_value in parent_model
             parent (QWidget): a parent widget
         """
         from ..ui.parameter_value_editor import Ui_ParameterValueEditor  # pylint: disable=import-outside-toplevel
@@ -106,7 +106,7 @@ class ParameterValueEditor(QDialog):
 
     @Slot()
     def accept(self):
-        """Saves the parameter value shown in the currently selected editor widget to the database manager."""
+        """Saves the parameter_value shown in the currently selected editor widget to the database manager."""
         editor = self._ui.editor_stack.currentWidget()
         try:
             value = to_database(editor.value())

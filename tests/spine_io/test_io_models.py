@@ -97,23 +97,23 @@ class TestMappingPreviewModel(unittest.TestCase):
         # column mapping
         mapping = MappingSpecModel(dict_to_map({"map_type": "ObjectClass", "name": 0}), "connector's name")
         model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity class"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity class"])
+        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity_class"])
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity_class"])
         # row not showing color if the start reading row is specified
         mapping = MappingSpecModel(
             dict_to_map({"map_type": "ObjectClass", "name": 0, "read_start_row": 1}), "connecto's name"
         )
         model.set_mapping(mapping)
         self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity class"])
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity_class"])
         # row not showing color if the row is pivoted
         mapping = MappingSpecModel(
             dict_to_map({"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}),
             "connector's name",
         )
         model.set_mapping(mapping)
-        self.assertNotEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity class"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity class"])
+        self.assertNotEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity_class"])
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity_class"])
 
     def test_mapping_pivoted_colors(self):
         model = MappingPreviewModel()
@@ -151,7 +151,7 @@ class TestMappingPreviewModel(unittest.TestCase):
         # no color showing where row and column mapping intersect
         self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
         self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity class"])
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), _MAPPING_COLORS["entity_class"])
         self.assertEqual(model.data(model.index(1, 1), role=Qt.BackgroundColorRole), None)
 
 
@@ -465,7 +465,7 @@ class TestMappingSpecModel(unittest.TestCase):
         }
         mapping_dict = {
             "map_type": "RelationshipClass",
-            "name": {"map_type": "constant", "reference": "relationship class name"},
+            "name": {"map_type": "constant", "reference": "relationship_class name"},
             "object_classes": [
                 {"map_type": "column", "reference": "column header"},
                 {"map_type": "constant", "reference": "second class"},
@@ -509,7 +509,7 @@ class TestMappingSpecModel(unittest.TestCase):
         index = model.index(7, 1)
         self.assertEqual(index.data(), "Column")
         index = model.index(0, 2)
-        self.assertEqual(index.data(), "relationship class name")
+        self.assertEqual(index.data(), "relationship_class name")
         self.assertEqual(index.data(Qt.BackgroundColorRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(1, 2)

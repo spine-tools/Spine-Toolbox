@@ -382,7 +382,7 @@ class IconPainterDelegate(QItemDelegate):
 
 
 class IconColorEditor(QDialog):
-    """An editor to let the user select an icon and a color for an object class.
+    """An editor to let the user select an icon and a color for an object_class.
     """
 
     def __init__(self, parent):

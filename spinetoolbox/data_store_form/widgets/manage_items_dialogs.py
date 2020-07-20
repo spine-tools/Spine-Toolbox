@@ -122,11 +122,11 @@ class GetObjectClassesMixin:
 
     def make_db_map_obj_cls_lookup(self):
         return {
-            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "object class")} for db_map in self.db_maps
+            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "object_class")} for db_map in self.db_maps
         }
 
     def object_class_name_list(self, row):
-        """Return a list of object class names present in all databases selected for given row.
+        """Return a list of object_class names present in all databases selected for given row.
         Used by `ManageObjectsDelegate`.
         """
         db_column = self.model.header.index('databases')
@@ -185,7 +185,7 @@ class GetRelationshipClassesMixin:
         return {
             db_map: {
                 (x["name"], x["object_class_name_list"]): x
-                for x in self.db_mngr.get_items(db_map, "relationship class")
+                for x in self.db_mngr.get_items(db_map, "relationship_class")
             }
             for db_map in self.db_maps
         }
@@ -226,7 +226,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         self.db_maps = db_maps
         self.keyed_db_maps = {db_map.codename: db_map for db_map in db_maps}
         self.setWindowTitle("Manage parameter tags")
-        header = ['parameter tag', 'description', 'databases', 'remove']
+        header = ['parameter_tag', 'description', 'databases', 'remove']
         self.model = CompoundWithEmptyTableModel(self, header=header)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageParameterTagsDelegate(self))
@@ -235,7 +235,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         model_data = list()
         tag_dict = {}
         for db_map in self.db_maps:
-            for parameter_tag in self.db_mngr.get_items(db_map, "parameter tag"):
+            for parameter_tag in self.db_mngr.get_items(db_map, "parameter_tag"):
                 tag_dict.setdefault(parameter_tag["tag"], {})[db_map] = parameter_tag
         self.items = list(tag_dict.values())
         for item in self.items:
@@ -301,7 +301,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             if check_box.isChecked():
                 for db_map in db_maps:
                     parameter_tag = self.items[i][db_map]
-                    db_map_typed_data_to_rm.setdefault(db_map, {}).setdefault("parameter tag", []).append(parameter_tag)
+                    db_map_typed_data_to_rm.setdefault(db_map, {}).setdefault("parameter_tag", []).append(parameter_tag)
                 continue
             if not tag:
                 self.parent().msg_error.emit("Tag missing at row {}".format(i + 1))

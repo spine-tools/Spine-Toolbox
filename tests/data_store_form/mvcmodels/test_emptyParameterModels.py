@@ -63,8 +63,8 @@ class TestEmptyParameterModel(unittest.TestCase):
         def _get_item(db_map, item_type, id_):
             # print(db_map, item_type, id_)
             return {
-                (self.mock_db_map, "object class", 1): {"id": 1, "name": "dog"},
-                (self.mock_db_map, "object class", 2): {"id": 2, "name": "fish"},
+                (self.mock_db_map, "object_class", 1): {"id": 1, "name": "dog"},
+                (self.mock_db_map, "object_class", 2): {"id": 2, "name": "fish"},
                 (self.mock_db_map, "alternative", 1): {"id": 1, "name": "Base"},
             }.get((db_map, item_type, id_), {})
 
@@ -76,15 +76,15 @@ class TestEmptyParameterModel(unittest.TestCase):
                 (self.mock_db_map, "relationship", "object_name_list", "pluto,nemo"): [
                     {"id": 3, "class_id": 3, "object_id_list": "1,2"}
                 ],
-                (self.mock_db_map, "object class", "name", "dog"): [{"id": 1, "name": "dog"}],
-                (self.mock_db_map, "object class", "name", "fish"): [{"id": 2, "name": "fish"}],
-                (self.mock_db_map, "relationship class", "name", "dog__fish"): [
+                (self.mock_db_map, "object_class", "name", "dog"): [{"id": 1, "name": "dog"}],
+                (self.mock_db_map, "object_class", "name", "fish"): [{"id": 2, "name": "fish"}],
+                (self.mock_db_map, "relationship_class", "name", "dog__fish"): [
                     {"id": 3, "name": "dog__fish", "object_class_id_list": "1,2"}
                 ],
-                (self.mock_db_map, "parameter definition", "parameter_name", "breed"): [
+                (self.mock_db_map, "parameter_definition", "parameter_name", "breed"): [
                     {"id": 1, "object_class_id": 1, "parameter_name": "breed"}
                 ],
-                (self.mock_db_map, "parameter definition", "parameter_name", "relative_speed"): [
+                (self.mock_db_map, "parameter_definition", "parameter_name", "relative_speed"): [
                     {"id": 2, "relationship_class_id": 3, "parameter_name": "relative_speed"}
                 ],
             }.get((db_map, item_type, field, value), [])

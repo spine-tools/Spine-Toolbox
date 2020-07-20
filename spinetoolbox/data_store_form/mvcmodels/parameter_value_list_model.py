@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A tree model for parameter value lists.
+A tree model for parameter_value lists.
 
 :authors: M. Marin (KTH)
 :date:   28.6.2019
@@ -58,13 +58,13 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
     def name(self):
         if not self.id:
             return self._name
-        return self.db_mngr.get_item(self.db_map, "parameter value list", self.id)["name"]
+        return self.db_mngr.get_item(self.db_map, "parameter_value_list", self.id)["name"]
 
     @property
     def value_list(self):
         if not self.id:
             return [child.value for child in self.children[:-1]]
-        return self.db_mngr.get_item(self.db_map, "parameter value list", self.id)["value_list"].split(";")
+        return self.db_mngr.get_item(self.db_map, "parameter_value_list", self.id)["value_list"].split(";")
 
     def fetch_more(self):
         children = [ValueItem() for _ in self.value_list]
@@ -185,7 +185,7 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
 
 
 class ParameterValueListModel(MinimalTreeModel):
-    """A model to display parameter value list data in a tree view.
+    """A model to display parameter_value_list data in a tree view.
 
 
     Args:

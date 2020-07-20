@@ -86,7 +86,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._make_delegate("database", DatabaseNameDelegate)
 
     def open_in_editor(self):
-        """Opens the current index in a parameter value editor using the connected data store form."""
+        """Opens the current index in a parameter_value editor using the connected data store form."""
         index = self.currentIndex()
         self._data_store_form.show_parameter_value_editor(index)
 
@@ -249,15 +249,15 @@ class ParameterValueTableView(ParameterTableView):
 
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the object parameter definition pane in Data Store Form."""
+    """A custom QTableView for the object parameter_definition pane in Data Store Form."""
 
 
 class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the relationship parameter definition pane in Data Store Form."""
+    """A custom QTableView for the relationship parameter_definition pane in Data Store Form."""
 
 
 class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the object parameter value pane in Data Store Form."""
+    """A custom QTableView for the object parameter_value pane in Data Store Form."""
 
     def create_delegates(self):
         super().create_delegates()
@@ -265,7 +265,7 @@ class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTab
 
 
 class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the relationship parameter value pane in Data Store Form."""
+    """A custom QTableView for the relationship parameter_value pane in Data Store Form."""
 
     def create_delegates(self):
         super().create_delegates()
@@ -349,8 +349,8 @@ class PivotTableView(CopyPasteTableView):
             column_mask.add(column)
         data = self.source_model.model.get_pivoted_data(row_mask, column_mask)
         ids = {item for row in data for item in row if item is not None}
-        parameter_values = [self.db_mngr.get_item(self.db_map, "parameter value", id_) for id_ in ids]
-        db_map_typed_data = {self.db_map: {"parameter value": parameter_values}}
+        parameter_values = [self.db_mngr.get_item(self.db_map, "parameter_value", id_) for id_ in ids]
+        db_map_typed_data = {self.db_map: {"parameter_value": parameter_values}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_objects(self):
@@ -373,12 +373,12 @@ class PivotTableView(CopyPasteTableView):
 
     def remove_parameters(self):
         ids = {self.source_model._header_id(index) for index in self._selected_parameter_indexes}
-        parameters = [self.db_mngr.get_item(self.db_map, "parameter definition", id_) for id_ in ids]
-        db_map_typed_data = {self.db_map: {"parameter definition": parameters}}
+        parameters = [self.db_mngr.get_item(self.db_map, "parameter_definition", id_) for id_ in ids]
+        db_map_typed_data = {self.db_map: {"parameter_definition": parameters}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def open_in_editor(self):
-        """Opens the parameter value editor for the first selected cell."""
+        """Opens the parameter_value editor for the first selected cell."""
         index = self._selected_value_indexes[0]
         self._data_store_form.show_parameter_value_editor(index)
 
@@ -454,7 +454,7 @@ class PivotTableView(CopyPasteTableView):
         if len(self._selected_parameter_indexes) == 1:
             index = self._selected_parameter_indexes[0]
             parameter_name = self.source_model.header_name(index)
-            self.remove_parameters_action.setText("Remove parameter definition: {}".format(parameter_name))
+            self.remove_parameters_action.setText("Remove parameter_definition: {}".format(parameter_name))
 
     @Slot("QAction")
     def _plot_in_window(self, action):

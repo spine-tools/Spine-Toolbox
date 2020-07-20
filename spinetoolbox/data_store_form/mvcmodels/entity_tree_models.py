@@ -49,7 +49,7 @@ class ObjectTreeModel(MultiDBTreeModel):
         return result
 
     def _parent_relationship_class_data(self, db_map_data):
-        """Takes given relationship class data and returns the same data keyed by parent tree-item.
+        """Takes given relationship_class data and returns the same data keyed by parent tree-item.
 
         Args:
             db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
@@ -88,7 +88,7 @@ class ObjectTreeModel(MultiDBTreeModel):
         return result
 
     def _parent_entity_group_data(self, db_map_data):
-        """Takes given entity group data and returns the same data keyed by parent tree-item.
+        """Takes given entity_group data and returns the same data keyed by parent tree-item.
 
         Args:
             db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
@@ -180,7 +180,7 @@ class ObjectTreeModel(MultiDBTreeModel):
         object_ids = list(reversed([int(id_) for id_ in rel_data['object_id_list'].split(",")]))
         object_class_ids = list(reversed([int(id_) for id_ in rel_cls_data['object_class_id_list'].split(",")]))
         # Find position in the relationship of the (grand parent) object,
-        # then use it to determine object class and object id to look for
+        # then use it to determine object_class and object id to look for
         pos = object_ids.index(obj_id) - 1
         object_id = object_ids[pos]
         object_class_id = object_class_ids[pos]

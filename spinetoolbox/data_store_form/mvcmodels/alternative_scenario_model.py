@@ -29,7 +29,7 @@ from .alternative_scenario_item import (
 
 class AlternativeScenarioModel(MinimalTreeModel):
 
-    """A model to display parameter value list data in a tree view.
+    """A model to display parameter_value_list data in a tree view.
 
 
     Args:

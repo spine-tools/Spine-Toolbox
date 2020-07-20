@@ -133,7 +133,7 @@ class ParameterMergingSettingsWindow(QWidget):
 
 class EntityClassInfo:
     """
-    Contains information of an entity class (object or relationship class) for use in the parameter merging widget.
+    Contains information of an entity_class (object or relationship_class) for use in the parameter merging widget.
 
     Attributes:
         name (str): entity's name
@@ -142,7 +142,7 @@ class EntityClassInfo:
             contains the entity's name only, for relationship classes the list contains the relationship's object
             classes
         parameter_names (list): entity's defined parameters
-        is_object_class (bool): True if the entity is a object class, False if it is a relationship class
+        is_object_class (bool): True if the entity is a object_class, False if it is a relationship_class
     """
 
     def __init__(self, name, class_id, domain_names, parameter_names, is_object_class):
@@ -154,7 +154,7 @@ class EntityClassInfo:
                 contains the entity's name only, for relationship classes the list contains the relationship's object
                 classes
             parameter_names (list): entity's defined parameters
-            is_object_class (bool): True if the entity is a object class, False if it is a relationship class
+            is_object_class (bool): True if the entity is a object_class, False if it is a relationship_class
         """
         self.name = name
         self.id = class_id
@@ -165,7 +165,7 @@ class EntityClassInfo:
 
 def _gather_entity_class_infos(db_map):
     """
-    Collects entity class infos from database.
+    Collects entity_class infos from database.
 
     Args:
         db_map (spinedb_api.DatabaseMapping): a database map

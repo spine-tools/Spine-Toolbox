@@ -62,7 +62,7 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit object classes")
         self.model = MinimalTableModel(self)
-        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
+        self.model.set_horizontal_header_labels(['object_class name', 'description', 'display icon', 'databases'])
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
@@ -214,7 +214,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageRelationshipClassesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['relationship class name', 'description', 'databases'])
+        self.model.set_horizontal_header_labels(['relationship_class name', 'description', 'databases'])
         self.orig_data = list()
         model_data = list()
         for item in selected:
@@ -273,7 +273,7 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
             parent (DataStoreForm): data store widget
             db_mngr (SpineDBManager): the manager to do the update
             selected (set): set of RelationshipItem instances to edit
-            class_key (tuple): (class_name, object_class_name_list) for identifying the relationship class
+            class_key (tuple): (class_name, object_class_name_list) for identifying the relationship_class
         """
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit relationships")
@@ -339,7 +339,7 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
                 relationship_classes = self.db_map_rel_cls_lookup[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
                     self.parent().msg_error.emit(
-                        "Invalid relationship class '{}' for db '{}' at row {}".format(
+                        "Invalid relationship_class '{}' for db '{}' at row {}".format(
                             self.class_name, db_map.codename, i + 1
                         )
                     )

@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A tree model for parameter value lists.
+A tree model for parameter_value lists.
 
 :authors: M. Marin (KTH)
 :date:   28.6.2019

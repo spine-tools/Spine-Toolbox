@@ -44,10 +44,10 @@ from .type_conversion import ConvertSpec
 
 _MAPPING_COLORS = {
     "entity": QColor(223, 194, 125),
-    "parameter value": QColor(21, 153, 133),
+    "parameter_value": QColor(21, 153, 133),
     "parameter extra dimension": QColor(178, 255, 243),
     "parameter name": QColor(128, 205, 193),
-    "entity class": QColor(166, 97, 26),
+    "entity_class": QColor(166, 97, 26),
     "group": QColor(120, 150, 220),
 }
 _ERROR_COLOR = QColor(Qt.red)
@@ -252,9 +252,9 @@ class MappingPreviewModel(MinimalTableModel):
                         and index.row() > last_row
                         and index.column() not in self.mapping_column_ref_int_list()
                     ):
-                        return _MAPPING_COLORS["parameter value"]
+                        return _MAPPING_COLORS["parameter_value"]
                 elif self.index_in_mapping(mapping.parameters.value, index):
-                    return _MAPPING_COLORS["parameter value"]
+                    return _MAPPING_COLORS["parameter_value"]
             if isinstance(mapping.parameters, ParameterArrayMapping) and mapping.parameters.extra_dimensions:
                 # parameter extra dimensions color
                 for ed in mapping.parameters.extra_dimensions:
@@ -266,7 +266,7 @@ class MappingPreviewModel(MinimalTableModel):
                 # parameter name colors
                 return _MAPPING_COLORS["parameter name"]
         if self.index_in_mapping(mapping.name, index):
-            return _MAPPING_COLORS["entity class"]
+            return _MAPPING_COLORS["entity_class"]
         classes = []
         objects = []
         if isinstance(mapping, ObjectClassMapping):
@@ -285,7 +285,7 @@ class MappingPreviewModel(MinimalTableModel):
         for c in classes:
             # object colors
             if self.index_in_mapping(c, index):
-                return _MAPPING_COLORS["entity class"]
+                return _MAPPING_COLORS["entity_class"]
 
     def index_in_mapping(self, mapping, index):
         """
@@ -601,9 +601,9 @@ class MappingSpecModel(QAbstractTableModel):
     @staticmethod
     def data_color(display_name):
         if display_name == "Relationship class names":
-            return _MAPPING_COLORS["entity class"]
+            return _MAPPING_COLORS["entity_class"]
         if "Object class" in display_name:
-            return _MAPPING_COLORS["entity class"]
+            return _MAPPING_COLORS["entity_class"]
         if "Object names" in display_name:
             return _MAPPING_COLORS["entity"]
         if "Group names" in display_name:
@@ -617,7 +617,7 @@ class MappingSpecModel(QAbstractTableModel):
         ):
             return _MAPPING_COLORS["parameter extra dimension"]
         if display_name == "Parameter values":
-            return _MAPPING_COLORS["parameter value"]
+            return _MAPPING_COLORS["parameter_value"]
 
     def _mapping_issues(self, row):
         """Returns a message string if given row contains issues, or an empty string if everything is OK."""

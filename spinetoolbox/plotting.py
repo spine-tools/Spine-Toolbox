@@ -377,7 +377,7 @@ def _collect_single_column_values(model, column, rows, hints):
 
     The return value of this function depends on what type of data the given column contains.
     In case of plain numbers, a list of scalars and a single label string are returned.
-    In case of indexed parameters (time series, maps), a list of parameter value objects is returned,
+    In case of indexed parameters (time series, maps), a list of parameter_value objects is returned,
     accompanied by a list of labels, each label corresponding to one of the indexed parameters.
 
     Args:

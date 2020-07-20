@@ -80,7 +80,7 @@ class FrozenTableModel(QAbstractItemModel):
                 return id_
             index_id = self._data[0][index.column()]
             if index_id == -1:
-                item = self.db_mngr.get_item(self.db_map, "parameter definition", id_)
+                item = self.db_mngr.get_item(self.db_map, "parameter_definition", id_)
                 name = item.get("parameter_name")
             if index_id == -2:
                 item = self.db_mngr.get_item(self.db_map, "alternative", id_)

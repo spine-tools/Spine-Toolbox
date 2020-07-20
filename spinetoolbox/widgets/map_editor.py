@@ -75,9 +75,9 @@ class MapEditor(QWidget):
             self._model.trim_columns()
 
     def set_value(self, value):
-        """Sets the parameter value to be edited."""
+        """Sets the parameter_value to be edited."""
         self._model.reset(value)
 
     def value(self):
-        """Returns the parameter value currently being edited."""
+        """Returns the parameter_value currently being edited."""
         return self._model.value()

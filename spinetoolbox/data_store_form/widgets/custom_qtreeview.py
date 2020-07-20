@@ -234,8 +234,8 @@ class EntityTreeView(CopyTreeView):
         item_has_children = item.has_children()
         self._fully_expand_action.setVisible(item_has_children)
         self._fully_collapse_action.setVisible(item_has_children)
-        self._add_relationships_action.setVisible(item.item_type == "relationship class")
-        self._manage_relationships_action.setVisible(item.item_type == "relationship class")
+        self._add_relationships_action.setVisible(item.item_type == "relationship_class")
+        self._manage_relationships_action.setVisible(item.item_type == "relationship_class")
 
     def edit_selected(self):
         """Edits all selected indexes using the connected data store form."""
@@ -258,9 +258,9 @@ class ObjectTreeView(EntityTreeView):
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)
         self.add_object_classes_action.setVisible(item.item_type == "root")
-        self.add_objects_action.setVisible(item.item_type == "object class")
-        self.add_object_group_action.setVisible(item.item_type == "object class")
-        self._add_relationship_classes_action.setVisible(item.item_type == "object class")
+        self.add_objects_action.setVisible(item.item_type == "object_class")
+        self.add_object_group_action.setVisible(item.item_type == "object_class")
+        self._add_relationship_classes_action.setVisible(item.item_type == "object_class")
         self.manage_object_group_action.setVisible(item.item_type == "object" and item.is_group())
         self.duplicate_object_action.setVisible(item.item_type == "object" and not item.is_group())
         self.find_next_action.setVisible(item.item_type == "relationship")
@@ -359,7 +359,7 @@ class RelationshipTreeView(EntityTreeView):
 
 
 class ItemTreeView(CopyTreeView):
-    """Custom QTreeView class for parameter value list in DataStoreForm.
+    """Custom QTreeView class for parameter_value_list in DataStoreForm.
     """
 
     def __init__(self, parent):
@@ -452,7 +452,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
 
 class ParameterValueListTreeView(ItemTreeView):
-    """Custom QTreeView class for parameter value list in DataStoreForm.
+    """Custom QTreeView class for parameter_value_list in DataStoreForm.
     """
 
     def __init__(self, parent):
@@ -470,7 +470,7 @@ class ParameterValueListTreeView(ItemTreeView):
         self.open_in_editor_action.setVisible(item.item_type == "value")
 
     def open_in_editor(self):
-        """Opens the parameter value editor for the first selected cell."""
+        """Opens the parameter_value editor for the first selected cell."""
         index = self.currentIndex()
         self._data_store_form.show_parameter_value_editor(index)
 
@@ -482,12 +482,12 @@ class ParameterValueListTreeView(ItemTreeView):
         db_map_data_to_upd = {}
         items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
         for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"parameter value list": []}
+            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_value_list": []}
             db_map_data_to_upd[db_item.db_map] = []
             for list_item in reversed(db_item.children[:-1]):
                 if list_item.id:
                     if list_item in items:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
+                        db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].append(
                             {"id": list_item.id, "name": list_item.name}
                         )
                         continue
@@ -498,7 +498,7 @@ class ParameterValueListTreeView(ItemTreeView):
                         if value_item not in items
                     ]
                     if not new_value_list:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
+                        db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].append(
                             {"id": list_item.id, "name": list_item.name}
                         )
                         continue

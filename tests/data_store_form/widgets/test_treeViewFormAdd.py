@@ -26,9 +26,9 @@ class TestTreeViewFormAddMixin:
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
         fish_item, dog_item = root_item.children
-        self.assertEqual(fish_item.item_type, "object class")
+        self.assertEqual(fish_item.item_type, "object_class")
         self.assertEqual(fish_item.display_data, "fish")
-        self.assertEqual(dog_item.item_type, "object class")
+        self.assertEqual(dog_item.item_type, "object_class")
         self.assertEqual(dog_item.display_data, "dog")
         self.assertEqual(root_item.child_count(), 2)
 
@@ -64,10 +64,10 @@ class TestTreeViewFormAddMixin:
         pluto_item = dog_item.child(0)
         nemo_dog_fish_item = nemo_item.child(1)
         pluto_fish_dog_item = pluto_item.child(0)
-        self.assertEqual(nemo_dog_fish_item.item_type, "relationship class")
+        self.assertEqual(nemo_dog_fish_item.item_type, "relationship_class")
         self.assertEqual(nemo_dog_fish_item.display_data, "dog__fish")
         self.assertEqual(nemo_item.child_count(), 2)
-        self.assertEqual(pluto_fish_dog_item.item_type, "relationship class")
+        self.assertEqual(pluto_fish_dog_item.item_type, "relationship_class")
         self.assertEqual(pluto_fish_dog_item.display_data, "fish__dog")
         self.assertEqual(pluto_item.child_count(), 2)
 

@@ -358,18 +358,18 @@ class DataStoreFormBase(QMainWindow):
         def _ids(t, types):
             return (Anyone,) if t in types else ()
 
-        db_map_obj_cls_ids = {db_map: _ids("object class", types) for db_map, types in db_map_item_types.items()}
-        db_map_rel_cls_ids = {db_map: _ids("relationship class", types) for db_map, types in db_map_item_types.items()}
+        db_map_obj_cls_ids = {db_map: _ids("object_class", types) for db_map, types in db_map_item_types.items()}
+        db_map_rel_cls_ids = {db_map: _ids("relationship_class", types) for db_map, types in db_map_item_types.items()}
         db_map_obj_ids = {db_map: _ids("object", types) for db_map, types in db_map_item_types.items()}
         db_map_rel_ids = {db_map: _ids("relationship", types) for db_map, types in db_map_item_types.items()}
         db_map_par_val_lst_ids = {
-            db_map: _ids("parameter value list", types) for db_map, types in db_map_item_types.items()
+            db_map: _ids("parameter_value_list", types) for db_map, types in db_map_item_types.items()
         }
         db_map_par_def_ids = {
-            db_map: _ids("parameter definition", types) for db_map, types in db_map_item_types.items()
+            db_map: _ids("parameter_definition", types) for db_map, types in db_map_item_types.items()
         }
-        db_map_par_val_ids = {db_map: _ids("parameter value", types) for db_map, types in db_map_item_types.items()}
-        db_map_ent_group_ids = {db_map: _ids("entity group", types) for db_map, types in db_map_item_types.items()}
+        db_map_par_val_ids = {db_map: _ids("parameter_value", types) for db_map, types in db_map_item_types.items()}
+        db_map_ent_group_ids = {db_map: _ids("entity_group", types) for db_map, types in db_map_item_types.items()}
         parcel = SpineDBParcel(self.db_mngr)
         parcel._push_object_class_ids(db_map_obj_cls_ids)
         parcel._push_object_ids(db_map_obj_ids)
@@ -607,7 +607,7 @@ class DataStoreFormBase(QMainWindow):
     @busy_effect
     @Slot("QModelIndex")
     def show_parameter_value_editor(self, index):
-        """Shows the parameter value editor for the given index of given table view.
+        """Shows the parameter_value editor for the given index of given table view.
         """
         editor = ParameterValueEditor(index, parent=self)
         editor.show()
@@ -665,32 +665,32 @@ class DataStoreFormBase(QMainWindow):
         self.notify_items_changed("added", "alternative", db_map_data)
 
     def receive_object_classes_added(self, db_map_data):
-        self.notify_items_changed("added", "object class", db_map_data)
+        self.notify_items_changed("added", "object_class", db_map_data)
 
     def receive_objects_added(self, db_map_data):
         self.notify_items_changed("added", "object", db_map_data)
 
     def receive_relationship_classes_added(self, db_map_data):
-        self.notify_items_changed("added", "relationship class", db_map_data)
+        self.notify_items_changed("added", "relationship_class", db_map_data)
 
     def receive_relationships_added(self, db_map_data):
         self.notify_items_changed("added", "relationship", db_map_data)
 
     def receive_entity_groups_added(self, db_map_data):
-        self.notify_items_changed("added", "entity group", db_map_data)
+        self.notify_items_changed("added", "entity_group", db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter definition", db_map_data)
+        self.notify_items_changed("added", "parameter_definition", db_map_data)
 
     def receive_parameter_values_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter value", db_map_data)
+        self.notify_items_changed("added", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter value list", db_map_data)
+        self.notify_items_changed("added", "parameter_value_list", db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
 
     def receive_parameter_tags_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter tag", db_map_data)
+        self.notify_items_changed("added", "parameter_tag", db_map_data)
 
     def receive_scenarios_updated(self, db_map_data):
         self.notify_items_changed("updated", "scenario", db_map_data)
@@ -699,32 +699,32 @@ class DataStoreFormBase(QMainWindow):
         self.notify_items_changed("updated", "alternative", db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
-        self.notify_items_changed("updated", "object class", db_map_data)
+        self.notify_items_changed("updated", "object_class", db_map_data)
 
     def receive_objects_updated(self, db_map_data):
         self.notify_items_changed("updated", "object", db_map_data)
 
     def receive_relationship_classes_updated(self, db_map_data):
-        self.notify_items_changed("updated", "relationship class", db_map_data)
+        self.notify_items_changed("updated", "relationship_class", db_map_data)
 
     def receive_relationships_updated(self, db_map_data):
         self.notify_items_changed("updated", "relationship", db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter definition", db_map_data)
+        self.notify_items_changed("updated", "parameter_definition", db_map_data)
 
     def receive_parameter_values_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter value", db_map_data)
+        self.notify_items_changed("updated", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter value list", db_map_data)
+        self.notify_items_changed("updated", "parameter_value_list", db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
 
     def receive_parameter_tags_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter tag", db_map_data)
+        self.notify_items_changed("updated", "parameter_tag", db_map_data)
 
     def receive_parameter_definition_tags_set(self, db_map_data):
-        self.notify_items_changed("set", "parameter definition tag", db_map_data)
+        self.notify_items_changed("set", "parameter_definition tag", db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
         self.notify_items_changed("removed", "scenarios", db_map_data)
@@ -733,32 +733,32 @@ class DataStoreFormBase(QMainWindow):
         self.notify_items_changed("removed", "alternatives", db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
-        self.notify_items_changed("removed", "object class", db_map_data)
+        self.notify_items_changed("removed", "object_class", db_map_data)
 
     def receive_objects_removed(self, db_map_data):
         self.notify_items_changed("removed", "object", db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
-        self.notify_items_changed("removed", "relationship class", db_map_data)
+        self.notify_items_changed("removed", "relationship_class", db_map_data)
 
     def receive_relationships_removed(self, db_map_data):
         self.notify_items_changed("removed", "relationship", db_map_data)
 
     def receive_entity_groups_removed(self, db_map_data):
-        self.notify_items_changed("removed", "entity group", db_map_data)
+        self.notify_items_changed("removed", "entity_group", db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter definition", db_map_data)
+        self.notify_items_changed("removed", "parameter_definition", db_map_data)
 
     def receive_parameter_values_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter value", db_map_data)
+        self.notify_items_changed("removed", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter value list", db_map_data)
+        self.notify_items_changed("removed", "parameter_value_list", db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
 
     def receive_parameter_tags_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter tag", db_map_data)
+        self.notify_items_changed("removed", "parameter_tag", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

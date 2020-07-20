@@ -66,7 +66,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @property
     def entity_class_type(self):
-        """Returns the entity class type, either 'object class' or 'relationship class'.
+        """Returns the entity_class type, either 'object_class' or 'relationship_class'.
 
         Returns:
             str
@@ -75,7 +75,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @property
     def item_type(self):
-        """Returns the parameter item type, either 'parameter definition' or 'parameter value'.
+        """Returns the parameter item type, either 'parameter_definition' or 'parameter_value'.
 
         Returns:
             str
@@ -91,13 +91,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             SingleParameterModel
         """
         return {
-            "object class": {
-                "parameter definition": SingleObjectParameterDefinitionModel,
-                "parameter value": SingleObjectParameterValueModel,
+            "object_class": {
+                "parameter_definition": SingleObjectParameterDefinitionModel,
+                "parameter_value": SingleObjectParameterValueModel,
             },
-            "relationship class": {
-                "parameter definition": SingleRelationshipParameterDefinitionModel,
-                "parameter value": SingleRelationshipParameterValueModel,
+            "relationship_class": {
+                "parameter_definition": SingleRelationshipParameterDefinitionModel,
+                "parameter_value": SingleRelationshipParameterValueModel,
             },
         }[self.entity_class_type][self.item_type]
 
@@ -110,31 +110,31 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             EmptyParameterModel
         """
         return {
-            "object class": {
-                "parameter definition": EmptyObjectParameterDefinitionModel,
-                "parameter value": EmptyObjectParameterValueModel,
+            "object_class": {
+                "parameter_definition": EmptyObjectParameterDefinitionModel,
+                "parameter_value": EmptyObjectParameterValueModel,
             },
-            "relationship class": {
-                "parameter definition": EmptyRelationshipParameterDefinitionModel,
-                "parameter value": EmptyRelationshipParameterValueModel,
+            "relationship_class": {
+                "parameter_definition": EmptyRelationshipParameterDefinitionModel,
+                "parameter_value": EmptyRelationshipParameterValueModel,
             },
         }[self.entity_class_type][self.item_type]
 
     @property
     def entity_class_id_key(self):
         """
-        Returns the key corresponding to the entity class id (either "object_class_id" or "relationship_class_id")
+        Returns the key corresponding to the entity_class id (either "object_class_id" or "relationship_class_id")
 
         Returns:
             str
         """
-        return {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
+        return {"object_class": "object_class_id", "relationship_class": "relationship_class_id"}[
             self.entity_class_type
         ]
 
     @property
     def parameter_definition_id_key(self):
-        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
+        return {"parameter_definition": "id", "parameter_value": "parameter_id"}[self.item_type]
 
     def init_model(self):
         """Initializes the model."""
@@ -193,7 +193,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return super().headerData(section, orientation, role)
 
     def _create_single_models(self):
-        """Returns a list of single models for this compound model, one for each entity class in each database.
+        """Returns a list of single models for this compound model, one for each entity_class in each database.
 
         Returns:
             list
@@ -294,7 +294,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
         Args:
             field (str): the field name
-            auto_filter (dict): mapping db_map to entity class id to accepted values for the field
+            auto_filter (dict): mapping db_map to entity_class id to accepted values for the field
         """
         self.set_compound_auto_filter(field, auto_filter)
         for model in self.accepted_single_models():
@@ -305,7 +305,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
         Args:
             field (str): the field name
-            auto_filter (dict): maps tuple (database map, entity class id) to list of accepted ids for the field
+            auto_filter (dict): maps tuple (database map, entity_class id) to list of accepted ids for the field
         """
         if self._auto_filter.setdefault(field, {}) == auto_filter:
             return
@@ -370,7 +370,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.layoutChanged.emit()
 
     def _items_per_class(self, items):
-        """Returns a dict mapping entity class ids to a set of items.
+        """Returns a dict mapping entity_class ids to a set of items.
 
         Args:
             items (list)
@@ -422,7 +422,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for class_items in items_per_class.values():
                 self._do_update_data_in_filter_menus(db_map, class_items)
         self._emit_data_changed_for_column("parameter_name")
-        # NOTE: parameter definition names aren't refreshed unless we emit dataChanged,
+        # NOTE: parameter_definition names aren't refreshed unless we emit dataChanged,
         # whereas entity and class names don't need it. Why?
 
     def receive_parameter_data_removed(self, db_map_data):
@@ -468,11 +468,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if item is None:
             return ""
         entity_name_key = {
-            "parameter definition": {
-                "object class": "object_class_name",
-                "relationship class": "relationship_class_name",
+            "parameter_definition": {
+                "object_class": "object_class_name",
+                "relationship_class": "relationship_class_name",
             },
-            "parameter value": {"object class": "object_name", "relationship class": "object_name_list"},
+            "parameter_value": {"object_class": "object_name", "relationship_class": "object_name_list"},
         }[self.item_type][self.entity_class_type]
         entity_name = item[entity_name_key].replace(",", self.db_mngr._GROUP_SEP)
         return entity_name + " - " + item["parameter_name"]
@@ -491,13 +491,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if sub_model == self.empty_model:
             return lambda value, index=index: self.setData(index, value)
         id_ = self.item_at_row(index.row())
-        value_field = {"parameter value": "value", "parameter definition": "default_value"}[self.item_type]
+        value_field = {"parameter_value": "value", "parameter_definition": "default_value"}[self.item_type]
         return lambda value, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
             [{"id": id_, value_field: value}]
         )
 
     def get_entity_class_id(self, index, db_map):
-        entity_class_name_key = {"object class": "object_class_name", "relationship class": "relationship_class_name"}[
+        entity_class_name_key = {"object_class": "object_class_name", "relationship_class": "relationship_class_name"}[
             self.entity_class_type
         ]
         entity_class_name = index.sibling(index.row(), self.header.index(entity_class_name_key)).data()
@@ -526,7 +526,7 @@ class CompoundObjectParameterMixin:
 
     @property
     def entity_class_type(self):
-        return "object class"
+        return "object_class"
 
 
 class CompoundRelationshipParameterMixin:
@@ -534,26 +534,26 @@ class CompoundRelationshipParameterMixin:
 
     @property
     def entity_class_type(self):
-        return "relationship class"
+        return "relationship_class"
 
 
 class CompoundParameterDefinitionMixin:
-    """Handles signals from db mngr for parameter definition models."""
+    """Handles signals from db mngr for parameter_definition models."""
 
     @property
     def item_type(self):
-        return "parameter definition"
+        return "parameter_definition"
 
     def receive_parameter_definition_tags_set(self, db_map_data):
         self._emit_data_changed_for_column("parameter_tag_list")
 
 
 class CompoundParameterValueMixin:
-    """Handles signals from db mngr for parameter value models."""
+    """Handles signals from db mngr for parameter_value models."""
 
     @property
     def item_type(self):
-        return "parameter value"
+        return "parameter_value"
 
     @property
     def entity_type(self):
@@ -582,8 +582,8 @@ class CompoundParameterValueMixin:
 class CompoundObjectParameterDefinitionModel(
     CompoundObjectParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
 ):
-    """A model that concatenates several single object parameter definition models
-    and one empty object parameter definition model.
+    """A model that concatenates several single object parameter_definition models
+    and one empty object parameter_definition model.
     """
 
     def _make_header(self):
@@ -601,8 +601,8 @@ class CompoundObjectParameterDefinitionModel(
 class CompoundRelationshipParameterDefinitionModel(
     CompoundRelationshipParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
 ):
-    """A model that concatenates several single relationship parameter definition models
-    and one empty relationship parameter definition model.
+    """A model that concatenates several single relationship parameter_definition models
+    and one empty relationship parameter_definition model.
     """
 
     def _make_header(self):
@@ -621,8 +621,8 @@ class CompoundRelationshipParameterDefinitionModel(
 class CompoundObjectParameterValueModel(
     CompoundObjectParameterMixin, CompoundParameterValueMixin, CompoundParameterModel
 ):
-    """A model that concatenates several single object parameter value models
-    and one empty object parameter value model.
+    """A model that concatenates several single object parameter_value models
+    and one empty object parameter_value model.
     """
 
     def _make_header(self):
@@ -636,8 +636,8 @@ class CompoundObjectParameterValueModel(
 class CompoundRelationshipParameterValueModel(
     CompoundRelationshipParameterMixin, CompoundParameterValueMixin, CompoundParameterModel
 ):
-    """A model that concatenates several single relationship parameter value models
-    and one empty relationship parameter value model.
+    """A model that concatenates several single relationship parameter_value models
+    and one empty relationship parameter_value model.
     """
 
     def _make_header(self):

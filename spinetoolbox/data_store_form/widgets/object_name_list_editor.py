@@ -66,7 +66,7 @@ class ObjectNameListEditor(ManageItemsDialog):
         Args:
             parent (DataStoreForm)
             index (QModelIndex)
-            object_class_names (list): string object class names
+            object_class_names (list): string object_class names
             object_names_lists (list): lists of string object names
             current_object_names (list)
         """

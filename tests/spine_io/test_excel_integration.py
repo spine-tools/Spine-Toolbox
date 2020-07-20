@@ -310,7 +310,7 @@ class TestExcelIntegration(unittest.TestCase):
                 # export_spine_database_to_xlsx exports db_map to an Excel that has a
                 # sheet called json_relationship_class. When this Excel is imported
                 # back to a database in _import_xlsx_to_database() function there
-                # is a duplicate relationship class called relationship_class.
+                # is a duplicate relationship_class called relationship_class.
                 # Is this intentional?
                 export_spine_database_to_xlsx(db_map, excel_file_name)
                 import_num = self._import_xlsx_to_database(excel_file_name, empty_db_map)
@@ -333,7 +333,7 @@ class TestExcelIntegration(unittest.TestCase):
                 import_num = self._import_xlsx_to_database(excel_file_name, empty_db_map)
                 self.assertEqual(import_num, 32)
 
-                # delete 1 object class
+                # delete 1 object_class
                 db_map.remove_items(object_class_ids={1})
                 db_map.commit_session("Delete class")
 

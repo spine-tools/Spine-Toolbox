@@ -119,7 +119,7 @@ class SpineDBFetcher(QObject):
 
     @Slot(object)
     def _receive_object_classes_fetched(self, db_map_data):
-        self._db_mngr.cache_items("object class", db_map_data)
+        self._db_mngr.cache_items("object_class", db_map_data)
         self._db_mngr.update_icons(db_map_data)
         self._listener.receive_object_classes_fetched(db_map_data)
 
@@ -130,7 +130,7 @@ class SpineDBFetcher(QObject):
 
     @Slot(object)
     def _receive_relationship_classes_fetched(self, db_map_data):
-        self._db_mngr.cache_items("relationship class", db_map_data)
+        self._db_mngr.cache_items("relationship_class", db_map_data)
         self._listener.receive_relationship_classes_fetched(db_map_data)
 
     @Slot(object)
@@ -140,27 +140,27 @@ class SpineDBFetcher(QObject):
 
     @Slot(object)
     def _receive_entity_groups_fetched(self, db_map_data):
-        self._db_mngr.cache_items("entity group", db_map_data)
+        self._db_mngr.cache_items("entity_group", db_map_data)
         self._listener.receive_entity_groups_fetched(db_map_data)
 
     @Slot(object)
     def _receive_parameter_definitions_fetched(self, db_map_data):
-        self._db_mngr.cache_items("parameter definition", db_map_data)
+        self._db_mngr.cache_items("parameter_definition", db_map_data)
         self._listener.receive_parameter_definitions_fetched(db_map_data)
 
     @Slot(object)
     def _receive_parameter_values_fetched(self, db_map_data):
-        self._db_mngr.cache_items("parameter value", db_map_data)
+        self._db_mngr.cache_items("parameter_value", db_map_data)
         self._listener.receive_parameter_values_fetched(db_map_data)
 
     @Slot(object)
     def _receive_parameter_value_lists_fetched(self, db_map_data):
-        self._db_mngr.cache_items("parameter value list", db_map_data)
+        self._db_mngr.cache_items("parameter_value_list", db_map_data)
         self._listener.receive_parameter_value_lists_fetched(db_map_data)
 
     @Slot(object)
     def _receive_parameter_tags_fetched(self, db_map_data):
-        self._db_mngr.cache_items("parameter tag", db_map_data)
+        self._db_mngr.cache_items("parameter_tag", db_map_data)
         self._listener.receive_parameter_tags_fetched(db_map_data)
 
     @Slot()

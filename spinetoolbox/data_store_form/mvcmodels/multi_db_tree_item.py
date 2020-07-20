@@ -262,8 +262,8 @@ class MultiDBTreeItem(TreeItem):
 
         Examples of problems:
 
-        - The user renames an object class in one db but not in the others --> we need to split
-        - The user renames an object class and the new name is already 'taken' by another object class in
+        - The user renames an object_class in one db but not in the others --> we need to split
+        - The user renames an object_class and the new name is already 'taken' by another object_class in
           another db_map --> we need to merge
 
         Args:
