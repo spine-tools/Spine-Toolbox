@@ -17,7 +17,7 @@ Classes to represent entities in a tree.
 """
 
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QFont, QBrush
+from PySide2.QtGui import QFont, QBrush, QIcon
 from .multi_db_tree_item import MultiDBTreeItem
 
 
@@ -31,6 +31,10 @@ class EntityRootItem(MultiDBTreeItem):
         return "root"
 
     @property
+    def display_icon(self):
+        return QIcon(":/symbols/Spine_symbol.png")
+
+    @property
     def display_data(self):
         """"See super class."""
         return "root"
@@ -42,6 +46,8 @@ class EntityRootItem(MultiDBTreeItem):
 
 class ObjectTreeRootItem(EntityRootItem):
     """An object tree root item."""
+
+    item_type = "root"
 
     @property
     def child_item_type(self):
@@ -59,6 +65,8 @@ class ObjectTreeRootItem(EntityRootItem):
 
 class RelationshipTreeRootItem(EntityRootItem):
     """A relationship tree root item."""
+
+    item_type = "root"
 
     @property
     def child_item_type(self):
@@ -309,10 +317,8 @@ class RelationshipItem(EntityItem):
     @property
     def display_data(self):
         """"Returns the name for display."""
-        return (
-            self.object_name_list.replace(self.parent_item.parent_item.display_data + ",", "")
-            .replace("," + self.parent_item.parent_item.display_data, "")
-            .replace(",", self.db_mngr._GROUP_SEP)
+        return self.db_mngr._GROUP_SEP.join(
+            [x for x in self.object_name_list.split(",") if x != self.parent_item.parent_item.display_data]
         )
 
     @property
@@ -341,6 +347,6 @@ class RelationshipItem(EntityItem):
     def is_valid(self):
         """Checks that the grand parent object is still in the relationship."""
         grand_parent = self.parent_item.parent_item
-        if grand_parent.display_data == "root":
+        if grand_parent.item_type == "root":
             return True
         return grand_parent.display_data in self.object_name_list.split(",")
