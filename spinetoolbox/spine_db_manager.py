@@ -50,8 +50,6 @@ from .spine_db_commands import (
     AddCheckedParameterValuesCommand,
     UpdateItemsCommand,
     UpdateCheckedParameterValuesCommand,
-    SetScenarioAlternativesCommand,
-    SetParameterDefinitionTagsCommand,
     RemoveItemsCommand,
 )
 from .widgets.commit_dialog import CommitDialog
@@ -1367,7 +1365,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(SetScenarioAlternativesCommand(self, db_map, data))
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "scenario_alternative"))
 
     def set_parameter_definition_tags(self, db_map_data):
         """Sets parameter_definition tags in db.
@@ -1376,7 +1374,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(SetParameterDefinitionTagsCommand(self, db_map, data))
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_definition_tag"))
 
     def remove_items(self, db_map_typed_ids):
         for db_map, ids_per_type in db_map_typed_ids.items():
@@ -1462,8 +1460,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
         db_map_data = {
-            db_map: self.get_scenarios(db_map, ids={x["scenario_id"] for x in data})
-            for db_map, data in db_map_data.items()
+            db_map: self.get_scenarios(db_map, ids={x["id"] for x in data}) for db_map, data in db_map_data.items()
         }
         if not any(db_map_data.values()):
             return
@@ -1477,7 +1474,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
         db_map_data = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["parameter_definition_id"] for x in data})
+            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in data})
             for db_map, data in db_map_data.items()
         }
         if not any(db_map_data.values()):

@@ -46,6 +46,10 @@ def _cache_to_db_parameter_definition(item):
     return item
 
 
+def _cache_to_db_parameter_definition_tag(item):
+    return {"id": item["id"], "parameter_tag_id_list": item["parameter_tag_id_list"]}
+
+
 def _cache_to_db_parameter_value(item):
     item = {k: v for k, v in item.items() if not any(k.startswith(x) for x in ("formatted_", "expanded_"))}
     item = deepcopy(item)
@@ -60,13 +64,19 @@ def _cache_to_db_parameter_value_list(item):
     return item
 
 
+def _cache_to_db_scenario_alternative(item):
+    return {"id": item["id"], "alternative_id_list": item["alternative_id_list"]}
+
+
 def _cache_to_db_item(item_type, item):
     return {
         "relationship_class": _cache_to_db_relationship_class,
         "relationship": _cache_to_db_relationship,
         "parameter_definition": _cache_to_db_parameter_definition,
+        "parameter_definition_tag": _cache_to_db_parameter_definition_tag,
         "parameter_value": _cache_to_db_parameter_value,
         "parameter_value_list": _cache_to_db_parameter_value_list,
+        "scenario_alternative": _cache_to_db_scenario_alternative,
     }.get(item_type, lambda x: x)(item)
 
 
@@ -120,7 +130,7 @@ class SpineDBCommand(AgedUndoCommand):
         "entity_group": "add entity groups",
         "parameter_definition": "add parameter definitions",
         "parameter_value": "add parameter values",
-        "parameter_value_list": "add parameter_value lists",
+        "parameter_value_list": "add parameter value lists",
         "parameter_tag": "add parameter tags",
         "alternative": "add alternative",
         "scenario": "add scenario",
@@ -131,11 +141,13 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship_class": "update relationship classes",
         "relationship": "update relationships",
         "parameter_definition": "update parameter definitions",
+        "parameter_definition_tag": "set parameter definition tags",
         "parameter_value": "update parameter values",
-        "parameter_value_list": "update parameter_value lists",
+        "parameter_value_list": "update parameter value lists",
         "parameter_tag": "update parameter tags",
         "alternative": "update alternative",
         "scenario": "update scenario",
+        "scenario_alternative": "set scenario alternatives",
     }
     _add_method_name = {
         "object_class": "add_object_classes",
@@ -171,11 +183,13 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship_class": "update_wide_relationship_classes",
         "relationship": "update_wide_relationships",
         "parameter_definition": "update_parameter_definitions",
+        "parameter_definition_tag": "set_parameter_definition_tags",
         "parameter_value": "update_parameter_values",
         "parameter_value_list": "update_wide_parameter_value_lists",
         "parameter_tag": "update_parameter_tags",
         "alternative": "update_alternatives",
         "scenario": "update_scenarios",
+        "scenario_alternative": "set_scenario_alternatives",
     }
     _get_method_name = {
         "object_class": "get_object_classes",
@@ -213,12 +227,15 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship_class": "relationship_classes_updated",
         "relationship": "relationships_updated",
         "parameter_definition": "parameter_definitions_updated",
+        "parameter_definition_tag": "_parameter_definition_tags_added",
         "parameter_value": "parameter_values_updated",
         "parameter_value_list": "parameter_value_lists_updated",
         "parameter_tag": "parameter_tags_updated",
         "alternative": "alternatives_updated",
         "scenario": "scenarios_updated",
+        "scenario_alternative": "_scenario_alternatives_added",
     }
+    _cache_item_type = {"parameter_definition_tag": "parameter_definition", "scenario_alternative": "scenario"}
 
     def __init__(self, db_mngr, db_map, parent=None):
         """
@@ -348,16 +365,17 @@ class UpdateItemsCommand(SpineDBCommand):
         """
         super().__init__(db_mngr, db_map, parent=parent)
         self.item_type = item_type
+        self.cache_item_type = self._cache_item_type.get(item_type, item_type)
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = self._update_method_name[item_type]
-        self.get_method_name = self._get_method_name[item_type]
+        self.get_method_name = self._get_method_name[self.cache_item_type]
         self.completed_signal_name = self._updated_signal_name[item_type]
         self.completed_signal = getattr(db_mngr, self.completed_signal_name)
         self.setText(self._update_command_name[item_type] + f" in '{db_map.codename}'")
 
     def _undo_item(self, db_map, redo_item):
-        undo_item = self.db_mngr.get_item(db_map, self.item_type, redo_item["id"])
+        undo_item = self.db_mngr.get_item(db_map, self.cache_item_type, redo_item["id"])
         return _cache_to_db_item(self.item_type, undo_item)
 
     @SpineDBCommand.redomethod
@@ -380,73 +398,6 @@ class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
     def __init__(self, db_mngr, db_map, data, parent=None):
         super().__init__(db_mngr, db_map, data, "parameter_value", parent=parent)
         self.method_name = "update_checked_parameter_values"
-
-
-class SetScenarioAlternativesCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, data, parent=None):
-        super().__init__(db_mngr, db_map, parent=parent)
-        self.redo_db_map_data = {db_map: data}
-        self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
-        self.method_name = "set_scenario_alternatives"
-        self.get_method_name = "get_scenarios"
-        self.completed_signal_name = "scenarios_updated"
-        self.setText(f"set scenario alternatives in '{db_map.codename}'")
-        self.completed_signal = self.db_mngr.scenarios_updated
-
-    def _undo_item(self, db_map, redo_item):
-        scenario_id = redo_item["scenario_id"]
-        return {
-            "scenario_id": scenario_id,
-            "alternative_id_list": self.db_mngr.get_field(db_map, "scenario", scenario_id, "alternative_id_list"),
-        }
-
-    @SpineDBCommand.redomethod
-    def redo(self):
-        self.db_mngr.add_or_update_items(
-            self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
-        )
-
-    @SpineDBCommand.undomethod
-    def undo(self):
-        self.db_mngr.add_or_update_items(
-            self.undo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
-        )
-
-    def data(self):
-        """See base class."""
-        raise NotImplementedError()
-
-
-class SetParameterDefinitionTagsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, data, parent=None):
-        super().__init__(db_mngr, db_map, parent=parent)
-        self.redo_db_map_data = {db_map: data}
-        self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
-        self.method_name = "set_parameter_definition_tags"
-        self.get_method_name = "get_parameter_definitions"
-        self.completed_signal_name = "parameter_definitions_updated"
-        self.setText(f"set parameter_definition tags in '{db_map.codename}'")
-        self.completed_signal = self.db_mngr.parameter_definitions_updated
-
-    def _undo_item(self, db_map, redo_item):
-        undo_item = self.db_mngr.get_item(db_map, "parameter_definition", redo_item["parameter_definition_id"])
-        return {"parameter_definition_id": undo_item["id"], "parameter_tag_id_list": undo_item["parameter_tag_id_list"]}
-
-    @SpineDBCommand.redomethod
-    def redo(self):
-        self.db_mngr.add_or_update_items(
-            self.redo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
-        )
-
-    @SpineDBCommand.undomethod
-    def undo(self):
-        self.db_mngr.add_or_update_items(
-            self.undo_db_map_data, self.method_name, self.get_method_name, self.completed_signal_name
-        )
-
-    def data(self):
-        """See base class."""
-        raise NotImplementedError()
 
 
 class RemoveItemsCommand(SpineDBCommand):

@@ -308,9 +308,9 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         param_def_tags = list()
         error_log = list()
         for item in items:
-            param_def, err1 = self._convert_to_db(item, self.db_map)
             param_def_tag, err2 = self._make_parameter_definition_tag(item, self.db_map)
-            if param_def:
+            param_def, err1 = self._convert_to_db(item, self.db_map)
+            if tuple(param_def.keys()) != ("id",):
                 param_defs.append(param_def)
             if param_def_tag:
                 param_def_tags.append(param_def_tag)
@@ -364,7 +364,7 @@ class SingleParameterValueMixin(ConvertToDBMixin):
         self.build_lookup_dictionary(db_map_data)
         for item in items:
             param_val, err = self._convert_to_db(item, self.db_map)
-            if param_val:
+            if tuple(param_val.keys()) != ("id",):
                 param_vals.append(param_val)
             if err:
                 error_log += err

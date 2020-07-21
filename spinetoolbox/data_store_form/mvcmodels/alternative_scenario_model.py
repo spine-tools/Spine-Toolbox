@@ -219,9 +219,6 @@ class AlternativeScenarioModel(MinimalTreeModel):
             alternative_ids = [scenario_item.child(row).id for row in alternative_rows]
             alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alternative_ids]
         alternative_id_list[row:row] = alternative_ids
-        db_item = {
-            "scenario_id": scenario_item.id,
-            "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
-        }
+        db_item = {"id": scenario_item.id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
         self.db_mngr.set_scenario_alternatives({scenario_item.db_map: [db_item]})
         return True

@@ -237,7 +237,7 @@ class MakeParameterTagMixin(ConvertToDBMixin):
             if not tag_item:
                 return None, [f"Unknown tag {tag}"]
             parameter_tag_id_list.append(str(tag_item["id"]))
-        return ({"parameter_definition_id": item["id"], "parameter_tag_id_list": ",".join(parameter_tag_id_list)}, [])
+        return ({"id": item["id"], "parameter_tag_id_list": ",".join(parameter_tag_id_list)}, [])
 
 
 class FillInEntityClassIdMixin(ConvertToDBMixin):
