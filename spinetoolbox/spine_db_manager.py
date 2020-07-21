@@ -1433,11 +1433,9 @@ class SpineDBManager(QObject):
         }
         typed_db_map_data = {}
         for item_type, signal in ordered_signals.items():
-            db_map_ids = {
-                db_map: ids_per_type.get(item_type, set()) for db_map, ids_per_type in db_map_typed_ids.items()
-            }
             db_map_data = {
-                db_map: [self._pop_item(db_map, item_type, id_) for id_ in ids] for db_map, ids in db_map_ids.items()
+                db_map: [self._pop_item(db_map, item_type, id_) for id_ in ids_per_type.get(item_type, set())]
+                for db_map, ids_per_type in db_map_typed_ids.items()
             }
             if any(db_map_data.values()):
                 signal.emit(db_map_data)

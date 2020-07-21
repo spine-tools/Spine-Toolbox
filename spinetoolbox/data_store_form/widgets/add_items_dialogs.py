@@ -945,6 +945,9 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
         if not super()._check_validity():
             return False
         group_name = self.group_name_line_edit.text()
+        if not group_name:
+            self.parent().msg_error.emit(f"Please enter a name for the group.")
+            return False
         if group_name in self.db_map_object_ids[self.db_map]:
             self.parent().msg_error.emit(
                 f"An object called {group_name} already exists in this class. Please select a different group name."
@@ -962,7 +965,9 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
         db_map_data = {
             self.db_map: {
                 "objects": [(class_name, group_name)],
-                "object_groups": [(self.object_class_item.display_data, group_name, member_names)],
+                "object_groups": [
+                    (self.object_class_item.display_data, group_name, member_name) for member_name in member_names
+                ],
             }
         }
         self.db_mngr.import_data(db_map_data, command_text="Add object group")
