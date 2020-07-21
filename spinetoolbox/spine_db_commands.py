@@ -46,10 +46,6 @@ def _cache_to_db_parameter_definition(item):
     return item
 
 
-def _cache_to_db_parameter_definition_tag(item):
-    return {"id": item["id"], "parameter_tag_id_list": item["parameter_tag_id_list"]}
-
-
 def _cache_to_db_parameter_value(item):
     item = {k: v for k, v in item.items() if not any(k.startswith(x) for x in ("formatted_", "expanded_"))}
     item = deepcopy(item)
@@ -64,19 +60,13 @@ def _cache_to_db_parameter_value_list(item):
     return item
 
 
-def _cache_to_db_scenario_alternative(item):
-    return {"id": item["id"], "alternative_id_list": item["alternative_id_list"]}
-
-
 def _cache_to_db_item(item_type, item):
     return {
         "relationship_class": _cache_to_db_relationship_class,
         "relationship": _cache_to_db_relationship,
         "parameter_definition": _cache_to_db_parameter_definition,
-        "parameter_definition_tag": _cache_to_db_parameter_definition_tag,
         "parameter_value": _cache_to_db_parameter_value,
         "parameter_value_list": _cache_to_db_parameter_value_list,
-        "scenario_alternative": _cache_to_db_scenario_alternative,
     }.get(item_type, lambda x: x)(item)
 
 
@@ -227,15 +217,15 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship_class": "relationship_classes_updated",
         "relationship": "relationships_updated",
         "parameter_definition": "parameter_definitions_updated",
-        "parameter_definition_tag": "_parameter_definition_tags_added",
+        "parameter_definition_tag": "_parameter_definition_tags_updated",
         "parameter_value": "parameter_values_updated",
         "parameter_value_list": "parameter_value_lists_updated",
         "parameter_tag": "parameter_tags_updated",
         "alternative": "alternatives_updated",
         "scenario": "scenarios_updated",
-        "scenario_alternative": "_scenario_alternatives_added",
+        "scenario_alternative": "_scenario_alternatives_updated",
     }
-    _cache_item_type = {"parameter_definition_tag": "parameter_definition", "scenario_alternative": "scenario"}
+    _update_item_type = {"parameter_definition_tag": "parameter_definition", "scenario_alternative": "scenario"}
 
     def __init__(self, db_mngr, db_map, parent=None):
         """
@@ -365,18 +355,18 @@ class UpdateItemsCommand(SpineDBCommand):
         """
         super().__init__(db_mngr, db_map, parent=parent)
         self.item_type = item_type
-        self.cache_item_type = self._cache_item_type.get(item_type, item_type)
+        self.update_item_type = self._update_item_type.get(item_type, item_type)
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = self._update_method_name[item_type]
-        self.get_method_name = self._get_method_name[self.cache_item_type]
+        self.get_method_name = self._get_method_name[self.item_type]
         self.completed_signal_name = self._updated_signal_name[item_type]
         self.completed_signal = getattr(db_mngr, self.completed_signal_name)
         self.setText(self._update_command_name[item_type] + f" in '{db_map.codename}'")
 
     def _undo_item(self, db_map, redo_item):
-        undo_item = self.db_mngr.get_item(db_map, self.cache_item_type, redo_item["id"])
-        return _cache_to_db_item(self.item_type, undo_item)
+        undo_item = self.db_mngr.get_item(db_map, self.update_item_type, redo_item["id"])
+        return _cache_to_db_item(self.update_item_type, undo_item)
 
     @SpineDBCommand.redomethod
     def redo(self):

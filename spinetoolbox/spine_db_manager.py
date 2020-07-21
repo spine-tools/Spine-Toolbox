@@ -112,8 +112,10 @@ class SpineDBManager(QObject):
     items_removed_from_cache = Signal(object)
     # Internal
     _scenario_alternatives_added = Signal(object)
+    _scenario_alternatives_updated = Signal(object)
     _scenario_alternatives_removed = Signal(object)
     _parameter_definition_tags_added = Signal(object)
+    _parameter_definition_tags_updated = Signal(object)
     _parameter_definition_tags_removed = Signal(object)
 
     _GROUP_SEP = " \u01C0 "
@@ -545,8 +547,10 @@ class SpineDBManager(QObject):
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         # refresh
         self._scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
+        self._scenario_alternatives_updated.connect(self._handle_scenario_alternatives_updated)
         self._scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
         self._parameter_definition_tags_added.connect(self._refresh_parameter_definitions_by_tag)
+        self._parameter_definition_tags_updated.connect(self._handle_parameter_definition_tags_updated)
         self._parameter_definition_tags_removed.connect(self._refresh_parameter_definitions_by_tag)
         qApp.aboutToQuit.connect(self._stop_fetchers)  # pylint: disable=undefined-variable
 
@@ -574,6 +578,46 @@ class SpineDBManager(QObject):
         for db_map, items in db_map_data.items():
             for item in items:
                 self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
+
+    def _handle_scenario_alternatives_updated(self, db_map_data):
+        """Updates scenario_alternative cache.
+
+        Args:
+            db_map_data (dict): lists of dict items keyed by DiffDatabaseMapping
+        """
+        db_map_scen_data = {}
+        for db_map, items in db_map_data.items():
+            scen_ids = {item["scenario_id"] for item in items}
+            cache = self._cache.get(db_map, {}).get("scenario_alternative", {})
+            ids_to_remove = set()
+            for id_, item in cache.items():
+                if item["scenario_id"] in scen_ids:
+                    ids_to_remove.add(id_)
+            for id_ in ids_to_remove:
+                del cache[id_]
+            db_map_scen_data[db_map] = self.get_scenarios(db_map, scen_ids)
+        self.cache_items("scenario_alternative", db_map_data)
+        self.scenarios_updated.emit(db_map_scen_data)
+
+    def _handle_parameter_definition_tags_updated(self, db_map_data):
+        """Updates parameter_definition_tag cache.
+
+        Args:
+            db_map_data (dict): lists of dict items keyed by DiffDatabaseMapping
+        """
+        db_map_param_def_data = {}
+        for db_map, items in db_map_data.items():
+            param_def_ids = {item["parameter_definition_id"] for item in items}
+            cache = self._cache.get(db_map, {}).get("parameter_definition_tag", {})
+            ids_to_remove = set()
+            for id_, item in cache.items():
+                if item["parameter_definition_id"] in param_def_ids:
+                    ids_to_remove.add(id_)
+            for id_ in ids_to_remove:
+                del cache[id_]
+            db_map_param_def_data[db_map] = self.get_parameter_definitions(db_map, param_def_ids)
+        self.cache_items("parameter_definition_tag", db_map_data)
+        self.parameter_definitions_updated.emit(db_map_param_def_data)
 
     def update_icons(self, db_map_data):
         """Runs when object classes are added or updated. Setups icons for those classes.
@@ -1435,7 +1479,7 @@ class SpineDBManager(QObject):
                 db_map: [self._pop_item(db_map, item_type, id_) for id_ in ids_per_type.get(item_type, set())]
                 for db_map, ids_per_type in db_map_typed_ids.items()
             }
-            if any(db_map_data.values()):
+            if any(any(v) for v in db_map_data.values()):
                 signal.emit(db_map_data)
                 typed_db_map_data[item_type] = db_map_data
         self.items_removed_from_cache.emit(typed_db_map_data)
@@ -1460,7 +1504,8 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
         db_map_data = {
-            db_map: self.get_scenarios(db_map, ids={x["id"] for x in data}) for db_map, data in db_map_data.items()
+            db_map: self.get_scenarios(db_map, ids={x["scenario_id"] for x in data})
+            for db_map, data in db_map_data.items()
         }
         if not any(db_map_data.values()):
             return
@@ -1474,7 +1519,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
         db_map_data = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in data})
+            db_map: self.get_parameter_definitions(db_map, ids={x["parameter_definition_id"] for x in data})
             for db_map, data in db_map_data.items()
         }
         if not any(db_map_data.values()):
