@@ -131,13 +131,11 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship_class": "update relationship classes",
         "relationship": "update relationships",
         "parameter_definition": "update parameter definitions",
-        "parameter_definition_tag": "set parameter definition tags",
         "parameter_value": "update parameter values",
         "parameter_value_list": "update parameter value lists",
         "parameter_tag": "update parameter tags",
         "alternative": "update alternative",
         "scenario": "update scenario",
-        "scenario_alternative": "set scenario alternatives",
     }
     _add_method_name = {
         "object_class": "add_object_classes",
@@ -146,11 +144,13 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship": "add_wide_relationships",
         "entity_group": "add_entity_groups",
         "parameter_definition": "add_parameter_definitions",
+        "parameter_definition_tag": "add_parameter_definition_tags",
         "parameter_value": "add_parameter_values",
         "parameter_value_list": "add_wide_parameter_value_lists",
         "parameter_tag": "add_parameter_tags",
         "alternative": "add_alternatives",
         "scenario": "add_scenarios",
+        "scenario_alternative": "add_scenario_alternatives",
     }
     _readd_method_name = {
         "object_class": "readd_object_classes",
@@ -173,13 +173,12 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship_class": "update_wide_relationship_classes",
         "relationship": "update_wide_relationships",
         "parameter_definition": "update_parameter_definitions",
-        "parameter_definition_tag": "set_parameter_definition_tags",
         "parameter_value": "update_parameter_values",
         "parameter_value_list": "update_wide_parameter_value_lists",
         "parameter_tag": "update_parameter_tags",
         "alternative": "update_alternatives",
         "scenario": "update_scenarios",
-        "scenario_alternative": "set_scenario_alternatives",
+        "scenario_alternative": "_update_scenario_alternatives",
     }
     _get_method_name = {
         "object_class": "get_object_classes",
@@ -217,7 +216,6 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship_class": "relationship_classes_updated",
         "relationship": "relationships_updated",
         "parameter_definition": "parameter_definitions_updated",
-        "parameter_definition_tag": "_parameter_definition_tags_updated",
         "parameter_value": "parameter_values_updated",
         "parameter_value_list": "parameter_value_lists_updated",
         "parameter_tag": "parameter_tags_updated",
@@ -225,7 +223,6 @@ class SpineDBCommand(AgedUndoCommand):
         "scenario": "scenarios_updated",
         "scenario_alternative": "_scenario_alternatives_updated",
     }
-    _update_item_type = {"parameter_definition_tag": "parameter_definition", "scenario_alternative": "scenario"}
 
     def __init__(self, db_mngr, db_map, parent=None):
         """
@@ -309,7 +306,7 @@ class AddItemsCommand(SpineDBCommand):
         self.get_method_name = self._get_method_name[item_type]
         self.completed_signal_name = self._added_signal_name[item_type]
         self.completed_signal = getattr(db_mngr, self.completed_signal_name)
-        self.setText(self._add_command_name[item_type] + f" to '{db_map.codename}'")
+        self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
         self.undo_db_map_typed_ids = None
 
     @SpineDBCommand.redomethod
@@ -355,18 +352,17 @@ class UpdateItemsCommand(SpineDBCommand):
         """
         super().__init__(db_mngr, db_map, parent=parent)
         self.item_type = item_type
-        self.update_item_type = self._update_item_type.get(item_type, item_type)
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
         self.method_name = self._update_method_name[item_type]
         self.get_method_name = self._get_method_name[self.item_type]
         self.completed_signal_name = self._updated_signal_name[item_type]
         self.completed_signal = getattr(db_mngr, self.completed_signal_name)
-        self.setText(self._update_command_name[item_type] + f" in '{db_map.codename}'")
+        self.setText(self._update_command_name.get(item_type, "update item") + f" in '{db_map.codename}'")
 
     def _undo_item(self, db_map, redo_item):
-        undo_item = self.db_mngr.get_item(db_map, self.update_item_type, redo_item["id"])
-        return _cache_to_db_item(self.update_item_type, undo_item)
+        undo_item = self.db_mngr.get_item(db_map, self.item_type, redo_item["id"])
+        return _cache_to_db_item(self.item_type, undo_item)
 
     @SpineDBCommand.redomethod
     def redo(self):

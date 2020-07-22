@@ -115,7 +115,6 @@ class SpineDBManager(QObject):
     _scenario_alternatives_updated = Signal(object)
     _scenario_alternatives_removed = Signal(object)
     _parameter_definition_tags_added = Signal(object)
-    _parameter_definition_tags_updated = Signal(object)
     _parameter_definition_tags_removed = Signal(object)
 
     _GROUP_SEP = " \u01C0 "
@@ -516,7 +515,7 @@ class SpineDBManager(QObject):
             "parameter_definition_tag": (self._parameter_definition_tags_added,),
             "alternative": (self.alternatives_added, self.alternatives_updated),
             "scenario": (self.scenarios_added, self.scenarios_updated),
-            "scenario_alternative": (self._scenario_alternatives_added,),
+            "scenario_alternative": (self._scenario_alternatives_added, self._scenario_alternatives_updated),
             "object": (self.objects_added, self.objects_updated),
             "relationship": (self.relationships_added, self.relationships_updated),
             "entity_group": (self.entity_groups_added,),
@@ -547,10 +546,9 @@ class SpineDBManager(QObject):
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
         # refresh
         self._scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
-        self._scenario_alternatives_updated.connect(self._handle_scenario_alternatives_updated)
+        self._scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
         self._scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
         self._parameter_definition_tags_added.connect(self._refresh_parameter_definitions_by_tag)
-        self._parameter_definition_tags_updated.connect(self._handle_parameter_definition_tags_updated)
         self._parameter_definition_tags_removed.connect(self._refresh_parameter_definitions_by_tag)
         qApp.aboutToQuit.connect(self._stop_fetchers)  # pylint: disable=undefined-variable
 
@@ -578,46 +576,6 @@ class SpineDBManager(QObject):
         for db_map, items in db_map_data.items():
             for item in items:
                 self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
-
-    def _handle_scenario_alternatives_updated(self, db_map_data):
-        """Updates scenario_alternative cache.
-
-        Args:
-            db_map_data (dict): lists of dict items keyed by DiffDatabaseMapping
-        """
-        db_map_scen_data = {}
-        for db_map, items in db_map_data.items():
-            scen_ids = {item["scenario_id"] for item in items}
-            cache = self._cache.get(db_map, {}).get("scenario_alternative", {})
-            ids_to_remove = set()
-            for id_, item in cache.items():
-                if item["scenario_id"] in scen_ids:
-                    ids_to_remove.add(id_)
-            for id_ in ids_to_remove:
-                del cache[id_]
-            db_map_scen_data[db_map] = self.get_scenarios(db_map, scen_ids)
-        self.cache_items("scenario_alternative", db_map_data)
-        self.scenarios_updated.emit(db_map_scen_data)
-
-    def _handle_parameter_definition_tags_updated(self, db_map_data):
-        """Updates parameter_definition_tag cache.
-
-        Args:
-            db_map_data (dict): lists of dict items keyed by DiffDatabaseMapping
-        """
-        db_map_param_def_data = {}
-        for db_map, items in db_map_data.items():
-            param_def_ids = {item["parameter_definition_id"] for item in items}
-            cache = self._cache.get(db_map, {}).get("parameter_definition_tag", {})
-            ids_to_remove = set()
-            for id_, item in cache.items():
-                if item["parameter_definition_id"] in param_def_ids:
-                    ids_to_remove.add(id_)
-            for id_ in ids_to_remove:
-                del cache[id_]
-            db_map_param_def_data[db_map] = self.get_parameter_definitions(db_map, param_def_ids)
-        self.cache_items("parameter_definition_tag", db_map_data)
-        self.parameter_definitions_updated.emit(db_map_param_def_data)
 
     def update_icons(self, db_map_data):
         """Runs when object classes are added or updated. Setups icons for those classes.
@@ -1154,9 +1112,15 @@ class SpineDBManager(QObject):
         db_map_data_out = dict()
         error_log = dict()
         for db_map, items in db_map_data.items():
-            ids, error_log[db_map] = getattr(db_map, method_name)(*items)
+            result = getattr(db_map, method_name)(*items)
+            if isinstance(result, tuple):
+                ids, errors = result
+            else:
+                ids, errors = result, ()
             if not ids:
                 continue
+            if errors:
+                error_log[db_map] = errors
             db_map_data_out[db_map] = getattr(self, get_method_name)(db_map, ids=ids)
         if any(error_log.values()):
             self.error_msg(error_log)
@@ -1409,7 +1373,28 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "scenario_alternative"))
+            macro_command = AgedUndoCommand()
+            macro_command.setText(f"set scenario alternatives in {db_map.codename}")
+            self.undo_stack[db_map].push(macro_command)
+            child_cmds = []
+            items_to_add, items_to_update, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data)
+            if ids_to_remove:
+                rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove}, parent=macro_command)
+                rm_cmd.redo()
+                child_cmds.append(rm_cmd)
+            if items_to_update:
+                upd_cmd = UpdateItemsCommand(
+                    self, db_map, items_to_update, "scenario_alternative", parent=macro_command
+                )
+                upd_cmd.redo()
+                child_cmds.append(upd_cmd)
+            if items_to_add:
+                add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative", parent=macro_command)
+                add_cmd.redo()
+                child_cmds.append(add_cmd)
+            if all([cmd.isObsolete() for cmd in child_cmds]):
+                macro_command.setObsolete(True)
+                self.undo_stack[db_map].undo()
 
     def set_parameter_definition_tags(self, db_map_data):
         """Sets parameter_definition tags in db.
@@ -1418,7 +1403,24 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_definition_tag"))
+            macro_command = AgedUndoCommand()
+            macro_command.setText(f"set parameter definition tags in {db_map.codename}")
+            self.undo_stack[db_map].push(macro_command)
+            child_cmds = []
+            items_to_add, ids_to_remove = db_map.get_data_to_set_parameter_definition_tags(*data)
+            if ids_to_remove:
+                rm_cmd = RemoveItemsCommand(
+                    self, db_map, {"parameter_definition_tag": ids_to_remove}, parent=macro_command
+                )
+                rm_cmd.redo()
+                child_cmds.append(rm_cmd)
+            if items_to_add:
+                add_cmd = AddItemsCommand(self, db_map, items_to_add, "parameter_definition_tag", parent=macro_command)
+                add_cmd.redo()
+                child_cmds.append(add_cmd)
+            if all([cmd.isObsolete() for cmd in child_cmds]):
+                macro_command.setObsolete(True)
+                self.undo_stack[db_map].undo()
 
     def remove_items(self, db_map_typed_ids):
         for db_map, ids_per_type in db_map_typed_ids.items():
