@@ -16,7 +16,16 @@ Classes for custom QDialogs to add edit and remove database items.
 :date:   13.5.2018
 """
 
-from PySide2.QtWidgets import QWidget, QDialog, QVBoxLayout, QHBoxLayout, QDialogButtonBox, QGroupBox, QCheckBox
+from PySide2.QtWidgets import (
+    QWidget,
+    QDialog,
+    QGridLayout,
+    QVBoxLayout,
+    QHBoxLayout,
+    QDialogButtonBox,
+    QGroupBox,
+    QCheckBox,
+)
 from PySide2.QtCore import Slot, Qt, QTimer, Signal
 
 
@@ -27,14 +36,19 @@ class SelectDBItemsDialog(QDialog):
     _ITEM_TYPES = (
         "object_class",
         "relationship_class",
+        "parameter_value_list",
         "parameter_definition",
         "parameter_tag",
-        "parameter_value_list",
+        "parameter_definition_tag",
         "object",
         "relationship",
         "entity_group",
         "parameter_value",
+        "alternative",
+        "scenario",
+        "scenario_alternative",
     )
+    _COLUMN_COUNT = 2
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Initialize class.
@@ -58,11 +72,13 @@ class SelectDBItemsDialog(QDialog):
             check_box.setChecked(True)
             db_maps_layout.addWidget(check_box)
         items_group_box = QGroupBox("Items", top_widget)
-        items_layout = QVBoxLayout(items_group_box)
+        items_layout = QGridLayout(items_group_box)
         items_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
         self.item_check_boxes = {item_type: QCheckBox(item_type, items_group_box) for item_type in self._ITEM_TYPES}
-        for check_box in self.item_check_boxes.values():
-            items_layout.addWidget(check_box)
+        for k, check_box in enumerate(self.item_check_boxes.values()):
+            row = k // self._COLUMN_COUNT
+            column = k % self._COLUMN_COUNT
+            items_layout.addWidget(check_box, row, column)
         top_layout.addWidget(db_maps_group_box)
         top_layout.addWidget(items_group_box)
         button_box = QDialogButtonBox(self)

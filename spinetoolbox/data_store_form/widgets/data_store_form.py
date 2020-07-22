@@ -370,6 +370,11 @@ class DataStoreFormBase(QMainWindow):
         }
         db_map_par_val_ids = {db_map: _ids("parameter_value", types) for db_map, types in db_map_item_types.items()}
         db_map_ent_group_ids = {db_map: _ids("entity_group", types) for db_map, types in db_map_item_types.items()}
+        db_map_alt_ids = {db_map: _ids("alternative", types) for db_map, types in db_map_item_types.items()}
+        db_map_scen_ids = {db_map: _ids("scenario", types) for db_map, types in db_map_item_types.items()}
+        db_map_scen_alt_ids = {
+            db_map: _ids("scenario_alternative", types) for db_map, types in db_map_item_types.items()
+        }
         parcel = SpineDBParcel(self.db_mngr)
         parcel._push_object_class_ids(db_map_obj_cls_ids)
         parcel._push_object_ids(db_map_obj_ids)
@@ -381,6 +386,9 @@ class DataStoreFormBase(QMainWindow):
         parcel._push_parameter_value_ids(db_map_par_val_ids, "relationship")
         parcel._push_parameter_value_list_ids(db_map_par_val_lst_ids)
         parcel._push_object_group_ids(db_map_ent_group_ids)
+        parcel._push_alternative_ids(db_map_alt_ids)
+        parcel._push_scenario_ids(db_map_scen_ids)
+        parcel._push_scenario_alternative_ids(db_map_scen_alt_ids)
         self.export_data(parcel.data)
 
     @Slot(object)

@@ -137,6 +137,12 @@ class SpineDBParcel:
             },
             entity_type,
         )
+        self._push_alternative_ids(
+            {
+                db_map: self._get_fields(db_map, "parameter_value", "alternative_id", ids)
+                for db_map, ids in db_map_ids.items()
+            }
+        )
         if entity_type == "object":
             self._push_object_ids(
                 {
@@ -160,6 +166,33 @@ class SpineDBParcel:
             {
                 db_map: self._get_fields(db_map, "entity_group", "entity_id", ids)
                 | self._get_fields(db_map, "entity_group", "member_id", ids)
+                for db_map, ids in db_map_ids.items()
+            }
+        )
+
+    def _push_alternative_ids(self, db_map_ids):
+        """Pushes alternative ids."""
+        for db_map, ids in db_map_ids.items():
+            self._setdefault(db_map)["alternative_ids"].update(ids)
+
+    def _push_scenario_ids(self, db_map_ids):
+        """Pushes scenario ids."""
+        for db_map, ids in db_map_ids.items():
+            self._setdefault(db_map)["scenario_ids"].update(ids)
+
+    def _push_scenario_alternative_ids(self, db_map_ids):
+        """Pushes scenario_alternative ids."""
+        for db_map, ids in db_map_ids.items():
+            self._setdefault(db_map)["scenario_alternative_ids"].update(ids)
+        self._push_alternative_ids(
+            {
+                db_map: self._get_fields(db_map, "scenario_alternative", "alternative_id", ids)
+                for db_map, ids in db_map_ids.items()
+            }
+        )
+        self._push_scenario_ids(
+            {
+                db_map: self._get_fields(db_map, "scenario_alternative", "scenario_id", ids)
                 for db_map, ids in db_map_ids.items()
             }
         )
@@ -248,5 +281,8 @@ class SpineDBParcel:
             "relationship_parameter_ids": set(),
             "object_parameter_value_ids": set(),
             "relationship_parameter_value_ids": set(),
+            "alternative_ids": set(),
+            "scenario_ids": set(),
+            "scenario_alternative_ids": set(),
         }
         return self._data.setdefault(db_map, d)
