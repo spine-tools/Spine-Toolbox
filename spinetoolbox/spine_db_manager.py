@@ -870,9 +870,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "wide_scenario_alternative_sq", ids=ids), key=lambda x: x["name"]
-        )
+        return self.get_db_items(self._make_query(db_map, "wide_scenario_sq", ids=ids), key=lambda x: x["name"])
 
     def get_scenario_alternatives(self, db_map, ids=()):
         """Returns scenario alternatives from database.
@@ -1117,10 +1115,10 @@ class SpineDBManager(QObject):
                 ids, errors = result
             else:
                 ids, errors = result, ()
-            if not ids:
-                continue
             if errors:
                 error_log[db_map] = errors
+            if not ids:
+                continue
             db_map_data_out[db_map] = getattr(self, get_method_name)(db_map, ids=ids)
         if any(error_log.values()):
             self.error_msg(error_log)
@@ -1477,14 +1475,17 @@ class SpineDBManager(QObject):
         }
         typed_db_map_data = {}
         for item_type, signal in ordered_signals.items():
+            db_map_ids = {db_map: ids_per_type.get(item_type) for db_map, ids_per_type in db_map_typed_ids.items()}
             db_map_data = {
-                db_map: [self._pop_item(db_map, item_type, id_) for id_ in ids_per_type.get(item_type, set())]
-                for db_map, ids_per_type in db_map_typed_ids.items()
+                db_map: [self._pop_item(db_map, item_type, id_) for id_ in ids]
+                for db_map, ids in db_map_ids.items()
+                if ids
             }
-            if any(any(v) for v in db_map_data.values()):
+            if any(db_map_data.values()):
                 signal.emit(db_map_data)
                 typed_db_map_data[item_type] = db_map_data
-        self.items_removed_from_cache.emit(typed_db_map_data)
+        if typed_db_map_data:
+            self.items_removed_from_cache.emit(typed_db_map_data)
 
     @staticmethod
     def db_map_ids(db_map_data):

@@ -167,8 +167,8 @@ class AlternativeScenarioModel(MinimalTreeModel):
             parent_item = item.parent_item
             db_row = self.db_row(parent_item)
             parent_type = parent_item.item_type
-            master_key = ";;".join([str(db_row), parent_type])
-            d.setdefault(master_key, {}).setdefault(parent_item.child_number(), []).append(item.child_number())
+            master_key = ";;".join([str(db_row), parent_type, str(parent_item.child_number())])
+            d.setdefault(master_key, []).append(item.child_number())
         data = json.dumps(d)
         mime = QMimeData()
         mime.setText(data)
@@ -183,20 +183,21 @@ class AlternativeScenarioModel(MinimalTreeModel):
             return False
         if not isinstance(data, dict):
             return False
+        # Check that all source data comes from the same db and parent
         if len(data) != 1:
             return False
         master_key = next(iter(data))
-        if len(data[master_key]) != 1:
-            return False
-        db_row, parent_type = master_key.split(";;")
+        db_row, parent_type, parent_row = master_key.split(";;")
         db_row = int(db_row)
         if parent_type not in ("alternative root", "scenario"):
             return False
+        # Check that target is in the same db as source
         scenario_item = self.item_from_index(parent)
         if db_row != self.db_row(scenario_item):
             return False
         if parent_type == "scenario":
-            scenario_row = next(iter(data[master_key]))
+            # Check that reordering only happens within the same scenario
+            scenario_row = parent_row
             if int(scenario_row) != scenario_item.child_number():
                 return False
         return True
@@ -206,16 +207,14 @@ class AlternativeScenarioModel(MinimalTreeModel):
         alternative_id_list = scenario_item.alternative_id_list
         if row == -1:
             row = len(alternative_id_list)
-        master_key, rows = json.loads(data.text()).popitem()
-        db_row, parent_type = master_key.split(";;")
+        master_key, alternative_rows = json.loads(data.text()).popitem()
+        db_row, parent_type, _parent_row = master_key.split(";;")
         db_row = int(db_row)
         if parent_type == "alternative root":
             alt_root_item = self._invisible_root_item.child(db_row).child(0)
-            _, alternative_rows = rows.popitem()
             alternative_ids = [alt_root_item.child(row).id for row in alternative_rows]
             alternative_ids = [id_ for id_ in alternative_ids if id_ not in set(alternative_id_list) | {None}]
         elif parent_type == "scenario":
-            _, alternative_rows = rows.popitem()
             alternative_ids = [scenario_item.child(row).id for row in alternative_rows]
             alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alternative_ids]
         alternative_id_list[row:row] = alternative_ids
