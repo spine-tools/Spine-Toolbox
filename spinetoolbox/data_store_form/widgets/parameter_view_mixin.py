@@ -18,7 +18,6 @@ Contains the ParameterViewMixin class.
 
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QHeaderView
-from .toolbars import ParameterTagToolBar
 from .object_name_list_editor import ObjectNameListEditor
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -26,7 +25,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from .manage_items_dialogs import ManageParameterTagsDialog
+from ..mvcmodels.parameter_tag_model import ParameterTagModel
 
 
 class ParameterViewMixin:
@@ -41,8 +40,9 @@ class ParameterViewMixin:
         self.filter_tag_ids = dict()
         self.tag_filter_class_ids = {}
         self.filter_parameter_ids = {}
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
+        self.parameter_tag_model = ParameterTagModel(self, self.db_mngr, *self.db_maps)
+        self.ui.treeView_parameter_tag.setModel(self.parameter_tag_model)
+        self.ui.treeView_parameter_tag.connect_data_store_form(self)
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *self.db_maps)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(
             self, self.db_mngr, *self.db_maps
@@ -78,7 +78,7 @@ class ParameterViewMixin:
         """Adds toggle view actions to View menu."""
         super().add_menu_actions()
         self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
+        self.ui.menuView.addAction(self.ui.dockWidget_parameter_tag.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
@@ -87,8 +87,7 @@ class ParameterViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
-        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
+        self.ui.treeView_parameter_tag.tag_selection_changed.connect(self._handle_tag_selection_changed)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_relationship.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
@@ -98,7 +97,11 @@ class ParameterViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
-        self.parameter_tag_toolbar.init_toolbar()
+        self.parameter_tag_model.build_tree()
+        for item in self.parameter_tag_model.visit_all():
+            index = self.parameter_tag_model.index_from_item(item)
+            self.ui.treeView_parameter_tag.expand(index)
+        self.ui.treeView_parameter_tag.resizeColumnToContents(0)
         self.object_parameter_value_model.init_model()
         self.object_parameter_definition_model.init_model()
         self.relationship_parameter_value_model.init_model()
@@ -239,14 +242,13 @@ class ParameterViewMixin:
         self.filter_entity_ids = self._db_map_class_ids(active_rel_inds)
         self.reset_filters()
 
-    @Slot("QVariant", bool)
-    def _handle_tag_button_toggled(self, db_map_ids, checked):
-        """Resets filter according to selection in parameter_tag toolbar."""
-        for db_map, id_ in db_map_ids:
-            if checked:
-                self.filter_tag_ids.setdefault(db_map, set()).add(id_)
-            else:
-                self.filter_tag_ids[db_map].remove(id_)
+    @Slot(object, object)
+    def _handle_tag_selection_changed(self, selected_db_map_ids, deselected_db_map_ids):
+        """Resets filter according to selection in parameter_tag tree view."""
+        for db_map, ids in selected_db_map_ids.items():
+            self.filter_tag_ids.setdefault(db_map, set()).update(ids)
+        for db_map, ids in deselected_db_map_ids.items():
+            self.filter_tag_ids[db_map].difference_update(ids)
         self.filter_tag_ids = {db_map: ids for db_map, ids in self.filter_tag_ids.items() if ids}
         filter_parameters = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.filter_tag_ids)
         self.filter_parameter_ids = d = {}
@@ -263,17 +265,6 @@ class ParameterViewMixin:
             for param in params:
                 d.setdefault(db_map, set()).add(param["entity_class_id"])
         self.reset_filters()
-
-    @Slot(bool)
-    def show_manage_parameter_tags_form(self, checked=False):
-        dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
-
-    def restore_dock_widgets(self):
-        """Restores parameter_tag toolbar."""
-        super().restore_dock_widgets()
-        self.parameter_tag_toolbar.setVisible(True)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
 
     def restore_ui(self):
         """Restores UI state from previous session."""
@@ -321,7 +312,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_fetched(self, db_map_data):
         super().receive_parameter_tags_fetched(db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_model.receive_parameter_tags_added(db_map_data)
 
     def receive_parameter_definitions_fetched(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
@@ -335,7 +326,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_added(self, db_map_data):
         super().receive_parameter_tags_added(db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_model.receive_parameter_tags_added(db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
@@ -349,7 +340,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_updated(self, db_map_data):
         super().receive_parameter_tags_updated(db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
+        self.parameter_tag_model.receive_parameter_tags_updated(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
         super().receive_parameter_definitions_updated(db_map_data)
@@ -378,7 +369,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_removed(self, db_map_data):
         super().receive_parameter_tags_removed(db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_removed(db_map_data)
+        self.parameter_tag_model.receive_parameter_tags_removed(db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
         super().receive_parameter_definitions_removed(db_map_data)

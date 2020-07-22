@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>889</width>
-    <height>817</height>
+    <width>969</width>
+    <height>1029</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,7 +61,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>889</width>
+     <width>969</width>
      <height>28</height>
     </rect>
    </property>
@@ -95,8 +95,6 @@
     <addaction name="separator"/>
     <addaction name="actionRemove_selected"/>
     <addaction name="actionMass_remove_items"/>
-    <addaction name="separator"/>
-    <addaction name="actionManage_parameter_tags"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuFile">
@@ -184,7 +182,7 @@
     <string>Alternative/Scenario tree</string>
    </property>
    <attribute name="dockWidgetArea">
-    <number>1</number>
+    <number>2</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_15">
     <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -227,7 +225,7 @@
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
        <property name="selectionBehavior">
-        <enum>QAbstractItemView::SelectItems</enum>
+        <enum>QAbstractItemView::SelectRows</enum>
        </property>
        <property name="iconSize">
         <size>
@@ -869,6 +867,52 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_parameter_tag">
+   <property name="windowTitle">
+    <string>Parameter tag</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_9">
+    <layout class="QVBoxLayout" name="verticalLayout_9">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="ParameterTagTreeView" name="treeView_parameter_tag">
+       <property name="contextMenuPolicy">
+        <enum>Qt::DefaultContextMenu</enum>
+       </property>
+       <property name="accessibleName">
+        <string>parameter value list</string>
+       </property>
+       <property name="editTriggers">
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+       <property name="uniformRowHeights">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>
@@ -1038,11 +1082,6 @@
    </property>
    <property name="text">
     <string>Edit selected items</string>
-   </property>
-  </action>
-  <action name="actionManage_parameter_tags">
-   <property name="text">
-    <string>Manage parameter tags</string>
    </property>
   </action>
   <action name="actionRemove_selected">
@@ -1324,6 +1363,11 @@
   </customwidget>
   <customwidget>
    <class>AlternativeScenarioTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ParameterTagTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
   </customwidget>

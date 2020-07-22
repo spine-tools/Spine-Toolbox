@@ -139,7 +139,7 @@ class OpenSQLiteFileButton(OpenFileButton):
 
 class ShootingLabel(QLabel):
     def __init__(self, origin, destination, parent=None, duration=1200):
-        super().__init__("FIXME", parent=parent)
+        super().__init__("foo", parent=parent)
         self.origin = QPointF(origin)
         self.direction = QPointF(destination - origin)
         self.effect = QGraphicsOpacityEffect()

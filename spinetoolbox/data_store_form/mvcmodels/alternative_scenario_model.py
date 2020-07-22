@@ -54,16 +54,6 @@ class AlternativeScenarioModel(MinimalTreeModel):
             return ("name", "description")[section]
         return None
 
-    def alternative_root_indexes(self, db_maps):
-        items = [child for child in self._invisible_root_item.children if child.db_map in db_maps]
-        items += [item.child(0) for item in items]
-        return [self.index_from_item(item) for item in items]
-
-    def scenario_root_indexes(self, db_maps):
-        items = [child for child in self._invisible_root_item.children if child.db_map in db_maps]
-        items += [item.child(1) for item in items]
-        return [self.index_from_item(item) for item in items]
-
     def build_tree(self):
         """Builds tree."""
         self.beginResetModel()

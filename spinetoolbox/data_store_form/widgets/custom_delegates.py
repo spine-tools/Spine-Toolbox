@@ -546,24 +546,3 @@ class RemoveEntitiesDelegate(ManageItemsDelegate):
             editor = self._create_database_editor(parent, option, index)
             self.connect_editor_signals(editor, index)
             return editor
-
-
-class ManageParameterTagsDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in ManageParameterTagsDialog.
-
-    Attributes:
-        parent (ManageItemsDialog): parent dialog
-    """
-
-    def createEditor(self, parent, option, index):
-        """Return editor."""
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'remove':
-            return None
-        if header[index.column()] == 'databases':
-            editor = self._create_database_editor(parent, option, index)
-        else:
-            editor = CustomLineEditor(parent)
-            editor.set_data(index.data(Qt.EditRole))
-        self.connect_editor_signals(editor, index)
-        return editor

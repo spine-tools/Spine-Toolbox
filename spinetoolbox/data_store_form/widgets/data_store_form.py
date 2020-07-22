@@ -147,7 +147,6 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selected.triggered.connect(self.remove_selected)
         self.ui.actionEdit_selected.triggered.connect(self.edit_selected)
-        self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
         self.ui.actionUser_guide.triggered.connect(self.show_user_guide)
@@ -887,12 +886,13 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_parameter_value_list, Qt.Horizontal
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
         )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical
         )
+        self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -928,7 +928,7 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_relationship_parameter_value.hide()
         self.ui.dockWidget_relationship_parameter_definition.hide()
         self.ui.dockWidget_parameter_value_list.hide()
-        self.parameter_tag_toolbar.hide()
+        self.ui.dockWidget_parameter_tag.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
@@ -941,12 +941,15 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_parameter_value_list, Qt.Horizontal)
+        self.splitDockWidget(
+            self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
+        )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical
         )
+        self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,

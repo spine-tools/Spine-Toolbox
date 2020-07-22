@@ -42,8 +42,6 @@ class TreeViewMixin:
     """Provides object and relationship trees for the data store form.
     """
 
-    _alternatives_fetched = Signal(list)
-    _scenarios_fetched = Signal(list)
     _object_classes_added = Signal()
     _relationship_classes_added = Signal()
     _object_classes_fetched = Signal()
@@ -80,8 +78,6 @@ class TreeViewMixin:
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
         self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
-        self._alternatives_fetched.connect(self._expand_alternative_roots)
-        self._scenarios_fetched.connect(self._expand_scenario_roots)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
         self._object_classes_fetched.connect(lambda: self.ui.treeView_object.expand(self.object_tree_model.root_index))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
@@ -89,22 +85,14 @@ class TreeViewMixin:
             lambda: self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
         )
 
-    @Slot(list)
-    def _expand_alternative_roots(self, db_maps):
-        root_indexes = self.alternative_scenario_model.alternative_root_indexes(db_maps)
-        for index in root_indexes:
-            self.ui.treeView_alternative_scenario.expand(index)
-
-    @Slot(list)
-    def _expand_scenario_roots(self, db_maps):
-        root_indexes = self.alternative_scenario_model.scenario_root_indexes(db_maps)
-        for index in root_indexes:
-            self.ui.treeView_alternative_scenario.expand(index)
-
     def init_models(self):
         """Initializes models."""
         super().init_models()
         self.alternative_scenario_model.build_tree()
+        for item in self.alternative_scenario_model.visit_all():
+            index = self.alternative_scenario_model.index_from_item(item)
+            self.ui.treeView_alternative_scenario.expand(index)
+        self.ui.treeView_alternative_scenario.resizeColumnToContents(0)
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())

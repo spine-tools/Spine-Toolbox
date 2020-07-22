@@ -367,7 +367,6 @@ class ItemTreeView(CopyTreeView):
         super().__init__(parent=parent)
         self._data_store_form = None
         self._menu = QMenu(self)
-        self.connect_signals()
 
     def connect_signals(self):
         """Connects signals."""
@@ -389,6 +388,7 @@ class ItemTreeView(CopyTreeView):
     def connect_data_store_form(self, data_store_form):
         self._data_store_form = data_store_form
         self.create_context_menu()
+        self.connect_signals()
 
     def create_context_menu(self):
         """Creates a context menu for this view."""
@@ -505,3 +505,48 @@ class ParameterValueListTreeView(ItemTreeView):
         self.model().db_mngr.update_parameter_value_lists(db_map_data_to_upd)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()
+
+
+class ParameterTagTreeView(ItemTreeView):
+    """Custom QTreeView class for the parameter_tag tree in DataStoreForm."""
+
+    tag_selection_changed = Signal(object, object)
+
+    def connect_signals(self):
+        """Connects signals."""
+        super().connect_signals()
+        self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+
+    def remove_selected(self):
+        """See base class."""
+        if not self.selectionModel().hasSelection():
+            return
+        db_map_typed_data_to_rm = {}
+        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
+        for db_item in self.model()._invisible_root_item.children:
+            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_tag": set()}
+            for tag_item in reversed(db_item.children[:-1]):
+                if tag_item.id and tag_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["parameter_tag"].add(tag_item.id)
+        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
+        self.selectionModel().clearSelection()
+
+    def update_actions_visibility(self, item):
+        """See base class."""
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_selection_changed(self, selected, deselected):
+        """Resets filter according to selection in parameter_tag tree view."""
+        selected_db_map_ids = self._make_db_map_ids_from_selection(selected)
+        deselected_db_map_ids = self._make_db_map_ids_from_selection(deselected)
+        self.tag_selection_changed.emit(selected_db_map_ids, deselected_db_map_ids)
+
+    def _make_db_map_ids_from_selection(self, selection):
+        db_map_ids = {}
+        for index in selection.indexes():
+            if index.column() != 0:
+                continue
+            item = self.model().item_from_index(index)
+            if item.item_type == "parameter_tag" and item.id:
+                db_map_ids.setdefault(item.db_map, set()).add(item.id)
+        return db_map_ids

@@ -83,7 +83,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
         if role in (Qt.DisplayRole, Qt.EditRole):
             return self.name
         if role == Qt.DecorationRole:
-            engine = CharIconEngine("\uf0ca", 0)
+            engine = CharIconEngine("\uf022", 0)
             return QIcon(engine.pixmap())
         return super().data(column, role)
 
