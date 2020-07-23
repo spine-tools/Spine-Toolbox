@@ -55,8 +55,8 @@ class TabularViewMixin:
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.pivot_db_action_group = None
-        self.input_type_action_group = None
+        self.pivot_db_action_group = QActionGroup(self)
+        self.input_type_action_group = QActionGroup(self)
         self.populate_pivot_db_action_group()
         self.populate_input_type_action_group()
         self.pivot_table_proxy = PivotTableSortFilterProxy()
@@ -72,7 +72,6 @@ class TabularViewMixin:
         if menu is None:
             return
         self.ui.menuPivot_table.addMenu(menu)
-        self.pivot_db_action_group = QActionGroup(self)
         actions = menu.actions()
         for action in actions:
             self.pivot_db_action_group.addAction(action)
@@ -81,7 +80,6 @@ class TabularViewMixin:
     def populate_input_type_action_group(self):
         menu = QMenu("Input type", self)
         self.ui.menuPivot_table.addMenu(menu)
-        self.input_type_action_group = QActionGroup(self)
         actions = {
             input_type: self.input_type_action_group.addAction(input_type)
             for input_type in [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]

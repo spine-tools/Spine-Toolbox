@@ -78,7 +78,7 @@ class GraphViewMixin:
         self.heat_map_items = []
         self.zoom_widget_action = None
         self.rotate_widget_action = None
-        self.graph_db_action_group = None
+        self.graph_db_action_group = QActionGroup(self)
         self.layout_gens = list()
         self.ui.graphicsView.connect_data_store_form(self)
         self.setup_widget_actions()
@@ -90,7 +90,6 @@ class GraphViewMixin:
             return
         before = self.ui.menuGraph.actions()[0]
         self.ui.menuGraph.insertMenu(before, menu)
-        self.graph_db_action_group = QActionGroup(self)
         actions = menu.actions()
         for action in actions:
             self.graph_db_action_group.addAction(action)

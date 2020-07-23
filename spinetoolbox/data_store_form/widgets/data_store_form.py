@@ -119,8 +119,8 @@ class DataStoreFormBase(QMainWindow):
         return self.db_maps[0]
 
     def _make_db_menu(self):
-        # if len(self.db_maps) <= 1:
-        #    return None
+        if len(self.db_maps) <= 1:
+            return None
         menu = QMenu("Database", self)
         actions = [menu.addAction(db_map.codename) for db_map in self.db_maps]
         for action in actions:
