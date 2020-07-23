@@ -38,7 +38,7 @@ class PivotTableModelBase(QAbstractTableModel):
         super().__init__()
         self._parent = parent
         self.db_mngr = parent.db_mngr
-        self.db_map = parent.db_map
+        self.db_map = parent.pivot_db_map
         self.model = PivotModel()
         self.top_left_headers = {}
         self._plot_x_column = None

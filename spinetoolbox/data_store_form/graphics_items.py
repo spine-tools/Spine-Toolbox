@@ -77,7 +77,7 @@ class EntityItem(QGraphicsPixmapItem):
         super().__init__()
         self._data_store_form = data_store_form
         self.db_mngr = data_store_form.db_mngr
-        self.db_map = data_store_form.db_map
+        self.db_map = data_store_form.graph_db_map
         self.entity_id = entity_id
         self.arc_items = list()
         self._extent = extent

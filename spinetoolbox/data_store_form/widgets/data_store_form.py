@@ -19,7 +19,7 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMenu
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from sqlalchemy.engine.url import URL, make_url
@@ -80,11 +80,11 @@ class DataStoreFormBase(QMainWindow):
 
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self.db_map = self.db_maps[0]
+        self.db_maps_by_codename = {db_map.codename: db_map for db_map in db_maps}
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.db_url = self.db_urls[0]
         self.db_mngr.register_listener(self, *self.db_maps)
-        self.db_mngr.set_logger_for_db_map(self, self.db_map)
+        self.db_mngr.set_logger_for_db_map(self, self.first_db_map)  # FIXME
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -114,13 +114,26 @@ class DataStoreFormBase(QMainWindow):
         self.setWindowTitle(f"{db_names}[*] - Data store view")
         self.update_commit_enabled()
 
+    @property
+    def first_db_map(self):
+        return self.db_maps[0]
+
+    def _make_db_menu(self):
+        # if len(self.db_maps) <= 1:
+        #    return None
+        menu = QMenu("Database", self)
+        actions = [menu.addAction(db_map.codename) for db_map in self.db_maps]
+        for action in actions:
+            action.setCheckable(True)
+        return menu
+
     def add_menu_actions(self):
         """Adds actions to View and Edit menu."""
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         before = self.ui.menuEdit.actions()[0]
-        self.undo_action = self.db_mngr.undo_action[self.db_map]
-        self.redo_action = self.db_mngr.redo_action[self.db_map]
+        self.undo_action = self.db_mngr.undo_action[self.first_db_map]
+        self.redo_action = self.db_mngr.redo_action[self.first_db_map]
         self.ui.menuEdit.insertAction(before, self.undo_action)
         self.ui.menuEdit.insertAction(before, self.redo_action)
         self.ui.menuEdit.insertSeparator(before)
@@ -157,8 +170,8 @@ class DataStoreFormBase(QMainWindow):
         redo_ages = {db_map: self.db_mngr.undo_stack[db_map].redo_age for db_map in self.db_maps}
         undo_ages = {db_map: age for db_map, age in undo_ages.items() if age is not None}
         redo_ages = {db_map: age for db_map, age in redo_ages.items() if age is not None}
-        new_undo_action = self.db_mngr.undo_action[max(undo_ages, key=undo_ages.get, default=self.db_map)]
-        new_redo_action = self.db_mngr.redo_action[min(redo_ages, key=redo_ages.get, default=self.db_map)]
+        new_undo_action = self.db_mngr.undo_action[max(undo_ages, key=undo_ages.get, default=self.first_db_map)]
+        new_redo_action = self.db_mngr.redo_action[min(redo_ages, key=redo_ages.get, default=self.first_db_map)]
         if new_undo_action != self.undo_action:
             self.ui.menuEdit.insertAction(self.undo_action, new_undo_action)
             self.ui.menuEdit.removeAction(self.undo_action)

@@ -306,7 +306,7 @@ class PivotTableView(CopyPasteTableView):
 
     @property
     def db_map(self):
-        return self._data_store_form.db_map
+        return self.source_model.pivot_db_map
 
     def connect_data_store_form(self, data_store_form):
         self._data_store_form = data_store_form

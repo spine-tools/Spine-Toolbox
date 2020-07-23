@@ -30,7 +30,7 @@ class FrozenTableModel(QAbstractItemModel):
         super().__init__()
         self._parent = parent
         self.db_mngr = parent.db_mngr
-        self.db_map = parent.db_map
+        self.db_map = parent.pivot_db_map
         if headers is None:
             headers = list()
         if data is None:

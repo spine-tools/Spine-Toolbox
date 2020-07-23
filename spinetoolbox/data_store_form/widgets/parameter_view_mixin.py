@@ -196,9 +196,9 @@ class ParameterViewMixin:
         """Resets filter according to graph selection."""
         obj_items = selected_items["object"]
         rel_items = selected_items["relationship"]
-        active_objs = {self.db_map: [x.db_representation for x in obj_items]}
+        active_objs = {self.graph_db_map: [x.db_representation for x in obj_items]}
         cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(active_objs))
-        active_rels = {self.db_map: [x.db_representation for x in rel_items] + cascading_rels[self.db_map]}
+        active_rels = {self.graph_db_map: [x.db_representation for x in rel_items] + cascading_rels[self.graph_db_map]}
         self.filter_class_ids = {}
         for db_map, items in active_objs.items():
             self.filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
