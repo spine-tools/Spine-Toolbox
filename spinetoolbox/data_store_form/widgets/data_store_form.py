@@ -912,6 +912,13 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         ]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
+        docks = [
+            self.ui.dockWidget_alternative_scenario_tree,
+            self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_parameter_tag,
+        ]
+        height = sum(d.size().height() for d in docks)
+        self.resizeDocks(docks, [0.4 * height, 0.4 * height, 0.2 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot(bool)
@@ -968,6 +975,13 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
+        docks = [
+            self.ui.dockWidget_alternative_scenario_tree,
+            self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_parameter_tag,
+        ]
+        height = sum(d.size().height() for d in docks)
+        self.resizeDocks(docks, [0.4 * height, 0.4 * height, 0.2 * height], Qt.Vertical)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 
