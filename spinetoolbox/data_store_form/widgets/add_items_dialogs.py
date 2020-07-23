@@ -648,6 +648,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Manage relationships")
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.remove_rows_button.setToolTip("<p>Remove selected relationships.</p>")
         self.remove_rows_button.setIconSize(QSize(24, 24))
         self.db_map = db_maps[0]

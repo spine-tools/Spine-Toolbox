@@ -330,6 +330,7 @@ class SingleParameterValueMixin(ConvertToDBMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._filter_entity_ids = dict()
+        self._filter_alternative_ids = dict()
 
     @property
     def item_type(self):
@@ -341,6 +342,7 @@ class SingleParameterValueMixin(ConvertToDBMixin):
             self._parameter_filter_accepts_row(row)
             and self._entity_filter_accepts_row(row)
             and self._auto_filter_accepts_row(row)
+            and self._alternative_filter_accepts_row(row)
         )
 
     def _entity_filter_accepts_row(self, row):
@@ -350,6 +352,13 @@ class SingleParameterValueMixin(ConvertToDBMixin):
         entity_id_key = {"object_class": "object_id", "relationship_class": "relationship_id"}[self.entity_class_type]
         entity_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[entity_id_key]
         return entity_id in self._filter_entity_ids.get((self.db_map, self.entity_class_id), set())
+
+    def _alternative_filter_accepts_row(self, row):
+        """Returns the result of the alternative filter."""
+        if not self._filter_alternative_ids:
+            return True
+        alt_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])["alternative_id"]
+        return alt_id in self._filter_alternative_ids.get(self.db_map, set())
 
     def update_items_in_db(self, items):
         """Update items in db.

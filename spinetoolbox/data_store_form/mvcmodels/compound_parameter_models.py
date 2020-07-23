@@ -570,6 +570,11 @@ class CompoundParameterValueMixin:
             if self._settattr_if_different(model, "_filter_entity_ids", entity_ids):
                 self._invalidate_filter()
 
+    def set_filter_alternative_ids(self, alternative_ids):
+        for model in self.single_models:
+            if self._settattr_if_different(model, "_filter_alternative_ids", alternative_ids):
+                self._invalidate_filter()
+
     def receive_alternatives_updated(self, db_map_data):
         """Updated alternative column
 

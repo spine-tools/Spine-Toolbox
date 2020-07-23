@@ -37,6 +37,7 @@ class ParameterViewMixin:
         super().__init__(*args, **kwargs)
         self.filter_class_ids = {}
         self.filter_entity_ids = {}
+        self.filter_alternative_ids = {}
         self.filter_tag_ids = dict()
         self.tag_filter_class_ids = {}
         self.filter_parameter_ids = {}
@@ -87,6 +88,9 @@ class ParameterViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
+        self.ui.treeView_alternative_scenario.alternative_selection_changed.connect(
+            self._handle_alternative_selection_changed
+        )
         self.ui.treeView_parameter_tag.tag_selection_changed.connect(self._handle_tag_selection_changed)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_relationship.selectionModel().currentChanged.connect(self.set_default_parameter_data)
@@ -190,6 +194,7 @@ class ParameterViewMixin:
             model.set_filter_parameter_ids(self.filter_parameter_ids)
         for model in self._parameter_value_models:
             model.set_filter_entity_ids(self.filter_entity_ids)
+            model.set_filter_alternative_ids(self.filter_alternative_ids)
 
     @Slot(dict)
     def _handle_graph_selection_changed(self, selected_items):
@@ -242,23 +247,29 @@ class ParameterViewMixin:
         self.filter_entity_ids = self._db_map_class_ids(active_rel_inds)
         self.reset_filters()
 
-    @Slot(object)
+    @Slot(dict)
+    def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):
+        """Resets filter according to selection in alternative tree view."""
+        self.filter_alternative_ids = {db_map: alt_ids.copy() for db_map, alt_ids in selected_db_map_alt_ids.items()}
+        self.reset_filters()
+
+    @Slot(dict)
     def _handle_tag_selection_changed(self, selected_db_map_tag_ids):
         """Resets filter according to selection in parameter_tag tree view."""
         filter_parameters = self.db_mngr.find_cascading_parameter_definitions_by_tag(selected_db_map_tag_ids)
-        self.filter_parameter_ids = d = {}
+        self.filter_parameter_ids = {}
         for db_map, params in filter_parameters.items():
             for param in params:
-                d.setdefault((db_map, param["entity_class_id"]), set()).add(param["id"])
+                self.filter_parameter_ids.setdefault((db_map, param["entity_class_id"]), set()).add(param["id"])
         if selected_db_map_tag_ids and not any(filter_parameters.values()):
             # There are tags selected but no matching parameter definitions ~> no class shall pass
             self.tag_filter_class_ids = None
             self.reset_filters()
             return
-        self.tag_filter_class_ids = d = {}
+        self.tag_filter_class_ids = {}
         for db_map, params in filter_parameters.items():
             for param in params:
-                d.setdefault(db_map, set()).add(param["entity_class_id"])
+                self.tag_filter_class_ids.setdefault(db_map, set()).add(param["entity_class_id"])
         self.reset_filters()
 
     def restore_ui(self):

@@ -412,6 +412,57 @@ class ItemTreeView(CopyTreeView):
 class AlternativeScenarioTreeView(ItemTreeView):
     """Custom QTreeView class for the alternative scenario tree in DataStoreForm."""
 
+    alternative_selection_changed = Signal(dict)
+
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self._selected_alternative_ids = dict()
+
+    def connect_signals(self):
+        """Connects signals."""
+        super().connect_signals()
+        self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+
+    def _db_map_alt_ids_from_selection(self, selection):
+        db_map_ids = {}
+        for index in selection.indexes():
+            if index.column() != 0:
+                continue
+            item = self.model().item_from_index(index)
+            if item.item_type == "alternative" and item.id:
+                db_map_ids.setdefault(item.db_map, set()).add(item.id)
+        return db_map_ids
+
+    def _db_map_scen_alt_ids_from_selection(self, selection):
+        db_map_ids = {}
+        for index in selection.indexes():
+            if index.column() != 0:
+                continue
+            item = self.model().item_from_index(index)
+            if item.item_type == "scenario" and item.id:
+                db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
+        return db_map_ids
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_selection_changed(self, selected, deselected):
+        """Emits alternative_selection_changed with the current selection."""
+        selected_db_map_alt_ids = self._db_map_alt_ids_from_selection(selected)
+        deselected_db_map_alt_ids = self._db_map_alt_ids_from_selection(deselected)
+        selected_db_map_scen_alt_ids = self._db_map_scen_alt_ids_from_selection(selected)
+        deselected_db_map_scen_alt_ids = self._db_map_scen_alt_ids_from_selection(deselected)
+        # NOTE: remove deselected scenario alternatives *before* adding selected alternatives, for obvious reasons
+        for db_map, ids in deselected_db_map_alt_ids.items():
+            self._selected_alternative_ids[db_map].difference_update(ids)
+        for db_map, ids in deselected_db_map_scen_alt_ids.items():
+            self._selected_alternative_ids[db_map].difference_update(ids)
+        for db_map, ids in selected_db_map_alt_ids.items():
+            self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
+        for db_map, ids in selected_db_map_scen_alt_ids.items():
+            self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
+        self._selected_alternative_ids = {db_map: ids for db_map, ids in self._selected_alternative_ids.items() if ids}
+        self.alternative_selection_changed.emit(self._selected_alternative_ids)
+
     def remove_selected(self):
         """See base class."""
         if not self.selectionModel().hasSelection():
@@ -510,7 +561,7 @@ class ParameterValueListTreeView(ItemTreeView):
 class ParameterTagTreeView(ItemTreeView):
     """Custom QTreeView class for the parameter_tag tree in DataStoreForm."""
 
-    tag_selection_changed = Signal(object)
+    tag_selection_changed = Signal(dict)
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -541,9 +592,9 @@ class ParameterTagTreeView(ItemTreeView):
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_selection_changed(self, selected, deselected):
-        """Resets filter according to selection in parameter_tag tree view."""
-        selected_db_map_ids = self._db_map_ids_from_selection(selected)
-        deselected_db_map_ids = self._db_map_ids_from_selection(deselected)
+        """Emits tag_selection_changed with the current selection."""
+        selected_db_map_ids = self._db_map_tag_ids_from_selection(selected)
+        deselected_db_map_ids = self._db_map_tag_ids_from_selection(deselected)
         for db_map, ids in selected_db_map_ids.items():
             self._selected_tag_ids.setdefault(db_map, set()).update(ids)
         for db_map, ids in deselected_db_map_ids.items():
@@ -551,7 +602,7 @@ class ParameterTagTreeView(ItemTreeView):
         self._selected_tag_ids = {db_map: ids for db_map, ids in self._selected_tag_ids.items() if ids}
         self.tag_selection_changed.emit(self._selected_tag_ids)
 
-    def _db_map_ids_from_selection(self, selection):
+    def _db_map_tag_ids_from_selection(self, selection):
         db_map_ids = {}
         for index in selection.indexes():
             if index.column() != 0:
