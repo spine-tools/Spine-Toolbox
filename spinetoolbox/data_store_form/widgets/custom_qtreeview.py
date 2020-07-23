@@ -510,7 +510,12 @@ class ParameterValueListTreeView(ItemTreeView):
 class ParameterTagTreeView(ItemTreeView):
     """Custom QTreeView class for the parameter_tag tree in DataStoreForm."""
 
-    tag_selection_changed = Signal(object, object)
+    tag_selection_changed = Signal(object)
+
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self._selected_tag_ids = dict()
 
     def connect_signals(self):
         """Connects signals."""
@@ -537,11 +542,16 @@ class ParameterTagTreeView(ItemTreeView):
     @Slot("QItemSelection", "QItemSelection")
     def _handle_selection_changed(self, selected, deselected):
         """Resets filter according to selection in parameter_tag tree view."""
-        selected_db_map_ids = self._make_db_map_ids_from_selection(selected)
-        deselected_db_map_ids = self._make_db_map_ids_from_selection(deselected)
-        self.tag_selection_changed.emit(selected_db_map_ids, deselected_db_map_ids)
+        selected_db_map_ids = self._db_map_ids_from_selection(selected)
+        deselected_db_map_ids = self._db_map_ids_from_selection(deselected)
+        for db_map, ids in selected_db_map_ids.items():
+            self._selected_tag_ids.setdefault(db_map, set()).update(ids)
+        for db_map, ids in deselected_db_map_ids.items():
+            self._selected_tag_ids[db_map].difference_update(ids)
+        self._selected_tag_ids = {db_map: ids for db_map, ids in self._selected_tag_ids.items() if ids}
+        self.tag_selection_changed.emit(self._selected_tag_ids)
 
-    def _make_db_map_ids_from_selection(self, selection):
+    def _db_map_ids_from_selection(self, selection):
         db_map_ids = {}
         for index in selection.indexes():
             if index.column() != 0:

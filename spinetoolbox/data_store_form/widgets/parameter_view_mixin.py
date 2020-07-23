@@ -242,20 +242,15 @@ class ParameterViewMixin:
         self.filter_entity_ids = self._db_map_class_ids(active_rel_inds)
         self.reset_filters()
 
-    @Slot(object, object)
-    def _handle_tag_selection_changed(self, selected_db_map_ids, deselected_db_map_ids):
+    @Slot(object)
+    def _handle_tag_selection_changed(self, selected_db_map_tag_ids):
         """Resets filter according to selection in parameter_tag tree view."""
-        for db_map, ids in selected_db_map_ids.items():
-            self.filter_tag_ids.setdefault(db_map, set()).update(ids)
-        for db_map, ids in deselected_db_map_ids.items():
-            self.filter_tag_ids[db_map].difference_update(ids)
-        self.filter_tag_ids = {db_map: ids for db_map, ids in self.filter_tag_ids.items() if ids}
-        filter_parameters = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.filter_tag_ids)
+        filter_parameters = self.db_mngr.find_cascading_parameter_definitions_by_tag(selected_db_map_tag_ids)
         self.filter_parameter_ids = d = {}
         for db_map, params in filter_parameters.items():
             for param in params:
                 d.setdefault((db_map, param["entity_class_id"]), set()).add(param["id"])
-        if self.filter_tag_ids and not any(filter_parameters.values()):
+        if selected_db_map_tag_ids and not any(filter_parameters.values()):
             # There are tags selected but no matching parameter definitions ~> no class shall pass
             self.tag_filter_class_ids = None
             self.reset_filters()
