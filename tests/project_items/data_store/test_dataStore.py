@@ -197,7 +197,7 @@ class TestDataStore(unittest.TestCase):
         ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, DataStoreForm)
         expected_url = "sqlite:///" + temp_db_path
-        self.assertEqual(expected_url, str(ds_form.db_map.db_url))
+        self.assertEqual(expected_url, str(ds_form.db_url))
         ds_form.close()
         self.ds._project.db_mngr.close_all_sessions()
 

@@ -279,7 +279,7 @@ class TestTreeViewForm(
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
             self.db_mngr.show_data_store_form({"mock_url": "mock_db"}, None)
             self.tree_view_form = self.db_mngr._ds_forms[("mock_url",)]
-            self.mock_db_map = self.tree_view_form.db_map
+            self.mock_db_map = self.tree_view_form.first_db_map
             self.tree_view_form.pivot_table_model = mock.MagicMock()
 
     def tearDown(self):
