@@ -54,6 +54,7 @@ _MAPPING_COLORS = {
     "parameter name": QColor(128, 205, 193),
     "alternative": QColor(166, 97, 26),
     "scenario": QColor(223, 194, 125),
+    "active": QColor(21, 153, 133),
     "before_alternative": QColor(120, 150, 220),
 }
 _ERROR_COLOR = QColor(Qt.red)
@@ -292,6 +293,8 @@ class MappingPreviewModel(MinimalTableModel):
         elif isinstance(mapping, ScenarioMapping):
             if self.index_in_mapping(mapping.name, index):
                 return _MAPPING_COLORS["scenario"]
+            if self.index_in_mapping(mapping.active, index):
+                return _MAPPING_COLORS["active"]
         elif isinstance(mapping, ScenarioAlternativeMapping):
             if self.index_in_mapping(mapping.scenario_name, index):
                 return _MAPPING_COLORS["scenario"]
@@ -552,6 +555,8 @@ class MappingSpecModel(QAbstractTableModel):
             self._display_names.append("Alternative names")
         elif isinstance(self._model, ScenarioMapping):
             self._display_names.append("Scenario names")
+            self._display_names.append("Scenario active flags")
+            self._mappings.append(self._model.active)
         elif isinstance(self._model, ScenarioAlternativeMapping):
             self._display_names.append("Scenario names")
             self._display_names.append("Alternative names")
@@ -660,6 +665,8 @@ class MappingSpecModel(QAbstractTableModel):
             return _MAPPING_COLORS["scenario"]
         if display_name == "Before Alternative names":
             return _MAPPING_COLORS["before_alternative"]
+        if display_name == "Scenario active flags":
+            return _MAPPING_COLORS["active"]
         if display_name == "Parameter names":
             return _MAPPING_COLORS["parameter name"]
         if display_name in ("Parameter time index", "Parameter time pattern index") or display_name.startswith(
@@ -838,6 +845,8 @@ class MappingSpecModel(QAbstractTableModel):
             return self._model.alternative_name
         if name == "Before Alternative names":
             return self._model.before_alternative_name
+        if name == "Scenario active flags":
+            return self._model.active
         if name == "Group names":
             return self._model.groups
         if name == "Member names":
@@ -879,6 +888,8 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.alternative_name = mapping
         elif name == "Before Alternative names":
             self._model.before_alternative_name = mapping
+        elif name == "Scenario active flags":
+            self._model.active = mapping
         elif name == "Object names":
             self._model.objects = mapping
         elif name == "Group names":

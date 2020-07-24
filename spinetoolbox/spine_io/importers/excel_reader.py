@@ -24,6 +24,9 @@ from spinedb_api import (
     RelationshipClassMapping,
     ObjectClassMapping,
     ObjectGroupMapping,
+    AlternativeMapping,
+    ScenarioMapping,
+    ScenarioAlternativeMapping,
     from_database,
     ParameterValueFormatError,
 )
@@ -224,7 +227,14 @@ def create_mapping_from_sheet(worksheet):
         return None, None
     if not isinstance(sheet_data, str):
         return None, None
-    if sheet_type.lower() not in ["relationship", "object", "object group"]:
+    if sheet_type.lower() not in [
+        "relationship",
+        "object",
+        "object group",
+        "alternative",
+        "scenario",
+        "scenario alternative",
+    ]:
         return None, None
     if sheet_data.lower() not in ["parameter", "time series", "time pattern", "map", "array", "no data"]:
         return None, None
@@ -356,6 +366,17 @@ def create_mapping_from_sheet(worksheet):
         options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
         mapping = ObjectGroupMapping.from_dict(
             {"map_type": "ObjectGroup", "name": obj_cls_name, "groups": 0, "members": 1}
+        )
+    elif sheet_type.lower() == "alternative":
+        options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
+        mapping = AlternativeMapping.from_dict({"map_type": "Alternative", "name": 0})
+    elif sheet_type.lower() == "scenario":
+        options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
+        mapping = ScenarioMapping.from_dict({"map_type": "Scenario", "name": 0, "active": 1})
+    elif sheet_type.lower() == "scenario alternative":
+        options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
+        mapping = ScenarioAlternativeMapping.from_dict(
+            {"map_type": "ScenarioAlternative", "scenario_name": 0, "alternative_name": 1, "before_alternative_name": 2}
         )
     else:
         return None, None

@@ -129,11 +129,11 @@ class BooleanConvertSpec(ConvertSpec):
         constructor = self.RETURN_TYPE
 
         def convert(value):
-            try:
-                # NOTE: This is so the string "0" is converted to False, as it's most expected
-                value = int(value)
-            except ValueError:
-                pass
+            if isinstance(value, str):
+                if value.lower() in ("false", "0"):
+                    return False
+                if value.lower() == "true":
+                    return True
             return constructor(value)
 
         return convert

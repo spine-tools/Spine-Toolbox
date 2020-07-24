@@ -21,7 +21,18 @@ from itertools import groupby
 from operator import itemgetter
 import numpy as np
 from openpyxl import Workbook
-from spinedb_api import from_database, TimeSeries, TimePattern, DateTime, Duration, to_database, export_object_groups
+from spinedb_api import (
+    from_database,
+    TimeSeries,
+    TimePattern,
+    DateTime,
+    Duration,
+    to_database,
+    export_object_groups,
+    export_alternatives,
+    export_scenarios,
+    export_scenario_alternatives,
+)
 
 
 def _get_objects_and_parameters(db):
@@ -583,6 +594,92 @@ def _write_object_groups_to_xlsx(wb, group_data):
                 ws.cell(row=start_row + r, column=start_col + c).value = item
 
 
+def _write_alternatives_to_xlsx(wb, alternative_data):
+    """Writes names, and description for alternatives.
+    Writes one sheet.
+
+    Args:
+        wb (openpyxl.Workbook): excel workbook to write too.
+        object_data (List[List]): List of lists containing object data give by function get_unstacked_objects
+    """
+
+    ws = wb.create_sheet()
+    title = "alternative"
+    ws.title = title
+
+    ws['A1'] = "Sheet type"
+    ws['A2'] = "Alternative"
+    ws['B1'] = "Data type"
+    ws['B2'] = "no data"
+
+    ws.cell(row=4, column=1).value = "alternative"
+    ws.cell(row=4, column=2).value = "description"
+
+    start_row = 5
+    start_col = 1
+    for r, data in enumerate(alternative_data):
+        for c, item in enumerate(data):
+            ws.cell(row=start_row + r, column=start_col + c).value = item
+
+
+def _write_scenarios_to_xlsx(wb, scenario_data):
+    """Writes names, active flag, and description for scenarios.
+    Writes one sheet.
+
+    Args:
+        wb (openpyxl.Workbook): excel workbook to write too.
+        object_data (List[List]): List of lists containing object data give by function get_unstacked_objects
+    """
+
+    ws = wb.create_sheet()
+    title = "scenario"
+    ws.title = title
+
+    ws['A1'] = "Sheet type"
+    ws['A2'] = "Scenario"
+    ws['B1'] = "Data type"
+    ws['B2'] = "no data"
+
+    ws.cell(row=4, column=1).value = "scenario"
+    ws.cell(row=4, column=2).value = "active"
+    ws.cell(row=4, column=3).value = "description"
+
+    start_row = 5
+    start_col = 1
+    for r, data in enumerate(scenario_data):
+        for c, item in enumerate(data):
+            ws.cell(row=start_row + r, column=start_col + c).value = item
+
+
+def _write_scenario_alternatives_to_xlsx(wb, scenario_alternative_data):
+    """Writes scenario names, alternative names, and before alternative names for scenario alternatives.
+    Writes one sheet.
+
+    Args:
+        wb (openpyxl.Workbook): excel workbook to write too.
+        object_data (List[List]): List of lists containing object data give by function get_unstacked_objects
+    """
+
+    ws = wb.create_sheet()
+    title = "scenario_alternative"
+    ws.title = title
+
+    ws['A1'] = "Sheet type"
+    ws['A2'] = "Scenario Alternative"
+    ws['B1'] = "Data type"
+    ws['B2'] = "no data"
+
+    ws.cell(row=4, column=1).value = "scenario"
+    ws.cell(row=4, column=2).value = "alternative"
+    ws.cell(row=4, column=3).value = "before alternative"
+
+    start_row = 5
+    start_col = 1
+    for r, data in enumerate(scenario_alternative_data):
+        for c, item in enumerate(data):
+            ws.cell(row=start_row + r, column=start_col + c).value = item
+
+
 def export_spine_database_to_xlsx(db, filepath):
     """Writes all data in a spine database into an excel file.
 
@@ -593,10 +690,16 @@ def export_spine_database_to_xlsx(db, filepath):
     obj_data, obj_json_data, obj_ts, obj_timepattern = _get_unstacked_objects(db)
     rel_data, rel_json_data, rel_ts, rel_timepattern = _get_unstacked_relationships(db)
     obj_grp_data = _get_object_groups(db)
+    alternative_data = export_alternatives(db)
+    scenario_data = export_scenarios(db)
+    scenario_alternative_data = export_scenario_alternatives(db)
     wb = Workbook()
     _write_relationships_to_xlsx(wb, rel_data)
     _write_objects_to_xlsx(wb, obj_data)
     _write_object_groups_to_xlsx(wb, obj_grp_data)
+    _write_alternatives_to_xlsx(wb, alternative_data)
+    _write_scenarios_to_xlsx(wb, scenario_data)
+    _write_scenario_alternatives_to_xlsx(wb, scenario_alternative_data)
     _write_json_array_to_xlsx(wb, obj_json_data, "object")
     _write_json_array_to_xlsx(wb, rel_json_data, "relationship")
     _write_TimeSeries_to_xlsx(wb, obj_ts, "object", "time series")

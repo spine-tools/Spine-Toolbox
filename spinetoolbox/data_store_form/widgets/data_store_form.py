@@ -111,7 +111,7 @@ class DataStoreFormBase(QMainWindow):
         self.redo_action = None
         self.template_file_path = None
         db_names = ", ".join([f"{db_map.codename}" for db_map in self.db_maps])
-        self.setWindowTitle(f"{db_names}[*] - Data store view")
+        self.setWindowTitle(f"{db_names}[*] - Data store form")
         self.update_commit_enabled()
 
     @property
@@ -316,7 +316,7 @@ class DataStoreFormBase(QMainWindow):
             mapped_data, errors = get_mapped_data_from_xlsx(file_path)
         except Exception as err:  # pylint: disable=broad-except
             self.msg.emit(f"Could'n import file {filename}: {str(err)}")
-            return
+            raise err  # NOTE: This is so the programmer gets to see the traceback
         if errors:
             msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
             self.error_box.emit("Parse error", msg)
