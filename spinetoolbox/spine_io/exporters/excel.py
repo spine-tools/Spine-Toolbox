@@ -677,6 +677,8 @@ def _write_scenario_alternatives_to_xlsx(wb, scenario_alternative_data):
     start_col = 1
     for r, data in enumerate(scenario_alternative_data):
         for c, item in enumerate(data):
+            if item is None:
+                item = "N/A"  # NOTE: This is because the mapping api doesn't accept rows with `None`s
             ws.cell(row=start_row + r, column=start_col + c).value = item
 
 

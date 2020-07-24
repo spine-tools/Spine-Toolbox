@@ -31,7 +31,6 @@ from spinedb_api import (
 )
 from spinetoolbox.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
-from spinetoolbox.config import APPLICATION_PATH
 
 _TEMP_EXCEL_FILENAME = 'excel.xlsx'
 _TEMP_SQLITE_FILENAME = 'first.sqlite'
