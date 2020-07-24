@@ -18,7 +18,7 @@ Custom item delegates.
 
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyleOptionComboBox
-from .custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, CheckListEditor
+from .custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor
 
 
 class ComboBoxDelegate(QItemDelegate):
@@ -175,7 +175,7 @@ class ForeignKeysDelegate(QItemDelegate):
         model = index.model()
         header = model.horizontal_header_labels()
         if header[index.column()] == 'fields':
-            editor = CheckListEditor(self.parent(), parent)
+            editor = CheckListEditor(self.parent(), parent, ranked=True)
             current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
             field_names = model.datapackage.resources[model.resource_index].schema.field_names
             editor.set_data(field_names, current_field_names)
@@ -186,7 +186,7 @@ class ForeignKeysDelegate(QItemDelegate):
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor
         if header[index.column()] == 'reference fields':
-            editor = CheckListEditor(self.parent(), parent)
+            editor = CheckListEditor(self.parent(), parent, ranked=True)
             current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
             reference_resource_name = index.sibling(index.row(), header.index('reference resource')).data(
                 Qt.DisplayRole
