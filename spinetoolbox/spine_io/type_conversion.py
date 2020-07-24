@@ -129,11 +129,8 @@ class BooleanConvertSpec(ConvertSpec):
         constructor = self.RETURN_TYPE
 
         def convert(value):
-            if isinstance(value, str):
-                if value.lower() in ("false", "0"):
-                    return False
-                if value.lower() == "true":
-                    return True
+            if isinstance(value, str) and value.lower() in ("false", "0"):
+                return False
             return constructor(value)
 
         return convert
