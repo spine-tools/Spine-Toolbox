@@ -183,6 +183,9 @@ class Ui_MainWindow(object):
         self.class_type_combo_box.addItem("")
         self.class_type_combo_box.addItem("")
         self.class_type_combo_box.addItem("")
+        self.class_type_combo_box.addItem("")
+        self.class_type_combo_box.addItem("")
+        self.class_type_combo_box.addItem("")
         self.class_type_combo_box.setObjectName(u"class_type_combo_box")
 
         self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.class_type_combo_box)
@@ -310,6 +313,9 @@ class Ui_MainWindow(object):
         self.class_type_combo_box.setItemText(0, QCoreApplication.translate("MainWindow", u"Object", None))
         self.class_type_combo_box.setItemText(1, QCoreApplication.translate("MainWindow", u"Relationship", None))
         self.class_type_combo_box.setItemText(2, QCoreApplication.translate("MainWindow", u"Object group", None))
+        self.class_type_combo_box.setItemText(3, QCoreApplication.translate("MainWindow", u"Alternative", None))
+        self.class_type_combo_box.setItemText(4, QCoreApplication.translate("MainWindow", u"Scenario", None))
+        self.class_type_combo_box.setItemText(5, QCoreApplication.translate("MainWindow", u"Scenario Alternative", None))
 
         self.parameter_type_label.setText(QCoreApplication.translate("MainWindow", u"Parameter type:", None))
         self.parameter_type_combo_box.setItemText(0, QCoreApplication.translate("MainWindow", u"Single value", None))

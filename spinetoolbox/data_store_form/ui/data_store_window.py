@@ -584,7 +584,6 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionSettings)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
-        self.menuView.addSeparator()
         self.menuView.addAction(self.actionStacked_style)
         self.menuView.addAction(self.actionPivot_style)
         self.menuView.addAction(self.actionGraph_style)

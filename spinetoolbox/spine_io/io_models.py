@@ -22,6 +22,9 @@ from spinedb_api import (
     ObjectClassMapping,
     RelationshipClassMapping,
     ObjectGroupMapping,
+    AlternativeMapping,
+    ScenarioMapping,
+    ScenarioAlternativeMapping,
     ParameterDefinitionMapping,
     ParameterValueMapping,
     ParameterMapMapping,
@@ -43,12 +46,15 @@ from .type_conversion import ConvertSpec
 
 
 _MAPPING_COLORS = {
+    "entity_class": QColor(166, 97, 26),
     "entity": QColor(223, 194, 125),
+    "group": QColor(120, 150, 220),
     "parameter_value": QColor(21, 153, 133),
     "parameter extra dimension": QColor(178, 255, 243),
     "parameter name": QColor(128, 205, 193),
-    "entity_class": QColor(166, 97, 26),
-    "group": QColor(120, 150, 220),
+    "alternative": QColor(166, 97, 26),
+    "scenario": QColor(223, 194, 125),
+    "before_alternative": QColor(120, 150, 220),
 }
 _ERROR_COLOR = QColor(Qt.red)
 
@@ -265,7 +271,9 @@ class MappingPreviewModel(MinimalTableModel):
             ):
                 # parameter name colors
                 return _MAPPING_COLORS["parameter name"]
-        if self.index_in_mapping(mapping.name, index):
+        if not isinstance(
+            mapping, (AlternativeMapping, ScenarioMapping, ScenarioAlternativeMapping)
+        ) and self.index_in_mapping(mapping.name, index):
             return _MAPPING_COLORS["entity_class"]
         classes = []
         objects = []
@@ -278,6 +286,19 @@ class MappingPreviewModel(MinimalTableModel):
         elif isinstance(mapping, RelationshipClassMapping):
             objects = mapping.objects
             classes = mapping.object_classes
+        elif isinstance(mapping, AlternativeMapping):
+            if self.index_in_mapping(mapping.name, index):
+                return _MAPPING_COLORS["alternative"]
+        elif isinstance(mapping, ScenarioMapping):
+            if self.index_in_mapping(mapping.name, index):
+                return _MAPPING_COLORS["scenario"]
+        elif isinstance(mapping, ScenarioAlternativeMapping):
+            if self.index_in_mapping(mapping.scenario_name, index):
+                return _MAPPING_COLORS["scenario"]
+            if self.index_in_mapping(mapping.alternative_name, index):
+                return _MAPPING_COLORS["alternative"]
+            if self.index_in_mapping(mapping.before_alternative_name, index):
+                return _MAPPING_COLORS["before_alternative"]
         for o in objects:
             # object colors
             if self.index_in_mapping(o, index):
@@ -424,11 +445,16 @@ class MappingSpecModel(QAbstractTableModel):
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
 
     def set_mapping(self, mapping):
-        if not isinstance(mapping, (RelationshipClassMapping, ObjectClassMapping, ObjectGroupMapping)):
-            raise TypeError(
-                "mapping must be of type: RelationshipClassMapping, ObjectClassMapping, ObjectGroupMapping "
-                f"instead got {type(mapping)}"
-            )
+        classes = (
+            RelationshipClassMapping,
+            ObjectClassMapping,
+            ObjectGroupMapping,
+            AlternativeMapping,
+            ScenarioMapping,
+            ScenarioAlternativeMapping,
+        )
+        if not isinstance(mapping, classes):
+            raise TypeError(f"mapping must be of type: {classes} instead got {type(mapping)}")
         if isinstance(mapping, type(self._model)):
             return
         self.beginResetModel()
@@ -460,6 +486,9 @@ class MappingSpecModel(QAbstractTableModel):
             "Object": ObjectClassMapping,
             "Relationship": RelationshipClassMapping,
             "Object group": ObjectGroupMapping,
+            "Alternative": AlternativeMapping,
+            "Scenario": ScenarioMapping,
+            "Scenario Alternative": ScenarioAlternativeMapping,
         }[new_class]
         if self._model is None:
             self._model = new_class()
@@ -495,44 +524,59 @@ class MappingSpecModel(QAbstractTableModel):
         self.endResetModel()
 
     def update_display_table(self):
-        display_name = []
-        mappings = [self._model.name]
+        self._display_names = []
+        self._mappings = []
+        if not isinstance(self._model, ScenarioAlternativeMapping):
+            self._mappings.append(self._model.name)
         if isinstance(self._model, RelationshipClassMapping):
-            display_name.append("Relationship class names")
+            self._display_names.append("Relationship class names")
             if self._model.object_classes:
-                display_name.extend([f"Object class names {i+1}" for i, oc in enumerate(self._model.object_classes)])
-                mappings.extend(list(self._model.object_classes))
+                self._display_names.extend(
+                    [f"Object class names {i+1}" for i, oc in enumerate(self._model.object_classes)]
+                )
+                self._mappings.extend(list(self._model.object_classes))
             if self._model.objects:
-                display_name.extend([f"Object names {i+1}" for i, oc in enumerate(self._model.objects)])
-                mappings.extend(list(self._model.objects))
+                self._display_names.extend([f"Object names {i+1}" for i, oc in enumerate(self._model.objects)])
+                self._mappings.extend(list(self._model.objects))
         elif isinstance(self._model, ObjectClassMapping):
-            display_name.append("Object class names")
-            display_name.append("Object names")
-            mappings.append(self._model.objects)
+            self._display_names.append("Object class names")
+            self._display_names.append("Object names")
+            self._mappings.append(self._model.objects)
         elif isinstance(self._model, ObjectGroupMapping):
-            display_name.append("Object class names")
-            display_name.append("Group names")
-            mappings.append(self._model.groups)
-            display_name.append("Member names")
-            mappings.append(self._model.members)
+            self._display_names.append("Object class names")
+            self._display_names.append("Group names")
+            self._mappings.append(self._model.groups)
+            self._display_names.append("Member names")
+            self._mappings.append(self._model.members)
+        elif isinstance(self._model, AlternativeMapping):
+            self._display_names.append("Alternative names")
+        elif isinstance(self._model, ScenarioMapping):
+            self._display_names.append("Scenario names")
+        elif isinstance(self._model, ScenarioAlternativeMapping):
+            self._display_names.append("Scenario names")
+            self._display_names.append("Alternative names")
+            self._display_names.append("Before Alternative names")
+            self._mappings.append(self._model.scenario_name)
+            self._mappings.append(self._model.alternative_name)
+            self._mappings.append(self._model.before_alternative_name)
+        if not self.mapping_has_parameters():
+            return
         if isinstance(self._model.parameters, ParameterDefinitionMapping):
-            display_name.append("Parameter names")
-            mappings.append(self._model.parameters.name)
+            self._display_names.append("Parameter names")
+            self._mappings.append(self._model.parameters.name)
         if isinstance(self._model.parameters, ParameterValueMapping):
-            display_name.append("Parameter values")
-            mappings.append(self._model.parameters.value)
+            self._display_names.append("Parameter values")
+            self._mappings.append(self._model.parameters.value)
         if isinstance(self._model.parameters, ParameterMapMapping):
             for i, dimension in enumerate(self._model.parameters.extra_dimensions):
-                display_name.append(f"Parameter index {i + 1}")
-                mappings.append(dimension)
+                self._display_names.append(f"Parameter index {i + 1}")
+                self._mappings.append(dimension)
         if isinstance(self._model.parameters, ParameterTimeSeriesMapping):
-            display_name.append("Parameter time index")
-            mappings.append(self._model.parameters.extra_dimensions[0])
+            self._display_names.append("Parameter time index")
+            self._mappings.append(self._model.parameters.extra_dimensions[0])
         if isinstance(self._model.parameters, ParameterTimePatternMapping):
-            display_name.append("Parameter time pattern index")
-            mappings.append(self._model.parameters.extra_dimensions[0])
-        self._display_names = display_name
-        self._mappings = mappings
+            self._display_names.append("Parameter time pattern index")
+            self._mappings.append(self._model.parameters.extra_dimensions[0])
 
     def get_map_type_display(self, mapping, name):
         if name == "Parameter values" and self._model.is_pivoted():
@@ -606,10 +650,16 @@ class MappingSpecModel(QAbstractTableModel):
             return _MAPPING_COLORS["entity_class"]
         if "Object names" in display_name:
             return _MAPPING_COLORS["entity"]
-        if "Group names" in display_name:
-            return _MAPPING_COLORS["group"]
-        if "Member names" in display_name:
+        if display_name == "Member names":
             return _MAPPING_COLORS["entity"]
+        if display_name == "Group names":
+            return _MAPPING_COLORS["group"]
+        if display_name == "Alternative names":
+            return _MAPPING_COLORS["alternative"]
+        if display_name == "Scenario names":
+            return _MAPPING_COLORS["scenario"]
+        if display_name == "Before Alternative names":
+            return _MAPPING_COLORS["before_alternative"]
         if display_name == "Parameter names":
             return _MAPPING_COLORS["parameter name"]
         if display_name in ("Parameter time index", "Parameter time pattern index") or display_name.startswith(
@@ -645,6 +695,15 @@ class MappingSpecModel(QAbstractTableModel):
             if row == 2:
                 return self._model.member_names_issues()
             parameter_name_row = 3
+        elif isinstance(self._model, AlternativeMapping):
+            if row == 1:
+                return self._model.alternative_names_issues()
+        elif isinstance(self._model, ScenarioMapping):
+            if row == 1:
+                return self._model.scenario_names_issues()
+        elif isinstance(self._model, ScenarioAlternativeMapping):
+            if row == 1:
+                return self._model.scenario_names_issues()
         if parameter_name_row is None:
             return ""
         if row == parameter_name_row:
@@ -771,6 +830,14 @@ class MappingSpecModel(QAbstractTableModel):
             return None
         if name in ("Relationship class names", "Object class names"):
             return self._model.name
+        if name in ("Alternative names", "Scenario names") and not isinstance(self._model, ScenarioAlternativeMapping):
+            return self._model.name
+        if name == "Scenario names":
+            return self._model.scenario_name
+        if name == "Alternative names":
+            return self._model.alternative_name
+        if name == "Before Alternative names":
+            return self._model.before_alternative_name
         if name == "Group names":
             return self._model.groups
         if name == "Member names":
@@ -802,6 +869,16 @@ class MappingSpecModel(QAbstractTableModel):
     def set_mapping_from_name(self, name, mapping):
         if name in ("Relationship class names", "Object class names"):
             self._model.name = mapping
+        elif name in ("Alternative names", "Scenario names") and not isinstance(
+            self._model, ScenarioAlternativeMapping
+        ):
+            self._model.name = mapping
+        elif name == "Scenario names":
+            self._model.scenario_name = mapping
+        elif name == "Alternative names":
+            self._model.alternative_name = mapping
+        elif name == "Before Alternative names":
+            self._model.before_alternative_name = mapping
         elif name == "Object names":
             self._model.objects = mapping
         elif name == "Group names":
@@ -886,7 +963,7 @@ class MappingSpecModel(QAbstractTableModel):
     def mapping_has_parameters(self):
         """Returns True if current mapping may have parameters, False otherwise"""
         # This method becomes more useful once we add support for alternatives and scenarios here.
-        return True
+        return not isinstance(self._model, (AlternativeMapping, ScenarioMapping, ScenarioAlternativeMapping))
 
 
 class MappingListModel(QAbstractListModel):

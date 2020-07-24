@@ -341,6 +341,21 @@
          <string>Object group</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Alternative</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Scenario</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Scenario Alternative</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item row="2" column="0">

@@ -114,9 +114,8 @@ class ImporterWorker(QThread):
                     self._logger.msg_error.emit("Cancel import on error has been set. Bailing out.")
                     self.import_finished.emit(-1)
                     return
-                else:
-                    self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
-                    continue
+                self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
+                continue
             if not errors:
                 self._logger.msg_success.emit(
                     f"Successfully read {sum(len(d) for d in data.values())} data from {source}"
@@ -144,8 +143,7 @@ class ImporterWorker(QThread):
                 self._logger.msg_error.emit("Cancel import on error has been set. Bailing out.")
                 self.import_finished.emit(-1)
                 return
-            else:
-                self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
+            self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
         if all_data:
             for url in self._urls_downstream:
                 success = self._import(all_data, url)

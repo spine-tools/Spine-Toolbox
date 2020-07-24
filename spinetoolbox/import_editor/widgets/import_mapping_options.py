@@ -20,6 +20,9 @@ from spinedb_api import (
     RelationshipClassMapping,
     ObjectClassMapping,
     ObjectGroupMapping,
+    AlternativeMapping,
+    ScenarioMapping,
+    ScenarioAlternativeMapping,
     ParameterMapMapping,
     ParameterTimeSeriesMapping,
 )
@@ -101,29 +104,40 @@ class ImportMappingOptions:
         self._ui.dockWidget_mapping_options.show()
         self._block_signals = True
         if self._mapping_options_model.map_type == RelationshipClassMapping:
+            self._ui.import_objects_check_box.show()
             self._ui.dimension_label.show()
             self._ui.dimension_spin_box.show()
-            self._ui.class_type_combo_box.setCurrentIndex(1)
             self._ui.dimension_spin_box.setValue(len(self._mapping_options_model._model.objects))
-            self._ui.import_objects_check_box.show()
             if self._mapping_options_model._model.import_objects:
                 self._ui.import_objects_check_box.setCheckState(Qt.Checked)
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
-        elif self._mapping_options_model.map_type == ObjectClassMapping:
-            self._ui.import_objects_check_box.hide()
-            self._ui.dimension_label.hide()
-            self._ui.dimension_spin_box.hide()
-            self._ui.class_type_combo_box.setCurrentIndex(0)
         elif self._mapping_options_model.map_type == ObjectGroupMapping:
             self._ui.import_objects_check_box.show()
             self._ui.dimension_label.hide()
             self._ui.dimension_spin_box.hide()
-            self._ui.class_type_combo_box.setCurrentIndex(2)
             if self._mapping_options_model._model.import_objects:
                 self._ui.import_objects_check_box.setCheckState(Qt.Checked)
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
+        elif self._mapping_options_model.map_type in (
+            ObjectClassMapping,
+            AlternativeMapping,
+            ScenarioMapping,
+            ScenarioAlternativeMapping,
+        ):
+            self._ui.import_objects_check_box.hide()
+            self._ui.dimension_label.hide()
+            self._ui.dimension_spin_box.hide()
+        class_type_index = {
+            ObjectClassMapping: 0,
+            RelationshipClassMapping: 1,
+            ObjectGroupMapping: 2,
+            AlternativeMapping: 3,
+            ScenarioMapping: 4,
+            ScenarioAlternativeMapping: 5,
+        }[self._mapping_options_model.map_type]
+        self._ui.class_type_combo_box.setCurrentIndex(class_type_index)
         # update parameter mapping
         if self._mapping_options_model.mapping_has_parameters():
             self._ui.parameter_type_combo_box.setEnabled(True)
