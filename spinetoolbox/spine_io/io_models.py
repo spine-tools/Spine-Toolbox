@@ -599,7 +599,7 @@ class MappingSpecModel(QAbstractTableModel):
             self._mappings.append(self._model.scenario_name)
             self._mappings.append(self._model.alternative_name)
             self._mappings.append(self._model.before_alternative_name)
-        if not self.mapping_has_parameters():
+        if not self._model.has_parameters():
             return
         if isinstance(self._model.parameters, ParameterDefinitionMapping):
             self._display_names.append("Parameter names")
@@ -1061,16 +1061,15 @@ class MappingSpecModel(QAbstractTableModel):
             self._mappings = self._mappings[:first]
             self.endRemoveRows()
 
+    def mapping_has_parameters(self):
+        """Returns True if the item mapping has parameters."""
+        return self._model.has_parameters()
+
     def model_parameters(self):
         """Returns the mapping's parameters."""
-        if not isinstance(self._model, EntityClassMapping):
+        if self._model is None or not self._model.has_parameters():
             return None
-        return self._model.parameters if self._model is not None else None
-
-    def mapping_has_parameters(self):
-        """Returns True if current mapping may have parameters, False otherwise"""
-        # This method becomes more useful once we add support for alternatives and scenarios here.
-        return not isinstance(self._model, (AlternativeMapping, ScenarioMapping, ScenarioAlternativeMapping))
+        return self._model.parameters
 
 
 class MappingListModel(QAbstractListModel):
