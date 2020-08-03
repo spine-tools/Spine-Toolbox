@@ -98,9 +98,7 @@ class MinimalTableModel(QAbstractTableModel):
         """Sets the data for the given role and section in the header
         with the specified orientation to the value supplied.
         """
-        if orientation != Qt.Horizontal:
-            return False
-        if role != Qt.EditRole:
+        if orientation != Qt.Horizontal or role != Qt.EditRole:
             return False
         try:
             self.header[section] = value

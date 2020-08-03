@@ -394,9 +394,9 @@ class MappingPreviewModel(MinimalTableModel):
         int_non_piv_cols = []
         for pc in set(non_pivoted_columns + skip_cols):
             if isinstance(pc, str):
-                if pc in self.horizontal_header_labels():
+                try:
                     pc = self.horizontal_header_labels().index(pc)
-                else:
+                except ValueError:
                     continue
             int_non_piv_cols.append(pc)
 
@@ -639,6 +639,8 @@ class MappingSpecModel(QAbstractTableModel):
             mapping_value = "Headers"
         else:
             mapping_value = mapping.reference
+            if isinstance(mapping_value, int):
+                mapping_value += 1
         return mapping_value
 
     # pylint: disable=no-self-use
@@ -848,20 +850,25 @@ class MappingSpecModel(QAbstractTableModel):
             bool: True if the reference was modified successfully, False otherwise.
         """
         mapping = self.get_mapping_from_name(name)
+        if isinstance(value, str) and value.isdigit():
+            value = int(value)
+        if isinstance(value, int):
+            value -= 1
         if isinstance(mapping, NoneMapping):
             # create new mapping
-            if value.isdigit():
-                mapping = ColumnMapping(reference=int(value))
+            if isinstance(value, int):
+                mapping = ColumnMapping(reference=value)
             elif value:
                 mapping = ConstantMapping(reference=value)
             else:
                 return False
             index = self.index(row, 1)
             self.dataChanged.emit(index, index)
-        try:
-            mapping.reference = value
-        except ValueError:
-            return False
+        else:
+            try:
+                mapping.reference = value
+            except ValueError:
+                return False
         return self.set_mapping_from_name(name, mapping)
 
     def set_append_str(self, name, value):

@@ -203,13 +203,13 @@ class ImportEditor:
             try:
                 data = _sanitize_data(data, header)
             except RuntimeError as error:
-                self._ui_error.showMessage("{0}".format(error))
+                self._ui_error.showMessage(str(error))
                 self.table.reset_model()
                 self.table.set_horizontal_header_labels([])
                 self.previewDataUpdated.emit()
                 return
             if not header:
-                header = list(range(len(data[0])))
+                header = list(range(1, len(data[0]) + 1))
             self.table.reset_model(main_data=data)
             self.table.set_horizontal_header_labels(header)
             types = self.connector.table_types.get(self.connector.current_table)
