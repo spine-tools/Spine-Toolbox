@@ -643,34 +643,18 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping_value += 1
         return mapping_value
 
-    # pylint: disable=no-self-use
-    def get_map_append_display(self, mapping, name):
-        append_str = ""
-        if isinstance(mapping, MappingBase):
-            append_str = mapping.append_str
-        return append_str
-
-    # pylint: disable=no-self-use
-    def get_map_prepend_display(self, mapping, name):
-        prepend_str = ""
-        if isinstance(mapping, MappingBase):
-            prepend_str = mapping.prepend_str
-        return prepend_str
-
     def data(self, index, role=Qt.DisplayRole):
+        column = index.column()
         if role in (Qt.DisplayRole, Qt.EditRole):
             name = self._display_names[index.row()]
+            if column == 0:
+                return name
             m = self._mappings[index.row()]
-            func = [
-                lambda: name,
-                lambda: self.get_map_type_display(m, name),
-                lambda: self.get_map_value_display(m, name),
-                lambda: self.get_map_prepend_display(m, name),
-                lambda: self.get_map_append_display(m, name),
-            ]
-            f = func[index.column()]
-            return f()
-        column = index.column()
+            if column == 1:
+                return self.get_map_type_display(m, name)
+            if column == 2:
+                return self.get_map_value_display(m, name)
+            raise RuntimeError("Column out of bounds.")
         if role == Qt.BackgroundColorRole and column == 0:
             return self.data_color(self._display_names[index.row()])
         if column == 2:
@@ -772,7 +756,7 @@ class MappingSpecModel(QAbstractTableModel):
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                return ["Target", "Source type", "Source ref.", "Prepend string", "Append string"][section]
+                return ["Target", "Source type", "Source ref."][section]
 
     def flags(self, index):
         editable = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
@@ -812,10 +796,6 @@ class MappingSpecModel(QAbstractTableModel):
                     self.dataChanged.emit(index, index)
                 return True
             return False
-        if index.column() == 3:
-            return self.set_prepend_str(name, value)
-        if index.column() == 4:
-            return self.set_append_str(name, value)
         return False
 
     def set_type(self, name, value):
@@ -870,26 +850,6 @@ class MappingSpecModel(QAbstractTableModel):
             except ValueError:
                 return False
         return self.set_mapping_from_name(name, mapping)
-
-    def set_append_str(self, name, value):
-        mapping = self.get_mapping_from_name(name)
-        if mapping:
-            if isinstance(mapping, MappingBase):
-                if value == "":
-                    value = None
-                mapping.append_str = value
-                return self.set_mapping_from_name(name, mapping)
-        return False
-
-    def set_prepend_str(self, name, value):
-        mapping = self.get_mapping_from_name(name)
-        if mapping:
-            if isinstance(mapping, MappingBase):
-                if value == "":
-                    value = None
-                mapping.prepend_str = value
-                return self.set_mapping_from_name(name, mapping)
-        return False
 
     def get_mapping_from_name(self, name):
         if not self._model:
