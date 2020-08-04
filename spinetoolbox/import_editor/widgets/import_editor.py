@@ -17,50 +17,52 @@ Contains ImportEditor widget and MappingTableMenu.
 """
 
 from copy import deepcopy
-
-from PySide2.QtWidgets import QMenu, QListWidgetItem, QErrorMessage
-from PySide2.QtCore import QItemSelectionModel, QPoint, Qt, Signal, Slot
+from PySide2.QtCore import QItemSelectionModel, QObject, QPoint, Qt, Signal, Slot
+from PySide2.QtWidgets import QMenu, QListWidgetItem
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
 from ...widgets.custom_menus import CustomContextMenu
 from ...spine_io.io_models import MappingPreviewModel, MappingListModel
 from ...spine_io.type_conversion import value_to_convert_spec
 
 
-class ImportEditor:
+class ImportEditor(QObject):
     """
     Provides an interface for defining one or more Mappings associated to a data Source (CSV file, Excel file, etc).
     """
 
-    tableChecked = Signal()
-    mappedDataReady = Signal(dict, list)
-    previewDataUpdated = Signal()
+    table_checked = Signal()
+    mapped_data_ready = Signal(dict, list)
+    mapping_model_changed = Signal(object)
+    preview_data_updated = Signal(int)
 
-    def __init__(self, *args, **kwargs):
-
-        super().__init__(*args, **kwargs)
+    def __init__(self, ui, ui_error, connector, mapping_settings):
+        """
+        Args:
+            ui (QWidget): importer window's UI
+            ui_error (QErrorMessage): error dialog
+            connector (ConnectionManager): a connector
+            mapping_settings (dict): serialized mappings
+        """
+        super().__init__()
+        self._ui = ui
+        self._ui_error = ui_error
 
         # state
-        self.connector = None
-        self.selected_table = None
-        self.table = MappingPreviewModel()
-        self.selected_source_tables = set()
-        self.table_mappings = {}
-        self.table_updating = False
-        self.data_updating = False
+        self._connector = connector
+        self._selected_table = None
+        self._preview_table_model = MappingPreviewModel()
+        self._selected_source_tables = set()
+        self._table_mappings = {}
+        self._table_updating = False
+        self._data_updating = False
         self._copied_mapping = None
         self._copied_options = {}
-        self._ui_error = QErrorMessage(self)
         self._ui_preview_menu = None
-
-    def _init_import_editor(self, connector, settings):
-        self.connector = connector
-        self.use_settings(settings)
+        self._restore_mappings(mapping_settings)
         # create ui
-        self._ui.source_data_table.setModel(self.table)
-        self._ui_error.setWindowTitle("Error")
-        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
+        self._ui.source_data_table.setModel(self._preview_table_model)
         self._ui_preview_menu = MappingTableMenu(self._ui.source_data_table)
-        self._ui.dockWidget_source_options.setWidget(self.connector.option_widget())
+        self._ui.dockWidget_source_options.setWidget(self._connector.option_widget())
         self._ui.source_data_table.verticalHeader().display_all = False
 
         # connect signals
@@ -71,33 +73,26 @@ class ImportEditor:
         self._ui.source_list.currentItemChanged.connect(self.select_table)
 
         # signals for connector
-        self.connector.connectionReady.connect(self.request_new_tables_from_connector)
-        self.connector.dataReady.connect(self.update_preview_data)
-        self.connector.tablesReady.connect(self.update_tables)
-        self.connector.mappedDataReady.connect(self.mappedDataReady.emit)
-        self.connector.error.connect(self.handle_connector_error)
+        self._connector.connectionReady.connect(self.request_new_tables_from_connector)
+        self._connector.dataReady.connect(self.update_preview_data)
+        self._connector.tablesReady.connect(self.update_tables)
+        self._connector.mappedDataReady.connect(self.mapped_data_ready.emit)
         # when data is ready set loading status to False.
-        self.connector.connectionReady.connect(lambda: self.set_loading_status(False))
-        self.connector.dataReady.connect(lambda: self.set_loading_status(False))
-        self.connector.tablesReady.connect(lambda: self.set_loading_status(False))
-        self.connector.mappedDataReady.connect(lambda: self.set_loading_status(False))
+        self._connector.connectionReady.connect(lambda: self.set_loading_status(False))
+        self._connector.dataReady.connect(lambda: self.set_loading_status(False))
+        self._connector.tablesReady.connect(lambda: self.set_loading_status(False))
+        self._connector.mappedDataReady.connect(lambda: self.set_loading_status(False))
         # when data is getting fetched set loading status to True
-        self.connector.fetchingData.connect(lambda: self.set_loading_status(True))
+        self._connector.fetchingData.connect(lambda: self.set_loading_status(True))
         # set loading status to False if error.
-        self.connector.error.connect(lambda: self.set_loading_status(False))
+        self._connector.error.connect(lambda: self.set_loading_status(False))
 
         # current mapping changed
-        self.mappingChanged.connect(self._ui_preview_menu.set_model)
-        self.mappingChanged.connect(self.table.set_mapping)
-        self.mappingDataChanged.connect(self.table.set_mapping)
-        self.table.mapping_changed.connect(self._update_display_row_types)
+        self._preview_table_model.mapping_changed.connect(self._update_display_row_types)
 
         # data preview table
-        self.table.column_types_updated.connect(self._new_column_types)
-        self.table.row_types_updated.connect(self._new_row_types)
-
-        # preview new preview data
-        self.previewDataUpdated.connect(lambda: self.set_num_available_columns(self.table.columnCount()))
+        self._preview_table_model.column_types_updated.connect(self._new_column_types)
+        self._preview_table_model.row_types_updated.connect(self._new_row_types)
 
     @property
     def checked_tables(self):
@@ -107,6 +102,14 @@ class ImportEditor:
             if item.checkState() == Qt.Checked:
                 checked_items.append(item.text())
         return checked_items
+
+    @Slot(object)
+    def set_model(self, model):
+        self._ui_preview_menu.set_model(model)
+
+    @Slot(object)
+    def set_mapping(self, model):
+        self._preview_table_model.set_mapping(model)
 
     def set_loading_status(self, status):
         """
@@ -125,28 +128,26 @@ class ImportEditor:
         """
         Requests new tables data from connector
         """
-        self.connector.request_tables()
+        self._connector.request_tables()
 
     def select_table(self, selection):
         """
         Set selected table and request data from connector
         """
-        if selection:
-            if selection.text() not in self.table_mappings:
-                self.table_mappings[selection.text()] = MappingListModel([ObjectClassMapping()], selection.text())
-            self.set_mappings_model(self.table_mappings[selection.text()])
-            # request new data
-            self.connector.set_table(selection.text())
-            self.connector.request_data(selection.text(), max_rows=100)
-            self.selected_table = selection.text()
-
-    @Slot(str)
-    def handle_connector_error(self, error_message):
-        self._ui_error.showMessage(error_message)
+        if not selection:
+            return
+        text = selection.text()
+        if text not in self._table_mappings:
+            self._table_mappings[text] = MappingListModel([ObjectClassMapping()], text)
+        self.mapping_model_changed.emit(self._table_mappings[text])
+        # request new data
+        self._connector.set_table(text)
+        self._connector.request_data(text, max_rows=100)
+        self._selected_table = text
 
     def request_mapped_data(self):
-        tables_mappings = {t: self.table_mappings[t].get_mappings() for t in self.checked_tables}
-        self.connector.request_mapped_data(tables_mappings, max_rows=-1)
+        tables_mappings = {t: self._table_mappings[t].get_mappings() for t in self.checked_tables}
+        self._connector.request_mapped_data(tables_mappings, max_rows=-1)
 
     @Slot(dict)
     def update_tables(self, tables):
@@ -155,14 +156,14 @@ class ImportEditor:
         """
         new_tables = list()
         for t_name, t_mapping in tables.items():
-            if t_name not in self.table_mappings:
+            if t_name not in self._table_mappings:
                 if t_mapping is None:
                     t_mapping = ObjectClassMapping()
-                self.table_mappings[t_name] = MappingListModel([t_mapping], t_name)
+                self._table_mappings[t_name] = MappingListModel([t_mapping], t_name)
                 new_tables.append(t_name)
-        for k in list(self.table_mappings.keys()):
+        for k in list(self._table_mappings.keys()):
             if k not in tables:
-                self.table_mappings.pop(k)
+                self._table_mappings.pop(k)
 
         if not tables:
             self._ui.source_list.clear()
@@ -195,7 +196,7 @@ class ImportEditor:
         elif tables:
             # select first item
             self._ui.source_list.setCurrentRow(0, QItemSelectionModel.SelectCurrent)
-        self.tableChecked.emit()
+        self.table_checked.emit()
 
     @Slot(list, list)
     def update_preview_data(self, data, header):
@@ -204,29 +205,29 @@ class ImportEditor:
                 data = _sanitize_data(data, header)
             except RuntimeError as error:
                 self._ui_error.showMessage(str(error))
-                self.table.reset_model()
-                self.table.set_horizontal_header_labels([])
-                self.previewDataUpdated.emit()
+                self._preview_table_model.reset_model()
+                self._preview_table_model.set_horizontal_header_labels([])
+                self.preview_data_updated.emit(self._preview_table_model.columnCount())
                 return
             if not header:
                 header = list(range(1, len(data[0]) + 1))
-            self.table.reset_model(main_data=data)
-            self.table.set_horizontal_header_labels(header)
-            types = self.connector.table_types.get(self.connector.current_table)
-            row_types = self.connector.table_row_types.get(self.connector.current_table)
+            self._preview_table_model.reset_model(main_data=data)
+            self._preview_table_model.set_horizontal_header_labels(header)
+            types = self._connector.table_types.get(self._connector.current_table)
+            row_types = self._connector.table_row_types.get(self._connector.current_table)
             for col in range(len(header)):
                 col_type = types.get(col, "string")
-                self.table.set_type(col, value_to_convert_spec(col_type), orientation=Qt.Horizontal)
+                self._preview_table_model.set_type(col, value_to_convert_spec(col_type), orientation=Qt.Horizontal)
             for row, row_type in row_types.items():
-                self.table.set_type(row, value_to_convert_spec(row_type), orientation=Qt.Vertical)
+                self._preview_table_model.set_type(row, value_to_convert_spec(row_type), orientation=Qt.Vertical)
         else:
-            self.table.reset_model()
-            self.table.set_horizontal_header_labels([])
-        self.previewDataUpdated.emit()
+            self._preview_table_model.reset_model()
+            self._preview_table_model.set_horizontal_header_labels([])
+        self.preview_data_updated.emit(self._preview_table_model.columnCount())
 
-    def use_settings(self, settings):
+    def _restore_mappings(self, settings):
         try:
-            self.table_mappings = {
+            self._table_mappings = {
                 table: MappingListModel([dict_to_map(m) for m in mappings], table)
                 for table, mappings in settings.get("table_mappings", {}).items()
             }
@@ -241,15 +242,15 @@ class ImportEditor:
             tn: {int(col): value_to_convert_spec(spec) for col, spec in cols.items()}
             for tn, cols in settings.get("table_row_types", {}).items()
         }
-        self.connector.set_table_options(settings.get("table_options", {}))
-        self.connector.set_table_types(table_types)
-        self.connector.set_table_row_types(table_row_types)
+        self._connector.set_table_options(settings.get("table_options", {}))
+        self._connector.set_table_types(table_types)
+        self._connector.set_table_row_types(table_row_types)
         self._ui.source_list.blockSignals(True)
         self._ui.source_list.clear()
         selected_tables = settings.get("selected_tables")
         if selected_tables is None:
-            selected_tables = set(self.table_mappings.keys())
-        for table_name in self.table_mappings:
+            selected_tables = set(self._table_mappings.keys())
+        for table_name in self._table_mappings:
             item = QListWidgetItem()
             item.setText(table_name)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
@@ -275,23 +276,23 @@ class ImportEditor:
 
         table_mappings = {
             t: [m.to_dict() for m in mappings.get_mappings()]
-            for t, mappings in self.table_mappings.items()
+            for t, mappings in self._table_mappings.items()
             if t in tables
         }
 
         table_types = {
             tn: {col: spec.to_json_value() for col, spec in cols.items()}
-            for tn, cols in self.connector.table_types.items()
+            for tn, cols in self._connector.table_types.items()
             if cols
             if tn in tables
         }
         table_row_types = {
             tn: {col: spec.to_json_value() for col, spec in cols.items()}
-            for tn, cols in self.connector.table_row_types.items()
+            for tn, cols in self._connector.table_row_types.items()
             if cols and tn in tables
         }
 
-        table_options = {t: o for t, o in self.connector.table_options.items() if t in tables}
+        table_options = {t: o for t, o in self._connector.table_options.items() if t in tables}
 
         settings = {
             "table_mappings": table_mappings,
@@ -299,28 +300,28 @@ class ImportEditor:
             "table_types": table_types,
             "table_row_types": table_row_types,
             "selected_tables": selected_tables,
-            "source_type": self.connector.source_type,
+            "source_type": self._connector.source_type,
         }
         return settings
 
     @Slot()
     def close_connection(self):
         """Close connector connection."""
-        self.connector.close_connection()
+        self._connector.close_connection()
 
     @Slot()
     def _new_column_types(self):
-        new_types = self.table.get_types(orientation=Qt.Horizontal)
-        self.connector.set_table_types({self.connector.current_table: new_types})
+        new_types = self._preview_table_model.get_types(orientation=Qt.Horizontal)
+        self._connector.set_table_types({self._connector.current_table: new_types})
 
     @Slot()
     def _new_row_types(self):
-        new_types = self.table.get_types(orientation=Qt.Vertical)
-        self.connector.set_table_row_types({self.connector.current_table: new_types})
+        new_types = self._preview_table_model.get_types(orientation=Qt.Vertical)
+        self._connector.set_table_row_types({self._connector.current_table: new_types})
 
     @Slot()
     def _update_display_row_types(self):
-        mapping = self.table.mapping()
+        mapping = self._preview_table_model.mapping()
         if mapping.last_pivot_row == -1:
             pivoted_rows = []
         else:
@@ -361,27 +362,27 @@ class ImportEditor:
             return
 
     def copy_mappings(self, table):
-        if table in self.table_mappings:
-            self._copied_mapping = [deepcopy(m) for m in self.table_mappings[table].get_mappings()]
+        if table in self._table_mappings:
+            self._copied_mapping = [deepcopy(m) for m in self._table_mappings[table].get_mappings()]
 
     def copy_options(self, table):
-        options = self.connector.table_options
-        col_types = self.connector.table_types
-        row_types = self.connector.table_row_types
+        options = self._connector.table_options
+        col_types = self._connector.table_types
+        row_types = self._connector.table_row_types
         self._copied_options["options"] = deepcopy(options.get(table, {}))
         self._copied_options["col_types"] = deepcopy(col_types.get(table, {}))
         self._copied_options["row_types"] = deepcopy(row_types.get(table, {}))
 
     def paste_mappings(self, table):
-        self.table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping], table)
-        if self.selected_table == table:
-            self.set_mappings_model(self.table_mappings[table])
+        self._table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping], table)
+        if self._selected_table == table:
+            self.mapping_model_changed.emit(self._table_mappings[table])
 
     def paste_options(self, table):
-        self.connector.set_table_options({table: deepcopy(self._copied_options.get("options", {}))})
-        self.connector.set_table_types({table: deepcopy(self._copied_options.get("col_types", {}))})
-        self.connector.set_table_row_types({table: deepcopy(self._copied_options.get("row_types", {}))})
-        if self.selected_table == table:
+        self._connector.set_table_options({table: deepcopy(self._copied_options.get("options", {}))})
+        self._connector.set_table_types({table: deepcopy(self._copied_options.get("col_types", {}))})
+        self._connector.set_table_row_types({table: deepcopy(self._copied_options.get("row_types", {}))})
+        if self._selected_table == table:
             self.select_table(self._ui.source_list.selectedItems()[0])
 
 

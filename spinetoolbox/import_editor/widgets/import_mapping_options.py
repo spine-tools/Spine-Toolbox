@@ -15,7 +15,7 @@ ImportMappingOptions widget.
 :author: P. Vennström (VTT)
 :date:   12.5.2020
 """
-from PySide2.QtCore import Qt
+from PySide2.QtCore import QObject, Qt, Slot
 from spinedb_api import (
     RelationshipClassMapping,
     ObjectClassMapping,
@@ -29,23 +29,24 @@ from spinedb_api import (
 from ...widgets.custom_menus import SimpleFilterMenu
 
 
-class ImportMappingOptions:
+class ImportMappingOptions(QObject):
     """
     Provides methods for managing Mapping options (class type, dimensions, parameter type, ignore columns, and so on).
     """
 
-    def __init__(self, *args, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
+    def __init__(self, ui):
+        """
+        Args:
+            ui (QWidget): importer window's UI
+        """
         # state
+        super().__init__()
+        self._ui = ui
         self._mapping_options_model = None
         self._block_signals = False
         self._model_reset_signal = None
         self._model_data_signal = None
         self._ui_ignore_columns_filtermenu = None
-
-    def _init_import_mapping_options(self):
         # ui
         self._ui_ignore_columns_filtermenu = SimpleFilterMenu(self._ui.ignore_columns_button, show_empty=False)
         self._ui.ignore_columns_button.setMenu(self._ui_ignore_columns_filtermenu)
@@ -60,6 +61,7 @@ class ImportMappingOptions:
 
         self.update_ui()
 
+    @Slot(int)
     def set_num_available_columns(self, num):
         selected = self._ui_ignore_columns_filtermenu._filter._filter_model.get_selected()
         self._ui_ignore_columns_filtermenu._filter._filter_model.set_list(set(range(num)))
@@ -69,6 +71,7 @@ class ImportMappingOptions:
         if self._mapping_options_model:
             self._mapping_options_model.set_skip_columns(skip_cols)
 
+    @Slot(object)
     def set_mapping_options_model(self, model):
         try:
             self._ui.time_series_repeat_check_box.toggled.disconnect()

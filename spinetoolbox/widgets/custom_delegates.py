@@ -17,11 +17,18 @@ Custom item delegates.
 """
 
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
-from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyleOptionComboBox
+from PySide2.QtWidgets import (
+    QComboBox,
+    QStyledItemDelegate,
+    QStyleOptionButton,
+    QStyle,
+    QApplication,
+    QStyleOptionComboBox,
+)
 from .custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor
 
 
-class ComboBoxDelegate(QItemDelegate):
+class ComboBoxDelegate(QStyledItemDelegate):
     def __init__(self, parent, choices):
         super().__init__(parent)
         self.editor = None
@@ -40,7 +47,7 @@ class ComboBoxDelegate(QItemDelegate):
         opt.text = str(value)
         opt.rect = option.rect
         style.drawComplexControl(QStyle.CC_ComboBox, opt, painter)
-        QItemDelegate.paint(self, painter, option, index)
+        super().paint(painter, option, index)
 
     def setEditorData(self, editor, index):
         value = index.data(Qt.DisplayRole)
@@ -58,7 +65,7 @@ class ComboBoxDelegate(QItemDelegate):
         self.commitData.emit(self.sender())
 
 
-class LineEditDelegate(QItemDelegate):
+class LineEditDelegate(QStyledItemDelegate):
     """A delegate that places a fully functioning QLineEdit.
 
     Attributes:
@@ -80,7 +87,7 @@ class LineEditDelegate(QItemDelegate):
         self.data_committed.emit(index, editor.data())
 
 
-class CheckBoxDelegate(QItemDelegate):
+class CheckBoxDelegate(QStyledItemDelegate):
     """A delegate that places a fully functioning QCheckBox.
 
     Attributes:
@@ -156,7 +163,7 @@ class CheckBoxDelegate(QItemDelegate):
         return QRect(checkbox_anchor, checkbox_rect.size())
 
 
-class ForeignKeysDelegate(QItemDelegate):
+class ForeignKeysDelegate(QStyledItemDelegate):
     """A QComboBox delegate with checkboxes.
 
     Attributes:

@@ -16,39 +16,40 @@ ImportMappings widget.
 :date:   1.6.2019
 """
 
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import QObject, Signal, Slot
 from ...widgets.custom_delegates import ComboBoxDelegate
 
 MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
 
-class ImportMappings:
+class ImportMappings(QObject):
     """
     Provides methods for managing Mappings (add, remove, edit, visualize, and so on).
     """
 
-    mappingChanged = Signal("QVariant")
+    mapping_changed = Signal(object)
     """Emitted when a new mapping MappingSpecModel is selected from the Mappings list."""
-    mappingDataChanged = Signal("QVariant")
+    mapping_data_changed = Signal(object)
     """Emits the new MappingListModel."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # state
+    def __init__(self, ui):
+        """
+        Args:
+            ui (QWidget): importer window's UI
+        """
+        super().__init__()
+        self._ui = ui
         self._mappings_model = None
         self._select_handle = None
-
-    def _init_import_mappings(self):
         # initialize interface
-        self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(self, MAPPING_CHOICES))
+        self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(None, MAPPING_CHOICES))
 
         # connect signals
         self._ui.new_button.clicked.connect(self.new_mapping)
         self._ui.remove_button.clicked.connect(self.delete_selected_mapping)
-        self.mappingChanged.connect(self._ui.table_view_mappings.setModel)
-        self.mappingChanged.connect(self.set_mapping_options_model)
+        self.mapping_changed.connect(self._ui.table_view_mappings.setModel)
 
+    @Slot(object)
     def set_mappings_model(self, model):
         """
         Sets new model
@@ -74,7 +75,7 @@ class ImportMappings:
         indexes = self._ui.list_view.selectedIndexes()
         if self._mappings_model and indexes:
             m = self._mappings_model.data_mapping(indexes()[0])
-        self.mappingDataChanged.emit(m)
+        self.mapping_data_changed.emit(m)
 
     @Slot()
     def new_mapping(self):
@@ -112,7 +113,7 @@ class ImportMappings:
             m = self._mappings_model.data_mapping(selection.indexes()[0])
         else:
             m = None
-        self.mappingChanged.emit(m)
+        self.mapping_changed.emit(m)
 
     def selected_mapping_name(self):
         """Returns the name of the selected mapping."""

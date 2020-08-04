@@ -17,9 +17,9 @@ Contains ImportPreviewWindow class.
 """
 
 import json
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QGuiApplication
-from PySide2.QtWidgets import QMainWindow, QFileDialog, QDialogButtonBox, QDockWidget
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QFileDialog, QDialogButtonBox, QDockWidget
 from ...helpers import ensure_window_is_on_screen
 from ...spine_io.connection_manager import ConnectionManager
 from .import_editor import ImportEditor
@@ -27,35 +27,48 @@ from .import_mapping_options import ImportMappingOptions
 from .import_mappings import ImportMappings
 
 
-class ImportEditorWindow(ImportEditor, ImportMappings, ImportMappingOptions, QMainWindow):
-    """A QMainWindow to let users define Mappings for an Importer item.
-
-    Args:
-        importer (spinetoolbox.project_items.importer.importer.Importer): Project item that owns this preview window
-        filepath (str): Importee path
-        connector (SourceConnection): Asynchronous data reader
-        settings (dict): Default mapping specification
-        toolbox (QMainWindow): ToolboxUI class
-    """
+class ImportEditorWindow(QMainWindow):
+    """A QMainWindow to let users define Mappings for an Importer item."""
 
     settings_updated = Signal(dict)
     connection_failed = Signal(str)
 
-    def __init__(self, importer, filepath, connector, connector_settings, settings, toolbox):
+    def __init__(self, importer, filepath, connector, connector_settings, mapping_settings, toolbox):
+        """
+        Args:
+            importer (spinetoolbox.project_items.importer.importer.Importer): Project item that owns this preview window
+            filepath (str): Importee path
+            connector (SourceConnection): Asynchronous data reader
+            mapping_settings (dict): Default mapping specification
+            toolbox (QMainWindow): ToolboxUI class
+        """
         from ..ui.import_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, flags=Qt.Window)
         self._importer = importer
         self._toolbox = toolbox
-        self._qsettings = self._toolbox.qsettings()
+        self._app_settings = self._toolbox.qsettings()
         self._connection_manager = ConnectionManager(connector, connector_settings)
         self._connection_manager.source = filepath
+        self._ui_error = QErrorMessage(self)
+        self._ui_error.setWindowTitle("Error")
+        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self._ui = Ui_MainWindow()
         self._ui.setupUi(self)
+        self._mappings_list_manager = ImportMappings(self._ui)
+        self._editor = ImportEditor(self._ui, self._ui_error, self._connection_manager, mapping_settings)
+        self._mappings_list_manager.mapping_changed.connect(self._editor.set_model)
+        self._mappings_list_manager.mapping_changed.connect(self._editor.set_mapping)
+        self._mappings_list_manager.mapping_data_changed.connect(self._editor.set_mapping)
+        self._mapping_options = ImportMappingOptions(self._ui)
+        self._editor.mapping_model_changed.connect(self._mappings_list_manager.set_mappings_model)
+        self._mappings_list_manager.mapping_changed.connect(self._mapping_options.set_mapping_options_model)
+        self._editor.preview_data_updated.connect(self._mapping_options.set_num_available_columns)
+
         self._size = None
         self.takeCentralWidget()
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle("Import Editor    -- {} --".format(importer.name))
+        self.setWindowTitle(f"Import Editor    -- {importer.name} --")
         self.settings_group = "mappingPreviewWindow"
         self.apply_classic_ui_style()
         self.restore_ui()
@@ -70,9 +83,11 @@ class ImportEditorWindow(ImportEditor, ImportMappings, ImportMappingOptions, QMa
         self._ui.actionClose.triggered.connect(self.close)
         self._connection_manager.connectionReady.connect(self.show)
         self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
-        self._init_import_mapping_options()
-        self._init_import_mappings()
-        self._init_import_editor(self._connection_manager, settings)
+        self._connection_manager.error.connect(self.show_error)
+
+    @Slot(str)
+    def show_error(self, message):
+        self._ui_error.showMessage(message)
 
     def restore_dock_widgets(self):
         """Docks all floating and or hidden QDockWidgets back to the window."""
@@ -147,7 +162,7 @@ class ImportEditorWindow(ImportEditor, ImportMappings, ImportMappingOptions, QMa
 
     def apply_and_close(self):
         """Apply changes to mappings and close preview window."""
-        settings = self.get_settings_dict()
+        settings = self._editor.get_settings_dict()
         self.settings_updated.emit(settings)
         self.close()
 
@@ -156,14 +171,14 @@ class ImportEditorWindow(ImportEditor, ImportMappings, ImportMappingOptions, QMa
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        qsettings = self._qsettings
-        qsettings.beginGroup(self.settings_group)
-        window_size = qsettings.value("windowSize")
-        window_pos = qsettings.value("windowPosition")
-        window_state = qsettings.value("windowState")
-        window_maximized = qsettings.value("windowMaximized", defaultValue='false')
-        n_screens = qsettings.value("n_screens", defaultValue=1)
-        qsettings.endGroup()
+        app_settings = self._app_settings
+        app_settings.beginGroup(self.settings_group)
+        window_size = app_settings.value("windowSize")
+        window_pos = app_settings.value("windowPosition")
+        window_state = app_settings.value("windowState")
+        window_maximized = app_settings.value("windowMaximized", defaultValue='false')
+        n_screens = app_settings.value("n_screens", defaultValue=1)
+        app_settings.endGroup()
         original_size = self.size()
         if window_size:
             self.resize(window_size)
@@ -185,14 +200,14 @@ class ImportEditorWindow(ImportEditor, ImportMappings, ImportMappingOptions, QMa
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
-        self.close_connection()
-        qsettings = self._qsettings
-        qsettings.beginGroup(self.settings_group)
-        qsettings.setValue("windowSize", self.size())
-        qsettings.setValue("windowPosition", self.pos())
-        qsettings.setValue("windowState", self.saveState(version=1))
-        qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
-        qsettings.setValue("n_screens", len(QGuiApplication.screens()))
-        qsettings.endGroup()
+        self._editor.close_connection()
+        app_settings = self._app_settings
+        app_settings.beginGroup(self.settings_group)
+        app_settings.setValue("windowSize", self.size())
+        app_settings.setValue("windowPosition", self.pos())
+        app_settings.setValue("windowState", self.saveState(version=1))
+        app_settings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
+        app_settings.setValue("n_screens", len(QGuiApplication.screens()))
+        app_settings.endGroup()
         if event:
             event.accept()
