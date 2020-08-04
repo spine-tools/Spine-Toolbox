@@ -113,9 +113,9 @@ class ImportEditor(QObject):
 
     def set_loading_status(self, status):
         """
-        Sets widgets enable state
+        Disables/hides widgets while status is True
         """
-        self._ui.source_list.setDisabled(status)
+        self._ui.table_page.setDisabled(status)
         preview_table = 0
         loading_message = 1
         self._ui.source_preview_widget_stack.setCurrentIndex(loading_message if status else preview_table)
