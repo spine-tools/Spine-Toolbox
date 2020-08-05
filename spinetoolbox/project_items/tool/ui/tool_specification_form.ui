@@ -954,7 +954,6 @@
     </layout>
    </item>
   </layout>
-  <zorder></zorder>
  </widget>
  <customwidgets>
   <customwidget>
@@ -980,6 +979,8 @@
   <tabstop>textEdit_description</tabstop>
   <tabstop>lineEdit_main_program</tabstop>
   <tabstop>toolButton_add_main_program</tabstop>
+  <tabstop>lineEdit_args</tabstop>
+  <tabstop>toolButton_add_cmdline_tag</tabstop>
   <tabstop>treeView_sourcefiles</tabstop>
   <tabstop>toolButton_add_source_files</tabstop>
   <tabstop>toolButton_add_source_dirs</tabstop>
