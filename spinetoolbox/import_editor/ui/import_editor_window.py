@@ -47,7 +47,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1197, 28))
+        self.menubar.setGeometry(QRect(0, 0, 1197, 26))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         MainWindow.setMenuBar(self.menubar)
@@ -276,6 +276,19 @@ class Ui_MainWindow(object):
 
         self.dockWidget_mapping_spec.setWidget(self.dockWidgetContents_6)
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_mapping_spec)
+        QWidget.setTabOrder(self.source_list, self.source_data_table)
+        QWidget.setTabOrder(self.source_data_table, self.new_button)
+        QWidget.setTabOrder(self.new_button, self.remove_button)
+        QWidget.setTabOrder(self.remove_button, self.list_view)
+        QWidget.setTabOrder(self.list_view, self.class_type_combo_box)
+        QWidget.setTabOrder(self.class_type_combo_box, self.import_objects_check_box)
+        QWidget.setTabOrder(self.import_objects_check_box, self.parameter_type_combo_box)
+        QWidget.setTabOrder(self.parameter_type_combo_box, self.start_read_row_spin_box)
+        QWidget.setTabOrder(self.start_read_row_spin_box, self.ignore_columns_button)
+        QWidget.setTabOrder(self.ignore_columns_button, self.dimension_spin_box)
+        QWidget.setTabOrder(self.dimension_spin_box, self.time_series_repeat_check_box)
+        QWidget.setTabOrder(self.time_series_repeat_check_box, self.map_dimension_spin_box)
+        QWidget.setTabOrder(self.map_dimension_spin_box, self.table_view_mappings)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menuFile.addAction(self.actionExportMappings)
@@ -336,6 +349,6 @@ class Ui_MainWindow(object):
         self.time_series_repeat_check_box.setText(QCoreApplication.translate("MainWindow", u"Repeat time series", None))
         self.map_dimensions_label.setText(QCoreApplication.translate("MainWindow", u"Map dimensions:", None))
         self.import_objects_check_box.setText(QCoreApplication.translate("MainWindow", u"Import objects", None))
-        self.dockWidget_mapping_spec.setWindowTitle(QCoreApplication.translate("MainWindow", u"Maping specification", None))
+        self.dockWidget_mapping_spec.setWindowTitle(QCoreApplication.translate("MainWindow", u"Mapping specification", None))
     # retranslateUi
 
