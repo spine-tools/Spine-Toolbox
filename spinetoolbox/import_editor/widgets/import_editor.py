@@ -22,7 +22,8 @@ from PySide2.QtWidgets import QMenu
 from ..commands import SetTableChecked
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
 from ...widgets.custom_menus import CustomContextMenu
-from ...spine_io.io_models import MappingPreviewModel, MappingListModel
+from ..mvcmodels.mapping_list_model import MappingListModel
+from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ...spine_io.type_conversion import value_to_convert_spec
 
 
@@ -52,7 +53,7 @@ class ImportEditor(QObject):
         # state
         self._connector = connector
         self._selected_table = None
-        self._preview_table_model = MappingPreviewModel()
+        self._preview_table_model = SourceDataTableModel()
         self._selected_source_tables = set()
         self._table_mappings = {}
         self._table_updating = False

@@ -20,8 +20,8 @@ from collections.abc import Iterable
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QCursor, QFont, QIcon
 from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
+from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ...spine_io.io_api import TYPE_STRING_TO_CLASS
-from ...spine_io.io_models import MappingPreviewModel
 from ...spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
 from spinetoolbox.helpers import CharIconEngine
 
@@ -375,15 +375,15 @@ class _HeaderWithButton(QHeaderView):
         Args:
             model (QAbstractItemModel): a model
         """
-        if isinstance(model, MappingPreviewModel):
+        if isinstance(model, SourceDataTableModel):
             old_model = self.model()
             if self.orientation() == Qt.Horizontal:
                 model.column_types_updated.connect(self.update_buttons)
-                if isinstance(old_model, MappingPreviewModel):
+                if isinstance(old_model, SourceDataTableModel):
                     old_model.column_types_updated.disconnect(self.update_buttons)
             else:
                 model.row_types_updated.connect(self.update_buttons)
-                if isinstance(old_model, MappingPreviewModel):
+                if isinstance(old_model, SourceDataTableModel):
                     old_model.row_types_updated.disconnect(self.update_buttons)
         super().setModel(model)
 
