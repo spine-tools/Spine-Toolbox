@@ -18,8 +18,8 @@ Contains ImportPreviewWindow class.
 
 import json
 from PySide2.QtCore import Qt, Signal, Slot
-from PySide2.QtGui import QGuiApplication
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QFileDialog, QDialogButtonBox, QDockWidget
+from PySide2.QtGui import QGuiApplication, QKeySequence
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QFileDialog, QDialogButtonBox, QDockWidget, QUndoStack
 from ...helpers import ensure_window_is_on_screen
 from ...spine_io.connection_manager import ConnectionManager
 from .import_editor import ImportEditor
@@ -50,13 +50,17 @@ class ImportEditorWindow(QMainWindow):
         self._app_settings = self._toolbox.qsettings()
         self._connection_manager = ConnectionManager(connector, connector_settings)
         self._connection_manager.source = filepath
+        self._undo_stack = QUndoStack()
         self._ui_error = QErrorMessage(self)
         self._ui_error.setWindowTitle("Error")
         self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self._ui = Ui_MainWindow()
         self._ui.setupUi(self)
+        self._insert_undo_redo_actions()
         self._mappings_list_manager = ImportMappings(self._ui)
-        self._editor = ImportEditor(self._ui, self._ui_error, self._connection_manager, mapping_settings)
+        self._editor = ImportEditor(
+            self._ui, self._ui_error, self._undo_stack, self._connection_manager, mapping_settings
+        )
         self._mappings_list_manager.mapping_changed.connect(self._editor.set_model)
         self._mappings_list_manager.mapping_changed.connect(self._editor.set_mapping)
         self._mappings_list_manager.mapping_data_changed.connect(self._editor.set_mapping)
@@ -78,12 +82,22 @@ class ImportEditorWindow(QMainWindow):
         self._ui.statusbar.layout().setContentsMargins(6, 6, 6, 6)
         self._button_box.button(QDialogButtonBox.Ok).clicked.connect(self.apply_and_close)
         self._button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
-        self._ui.actionExportMappings.triggered.connect(self.export_mapping_to_file)
-        self._ui.actionImportMappings.triggered.connect(self.import_mapping_from_file)
-        self._ui.actionClose.triggered.connect(self.close)
+        self._ui.export_mappings_action.triggered.connect(self.export_mapping_to_file)
+        self._ui.import_mappings_action.triggered.connect(self.import_mapping_from_file)
+        self._ui.close_action.triggered.connect(self.close)
         self._connection_manager.connectionReady.connect(self.show)
         self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
         self._connection_manager.error.connect(self.show_error)
+
+    def _insert_undo_redo_actions(self):
+        undo_action = self._undo_stack.createUndoAction(self)
+        redo_action = self._undo_stack.createRedoAction(self)
+        undo_action.setShortcuts(QKeySequence.Undo)
+        redo_action.setShortcuts(QKeySequence.Redo)
+        actions = self._ui.edit_menu.actions()
+        before = actions[0] if actions else None
+        self._ui.edit_menu.insertAction(before, undo_action)
+        self._ui.edit_menu.insertAction(before, redo_action)
 
     @Slot(str)
     def show_error(self, message):

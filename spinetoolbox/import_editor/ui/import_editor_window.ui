@@ -38,16 +38,22 @@
      <height>26</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuFile">
+   <widget class="QMenu" name="file_menu">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionExportMappings"/>
-    <addaction name="actionImportMappings"/>
+    <addaction name="export_mappings_action"/>
+    <addaction name="import_mappings_action"/>
     <addaction name="separator"/>
-    <addaction name="actionClose"/>
+    <addaction name="close_action"/>
    </widget>
-   <addaction name="menuFile"/>
+   <widget class="QMenu" name="edit_menu">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+   </widget>
+   <addaction name="file_menu"/>
+   <addaction name="edit_menu"/>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="sizeGripEnabled">
@@ -79,7 +85,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QListWidget" name="source_list">
+      <widget class="QListView" name="source_list">
        <property name="contextMenuPolicy">
         <enum>Qt::CustomContextMenu</enum>
        </property>
@@ -506,12 +512,12 @@
     </layout>
    </widget>
   </widget>
-  <action name="actionExportMappings">
+  <action name="export_mappings_action">
    <property name="text">
     <string>Export mappings...</string>
    </property>
   </action>
-  <action name="actionImportMappings">
+  <action name="import_mappings_action">
    <property name="text">
     <string>Import mappings...</string>
    </property>
@@ -521,7 +527,7 @@
     <string>Save</string>
    </property>
   </action>
-  <action name="actionClose">
+  <action name="close_action">
    <property name="text">
     <string>Close</string>
    </property>

@@ -17,8 +17,9 @@ Contains ImportEditor widget and MappingTableMenu.
 """
 
 from copy import deepcopy
-from PySide2.QtCore import QItemSelectionModel, QObject, QPoint, Qt, Signal, Slot
-from PySide2.QtWidgets import QMenu, QListWidgetItem
+from PySide2.QtCore import QAbstractListModel, QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
+from PySide2.QtWidgets import QMenu
+from ..commands import SetTableChecked
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
 from ...widgets.custom_menus import CustomContextMenu
 from ...spine_io.io_models import MappingPreviewModel, MappingListModel
@@ -35,11 +36,12 @@ class ImportEditor(QObject):
     mapping_model_changed = Signal(object)
     preview_data_updated = Signal(int)
 
-    def __init__(self, ui, ui_error, connector, mapping_settings):
+    def __init__(self, ui, ui_error, undo_stack, connector, mapping_settings):
         """
         Args:
             ui (QWidget): importer window's UI
             ui_error (QErrorMessage): error dialog
+            undo_stack (QUndoStack): undo stack
             connector (ConnectionManager): a connector
             mapping_settings (dict): serialized mappings
         """
@@ -58,7 +60,9 @@ class ImportEditor(QObject):
         self._copied_mapping = None
         self._copied_options = {}
         self._ui_preview_menu = None
+        self._source_table_model = _SourceTableListModel(undo_stack)
         self._restore_mappings(mapping_settings)
+        self._ui.source_list.setModel(self._source_table_model)
         # create ui
         self._ui.source_data_table.setModel(self._preview_table_model)
         self._ui_preview_menu = MappingTableMenu(self._ui.source_data_table)
@@ -68,9 +72,9 @@ class ImportEditor(QObject):
         # connect signals
         self._ui.source_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.source_list.customContextMenuRequested.connect(self.show_source_table_context_menu)
+        self._ui.source_list.selectionModel().currentChanged.connect(self._change_selected_table)
         self._ui.source_data_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.source_data_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
-        self._ui.source_list.currentItemChanged.connect(self.select_table)
 
         # signals for connector
         self._connector.connectionReady.connect(self.request_new_tables_from_connector)
@@ -96,12 +100,7 @@ class ImportEditor(QObject):
 
     @property
     def checked_tables(self):
-        checked_items = []
-        for i in range(self._ui.source_list.count()):
-            item = self._ui.source_list.item(i)
-            if item.checkState() == Qt.Checked:
-                checked_items.append(item.text())
-        return checked_items
+        return self._source_table_model.checked_table_names()
 
     @Slot(object)
     def set_model(self, model):
@@ -130,20 +129,24 @@ class ImportEditor(QObject):
         """
         self._connector.request_tables()
 
-    def select_table(self, selection):
+    @Slot(QModelIndex, QModelIndex)
+    def _change_selected_table(self, selected, deselected):
+        if not selected.isValid():
+            return
+        item = self._source_table_model.table_at(selected.row())
+        self._select_table(item.name)
+
+    def _select_table(self, table_name):
         """
         Set selected table and request data from connector
         """
-        if not selection:
-            return
-        text = selection.text()
-        if text not in self._table_mappings:
-            self._table_mappings[text] = MappingListModel([ObjectClassMapping()], text)
-        self.mapping_model_changed.emit(self._table_mappings[text])
+        if table_name not in self._table_mappings:
+            self._table_mappings[table_name] = MappingListModel([ObjectClassMapping()], table_name)
+        self.mapping_model_changed.emit(self._table_mappings[table_name])
         # request new data
-        self._connector.set_table(text)
-        self._connector.request_data(text, max_rows=100)
-        self._selected_table = text
+        self._connector.set_table(table_name)
+        self._connector.request_data(table_name, max_rows=100)
+        self._selected_table = table_name
 
     def request_mapped_data(self):
         tables_mappings = {t: self._table_mappings[t].get_mappings() for t in self.checked_tables}
@@ -170,32 +173,21 @@ class ImportEditor(QObject):
             self._ui.source_list.clearSelection()
             return
 
-        # current selected table
-        selected = self._ui.source_list.selectedItems()
-
         # empty tables list and add new tables
         tables_to_select = set(self.checked_tables + new_tables)
-        self._ui.source_list.blockSignals(True)
-        self._ui.source_list.clear()
-        self._ui.source_list.clearSelection()
-        for t in tables:
-            item = QListWidgetItem()
-            item.setText(t)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            if t in tables_to_select:
-                item.setCheckState(Qt.Checked)
-            else:
-                item.setCheckState(Qt.Unchecked)
-            self._ui.source_list.addItem(item)
-        self._ui.source_list.blockSignals(False)
+        table_items = [_SourceTableItem(name, name in tables_to_select) for name in tables]
+        self._source_table_model.reset(table_items)
 
+        # current selected table
+        current_index = self._ui.source_list.selectionModel().currentIndex()
         # reselect table if existing otherwise select first table
-        if selected and selected[0].text() in tables:
-            table = selected[0].text()
-            self._ui.source_list.setCurrentRow(tables.index(table), QItemSelectionModel.SelectCurrent)
+        if current_index.isValid():
+            table_name = self._source_table_model.table_at(current_index.row()).name
+            index = self._source_table_model.index(tables.index(table_name), 0)
+            self._ui.source_list.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectCurrent)
         elif tables:
-            # select first item
-            self._ui.source_list.setCurrentRow(0, QItemSelectionModel.SelectCurrent)
+            index = self._source_table_model.index(0, 0)
+            self._ui.source_list.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectCurrent)
         self.table_checked.emit()
 
     @Slot(list, list)
@@ -245,18 +237,11 @@ class ImportEditor(QObject):
         self._connector.set_table_options(settings.get("table_options", {}))
         self._connector.set_table_types(table_types)
         self._connector.set_table_row_types(table_row_types)
-        self._ui.source_list.blockSignals(True)
-        self._ui.source_list.clear()
         selected_tables = settings.get("selected_tables")
         if selected_tables is None:
             selected_tables = set(self._table_mappings.keys())
-        for table_name in self._table_mappings:
-            item = QListWidgetItem()
-            item.setText(table_name)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked if table_name in selected_tables else Qt.Unchecked)
-            self._ui.source_list.addItem(item)
-        self._ui.source_list.blockSignals(False)
+        table_items = [_SourceTableItem(name, name in selected_tables) for name in self._table_mappings]
+        self._source_table_model.reset(table_items)
 
     def get_settings_dict(self):
         """Returns a dictionary with type of connector, connector options for tables,
@@ -383,7 +368,7 @@ class ImportEditor(QObject):
         self._connector.set_table_types({table: deepcopy(self._copied_options.get("col_types", {}))})
         self._connector.set_table_row_types({table: deepcopy(self._copied_options.get("row_types", {}))})
         if self._selected_table == table:
-            self.select_table(self._ui.source_list.selectedItems()[0])
+            self._select_table(self._ui.source_list.selectedItems()[0])
 
 
 class MappingTableMenu(QMenu):
@@ -455,6 +440,71 @@ class TableMenu(CustomContextMenu):
         self.add_action("Paste options", enabled=can_paste_option)
         self.add_action("Paste mappings", enabled=can_paste_mapping)
         self.add_action("Paste options and mappings", enabled=can_paste_mapping & can_paste_option)
+
+
+class _SourceTableItem:
+    """A list item for :class:`_SourceTableListModel`"""
+
+    def __init__(self, name, checked):
+        self.name = name
+        self.checked = checked
+
+
+class _SourceTableListModel(QAbstractListModel):
+    """Model for source table lists which supports undo/redo functionality."""
+
+    def __init__(self, undo_stack):
+        """
+        Args:
+            undo_stack (QUndoStack): undo stack
+        """
+        super().__init__()
+        self._tables = []
+        self._undo_stack = undo_stack
+
+    def checked_table_names(self):
+        return [table.name for table in self._tables if table.checked]
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        if role == Qt.DisplayRole:
+            return self._tables[index.row()].name
+        if role == Qt.CheckStateRole:
+            return Qt.Checked if self._tables[index.row()].checked else Qt.Unchecked
+        return None
+
+    def flags(self, index):
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        return None
+
+    def reset(self, items):
+        self.beginResetModel()
+        self._tables = items
+        self.endResetModel()
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._tables)
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if not index.isValid():
+            return False
+        if role == Qt.CheckStateRole:
+            row = index.row()
+            item = self._tables[row]
+            checked = value == Qt.Checked
+            self._undo_stack.push(SetTableChecked(item.name, self, row, checked))
+        return False
+
+    def set_checked(self, row, checked):
+        self._tables[row].checked = checked
+        index = self.index(row, 0)
+        self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+
+    def table_at(self, row):
+        return self._tables[row]
 
 
 def _sanitize_data(data, header):
