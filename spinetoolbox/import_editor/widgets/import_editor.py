@@ -251,14 +251,8 @@ class ImportEditor(QObject):
         Returns:
             [Dict] -- dict with settings
         """
-        get_source_item = self._ui.source_list.item
-        table_count = self._ui.source_list.count()
-        tables = set(get_source_item(i).text() for i in range(table_count))
-        selected_tables = list()
-        for i in range(table_count):
-            item = get_source_item(i)
-            if item.checkState() == Qt.Checked:
-                selected_tables.append(item.text())
+        tables = self._source_table_model.table_names()
+        selected_tables = self._source_table_model.checked_table_names()
 
         table_mappings = {
             t: [m.to_dict() for m in mappings.get_mappings()]
@@ -506,6 +500,9 @@ class _SourceTableListModel(QAbstractListModel):
 
     def table_at(self, row):
         return self._tables[row]
+
+    def table_names(self):
+        return [table.name for table in self._tables]
 
 
 def _sanitize_data(data, header):
