@@ -301,11 +301,11 @@ class ImportEditor(QObject):
 
     @Slot()
     def _update_display_row_types(self):
-        mapping = self._preview_table_model.mapping()
-        if mapping.last_pivot_row == -1:
+        mapping_specification = self._preview_table_model.mapping_specification()
+        if mapping_specification.last_pivot_row == -1:
             pivoted_rows = []
         else:
-            pivoted_rows = list(range(mapping.last_pivot_row + 1))
+            pivoted_rows = list(range(mapping_specification.last_pivot_row + 1))
         self._ui.source_data_table.verticalHeader().sections_with_buttons = pivoted_rows
 
     def show_source_table_context_menu(self, pos):

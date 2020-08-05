@@ -46,7 +46,7 @@ class MappingListModel(QAbstractListModel):
         self.endResetModel()
 
     def get_mappings(self):
-        return [m._model for m in self._qmappings]
+        return [m._item_mapping for m in self._qmappings]
 
     def rowCount(self, index=None):
         if not self._qmappings:

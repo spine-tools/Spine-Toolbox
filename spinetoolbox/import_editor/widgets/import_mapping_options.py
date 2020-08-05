@@ -110,8 +110,8 @@ class ImportMappingOptions(QObject):
             self._ui.import_objects_check_box.show()
             self._ui.dimension_label.show()
             self._ui.dimension_spin_box.show()
-            self._ui.dimension_spin_box.setValue(len(self._mapping_options_model._model.objects))
-            if self._mapping_options_model._model.import_objects:
+            self._ui.dimension_spin_box.setValue(len(self._mapping_options_model._item_mapping.objects))
+            if self._mapping_options_model._item_mapping.import_objects:
                 self._ui.import_objects_check_box.setCheckState(Qt.Checked)
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
@@ -119,7 +119,7 @@ class ImportMappingOptions(QObject):
             self._ui.import_objects_check_box.show()
             self._ui.dimension_label.hide()
             self._ui.dimension_spin_box.hide()
-            if self._mapping_options_model._model.import_objects:
+            if self._mapping_options_model._item_mapping.import_objects:
                 self._ui.import_objects_check_box.setCheckState(Qt.Checked)
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
@@ -153,8 +153,8 @@ class ImportMappingOptions(QObject):
 
         # update ignore columns filter
         skip_cols = []
-        if self._mapping_options_model._model.skip_columns:
-            skip_cols = self._mapping_options_model._model.skip_columns
+        if self._mapping_options_model._item_mapping.skip_columns:
+            skip_cols = self._mapping_options_model._item_mapping.skip_columns
         self._ui_ignore_columns_filtermenu._filter._filter_model.set_selected(skip_cols)
         skip_text = ",".join(str(c) for c in skip_cols)
         if len(skip_text) > 20:
