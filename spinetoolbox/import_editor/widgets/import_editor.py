@@ -355,7 +355,9 @@ class ImportEditor(QObject):
         self._copied_options["row_types"] = deepcopy(row_types.get(table, {}))
 
     def paste_mappings(self, table):
-        self._table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping], table, self._undo_stack)
+        self._table_mappings[table] = MappingListModel(
+            [deepcopy(m) for m in self._copied_mapping], table, self._undo_stack
+        )
         if self._selected_table == table:
             self.mapping_model_changed.emit(self._table_mappings[table])
 

@@ -8,160 +8,23 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
 """
-Contains unit tests for io_models.py.
+Contains unit tests for Import editor's MappingSpecificationModel.
 """
 
 import unittest
-from spinetoolbox.import_editor.mapping_colors import ERROR_COLOR, MAPPING_COLORS
-from spinetoolbox.import_editor.mvcmodels.mapping_specification_model import MappingSpecificationModel
-from spinetoolbox.import_editor.mvcmodels.mapping_list_model import MappingListModel
-from spinetoolbox.import_editor.mvcmodels.source_data_table_model import SourceDataTableModel
-from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
-from spinedb_api import dict_to_map
+from unittest.mock import MagicMock
 from PySide2.QtCore import Qt
-
-
-class TestSourceDataTableModel(unittest.TestCase):
-    def test_column_type_checking(self):
-        model = SourceDataTableModel()
-        model.reset_model([["1", "0h", "2018-01-01 00:00"], ["2", "1h", "2018-01-01 00:00"]])
-        model.set_type(0, value_to_convert_spec('float'))
-        self.assertEqual(model._column_type_errors, {})
-        self.assertEqual(model._row_type_errors, {})
-        model.set_type(1, value_to_convert_spec('duration'))
-        self.assertEqual(model._column_type_errors, {})
-        self.assertEqual(model._row_type_errors, {})
-        model.set_type(2, value_to_convert_spec('datetime'))
-        self.assertEqual(model._column_type_errors, {})
-        self.assertEqual(model._row_type_errors, {})
-
-    def test_row_type_checking(self):
-        model = SourceDataTableModel()
-        model.reset_model(
-            [["1", "1", "1.1"], ["2h", "1h", "2h"], ["2018-01-01 00:00", "2018-01-01 00:00", "2018-01-01 00:00"]]
-        )
-        model.set_type(0, value_to_convert_spec('float'), orientation=Qt.Vertical)
-        self.assertEqual(model._column_type_errors, {})
-        self.assertEqual(model._row_type_errors, {})
-        model.set_type(1, value_to_convert_spec('duration'), orientation=Qt.Vertical)
-        self.assertEqual(model._column_type_errors, {})
-        self.assertEqual(model._row_type_errors, {})
-        model.set_type(2, value_to_convert_spec('datetime'), orientation=Qt.Vertical)
-        self.assertEqual(model._column_type_errors, {})
-        self.assertEqual(model._row_type_errors, {})
-
-    def test_column_type_checking_produces_error(self):
-        model = SourceDataTableModel()
-        model.reset_model([["Not a valid number", "2.4"], ["1", "3"]])
-        model.set_type(0, value_to_convert_spec('float'))
-        error_index = (0, 0)
-        self.assertEqual(len(model._column_type_errors), 1)
-        self.assertEqual(model._row_type_errors, {})
-        self.assertTrue(error_index in model._column_type_errors)
-        self.assertEqual(model.data(model.index(*error_index)), "Error")
-
-        # if we add a pivoted mapping for the row with the error, the error should not be shown
-        mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": {"map_type": "row", "value_reference": 0}}),
-            "connector's name",
-        )
-        model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(*error_index)), "Not a valid number")
-
-        # or if we add a mapping where there reading starts from a row bellow the error, the error should not be shown.
-        mapping = MappingSpecificationModel(dict_to_map({"map_type": "ObjectClass", "read_start_row": 1}), "connector's name")
-        model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(*error_index)), "Not a valid number")
-
-    def test_row_type_checking_produces_error(self):
-        model = SourceDataTableModel()
-        model.reset_model([["1", "2.4"], ["Not a valid number", "3"]])
-        model.set_type(1, value_to_convert_spec('float'), orientation=Qt.Vertical)
-        error_index = (1, 0)
-        self.assertEqual(len(model._row_type_errors), 1)
-        self.assertEqual(model._column_type_errors, {})
-        self.assertTrue(error_index in model._row_type_errors)
-        # Error should only be shown if we have a pivot mapping on that row.
-        self.assertEqual(model.data(model.index(*error_index)), "Not a valid number")
-
-        # if we add mapping error should be shown.
-        mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": {"map_type": "row", "value_reference": 1}}),
-            "connector's name",
-        )
-        model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(*error_index)), "Error")
-
-    def test_mapping_column_colors(self):
-        model = SourceDataTableModel()
-        model.reset_model([[1, 2], [3, 4]])
-        # column mapping
-        mapping = MappingSpecificationModel(dict_to_map({"map_type": "ObjectClass", "name": 0}), "connector's name")
-        model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-        # row not showing color if the start reading row is specified
-        mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": 0, "read_start_row": 1}), "connecto's name"
-        )
-        model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-        # row not showing color if the row is pivoted
-        mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}),
-            "connector's name",
-        )
-        model.set_mapping(mapping)
-        self.assertNotEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-
-    def test_mapping_pivoted_colors(self):
-        model = SourceDataTableModel()
-        model.reset_model([[1, 2], [3, 4]])
-        # row mapping
-        mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}}),
-            "connector's name",
-        )
-        model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), None)
-        # column not showing color if the columns is skipped
-        mapping = MappingSpecificationModel(
-            dict_to_map(
-                {"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}, "skip_columns": [0]}
-            ),
-            "connector's name",
-        )
-        model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
-        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), None)
-
-    def test_mapping_column_and_pivot_colors(self):
-        model = SourceDataTableModel()
-        model.reset_model([[1, 2], [3, 4]])
-        # row mapping
-        mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}),
-            "connector's name",
-        )
-        model.set_mapping(mapping)
-        # no color showing where row and column mapping intersect
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
-        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-        self.assertEqual(model.data(model.index(1, 1), role=Qt.BackgroundColorRole), None)
+from spinetoolbox.import_editor.mapping_colors import ERROR_COLOR
+from spinetoolbox.import_editor.mvcmodels.mapping_specification_model import MappingSpecificationModel
+from spinedb_api import dict_to_map
 
 
 class TestMappingSpecificationModel(unittest.TestCase):
     def test_data_when_mapping_object_class_without_objects_or_parameters(self):
+        undo_stack = MagicMock()
         model = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": None, "object": None}), "connector's name"
+            dict_to_map({"map_type": "ObjectClass", "name": None, "object": None}), "connector's name", undo_stack
         )
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 3)
@@ -196,7 +59,8 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "objects": None,
             "parameters": indexed_parameter_mapping_dict,
         }
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name")
+        undo_stack = MagicMock()
+        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
         self.assertEqual(model.rowCount(), 5)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -225,7 +89,8 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "value": {"map_type": "row", "reference": 0},
         }
         mapping_dict = {"map_type": "ObjectClass", "name": 0, "objects": 1, "parameters": array_parameter_mapping_dict}
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name")
+        undo_stack = MagicMock()
+        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
         self.assertEqual(model.rowCount(), 4)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -275,7 +140,8 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "name": {"reference": "class_name", "map_type": "constant"},
             "objects": {"reference": "object_name", "map_type": "constant"},
         }
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name")
+        undo_stack = MagicMock()
+        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
         self.assertEqual(model.rowCount(), 5)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -336,7 +202,8 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "name": {"reference": "class_name", "map_type": "constant"},
             "objects": {"reference": "object_name", "map_type": "constant"},
         }
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name")
+        undo_stack = MagicMock()
+        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
         self.assertEqual(model.rowCount(), 6)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -389,9 +256,11 @@ class TestMappingSpecificationModel(unittest.TestCase):
         self.assertFalse(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_relationship_class_without_objects_or_parameters(self):
+        undo_stack = MagicMock()
         model = MappingSpecificationModel(
             dict_to_map({"map_type": "RelationshipClass", "name": None, "object_classes": None, "object": None}),
             "connector's name",
+            undo_stack,
         )
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.columnCount(), 3)
@@ -435,7 +304,8 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "object": None,
             "parameters": indexed_parameter_mapping_dict,
         }
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name")
+        undo_stack = MagicMock()
+        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
         self.assertEqual(model.rowCount(), 6)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -476,7 +346,8 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "objects": [{"map_type": "column", "reference": 21}, {"map_type": "column", "reference": 22}],
             "parameters": indexed_parameter_mapping_dict,
         }
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name")
+        undo_stack = MagicMock()
+        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
         self.assertEqual(model.rowCount(), 8)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)

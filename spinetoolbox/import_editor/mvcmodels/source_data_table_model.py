@@ -89,7 +89,9 @@ class SourceDataTableModel(MinimalTableModel):
         if not mapping:
             return
         if not isinstance(mapping, MappingSpecificationModel):
-            raise TypeError(f"mapping must be instance of 'MappingSpecificationModel', instead got: '{type(mapping).__name__}'")
+            raise TypeError(
+                f"mapping must be instance of 'MappingSpecificationModel', instead got: '{type(mapping).__name__}'"
+            )
         if self._mapping_specification is not None:
             if self._data_changed_signal is not None:
                 self._mapping_specification.dataChanged.disconnect(self._mapping_data_changed)
@@ -107,7 +109,9 @@ class SourceDataTableModel(MinimalTableModel):
                 self._multi_column_type_recommendation_changed_signal = None
         self._mapping_specification = mapping
         self._data_changed_signal = self._mapping_specification.dataChanged.connect(self._mapping_data_changed)
-        self._read_start_row_changed_signal = self._mapping_specification.mapping_read_start_row_changed.connect(self._mapping_data_changed)
+        self._read_start_row_changed_signal = self._mapping_specification.mapping_read_start_row_changed.connect(
+            self._mapping_data_changed
+        )
         self._row_or_column_type_recommendation_changed_signal = self._mapping_specification.row_or_column_type_recommendation_changed.connect(
             self.set_type
         )
