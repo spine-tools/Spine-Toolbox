@@ -19,8 +19,8 @@ Contains ImportEditor widget and MappingTableMenu.
 from copy import deepcopy
 from PySide2.QtCore import QAbstractListModel, QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
-from ..commands import SetTableChecked
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
+from ..commands import SetTableChecked
 from ...widgets.custom_menus import CustomContextMenu
 from ..mvcmodels.mapping_list_model import MappingListModel
 from ..mvcmodels.source_data_table_model import SourceDataTableModel

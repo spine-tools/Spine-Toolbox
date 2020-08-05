@@ -25,55 +25,48 @@ class MappingListModel(QAbstractListModel):
     A model to hold a list of Mappings.
     """
 
-    def __init__(self, mapping_list, table_name, undo_stack):
+    def __init__(self, item_mappings, table_name, undo_stack):
         super().__init__()
-        self._qmappings = []
+        self._mapping_specifications = []
         self._names = []
         self._counter = 1
         self._table_name = table_name
         self._undo_stack = undo_stack
-        self.set_model(mapping_list)
-
-    def set_model(self, model):
-        self.beginResetModel()
-        self._names = []
-        self._qmappings = []
-        for m in model:
+        for m in item_mappings:
             self._names.append("Mapping " + str(self._counter))
-            self._qmappings.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
+            self._mapping_specifications.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
             self._counter += 1
-        self.endResetModel()
 
     def get_mappings(self):
-        return [m._item_mapping for m in self._qmappings]
+        return [m.mapping for m in self._mapping_specifications]
 
     def rowCount(self, index=None):
-        if not self._qmappings:
+        if not self._mapping_specifications:
             return 0
-        return len(self._qmappings)
+        return len(self._mapping_specifications)
 
     def data_mapping(self, index):
-        if self._qmappings and index.row() < len(self._qmappings):
-            return self._qmappings[index.row()]
+        if self._mapping_specifications and index.row() < len(self._mapping_specifications):
+            return self._mapping_specifications[index.row()]
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return
-        if self._qmappings and role == Qt.DisplayRole and index.row() < self.rowCount():
+        if self._mapping_specifications and role == Qt.DisplayRole and index.row() < self.rowCount():
             return self._names[index.row()]
 
     def add_mapping(self):
         self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(), self.rowCount())
         m = ObjectClassMapping()
-        self._qmappings.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
+        self._mapping_specifications.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
         self._names.append("Mapping " + str(self._counter))
         self._counter += 1
         self.endInsertRows()
 
     def remove_mapping(self, row):
-        if self._qmappings and row < len(self._qmappings):
+        if self._mapping_specifications and row < len(self._mapping_specifications):
             self.beginRemoveRows(self.index(row, 0), row, row)
-            self._qmappings.pop(row)
+            self._mapping_specifications.pop(row)
             self._names.pop(row)
             self.endRemoveRows()
 
@@ -85,7 +78,7 @@ class MappingListModel(QAbstractListModel):
              dict: a map from mapping name to discovered issue; contains only mappings that have issues
         """
         issues = dict()
-        for name, mapping in zip(self._names, self._qmappings):
+        for name, mapping in zip(self._names, self._mapping_specifications):
             issue = mapping.check_mapping_validity()
             if issue:
                 issues[name] = issue
