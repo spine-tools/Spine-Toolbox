@@ -61,7 +61,8 @@ class ImportEditor(QObject):
         self._copied_mapping = None
         self._copied_options = {}
         self._ui_preview_menu = None
-        self._source_table_model = _SourceTableListModel(undo_stack)
+        self._undo_stack = undo_stack
+        self._source_table_model = _SourceTableListModel(self._undo_stack)
         self._restore_mappings(mapping_settings)
         self._ui.source_list.setModel(self._source_table_model)
         # create ui
@@ -142,7 +143,7 @@ class ImportEditor(QObject):
         Set selected table and request data from connector
         """
         if table_name not in self._table_mappings:
-            self._table_mappings[table_name] = MappingListModel([ObjectClassMapping()], table_name)
+            self._table_mappings[table_name] = MappingListModel([ObjectClassMapping()], table_name, self._undo_stack)
         self.mapping_model_changed.emit(self._table_mappings[table_name])
         # request new data
         self._connector.set_table(table_name)
@@ -163,7 +164,7 @@ class ImportEditor(QObject):
             if t_name not in self._table_mappings:
                 if t_mapping is None:
                     t_mapping = ObjectClassMapping()
-                self._table_mappings[t_name] = MappingListModel([t_mapping], t_name)
+                self._table_mappings[t_name] = MappingListModel([t_mapping], t_name, self._undo_stack)
                 new_tables.append(t_name)
         for k in list(self._table_mappings.keys()):
             if k not in tables:
@@ -221,7 +222,7 @@ class ImportEditor(QObject):
     def _restore_mappings(self, settings):
         try:
             self._table_mappings = {
-                table: MappingListModel([dict_to_map(m) for m in mappings], table)
+                table: MappingListModel([dict_to_map(m) for m in mappings], table, self._undo_stack)
                 for table, mappings in settings.get("table_mappings", {}).items()
             }
         except ValueError as error:
@@ -354,7 +355,7 @@ class ImportEditor(QObject):
         self._copied_options["row_types"] = deepcopy(row_types.get(table, {}))
 
     def paste_mappings(self, table):
-        self._table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping], table)
+        self._table_mappings[table] = MappingListModel([deepcopy(m) for m in self._copied_mapping], table, self._undo_stack)
         if self._selected_table == table:
             self.mapping_model_changed.emit(self._table_mappings[table])
 

@@ -25,12 +25,13 @@ class MappingListModel(QAbstractListModel):
     A model to hold a list of Mappings.
     """
 
-    def __init__(self, mapping_list, table_name, parent=None):
-        super().__init__(parent)
+    def __init__(self, mapping_list, table_name, undo_stack):
+        super().__init__()
         self._qmappings = []
         self._names = []
         self._counter = 1
         self._table_name = table_name
+        self._undo_stack = undo_stack
         self.set_model(mapping_list)
 
     def set_model(self, model):
@@ -39,7 +40,7 @@ class MappingListModel(QAbstractListModel):
         self._qmappings = []
         for m in model:
             self._names.append("Mapping " + str(self._counter))
-            self._qmappings.append(MappingSpecificationModel(m, self._table_name))
+            self._qmappings.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
             self._counter += 1
         self.endResetModel()
 
@@ -64,7 +65,7 @@ class MappingListModel(QAbstractListModel):
     def add_mapping(self):
         self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(), self.rowCount())
         m = ObjectClassMapping()
-        self._qmappings.append(MappingSpecificationModel(m, self._table_name))
+        self._qmappings.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
         self._names.append("Mapping " + str(self._counter))
         self._counter += 1
         self.endInsertRows()

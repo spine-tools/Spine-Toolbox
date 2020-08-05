@@ -30,3 +30,50 @@ class SetTableChecked(QUndoCommand):
 
     def undo(self):
         self._model.set_checked(self._row, not self._checked)
+
+
+class SetComponentMappingType(QUndoCommand):
+    def __init__(
+        self, component_display_name, mapping_specification_model, mapping_type, previous_type, previous_reference
+    ):
+        text = "change source mapping"
+        super().__init__(text)
+        self._model = mapping_specification_model
+        self._component_display_name = component_display_name
+        self._new_type = mapping_type
+        self._previous_type = previous_type
+        self._previous_reference = previous_reference
+
+    def redo(self):
+        self._model.set_type(self._component_display_name, self._new_type)
+
+    def undo(self):
+        self._model.set_type(self._component_display_name, self._previous_type)
+        self._model.set_value(self._component_display_name, self._previous_reference)
+
+
+class SetComponentMappingReference(QUndoCommand):
+    def __init__(
+        self,
+        component_display_name,
+        mapping_specification_model,
+        reference,
+        previous_reference,
+        previous_mapping_type_was_none,
+    ):
+        text = "change source mapping reference"
+        super().__init__(text)
+        self._model = mapping_specification_model
+        self._component_display_name = component_display_name
+        self._reference = reference
+        self._previous_reference = previous_reference
+        self._previous_mapping_type_was_none = previous_mapping_type_was_none
+
+    def redo(self):
+        self._model.set_value(self._component_display_name, self._reference)
+
+    def undo(self):
+        if self._previous_mapping_type_was_none:
+            self._model.set_type(self._component_display_name, "None")
+        else:
+            self._model.set_value(self._component_display_name, self._previous_reference)

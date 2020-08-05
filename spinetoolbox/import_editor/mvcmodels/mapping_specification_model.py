@@ -38,6 +38,7 @@ from spinedb_api import (
     TableNameMapping,
 )
 from spinetoolbox.spine_io.type_conversion import DateTimeConvertSpec, FloatConvertSpec, StringConvertSpec
+from ..commands import SetComponentMappingReference, SetComponentMappingType
 from ..mapping_colors import ERROR_COLOR, MAPPING_COLORS
 
 _MAP_TYPE_DISPLAY_NAME = {
@@ -76,14 +77,21 @@ class MappingSpecificationModel(QAbstractTableModel):
     multi_column_type_recommendation_changed = Signal(object, object)
     """Emitted when all but given columns should be of given type."""
 
-    def __init__(self, mapping, table_name, parent=None):
-        super().__init__(parent)
+    def __init__(self, mapping, table_name, undo_stack):
+        """
+        Args:
+            mapping (spinedb_api.ItemMappingBase): the item mapping to model
+            table_name (str): source table name
+            undo_stack (QUndoStack): undo stack
+        """
+        super().__init__()
         self._display_names = []
         self._component_mappings = []
         self._item_mapping = None
         if mapping is not None:
             self.set_mapping(mapping)
         self._table_name = table_name
+        self._undo_stack = undo_stack
 
     @property
     def mapping(self):
@@ -445,11 +453,24 @@ class MappingSpecificationModel(QAbstractTableModel):
         return editable
 
     def setData(self, index, value, role=Qt.DisplayRole):
-        name = self._display_names[index.row()]
-        if index.column() == 1:
-            return self.set_type(name, value)
-        if index.column() == 2:
-            return self.set_value(index.row(), name, value)
+        column = index.column()
+        if column not in (1, 2):
+            return False
+        row = index.row()
+        name = self._display_names[row]
+        component_mapping = self._component_mappings[row]
+        previous_reference = component_mapping.reference
+        if isinstance(previous_reference, int):
+            previous_reference += 1
+        if column == 1:
+            previous_type = _MAP_TYPE_DISPLAY_NAME[type(component_mapping)]
+            self._undo_stack.push(SetComponentMappingType(name, self, value, previous_type, previous_reference))
+        elif column == 2:
+            self._undo_stack.push(
+                SetComponentMappingReference(
+                    name, self, value, previous_reference, isinstance(component_mapping, NoneMapping)
+                )
+            )
         return False
 
     def set_type(self, name, value):
@@ -471,12 +492,11 @@ class MappingSpecificationModel(QAbstractTableModel):
             return False
         return self.set_component_mapping_from_name(name, value)
 
-    def set_value(self, row, name, value):
+    def set_value(self, name, value):
         """
         Sets the reference for given mapping.
 
         Args:
-            row (int): row index
             name (str): name of the mapping
             value (str): a new value
 
