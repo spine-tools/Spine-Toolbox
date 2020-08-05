@@ -28,7 +28,7 @@ class ImportMappings(QObject):
     """
 
     mapping_changed = Signal(object)
-    """Emitted when a new mapping MappingSpecModel is selected from the Mappings list."""
+    """Emitted when a new mapping specification is selected from the Mappings list."""
     mapping_data_changed = Signal(object)
     """Emits the new MappingListModel."""
 

@@ -382,7 +382,7 @@ class MappingTableMenu(QMenu):
         if not self._model:
             return
         mapping = mapping_from_dict({"map_type": map_type, "value_reference": value})
-        self._model.set_mapping_from_name(name, mapping)
+        self._model.set_component_mapping_from_name(name, mapping)
 
     def request_menu(self, QPos=None):
         if not self._model:

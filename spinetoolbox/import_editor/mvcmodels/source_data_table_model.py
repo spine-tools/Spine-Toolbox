@@ -55,6 +55,7 @@ class SourceDataTableModel(MinimalTableModel):
         self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self._mapping_specification = None
         self._data_changed_signal = None
+        self._read_start_row_changed_signal = None
         self._row_or_column_type_recommendation_changed_signal = None
         self._multi_column_type_recommendation_changed_signal = None
         self._column_types = {}
@@ -88,19 +89,25 @@ class SourceDataTableModel(MinimalTableModel):
         if not mapping:
             return
         if not isinstance(mapping, MappingSpecificationModel):
-            raise TypeError(f"mapping must be instance of 'MappingSpecModel', instead got: '{type(mapping).__name__}'")
+            raise TypeError(f"mapping must be instance of 'MappingSpecificationModel', instead got: '{type(mapping).__name__}'")
         if self._mapping_specification is not None:
             if self._data_changed_signal is not None:
                 self._mapping_specification.dataChanged.disconnect(self._mapping_data_changed)
                 self._data_changed_signal = None
+            if self._read_start_row_changed_signal is not None:
+                self._mapping_specification.mapping_read_start_row_changed.disconnect(self._mapping_data_changed)
+                self._read_start_row_changed_signal = None
             if self._row_or_column_type_recommendation_changed_signal is not None:
                 self._mapping_specification.row_or_column_type_recommendation_changed.disconnect(self.set_type)
                 self._row_or_column_type_recommendation_changed_signal = None
             if self._multi_column_type_recommendation_changed_signal is not None:
-                self._mapping_specification.multi_column_type_recommendation_changed.disconnect(self.set_all_column_types)
+                self._mapping_specification.multi_column_type_recommendation_changed.disconnect(
+                    self.set_all_column_types
+                )
                 self._multi_column_type_recommendation_changed_signal = None
         self._mapping_specification = mapping
         self._data_changed_signal = self._mapping_specification.dataChanged.connect(self._mapping_data_changed)
+        self._read_start_row_changed_signal = self._mapping_specification.mapping_read_start_row_changed.connect(self._mapping_data_changed)
         self._row_or_column_type_recommendation_changed_signal = self._mapping_specification.row_or_column_type_recommendation_changed.connect(
             self.set_type
         )
@@ -185,12 +192,15 @@ class SourceDataTableModel(MinimalTableModel):
                 self._column_types[column] = column_type
         self.column_types_updated.emit()
 
+    @Slot()
     def _mapping_data_changed(self):
         self.update_colors()
         self.mapping_changed.emit()
 
     def update_colors(self):
-        self.dataChanged.emit(QModelIndex, QModelIndex, [Qt.BackgroundColorRole])
+        top_left = self.index(0, 0)
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundColorRole])
 
     def data_error(self, index, role=Qt.DisplayRole, orientation=Qt.Horizontal):
         if role == Qt.DisplayRole:
@@ -215,7 +225,8 @@ class SourceDataTableModel(MinimalTableModel):
 
         if index.row() <= last_pivoted_row:
             if (
-                index.column() not in mapping_non_pivoted_columns(self._mapping_specification.mapping, self.columnCount(), self.header)
+                index.column()
+                not in mapping_non_pivoted_columns(self._mapping_specification.mapping, self.columnCount(), self.header)
                 and index.column() not in self._mapping_specification.skip_columns
             ):
                 if (index.row(), index.column()) in self._row_type_errors:
@@ -323,7 +334,10 @@ class SourceDataTableModel(MinimalTableModel):
             if index.column() == ref:
                 if self._mapping_specification.mapping.is_pivoted():
                     # only rows below pivoted rows
-                    last_row = max(self._mapping_specification.mapping.last_pivot_row(), self._mapping_specification.read_start_row - 1)
+                    last_row = max(
+                        self._mapping_specification.mapping.last_pivot_row(),
+                        self._mapping_specification.read_start_row - 1,
+                    )
                     if last_row is not None and index.row() > last_row:
                         return True
                 elif index.row() >= self._mapping_specification.read_start_row:

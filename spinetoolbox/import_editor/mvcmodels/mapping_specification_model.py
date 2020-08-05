@@ -69,6 +69,8 @@ class MappingSpecificationModel(QAbstractTableModel):
     A model to hold a Mapping specification.
     """
 
+    mapping_read_start_row_changed = Signal(int)
+    """Emitted after mapping's read start row has been changed."""
     row_or_column_type_recommendation_changed = Signal(int, object, object)
     """Emitted when a change in mapping prompts for change in column or row type."""
     multi_column_type_recommendation_changed = Signal(object, object)
@@ -137,11 +139,10 @@ class MappingSpecificationModel(QAbstractTableModel):
     def set_read_start_row(self, row):
         if self._item_mapping:
             self._item_mapping.read_start_row = row
-        self.dataChanged.emit(QModelIndex, QModelIndex, [])
+            self.mapping_read_start_row_changed.emit(row)
 
     def set_import_objects(self, flag):
         self._item_mapping.import_objects = bool(flag)
-        self.dataChanged.emit(QModelIndex, QModelIndex, [])
 
     def set_mapping(self, mapping):
         classes = (
@@ -448,11 +449,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         if index.column() == 1:
             return self.set_type(name, value)
         if index.column() == 2:
-            if self.set_value(index.row(), name, value):
-                if name in self._display_names:
-                    self.dataChanged.emit(index, index)
-                return True
-            return False
+            return self.set_value(index.row(), name, value)
         return False
 
     def set_type(self, name, value):
@@ -472,7 +469,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             value = TableNameMapping(self._table_name)
         else:
             return False
-        return self.set_mapping_from_name(name, value)
+        return self.set_component_mapping_from_name(name, value)
 
     def set_value(self, row, name, value):
         """
@@ -486,7 +483,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         Returns:
             bool: True if the reference was modified successfully, False otherwise.
         """
-        mapping = self.get_mapping_from_name(name)
+        mapping = self.get_component_mapping_from_name(name)
         if isinstance(value, str) and value.isdigit():
             value = int(value)
         if isinstance(value, int):
@@ -499,21 +496,21 @@ class MappingSpecificationModel(QAbstractTableModel):
                 mapping = ConstantMapping(reference=value)
             else:
                 return False
-            index = self.index(row, 1)
-            self.dataChanged.emit(index, index)
         else:
             try:
                 mapping.reference = value
             except ValueError:
                 return False
-        return self.set_mapping_from_name(name, mapping)
+        return self.set_component_mapping_from_name(name, mapping)
 
-    def get_mapping_from_name(self, name):
+    def get_component_mapping_from_name(self, name):
         if not self._item_mapping:
             return None
         if name in ("Relationship class names", "Object class names"):
             return self._item_mapping.name
-        if name in ("Alternative names", "Scenario names") and not isinstance(self._item_mapping, ScenarioAlternativeMapping):
+        if name in ("Alternative names", "Scenario names") and not isinstance(
+            self._item_mapping, ScenarioAlternativeMapping
+        ):
             return self._item_mapping.name
         if name == "Scenario names":
             return self._item_mapping.scenario_name
@@ -545,7 +542,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             return self._item_mapping.parameters.extra_dimensions[_name_index(name)]
         return None
 
-    def set_mapping_from_name(self, name, mapping):
+    def set_component_mapping_from_name(self, name, mapping):
         if name in ("Relationship class names", "Object class names"):
             self._item_mapping.name = mapping
             self._recommend_string_type(mapping)
@@ -576,15 +573,11 @@ class MappingSpecificationModel(QAbstractTableModel):
             self._item_mapping.members = mapping
             self._recommend_string_type(mapping)
         elif "Object class " in name:
-            index = [int(s) - 1 for s in name.split() if s.isdigit()]
-            if index:
-                self._item_mapping.object_classes[index[0]] = mapping
-                self._recommend_string_type(mapping)
+            self._item_mapping.object_classes[_name_index(name)] = mapping
+            self._recommend_string_type(mapping)
         elif "Object " in name:
-            index = [int(s) - 1 for s in name.split() if s.isdigit()]
-            if index:
-                self._item_mapping.objects[index[0]] = mapping
-                self._recommend_string_type(mapping)
+            self._item_mapping.objects[_name_index(name)] = mapping
+            self._recommend_string_type(mapping)
         elif name == "Parameter names":
             self._item_mapping.parameters.name = mapping
             self._recommend_string_type(mapping)
@@ -607,10 +600,15 @@ class MappingSpecificationModel(QAbstractTableModel):
             self._recommend_string_type(mapping)
         else:
             return False
-        self.update_display_table()
-        if name in self._display_names:
-            self.dataChanged.emit(QModelIndex(), QModelIndex(), [])
+        row = self._row_for_component_name(name)
+        self._component_mappings[row] = mapping
+        top_left = self.index(row, 1)
+        bottom_right = self.index(row, 2)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundColorRole, Qt.DisplayRole, Qt.ToolTipRole])
         return True
+
+    def _row_for_component_name(self, name):
+        return self._display_names.index(name)
 
     def _recommend_string_type(self, mapping):
         self._recommend_mapping_reference_type_change(mapping, StringConvertSpec())
@@ -646,7 +644,6 @@ class MappingSpecificationModel(QAbstractTableModel):
         if columns is None:
             columns = []
         self._item_mapping.skip_columns = list(set(columns))
-        self.dataChanged.emit(0, 0, [])
 
     @Slot(bool)
     def set_time_series_repeat(self, repeat):
@@ -654,7 +651,6 @@ class MappingSpecificationModel(QAbstractTableModel):
         if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterTimeSeriesMapping):
             return
         self._item_mapping.parameters.options.repeat = repeat
-        self.dataChanged.emit(0, 0, [])
 
     @Slot(int)
     def set_map_dimensions(self, dimensions):

@@ -66,7 +66,7 @@ class ImportEditorWindow(QMainWindow):
         self._mappings_list_manager.mapping_data_changed.connect(self._editor.set_mapping)
         self._mapping_options = ImportMappingOptions(self._ui)
         self._editor.mapping_model_changed.connect(self._mappings_list_manager.set_mappings_model)
-        self._mappings_list_manager.mapping_changed.connect(self._mapping_options.set_mapping_options_model)
+        self._mappings_list_manager.mapping_changed.connect(self._mapping_options.set_mapping_specification_model)
         self._editor.preview_data_updated.connect(self._mapping_options.set_num_available_columns)
 
         self._size = None

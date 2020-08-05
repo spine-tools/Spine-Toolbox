@@ -42,7 +42,7 @@ class ImportMappingOptions(QObject):
         # state
         super().__init__()
         self._ui = ui
-        self._mapping_options_model = None
+        self._mapping_specification_model = None
         self._block_signals = False
         self._model_reset_signal = None
         self._model_data_signal = None
@@ -68,11 +68,11 @@ class ImportMappingOptions(QObject):
         self._ui_ignore_columns_filtermenu._filter._filter_model.set_selected(selected)
 
     def change_skip_columns(self, skip_cols):
-        if self._mapping_options_model:
-            self._mapping_options_model.set_skip_columns(skip_cols)
+        if self._mapping_specification_model:
+            self._mapping_specification_model.set_skip_columns(skip_cols)
 
     @Slot(object)
-    def set_mapping_options_model(self, model):
+    def set_mapping_specification_model(self, model):
         try:
             self._ui.time_series_repeat_check_box.toggled.disconnect()
         except RuntimeError:
@@ -81,49 +81,51 @@ class ImportMappingOptions(QObject):
             self._ui.map_dimension_spin_box.valueChanged.disconnect()
         except RuntimeError:
             pass
-        if self._mapping_options_model:
+        if self._mapping_specification_model:
             if self._model_reset_signal:
-                self._mapping_options_model.modelReset.disconnect(self.update_ui)
+                self._mapping_specification_model.modelReset.disconnect(self.update_ui)
                 self._model_reset_signal = None
             if self._model_data_signal:
-                self._mapping_options_model.dataChanged.disconnect(self.update_ui)
+                self._mapping_specification_model.dataChanged.disconnect(self.update_ui)
                 self._model_data_signal = None
-        self._mapping_options_model = model
-        if self._mapping_options_model:
-            self._model_reset_signal = self._mapping_options_model.modelReset.connect(self.update_ui)
-            self._model_data_signal = self._mapping_options_model.dataChanged.connect(self.update_ui)
-            self._ui.time_series_repeat_check_box.toggled.connect(self._mapping_options_model.set_time_series_repeat)
-            self._ui.map_dimension_spin_box.valueChanged.connect(self._mapping_options_model.set_map_dimensions)
+        self._mapping_specification_model = model
+        if self._mapping_specification_model:
+            self._model_reset_signal = self._mapping_specification_model.modelReset.connect(self.update_ui)
+            self._model_data_signal = self._mapping_specification_model.dataChanged.connect(self.update_ui)
+            self._ui.time_series_repeat_check_box.toggled.connect(
+                self._mapping_specification_model.set_time_series_repeat
+            )
+            self._ui.map_dimension_spin_box.valueChanged.connect(self._mapping_specification_model.set_map_dimensions)
         self.update_ui()
 
     def update_ui(self):
         """
         updates ui to RelationshipClassMapping, ObjectClassMapping or ObjectGroupMapping model
         """
-        if not self._mapping_options_model:
+        if not self._mapping_specification_model:
             self._ui.dockWidget_mapping_options.hide()
             return
 
         self._ui.dockWidget_mapping_options.show()
         self._block_signals = True
-        if self._mapping_options_model.map_type == RelationshipClassMapping:
+        if self._mapping_specification_model.map_type == RelationshipClassMapping:
             self._ui.import_objects_check_box.show()
             self._ui.dimension_label.show()
             self._ui.dimension_spin_box.show()
-            self._ui.dimension_spin_box.setValue(len(self._mapping_options_model._item_mapping.objects))
-            if self._mapping_options_model._item_mapping.import_objects:
+            self._ui.dimension_spin_box.setValue(len(self._mapping_specification_model.mapping.objects))
+            if self._mapping_specification_model.mapping.import_objects:
                 self._ui.import_objects_check_box.setCheckState(Qt.Checked)
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
-        elif self._mapping_options_model.map_type == ObjectGroupMapping:
+        elif self._mapping_specification_model.map_type == ObjectGroupMapping:
             self._ui.import_objects_check_box.show()
             self._ui.dimension_label.hide()
             self._ui.dimension_spin_box.hide()
-            if self._mapping_options_model._item_mapping.import_objects:
+            if self._mapping_specification_model.mapping.import_objects:
                 self._ui.import_objects_check_box.setCheckState(Qt.Checked)
             else:
                 self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
-        elif self._mapping_options_model.map_type in (
+        elif self._mapping_specification_model.map_type in (
             ObjectClassMapping,
             AlternativeMapping,
             ScenarioMapping,
@@ -139,58 +141,58 @@ class ImportMappingOptions(QObject):
             AlternativeMapping: 3,
             ScenarioMapping: 4,
             ScenarioAlternativeMapping: 5,
-        }[self._mapping_options_model.map_type]
+        }[self._mapping_specification_model.map_type]
         self._ui.class_type_combo_box.setCurrentIndex(class_type_index)
         # update parameter mapping
-        if self._mapping_options_model.mapping_has_parameters():
+        if self._mapping_specification_model.mapping_has_parameters():
             self._ui.parameter_type_combo_box.setEnabled(True)
-            self._ui.parameter_type_combo_box.setCurrentText(self._mapping_options_model.parameter_type)
+            self._ui.parameter_type_combo_box.setCurrentText(self._mapping_specification_model.parameter_type)
         else:
             self._ui.parameter_type_combo_box.setEnabled(False)
 
-        self._ui.ignore_columns_button.setVisible(self._mapping_options_model.is_pivoted)
-        self._ui.ignore_columns_label.setVisible(self._mapping_options_model.is_pivoted)
+        self._ui.ignore_columns_button.setVisible(self._mapping_specification_model.is_pivoted)
+        self._ui.ignore_columns_label.setVisible(self._mapping_specification_model.is_pivoted)
 
         # update ignore columns filter
         skip_cols = []
-        if self._mapping_options_model._item_mapping.skip_columns:
-            skip_cols = self._mapping_options_model._item_mapping.skip_columns
+        if self._mapping_specification_model.mapping.skip_columns:
+            skip_cols = self._mapping_specification_model.mapping.skip_columns
         self._ui_ignore_columns_filtermenu._filter._filter_model.set_selected(skip_cols)
         skip_text = ",".join(str(c) for c in skip_cols)
         if len(skip_text) > 20:
             skip_text = skip_text[:20] + "..."
         self._ui.ignore_columns_button.setText(skip_text)
 
-        self._ui.start_read_row_spin_box.setValue(self._mapping_options_model.read_start_row)
+        self._ui.start_read_row_spin_box.setValue(self._mapping_specification_model.read_start_row)
 
         self._update_time_series_options()
         self._update_map_options()
         self._block_signals = False
 
     def change_class(self, new_class):
-        if self._mapping_options_model and not self._block_signals:
-            self._mapping_options_model.change_model_class(new_class)
+        if self._mapping_specification_model and not self._block_signals:
+            self._mapping_specification_model.change_model_class(new_class)
 
     def change_dimension(self, dim):
-        if self._mapping_options_model and not self._block_signals:
-            self._mapping_options_model.set_dimension(dim)
+        if self._mapping_specification_model and not self._block_signals:
+            self._mapping_specification_model.set_dimension(dim)
 
     def change_parameter(self, par):
-        if self._mapping_options_model and not self._block_signals:
-            self._mapping_options_model.change_parameter_type(par)
+        if self._mapping_specification_model and not self._block_signals:
+            self._mapping_specification_model.change_parameter_type(par)
 
     def change_import_objects(self, state):
-        if self._mapping_options_model and not self._block_signals:
-            self._mapping_options_model.set_import_objects(state)
+        if self._mapping_specification_model and not self._block_signals:
+            self._mapping_specification_model.set_import_objects(state)
 
     def change_read_start_row(self, row):
-        if self._mapping_options_model and not self._block_signals:
-            self._mapping_options_model.set_read_start_row(row)
+        if self._mapping_specification_model and not self._block_signals:
+            self._mapping_specification_model.set_read_start_row(row)
 
     def _update_time_series_options(self):
-        if self._mapping_options_model is None:
+        if self._mapping_specification_model is None:
             return
-        par = self._mapping_options_model.model_parameters()
+        par = self._mapping_specification_model.model_parameters()
         if par is None:
             self._ui.time_series_repeat_check_box.setEnabled(False)
             return
@@ -201,9 +203,9 @@ class ImportMappingOptions(QObject):
         )
 
     def _update_map_options(self):
-        if self._mapping_options_model is None:
+        if self._mapping_specification_model is None:
             return
-        mapping = self._mapping_options_model.model_parameters()
+        mapping = self._mapping_specification_model.model_parameters()
         if mapping is None:
             self._ui.map_dimension_spin_box.setEnabled(False)
             return
