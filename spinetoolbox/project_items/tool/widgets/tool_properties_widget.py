@@ -26,7 +26,7 @@ class ToolPropertiesWidget(QWidget):
     """Widget for the Tool Item Properties.
 
     Args:
-        toolbox (ToolboxUI): The toolbox instance where this widget should be embeded
+        toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
     """
 
     def __init__(self, toolbox):

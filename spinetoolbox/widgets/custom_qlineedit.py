@@ -19,6 +19,26 @@ Classes for custom line edits.
 import os
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtWidgets import QLineEdit
+from PySide2.QtGui import QKeySequence
+
+
+class PropertyQLineEdit(QLineEdit):
+    """A custom QLineEdit for Project Item Properties."""
+
+    def keyPressEvent(self, e):
+        """Overridden to catch Undo and Redo commands
+        when the line edit has the focus.
+
+        Args:
+            e (QKeyEvent): Event
+        """
+        mw = self.nativeParentWidget()  # ToolboxUI
+        if e.matches(QKeySequence.Undo):
+            mw.undo_stack.undo()
+        elif e.matches(QKeySequence.Redo):
+            mw.undo_stack.redo()
+        else:
+            super().keyPressEvent(e)
 
 
 class CustomQLineEdit(QLineEdit):

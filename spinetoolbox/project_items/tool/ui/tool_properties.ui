@@ -183,7 +183,7 @@
         </layout>
        </item>
        <item>
-        <widget class="QLineEdit" name="lineEdit_tool_args">
+        <widget class="PropertyQLineEdit" name="lineEdit_tool_args">
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool command line arguments&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -363,6 +363,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PropertyQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>spinetoolbox/widgets/custom_qlineedit.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>scrollArea_3</tabstop>
   <tabstop>comboBox_tool</tabstop>
