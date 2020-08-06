@@ -38,6 +38,21 @@ class SetTableChecked(QUndoCommand):
         self._model.set_checked(self._row, not self._checked)
 
 
+class ChangeTable(QUndoCommand):
+    def __init__(self, import_editor, table, previous_table):
+        text = "change source table"
+        super().__init__(text)
+        self._editor = import_editor
+        self._table = table
+        self._previous_table = previous_table
+
+    def redo(self):
+        self._editor.select_table(self._table)
+
+    def undo(self):
+        self._editor.select_table(self._previous_table)
+
+
 class SetComponentMappingType(QUndoCommand):
     def __init__(
         self, component_display_name, mapping_specification_model, mapping_type, previous_type, previous_reference

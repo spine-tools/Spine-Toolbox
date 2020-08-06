@@ -84,5 +84,12 @@ class SourceTableListModel(QAbstractListModel):
     def table_at(self, row):
         return self._tables[row]
 
+    def table_index(self, table):
+        rows = {table.name: i for table, i in zip(self._tables, range(len(self._tables)))}
+        try:
+            return self.index(rows[table], 0)
+        except KeyError:
+            return QModelIndex()
+
     def table_names(self):
         return [table.name for table in self._tables]
