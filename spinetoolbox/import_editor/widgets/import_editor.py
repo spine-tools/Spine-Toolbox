@@ -17,14 +17,14 @@ Contains ImportEditor widget and MappingTableMenu.
 """
 
 from copy import deepcopy
-from PySide2.QtCore import QAbstractListModel, QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
+from PySide2.QtCore import QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
 from .options_widget import OptionsWidget
-from ..commands import SetTableChecked
 from ...widgets.custom_menus import CustomContextMenu
 from ..mvcmodels.mapping_list_model import MappingListModel
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
+from ..mvcmodels.source_table_list_model import SourceTableItem, SourceTableListModel
 from ...spine_io.type_conversion import value_to_convert_spec
 
 
@@ -63,7 +63,7 @@ class ImportEditor(QObject):
         self._copied_options = {}
         self._ui_preview_menu = None
         self._undo_stack = undo_stack
-        self._source_table_model = _SourceTableListModel(self._undo_stack)
+        self._source_table_model = SourceTableListModel(self._undo_stack)
         self._restore_mappings(mapping_settings)
         self._ui.source_list.setModel(self._source_table_model)
         # create ui
@@ -179,7 +179,7 @@ class ImportEditor(QObject):
 
         # empty tables list and add new tables
         tables_to_select = set(self.checked_tables + new_tables)
-        table_items = [_SourceTableItem(name, name in tables_to_select) for name in tables]
+        table_items = [SourceTableItem(name, name in tables_to_select) for name in tables]
         self._source_table_model.reset(table_items)
 
         # current selected table
@@ -244,7 +244,7 @@ class ImportEditor(QObject):
         selected_tables = settings.get("selected_tables")
         if selected_tables is None:
             selected_tables = set(self._table_mappings.keys())
-        table_items = [_SourceTableItem(name, name in selected_tables) for name in self._table_mappings]
+        table_items = [SourceTableItem(name, name in selected_tables) for name in self._table_mappings]
         self._source_table_model.reset(table_items)
 
     def get_settings_dict(self):
@@ -440,74 +440,6 @@ class TableMenu(CustomContextMenu):
         self.add_action("Paste options", enabled=can_paste_option)
         self.add_action("Paste mappings", enabled=can_paste_mapping)
         self.add_action("Paste options and mappings", enabled=can_paste_mapping & can_paste_option)
-
-
-class _SourceTableItem:
-    """A list item for :class:`_SourceTableListModel`"""
-
-    def __init__(self, name, checked):
-        self.name = name
-        self.checked = checked
-
-
-class _SourceTableListModel(QAbstractListModel):
-    """Model for source table lists which supports undo/redo functionality."""
-
-    def __init__(self, undo_stack):
-        """
-        Args:
-            undo_stack (QUndoStack): undo stack
-        """
-        super().__init__()
-        self._tables = []
-        self._undo_stack = undo_stack
-
-    def checked_table_names(self):
-        return [table.name for table in self._tables if table.checked]
-
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
-            return None
-        if role == Qt.DisplayRole:
-            return self._tables[index.row()].name
-        if role == Qt.CheckStateRole:
-            return Qt.Checked if self._tables[index.row()].checked else Qt.Unchecked
-        return None
-
-    def flags(self, index):
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        return None
-
-    def reset(self, items):
-        self.beginResetModel()
-        self._tables = items
-        self.endResetModel()
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self._tables)
-
-    def setData(self, index, value, role=Qt.EditRole):
-        if not index.isValid():
-            return False
-        if role == Qt.CheckStateRole:
-            row = index.row()
-            item = self._tables[row]
-            checked = value == Qt.Checked
-            self._undo_stack.push(SetTableChecked(item.name, self, row, checked))
-        return False
-
-    def set_checked(self, row, checked):
-        self._tables[row].checked = checked
-        index = self.index(row, 0)
-        self.dataChanged.emit(index, index, [Qt.CheckStateRole])
-
-    def table_at(self, row):
-        return self._tables[row]
-
-    def table_names(self):
-        return [table.name for table in self._tables]
 
 
 def _sanitize_data(data, header):
