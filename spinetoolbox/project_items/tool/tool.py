@@ -96,7 +96,8 @@ class Tool(ProjectItem):
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
         s[self._properties_ui.comboBox_tool.textActivated] = self.update_specification
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
-        s[self._properties_ui.lineEdit_tool_args.editingFinished] = self.update_tool_cmd_line_args
+        s[self._properties_ui.lineEdit_tool_args.editingFinished] = self.tool_args_editing_finished
+        s[self._properties_ui.lineEdit_tool_args.textEdited] = self.tool_args_text_edited
         return s
 
     def restore_selections(self):
@@ -108,7 +109,7 @@ class Tool(ProjectItem):
 
     @Slot(bool)
     def update_execution_mode(self, checked):
-        """Pushed a new UpdateToolExecuteInWorkCommand to the toolbox stack."""
+        """Pushes a new UpdateToolExecuteInWorkCommand to the toolbox stack."""
         self._toolbox.undo_stack.push(UpdateToolExecuteInWorkCommand(self, checked))
 
     def do_update_execution_mode(self, execute_in_work):
@@ -119,6 +120,8 @@ class Tool(ProjectItem):
         self.update_execute_in_work_button()
 
     def update_execute_in_work_button(self):
+        """Sets the execute in work radio button check state according to
+        execute_in_work instance variable."""
         if not self._active:
             return
         self._properties_ui.radioButton_execute_in_work.blockSignals(True)
@@ -141,22 +144,41 @@ class Tool(ProjectItem):
         else:
             self.set_specification(spec)
 
+    @Slot(str)
+    def tool_args_text_edited(self, txt):
+        """Calls the editingFinished slot when
+        the line edit is cleared. Needed in order to
+        clear the cmd line args list in case the line
+        edit clear button is clicked.
+
+        Args:
+            txt (str): Text in line edit after edit
+        """
+        if txt == "":
+            self.tool_args_editing_finished()
+
     @Slot()
-    def update_tool_cmd_line_args(self):
-        """Updates tool cmd line args list as line edit text is changed."""
+    def tool_args_editing_finished(self):
+        """Processed when the user has finished editing
+        the cmd line args line edit. Pushes a new command
+        to undo stack if the args were changed.
+        """
         txt = self._properties_ui.lineEdit_tool_args.text()
         cmd_line_args = ToolSpecification.split_cmdline_args(txt)
         if self.cmd_line_args == cmd_line_args:
             return
         self._toolbox.undo_stack.push(UpdateToolCmdLineArgsCommand(self, cmd_line_args))
 
-    def do_update_tool_cmd_line_args(self, cmd_line_args):
+    def update_tool_cmd_line_args(self, cmd_line_args):
+        """Updates instance cmd line args list and sets the list as text to the line edit widget.
+
+        Args:
+            cmd_line_args (list): Tool cmd line args
+        """
         self.cmd_line_args = cmd_line_args
         if not self._active:
             return
-        self._properties_ui.lineEdit_tool_args.blockSignals(True)
         self._properties_ui.lineEdit_tool_args.setText(" ".join(self.cmd_line_args))
-        self._properties_ui.lineEdit_tool_args.blockSignals(False)
 
     def do_set_specification(self, specification):
         """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.

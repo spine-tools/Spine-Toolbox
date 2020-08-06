@@ -53,7 +53,7 @@ class UpdateToolCmdLineArgsCommand(SpineToolboxCommand):
         self.setText(f"change command line arguments of {tool.name}")
 
     def redo(self):
-        self.tool.do_update_tool_cmd_line_args(self.redo_cmd_line_args)
+        self.tool.update_tool_cmd_line_args(self.redo_cmd_line_args)
 
     def undo(self):
-        self.tool.do_update_tool_cmd_line_args(self.undo_cmd_line_args)
+        self.tool.update_tool_cmd_line_args(self.undo_cmd_line_args)
