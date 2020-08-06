@@ -242,6 +242,15 @@ class ConnectionManager(QObject):
             return {}
         return self._table_options.get(self._current_table, {})
 
+    def get_current_option_value(self, option_key):
+        """Returns the value for option_key for the current table or the default value."""
+        current_options = self._table_options.get(self._current_table, {})
+        option_value = current_options.get(option_key)
+        if option_value is None:
+            option_specification = self._connection.OPTIONS[option_key]
+            return option_specification["default"]
+        return option_value
+
     def set_table_options(self, options):
         """Sets connection manager options for current connector
 

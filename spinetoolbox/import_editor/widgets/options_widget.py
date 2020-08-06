@@ -18,6 +18,7 @@ Contains OptionsWidget class.
 import functools
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QLabel, QLineEdit, QComboBox, QCheckBox, QSpinBox, QWidget, QFormLayout
+from ..commands import SetConnectorOption
 
 
 class OptionsWidget(QWidget):
@@ -26,14 +27,17 @@ class OptionsWidget(QWidget):
     options_changed = Signal(dict)
     """Emitted whenever an option in the widget is changed."""
 
-    def __init__(self, connector):
+    def __init__(self, connector, undo_stack):
         """
         Args:
             connector (ConnectionManager): the connection manager whose current table's options are show on the widget
+            undo_stack (QUndoStack): undo stack
         """
         super().__init__()
         self._connector = connector
         self._options = connector.connection.OPTIONS
+        self._undo_stack = undo_stack
+        self._undo_enabled = True
         connector.current_table_changed.connect(self._fetch_options_from_connector)
         self.options_changed.connect(connector.update_options)
 
@@ -76,6 +80,19 @@ class OptionsWidget(QWidget):
             # Add to layout:
             self.layout().addRow(QLabel(options['label'] + ':'), ui_element)
 
+    @property
+    def connector(self):
+        """The connection manager linked to this options widget."""
+        return self._connector
+
+    @property
+    def undo_stack(self):
+        return self._undo_stack
+
+    @property
+    def undo_enabled(self):
+        return self._undo_enabled
+
     def set_options(self, options=None, set_missing_default=True):
         """Sets state of options
 
@@ -103,6 +120,37 @@ class OptionsWidget(QWidget):
                 ui_element.setCurrentText(value)
             ui_element.blockSignals(False)
 
+    def set_option_without_undo(self, option_key, value):
+        ui_element = self._ui_elements[option_key]
+        if isinstance(ui_element, QSpinBox):
+            current_value = ui_element.value()
+            if value == current_value:
+                return
+            self._undo_enabled = False
+            ui_element.setValue(value)
+            self._undo_enabled = True
+        elif isinstance(ui_element, QLineEdit):
+            current_value = ui_element.text()
+            if value == current_value:
+                return
+            self._undo_enabled = False
+            ui_element.setText(value)
+            self._undo_enabled = True
+        elif isinstance(ui_element, QCheckBox):
+            current_value = ui_element.isChecked()
+            if value == current_value:
+                return
+            self._undo_enabled = False
+            ui_element.setChecked(value)
+            self._undo_enabled = True
+        elif isinstance(ui_element, QComboBox):
+            current_value = ui_element.currentText()
+            if value == current_value:
+                return
+            self._undo_enabled = False
+            ui_element.setCurrentText(value)
+            self._undo_enabled = True
+
     @Slot()
     def _fetch_options_from_connector(self):
         """Read options from the connector."""
@@ -111,23 +159,35 @@ class OptionsWidget(QWidget):
 
 def _emit_spin_box_option_changed(i, option_key, options_widget):
     """A 'slot' to transform changes in QSpinBox into changes in options."""
+    if options_widget.undo_enabled:
+        previous_value = options_widget.connector.get_current_option_value(option_key)
+        options_widget.undo_stack.push(SetConnectorOption(option_key, options_widget, i, previous_value))
     options = {option_key: i}
     options_widget.options_changed.emit(options)
 
 
 def _emit_line_edit_option_changed(text, option_key, options_widget):
     """A 'slot' to transform changes in QLineEdit into changes in options."""
+    if options_widget.undo_enabled:
+        previous_value = options_widget.connector.get_current_option_value(option_key)
+        options_widget.undo_stack.push(SetConnectorOption(option_key, options_widget, text, previous_value))
     options = {option_key: text}
     options_widget.options_changed.emit(options)
 
 
 def _emit_check_box_option_changed(state, option_key, options_widget):
     """A 'slot' to transform changes in QCheckBox into changes in options."""
+    if options_widget.undo_enabled:
+        previous_value = options_widget.connector.get_current_option_value(option_key)
+        options_widget.undo_stack.push(SetConnectorOption(option_key, options_widget, state, previous_value))
     options = {option_key: state == Qt.Checked}
     options_widget.options_changed.emit(options)
 
 
 def _emit_combo_box_option_changed(text, option_key, options_widget):
     """A 'slot' to transform changes in QComboBox into changes in options."""
+    if options_widget.undo_enabled:
+        previous_value = options_widget.connector.get_current_option_value(option_key)
+        options_widget.undo_stack.push(SetConnectorOption(option_key, options_widget, text, previous_value))
     options = {option_key: text}
     options_widget.options_changed.emit(options)

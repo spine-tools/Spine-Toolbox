@@ -14,7 +14,13 @@ Contains undo and redo commands for Import editor.
 :author: A. Soininen (VTT)
 :date:   4.8.2020
 """
+from enum import auto, IntEnum, unique
 from PySide2.QtWidgets import QUndoCommand
+
+
+@unique
+class _Id(IntEnum):
+    SET_OPTION = auto()
 
 
 class SetTableChecked(QUndoCommand):
@@ -77,3 +83,27 @@ class SetComponentMappingReference(QUndoCommand):
             self._model.set_type(self._component_display_name, "None")
         else:
             self._model.set_value(self._component_display_name, self._previous_reference)
+
+
+class SetConnectorOption(QUndoCommand):
+    def __init__(self, option_key, options_widget, value, previous_value):
+        text = f"change {option_key}"
+        super().__init__(text)
+        self._option_key = option_key
+        self._options_widget = options_widget
+        self._value = value
+        self._previous_value = previous_value
+
+    def id(self):
+        return _Id.SET_OPTION
+
+    def mergeWith(self, command):
+        if not isinstance(command, SetConnectorOption):
+            return False
+        return command._option_key == self._option_key and command._value == self._value
+
+    def redo(self):
+        self._options_widget.set_option_without_undo(self._option_key, self._value)
+
+    def undo(self):
+        self._options_widget.set_option_without_undo(self._option_key, self._previous_value)

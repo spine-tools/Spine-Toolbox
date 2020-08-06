@@ -17,7 +17,7 @@ Contains unit tests for the OptionsWidget class.
 """
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtWidgets import QApplication, QCheckBox, QComboBox, QLineEdit, QSpinBox
+from PySide2.QtWidgets import QApplication, QCheckBox, QComboBox, QLineEdit, QSpinBox, QUndoStack
 from spinetoolbox.import_editor.widgets.options_widget import OptionsWidget
 
 
@@ -27,11 +27,14 @@ class TestOptionsWidget(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
+    def setUp(self):
+        self._undo_stack = QUndoStack()
+
     def test_spin_box_change_signalling(self):
         option_template = {"number": {"label": "int value", "type": int, "default": 0}}
         connector = MagicMock()
         connector.connection.OPTIONS = option_template
-        widget = OptionsWidget(connector)
+        widget = OptionsWidget(connector, self._undo_stack)
         layout = widget.layout()
         checked = {"number": False}
         for item in (layout.itemAt(i).widget() for i in range(layout.count())):
@@ -46,7 +49,7 @@ class TestOptionsWidget(unittest.TestCase):
         option_template = {"text": {"label": "text value", "type": str, "default": ""}}
         connector = MagicMock()
         connector.connection.OPTIONS = option_template
-        widget = OptionsWidget(connector)
+        widget = OptionsWidget(connector, self._undo_stack)
         layout = widget.layout()
         checked = False
         for item in (layout.itemAt(i).widget() for i in range(layout.count())):
@@ -63,7 +66,7 @@ class TestOptionsWidget(unittest.TestCase):
         }
         connector = MagicMock()
         connector.connection.OPTIONS = option_template
-        widget = OptionsWidget(connector)
+        widget = OptionsWidget(connector, self._undo_stack)
         layout = widget.layout()
         checked = False
         for item in (layout.itemAt(i).widget() for i in range(layout.count())):
@@ -78,7 +81,7 @@ class TestOptionsWidget(unittest.TestCase):
         option_template = {"yesno": {"label": "check me", "type": bool, "default": True}}
         connector = MagicMock()
         connector.connection.OPTIONS = option_template
-        widget = OptionsWidget(connector)
+        widget = OptionsWidget(connector, self._undo_stack)
         layout = widget.layout()
         checked = False
         for item in (layout.itemAt(i).widget() for i in range(layout.count())):
