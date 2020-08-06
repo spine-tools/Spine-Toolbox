@@ -24,7 +24,7 @@ class OptionsWidget(QWidget):
     """A widget for handling simple options."""
 
     # Emitted whenever an option in the widget is changed.
-    optionsChanged = Signal()
+    options_changed = Signal()
 
     def __init__(self, options, header="Options", parent=None):
         """Creates OptionWidget
@@ -63,14 +63,14 @@ class OptionsWidget(QWidget):
             # using lambdas here because I want to emit a signal without arguments
             # pylint: disable=unnecessary-lambda
             if isinstance(ui_element, QSpinBox):
-                ui_element.valueChanged.connect(lambda: self.optionsChanged.emit())
+                ui_element.valueChanged.connect(lambda: self.options_changed.emit())
             elif isinstance(ui_element, QLineEdit):
-                ui_element.textChanged.connect(lambda: self.optionsChanged.emit())
+                ui_element.textChanged.connect(lambda: self.options_changed.emit())
             elif isinstance(ui_element, QCheckBox):
-                ui_element.stateChanged.connect(lambda: self.optionsChanged.emit())
+                ui_element.stateChanged.connect(lambda: self.options_changed.emit())
             elif isinstance(ui_element, QComboBox):
                 ui_element.addItems([str(x) for x in options["Items"]])
-                ui_element.currentIndexChanged.connect(lambda: self.optionsChanged.emit())
+                ui_element.currentIndexChanged.connect(lambda: self.options_changed.emit())
             self._ui_elements[key] = ui_element
 
             # Add to layout:

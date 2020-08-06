@@ -79,17 +79,17 @@ class ImportEditor(QObject):
         self._ui.source_data_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
 
         # signals for connector
-        self._connector.connectionReady.connect(self.request_new_tables_from_connector)
-        self._connector.dataReady.connect(self.update_preview_data)
-        self._connector.tablesReady.connect(self.update_tables)
-        self._connector.mappedDataReady.connect(self.mapped_data_ready.emit)
+        self._connector.connection_ready.connect(self.request_new_tables_from_connector)
+        self._connector.data_ready.connect(self.update_preview_data)
+        self._connector.tables_ready.connect(self.update_tables)
+        self._connector.mapped_data_ready.connect(self.mapped_data_ready.emit)
         # when data is ready set loading status to False.
-        self._connector.connectionReady.connect(lambda: self.set_loading_status(False))
-        self._connector.dataReady.connect(lambda: self.set_loading_status(False))
-        self._connector.tablesReady.connect(lambda: self.set_loading_status(False))
-        self._connector.mappedDataReady.connect(lambda: self.set_loading_status(False))
+        self._connector.connection_ready.connect(lambda: self.set_loading_status(False))
+        self._connector.data_ready.connect(lambda: self.set_loading_status(False))
+        self._connector.tables_ready.connect(lambda: self.set_loading_status(False))
+        self._connector.mapped_data_ready.connect(lambda: self.set_loading_status(False))
         # when data is getting fetched set loading status to True
-        self._connector.fetchingData.connect(lambda: self.set_loading_status(True))
+        self._connector.fetching_data.connect(lambda: self.set_loading_status(True))
         # set loading status to False if error.
         self._connector.error.connect(lambda: self.set_loading_status(False))
 

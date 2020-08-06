@@ -27,33 +27,33 @@ class ConnectionManager(QObject):
         connection (class): A class derived from `SourceConnection`, e.g. `CSVConnector`
     """
 
-    startTableGet = Signal()
-    startDataGet = Signal(str, dict, int)
-    startMappedDataGet = Signal(dict, dict, dict, dict, int)
+    start_table_get = Signal()
+    start_data_get = Signal(str, dict, int)
+    start_mapped_data_get = Signal(dict, dict, dict, dict, int)
 
     # Signal with error message if connection fails
-    connectionFailed = Signal(str)
+    connection_failed = Signal(str)
 
     # Signal that a connection to the datasource is ready
-    connectionReady = Signal()
+    connection_ready = Signal()
 
     # Signal that connection is being closed
-    closeConnection = Signal()
+    connection_closed = Signal()
 
     # error while reading data or connection to data source
     error = Signal(str)
 
     # signal that the data connection is getting data
-    fetchingData = Signal()
+    fetching_data = Signal()
 
     # data from source is ready, should send list of data and headers
-    dataReady = Signal(list, list)
+    data_ready = Signal(list, list)
 
     # tables from source is ready, should send a list of str of available tables
-    tablesReady = Signal(dict)
+    tables_ready = Signal(dict)
 
     # mapped data read from data source
-    mappedDataReady = Signal(dict, list)
+    mapped_data_ready = Signal(dict, list)
 
     def __init__(self, connection, connection_settings, parent=None):
         super().__init__(parent)
@@ -67,7 +67,7 @@ class ConnectionManager(QObject):
         self._connection = connection
         self._connection_settings = connection_settings
         self._options_widget = OptionsWidget(self._connection.OPTIONS)
-        self._options_widget.optionsChanged.connect(self._new_options)
+        self._options_widget.options_changed.connect(self._new_options)
         self._is_connected = False
 
     @property
@@ -127,8 +127,8 @@ class ConnectionManager(QObject):
         to know when to run get a list of table names.
         """
         if self.is_connected:
-            self.fetchingData.emit()
-            self.startTableGet.emit()
+            self.fetching_data.emit()
+            self.start_table_get.emit()
 
     def request_data(self, table=None, max_rows=-1):
         """Request data from emits dataReady to with data
@@ -139,8 +139,8 @@ class ConnectionManager(QObject):
         """
         if self.is_connected:
             options = self._options_widget.get_options()
-            self.fetchingData.emit()
-            self.startDataGet.emit(table, options, max_rows)
+            self.fetching_data.emit()
+            self.start_data_get.emit(table, options, max_rows)
 
     def request_mapped_data(self, table_mappings, max_rows=-1):
         """Get mapped data from csv file
@@ -163,8 +163,8 @@ class ConnectionManager(QObject):
                     options[table_name] = {}
                 types.setdefault(table_name, self._table_types.get(table_name, {}))
                 row_types.setdefault(table_name, self._table_row_types.get(table_name, {}))
-            self.fetchingData.emit()
-            self.startMappedDataGet.emit(table_mappings, options, types, row_types, max_rows)
+            self.fetching_data.emit()
+            self.start_mapped_data_get.emit(table_mappings, options, types, row_types, max_rows)
 
     def connection_ui(self):
         """
@@ -191,15 +191,15 @@ class ConnectionManager(QObject):
         # connect worker signals
         self._worker.connectionReady.connect(self._handle_connection_ready)
         self._worker.tablesReady.connect(self._handle_tables_ready)
-        self._worker.dataReady.connect(self.dataReady.emit)
-        self._worker.mappedDataReady.connect(self.mappedDataReady.emit)
+        self._worker.dataReady.connect(self.data_ready.emit)
+        self._worker.mappedDataReady.connect(self.mapped_data_ready.emit)
         self._worker.error.connect(self.error.emit)
-        self._worker.connectionFailed.connect(self.connectionFailed.emit)
+        self._worker.connectionFailed.connect(self.connection_failed.emit)
         # connect start working signals
-        self.startTableGet.connect(self._worker.tables)
-        self.startDataGet.connect(self._worker.data)
-        self.startMappedDataGet.connect(self._worker.mapped_data)
-        self.closeConnection.connect(self._worker.disconnect)
+        self.start_table_get.connect(self._worker.tables)
+        self.start_data_get.connect(self._worker.data)
+        self.start_mapped_data_get.connect(self._worker.mapped_data)
+        self.connection_closed.connect(self._worker.disconnect)
 
         # when thread is started, connect worker to source
         self._thread.started.connect(self._worker.init_connection)
@@ -207,7 +207,7 @@ class ConnectionManager(QObject):
 
     def _handle_connection_ready(self):
         self._is_connected = True
-        self.connectionReady.emit()
+        self.connection_ready.emit()
 
     @Slot("QVariant")
     def _handle_tables_ready(self, table_options):
@@ -233,7 +233,7 @@ class ConnectionManager(QObject):
                 self._table_row_types.setdefault(key, row_types)
 
         tables = {k: t.get("mapping", None) for k, t in table_options.items()}
-        self.tablesReady.emit(tables)
+        self.tables_ready.emit(tables)
         # update options if a sheet is selected
         if self._current_table and self._current_table in self._table_options:
             self._options_widget.set_options(self._table_options[self._current_table])
@@ -280,7 +280,7 @@ class ConnectionManager(QObject):
         """Close and delete thread and worker
         """
         self._is_connected = False
-        self.closeConnection.emit()
+        self.connection_closed.emit()
         if self._worker:
             self._worker.deleteLater()
             self._worker = None

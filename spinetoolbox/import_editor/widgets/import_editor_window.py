@@ -85,8 +85,8 @@ class ImportEditorWindow(QMainWindow):
         self._ui.export_mappings_action.triggered.connect(self.export_mapping_to_file)
         self._ui.import_mappings_action.triggered.connect(self.import_mapping_from_file)
         self._ui.close_action.triggered.connect(self.close)
-        self._connection_manager.connectionReady.connect(self.show)
-        self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
+        self._connection_manager.connection_ready.connect(self.show)
+        self._connection_manager.connection_failed.connect(self.connection_failed.emit)
         self._connection_manager.error.connect(self.show_error)
 
     def _insert_undo_redo_actions(self):
