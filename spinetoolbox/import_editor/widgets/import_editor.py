@@ -20,6 +20,7 @@ from copy import deepcopy
 from PySide2.QtCore import QAbstractListModel, QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
+from .options_widget import OptionsWidget
 from ..commands import SetTableChecked
 from ...widgets.custom_menus import CustomContextMenu
 from ..mvcmodels.mapping_list_model import MappingListModel
@@ -68,7 +69,8 @@ class ImportEditor(QObject):
         # create ui
         self._ui.source_data_table.setModel(self._preview_table_model)
         self._ui_preview_menu = MappingTableMenu(self._ui.source_data_table)
-        self._ui.dockWidget_source_options.setWidget(self._connector.option_widget())
+        self._ui_options_widget = OptionsWidget(self._connector)
+        self._ui.dockWidget_source_options.setWidget(self._ui_options_widget)
         self._ui.source_data_table.verticalHeader().display_all = False
 
         # connect signals

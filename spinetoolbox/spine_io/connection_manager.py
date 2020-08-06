@@ -17,7 +17,6 @@ Contains ConnectionManager class.
 """
 
 from PySide2.QtCore import QObject, QThread, Signal, Slot
-from ..import_editor.widgets.options_widget import OptionsWidget
 
 
 class ConnectionManager(QObject):
@@ -55,6 +54,9 @@ class ConnectionManager(QObject):
     # mapped data read from data source
     mapped_data_ready = Signal(dict, list)
 
+    current_table_changed = Signal()
+    """Emitted when the current table has changed."""
+
     def __init__(self, connection, connection_settings, parent=None):
         super().__init__(parent)
         self._thread = None
@@ -66,9 +68,11 @@ class ConnectionManager(QObject):
         self._table_row_types = {}
         self._connection = connection
         self._connection_settings = connection_settings
-        self._options_widget = OptionsWidget(self._connection.OPTIONS)
-        self._options_widget.options_changed.connect(self._new_options)
         self._is_connected = False
+
+    @property
+    def connection(self):
+        return self._connection
 
     @property
     def current_table(self):
@@ -105,20 +109,12 @@ class ConnectionManager(QObject):
     def set_table(self, table):
         """Sets the current table of the data source.
 
-        Arguments:
-            table {str} -- str with table name
+        Args:
+            table (str): table name
         """
-        # save current options if a table is selected
-        if self._current_table:
-            options = self._options_widget.get_options()
-            self._table_options.update({self._current_table: options})
         # check if table has options
         self._current_table = table
-        if table in self._table_options:
-            self._options_widget.set_options(self._table_options[table])
-        else:
-            # restore default values
-            self._options_widget.set_options()
+        self.current_table_changed.emit()
 
     def request_tables(self):
         """Get tables tables from source, emits two singals,
@@ -138,7 +134,7 @@ class ConnectionManager(QObject):
             max_rows {int} -- how many rows to read (default: {-1})
         """
         if self.is_connected:
-            options = self._options_widget.get_options()
+            options = self._table_options.get(self._current_table, {})
             self.fetching_data.emit()
             self.start_data_get.emit(table, options, max_rows)
 
@@ -155,12 +151,8 @@ class ConnectionManager(QObject):
             options = {}
             types = {}
             row_types = {}
-            self._table_options[self._current_table] = self._options_widget.get_options()
             for table_name in table_mappings:
-                if table_name in self._table_options:
-                    options[table_name] = self._table_options[table_name]
-                else:
-                    options[table_name] = {}
+                options[table_name] = self._table_options.get(table_name, {})
                 types.setdefault(table_name, self._table_types.get(table_name, {}))
                 row_types.setdefault(table_name, self._table_row_types.get(table_name, {}))
             self.fetching_data.emit()
@@ -235,30 +227,36 @@ class ConnectionManager(QObject):
         tables = {k: t.get("mapping", None) for k, t in table_options.items()}
         self.tables_ready.emit(tables)
         # update options if a sheet is selected
-        if self._current_table and self._current_table in self._table_options:
-            self._options_widget.set_options(self._table_options[self._current_table])
+        if self._current_table in self._table_options:
+            self.current_table_changed.emit()
 
-    def _new_options(self):
-        if self._current_table:
-            options = self._options_widget.get_options()
-            self._table_options.update({self._current_table: options})
+    @Slot()
+    def update_options(self, options):
+        if not self._current_table:
+            return
+        self._table_options.setdefault(self._current_table, {}).update(options)
         self.request_data(self._current_table, 100)
+
+    def get_current_options(self):
+        if not self._current_table:
+            return {}
+        return self._table_options.get(self._current_table, {})
 
     def set_table_options(self, options):
         """Sets connection manager options for current connector
 
-        Arguments:
-            options {dict} -- Dict with option settings
+        Args:
+            options (dict): settings for the tables
         """
         self._table_options.update(options)
-        if self._current_table:
-            self._options_widget.set_options(options=self._table_options.get(self._current_table, {}))
+        if self._current_table in self._table_options:
+            self.current_table_changed.emit()
 
     def set_table_types(self, types):
         """Sets connection manager types for current connector
 
-        Arguments:
-            types {dict} -- Dict with types settings, column (int) as key, type as value
+        Args:
+            types (dict): dict with types settings, column (int) as key, type as value
         """
         self._table_types.update(types)
 
@@ -269,12 +267,6 @@ class ConnectionManager(QObject):
             types {dict} -- Dict with types settings, row (int) as key, type as value
         """
         self._table_row_types.update(types)
-
-    def option_widget(self):
-        """
-        Return a Qwidget with options for reading data from a table in source
-        """
-        return self._options_widget
 
     def close_connection(self):
         """Close and delete thread and worker

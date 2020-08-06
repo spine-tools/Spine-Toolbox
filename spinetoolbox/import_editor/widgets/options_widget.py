@@ -15,32 +15,30 @@ Contains OptionsWidget class.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-
+import functools
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QLabel, QLineEdit, QComboBox, QCheckBox, QSpinBox, QWidget, QFormLayout
-from PySide2.QtCore import Signal
 
 
 class OptionsWidget(QWidget):
     """A widget for handling simple options."""
 
-    # Emitted whenever an option in the widget is changed.
-    options_changed = Signal()
+    options_changed = Signal(dict)
+    """Emitted whenever an option in the widget is changed."""
 
-    def __init__(self, options, header="Options", parent=None):
-        """Creates OptionWidget
-
-        Arguments:
-            options (Dict): Dict describing what options to build a widget around.
-
-        Keyword Arguments:
-            header (str): Title of groupbox (default: {"Options"})
-            parent (QWidget, None): parent of widget
+    def __init__(self, connector):
         """
-        super().__init__(parent)
-        QFormLayout(self)
-        self._options = options
+        Args:
+            connector (ConnectionManager): the connection manager whose current table's options are show on the widget
+        """
+        super().__init__()
+        self._connector = connector
+        self._options = connector.connection.OPTIONS
+        connector.current_table_changed.connect(self._fetch_options_from_connector)
+        self.options_changed.connect(connector.update_options)
 
         # ui
+        QFormLayout(self)
         self._ui_choices = {str: QLineEdit, list: QComboBox, int: QSpinBox, bool: QCheckBox}
         self._ui_elements = {}
         self._build_ui()
@@ -60,17 +58,19 @@ class OptionsWidget(QWidget):
             max_length = options.get('MaxLength', None)
             if max_length is not None:
                 ui_element.setMaxLength(max_length)
-            # using lambdas here because I want to emit a signal without arguments
-            # pylint: disable=unnecessary-lambda
             if isinstance(ui_element, QSpinBox):
-                ui_element.valueChanged.connect(lambda: self.options_changed.emit())
+                handler = functools.partial(_emit_spin_box_option_changed, option_key=key, options_widget=self)
+                ui_element.valueChanged.connect(handler)
             elif isinstance(ui_element, QLineEdit):
-                ui_element.textChanged.connect(lambda: self.options_changed.emit())
+                handler = functools.partial(_emit_line_edit_option_changed, option_key=key, options_widget=self)
+                ui_element.textChanged.connect(handler)
             elif isinstance(ui_element, QCheckBox):
-                ui_element.stateChanged.connect(lambda: self.options_changed.emit())
+                handler = functools.partial(_emit_check_box_option_changed, option_key=key, options_widget=self)
+                ui_element.stateChanged.connect(handler)
             elif isinstance(ui_element, QComboBox):
                 ui_element.addItems([str(x) for x in options["Items"]])
-                ui_element.currentIndexChanged.connect(lambda: self.options_changed.emit())
+                handler = functools.partial(_emit_combo_box_option_changed, option_key=key, options_widget=self)
+                ui_element.currentTextChanged.connect(handler)
             self._ui_elements[key] = ui_element
 
             # Add to layout:
@@ -79,9 +79,9 @@ class OptionsWidget(QWidget):
     def set_options(self, options=None, set_missing_default=True):
         """Sets state of options
 
-        Keyword Arguments:
-            options {Dict} -- Dict with option name as key and value as value (default: {None})
-            set_missing_default {bool} -- Sets missing options to default if True (default: {True})
+        Args:
+            options (dict, optional): Dict with option name as key and value as value (default: {None})
+            set_missing_default (bool): Sets missing options to default if True (default: {True})
         """
         if options is None:
             options = {}
@@ -103,21 +103,31 @@ class OptionsWidget(QWidget):
                 ui_element.setCurrentText(value)
             ui_element.blockSignals(False)
 
-    def get_options(self):
-        """Returns current state of option widget
+    @Slot()
+    def _fetch_options_from_connector(self):
+        """Read options from the connector."""
+        self.set_options(self._connector.get_current_options())
 
-        Returns:
-            [Dict] -- Dict with option name as key and value as value
-        """
-        options = {}
-        for key, ui_element in self._ui_elements.items():
-            if isinstance(ui_element, QSpinBox):
-                value = int(ui_element.value())
-            elif isinstance(ui_element, QLineEdit):
-                value = str(ui_element.text())
-            elif isinstance(ui_element, QCheckBox):
-                value = bool(ui_element.checkState())
-            elif isinstance(ui_element, QComboBox):
-                value = str(ui_element.currentText())
-            options[key] = value
-        return options
+
+def _emit_spin_box_option_changed(i, option_key, options_widget):
+    """A 'slot' to transform changes in QSpinBox into changes in options."""
+    options = {option_key: i}
+    options_widget.options_changed.emit(options)
+
+
+def _emit_line_edit_option_changed(text, option_key, options_widget):
+    """A 'slot' to transform changes in QLineEdit into changes in options."""
+    options = {option_key: text}
+    options_widget.options_changed.emit(options)
+
+
+def _emit_check_box_option_changed(state, option_key, options_widget):
+    """A 'slot' to transform changes in QCheckBox into changes in options."""
+    options = {option_key: state == Qt.Checked}
+    options_widget.options_changed.emit(options)
+
+
+def _emit_combo_box_option_changed(text, option_key, options_widget):
+    """A 'slot' to transform changes in QComboBox into changes in options."""
+    options = {option_key: text}
+    options_widget.options_changed.emit(options)
