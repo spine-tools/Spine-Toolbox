@@ -162,7 +162,8 @@ class MappingSpecificationModel(QAbstractTableModel):
             ScenarioAlternativeMapping,
         )
         if not isinstance(mapping, classes):
-            raise TypeError(f"mapping must be of type: {classes} instead got {type(mapping)}")
+            class_names = [c.__name__ for c in classes]
+            raise TypeError(f"mapping must be of type: {class_names} instead got {type(mapping).__name__}")
         if isinstance(mapping, type(self._item_mapping)):
             return
         self.beginResetModel()

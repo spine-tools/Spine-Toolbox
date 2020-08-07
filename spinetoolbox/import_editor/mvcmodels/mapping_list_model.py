@@ -40,10 +40,19 @@ class MappingListModel(QAbstractListModel):
     def get_mappings(self):
         return [m.mapping for m in self._mapping_specifications]
 
+    def mapping_name_at(self, row):
+        return self._names[row]
+
     def rowCount(self, index=None):
         if not self._mapping_specifications:
             return 0
         return len(self._mapping_specifications)
+
+    def row_for_mapping(self, name):
+        try:
+            return self._names.index(name)
+        except ValueError:
+            return None
 
     def data_mapping(self, index):
         if self._mapping_specifications and index.row() < len(self._mapping_specifications):
@@ -55,20 +64,24 @@ class MappingListModel(QAbstractListModel):
         if self._mapping_specifications and role == Qt.DisplayRole and index.row() < self.rowCount():
             return self._names[index.row()]
 
-    def add_mapping(self):
+    def add_mapping(self, mapping=None):
         self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(), self.rowCount())
-        m = ObjectClassMapping()
+        m = mapping if mapping is not None else ObjectClassMapping()
         self._mapping_specifications.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
-        self._names.append("Mapping " + str(self._counter))
+        name = "Mapping " + str(self._counter)
+        self._names.append(name)
         self._counter += 1
         self.endInsertRows()
+        return name
 
     def remove_mapping(self, row):
-        if self._mapping_specifications and row < len(self._mapping_specifications):
-            self.beginRemoveRows(self.index(row, 0), row, row)
-            self._mapping_specifications.pop(row)
-            self._names.pop(row)
-            self.endRemoveRows()
+        if row < 0 or row >= len(self._mapping_specifications):
+            return
+        self.beginRemoveRows(self.index(row, 0), row, row)
+        mapping = self._mapping_specifications.pop(row).mapping
+        self._names.pop(row)
+        self.endRemoveRows()
+        return mapping
 
     def check_mapping_validity(self):
         """

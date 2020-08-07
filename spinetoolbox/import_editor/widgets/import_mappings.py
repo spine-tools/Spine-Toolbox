@@ -18,6 +18,7 @@ ImportMappings widget.
 
 from PySide2.QtCore import QObject, Signal, Slot
 from ...widgets.custom_delegates import ComboBoxDelegate
+from ..commands import CreateMapping, DeleteMapping, SelectMapping
 
 MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
@@ -32,15 +33,18 @@ class ImportMappings(QObject):
     mapping_data_changed = Signal(object)
     """Emits the new MappingListModel."""
 
-    def __init__(self, ui):
+    def __init__(self, ui, undo_stack):
         """
         Args:
             ui (QWidget): importer window's UI
+            undo_stack (QUndoStack): undo stack
         """
         super().__init__()
         self._ui = ui
         self._mappings_model = None
         self._select_handle = None
+        self._undo_stack = undo_stack
+        self._block_select_mapping_command = False
         # initialize interface
         self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(None, MAPPING_CHOICES))
 
@@ -55,16 +59,16 @@ class ImportMappings(QObject):
         Sets new model
         """
         if self._select_handle and self._ui.list_view.selectionModel():
-            self._ui.list_view.selectionModel().selectionChanged.disconnect(self.select_mapping)
+            self._ui.list_view.selectionModel().selectionChanged.disconnect(self.change_mapping)
             self._select_handle = None
-        if self._mappings_model:
+        if self._mappings_model is not None:
             self._mappings_model.dataChanged.disconnect(self.data_changed)
         self._mappings_model = model
         self._ui.list_view.setModel(model)
-        self._select_handle = self._ui.list_view.selectionModel().selectionChanged.connect(self.select_mapping)
+        self._select_handle = self._ui.list_view.selectionModel().selectionChanged.connect(self.change_mapping)
         self._mappings_model.dataChanged.connect(self.data_changed)
         if self._mappings_model.rowCount() > 0:
-            self._ui.list_view.setCurrentIndex(self._mappings_model.index(0, 0))
+            self.select_mapping(0)
         else:
             self._ui.list_view.clearSelection()
 
@@ -80,40 +84,64 @@ class ImportMappings(QObject):
     @Slot()
     def new_mapping(self):
         """
-        Adds new empty mapping
+        Pushes a CreateMapping command to the undo stack
         """
-        if self._mappings_model:
-            self._mappings_model.add_mapping()
-            if not self._ui.list_view.selectedIndexes():
-                # if no item is selected, select the first item
-                self._ui.list_view.setCurrentIndex(self._mappings_model.index(0, 0))
+        command = CreateMapping(self)
+        self._undo_stack.push(command)
+
+    def create_mapping(self, mapping=None):
+        if self._mappings_model is None:
+            return
+        mapping_name = self._mappings_model.add_mapping(mapping)
+        self.select_mapping(self._mappings_model.rowCount() - 1)
+        return mapping_name
 
     @Slot()
     def delete_selected_mapping(self):
         """
-        deletes selected mapping
+        Pushes a DeleteMapping command to the undo stack.
         """
-        if self._mappings_model is not None:
-            # get selected mapping in list
-            indexes = self._ui.list_view.selectedIndexes()
-            if indexes:
-                self._mappings_model.remove_mapping(indexes[0].row())
-                if self._mappings_model.rowCount() > 0:
-                    # select the first item
-                    self._ui.list_view.setCurrentIndex(self._mappings_model.index(0, 0))
-                    self.select_mapping(self._ui.list_view.selectionModel().selection())
-                else:
-                    # no items clear selection so select_mapping is called
-                    self._ui.list_view.clearSelection()
+        indexes = self._ui.list_view.selectedIndexes()
+        if not indexes:
+            return
+        row = indexes[0].row()
+        mapping_name = self._mappings_model.mapping_name_at(row)
+        self._undo_stack.push(DeleteMapping(self, mapping_name))
 
-    @Slot("QItemSelection")
-    def select_mapping(self, selection):
-        """Emits mappingChanged with the selected mapping."""
-        if selection.indexes():
-            m = self._mappings_model.data_mapping(selection.indexes()[0])
+    def delete_mapping(self, name):
+        if self._mappings_model is None:
+            return None
+        row = self._mappings_model.row_for_mapping(name)
+        if row is None:
+            return None
+        mapping = self._mappings_model.remove_mapping(row)
+        mapping_count = self._mappings_model.rowCount()
+        if mapping_count:
+            if row == mapping_count:
+                self.select_mapping(mapping_count - 1)
+            else:
+                self.select_mapping(row)
         else:
-            m = None
-        self.mapping_changed.emit(m)
+            self.mapping_changed.emit(None)
+        return mapping
+
+
+    @Slot(object, object)
+    def change_mapping(self, selected, deselected):
+        if self._block_select_mapping_command:
+            return
+        row = selected.indexes()[0].row()
+        previous_row = deselected.indexes()[0].row()
+        command = SelectMapping(self, row, previous_row)
+        self._undo_stack.push(command)
+
+    def select_mapping(self, row):
+        """Emits mappingChanged with the selected mapping."""
+        index = self._mappings_model.index(row, 0)
+        self._block_select_mapping_command = True
+        self._ui.list_view.setCurrentIndex(index)
+        self._block_select_mapping_command = False
+        self.mapping_changed.emit(self._mappings_model.data_mapping(index))
 
     def selected_mapping_name(self):
         """Returns the name of the selected mapping."""

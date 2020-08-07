@@ -57,7 +57,7 @@ class ImportEditorWindow(QMainWindow):
         self._ui = Ui_MainWindow()
         self._ui.setupUi(self)
         self._insert_undo_redo_actions()
-        self._mappings_list_manager = ImportMappings(self._ui)
+        self._mappings_list_manager = ImportMappings(self._ui, self._undo_stack)
         self._editor = ImportEditor(
             self._ui, self._ui_error, self._undo_stack, self._connection_manager, mapping_settings
         )
