@@ -76,12 +76,15 @@ class MappingSpecificationModel(QAbstractTableModel):
     """Emitted when a change in mapping prompts for change in column or row type."""
     multi_column_type_recommendation_changed = Signal(object, object)
     """Emitted when all but given columns should be of given type."""
+    about_to_undo = Signal(str, str)
+    """Emitted before an undo/redo action."""
 
-    def __init__(self, mapping, table_name, undo_stack):
+    def __init__(self, table_name, mapping_name, mapping, undo_stack):
         """
         Args:
-            mapping (spinedb_api.ItemMappingBase): the item mapping to model
             table_name (str): source table name
+            mapping_name (str): mapping name
+            mapping (spinedb_api.ItemMappingBase): the item mapping to model
             undo_stack (QUndoStack): undo stack
         """
         super().__init__()
@@ -91,6 +94,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         if mapping is not None:
             self.set_mapping(mapping)
         self._table_name = table_name
+        self._mapping_name = mapping_name
         self._undo_stack = undo_stack
 
     @property
@@ -475,6 +479,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         return False
 
     def set_type(self, name, value):
+        self.about_to_undo.emit(self._table_name, self._mapping_name)
         if value in ("None", "", None):
             value = NoneMapping()
         elif value == "Constant":
@@ -504,6 +509,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         Returns:
             bool: True if the reference was modified successfully, False otherwise.
         """
+        self.about_to_undo.emit(self._table_name, self._mapping_name)
         mapping = self.get_component_mapping_from_name(name)
         if isinstance(value, str) and value.isdigit():
             value = int(value)

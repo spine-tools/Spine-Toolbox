@@ -15,7 +15,7 @@ Contains the mapping list model.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-from PySide2.QtCore import Qt, QAbstractListModel
+from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt
 from spinedb_api import ObjectClassMapping
 from .mapping_specification_model import MappingSpecificationModel
 
@@ -33,12 +33,25 @@ class MappingListModel(QAbstractListModel):
         self._table_name = table_name
         self._undo_stack = undo_stack
         for m in item_mappings:
-            self._names.append("Mapping " + str(self._counter))
-            self._mapping_specifications.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
+            name = "Mapping " + str(self._counter)
+            self._names.append(name)
+            specification = MappingSpecificationModel(self._table_name, name, m, self._undo_stack)
+            self._mapping_specifications.append(specification)
             self._counter += 1
 
     def get_mappings(self):
         return [m.mapping for m in self._mapping_specifications]
+
+    @property
+    def mapping_specifications(self):
+        return self._mapping_specifications
+
+    def mapping_specification(self, name):
+        try:
+            row = self._names.index(name)
+        except ValueError:
+            return None
+        return self._mapping_specifications[row]
 
     def mapping_name_at(self, row):
         return self._names[row]
@@ -64,24 +77,31 @@ class MappingListModel(QAbstractListModel):
         if self._mapping_specifications and role == Qt.DisplayRole and index.row() < self.rowCount():
             return self._names[index.row()]
 
-    def add_mapping(self, mapping=None):
-        self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(), self.rowCount())
-        m = mapping if mapping is not None else ObjectClassMapping()
-        self._mapping_specifications.append(MappingSpecificationModel(m, self._table_name, self._undo_stack))
+    def add_mapping(self):
+        self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
+        m = ObjectClassMapping()
         name = "Mapping " + str(self._counter)
+        specification = MappingSpecificationModel(self._table_name, name, m, self._undo_stack)
+        self._mapping_specifications.append(specification)
         self._names.append(name)
         self._counter += 1
         self.endInsertRows()
         return name
 
+    def insert_mapping_specification(self, name, row, specification):
+        self.beginInsertRows(QModelIndex(), row, row)
+        self._names.insert(row, name)
+        self._mapping_specifications.insert(row, specification)
+        self.endInsertRows()
+
     def remove_mapping(self, row):
         if row < 0 or row >= len(self._mapping_specifications):
             return
-        self.beginRemoveRows(self.index(row, 0), row, row)
-        mapping = self._mapping_specifications.pop(row).mapping
+        self.beginRemoveRows(QModelIndex(), row, row)
+        specification = self._mapping_specifications.pop(row)
         self._names.pop(row)
         self.endRemoveRows()
-        return mapping
+        return specification
 
     def check_mapping_validity(self):
         """

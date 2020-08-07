@@ -24,7 +24,10 @@ class TestMappingSpecificationModel(unittest.TestCase):
     def test_data_when_mapping_object_class_without_objects_or_parameters(self):
         undo_stack = MagicMock()
         model = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": None, "object": None}), "connector's name", undo_stack
+            "source table",
+            "mapping",
+            dict_to_map({"map_type": "ObjectClass", "name": None, "object": None}),
+            undo_stack,
         )
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 3)
@@ -60,7 +63,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "parameters": indexed_parameter_mapping_dict,
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
+        model = MappingSpecificationModel("source table", "mapping 1", dict_to_map(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 5)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -90,7 +93,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
         }
         mapping_dict = {"map_type": "ObjectClass", "name": 0, "objects": 1, "parameters": array_parameter_mapping_dict}
         undo_stack = MagicMock()
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
+        model = MappingSpecificationModel("source table", "mapping", dict_to_map(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 4)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -141,7 +144,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "objects": {"reference": "object_name", "map_type": "constant"},
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
+        model = MappingSpecificationModel("source table", "mapping 1", dict_to_map(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 5)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -203,7 +206,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "objects": {"reference": "object_name", "map_type": "constant"},
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
+        model = MappingSpecificationModel("source table", "mapping", dict_to_map(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 6)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -258,8 +261,9 @@ class TestMappingSpecificationModel(unittest.TestCase):
     def test_data_when_mapping_relationship_class_without_objects_or_parameters(self):
         undo_stack = MagicMock()
         model = MappingSpecificationModel(
+            "source table name",
+            "mapping",
             dict_to_map({"map_type": "RelationshipClass", "name": None, "object_classes": None, "object": None}),
-            "connector's name",
             undo_stack,
         )
         self.assertEqual(model.rowCount(), 3)
@@ -305,7 +309,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "parameters": indexed_parameter_mapping_dict,
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
+        model = MappingSpecificationModel("source table", "mapping 1", dict_to_map(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 6)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -347,7 +351,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "parameters": indexed_parameter_mapping_dict,
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel(dict_to_map(mapping_dict), "connector's name", undo_stack)
+        model = MappingSpecificationModel("source_table", "mapping 1", dict_to_map(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 8)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)

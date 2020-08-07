@@ -63,8 +63,9 @@ class TestSourceDataTableModel(unittest.TestCase):
         # if we add a pivoted mapping for the row with the error, the error should not be
         undo_stack = MagicMock()
         mapping = MappingSpecificationModel(
+            "source table",
+            "mapping",
             dict_to_map({"map_type": "ObjectClass", "name": {"map_type": "row", "value_reference": 0}}),
-            "connector's name",
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -72,7 +73,7 @@ class TestSourceDataTableModel(unittest.TestCase):
 
         # or if we add a mapping where there reading starts from a row bellow the error, the error should not be shown.
         mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "read_start_row": 1}), "connector's name", undo_stack
+            "source table", "mapping", dict_to_map({"map_type": "ObjectClass", "read_start_row": 1}), undo_stack
         )
         model.set_mapping(mapping)
         self.assertEqual(model.data(model.index(*error_index)), "Not a valid number")
@@ -91,8 +92,9 @@ class TestSourceDataTableModel(unittest.TestCase):
         # if we add mapping error should be shown.
         undo_stack = MagicMock()
         mapping = MappingSpecificationModel(
+            "source table",
+            "mapping",
             dict_to_map({"map_type": "ObjectClass", "name": {"map_type": "row", "value_reference": 1}}),
-            "connector's name",
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -104,22 +106,26 @@ class TestSourceDataTableModel(unittest.TestCase):
         # column mapping
         undo_stack = MagicMock()
         mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": 0}), "connector's name", undo_stack
+            "source table", "mapping", dict_to_map({"map_type": "ObjectClass", "name": 0}), undo_stack
         )
         model.set_mapping(mapping)
         self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
         self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
         # row not showing color if the start reading row is specified
         mapping = MappingSpecificationModel(
-            dict_to_map({"map_type": "ObjectClass", "name": 0, "read_start_row": 1}), "connector's name", undo_stack
+            "source table",
+            "mapping",
+            dict_to_map({"map_type": "ObjectClass", "name": 0, "read_start_row": 1}),
+            undo_stack,
         )
         model.set_mapping(mapping)
         self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
         self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
         # row not showing color if the row is pivoted
         mapping = MappingSpecificationModel(
+            "source table",
+            "mapping",
             dict_to_map({"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}),
-            "connector's name",
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -132,8 +138,9 @@ class TestSourceDataTableModel(unittest.TestCase):
         # row mapping
         undo_stack = MagicMock()
         mapping = MappingSpecificationModel(
+            "source table",
+            "mapping",
             dict_to_map({"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}}),
-            "connector's name",
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -142,10 +149,11 @@ class TestSourceDataTableModel(unittest.TestCase):
         self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), None)
         # column not showing color if the columns is skipped
         mapping = MappingSpecificationModel(
+            "source table",
+            "mapping",
             dict_to_map(
                 {"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}, "skip_columns": [0]}
             ),
-            "connector's name",
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -159,8 +167,9 @@ class TestSourceDataTableModel(unittest.TestCase):
         # row mapping
         undo_stack = MagicMock()
         mapping = MappingSpecificationModel(
+            "source table",
+            "mapping",
             dict_to_map({"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}),
-            "connector's name",
             undo_stack,
         )
         model.set_mapping(mapping)

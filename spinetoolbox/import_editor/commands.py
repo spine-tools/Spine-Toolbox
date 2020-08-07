@@ -38,21 +38,6 @@ class SetTableChecked(QUndoCommand):
         self._model.set_checked(self._row, not self._checked)
 
 
-class ChangeTable(QUndoCommand):
-    def __init__(self, import_editor, table, previous_table):
-        text = "change source table"
-        super().__init__(text)
-        self._editor = import_editor
-        self._table = table
-        self._previous_table = previous_table
-
-    def redo(self):
-        self._editor.select_table(self._table)
-
-    def undo(self):
-        self._editor.select_table(self._previous_table)
-
-
 class SetComponentMappingType(QUndoCommand):
     def __init__(
         self, component_display_name, mapping_specification_model, mapping_type, previous_type, previous_reference
@@ -101,9 +86,10 @@ class SetComponentMappingReference(QUndoCommand):
 
 
 class SetConnectorOption(QUndoCommand):
-    def __init__(self, option_key, options_widget, value, previous_value):
+    def __init__(self, source_table, option_key, options_widget, value, previous_value):
         text = f"change {option_key}"
         super().__init__(text)
+        self._source_table = source_table
         self._option_key = option_key
         self._options_widget = options_widget
         self._value = value
@@ -118,53 +104,52 @@ class SetConnectorOption(QUndoCommand):
         return command._option_key == self._option_key and command._value == self._value
 
     def redo(self):
-        self._options_widget.set_option_without_undo(self._option_key, self._value)
+        self._options_widget.set_option_without_undo(self._source_table, self._option_key, self._value)
 
     def undo(self):
-        self._options_widget.set_option_without_undo(self._option_key, self._previous_value)
-
-
-class SelectMapping(QUndoCommand):
-    def __init__(self, import_mappings, row, previous_row):
-        text = "mapping selection change"
-        super().__init__(text)
-        self._import_mappings = import_mappings
-        self._row = row
-        self._previous_row = previous_row
-
-    def redo(self):
-        self._import_mappings.select_mapping(self._row)
-
-    def undo(self):
-        self._import_mappings.select_mapping(self._previous_row)
+        self._options_widget.set_option_without_undo(self._source_table, self._option_key, self._previous_value)
 
 
 class CreateMapping(QUndoCommand):
-    def __init__(self, import_mappings):
+    def __init__(self, source_table_name, import_mappings, row):
         text = "new mapping"
         super().__init__(text)
+        self._source_table_name = source_table_name
         self._import_mappings = import_mappings
         self._mapping_name = None
+        self._row = row
+        self._stored_mapping_specification = None
 
     def redo(self):
-        self._mapping_name = self._import_mappings.create_mapping()
+        if self._mapping_name is None:
+            self._mapping_name = self._import_mappings.create_mapping()
+        else:
+            self._import_mappings.insert_mapping_specification(
+                self._source_table_name, self._mapping_name, self._row, self._stored_mapping_specification
+            )
 
     def undo(self):
-        if self._mapping_name is None:
-            return
-        self._import_mappings.delete_mapping(self._mapping_name)
+        self._stored_mapping_specification = self._import_mappings.delete_mapping(
+            self._source_table_name, self._mapping_name
+        )
 
 
 class DeleteMapping(QUndoCommand):
-    def __init__(self, import_mappings, mapping_name):
+    def __init__(self, source_table_name, import_mappings, mapping_name, row):
         text = "delete mapping"
         super().__init__(text)
+        self._source_table_name = source_table_name
         self._import_mappings = import_mappings
         self._mapping_name = mapping_name
-        self._stored_mapping = None
+        self._row = row
+        self._stored_mapping_specification = None
 
     def redo(self):
-        self._stored_mapping = self._import_mappings.delete_mapping(self._mapping_name)
+        self._stored_mapping_specification = self._import_mappings.delete_mapping(
+            self._source_table_name, self._mapping_name
+        )
 
     def undo(self):
-        self._mapping_name = self._import_mappings.create_mapping(self._stored_mapping)
+        self._import_mappings.insert_mapping_specification(
+            self._source_table_name, self._mapping_name, self._row, self._stored_mapping_specification
+        )

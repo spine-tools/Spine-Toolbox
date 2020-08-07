@@ -16,9 +16,9 @@ ImportMappings widget.
 :date:   1.6.2019
 """
 
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide2.QtCore import QObject, QItemSelectionModel, Signal, Slot
 from ...widgets.custom_delegates import ComboBoxDelegate
-from ..commands import CreateMapping, DeleteMapping, SelectMapping
+from ..commands import CreateMapping, DeleteMapping
 
 MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
@@ -28,10 +28,12 @@ class ImportMappings(QObject):
     Provides methods for managing Mappings (add, remove, edit, visualize, and so on).
     """
 
-    mapping_changed = Signal(object)
+    mapping_selection_changed = Signal(object)
     """Emitted when a new mapping specification is selected from the Mappings list."""
     mapping_data_changed = Signal(object)
     """Emits the new MappingListModel."""
+    about_to_undo = Signal(str)
+    """Emitted before an undo/redo action."""
 
     def __init__(self, ui, undo_stack):
         """
@@ -41,36 +43,53 @@ class ImportMappings(QObject):
         """
         super().__init__()
         self._ui = ui
+        self._source_table = None
         self._mappings_model = None
-        self._select_handle = None
         self._undo_stack = undo_stack
-        self._block_select_mapping_command = False
         # initialize interface
         self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(None, MAPPING_CHOICES))
 
         # connect signals
         self._ui.new_button.clicked.connect(self.new_mapping)
         self._ui.remove_button.clicked.connect(self.delete_selected_mapping)
-        self.mapping_changed.connect(self._ui.table_view_mappings.setModel)
+        self.mapping_selection_changed.connect(self._ui.table_view_mappings.setModel)
 
-    @Slot(object)
-    def set_mappings_model(self, model):
+    @Slot(str, object)
+    def set_mappings_model(self, source_table_name, model):
         """
-        Sets new model
+        Sets new mappings.
+
+        Args:
+            source_table_name (str): source table's name
+            model (MappingListModel): mapping list model
         """
-        if self._select_handle and self._ui.list_view.selectionModel():
-            self._ui.list_view.selectionModel().selectionChanged.disconnect(self.change_mapping)
-            self._select_handle = None
+        self._source_table = source_table_name
         if self._mappings_model is not None:
             self._mappings_model.dataChanged.disconnect(self.data_changed)
         self._mappings_model = model
         self._ui.list_view.setModel(model)
-        self._select_handle = self._ui.list_view.selectionModel().selectionChanged.connect(self.change_mapping)
+        for specification in self._mappings_model.mapping_specifications:
+            specification.about_to_undo.connect(self._focus_on_changing_specification)
+        self._ui.list_view.selectionModel().currentChanged.connect(self.change_mapping)
         self._mappings_model.dataChanged.connect(self.data_changed)
         if self._mappings_model.rowCount() > 0:
-            self.select_mapping(0)
+            self._select_row(0)
         else:
             self._ui.list_view.clearSelection()
+
+    @Slot(str, str)
+    def _focus_on_changing_specification(self, source_table_name, mapping_name):
+        """
+        Selects the given mapping from the list and emits about_to_undo.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_name (str): name of the mapping specification
+        """
+        self.about_to_undo.emit(source_table_name)
+        row = self._mappings_model.row_for_mapping(mapping_name)
+        index = self._mappings_model.index(row, 0)
+        self._ui.list_view.selectionModel().setCurrentIndex(index, QItemSelectionModel.ClearAndSelect)
 
     @Slot()
     def data_changed(self):
@@ -86,65 +105,75 @@ class ImportMappings(QObject):
         """
         Pushes a CreateMapping command to the undo stack
         """
-        command = CreateMapping(self)
-        self._undo_stack.push(command)
-
-    def create_mapping(self, mapping=None):
         if self._mappings_model is None:
             return
-        mapping_name = self._mappings_model.add_mapping(mapping)
-        self.select_mapping(self._mappings_model.rowCount() - 1)
+        row = self._mappings_model.rowCount()
+        command = CreateMapping(self._source_table, self, row)
+        self._undo_stack.push(command)
+
+    def create_mapping(self):
+        if self._mappings_model is None:
+            return
+        mapping_name = self._mappings_model.add_mapping()
+        specification = self._mappings_model.mapping_specification(mapping_name)
+        row = self._mappings_model.rowCount() - 1
+
+        def select_row_slot():
+            # We want to select the mapping during undo/redo to show the user where the changes happen.
+            self._select_row(row)
+
+        specification.dataChanged.connect(select_row_slot)
+        specification.about_to_undo.connect(self._focus_on_changing_specification)
+        self._select_row(row)
         return mapping_name
+
+    def insert_mapping_specification(self, source_table_name, name, row, mapping_specification):
+        self.about_to_undo.emit(source_table_name)
+        if self._mappings_model is None:
+            return
+        self._mappings_model.insert_mapping_specification(name, row, mapping_specification)
+        self._select_row(row)
 
     @Slot()
     def delete_selected_mapping(self):
         """
         Pushes a DeleteMapping command to the undo stack.
         """
-        indexes = self._ui.list_view.selectedIndexes()
-        if not indexes:
+        selection_model = self._ui.list_view.selectionModel()
+        if self._mappings_model is None or selection_model.hasSelection():
             return
-        row = indexes[0].row()
+        row = selection_model.currentIndex.row()
         mapping_name = self._mappings_model.mapping_name_at(row)
-        self._undo_stack.push(DeleteMapping(self, mapping_name))
+        self._undo_stack.push(DeleteMapping(self._source_table, self, mapping_name, row))
 
-    def delete_mapping(self, name):
+    def delete_mapping(self, source_table_name, name):
+        self.about_to_undo.emit(source_table_name)
         if self._mappings_model is None:
             return None
         row = self._mappings_model.row_for_mapping(name)
         if row is None:
             return None
-        mapping = self._mappings_model.remove_mapping(row)
+        mapping_specification = self._mappings_model.remove_mapping(row)
         mapping_count = self._mappings_model.rowCount()
         if mapping_count:
             if row == mapping_count:
-                self.select_mapping(mapping_count - 1)
+                self._select_row(mapping_count - 1)
             else:
-                self.select_mapping(row)
+                self._select_row(row)
         else:
-            self.mapping_changed.emit(None)
-        return mapping
+            self._ui.list_view.clearSelection()
+        return mapping_specification
 
+    def _select_row(self, row):
+        selection_model = self._ui.list_view.selectionModel()
+        if selection_model.hasSelection():
+            current_row = selection_model.currentIndex().row()
+            if row == current_row:
+                return
+        selection_model.setCurrentIndex(self._mappings_model.index(row, 0), QItemSelectionModel.ClearAndSelect)
 
     @Slot(object, object)
     def change_mapping(self, selected, deselected):
-        if self._block_select_mapping_command:
-            return
-        row = selected.indexes()[0].row()
-        previous_row = deselected.indexes()[0].row()
-        command = SelectMapping(self, row, previous_row)
-        self._undo_stack.push(command)
-
-    def select_mapping(self, row):
-        """Emits mappingChanged with the selected mapping."""
+        row = selected.row()
         index = self._mappings_model.index(row, 0)
-        self._block_select_mapping_command = True
-        self._ui.list_view.setCurrentIndex(index)
-        self._block_select_mapping_command = False
-        self.mapping_changed.emit(self._mappings_model.data_mapping(index))
-
-    def selected_mapping_name(self):
-        """Returns the name of the selected mapping."""
-        if not self._ui.list_view.selectionModel().hasSelection():
-            return None
-        return self._ui.list_view.selectionModel().selection().indexes()[0].data()
+        self.mapping_selection_changed.emit(self._mappings_model.data_mapping(index))

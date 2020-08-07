@@ -17,12 +17,11 @@ Contains ImportEditor widget and MappingTableMenu.
 """
 
 from copy import deepcopy
-from PySide2.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
+from PySide2.QtCore import QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
 from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
 from .options_widget import OptionsWidget
 from ...widgets.custom_menus import CustomContextMenu
-from ..commands import ChangeTable
 from ..mvcmodels.mapping_list_model import MappingListModel
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ..mvcmodels.source_table_list_model import SourceTableItem, SourceTableListModel
@@ -36,7 +35,7 @@ class ImportEditor(QObject):
 
     table_checked = Signal()
     mapped_data_ready = Signal(dict, list)
-    mapping_model_changed = Signal(object)
+    source_table_selected = Signal(str, object)
     preview_data_updated = Signal(int)
 
     def __init__(self, ui, ui_error, undo_stack, connector, mapping_settings):
@@ -55,8 +54,6 @@ class ImportEditor(QObject):
         # state
         self._connector = connector
         self._selected_table = None
-        self._preview_table_model = SourceDataTableModel()
-        self._selected_source_tables = set()
         self._table_mappings = {}
         self._table_updating = False
         self._data_updating = False
@@ -64,7 +61,7 @@ class ImportEditor(QObject):
         self._copied_options = {}
         self._ui_preview_menu = None
         self._undo_stack = undo_stack
-        self._block_change_table_command = False
+        self._preview_table_model = SourceDataTableModel()
         self._source_table_model = SourceTableListModel(self._undo_stack)
         self._restore_mappings(mapping_settings)
         self._ui.source_list.setModel(self._source_table_model)
@@ -76,6 +73,7 @@ class ImportEditor(QObject):
         self._ui.source_data_table.verticalHeader().display_all = False
 
         # connect signals
+        self._ui_options_widget.about_to_undo.connect(self.select_table)
         self._ui.source_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.source_list.customContextMenuRequested.connect(self.show_source_table_context_menu)
         self._ui.source_list.selectionModel().currentChanged.connect(self._change_selected_table)
@@ -137,32 +135,35 @@ class ImportEditor(QObject):
 
     @Slot(QModelIndex, QModelIndex)
     def _change_selected_table(self, selected, deselected):
-        if not selected.isValid() or self._block_change_table_command:
-            return
-        item = self._source_table_model.table_at(selected.row())
-        previous_item = self._source_table_model.table_at(deselected.row())
-        command = ChangeTable(self, item.name, previous_item.name)
-        self._undo_stack.push(command)
-
-    def select_table(self, table_name):
         """
         Set selected table and request data from connector
         """
-        if table_name not in self._table_mappings:
-            self._table_mappings[table_name] = MappingListModel([ObjectClassMapping()], table_name, self._undo_stack)
-        self.mapping_model_changed.emit(self._table_mappings[table_name])
-        # request new data
-        self._connector.set_table(table_name)
-        self._connector.request_data(table_name, max_rows=100)
-        self._selected_table = table_name
+        item = self._source_table_model.table_at(selected.row())
+        if item.name not in self._table_mappings:
+            self._table_mappings[item.name] = MappingListModel([ObjectClassMapping()], item.name, self._undo_stack)
+        self.source_table_selected.emit(item.name, self._table_mappings[item.name])
+        self._connector.set_table(item.name)
+        self._connector.request_data(item.name, max_rows=100)
+        self._selected_table = item.name
+
+    def _select_table_row(self, row):
         selection_model = self._ui.source_list.selectionModel()
-        selected_rows = selection_model.selectedRows()
-        if selected_rows and selected_rows[0].data() == table_name:
+        index = self._source_table_model.index(row, 0)
+        selection_model.setCurrentIndex(index, QItemSelectionModel.Select)
+
+    @Slot(str)
+    def select_table(self, table):
+        """
+        Selects given table in the source table list.
+
+        Args:
+            table (str): source table name
+        """
+        index = self._source_table_model.table_index(table)
+        selection_model = self._ui.source_list.selectionModel()
+        if selection_model.hasSelection() and index == selection_model.selection().indexes()[0]:
             return
-        select_index = self._source_table_model.table_index(table_name)
-        self._block_change_table_command = True
-        selection_model.setCurrentIndex(select_index, QItemSelectionModel.ClearAndSelect)
-        self._block_change_table_command = False
+        selection_model.setCurrentIndex(index, QItemSelectionModel.ClearAndSelect)
 
     def request_mapped_data(self):
         tables_mappings = {t: self._table_mappings[t].get_mappings() for t in self.checked_tables}
@@ -198,11 +199,9 @@ class ImportEditor(QObject):
         current_index = self._ui.source_list.selectionModel().currentIndex()
         # reselect table if existing otherwise select first table
         if current_index.isValid():
-            table_name = self._source_table_model.table_at(current_index.row()).name
-            self.select_table(table_name)
+            self._select_table_row(current_index.row())
         elif tables:
-            table_name = self._source_table_model.table_at(0).name
-            self.select_table(table_name)
+            self._select_table_row(0)
         self.table_checked.emit()
 
     @Slot(list, list)
@@ -372,14 +371,15 @@ class ImportEditor(QObject):
             [deepcopy(m) for m in self._copied_mapping], table, self._undo_stack
         )
         if self._selected_table == table:
-            self.mapping_model_changed.emit(self._table_mappings[table])
+            self.source_table_selected.emit(table, self._table_mappings[table])
 
     def paste_options(self, table):
         self._connector.set_table_options({table: deepcopy(self._copied_options.get("options", {}))})
         self._connector.set_table_types({table: deepcopy(self._copied_options.get("col_types", {}))})
         self._connector.set_table_row_types({table: deepcopy(self._copied_options.get("row_types", {}))})
         if self._selected_table == table:
-            self.select_table(self._ui.source_list.selectedItems()[0])
+            index = self._source_table_model.table_index(table)
+            self._ui.source_list.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
 
 
 class MappingTableMenu(QMenu):
