@@ -28,7 +28,7 @@ from .utils import deserialize_mappings
 class ExecutableItem(ExecutableItemBase, QObject):
 
     importing_finished = Signal()
-    """Emitted after the separate import process has finished executing."""
+    """Emitted after import thread has finished."""
 
     def __init__(self, name, settings, logs_dir, gams_path, cancel_on_error, logger):
         """
