@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>117</height>
+    <height>140</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,7 +61,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="out_file_name_edit">
+         <widget class="PropertyQLineEdit" name="out_file_name_edit">
           <property name="placeholderText">
            <string>Type output file name here...</string>
           </property>
@@ -108,6 +108,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PropertyQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>spinetoolbox/widgets/custom_qlineedits.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -25,7 +25,7 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
-from spinetoolbox.widgets.custom_qlineedit import PropertyQLineEdit
+from spinetoolbox.widgets.custom_qlineedits import PropertyQLineEdit
 
 from spinetoolbox import resources_icons_rc
 

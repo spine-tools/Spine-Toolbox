@@ -12,7 +12,7 @@
 """
 Classes for custom line edits.
 
-:author: M. Marin (KTH)
+:authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   11.10.2018
 """
 
@@ -26,8 +26,9 @@ class PropertyQLineEdit(QLineEdit):
     """A custom QLineEdit for Project Item Properties."""
 
     def keyPressEvent(self, e):
-        """Overridden to catch Undo and Redo commands
-        when the line edit has the focus.
+        """Overridden to catch and pass on the
+        Undo and Redo commands when this line
+        edit has the focus.
 
         Args:
             e (QKeyEvent): Event
@@ -74,3 +75,19 @@ class CustomQLineEdit(QLineEdit):
         """Emit file_dropped signal with the file for the dropped url."""
         url = event.mimeData().urls()[0]
         self.file_dropped.emit(url.toLocalFile())
+
+    def keyPressEvent(self, e):
+        """Overridden to catch and pass on the
+        Undo and Redo commands when this line
+        edit has the focus.
+
+        Args:
+            e (QKeyEvent): Event
+        """
+        mw = self.nativeParentWidget()  # ToolboxUI
+        if e.matches(QKeySequence.Undo):
+            mw.undo_stack.undo()
+        elif e.matches(QKeySequence.Redo):
+            mw.undo_stack.redo()
+        else:
+            super().keyPressEvent(e)

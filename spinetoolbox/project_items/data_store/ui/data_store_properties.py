@@ -25,7 +25,8 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
-from spinetoolbox.widgets.custom_qlineedit import CustomQLineEdit
+from spinetoolbox.widgets.custom_qlineedits import CustomQLineEdit
+from spinetoolbox.widgets.custom_qlineedits import PropertyQLineEdit
 
 from spinetoolbox import resources_icons_rc
 
@@ -170,7 +171,7 @@ class Ui_Form(object):
 
         self.gridLayout_3.addWidget(self.label_dsn, 1, 0, 1, 1)
 
-        self.lineEdit_username = QLineEdit(self.groupBox_3)
+        self.lineEdit_username = PropertyQLineEdit(self.groupBox_3)
         self.lineEdit_username.setObjectName(u"lineEdit_username")
         self.lineEdit_username.setEnabled(False)
         sizePolicy2.setHeightForWidth(self.lineEdit_username.sizePolicy().hasHeightForWidth())
@@ -190,7 +191,7 @@ class Ui_Form(object):
 
         self.gridLayout_3.addWidget(self.label_username, 2, 0, 1, 1)
 
-        self.lineEdit_password = QLineEdit(self.groupBox_3)
+        self.lineEdit_password = PropertyQLineEdit(self.groupBox_3)
         self.lineEdit_password.setObjectName(u"lineEdit_password")
         self.lineEdit_password.setEnabled(False)
         sizePolicy2.setHeightForWidth(self.lineEdit_password.sizePolicy().hasHeightForWidth())
@@ -205,7 +206,7 @@ class Ui_Form(object):
 
         self.horizontalLayout_23 = QHBoxLayout()
         self.horizontalLayout_23.setObjectName(u"horizontalLayout_23")
-        self.lineEdit_host = QLineEdit(self.groupBox_3)
+        self.lineEdit_host = PropertyQLineEdit(self.groupBox_3)
         self.lineEdit_host.setObjectName(u"lineEdit_host")
         self.lineEdit_host.setEnabled(False)
         sizePolicy3 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -231,7 +232,7 @@ class Ui_Form(object):
 
         self.horizontalLayout_23.addWidget(self.label_port)
 
-        self.lineEdit_port = QLineEdit(self.groupBox_3)
+        self.lineEdit_port = PropertyQLineEdit(self.groupBox_3)
         self.lineEdit_port.setObjectName(u"lineEdit_port")
         self.lineEdit_port.setEnabled(False)
         sizePolicy2.setHeightForWidth(self.lineEdit_port.sizePolicy().hasHeightForWidth())
@@ -345,6 +346,18 @@ class Ui_Form(object):
 
         self.verticalLayout.addWidget(self.scrollArea_5)
 
+        QWidget.setTabOrder(self.scrollArea_5, self.comboBox_dialect)
+        QWidget.setTabOrder(self.comboBox_dialect, self.comboBox_dsn)
+        QWidget.setTabOrder(self.comboBox_dsn, self.lineEdit_username)
+        QWidget.setTabOrder(self.lineEdit_username, self.lineEdit_password)
+        QWidget.setTabOrder(self.lineEdit_password, self.lineEdit_host)
+        QWidget.setTabOrder(self.lineEdit_host, self.lineEdit_port)
+        QWidget.setTabOrder(self.lineEdit_port, self.lineEdit_database)
+        QWidget.setTabOrder(self.lineEdit_database, self.toolButton_open_sqlite_file)
+        QWidget.setTabOrder(self.toolButton_open_sqlite_file, self.pushButton_create_new_spine_db)
+        QWidget.setTabOrder(self.pushButton_create_new_spine_db, self.pushButton_ds_form)
+        QWidget.setTabOrder(self.pushButton_ds_form, self.toolButton_copy_url)
+        QWidget.setTabOrder(self.toolButton_copy_url, self.toolButton_ds_open_dir)
 
         self.retranslateUi(Form)
 
