@@ -69,7 +69,7 @@ class ImportMappings(QObject):
         self._mappings_model = model
         self._ui.list_view.setModel(model)
         for specification in self._mappings_model.mapping_specifications:
-            specification.about_to_undo.connect(self._focus_on_changing_specification)
+            specification.about_to_undo.connect(self.focus_on_changing_specification)
         self._ui.list_view.selectionModel().currentChanged.connect(self.change_mapping)
         self._mappings_model.dataChanged.connect(self.data_changed)
         if self._mappings_model.rowCount() > 0:
@@ -78,7 +78,7 @@ class ImportMappings(QObject):
             self._ui.list_view.clearSelection()
 
     @Slot(str, str)
-    def _focus_on_changing_specification(self, source_table_name, mapping_name):
+    def focus_on_changing_specification(self, source_table_name, mapping_name):
         """
         Selects the given mapping from the list and emits about_to_undo.
 
@@ -123,7 +123,7 @@ class ImportMappings(QObject):
             self._select_row(row)
 
         specification.dataChanged.connect(select_row_slot)
-        specification.about_to_undo.connect(self._focus_on_changing_specification)
+        specification.about_to_undo.connect(self.focus_on_changing_specification)
         self._select_row(row)
         return mapping_name
 
@@ -140,9 +140,9 @@ class ImportMappings(QObject):
         Pushes a DeleteMapping command to the undo stack.
         """
         selection_model = self._ui.list_view.selectionModel()
-        if self._mappings_model is None or selection_model.hasSelection():
+        if self._mappings_model is None or not selection_model.hasSelection():
             return
-        row = selection_model.currentIndex.row()
+        row = selection_model.currentIndex().row()
         mapping_name = self._mappings_model.mapping_name_at(row)
         self._undo_stack.push(DeleteMapping(self._source_table, self, mapping_name, row))
 
@@ -176,4 +176,7 @@ class ImportMappings(QObject):
     def change_mapping(self, selected, deselected):
         row = selected.row()
         index = self._mappings_model.index(row, 0)
-        self.mapping_selection_changed.emit(self._mappings_model.data_mapping(index))
+        if index.isValid():
+            self.mapping_selection_changed.emit(self._mappings_model.data_mapping(index))
+        else:
+            self.mapping_selection_changed.emit(None)

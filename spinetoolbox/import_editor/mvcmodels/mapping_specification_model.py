@@ -102,6 +102,14 @@ class MappingSpecificationModel(QAbstractTableModel):
         return self._item_mapping
 
     @property
+    def mapping_name(self):
+        return self._mapping_name
+
+    @property
+    def source_table_name(self):
+        return self._table_name
+
+    @property
     def skip_columns(self):
         if self._item_mapping.skip_columns is None:
             return []
@@ -188,23 +196,26 @@ class MappingSpecificationModel(QAbstractTableModel):
         self.update_display_table()
         self.endResetModel()
 
-    def change_model_class(self, new_class):
+    def change_item_mapping_type(self, new_type):
         """
-        Change model between Relationship and Object class
+        Change item mapping's type.
+
+        Args:
+            new_type (str): name of the type
         """
         self.beginResetModel()
-        new_class = {
+        new_type = {
             "Object": ObjectClassMapping,
             "Relationship": RelationshipClassMapping,
             "Object group": ObjectGroupMapping,
             "Alternative": AlternativeMapping,
             "Scenario": ScenarioMapping,
-            "Scenario Alternative": ScenarioAlternativeMapping,
-        }[new_class]
+            "Scenario alternative": ScenarioAlternativeMapping,
+        }[new_type]
         if self._item_mapping is None:
-            self._item_mapping = new_class()
-        elif not isinstance(self._item_mapping, new_class):
-            self._item_mapping = new_class.from_instance(self._item_mapping)
+            self._item_mapping = new_type()
+        elif not isinstance(self._item_mapping, new_type):
+            self._item_mapping = new_type.from_instance(self._item_mapping)
         self.update_display_table()
         self.endResetModel()
 
@@ -229,6 +240,18 @@ class MappingSpecificationModel(QAbstractTableModel):
         elif new_type == "Time pattern":
             self._item_mapping.parameters = ParameterTimePatternMapping()
 
+        self.update_display_table()
+        self.endResetModel()
+
+    def set_parameter_mapping(self, mapping):
+        """
+        Changes the parameter mapping.
+
+        Args:
+            mapping (ParameterDefinitionMapping): new mapping
+        """
+        self.beginResetModel()
+        self._item_mapping.parameters = mapping
         self.update_display_table()
         self.endResetModel()
 
@@ -526,7 +549,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         else:
             try:
                 mapping.reference = value
-            except ValueError:
+            except TypeError:
                 return False
         return self.set_component_mapping_from_name(name, mapping)
 
@@ -672,7 +695,6 @@ class MappingSpecificationModel(QAbstractTableModel):
             columns = []
         self._item_mapping.skip_columns = list(set(columns))
 
-    @Slot(bool)
     def set_time_series_repeat(self, repeat):
         """Toggles the repeat flag in the parameter's options."""
         if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterTimeSeriesMapping):

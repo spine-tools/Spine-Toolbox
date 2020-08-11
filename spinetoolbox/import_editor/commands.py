@@ -16,6 +16,7 @@ Contains undo and redo commands for Import editor.
 """
 from enum import auto, IntEnum, unique
 from PySide2.QtWidgets import QUndoCommand
+from spinedb_api import parameter_mapping_from_dict
 
 
 @unique
@@ -152,4 +153,216 @@ class DeleteMapping(QUndoCommand):
     def undo(self):
         self._import_mappings.insert_mapping_specification(
             self._source_table_name, self._mapping_name, self._row, self._stored_mapping_specification
+        )
+
+
+class SetItemMappingType(QUndoCommand):
+    """Command to change item mapping's type."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, new_type, previous_mapping):
+        """
+        Args:
+            source_table_name (src): name of the source table
+            mapping_specification_name (str): name of the mapping
+            options_widget (ImportMappingOptions): options widget
+            new_type (str): name of the new mapping type
+            previous_mapping (ItemMappingBase): the previous mapping
+        """
+        text = "mapping class change"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._new_type = new_type
+        self._previous_mapping = previous_mapping
+
+    def redo(self):
+        """Sets the mapping type to its new value."""
+        self._options_widget.set_item_mapping_type(
+            self._source_table_name, self._mapping_specification_name, self._new_type
+        )
+
+    def undo(self):
+        """Resets the mapping type to its former value."""
+        self._options_widget.set_item_mapping(
+            self._source_table_name, self._mapping_specification_name, self._previous_mapping
+        )
+
+
+class SetImportObjectsFlag(QUndoCommand):
+    """Command to set item mapping's import objects flag."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, import_objects):
+        """
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            options_widget (ImportMappingOptions): options widget
+            import_objects (bool): new flag value
+        """
+        text = "import objects flag change"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._import_objects = import_objects
+
+    def redo(self):
+        self._options_widget.set_import_objects_flag(
+            self._source_table_name, self._mapping_specification_name, self._import_objects
+        )
+
+    def undo(self):
+        self._options_widget.set_import_objects_flag(
+            self._source_table_name, self._mapping_specification_name, not self._import_objects
+        )
+
+
+class SetParameterType(QUndoCommand):
+    """Command to change the parameter type of an item mapping."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, new_type, previous_parameter):
+        """
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            options_widget (ImportMappingOptions): options widget
+            new_type (str): name of the new parameter type
+            previous_parameter (ParameterDefinitionMapping): previous parameter mapping
+        """
+        text = "parameter type change"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._new_type = new_type
+        self._previous_parameter = previous_parameter.to_dict()
+
+    def redo(self):
+        self._options_widget.set_parameter_type(
+            self._source_table_name, self._mapping_specification_name, self._new_type
+        )
+
+    def undo(self):
+        mapping = parameter_mapping_from_dict(self._previous_parameter)
+        self._options_widget.set_parameter_mapping(self._source_table_name, self._mapping_specification_name, mapping)
+
+
+class SetReadStartRow(QUndoCommand):
+    """Command to change item mapping's read start row option."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, start_row, previous_start_row):
+        """
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            options_widget (ImportMappingOptions): options widget
+            start_row (int): new read start row
+            previous_start_row (int): previous read start row value
+        """
+        text = "mapping read start row change"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._start_row = start_row
+        self._previous_start_row = previous_start_row
+
+    def redo(self):
+        """Changes item mapping's read start row to a new value."""
+        self._options_widget.set_read_start_row(
+            self._source_table_name, self._mapping_specification_name, self._start_row
+        )
+
+    def undo(self):
+        """Restores item mapping's read start row to its previous value."""
+        self._options_widget.set_read_start_row(
+            self._source_table_name, self._mapping_specification_name, self._previous_start_row
+        )
+
+
+class SetItemMappingDimension(QUndoCommand):
+    """Command to change item mapping's dimension option."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, dimension, previous_dimension):
+        """
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            options_widget (ImportMappingOptions): options widget
+            dimension (int): new dimension
+            previous_dimension (int): previous dimension
+        """
+        text = "mapping dimension change"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._dimension = dimension
+        self._previous_dimension = previous_dimension
+
+    def redo(self):
+        """Changes the item mapping's dimension to the new value."""
+        self._options_widget.set_dimension(self._source_table_name, self._mapping_specification_name, self._dimension)
+
+    def undo(self):
+        """Changes the item mapping's dimension to its previous value."""
+        self._options_widget.set_dimension(
+            self._source_table_name, self._mapping_specification_name, self._previous_dimension
+        )
+
+
+class SetTimeSeriesRepeatFlag(QUndoCommand):
+    """Command to change the repeat flag for time series."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, repeat):
+        """
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            options_widget (ImportMappingOptions): options widget
+            repeat (bool): new repeat flag value
+        """
+        text = "change time series repeat flag"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._repeat = repeat
+
+    def redo(self):
+        """Sets the repeat flag to given value."""
+        self._options_widget.set_time_series_repeat_flag(
+            self._source_table_name, self._mapping_specification_name, self._repeat
+        )
+
+    def undo(self):
+        """Restores the repeat flag to its previous value."""
+        self._options_widget.set_time_series_repeat_flag(
+            self._source_table_name, self._mapping_specification_name, not self._repeat
+        )
+
+
+class SetMapDimensions(QUndoCommand):
+    """Command to change the dimensions of a Map parameter value type."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, dimensions, previous_dimensions):
+        text = "map dimensions change"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._dimensions = dimensions
+        self._previous_dimensions = previous_dimensions
+
+    def redo(self):
+        """Sets the Map dimensions to the new value."""
+        self._options_widget.set_map_dimensions(
+            self._source_table_name, self._mapping_specification_name, self._dimensions
+        )
+
+    def undo(self):
+        """Restores the previous Map dimensions value."""
+        self._options_widget.set_map_dimensions(
+            self._source_table_name, self._mapping_specification_name, self._previous_dimensions
         )

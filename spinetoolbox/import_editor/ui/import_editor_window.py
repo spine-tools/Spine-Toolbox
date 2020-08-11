@@ -332,7 +332,7 @@ class Ui_MainWindow(object):
         self.class_type_combo_box.setItemText(2, QCoreApplication.translate("MainWindow", u"Object group", None))
         self.class_type_combo_box.setItemText(3, QCoreApplication.translate("MainWindow", u"Alternative", None))
         self.class_type_combo_box.setItemText(4, QCoreApplication.translate("MainWindow", u"Scenario", None))
-        self.class_type_combo_box.setItemText(5, QCoreApplication.translate("MainWindow", u"Scenario Alternative", None))
+        self.class_type_combo_box.setItemText(5, QCoreApplication.translate("MainWindow", u"Scenario alternative", None))
 
         self.parameter_type_label.setText(QCoreApplication.translate("MainWindow", u"Parameter type:", None))
         self.parameter_type_combo_box.setItemText(0, QCoreApplication.translate("MainWindow", u"Single value", None))

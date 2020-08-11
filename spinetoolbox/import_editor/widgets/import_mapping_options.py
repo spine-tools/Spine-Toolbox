@@ -15,7 +15,7 @@ ImportMappingOptions widget.
 :author: P. Vennström (VTT)
 :date:   12.5.2020
 """
-from PySide2.QtCore import QObject, Qt, Slot
+from PySide2.QtCore import QObject, Qt, Signal, Slot
 from spinedb_api import (
     RelationshipClassMapping,
     ObjectClassMapping,
@@ -26,6 +26,15 @@ from spinedb_api import (
     ParameterMapMapping,
     ParameterTimeSeriesMapping,
 )
+from ..commands import (
+    SetImportObjectsFlag,
+    SetItemMappingDimension,
+    SetItemMappingType,
+    SetMapDimensions,
+    SetParameterType,
+    SetReadStartRow,
+    SetTimeSeriesRepeatFlag,
+)
 from ...widgets.custom_menus import SimpleFilterMenu
 
 
@@ -34,31 +43,35 @@ class ImportMappingOptions(QObject):
     Provides methods for managing Mapping options (class type, dimensions, parameter type, ignore columns, and so on).
     """
 
-    def __init__(self, ui):
+    about_to_undo = Signal(str, str)
+
+    def __init__(self, ui, undo_stack):
         """
         Args:
             ui (QWidget): importer window's UI
+            undo_stack (QUndoStack): undo stack
         """
         # state
         super().__init__()
         self._ui = ui
+        self._undo_stack = undo_stack
         self._mapping_specification_model = None
         self._block_signals = False
-        self._model_reset_signal = None
-        self._model_data_signal = None
+        self._executing_command = False
         self._ui_ignore_columns_filtermenu = None
         # ui
         self._ui_ignore_columns_filtermenu = SimpleFilterMenu(self._ui.ignore_columns_button, show_empty=False)
         self._ui.ignore_columns_button.setMenu(self._ui_ignore_columns_filtermenu)
 
         # connect signals
-        self._ui.dimension_spin_box.valueChanged.connect(self.change_dimension)
-        self._ui.class_type_combo_box.currentTextChanged.connect(self.change_class)
-        self._ui.parameter_type_combo_box.currentTextChanged.connect(self.change_parameter)
-        self._ui.import_objects_check_box.stateChanged.connect(self.change_import_objects)
+        self._ui.dimension_spin_box.valueChanged.connect(self._change_dimension)
+        self._ui.class_type_combo_box.currentTextChanged.connect(self._change_item_mapping_type)
+        self._ui.parameter_type_combo_box.currentTextChanged.connect(self._change_parameter_type)
+        self._ui.import_objects_check_box.stateChanged.connect(self._change_import_objects)
         self._ui_ignore_columns_filtermenu.filterChanged.connect(self.change_skip_columns)
-        self._ui.start_read_row_spin_box.valueChanged.connect(self.change_read_start_row)
-
+        self._ui.start_read_row_spin_box.valueChanged.connect(self._change_read_start_row)
+        self._ui.time_series_repeat_check_box.stateChanged.connect(self._change_time_series_repeat_flag)
+        self._ui.map_dimension_spin_box.valueChanged.connect(self._change_map_dimensions)
         self.update_ui()
 
     @Slot(int)
@@ -73,29 +86,19 @@ class ImportMappingOptions(QObject):
 
     @Slot(object)
     def set_mapping_specification_model(self, model):
-        try:
-            self._ui.time_series_repeat_check_box.toggled.disconnect()
-        except RuntimeError:
-            pass
-        try:
-            self._ui.map_dimension_spin_box.valueChanged.disconnect()
-        except RuntimeError:
-            pass
-        if self._mapping_specification_model:
-            if self._model_reset_signal:
-                self._mapping_specification_model.modelReset.disconnect(self.update_ui)
-                self._model_reset_signal = None
-            if self._model_data_signal:
-                self._mapping_specification_model.dataChanged.disconnect(self.update_ui)
-                self._model_data_signal = None
-        self._mapping_specification_model = model
-        if self._mapping_specification_model:
-            self._model_reset_signal = self._mapping_specification_model.modelReset.connect(self.update_ui)
-            self._model_data_signal = self._mapping_specification_model.dataChanged.connect(self.update_ui)
-            self._ui.time_series_repeat_check_box.toggled.connect(
-                self._mapping_specification_model.set_time_series_repeat
+        if self._mapping_specification_model is not None:
+            self._mapping_specification_model.modelReset.disconnect(self.update_ui)
+            self._mapping_specification_model.dataChanged.disconnect(self.update_ui)
+            self._mapping_specification_model.mapping_read_start_row_changed.disconnect(
+                self._ui.start_read_row_spin_box.setValue
             )
-            self._ui.map_dimension_spin_box.valueChanged.connect(self._mapping_specification_model.set_map_dimensions)
+        self._mapping_specification_model = model
+        if self._mapping_specification_model is not None:
+            self._mapping_specification_model.modelReset.connect(self.update_ui)
+            self._mapping_specification_model.dataChanged.connect(self.update_ui)
+            self._mapping_specification_model.mapping_read_start_row_changed.connect(
+                self._ui.start_read_row_spin_box.setValue
+            )
         self.update_ui()
 
     def update_ui(self):
@@ -169,25 +172,264 @@ class ImportMappingOptions(QObject):
         self._update_map_options()
         self._block_signals = False
 
-    def change_class(self, new_class):
-        if self._mapping_specification_model and not self._block_signals:
-            self._mapping_specification_model.change_model_class(new_class)
+    @Slot(str)
+    def _change_item_mapping_type(self, new_type):
+        """
+        Pushes a SetItemMappingType command to the undo stack
 
-    def change_dimension(self, dim):
-        if self._mapping_specification_model and not self._block_signals:
-            self._mapping_specification_model.set_dimension(dim)
+        Args:
+            new_type (str): item's new type
+        """
+        if self._executing_command or self._block_signals:
+            return
+        source_table_name = self._mapping_specification_model.source_table_name
+        specification_name = self._mapping_specification_model.mapping_name
+        previous_mapping = self._mapping_specification_model.mapping
+        self._undo_stack.push(
+            SetItemMappingType(source_table_name, specification_name, self, new_type, previous_mapping)
+        )
 
-    def change_parameter(self, par):
-        if self._mapping_specification_model and not self._block_signals:
-            self._mapping_specification_model.change_parameter_type(par)
+    def set_item_mapping_type(self, source_table_name, mapping_specification_name, new_type):
+        """
+        Sets the type for an item mapping.
 
-    def change_import_objects(self, state):
-        if self._mapping_specification_model and not self._block_signals:
-            self._mapping_specification_model.set_import_objects(state)
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            new_type (str): name of the type
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.change_item_mapping_type(new_type)
+        self._executing_command = False
 
-    def change_read_start_row(self, row):
+    def set_item_mapping(self, source_table_name, mapping_specification_name, mapping):
+        """
+        Sets item mapping.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            mapping (ItemMappingBase): item mapping
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.set_mapping(mapping)
+        self._executing_command = False
+
+    @Slot(int)
+    def _change_dimension(self, dimension):
+        """
+        Pushes a SetItemMappingDimension command to the undo stack.
+
+        Args:
+            dimension (int): mapping's dimension
+        """
+        if self._executing_command or self._block_signals:
+            return
+        source_table_name = self._mapping_specification_model.source_table_name
+        specification_name = self._mapping_specification_model.mapping_name
+        previous_dimension = self._mapping_specification_model.mapping.dimensions
+        self._undo_stack.push(
+            SetItemMappingDimension(source_table_name, specification_name, self, dimension, previous_dimension)
+        )
+
+    def set_dimension(self, source_table_name, mapping_specification_name, dimension):
+        """
+        Changes the item mapping's dimension and emits about_to_undo.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            dimension (int): new dimension value
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.set_dimension(dimension)
+        self._executing_command = False
+
+    @Slot(str)
+    def _change_parameter_type(self, type_name):
+        """
+        Pushes a SetParameterType command to undo stack.
+
+        Args:
+            type_name (str): new parameter type's name
+        """
+        if self._executing_command or self._block_signals:
+            return
         if self._mapping_specification_model and not self._block_signals:
-            self._mapping_specification_model.set_read_start_row(row)
+            source_table_name = self._mapping_specification_model.source_table_name
+            specification_name = self._mapping_specification_model.mapping_name
+            previous_mapping = self._mapping_specification_model.mapping.parameters
+            self._undo_stack.push(
+                SetParameterType(source_table_name, specification_name, self, type_name, previous_mapping)
+            )
+
+    def set_parameter_type(self, source_table_name, mapping_specification_name, type_name):
+        """
+        Sets parameter type for an item mapping.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            type_name (src): new parameter type's name
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.change_parameter_type(type_name)
+        self._executing_command = False
+
+    def set_parameter_mapping(self, source_table_name, mapping_specification_name, parameter_mapping):
+        """
+        Sets parameter mapping for an item mapping.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            parameter_mapping (ParameterDefinitionMapping): new parameter
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.set_parameter_mapping(parameter_mapping)
+        self._executing_command = False
+
+    @Slot(bool)
+    def _change_import_objects(self, state):
+        """
+        Pushes SetImportObjectsFlag command to the undo stack.
+
+        Args:
+            state (bool): new flag value
+        """
+        if self._executing_command or self._block_signals:
+            return
+        source_table_name = self._mapping_specification_model.source_table_name
+        specification_name = self._mapping_specification_model.mapping_name
+        self._undo_stack.push(SetImportObjectsFlag(source_table_name, specification_name, self, state))
+
+    def set_import_objects_flag(self, source_table_name, mapping_specification_name, import_objects):
+        """
+        Sets the import objects flag.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            import_objects (bool): flag value
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.set_import_objects(import_objects)
+        self._ui.import_objects_check_box.setChecked(import_objects)
+        self._executing_command = False
+
+    @Slot(int)
+    def _change_read_start_row(self, row):
+        """
+        Pushes :class:`SetReadStartRow` to the undo stack.
+
+        Args:
+            row (int): new read start row
+        """
+        if self._executing_command or self._block_signals:
+            return
+        source_table_name = self._mapping_specification_model.source_table_name
+        specification_name = self._mapping_specification_model.mapping_name
+        previous_row = self._mapping_specification_model.mapping.read_start_row
+        self._undo_stack.push(SetReadStartRow(source_table_name, specification_name, self, row, previous_row))
+
+    def set_read_start_row(self, source_table_name, mapping_specification_name, start_row):
+        """
+        Sets item's parameter's read start row.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            start_row (int): new read start row value
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.set_read_start_row(start_row)
+        self._executing_command = False
+
+    @Slot(bool)
+    def _change_time_series_repeat_flag(self, repeat):
+        """
+        Pushes :class:`SetTimeSeriesRepeatFlag` to the undo stack.
+
+        Args:
+            repeat (bool): True is repeat is enable, False otherwise
+        """
+        if self._executing_command or self._block_signals:
+            return
+        source_table_name = self._mapping_specification_model.source_table_name
+        specification_name = self._mapping_specification_model.mapping_name
+        self._undo_stack.push(SetTimeSeriesRepeatFlag(source_table_name, specification_name, self, repeat))
+
+    def set_time_series_repeat_flag(self, source_table_name, mapping_specification_name, repeat):
+        """
+        Sets the time series repeat flag to given value.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            repeat (bool): new repeat flag value
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.set_time_series_repeat(repeat)
+        self._ui.time_series_repeat_check_box.setChecked(repeat)
+        self._executing_command = False
+
+    @Slot(int)
+    def _change_map_dimensions(self, dimensions):
+        """
+        Pushes :class:`SetMapDimensions` to the undo stack.
+
+        Args:
+            dimensions (int): new map dimensions
+        """
+        if self._executing_command or self._block_signals:
+            return
+        source_table_name = self._mapping_specification_model.source_table_name
+        specification_name = self._mapping_specification_model.mapping_name
+        previous_dimensions = len(self._mapping_specification_model.mapping.parameters.extra_dimensions)
+        self._undo_stack.push(
+            SetMapDimensions(source_table_name, specification_name, self, dimensions, previous_dimensions)
+        )
+
+    def set_map_dimensions(self, source_table_name, mapping_specification_name, dimensions):
+        """
+        Sets map dimensions.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            dimensions (int): new map dimensions
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.set_map_dimensions(dimensions)
+        self._ui.map_dimension_spin_box.setValue(dimensions)
+        self._executing_command = False
 
     def _update_time_series_options(self):
         if self._mapping_specification_model is None:
