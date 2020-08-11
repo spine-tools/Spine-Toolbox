@@ -327,12 +327,12 @@ class ImportEditor(QObject):
         Args:
             pos (QPoint): Mouse position
         """
-        pPos = self._ui.source_list.mapToGlobal(pos)
-        item = self._ui.source_list.itemAt(pos)
-        table = item.text()
-        source_list_menu = TableMenu(self, pPos, bool(self._copied_options), self._copied_mapping is not None)
-        source_list_menu.deleteLater()
+        global_pos = self._ui.source_list.mapToGlobal(pos)
+        index = self._ui.source_list.indexAt(pos)
+        table = index.data()
+        source_list_menu = TableMenu(self._ui.source_list, global_pos, bool(self._copied_options), self._copied_mapping is not None)
         option = source_list_menu.get_action()
+        source_list_menu.deleteLater()
         if option == "Copy mappings":
             self.copy_mappings(table)
             return
