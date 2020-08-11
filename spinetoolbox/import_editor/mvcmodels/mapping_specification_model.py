@@ -501,7 +501,38 @@ class MappingSpecificationModel(QAbstractTableModel):
             )
         return False
 
+    def change_component_mapping(self, component_name, type_name, reference):
+        """
+        Pushes :class:`SetComponentMappingType` to the undo stack.
+
+        Args:
+            component_name (str): name of the component whose type to change
+            type_name (str): name of the new type
+            reference (str or int): component mapping reference
+        """
+        row = self._display_names.index(component_name)
+        component_mapping = self._component_mappings[row]
+        previous_reference = component_mapping.reference
+        previous_type = _MAP_TYPE_DISPLAY_NAME[type(component_mapping)]
+        self._undo_stack.beginMacro("mapping type change")
+        self._undo_stack.push(
+            SetComponentMappingType(component_name, self, type_name, previous_type, previous_reference)
+        )
+        self._undo_stack.push(
+            SetComponentMappingReference(
+                component_name, self, reference, previous_reference, isinstance(component_mapping, NoneMapping)
+            )
+        )
+        self._undo_stack.endMacro()
+
     def set_type(self, name, value):
+        """
+        Changes the type of a component mapping.
+
+        Args:
+            name (str): component name
+            value (str): mapping type name
+        """
         self.about_to_undo.emit(self._table_name, self._mapping_name)
         if value in ("None", "", None):
             value = NoneMapping()
@@ -519,7 +550,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             value = TableNameMapping(self._table_name)
         else:
             return False
-        return self.set_component_mapping_from_name(name, value)
+        return self._set_component_mapping_from_name(name, value)
 
     def set_value(self, name, value):
         """
@@ -533,7 +564,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             bool: True if the reference was modified successfully, False otherwise.
         """
         self.about_to_undo.emit(self._table_name, self._mapping_name)
-        mapping = self.get_component_mapping_from_name(name)
+        mapping = self._get_component_mapping_from_name(name)
         if isinstance(value, str) and value.isdigit():
             value = int(value)
         if isinstance(value, int):
@@ -551,9 +582,9 @@ class MappingSpecificationModel(QAbstractTableModel):
                 mapping.reference = value
             except TypeError:
                 return False
-        return self.set_component_mapping_from_name(name, mapping)
+        return self._set_component_mapping_from_name(name, mapping)
 
-    def get_component_mapping_from_name(self, name):
+    def _get_component_mapping_from_name(self, name):
         if not self._item_mapping:
             return None
         if name in ("Relationship class names", "Object class names"):
@@ -592,7 +623,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             return self._item_mapping.parameters.extra_dimensions[_name_index(name)]
         return None
 
-    def set_component_mapping_from_name(self, name, mapping):
+    def _set_component_mapping_from_name(self, name, mapping):
         if name in ("Relationship class names", "Object class names"):
             self._item_mapping.name = mapping
             self._recommend_string_type(mapping)

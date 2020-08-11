@@ -388,19 +388,28 @@ class MappingTableMenu(QMenu):
     """
 
     def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         super().__init__(parent)
         self._model = None
 
     def set_model(self, model):
+        """
+        Sets target mapping specification.
+
+        Args:
+            model (MappingSpecificationModel): mapping specification
+        """
         self._model = model
 
     def set_mapping(self, name="", map_type=None, value=None):
-        if not self._model:
+        if self._model is None:
             return
-        mapping = mapping_from_dict({"map_type": map_type, "value_reference": value})
-        self._model.set_component_mapping_from_name(name, mapping)
+        self._model.change_component_mapping(name, map_type, value)
 
-    def request_menu(self, QPos=None):
+    def request_menu(self, pos=None):
         if not self._model:
             return
         indexes = self.parent().selectedIndexes()
@@ -408,11 +417,11 @@ class MappingTableMenu(QMenu):
             return
         self.clear()
         index = indexes[0]
-        row = index.row()
-        col = index.column()
+        row = index.row() + 1
+        col = index.column() + 1
 
         def create_callback(name, map_type, value):
-            return lambda: self.set_mapping(name=name, map_type=map_type, value=value)
+            return lambda: self.set_mapping(name, map_type, value)
 
         mapping_names = [
             self._model.data(self._model.createIndex(i, 0), Qt.DisplayRole) for i in range(self._model.rowCount())
@@ -428,11 +437,11 @@ class MappingTableMenu(QMenu):
         for title, map_type, value in menus:
             m = self.addMenu(title)
             for name in mapping_names:
-                m.addAction(name).triggered.connect(create_callback(name=name, map_type=map_type, value=value))
+                m.addAction(name).triggered.connect(create_callback(name, map_type, value))
 
-        pPos = self.parent().mapToGlobal(QPoint(5, 20))
-        mPos = pPos + QPos
-        self.move(mPos)
+        global_pos = self.parent().mapToGlobal(QPoint(5, 20))
+        menu_pos = global_pos + pos
+        self.move(menu_pos)
         self.show()
 
 

@@ -169,7 +169,7 @@ class SetItemMappingType(QUndoCommand):
             new_type (str): name of the new mapping type
             previous_mapping (ItemMappingBase): the previous mapping
         """
-        text = "mapping class change"
+        text = "mapping type change"
         super().__init__(text)
         self._source_table_name = source_table_name
         self._mapping_specification_name = mapping_specification_name
