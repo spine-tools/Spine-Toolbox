@@ -17,10 +17,11 @@ Classes for handling models in PySide2's model/view framework.
 """
 from collections import namedtuple
 from collections.abc import Iterable
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QCursor, QFont, QIcon
 from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
 from spinetoolbox.helpers import CharIconEngine
+from ..commands import SetColumnOrRowType
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ...spine_io.io_api import TYPE_STRING_TO_CLASS
 from ...spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
@@ -49,8 +50,8 @@ class TableViewWithButtonHeader(QTableView):
             parent (QWidget): a parent widget
         """
         super().__init__(parent)
-        self._horizontal_header = _HeaderWithButton(Qt.Horizontal, self)
-        self._vertical_header = _HeaderWithButton(Qt.Vertical, self)
+        self._horizontal_header = HeaderWithButton(Qt.Horizontal, self)
+        self._vertical_header = HeaderWithButton(Qt.Vertical, self)
         self.setHorizontalHeader(self._horizontal_header)
         self._horizontal_header.setContextMenuPolicy(Qt.CustomContextMenu)
         self._horizontal_header.customContextMenuRequested.connect(self._show_horizontal_header_menu)
@@ -116,23 +117,41 @@ class TableViewWithButtonHeader(QTableView):
         """Sets all columns data types to the type given by action's text."""
         type_str = action.text()
         columns = range(self._horizontal_header.count())
-        self._horizontal_header.set_data_types(columns, type_str)
+        self._horizontal_header.change_data_types(columns, type_str)
 
     @Slot("QAction")
     def _set_all_row_data_types(self, action):
         """Sets all rows data types to the type given by action's text."""
         type_str = action.text()
         rows = range(self._vertical_header.count())
-        self._vertical_header.set_data_types(rows, type_str)
+        self._vertical_header.change_data_types(rows, type_str)
+
+    def set_undo_stack(self, undo_stack, about_to_undo_slot):
+        """
+        Sets undo stack for the table.
+
+        Args:
+            undo_stack (QUndoStack): undo stack
+            about_to_undo_slot (object): a slot that takes the source table name as its argument
+        """
+        self._horizontal_header.set_undo_stack(undo_stack)
+        self._horizontal_header.about_to_undo.connect(about_to_undo_slot)
+        self._vertical_header.set_undo_stack(undo_stack)
+        self._vertical_header.about_to_undo.connect(about_to_undo_slot)
 
 
-class _HeaderWithButton(QHeaderView):
+class HeaderWithButton(QHeaderView):
     """Class that reimplements the QHeaderView section paint event to draw a button
     that is used to display and change the type of that column or row.
     """
 
+    about_to_undo = Signal(str)
+    """Emitted when an undo/redo command is going to be executed."""
+
     def __init__(self, orientation, parent=None):
         super().__init__(orientation, parent)
+        self._source_table_name = None
+        self._undo_stack = None
         self.setHighlightSections(True)
         self.setSectionsClickable(True)
         self.setDefaultAlignment(Qt.AlignLeft)
@@ -183,11 +202,11 @@ class _HeaderWithButton(QHeaderView):
         """Sets the data type of a row or column according to menu action."""
         logical_index = self.logicalIndexAt(self._button.pos())
         type_str = action.text()
-        self.set_data_types(logical_index, type_str)
+        self.change_data_types(logical_index, type_str)
 
-    def set_data_types(self, sections, type_str):
+    def change_data_types(self, sections, type_str):
         """
-        Sets the data types of given sections (rows, columns).
+        Pushes :class:`SetColumnOrRowType` to the undo stack.
 
         Args:
             sections (Iterable or int or NoneType): row/column index
@@ -203,7 +222,22 @@ class _HeaderWithButton(QHeaderView):
         if not isinstance(sections, Iterable):
             sections = [sections]
         orientation = self.orientation()
-        self.model().set_types(sections, convert_spec, orientation)
+        previous_convert_spec = self.model().get_type(sections[0], orientation)
+        self._undo_stack.push(
+            SetColumnOrRowType(self._source_table_name, self, sections, convert_spec, previous_convert_spec)
+        )
+
+    def set_data_types(self, source_table_name, sections, convert_specification):
+        """
+        Sets the data type for given sections.
+
+        Args:
+            source_table_name (str): name of the source table
+            sections (Iterable): section indexes
+            convert_specification (ConvertSpec): data conversion specification
+        """
+        self.about_to_undo.emit(source_table_name)
+        self.model().set_types(sections, convert_specification, self.orientation())
 
     @Slot()
     def update_buttons(self):
@@ -386,6 +420,25 @@ class _HeaderWithButton(QHeaderView):
                 if isinstance(old_model, SourceDataTableModel):
                     old_model.row_types_updated.disconnect(self.update_buttons)
         super().setModel(model)
+
+    def set_undo_stack(self, undo_stack):
+        """
+        Sets undo stack for the header making menu actions to work.
+
+        Args:
+            undo_stack (QUndoStack): undo stack
+        """
+        self._undo_stack = undo_stack
+
+    @Slot(str)
+    def set_source_table(self, table_name):
+        """
+        Sets the current source table.
+
+        Args:
+            table_name (str): source table name
+        """
+        self._source_table_name = table_name
 
 
 def _create_allowed_types_menu(parent, trigger_slot):

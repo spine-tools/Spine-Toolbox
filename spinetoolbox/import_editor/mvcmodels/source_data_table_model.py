@@ -48,15 +48,13 @@ class SourceDataTableModel(MinimalTableModel):
     column_types_updated = Signal()
     row_types_updated = Signal()
     mapping_changed = Signal()
+    about_to_undo = Signal(str)
+    """Emitted when an undo/redo command is going to be executed."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self._mapping_specification = None
-        self._data_changed_signal = None
-        self._read_start_row_changed_signal = None
-        self._row_or_column_type_recommendation_changed_signal = None
-        self._multi_column_type_recommendation_changed_signal = None
         self._column_types = {}
         self._row_types = {}
         self._column_type_errors = {}
@@ -92,31 +90,15 @@ class SourceDataTableModel(MinimalTableModel):
                 f"mapping must be instance of 'MappingSpecificationModel', instead got: '{type(mapping).__name__}'"
             )
         if self._mapping_specification is not None:
-            if self._data_changed_signal is not None:
-                self._mapping_specification.dataChanged.disconnect(self._mapping_data_changed)
-                self._data_changed_signal = None
-            if self._read_start_row_changed_signal is not None:
-                self._mapping_specification.mapping_read_start_row_changed.disconnect(self._mapping_data_changed)
-                self._read_start_row_changed_signal = None
-            if self._row_or_column_type_recommendation_changed_signal is not None:
-                self._mapping_specification.row_or_column_type_recommendation_changed.disconnect(self.set_type)
-                self._row_or_column_type_recommendation_changed_signal = None
-            if self._multi_column_type_recommendation_changed_signal is not None:
-                self._mapping_specification.multi_column_type_recommendation_changed.disconnect(
-                    self.set_all_column_types
-                )
-                self._multi_column_type_recommendation_changed_signal = None
+            self._mapping_specification.dataChanged.disconnect(self._mapping_data_changed)
+            self._mapping_specification.mapping_read_start_row_changed.disconnect(self._mapping_data_changed)
+            self._mapping_specification.row_or_column_type_recommendation_changed.disconnect(self.set_type)
+            self._mapping_specification.multi_column_type_recommendation_changed.disconnect(self.set_all_column_types)
         self._mapping_specification = mapping
-        self._data_changed_signal = self._mapping_specification.dataChanged.connect(self._mapping_data_changed)
-        self._read_start_row_changed_signal = self._mapping_specification.mapping_read_start_row_changed.connect(
-            self._mapping_data_changed
-        )
-        self._row_or_column_type_recommendation_changed_signal = self._mapping_specification.row_or_column_type_recommendation_changed.connect(
-            self.set_type
-        )
-        self._multi_column_type_recommendation_changed_signal = self._mapping_specification.multi_column_type_recommendation_changed.connect(
-            self.set_all_column_types
-        )
+        self._mapping_specification.dataChanged.connect(self._mapping_data_changed)
+        self._mapping_specification.mapping_read_start_row_changed.connect(self._mapping_data_changed)
+        self._mapping_specification.row_or_column_type_recommendation_changed.connect(self.set_type)
+        self._mapping_specification.multi_column_type_recommendation_changed.connect(self.set_all_column_types)
         self._mapping_data_changed()
 
     def validate(self, section, orientation=Qt.Horizontal):

@@ -61,11 +61,14 @@ class ImportEditorWindow(QMainWindow):
         self._editor = ImportEditor(
             self._ui, self._ui_error, self._undo_stack, self._connection_manager, mapping_settings
         )
+        self._ui.source_data_table.set_undo_stack(self._undo_stack, self._editor.select_table)
         self._mappings_list_manager.mapping_selection_changed.connect(self._editor.set_model)
         self._mappings_list_manager.mapping_selection_changed.connect(self._editor.set_mapping)
         self._mappings_list_manager.mapping_data_changed.connect(self._editor.set_mapping)
         self._mapping_options = ImportMappingOptions(self._ui, self._undo_stack)
         self._editor.source_table_selected.connect(self._mappings_list_manager.set_mappings_model)
+        self._editor.source_table_selected.connect(self._ui.source_data_table.horizontalHeader().set_source_table)
+        self._editor.source_table_selected.connect(self._ui.source_data_table.verticalHeader().set_source_table)
         self._mappings_list_manager.mapping_selection_changed.connect(
             self._mapping_options.set_mapping_specification_model
         )

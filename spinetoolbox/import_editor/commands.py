@@ -15,6 +15,7 @@ Contains undo and redo commands for Import editor.
 :date:   4.8.2020
 """
 from enum import auto, IntEnum, unique
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QUndoCommand
 from spinedb_api import parameter_mapping_from_dict
 
@@ -366,3 +367,32 @@ class SetMapDimensions(QUndoCommand):
         self._options_widget.set_map_dimensions(
             self._source_table_name, self._mapping_specification_name, self._previous_dimensions
         )
+
+
+class SetColumnOrRowType(QUndoCommand):
+    """Command to change the type of columns or rows."""
+
+    def __init__(self, source_table_name, header_widget, sections, new_type, previous_type):
+        """
+        Args:
+            source_table_name (src): name of the source table
+            header_widget (HeaderWithButton): widget of origin
+            sections (Iterable of int): row or column indexes
+            new_type (ConvertSpec): conversion specification for the rows/columns
+            previous_type (ConvertSpec): previous conversion specification for the rows/columns
+        """
+        text = ("row" if header_widget.orientation() == Qt.Vertical else "column") + " type change"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._header_widget = header_widget
+        self._sections = sections
+        self._new_type = new_type
+        self._previous_type = previous_type
+
+    def redo(self):
+        """Sets column/row type."""
+        self._header_widget.set_data_types(self._source_table_name, self._sections, self._new_type)
+
+    def undo(self):
+        """Restores column/row type to its previous value."""
+        self._header_widget.set_data_types(self._source_table_name, self._sections, self._previous_type)
