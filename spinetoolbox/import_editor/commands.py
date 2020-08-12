@@ -25,6 +25,59 @@ class _Id(IntEnum):
     SET_OPTION = auto()
 
 
+class PasteMappings(QUndoCommand):
+    """Command to paste copied mappings"""
+
+    def __init__(self, import_editor, source_table_name, copied_mappings, previous_mappings):
+        """
+        Args:
+            import_editor (ImportEditor): import editor
+            source_table_name (src): name of the target source table
+            copied_mappings (Iterable): mappings to paste
+            previous_mappings (Iterable): mappings before pasting
+        """
+        text = "paste mappings"
+        super().__init__(text)
+        self._import_editor = import_editor
+        self._source_table_name = source_table_name
+        self._mappings = copied_mappings
+        self._previous_mappings = previous_mappings
+
+    def redo(self):
+        """Pastes the copied mappings"""
+        self._import_editor.paste_mappings(self._source_table_name, self._mappings)
+
+    def undo(self):
+        """Restores mappings to their previous state."""
+        self._import_editor.paste_mappings(self._source_table_name, self._previous_mappings)
+
+
+class PasteOptions(QUndoCommand):
+    """Command to paste copied mapping options."""
+
+    def __init__(self, import_editor, source_table_name, copied_options, previous_options):
+        """
+        Args:
+            import_editor (ImportEditor): import editor
+            source_table_name (src): name of the target source table
+            copied_options (dict): options from the internal clipboard
+            previous_options (dict): previous options
+        """
+        text = "paste options"
+        super().__init__(text)
+        self._import_editor = import_editor
+        self._source_table_name = source_table_name
+        self._options = copied_options
+        self._previous_options = previous_options
+
+    def redo(self):
+        """Pastes the options."""
+        self._import_editor.paste_options(self._source_table_name, self._options)
+
+    def undo(self):
+        """Restores the options to their previous values."""
+
+
 class SetTableChecked(QUndoCommand):
     def __init__(self, table_name, table_list_model, row, checked):
         text = ("select" if checked else "deselect") + f" '{table_name}'"

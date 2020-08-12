@@ -19,13 +19,14 @@ Contains ImportEditor widget and MappingTableMenu.
 from copy import deepcopy
 from PySide2.QtCore import QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
-from spinedb_api import ObjectClassMapping, dict_to_map, mapping_from_dict
+from spinedb_api import ObjectClassMapping, dict_to_map
 from .options_widget import OptionsWidget
-from ...widgets.custom_menus import CustomContextMenu
+from ..commands import PasteMappings, PasteOptions
 from ..mvcmodels.mapping_list_model import MappingListModel
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ..mvcmodels.source_table_list_model import SourceTableItem, SourceTableListModel
 from ...spine_io.type_conversion import value_to_convert_spec
+from ...widgets.custom_menus import CustomContextMenu
 
 
 class ImportEditor(QObject):
@@ -53,7 +54,6 @@ class ImportEditor(QObject):
 
         # state
         self._connector = connector
-        self._selected_table = None
         self._table_mappings = {}
         self._table_updating = False
         self._data_updating = False
@@ -144,7 +144,6 @@ class ImportEditor(QObject):
         self.source_table_selected.emit(item.name, self._table_mappings[item.name])
         self._connector.set_table(item.name)
         self._connector.request_data(item.name, max_rows=100)
-        self._selected_table = item.name
 
     def _select_table_row(self, row):
         selection_model = self._ui.source_list.selectionModel()
@@ -321,8 +320,10 @@ class ImportEditor(QObject):
             pivoted_rows = list(range(mapping_specification.last_pivot_row + 1))
         self._ui.source_data_table.verticalHeader().sections_with_buttons = pivoted_rows
 
+    @Slot(QPoint)
     def show_source_table_context_menu(self, pos):
-        """Context menu for connection links.
+        """
+        Shows context menu for source tables.
 
         Args:
             pos (QPoint): Mouse position
@@ -330,7 +331,9 @@ class ImportEditor(QObject):
         global_pos = self._ui.source_list.mapToGlobal(pos)
         index = self._ui.source_list.indexAt(pos)
         table = index.data()
-        source_list_menu = TableMenu(self._ui.source_list, global_pos, bool(self._copied_options), self._copied_mapping is not None)
+        source_list_menu = TableMenu(
+            self._ui.source_list, global_pos, bool(self._copied_options), self._copied_mapping is not None
+        )
         option = source_list_menu.get_action()
         source_list_menu.deleteLater()
         if option == "Copy mappings":
@@ -344,14 +347,20 @@ class ImportEditor(QObject):
             self.copy_mappings(table)
             return
         if option == "Paste mappings":
-            self.paste_mappings(table)
+            previous = [deepcopy(m) for m in self._table_mappings[table].get_mappings()]
+            self._undo_stack.push(PasteMappings(self, table, self._copied_mapping, previous))
             return
         if option == "Paste options":
-            self.paste_options(table)
+            previous = self._options_to_dict(table)
+            self._undo_stack.push(PasteOptions(self, table, self._copied_options, previous))
             return
         if option == "Paste options and mappings":
-            self.paste_mappings(table)
-            self.paste_options(table)
+            previous_mappings = [deepcopy(m) for m in self._table_mappings[table].get_mappings()]
+            previous_options = self._options_to_dict(table)
+            self._undo_stack.beginMacro("paste options and mapings")
+            self._undo_stack.push(PasteMappings(self, table, self._copied_mapping, previous_mappings))
+            self._undo_stack.push(PasteOptions(self, table, self._copied_options, previous_options))
+            self._undo_stack.endMacro()
             return
 
     def copy_mappings(self, table):
@@ -359,27 +368,55 @@ class ImportEditor(QObject):
             self._copied_mapping = [deepcopy(m) for m in self._table_mappings[table].get_mappings()]
 
     def copy_options(self, table):
+        self._copied_options = self._options_to_dict(table)
+
+    def _options_to_dict(self, table):
+        """
+        Serializes mapping options to a dict.
+
+        Args:
+            table (str): source table name
+
+        Returns:
+            dict: serialized options
+        """
         options = self._connector.table_options
         col_types = self._connector.table_types
         row_types = self._connector.table_row_types
-        self._copied_options["options"] = deepcopy(options.get(table, {}))
-        self._copied_options["col_types"] = deepcopy(col_types.get(table, {}))
-        self._copied_options["row_types"] = deepcopy(row_types.get(table, {}))
+        all_options = dict()
+        all_options["options"] = deepcopy(options.get(table, {}))
+        all_options["col_types"] = deepcopy(col_types.get(table, {}))
+        all_options["row_types"] = deepcopy(row_types.get(table, {}))
+        return all_options
 
-    def paste_mappings(self, table):
-        self._table_mappings[table] = MappingListModel(
-            [deepcopy(m) for m in self._copied_mapping], table, self._undo_stack
-        )
-        if self._selected_table == table:
+    def paste_mappings(self, table, mappings):
+        """
+        Pastes mappings to given table
+
+        Args:
+            table (src): source table name
+            mappings (Iterable): mappings to paste
+        """
+        self._table_mappings[table].reset([deepcopy(m) for m in mappings], table)
+        index = self._ui.source_list.selectionModel().currentIndex()
+        current_table = index.data()
+        if table == current_table:
             self.source_table_selected.emit(table, self._table_mappings[table])
+        else:
+            self.select_table(table)
 
-    def paste_options(self, table):
-        self._connector.set_table_options({table: deepcopy(self._copied_options.get("options", {}))})
-        self._connector.set_table_types({table: deepcopy(self._copied_options.get("col_types", {}))})
-        self._connector.set_table_row_types({table: deepcopy(self._copied_options.get("row_types", {}))})
-        if self._selected_table == table:
-            index = self._source_table_model.table_index(table)
-            self._ui.source_list.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+    def paste_options(self, table, options):
+        """
+        Pastes all mapping options to given table.
+
+        Args:
+            table (src): source table name
+            options (dict): options
+        """
+        self._connector.set_table_options({table: deepcopy(options.get("options", {}))})
+        self._connector.set_table_types({table: deepcopy(options.get("col_types", {}))})
+        self._connector.set_table_row_types({table: deepcopy(options.get("row_types", {}))})
+        self.select_table(table)
 
 
 class MappingTableMenu(QMenu):

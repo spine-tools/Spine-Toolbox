@@ -116,3 +116,24 @@ class MappingListModel(QAbstractListModel):
             if issue:
                 issues[name] = issue
         return issues
+
+    def reset(self, item_mappings, table_name):
+        """
+        Resets the model.
+
+        Args:
+            item_mappings (Iterable): item mappings
+            table_name (src): name of the source table
+        """
+        self.beginResetModel()
+        self._mapping_specifications.clear()
+        self._names.clear()
+        self._counter = 1
+        self._table_name = table_name
+        for m in item_mappings:
+            name = "Mapping " + str(self._counter)
+            self._names.append(name)
+            specification = MappingSpecificationModel(self._table_name, name, m, self._undo_stack)
+            self._mapping_specifications.append(specification)
+            self._counter += 1
+        self.endResetModel()
