@@ -79,7 +79,16 @@ class PasteOptions(QUndoCommand):
 
 
 class SetTableChecked(QUndoCommand):
+    """Command to change a source table's checked state."""
+
     def __init__(self, table_name, table_list_model, row, checked):
+        """
+        Args:
+            table_name (str): source table name
+            table_list_model (SourceTableListModel): source table model
+            row (int): table row on the list
+            checked (bool): new checked state
+        """
         text = ("select" if checked else "deselect") + f" '{table_name}'"
         super().__init__(text)
         self._model = table_list_model
@@ -87,16 +96,27 @@ class SetTableChecked(QUndoCommand):
         self._checked = checked
 
     def redo(self):
+        """Changes the checked state."""
         self._model.set_checked(self._row, self._checked)
 
     def undo(self):
+        """Restores the previous checked state."""
         self._model.set_checked(self._row, not self._checked)
 
 
 class SetComponentMappingType(QUndoCommand):
+    """Sets the type of a component mapping."""
     def __init__(
         self, component_display_name, mapping_specification_model, mapping_type, previous_type, previous_reference
     ):
+        """
+        Args:
+            component_display_name (str): component name on the mapping specification table
+            mapping_specification_model (MappingSpecificationModel): specification model
+            mapping_type (str): name of the new type
+            previous_type (str): name of the original type
+            previous_reference (str or int): original mapping's reference
+        """
         text = "change source mapping"
         super().__init__(text)
         self._model = mapping_specification_model
@@ -106,14 +126,18 @@ class SetComponentMappingType(QUndoCommand):
         self._previous_reference = previous_reference
 
     def redo(self):
+        """Changes a component mapping's type."""
         self._model.set_type(self._component_display_name, self._new_type)
 
     def undo(self):
+        """Restores component mapping's original type."""
         self._model.set_type(self._component_display_name, self._previous_type)
         self._model.set_value(self._component_display_name, self._previous_reference)
 
 
 class SetComponentMappingReference(QUndoCommand):
+    """Sets the reference for a component mapping."""
+
     def __init__(
         self,
         component_display_name,
@@ -122,6 +146,14 @@ class SetComponentMappingReference(QUndoCommand):
         previous_reference,
         previous_mapping_type_was_none,
     ):
+        """
+        Args:
+            component_display_name (str): component name on the mapping specification table
+            mapping_specification_model (MappingSpecificationModel): specification model
+            reference (str or int): new value for the reference
+            previous_reference (str or int): preference's original value
+            previous_mapping_type_was_none (bool): True if the mapping was originally a :class:`NoneMapping`
+        """
         text = "change source mapping reference"
         super().__init__(text)
         self._model = mapping_specification_model
@@ -131,9 +163,11 @@ class SetComponentMappingReference(QUndoCommand):
         self._previous_mapping_type_was_none = previous_mapping_type_was_none
 
     def redo(self):
+        """Sets the reference's value."""
         self._model.set_value(self._component_display_name, self._reference)
 
     def undo(self):
+        """Restores the reference's value and, if necessary, mapping type to their original values."""
         if self._previous_mapping_type_was_none:
             self._model.set_type(self._component_display_name, "None")
         else:
@@ -141,7 +175,17 @@ class SetComponentMappingReference(QUndoCommand):
 
 
 class SetConnectorOption(QUndoCommand):
+    """Command to set a :class:`ConnectorManager` option."""
+
     def __init__(self, source_table, option_key, options_widget, value, previous_value):
+        """
+        Args:
+            source_table (str): source table name
+            option_key (str): option's key
+            options_widget (OptionsWidget): connector options widget
+            value (str or int or bool): option's new value
+            previous_value (str or int or bool): option's previous value
+        """
         text = f"change {option_key}"
         super().__init__(text)
         self._source_table = source_table
@@ -151,22 +195,47 @@ class SetConnectorOption(QUndoCommand):
         self._previous_value = previous_value
 
     def id(self):
+        """
+        This command's id.
+
+        Returns:
+            int: id
+        """
         return _Id.SET_OPTION
 
     def mergeWith(self, command):
+        """
+        Merges command with another :class:`SetConnectorOption`.
+
+        Args:
+            command (QUndoCommand): a command to merge with
+
+        Returns:
+            bool: True if merge was successful, False otherwise
+        """
         if not isinstance(command, SetConnectorOption):
             return False
         return command._option_key == self._option_key and command._value == self._value
 
     def redo(self):
+        """Changes the connector's option."""
         self._options_widget.set_option_without_undo(self._source_table, self._option_key, self._value)
 
     def undo(self):
+        """Restores the option back to its original value."""
         self._options_widget.set_option_without_undo(self._source_table, self._option_key, self._previous_value)
 
 
 class CreateMapping(QUndoCommand):
+    """Creates a new mapping."""
+
     def __init__(self, source_table_name, import_mappings, row):
+        """
+        Args:
+            source_table_name (src): source table name
+            import_mappings (ImportMappings): mappings manager
+            row (int): row where the new mapping should be created
+        """
         text = "new mapping"
         super().__init__(text)
         self._source_table_name = source_table_name
@@ -176,6 +245,7 @@ class CreateMapping(QUndoCommand):
         self._stored_mapping_specification = None
 
     def redo(self):
+        """Creates a new mapping at the given row in mappings list."""
         if self._mapping_name is None:
             self._mapping_name = self._import_mappings.create_mapping()
         else:
@@ -184,13 +254,23 @@ class CreateMapping(QUndoCommand):
             )
 
     def undo(self):
+        """Deletes the created mapping."""
         self._stored_mapping_specification = self._import_mappings.delete_mapping(
             self._source_table_name, self._mapping_name
         )
 
 
 class DeleteMapping(QUndoCommand):
+    """Command to delete a mapping."""
+
     def __init__(self, source_table_name, import_mappings, mapping_name, row):
+        """
+        Args:
+            source_table_name (src): source table name
+            import_mappings (ImportMappings): mappings manager
+            mapping_name (str): name of the mapping to delete
+            row (int): mapping's row in the mapping list
+        """
         text = "delete mapping"
         super().__init__(text)
         self._source_table_name = source_table_name
@@ -200,11 +280,13 @@ class DeleteMapping(QUndoCommand):
         self._stored_mapping_specification = None
 
     def redo(self):
+        """Deletes the mapping."""
         self._stored_mapping_specification = self._import_mappings.delete_mapping(
             self._source_table_name, self._mapping_name
         )
 
     def undo(self):
+        """Restores the deleted mapping."""
         self._import_mappings.insert_mapping_specification(
             self._source_table_name, self._mapping_name, self._row, self._stored_mapping_specification
         )
@@ -262,11 +344,13 @@ class SetImportObjectsFlag(QUndoCommand):
         self._import_objects = import_objects
 
     def redo(self):
+        """Changes the import objects flag."""
         self._options_widget.set_import_objects_flag(
             self._source_table_name, self._mapping_specification_name, self._import_objects
         )
 
     def undo(self):
+        """Restores the import objects flag."""
         self._options_widget.set_import_objects_flag(
             self._source_table_name, self._mapping_specification_name, not self._import_objects
         )
@@ -293,11 +377,13 @@ class SetParameterType(QUndoCommand):
         self._previous_parameter = previous_parameter.to_dict()
 
     def redo(self):
+        """Changes a parameter's type."""
         self._options_widget.set_parameter_type(
             self._source_table_name, self._mapping_specification_name, self._new_type
         )
 
     def undo(self):
+        """Restores a parameter to its previous type"""
         mapping = parameter_mapping_from_dict(self._previous_parameter)
         self._options_widget.set_parameter_mapping(self._source_table_name, self._mapping_specification_name, mapping)
 
@@ -401,6 +487,14 @@ class SetMapDimensions(QUndoCommand):
     """Command to change the dimensions of a Map parameter value type."""
 
     def __init__(self, source_table_name, mapping_specification_name, options_widget, dimensions, previous_dimensions):
+        """
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            options_widget (ImportMappingOptions): options widget
+            dimensions (int): new dimensions
+            previous_dimensions (int): previous dimensions
+        """
         text = "map dimensions change"
         super().__init__(text)
         self._source_table_name = source_table_name
