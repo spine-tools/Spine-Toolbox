@@ -561,6 +561,8 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
         self._logger.msg.emit("--------------------------------------------")
         self.execute_dags(dags, execution_permit_list)
+        # Make sure transient file resources are updated after execution.
+        self.notify_changes_in_all_dags()
 
     def stop(self):
         """Stops execution. Slot for the main window Stop tool button in the toolbar."""

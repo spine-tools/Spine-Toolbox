@@ -106,6 +106,7 @@ class SetTableChecked(QUndoCommand):
 
 class SetComponentMappingType(QUndoCommand):
     """Sets the type of a component mapping."""
+
     def __init__(
         self, component_display_name, mapping_specification_model, mapping_type, previous_type, previous_reference
     ):
