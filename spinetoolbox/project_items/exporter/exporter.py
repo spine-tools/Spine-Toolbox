@@ -430,6 +430,7 @@ class Exporter(ProjectItem):
         self._settings_packs[database_path].notifications.missing_output_file_name = not file_name
         self._check_duplicate_file_names()
         self._report_notifications()
+        self.item_changed.emit()
 
     def undo_or_redo_settings(
         self, settings, indexing_settings, indexing_domains, merging_settings, merging_domains, database_path
