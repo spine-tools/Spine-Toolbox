@@ -104,9 +104,15 @@ class ExecutableItem(ExecutableItemBase):
 
     def _output_resources_forward(self):
         """See base class."""
-        files = [pack.output_file_name for pack in self._settings_packs.values()]
-        paths = [os.path.join(self._data_dir, file_name) for file_name in files]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
+        resources = [
+            ProjectItemResource(
+                self,
+                "transient_file",
+                pathlib.Path(self._data_dir, pack.output_file_name).as_uri(),
+                {"label": pack.output_file_name},
+            )
+            for pack in self._settings_packs.values()
+        ]
         return resources
 
     def _resolve_gams_system_directory(self):

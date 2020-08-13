@@ -514,9 +514,14 @@ class Exporter(ProjectItem):
 
     def resources_for_direct_successors(self):
         """See base class."""
-        files = [pack.output_file_name for pack in self._settings_packs.values()]
-        paths = [os.path.join(self.data_dir, file_name) for file_name in files]
-        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
+        resources = list()
+        for pack in self._settings_packs.values():
+            if not pack.output_file_name:
+                continue
+            metadata = {"label": pack.output_file_name}
+            path = pathlib.Path(self.data_dir, pack.output_file_name)
+            url = path.as_uri() if path.exists() else ""
+            resources.append(ProjectItemResource(self, "transient_file", url, metadata))
         return resources
 
     def tear_down(self):
