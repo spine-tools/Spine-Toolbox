@@ -201,7 +201,7 @@ class Combiner(ProjectItem):
             self._logger.msg.emit(
                 "Link established. "
                 f"Data from<b>{source_item.name}</b> will be merged "
-                f"into <b>{self.name}</b>'s downstream Data Stores upon execution."
+                f"into <b>{self.name}</b>'s successor Data Stores upon execution."
             )
         else:
             super().notify_destination(source_item)
