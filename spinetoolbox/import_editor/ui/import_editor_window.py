@@ -26,6 +26,7 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
 from PySide2.QtWidgets import *
 
 from spinetoolbox.import_editor.widgets.table_view_with_button_header import TableViewWithButtonHeader
+from spinetoolbox.import_editor.widgets.multi_checkable_list_view import MultiCheckableListView
 
 
 class Ui_MainWindow(object):
@@ -65,9 +66,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.source_list = QListView(self.dockWidgetContents)
+        self.source_list = MultiCheckableListView(self.dockWidgetContents)
         self.source_list.setObjectName(u"source_list")
         self.source_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.source_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         self.verticalLayout_2.addWidget(self.source_list)
 

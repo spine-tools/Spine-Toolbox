@@ -85,9 +85,12 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QListView" name="source_list">
+      <widget class="MultiCheckableListView" name="source_list">
        <property name="contextMenuPolicy">
         <enum>Qt::CustomContextMenu</enum>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
       </widget>
      </item>
@@ -541,6 +544,11 @@
    <class>TableViewWithButtonHeader</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/import_editor/widgets/table_view_with_button_header.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MultiCheckableListView</class>
+   <extends>QListView</extends>
+   <header>spinetoolbox/import_editor/widgets/multi_checkable_list_view.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
