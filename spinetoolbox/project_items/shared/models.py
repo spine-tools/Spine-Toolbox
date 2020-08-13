@@ -112,10 +112,6 @@ class FileListModel(QAbstractListModel):
         """All model's file items."""
         return self._files
 
-    def existing_files(self):
-        """Returns a list of items that exist."""
-        return [item for item in self._files if item.exists()]
-
     def data(self, index, role=Qt.DisplayRole):
         """Returns data associated with given role at given index."""
         if not index.isValid():

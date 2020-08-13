@@ -118,7 +118,7 @@ class Importer(ProjectItem):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         selected_settings = dict()
-        for file_item in self._file_model.existing_files():
+        for file_item in self._file_model.files:
             label = file_item.label
             settings = self.settings.get(label) if file_item.selected else "deselected"
             if not settings:
