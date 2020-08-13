@@ -338,6 +338,7 @@ class Ui_MainWindow(object):
         self.treeView_project.setContextMenuPolicy(Qt.CustomContextMenu)
         self.treeView_project.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.treeView_project.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.treeView_project.setUniformRowHeights(True)
         self.treeView_project.setAnimated(True)
 
         self.verticalLayout_4.addWidget(self.treeView_project)

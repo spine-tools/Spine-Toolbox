@@ -38,7 +38,7 @@ class PivotTableModelBase(QAbstractTableModel):
         super().__init__()
         self._parent = parent
         self.db_mngr = parent.db_mngr
-        self.db_map = parent.db_map
+        self.db_map = parent.pivot_db_map
         self.model = PivotModel()
         self.top_left_headers = {}
         self._plot_x_column = None
@@ -279,7 +279,7 @@ class PivotTableModelBase(QAbstractTableModel):
         )
 
     def column_is_index_column(self, column):  # pylint: disable=no-self-use
-        """Returns True if column is the column containing expanded parameter value indexes."""
+        """Returns True if column is the column containing expanded parameter_value indexes."""
         return False
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -498,7 +498,7 @@ class TopLeftHeaderItem:
 
 
 class TopLeftObjectHeaderItem(TopLeftHeaderItem):
-    """A top left header for object class."""
+    """A top left header for object_class."""
 
     def __init__(self, model, class_name, class_id):
         super().__init__(model)
@@ -534,7 +534,7 @@ class TopLeftObjectHeaderItem(TopLeftHeaderItem):
 
 
 class TopLeftParameterHeaderItem(TopLeftHeaderItem):
-    """A top left header for parameter definition."""
+    """A top left header for parameter_definition."""
 
     @property
     def header_type(self):
@@ -545,7 +545,7 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
         return "parameter"
 
     def header_data(self, header_id, role=Qt.DisplayRole):
-        return self._get_header_data_from_db("parameter definition", header_id, "parameter_name", role)
+        return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
 
     def update_data(self, data):
         if not data:
@@ -587,8 +587,39 @@ class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
         return False
 
 
+class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
+    """A top left header for parameter index."""
+
+    @property
+    def header_type(self):
+        return "alternative"
+
+    @property
+    def name(self):
+        return "alternative"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return self._get_header_data_from_db("alternative", header_id, "name", role)
+
+    def update_data(self, data):
+        if not data:
+            return False
+        self.db_mngr.update_alternatives({self.db_map: data})
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        data = []
+        for name in names:
+            item = {"name": name}
+            data.append(item)
+        self.db_mngr.add_alternatives({self.db_map: data})
+        return True
+
+
 class ParameterValuePivotTableModel(PivotTableModelBase):
-    """A model for the pivot table in parameter value input type."""
+    """A model for the pivot table in parameter_value input type."""
 
     def __init__(self, parent):
         """
@@ -600,7 +631,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     @property
     def item_type(self):
-        return "parameter value"
+        return "parameter_value"
 
     def object_and_parameter_ids(self, index):
         """Returns the object and parameter ids corresponding to the given data index.
@@ -615,7 +646,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        return header_ids[: self._object_class_count], header_ids[-1]
+        return header_ids[: self._object_class_count], header_ids[-2], header_ids[-1]
 
     def object_and_parameter_names(self, index):
         """Returns the object and parameter names corresponding to the given data index.
@@ -628,12 +659,13 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             list(str): object names
             str: parameter name
         """
-        objects_ids, parameter_id = self.object_and_parameter_ids(index)
+        objects_ids, parameter_id, alternative_id = self.object_and_parameter_ids(index)
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
-        parameter_name = self.db_mngr.get_item(self.db_map, "parameter definition", parameter_id).get(
+        parameter_name = self.db_mngr.get_item(self.db_map, "parameter_definition", parameter_id).get(
             "parameter_name", ""
         )
-        return object_names, parameter_name
+        alternative_name = self.db_mngr.get_item(self.db_map, "alternative", alternative_id).get("name", "")
+        return object_names, parameter_name, alternative_name
 
     def index_name(self, index):
         """Returns a string that concatenates the object and parameter names corresponding to the given data index.
@@ -647,8 +679,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         if not self.index_in_data(index):
             return ""
-        object_names, parameter_name = self.object_and_parameter_names(index)
-        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name
+        object_names, parameter_name, alternative_name = self.object_and_parameter_names(index)
+        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name + " - " + alternative_name
 
     def column_name(self, column):
         """Returns a string that concatenates the object and parameter names corresponding to the given column.
@@ -673,6 +705,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         data = self._parent.load_parameter_value_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         top_left_headers += [TopLeftParameterHeaderItem(self)]
+        top_left_headers += [TopLeftAlternativeHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot()
@@ -693,7 +726,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             return None
         if data[0][0] is None:
             return None
-        return self.db_mngr.get_value(self.db_map, "parameter value", data[0][0], role)
+        return self.db_mngr.get_value(self.db_map, "parameter_value", data[0][0], role)
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
         return self._batch_set_parameter_value_data(row_map, column_map, data, values)
@@ -702,24 +735,26 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         return dict(
             entity_class_id=self._parent.current_class_id,
             entity_id=header_ids[0],
-            parameter_definition_id=header_ids[-1],
+            parameter_definition_id=header_ids[-2],
             value=value,
+            alternative_id=header_ids[-1],
         )
 
     def _relationship_parameter_value_to_add(self, header_ids, value, rel_id_lookup):
-        object_id_list = ",".join([str(id_) for id_ in header_ids[:-1]])
+        object_id_list = ",".join([str(id_) for id_ in header_ids[:-2]])
         relationship_id = rel_id_lookup[object_id_list]
         return dict(
             entity_class_id=self._parent.current_class_id,
             entity_id=relationship_id,
-            parameter_definition_id=header_ids[-1],
+            parameter_definition_id=header_ids[-2],
             value=value,
+            alternative_id=header_ids[-1],
         )
 
     def _make_parameter_value_to_add(self):
-        if self._parent.current_class_type == "object class":
+        if self._parent.current_class_type == "object_class":
             return self._object_parameter_value_to_add
-        if self._parent.current_class_type == "relationship class":
+        if self._parent.current_class_type == "relationship_class":
             relationships = self.db_mngr.get_items_by_field(
                 self.db_map, "relationship", "class_id", self._parent.current_class_id
             )
@@ -730,7 +765,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     @staticmethod
     def _parameter_value_to_update(id_, header_ids, value):
-        return {"id": id_, "value": value, "parameter_definition_id": header_ids[-1]}
+        return {"id": id_, "value": value, "parameter_definition_id": header_ids[-2], "alternative_id": header_ids[-1]}
 
     def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
         """Sets parameter values in batch."""
@@ -760,16 +795,16 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         value_lists = {}
         par_def_ids = {item["parameter_definition_id"] for item in items}
         for par_def_id in par_def_ids:
-            param_val_list_id = self.db_mngr.get_item(self.db_map, "parameter definition", par_def_id).get(
+            param_val_list_id = self.db_mngr.get_item(self.db_map, "parameter_definition", par_def_id).get(
                 "parameter_value_list_id"
             )
             if not param_val_list_id:
                 continue
-            param_val_list = self.db_mngr.get_item(self.db_map, "parameter value list", param_val_list_id)
+            param_val_list = self.db_mngr.get_item(self.db_map, "parameter_value_list", param_val_list_id)
             value_list = param_val_list.get("value_list")
             if not value_list:
                 continue
-            value_lists[par_def_id] = value_list.split(",")
+            value_lists[par_def_id] = value_list.split(";")
         checked_items = []
         for item in items:
             par_def_id = item["parameter_definition_id"]
@@ -810,7 +845,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         )
 
     def receive_objects_added_or_removed(self, items, action):
-        if self._parent.current_class_type != "object class":
+        if self._parent.current_class_type != "object_class":
             return False
         objects = [x for x in items if x["class_id"] == self._parent.current_class_id]
         if not objects:
@@ -853,7 +888,11 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         data = self._parent.load_expanded_parameter_value_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
-        top_left_headers += [self._index_top_left_header, TopLeftParameterHeaderItem(self)]
+        top_left_headers += [
+            self._index_top_left_header,
+            TopLeftParameterHeaderItem(self),
+            TopLeftAlternativeHeaderItem(self),
+        ]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot()
@@ -879,7 +918,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         return super().flags(index)
 
     def column_is_index_column(self, column):
-        """Returns True if column is the column containing expanded parameter value indexes."""
+        """Returns True if column is the column containing expanded parameter_value indexes."""
         try:
             index_column = self.model.pivot_rows.index(self._index_top_left_header.name)
             return column == index_column
@@ -895,7 +934,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         if data[0][0] is None:
             return None
         parameter_index = self._header_ids(row, column)[-2]
-        return self.db_mngr.get_value_index(self.db_map, "parameter value", data[0][0], parameter_index, role)
+        return self.db_mngr.get_value_index(self.db_map, "parameter_value", data[0][0], parameter_index, role)
 
     @staticmethod
     def _parameter_value_to_update(id_, header_ids, value):
@@ -946,7 +985,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
 
     def _batch_set_relationship_data(self, row_map, column_map, data, values):
         def relationship_to_add(header_ids):
-            rel_cls_name = self.db_mngr.get_item(self.db_map, "relationship class", self._parent.current_class_id)[
+            rel_cls_name = self.db_mngr.get_item(self.db_map, "relationship_class", self._parent.current_class_id)[
                 "name"
             ]
             object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in header_ids]
@@ -962,8 +1001,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
                     item = relationship_to_add(header_ids)
                     to_add.append(item)
                 elif data[i][j] is not None and not values[row, column]:
-                    item = self.db_mngr.get_item(self.db_map, "relationship", data[i][j])
-                    to_remove.append(item)
+                    to_remove.append(data[i][j])
         if not to_add and not to_remove:
             return False
         if to_add:
@@ -1004,7 +1042,7 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         self.index_filters = {}
 
     def set_filter(self, identifier, filter_value):
-        """Sets filter for a given index (object class) name.
+        """Sets filter for a given index (object_class) name.
 
         Args:
             identifier (int): index identifier

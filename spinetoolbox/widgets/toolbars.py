@@ -18,7 +18,7 @@ Functions to make and handle QToolBars.
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
-from PySide2.QtGui import QIcon
+from PySide2.QtGui import QIcon, Qt
 from ..config import ICON_TOOLBAR_SS
 from .custom_qlistview import ProjectItemDragListView
 
@@ -77,12 +77,14 @@ class MainToolBar(QToolBar):
         execute_project.setIcon(execute_project_icon)
         execute_project.clicked.connect(self.execute_project)
         execute_project.setToolTip("Execute project")
+        execute_project.setFocusPolicy(Qt.StrongFocus)
         self.addWidget(execute_project)
         execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(icon_size, icon_size)
         execute_selected = QToolButton(self)
         execute_selected.setIcon(execute_selected_icon)
         execute_selected.clicked.connect(self.execute_selected)
         execute_selected.setToolTip("Execute selection")
+        execute_selected.setFocusPolicy(Qt.StrongFocus)
         self.addWidget(execute_selected)
         stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(icon_size, icon_size)
         stop = QToolButton(self)

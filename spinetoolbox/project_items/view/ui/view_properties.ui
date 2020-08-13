@@ -146,7 +146,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_view_open_ds_form">
+          <widget class="QPushButton" name="pushButton_view_open_editor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -169,7 +169,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data store view for selected db references&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
-            <string>Open DS form</string>
+            <string>Open editor</string>
            </property>
           </widget>
          </item>

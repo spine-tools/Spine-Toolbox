@@ -44,7 +44,7 @@ class ArrayEditor(QWidget):
             self._ui.splitter.setCollapsible(i, False)
 
     def set_value(self, value):
-        """Sets the parameter value for editing in this widget."""
+        """Sets the parameter_value for editing in this widget."""
         type_name = {float: "Float", DateTime: "Datetime", Duration: "Duration", str: "String"}[value.value_type]
         self._ui.value_type_combo_box.blockSignals(True)
         self._ui.value_type_combo_box.setCurrentText(type_name)

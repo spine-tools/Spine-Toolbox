@@ -40,9 +40,14 @@ class TestPivotTableModel(unittest.TestCase):
         with patch.object(DataStoreForm, "restore_ui"):
             tabular_view = DataStoreForm(db_mngr, mock_db_map)
         self._model = PivotTableModel(tabular_view)
-        data = {('row1', 'col1'): '1', ('row2', 'col1'): '3', ('row1', 'col2'): '5', ('row2', 'col2'): '7'}
-        index_names = ['rows', 'cols']
-        self._model.reset_model(data, index_names, ['rows'], ['cols'], [], ())
+        data = {
+            ('row1', 'col1', 'alternative1'): '1',
+            ('row2', 'col1', 'alternative1'): '3',
+            ('row1', 'col2', 'alternative1'): '5',
+            ('row2', 'col2', 'alternative1'): '7',
+        }
+        index_names = ['rows', 'cols', 'alternatives']
+        self._model.reset_model(data, index_names, ['rows'], ['cols', 'alternatives'], [], ())
         self._model.start_fetching()
 
     def test_x_flag(self):
@@ -57,11 +62,11 @@ class TestPivotTableModel(unittest.TestCase):
         self.assertEqual(self._model.header_name(self._model.index(0, 2)), 'col2')
 
     def test_header_names(self):
-        index = self._model.index(2, 2)
-        self.assertEqual(self._model.header_names(index), (['row1'], 'col2'))
+        index = self._model.index(3, 2)
+        self.assertEqual(self._model.header_names(index), (['row1'], 'col2', 'alternative1'))
 
     def test_first_data_row(self):
-        self.assertEqual(self._model.first_data_row(), 2)
+        self.assertEqual(self._model.first_data_row(), 3)
 
 
 if __name__ == '__main__':

@@ -17,7 +17,7 @@ Contains the GraphViewMixin class.
 """
 import itertools
 from PySide2.QtCore import Signal, Slot, QRectF
-from PySide2.QtWidgets import QGraphicsTextItem
+from PySide2.QtWidgets import QGraphicsTextItem, QActionGroup
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
 from spinedb_api import to_database, from_database
@@ -51,6 +51,7 @@ class GraphViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.graph_db_map = self.first_db_map
         self._full_relationship_expansion = (
             self.qsettings.value("appSettings/fullRelationshipExpansion", defaultValue="false") == "true"
         )
@@ -77,9 +78,27 @@ class GraphViewMixin:
         self.heat_map_items = []
         self.zoom_widget_action = None
         self.rotate_widget_action = None
+        self.graph_db_action_group = QActionGroup(self)
         self.layout_gens = list()
         self.ui.graphicsView.connect_data_store_form(self)
         self.setup_widget_actions()
+        self.populate_graph_db_action_group()
+
+    def populate_graph_db_action_group(self):
+        menu = self._make_db_menu()
+        if menu is None:
+            return
+        before = self.ui.menuGraph.actions()[0]
+        self.ui.menuGraph.insertMenu(before, menu)
+        actions = menu.actions()
+        for action in actions:
+            self.graph_db_action_group.addAction(action)
+        actions[0].setChecked(True)
+
+    @Slot("QAction")
+    def _update_graph_db_map(self, action):
+        self.graph_db_map = self.db_maps_by_codename[action.text()]
+        self.build_graph()
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -117,6 +136,7 @@ class GraphViewMixin:
         self.rotate_widget_action.clockwise_pressed.connect(self.ui.graphicsView.rotate_clockwise)
         self.rotate_widget_action.anticlockwise_pressed.connect(self.ui.graphicsView.rotate_anticlockwise)
         self.scene.selectionChanged.connect(self._handle_scene_selection_changed)
+        self.graph_db_action_group.triggered.connect(self._update_graph_db_map)
 
     @Slot()
     def _handle_scene_selection_changed(self):
@@ -151,7 +171,7 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_added(db_map_data)
-        objects = db_map_data.get(self.db_map, [])
+        objects = db_map_data.get(self.graph_db_map, [])
         added_ids = {x["id"] for x in objects}
         self.restore_removed_entities(added_ids)
 
@@ -163,7 +183,7 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_relationships_added(db_map_data)
-        relationships = db_map_data.get(self.db_map, [])
+        relationships = db_map_data.get(self.graph_db_map, [])
         added_ids = {x["id"] for x in relationships}
         restored_ids = self.restore_removed_entities(added_ids)
         added_ids -= restored_ids
@@ -187,7 +207,7 @@ class GraphViewMixin:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
         super().receive_objects_updated(db_map_data)
-        updated_ids = {x["id"]: (x["name"], x["description"]) for x in db_map_data.get(self.db_map, [])}
+        updated_ids = {x["id"]: (x["name"], x["description"]) for x in db_map_data.get(self.graph_db_map, [])}
         for item in self.ui.graphicsView.items():
             if isinstance(item, ObjectItem) and item.entity_id in updated_ids:
                 name, description = updated_ids[item.entity_id]
@@ -231,7 +251,7 @@ class GraphViewMixin:
     def hide_removed_entities(self, db_map_data):
         """Hides removed entities while saving them into a list attribute.
         This allows entities to be restored in case the user undoes the operation."""
-        removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        removed_ids = {x["id"] for x in db_map_data.get(self.graph_db_map, [])}
         self.added_relationship_ids -= removed_ids
         removed_items = [
             item
@@ -252,7 +272,7 @@ class GraphViewMixin:
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
-        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        updated_ids = {x["id"] for x in db_map_data.get(self.graph_db_map, [])}
         for item in self.ui.graphicsView.items():
             if isinstance(item, EntityItem) and item.entity_class_id in updated_ids:
                 item.refresh_icon()
@@ -345,24 +365,24 @@ class GraphViewMixin:
             set: selected relationship ids
         """
         if "root" in self.selected_tree_inds:
-            return set(x["id"] for x in self.db_mngr.get_items(self.db_map, "object")), set()
+            return set(x["id"] for x in self.db_mngr.get_items(self.graph_db_map, "object")), set()
         selected_object_ids = set()
         selected_relationship_ids = set()
         for index in self.selected_tree_inds.get("object", {}):
             item = index.model().item_from_index(index)
-            object_id = item.db_map_id(self.db_map)
+            object_id = item.db_map_id(self.graph_db_map)
             selected_object_ids.add(object_id)
         for index in self.selected_tree_inds.get("relationship", {}):
             item = index.model().item_from_index(index)
-            relationship_id = item.db_map_id(self.db_map)
+            relationship_id = item.db_map_id(self.graph_db_map)
             selected_relationship_ids.add(relationship_id)
-        for index in self.selected_tree_inds.get("object class", {}):
+        for index in self.selected_tree_inds.get("object_class", {}):
             item = index.model().item_from_index(index)
-            object_ids = set(item._get_children_ids(self.db_map))
+            object_ids = set(item._get_children_ids(self.graph_db_map))
             selected_object_ids.update(object_ids)
-        for index in self.selected_tree_inds.get("relationship class", {}):
+        for index in self.selected_tree_inds.get("relationship_class", {}):
             item = index.model().item_from_index(index)
-            relationship_ids = set(item._get_children_ids(self.db_map))
+            relationship_ids = set(item._get_children_ids(self.graph_db_map))
             selected_relationship_ids.update(relationship_ids)
         return selected_object_ids, selected_relationship_ids
 
@@ -370,9 +390,9 @@ class GraphViewMixin:
         cond = any if self._full_relationship_expansion else all
         return [
             x
-            for x in self.db_mngr.get_items(self.db_map, "relationship")
+            for x in self.db_mngr.get_items(self.graph_db_map, "relationship")
             if cond([int(id_) in object_ids for id_ in x["object_id_list"].split(",")])
-        ] + [self.db_mngr.get_item(self.db_map, "relationship", id_) for id_ in relationship_ids]
+        ] + [self.db_mngr.get_item(self.graph_db_map, "relationship", id_) for id_ in relationship_ids]
 
     def _update_graph_data(self):
         """Updates data for graph according to selection in trees."""
@@ -420,7 +440,7 @@ class GraphViewMixin:
         parameter_positions = {
             p["entity_id"]: dict(from_database(p["value"]).value_to_database_data())
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
             )
         }
         if self._persistent:
@@ -508,9 +528,11 @@ class GraphViewMixin:
     def prune_selected_classes(self, checked=False):
         """Prunes selected items."""
         class_ids = {x.entity_class_id for x in self.selected_items}
-        entity_ids = {x["id"] for x in self.db_mngr.get_items(self.db_map, "object") if x["class_id"] in class_ids}
+        entity_ids = {
+            x["id"] for x in self.db_mngr.get_items(self.graph_db_map, "object") if x["class_id"] in class_ids
+        }
         entity_ids |= {
-            x["id"] for x in self.db_mngr.get_items(self.db_map, "relationship") if x["class_id"] in class_ids
+            x["id"] for x in self.db_mngr.get_items(self.graph_db_map, "relationship") if x["class_id"] in class_ids
         }
         key = self._get_selected_class_names()
         self.prunned_entity_ids[key] = entity_ids
@@ -542,10 +564,10 @@ class GraphViewMixin:
         """Removes all selected items in the graph."""
         if not self.selected_items:
             return
-        db_map_typed_data = {self.db_map: {}}
+        db_map_typed_data = {self.graph_db_map: {}}
         for item in self.selected_items:
-            db_item = item.db_representation
-            db_map_typed_data[self.db_map].setdefault(item.entity_type, []).append(db_item)
+            id_ = item.entity_id
+            db_map_typed_data[self.graph_db_map].setdefault(item.entity_type, []).add(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     @Slot(bool)
@@ -556,7 +578,7 @@ class GraphViewMixin:
         pos_def_class_ids = {
             p["entity_class_id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter definition", "parameter_name", self._POS_PARAM_NAME
+                self.graph_db_map, "parameter_definition", "parameter_name", self._POS_PARAM_NAME
             )
         }
         defs_to_add = [
@@ -564,17 +586,17 @@ class GraphViewMixin:
             for class_id in items_per_class_id.keys() - pos_def_class_ids
         ]
         if defs_to_add:
-            self.db_mngr.add_parameter_definitions({self.db_map: defs_to_add})
+            self.db_mngr.add_parameter_definitions({self.graph_db_map: defs_to_add})
         pos_def_id_lookup = {
             p["entity_class_id"]: p["id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter definition", "parameter_name", self._POS_PARAM_NAME
+                self.graph_db_map, "parameter_definition", "parameter_name", self._POS_PARAM_NAME
             )
         }
         pos_val_id_lookup = {
             (p["entity_class_id"], p["entity_id"]): p["id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
             )
         }
         vals_to_add = list()
@@ -596,22 +618,22 @@ class GraphViewMixin:
                 else:
                     vals_to_update.append({"id": pos_val_id, "value": to_database(value)})
         if vals_to_add:
-            self.db_mngr.add_parameter_values({self.db_map: vals_to_add})
+            self.db_mngr.add_parameter_values({self.graph_db_map: vals_to_add})
         if vals_to_update:
-            self.db_mngr.update_parameter_values({self.db_map: vals_to_update})
+            self.db_mngr.update_parameter_values({self.graph_db_map: vals_to_update})
 
     @Slot(bool)
     def clear_saved_positions(self, checked=False):
         entity_ids = {x.entity_id for x in self.selected_items}
-        vals_to_remove = [
-            p
+        value_ids_to_remove = [
+            p["id"]
             for p in self.db_mngr.get_items_by_field(
-                self.db_map, "parameter value", "parameter_name", self._POS_PARAM_NAME
+                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
             )
             if p["entity_id"] in entity_ids
         ]
-        if vals_to_remove:
-            self.db_mngr.remove_items({self.db_map: {"parameter value": vals_to_remove}})
+        if value_ids_to_remove:
+            self.db_mngr.remove_items({self.graph_db_map: {"parameter_value": value_ids_to_remove}})
         self.build_graph()
 
     @Slot(bool)
@@ -686,16 +708,16 @@ class GraphViewMixin:
         """Populates the menu 'Add parameter heat map' with parameters for currently shown items in the graph."""
         entity_class_ids = {x.entity_class_id for x in self.scene.items() if isinstance(x, EntityItem)}
         parameters = self.db_mngr.find_cascading_parameter_data(
-            {self.db_map: entity_class_ids}, "parameter definition"
-        )[self.db_map]
+            {self.graph_db_map: entity_class_ids}, "parameter_definition"
+        )[self.graph_db_map]
         parameters_by_class_id = {}
         for parameter in parameters:
             parameters_by_class_id.setdefault(parameter["entity_class_id"], []).append(parameter)
         value_ids = {
             (val["parameter_id"], val["entity_id"]): val["id"]
             for val in self.db_mngr.find_cascading_parameter_values_by_definition(
-                {self.db_map: {x["id"] for x in parameters}}
-            )[self.db_map]
+                {self.graph_db_map: {x["id"] for x in parameters}}
+            )[self.graph_db_map]
         }
         self._point_value_tuples_per_parameter_name.clear()
         for item in self.scene.items():
@@ -704,7 +726,7 @@ class GraphViewMixin:
             for parameter in parameters_by_class_id.get(item.entity_class_id, ()):
                 value_id = value_ids.get((parameter["id"], item.entity_id))
                 try:
-                    value = float(self.db_mngr.get_value(self.db_map, "parameter value", value_id))
+                    value = float(self.db_mngr.get_value(self.graph_db_map, "parameter_value", value_id))
                     pos = item.pos()
                     self._point_value_tuples_per_parameter_name.setdefault(parameter["parameter_name"], []).append(
                         (pos.x(), -pos.y(), value)

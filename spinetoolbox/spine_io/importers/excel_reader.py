@@ -20,7 +20,16 @@ from itertools import islice, takewhile
 import io
 from PySide2.QtWidgets import QFileDialog
 from openpyxl import load_workbook
-from spinedb_api import RelationshipClassMapping, ObjectClassMapping, from_database, ParameterValueFormatError
+from spinedb_api import (
+    RelationshipClassMapping,
+    ObjectClassMapping,
+    ObjectGroupMapping,
+    AlternativeMapping,
+    ScenarioMapping,
+    ScenarioAlternativeMapping,
+    from_database,
+    ParameterValueFormatError,
+)
 from ..io_api import SourceConnection
 
 
@@ -165,7 +174,7 @@ class ExcelConnector(SourceConnection):
 
     def get_mapped_data(self, tables_mappings, options, table_types, table_row_types, max_rows=-1):
         """
-        Overrides io_api method to check for some parameter value types.
+        Overrides io_api method to check for some parameter_value types.
         """
         mapped_data, errors = super().get_mapped_data(tables_mappings, options, table_types, table_row_types, max_rows)
         for key in ("object_parameter_values", "relationship_parameter_values"):
@@ -218,17 +227,24 @@ def create_mapping_from_sheet(worksheet):
         return None, None
     if not isinstance(sheet_data, str):
         return None, None
-    if sheet_type.lower() not in ["relationship", "object"]:
+    if sheet_type.lower() not in [
+        "relationship",
+        "object",
+        "object group",
+        "alternative",
+        "scenario",
+        "scenario alternative",
+    ]:
         return None, None
-    if sheet_data.lower() not in ["parameter", "time series", "time pattern", "map", "array"]:
+    if sheet_data.lower() not in ["parameter", "time series", "time pattern", "map", "array", "no data"]:
         return None, None
     if sheet_type.lower() == "relationship":
         mapping = RelationshipClassMapping()
         rel_dimension = worksheet["D2"].value
-        rel_name = worksheet["C2"].value
-        if not isinstance(rel_name, str):
+        rel_cls_name = worksheet["C2"].value
+        if not isinstance(rel_cls_name, str):
             return None, None
-        if not rel_name:
+        if not rel_cls_name:
             return None, None
         if not isinstance(rel_dimension, int):
             return None, None
@@ -247,7 +263,7 @@ def create_mapping_from_sheet(worksheet):
             mapping = RelationshipClassMapping.from_dict(
                 {
                     "map_type": "RelationshipClass",
-                    "name": rel_name,
+                    "name": rel_cls_name,
                     "object_classes": obj_classes,
                     "objects": list(range(rel_dimension)),
                     "parameters": {
@@ -262,7 +278,7 @@ def create_mapping_from_sheet(worksheet):
             mapping = RelationshipClassMapping.from_dict(
                 {
                     "map_type": "RelationshipClass",
-                    "name": rel_name,
+                    "name": rel_cls_name,
                     "object_classes": obj_classes,
                     "objects": [{"map_type": "row", "value_reference": i} for i in range(rel_dimension)],
                     "parameters": {
@@ -278,7 +294,7 @@ def create_mapping_from_sheet(worksheet):
             mapping = RelationshipClassMapping.from_dict(
                 {
                     "map_type": "RelationshipClass",
-                    "name": rel_name,
+                    "name": rel_cls_name,
                     "object_classes": obj_classes,
                     "objects": [{"map_type": "row", "value_reference": i} for i in range(rel_dimension)],
                     "parameters": {
@@ -291,18 +307,18 @@ def create_mapping_from_sheet(worksheet):
             )
 
     elif sheet_type.lower() == "object":
-        obj_name = worksheet["C2"].value
-        if not isinstance(obj_name, str):
+        obj_cls_name = worksheet["C2"].value
+        if not isinstance(obj_cls_name, str):
             return None, None
-        if not obj_name:
+        if not obj_cls_name:
             return None, None
         if sheet_data.lower() == "parameter":
             options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
             mapping = ObjectClassMapping.from_dict(
                 {
                     "map_type": "ObjectClass",
-                    "name": obj_name,
-                    "object": 0,
+                    "name": obj_cls_name,
+                    "objects": 0,
                     "parameters": {
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": -1},
@@ -315,8 +331,8 @@ def create_mapping_from_sheet(worksheet):
             mapping = ObjectClassMapping.from_dict(
                 {
                     "map_type": "ObjectClass",
-                    "name": obj_name,
-                    "object": {"map_type": "row", "value_reference": 0},
+                    "name": obj_cls_name,
+                    "objects": {"map_type": "row", "value_reference": 0},
                     "parameters": {
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": 1},
@@ -330,8 +346,8 @@ def create_mapping_from_sheet(worksheet):
             mapping = ObjectClassMapping.from_dict(
                 {
                     "map_type": "ObjectClass",
-                    "name": obj_name,
-                    "object": {"map_type": "row", "value_reference": 0},
+                    "name": obj_cls_name,
+                    "objects": {"map_type": "row", "value_reference": 0},
                     "parameters": {
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": 1},
@@ -340,6 +356,28 @@ def create_mapping_from_sheet(worksheet):
                     },
                 }
             )
+
+    elif sheet_type.lower() == "object group":
+        obj_cls_name = worksheet["C2"].value
+        if not isinstance(obj_cls_name, str):
+            return None, None
+        if not obj_cls_name:
+            return None, None
+        options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
+        mapping = ObjectGroupMapping.from_dict(
+            {"map_type": "ObjectGroup", "name": obj_cls_name, "groups": 0, "members": 1}
+        )
+    elif sheet_type.lower() == "alternative":
+        options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
+        mapping = AlternativeMapping.from_dict({"map_type": "Alternative", "name": 0})
+    elif sheet_type.lower() == "scenario":
+        options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
+        mapping = ScenarioMapping.from_dict({"map_type": "Scenario", "name": 0, "active": 1})
+    elif sheet_type.lower() == "scenario alternative":
+        options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
+        mapping = ScenarioAlternativeMapping.from_dict(
+            {"map_type": "ScenarioAlternative", "scenario_name": 0, "alternative_name": 1, "before_alternative_name": 2}
+        )
     else:
         return None, None
     return mapping, options

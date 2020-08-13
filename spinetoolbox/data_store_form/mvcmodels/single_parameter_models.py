@@ -29,8 +29,8 @@ from ...mvcmodels.shared import PARSED_ROLE
 
 
 class SingleParameterModel(MinimalTableModel):
-    """A parameter model for a single entity class to go in a CompoundParameterModel.
-    Provides methods to associate the model to an entity class as well as
+    """A parameter model for a single entity_class to go in a CompoundParameterModel.
+    Provides methods to associate the model to an entity_class as well as
     to filter entities within the class.
     """
 
@@ -49,44 +49,56 @@ class SingleParameterModel(MinimalTableModel):
 
     @property
     def item_type(self):
-        """The item type, either 'parameter value' or 'parameter definition', required by the data method."""
+        """The item type, either 'parameter_value' or 'parameter_definition', required by the data method."""
         raise NotImplementedError()
 
     @property
     def entity_class_type(self):
-        """The entity class type, either 'object class' or 'relationship class'."""
+        """The entity_class type, either 'object_class' or 'relationship_class'."""
         raise NotImplementedError()
 
     @property
     def json_fields(self):
-        return {"parameter definition": ["default_value"], "parameter value": ["value"]}[self.item_type]
+        return {"parameter_definition": ["default_value"], "parameter_value": ["value"]}[self.item_type]
 
     @property
     def fixed_fields(self):
         return {
-            "object class": {
-                "parameter definition": ["object_class_name", "database"],
-                "parameter value": ["object_class_name", "object_name", "parameter_name", "database"],
+            "object_class": {
+                "parameter_definition": ["object_class_name", "database"],
+                "parameter_value": [
+                    "object_class_name",
+                    "object_name",
+                    "parameter_name",
+                    "alternative_name",
+                    "database",
+                ],
             },
-            "relationship class": {
-                "parameter definition": ["relationship_class_name", "object_class_name_list", "database"],
-                "parameter value": ["relationship_class_name", "object_name_list", "parameter_name", "database"],
+            "relationship_class": {
+                "parameter_definition": ["relationship_class_name", "object_class_name_list", "database"],
+                "parameter_value": [
+                    "relationship_class_name",
+                    "object_name_list",
+                    "parameter_name",
+                    "alternative_name",
+                    "database",
+                ],
             },
         }[self.entity_class_type][self.item_type]
 
     @property
     def group_fields(self):
         return {
-            "object class": {"parameter definition": ["parameter_tag_list"], "parameter value": []},
-            "relationship class": {
-                "parameter definition": ["object_class_name_list", "parameter_tag_list"],
-                "parameter value": ["object_name_list"],
+            "object_class": {"parameter_definition": ["parameter_tag_list"], "parameter_value": []},
+            "relationship_class": {
+                "parameter_definition": ["object_class_name_list", "parameter_tag_list"],
+                "parameter_value": ["object_name_list"],
             },
         }[self.entity_class_type][self.item_type]
 
     @property
     def parameter_definition_id_key(self):
-        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
+        return {"parameter_definition": "id", "parameter_value": "parameter_id"}[self.item_type]
 
     @property
     def can_be_filtered(self):
@@ -129,17 +141,18 @@ class SingleParameterModel(MinimalTableModel):
             str, str
         """
         return {
-            "object_class_name": ("object_class_id", "object class"),
-            "relationship_class_name": ("relationship_class_id", "relationship class"),
-            "object_class_name_list": ("relationship_class_id", "relationship class"),
+            "object_class_name": ("object_class_id", "object_class"),
+            "relationship_class_name": ("relationship_class_id", "relationship_class"),
+            "object_class_name_list": ("relationship_class_id", "relationship_class"),
             "object_name": ("object_id", "object"),
             "object_name_list": ("relationship_id", "relationship"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
-            "value_list_name": ("value_list_id", "parameter value list"),
-            "description": ("id", "parameter definition"),
-            "value": ("id", "parameter value"),
-            "default_value": ("id", "parameter definition"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
+            "value_list_name": ("value_list_id", "parameter_value_list"),
+            "description": ("id", "parameter_definition"),
+            "value": ("id", "parameter_value"),
+            "default_value": ("id", "parameter_definition"),
             "database": ("database", None),
+            "alternative_id": ("alternative_id", "alternative"),
         }.get(field)
 
     def get_id_key(self, field):
@@ -162,7 +175,7 @@ class SingleParameterModel(MinimalTableModel):
     def data(self, index, role=Qt.DisplayRole):
         """Gets the id and database for the row, and reads data from the db manager
         using the item_type property.
-        Paint the object class icon next to the name.
+        Paint the object_class icon next to the name.
         Also paint background of fixed indexes gray and apply custom format to JSON fields."""
         field = self.header[index.column()]
         # Background role
@@ -173,10 +186,6 @@ class SingleParameterModel(MinimalTableModel):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
-            if role == Qt.ToolTipRole:
-                description = self._get_field_item(field, id_).get("description", None)
-                if description not in (None, ""):
-                    return description
             if field in self.json_fields:
                 return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
@@ -184,14 +193,19 @@ class SingleParameterModel(MinimalTableModel):
                 description = self.get_field_item(field, item).get("description", None)
                 if description not in (None, ""):
                     return description
+            if field == "alternative_id":
+                return self.get_field_item(field, item).get("name", None)
+
+            if field in self.json_fields:
+                return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
             data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
                 data = data.replace(",", self.db_mngr._GROUP_SEP)
             return data
         # Decoration role
         entity_class_name_field = {
-            "object class": "object_class_name",
-            "relationship class": "relationship_class_name",
+            "object_class": "object_class_name",
+            "relationship_class": "relationship_class_name",
         }[self.entity_class_type]
         if role == Qt.DecorationRole and field == entity_class_name_field:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
@@ -242,17 +256,16 @@ class SingleParameterModel(MinimalTableModel):
         return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
 
     def _get_field_item(self, field, id_):
-        """Returns a item from the db_mngr.get_item depending on the
-        field. If a field doesn't correspond to a item in the database then
-        an empty dict is returned.
+        """Returns a item from the db_mngr.get_item depending on the field.
+        If a field doesn't correspond to a item in the database then an empty dict is returned.
         """
         data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
         header_to_id = {
-            "object_class_name": ("entity_class_id", "object class"),
-            "relationship_class_name": ("entity_class_id", "relationship class"),
+            "object_class_name": ("entity_class_id", "object_class"),
+            "relationship_class_name": ("entity_class_id", "relationship_class"),
             "object_name": ("entity_id", "object"),
             "object_name_list": ("entity_id", "relationship"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter definition"),
+            "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
         }
         if field not in header_to_id:
             return {}
@@ -262,27 +275,27 @@ class SingleParameterModel(MinimalTableModel):
 
 
 class SingleObjectParameterMixin:
-    """Associates a parameter model with a single object class."""
+    """Associates a parameter model with a single object_class."""
 
     @property
     def entity_class_type(self):
-        return "object class"
+        return "object_class"
 
 
 class SingleRelationshipParameterMixin:
-    """Associates a parameter model with a single relationship class."""
+    """Associates a parameter model with a single relationship_class."""
 
     @property
     def entity_class_type(self):
-        return "relationship class"
+        return "relationship_class"
 
 
 class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin):
-    """A parameter definition model for a single entity class."""
+    """A parameter_definition model for a single entity_class."""
 
     @property
     def item_type(self):
-        return "parameter definition"
+        return "parameter_definition"
 
     def update_items_in_db(self, items):
         """Update items in db.
@@ -295,9 +308,9 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         param_def_tags = list()
         error_log = list()
         for item in items:
-            param_def, err1 = self._convert_to_db(item, self.db_map)
             param_def_tag, err2 = self._make_parameter_definition_tag(item, self.db_map)
-            if param_def:
+            param_def, err1 = self._convert_to_db(item, self.db_map)
+            if tuple(param_def.keys()) != ("id",):
                 param_defs.append(param_def)
             if param_def_tag:
                 param_def_tags.append(param_def_tag)
@@ -312,15 +325,16 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
 
 
 class SingleParameterValueMixin(ConvertToDBMixin):
-    """A parameter value model for a single entity class."""
+    """A parameter_value model for a single entity_class."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._filter_entity_ids = dict()
+        self._filter_alternative_ids = dict()
 
     @property
     def item_type(self):
-        return "parameter value"
+        return "parameter_value"
 
     def _filter_accepts_row(self, row):
         """Reimplemented to also account for the entity filter."""
@@ -328,15 +342,23 @@ class SingleParameterValueMixin(ConvertToDBMixin):
             self._parameter_filter_accepts_row(row)
             and self._entity_filter_accepts_row(row)
             and self._auto_filter_accepts_row(row)
+            and self._alternative_filter_accepts_row(row)
         )
 
     def _entity_filter_accepts_row(self, row):
         """Returns the result of the entity filter."""
         if not self._filter_entity_ids:
             return True
-        entity_id_key = {"object class": "object_id", "relationship class": "relationship_id"}[self.entity_class_type]
+        entity_id_key = {"object_class": "object_id", "relationship_class": "relationship_id"}[self.entity_class_type]
         entity_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[entity_id_key]
         return entity_id in self._filter_entity_ids.get((self.db_map, self.entity_class_id), set())
+
+    def _alternative_filter_accepts_row(self, row):
+        """Returns the result of the alternative filter."""
+        if not self._filter_alternative_ids:
+            return True
+        alt_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])["alternative_id"]
+        return alt_id in self._filter_alternative_ids.get(self.db_map, set())
 
     def update_items_in_db(self, items):
         """Update items in db.
@@ -346,9 +368,12 @@ class SingleParameterValueMixin(ConvertToDBMixin):
         """
         param_vals = list()
         error_log = list()
+        db_map_data = dict()
+        db_map_data[self.db_map] = items
+        self.build_lookup_dictionary(db_map_data)
         for item in items:
             param_val, err = self._convert_to_db(item, self.db_map)
-            if param_val:
+            if tuple(param_val.keys()) != ("id",):
                 param_vals.append(param_val)
             if err:
                 error_log += err
@@ -361,20 +386,20 @@ class SingleParameterValueMixin(ConvertToDBMixin):
 class SingleObjectParameterDefinitionModel(
     SingleObjectParameterMixin, SingleParameterDefinitionMixin, SingleParameterModel
 ):
-    """An object parameter definition model for a single object class."""
+    """An object parameter_definition model for a single object_class."""
 
 
 class SingleRelationshipParameterDefinitionModel(
     SingleRelationshipParameterMixin, SingleParameterDefinitionMixin, SingleParameterModel
 ):
-    """A relationship parameter definition model for a single relationship class."""
+    """A relationship parameter_definition model for a single relationship_class."""
 
 
 class SingleObjectParameterValueModel(SingleObjectParameterMixin, SingleParameterValueMixin, SingleParameterModel):
-    """An object parameter value model for a single object class."""
+    """An object parameter_value model for a single object_class."""
 
 
 class SingleRelationshipParameterValueModel(
     SingleRelationshipParameterMixin, SingleParameterValueMixin, SingleParameterModel
 ):
-    """A relationship parameter value model for a single relationship class."""
+    """A relationship parameter_value model for a single relationship_class."""

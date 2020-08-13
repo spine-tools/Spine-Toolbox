@@ -20,6 +20,7 @@ import logging
 from copy import copy
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PySide2.QtWidgets import QMessageBox
+from PySide2.QtGui import QIcon, QFont
 from ..config import INVALID_CHARS
 from ..metaobject import shorten
 
@@ -119,6 +120,19 @@ class ProjectItemModel(QAbstractItemModel):
         item = index.internalPointer()
         if role == Qt.DisplayRole:
             return item.name
+        elif role == Qt.DecorationRole:
+            if not hasattr(item, "project_item"):
+                # item is a CategoryProjectTreeItem or root
+                return None
+            else:
+                # item is a LeafProjectTreeItem
+                icon_path = item.project_item.get_icon().icon_file
+                return QIcon(icon_path)
+        elif role == Qt.FontRole:
+            if not hasattr(item, "project_item"):
+                bold_font = QFont()
+                bold_font.setBold(True)
+                return bold_font
         return None
 
     def item(self, index):

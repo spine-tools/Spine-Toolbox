@@ -12,13 +12,34 @@
 """
 Classes for custom line edits.
 
-:author: M. Marin (KTH)
+:authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   11.10.2018
 """
 
 import os
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtWidgets import QLineEdit
+from PySide2.QtGui import QKeySequence
+
+
+class PropertyQLineEdit(QLineEdit):
+    """A custom QLineEdit for Project Item Properties."""
+
+    def keyPressEvent(self, e):
+        """Overridden to catch and pass on the
+        Undo and Redo commands when this line
+        edit has the focus.
+
+        Args:
+            e (QKeyEvent): Event
+        """
+        mw = self.nativeParentWidget()  # ToolboxUI
+        if e.matches(QKeySequence.Undo):
+            mw.undo_stack.undo()
+        elif e.matches(QKeySequence.Redo):
+            mw.undo_stack.redo()
+        else:
+            super().keyPressEvent(e)
 
 
 class CustomQLineEdit(QLineEdit):
@@ -54,3 +75,19 @@ class CustomQLineEdit(QLineEdit):
         """Emit file_dropped signal with the file for the dropped url."""
         url = event.mimeData().urls()[0]
         self.file_dropped.emit(url.toLocalFile())
+
+    def keyPressEvent(self, e):
+        """Overridden to catch and pass on the
+        Undo and Redo commands when this line
+        edit has the focus.
+
+        Args:
+            e (QKeyEvent): Event
+        """
+        mw = self.nativeParentWidget()  # ToolboxUI
+        if e.matches(QKeySequence.Undo):
+            mw.undo_stack.undo()
+        elif e.matches(QKeySequence.Redo):
+            mw.undo_stack.redo()
+        else:
+            super().keyPressEvent(e)

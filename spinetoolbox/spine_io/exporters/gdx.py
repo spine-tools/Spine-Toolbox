@@ -254,7 +254,7 @@ class Parameter:
 
 class IndexingDomain:
     """
-    This class holds the indexes that should be used for indexed parameter value expansion.
+    This class holds the indexes that should be used for indexed parameter_value expansion.
 
     Attributes:
         name (str): indexing domain's name
@@ -365,9 +365,9 @@ def _read_value(value_in_database):
     try:
         value = from_database(value_in_database)
     except ParameterValueFormatError:
-        raise GdxExportException("Failed to read parameter value.")
+        raise GdxExportException("Failed to read parameter_value.")
     if value is not None and not isinstance(value, (float, IndexedValue)):
-        raise GdxUnsupportedValueTypeException(f"Unsupported parameter value type '{type(value).__name__}'.")
+        raise GdxUnsupportedValueTypeException(f"Unsupported parameter_value type '{type(value).__name__}'.")
     if isinstance(value, Map):
         if value.is_nested():
             raise GdxUnsupportedValueTypeException("Nested maps are not supported.")
@@ -520,7 +520,7 @@ def update_merging_settings(merging_settings, set_settings, db_map):
         elif type_name == "relationship":
             parameters = db_map.parameter_definition_list(relationship_class_id=class_id)
         else:
-            raise GdxExportException(f"Unknown entity class type '{type_name}'")
+            raise GdxExportException(f"Unknown entity_class type '{type_name}'")
         defined_parameter_names = [parameter.name for parameter in parameters]
         if not defined_parameter_names:
             continue
@@ -668,7 +668,7 @@ def object_classes_to_domains(db_map, domain_names):
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
         domain_names (set): names of domains to convert
     Returns:
-         dict: a map from object class id to corresponding :class:`Set`.
+         dict: a map from object_class id to corresponding :class:`Set`.
     """
     domains = dict()
     for object_class_row in db_map.object_class_list():
@@ -688,7 +688,7 @@ def object_parameters(db_map, domains_with_ids, logger):
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set` objects
+        domains_with_ids (dict): mapping from object_class ids to corresponding :class:`Set` objects
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
     Returns:
@@ -717,9 +717,9 @@ def _object_parameter_default_values(db_map, domains_with_ids, classes_with_igno
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set` objects
-        classes_with_ignored_parameters (set, optional): a set of problematic object class names; if not None,
-            object class names are added to this set in case of errors instead of raising an exception
+        domains_with_ids (dict): mapping from object_class ids to corresponding :class:`Set` objects
+        classes_with_ignored_parameters (set, optional): a set of problematic object_class names; if not None,
+            object_class names are added to this set in case of errors instead of raising an exception
     Returns:
         dict: a map from parameter name to corresponding :class:`Parameter`
     """
@@ -755,9 +755,9 @@ def _update_using_existing_object_parameter_values(
     Args:
         parameters (dict): a mapping from object parameter names to :class:`Parameter` objects to update
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object class ids to corresponding :class:`Set` objects
-        classes_with_ignored_parameters (set, optional): a set of problematic object class names; if not None,
-            object class names are added to this set in case of errors instead of raising an exception
+        domains_with_ids (dict): mapping from object_class ids to corresponding :class:`Set` objects
+        classes_with_ignored_parameters (set, optional): a set of problematic object_class names; if not None,
+            object_class names are added to this set in case of errors instead of raising an exception
     """
     for parameter_row in db_map.object_parameter_value_list():
         name = parameter_row.parameter_name
@@ -787,7 +787,7 @@ def relationship_classes_to_sets(db_map, domain_names, set_names):
         domain_names (set): names of domains (a.k.a object classes) the relationships connect
         set_names (set): names of sets to convert
     Returns:
-         dict: a map from relationship class ids to the corresponding :class:`Set` objects
+         dict: a map from relationship_class ids to the corresponding :class:`Set` objects
     """
     sets = dict()
     for relationship_class_row in db_map.wide_relationship_class_list():
@@ -811,7 +811,7 @@ def relationship_parameters(db_map, sets_with_ids, logger):
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set` objects
+        sets_with_ids (dict): mapping from relationship_class ids to corresponding :class:`Set` objects
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
     Returns:
@@ -840,9 +840,9 @@ def _relationship_parameter_default_values(db_map, sets_with_ids, classes_with_i
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set` objects
-        classes_with_ignored_parameters (set, optional): a set of problematic relationship class names; if not None,
-            relationship class names are added to this set in case of errors instead of raising an exception
+        sets_with_ids (dict): mapping from relationship_class ids to corresponding :class:`Set` objects
+        classes_with_ignored_parameters (set, optional): a set of problematic relationship_class names; if not None,
+            relationship_class names are added to this set in case of errors instead of raising an exception
     Returns:
         dict: a map from parameter name to corresponding :class:`Parameter`
     """
@@ -878,8 +878,8 @@ def _update_using_existing_relationship_parameter_values(
     Args:
         parameters (dict): a mapping from relationship parameter names to :class:`Parameter` objects to update
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        sets_with_ids (dict): mapping from relationship class ids to corresponding :class:`Set` objects
-        classes_with_ignored_parameters (set, optional): a set of problematic relationship class names; if not None,
+        sets_with_ids (dict): mapping from relationship_class ids to corresponding :class:`Set` objects
+        classes_with_ignored_parameters (set, optional): a set of problematic relationship_class names; if not None,
             class names are added to this set in case of errors instead of raising an exception
     """
     for parameter_row in db_map.relationship_parameter_value_list():
@@ -959,7 +959,7 @@ class IndexingSetting:
         """
         Args:
             indexed_parameter (Parameter): a parameter containing indexed values
-            set_name (str): name of the original entity class to which this parameter belongs
+            set_name (str): name of the original entity_class to which this parameter belongs
         """
         self.parameter = indexed_parameter
         self.indexing_domain = None
@@ -1154,11 +1154,11 @@ def _add_to_indexing_settings(
     Parameters:
         settings (dict): indexing settings
         parameter_name (str): parameter's name
-        entity_class_name (str): name of the object or relationship class the parameter belongs to
+        entity_class_name (str): name of the object or relationship_class the parameter belongs to
         dimensions (list): a list of parameter's domain names
-        parsed_value (IndexedValue): parsed parameter value
+        parsed_value (IndexedValue): parsed parameter_value
         index_keys (tuple): parameter's keys
-        classes_with_unsupported_value_types (set, optional): entity class names with unsupported value types
+        classes_with_unsupported_value_types (set, optional): entity_class names with unsupported value types
     """
     try:
         parameter = Parameter(dimensions, [index_keys], [parsed_value])
@@ -1258,7 +1258,7 @@ def indexing_settings_from_dict(settings_dict, db_map, logger):
 
 
 def _find_indexed_parameter(parameter_name, db_map, logger=None):
-    """Searches for parameter_name in db_map and returns Parameter and its entity class name."""
+    """Searches for parameter_name in db_map and returns Parameter and its entity_class name."""
     object_classes_with_unsupported_parameter_types = set() if logger is not None else None
     relationship_classes_with_unsupported_parameter_types = set()
     definition = (

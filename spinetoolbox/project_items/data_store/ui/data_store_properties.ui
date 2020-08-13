@@ -333,7 +333,7 @@
              </widget>
             </item>
             <item row="2" column="2" colspan="2">
-             <widget class="QLineEdit" name="lineEdit_username">
+             <widget class="PropertyQLineEdit" name="lineEdit_username">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -387,7 +387,7 @@
              </widget>
             </item>
             <item row="3" column="2" colspan="2">
-             <widget class="QLineEdit" name="lineEdit_password">
+             <widget class="PropertyQLineEdit" name="lineEdit_password">
               <property name="enabled">
                <bool>false</bool>
               </property>
@@ -428,7 +428,7 @@
             <item row="4" column="2" colspan="2">
              <layout class="QHBoxLayout" name="horizontalLayout_23">
               <item>
-               <widget class="QLineEdit" name="lineEdit_host">
+               <widget class="PropertyQLineEdit" name="lineEdit_host">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -482,7 +482,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="lineEdit_port">
+               <widget class="PropertyQLineEdit" name="lineEdit_port">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -615,7 +615,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_ds_form">
+          <widget class="QPushButton" name="pushButton_ds_open_editor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -638,7 +638,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
-            <string>Open form</string>
+            <string>Open editor</string>
            </property>
           </widget>
          </item>
@@ -736,9 +736,29 @@
   <customwidget>
    <class>CustomQLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>spinetoolbox/widgets/custom_qlineedit.h</header>
+   <header>spinetoolbox/widgets/custom_qlineedits.h</header>
+  </customwidget>
+  <customwidget>
+   <class>PropertyQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>spinetoolbox/widgets/custom_qlineedits.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>scrollArea_5</tabstop>
+  <tabstop>comboBox_dialect</tabstop>
+  <tabstop>comboBox_dsn</tabstop>
+  <tabstop>lineEdit_username</tabstop>
+  <tabstop>lineEdit_password</tabstop>
+  <tabstop>lineEdit_host</tabstop>
+  <tabstop>lineEdit_port</tabstop>
+  <tabstop>lineEdit_database</tabstop>
+  <tabstop>toolButton_open_sqlite_file</tabstop>
+  <tabstop>pushButton_create_new_spine_db</tabstop>
+  <tabstop>pushButton_ds_open_editor</tabstop>
+  <tabstop>toolButton_copy_url</tabstop>
+  <tabstop>toolButton_ds_open_dir</tabstop>
+ </tabstops>
  <resources>
   <include location="../../../ui/resources/resources_icons.qrc"/>
  </resources>

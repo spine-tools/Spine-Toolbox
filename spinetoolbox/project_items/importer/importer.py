@@ -118,16 +118,15 @@ class Importer(ProjectItem):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         selected_settings = dict()
-        for file_item in self._file_model.existing_files():
+        for file_item in self._file_model.files:
             label = file_item.label
             settings = self.settings.get(label) if file_item.selected else "deselected"
             if not settings:
                 continue
             selected_settings[label] = settings
-        python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
         gams_path = self._project.settings.value("appSettings/gamsPath", defaultValue=None)
         executable = ExecutableItem(
-            self.name, selected_settings, self.logs_dir, python_path, gams_path, self.cancel_on_error, self._logger
+            self.name, selected_settings, self.logs_dir, gams_path, self.cancel_on_error, self._logger
         )
         return executable
 

@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A model for maps, used by the parameter value editors.
+A model for maps, used by the parameter_value editors.
 
 :authors: A. Soininen (VTT)
 :date:    11.2.2020
@@ -18,7 +18,19 @@ A model for maps, used by the parameter value editors.
 
 from itertools import takewhile
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from spinedb_api import DateTime, Duration, from_database, Map, ParameterValueFormatError, to_database
+from spinedb_api import (
+    Array,
+    convert_leaf_maps_to_specialized_containers,
+    DateTime,
+    Duration,
+    from_database,
+    IndexedValue,
+    Map,
+    ParameterValueFormatError,
+    TimePattern,
+    TimeSeries,
+    to_database,
+)
 
 
 class MapModel(QAbstractTableModel):
@@ -72,6 +84,11 @@ class MapModel(QAbstractTableModel):
             return 0
         return len(self._rows[0])
 
+    def convert_leaf_maps(self):
+        converted = convert_leaf_maps_to_specialized_containers(self.value())
+        if isinstance(converted, Map):
+            self.reset(converted)
+
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data associated with the given role."""
         if role not in (Qt.DisplayRole, Qt.EditRole) or not index.isValid():
@@ -96,6 +113,12 @@ class MapModel(QAbstractTableModel):
             return str(data.value)
         if isinstance(data, Duration):
             return str(data)
+        if isinstance(data, TimeSeries):
+            return "Time series"
+        if isinstance(data, TimePattern):
+            return "Time pattern"
+        if isinstance(data, Array):
+            return "Array"
         return data
 
     def flags(self, index):
@@ -190,9 +213,10 @@ class MapModel(QAbstractTableModel):
             new_value = from_database(value)
         except ParameterValueFormatError:
             return False
-        if not isinstance(new_value, (str, float, Duration, DateTime)):
+        if not isinstance(new_value, (str, float, Duration, DateTime, IndexedValue)):
             return False
-        self._rows[index.row()][index.column()] = from_database(value)
+        self._rows[index.row()][index.column()] = new_value
+        self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
         return True
 
     def trim_columns(self):
@@ -255,6 +279,8 @@ def _reconstruct_map(rows, first_row, last_row, column_index):
             index = row[0]
             if index is None:
                 raise ParameterValueFormatError(f"Index missing on row {first_row + row_index} column {column_index}.")
+        if not isinstance(index, (str, float, DateTime, Duration)):
+            raise ParameterValueFormatError(f"Index not scalar on row {first_row + row_index} column {column_index}.")
         is_leaf = len(row) == 2 or row[2] is None
         if is_leaf:
             indexes.append(index)

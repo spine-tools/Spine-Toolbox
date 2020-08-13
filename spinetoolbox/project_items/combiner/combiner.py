@@ -68,15 +68,14 @@ class Combiner(ProjectItem):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         cancel_on_error = self.cancel_on_error
-        python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
-        return ExecutableItem(self.name, self.logs_dir, python_path, cancel_on_error, self._logger)
+        return ExecutableItem(self.name, self.logs_dir, cancel_on_error, self._logger)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
-        s[self._properties_ui.toolButton_view_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_view_open_ds_view.clicked] = self.open_ds_form
+        s[self._properties_ui.toolButton_combiner_open_dir.clicked] = lambda checked=False: self.open_directory()
+        s[self._properties_ui.pushButton_combiner_open_editor.clicked] = self.open_db_editor
         s[self._properties_ui.cancel_on_error_checkBox.stateChanged] = self._handle_cancel_on_error_changed
         return s
 
@@ -99,17 +98,16 @@ class Combiner(ProjectItem):
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.cancel_on_error_checkBox.setCheckState(Qt.Checked if self.cancel_on_error else Qt.Unchecked)
-        self._properties_ui.label_view_name.setText(self.name)
-        self._properties_ui.treeView_view.setModel(self.reference_model)
+        self._properties_ui.label_name.setText(self.name)
+        self._properties_ui.treeView_files.setModel(self.reference_model)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-        self._properties_ui.treeView_view.setModel(None)
+        self._properties_ui.treeView_files.setModel(None)
 
     @Slot(bool)
-    def open_ds_form(self, checked=False):
-        """Opens references in the Data store form.
-        """
+    def open_db_editor(self, checked=False):
+        """Opens selected db in the Spine database editor."""
         indexes = self._selected_indexes()
         db_url_codenames = self._db_url_codenames(indexes)
         if not db_url_codenames:
@@ -128,7 +126,7 @@ class Combiner(ProjectItem):
 
     def update_name_label(self):
         """Update Combiner tab name label. Used only when renaming project items."""
-        self._properties_ui.label_view_name.setText(self.name)
+        self._properties_ui.label_name.setText(self.name)
 
     def execute_forward(self, resources):
         """see base class"""
@@ -181,10 +179,10 @@ class Combiner(ProjectItem):
 
     def _selected_indexes(self):
         """Returns selected indexes."""
-        selection_model = self._properties_ui.treeView_view.selectionModel()
+        selection_model = self._properties_ui.treeView_files.selectionModel()
         if not selection_model.hasSelection():
-            self._properties_ui.treeView_view.selectAll()
-        return self._properties_ui.treeView_view.selectionModel().selectedRows()
+            self._properties_ui.treeView_files.selectAll()
+        return self._properties_ui.treeView_files.selectionModel().selectedRows()
 
     def _db_url_codenames(self, indexes):
         """Returns a dict mapping url to provider's name for given indexes in the reference model."""
@@ -202,7 +200,7 @@ class Combiner(ProjectItem):
             self._logger.msg.emit(
                 "Link established. "
                 f"Data from<b>{source_item.name}</b> will be merged "
-                f"into <b>{self.name}</b>'s downstream Data Stores upon execution."
+                f"into <b>{self.name}</b>'s successor Data Stores upon execution."
             )
         else:
             super().notify_destination(source_item)

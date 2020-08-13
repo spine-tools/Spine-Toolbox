@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A model for time patterns, used by the parameter value editors.
+A model for time patterns, used by the parameter_value editors.
 
 :authors: A. Soininen (VTT)
 :date:   4.7.2019

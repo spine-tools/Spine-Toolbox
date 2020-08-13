@@ -10,9 +10,9 @@
 ######################################################################################################################
 
 """
-View properties widget.
+Combiner properties widget.
 
-:author: M. Marin (KTH)
+:authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   12.9.2019
 """
 
@@ -23,10 +23,10 @@ from .custom_menus import CombinerPropertiesContextMenu
 
 
 class CombinerPropertiesWidget(QWidget):
-    """Widget for the Combiner Item Properties.
+    """Widget for the Combiner Project Item Properties.
 
     Args:
-        toolbox (ToolboxUI): The toolbox instance where this widget should be embeded
+        toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
     """
 
     def __init__(self, toolbox):
@@ -37,7 +37,7 @@ class CombinerPropertiesWidget(QWidget):
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_files.setStyleSheet(TREEVIEW_HEADER_SS)
         toolbox.ui.tabWidget_item_properties.addTab(self, "Combiner")
         # Class attributes
         self.properties_context_menu = None
@@ -45,22 +45,22 @@ class CombinerPropertiesWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.treeView_view.customContextMenuRequested.connect(self.show_view_properties_context_menu)
+        self.ui.treeView_files.customContextMenuRequested.connect(self.show_combiner_properties_context_menu)
 
     @Slot("QPoint")
-    def show_view_properties_context_menu(self, pos):
+    def show_combiner_properties_context_menu(self, pos):
         """Create and show a context-menu in Combiner properties.
 
         Args:
             pos (QPoint): Mouse position
         """
-        ind = self.ui.treeView_view.indexAt(pos)  # Index of selected item in View references tree view.
-        curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected View
-        view = self._toolbox.project_item_model.item(curr_index).project_item
-        global_pos = self.ui.treeView_view.viewport().mapToGlobal(pos)
+        ind = self.ui.treeView_files.indexAt(pos)  # Index of selected item in Combiner references tree view.
+        curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Combiner
+        combiner = self._toolbox.project_item_model.item(curr_index).project_item
+        global_pos = self.ui.treeView_files.viewport().mapToGlobal(pos)
         self.properties_context_menu = CombinerPropertiesContextMenu(self, global_pos, ind)
         option = self.properties_context_menu.get_action()
-        if option == "Open view":
-            view.open_view()
+        if option == "Open editor":
+            combiner.open_db_editor()
         self.properties_context_menu.deleteLater()
         self.properties_context_menu = None

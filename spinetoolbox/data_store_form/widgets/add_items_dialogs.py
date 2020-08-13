@@ -62,14 +62,13 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
     """A dialog to let the user add new 'ready' relationships."""
 
     def __init__(self, parent, relationships_class, relationships, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
+            parent (DataStoreForm)
             relationships_class (dict)
             relationships (list(list(str))
-            parent (DataStoreForm)
             db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
+            db_maps (iter): DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
         self.relationship_class = relationships_class
@@ -136,9 +135,8 @@ class AddItemsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for new db items."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -147,7 +145,8 @@ class AddItemsDialog(ManageItemsDialog):
         self.db_maps = db_maps
         self.keyed_db_maps = {x.codename: x for x in db_maps}
         self.remove_rows_button = QToolButton()
-        self.remove_rows_button.setToolTip("<p>Remove selected rows.</p>")
+        self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.remove_rows_button.setText("Remove selected rows")
         self.layout().addWidget(self.remove_rows_button, 1, 0)
         self.layout().addWidget(self.button_box, 2, 0, -1, -1)
 
@@ -173,9 +172,8 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
     """A dialog to query user's preferences for new object classes."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -188,13 +186,13 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
         self.layout().addWidget(self.remove_rows_button, 1, 0)
         self.layout().addWidget(self.button_box, 2, 0, -1, -1)
         self.display_order = {
-            db_map: max((x["display_order"] for x in self.db_mngr.get_items(db_map, "object class")), default=-1)
+            db_map: max((x["display_order"] for x in self.db_mngr.get_items(db_map, "object_class")), default=-1)
             for db_map in self.db_maps
         }
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
+        self.model.set_horizontal_header_labels(['object_class name', 'description', 'display icon', 'databases'])
         databases = ",".join(list(self.keyed_db_maps.keys()))
         self.default_display_icon = default_icon_id()
         self.model.set_default_row(**{'databases': databases, 'display icon': self.default_display_icon})
@@ -251,13 +249,12 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
     """
 
     def __init__(self, parent, db_mngr, *db_maps, class_name=None, force_default=False):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
-            class_name (str): default object class name
+            class_name (str): default object_class name
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
@@ -268,7 +265,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageObjectsDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class name', 'object name', 'description', 'databases'])
+        self.model.set_horizontal_header_labels(['object_class name', 'object name', 'description', 'databases'])
         self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
         if class_name:
             default_db_maps = [db_map for db_map, names in self.db_map_obj_cls_lookup.items() if class_name in names]
@@ -277,7 +274,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
             )
         else:
             db_names = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'object class name': class_name, 'databases': db_names})
+        self.model.set_default_row(**{'object_class name': class_name, 'databases': db_names})
         self.model.clear()
 
     @Slot()
@@ -301,7 +298,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
                 object_classes = self.db_map_obj_cls_lookup[db_map]
                 if class_name not in object_classes:
                     self.parent().msg_error.emit(
-                        "Invalid object class '{}' for db '{}' at row {}".format(class_name, db_name, i + 1)
+                        "Invalid object_class '{}' for db '{}' at row {}".format(class_name, db_name, i + 1)
                     )
                     return
                 class_id = object_classes[class_name]["id"]
@@ -319,13 +316,12 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     """A dialog to query user's preferences for new relationship classes."""
 
     def __init__(self, parent, db_mngr, *db_maps, object_class_one_name=None, force_default=False):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
-            object_class_one_name (str): default object class name
+            object_class_one_name (str): default object_class name
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
@@ -349,7 +345,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         self.number_of_dimensions = 1
         self.connect_signals()
         self.model.set_horizontal_header_labels(
-            ['object class name (1)', 'relationship class name', 'description', 'databases']
+            ['object_class name (1)', 'relationship_class name', 'description', 'databases']
         )
         self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
         if object_class_one_name:
@@ -361,7 +357,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
             )
         else:
             db_names = ",".join(list(self.keyed_db_maps.keys()))
-        self.model.set_default_row(**{'object class name (1)': object_class_one_name, 'databases': db_names})
+        self.model.set_default_row(**{'object_class name (1)': object_class_one_name, 'databases': db_names})
         self.model.clear()
 
     def connect_signals(self):
@@ -382,7 +378,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
-        column_name = "object class name ({0})".format(self.number_of_dimensions)
+        column_name = "object_class name ({0})".format(self.number_of_dimensions)
         self.model.insertColumns(column, 1)
         self.model.insert_horizontal_header_labels(column, [column_name])
         self.table_view.resizeColumnToContents(column)
@@ -404,7 +400,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         right = bottom_right.column()
         for row in range(top, bottom + 1):
             for column in range(left, right + 1):
-                if header[column] == 'relationship class name':
+                if header[column] == 'relationship_class name':
                     break
             else:
                 col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
@@ -419,7 +415,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
-        name_column = self.model.horizontal_header_labels().index("relationship class name")
+        name_column = self.model.horizontal_header_labels().index("relationship_class name")
         description_column = self.model.horizontal_header_labels().index("description")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -444,7 +440,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
                     object_class_name = row_data[column]
                     if object_class_name not in object_classes:
                         self.parent().msg_error.emit(
-                            "Invalid object class '{}' for db '{}' at row {}".format(object_class_name, db_name, i + 1)
+                            "Invalid object_class '{}' for db '{}' at row {}".format(object_class_name, db_name, i + 1)
                         )
                         return
                     object_class_id = object_classes[object_class_name]["id"]
@@ -463,9 +459,8 @@ class AddOrManageRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixi
     """A dialog to query user's preferences for new relationships."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
@@ -500,7 +495,7 @@ class AddOrManageRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixi
 
     @Slot(int)
     def reset_model(self, index):
-        """Called when relationship class's combobox's index changes.
+        """Called when relationship_class's combobox's index changes.
         Update relationship_class attribute accordingly and reset model."""
         raise NotImplementedError()
 
@@ -511,14 +506,13 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
     def __init__(
         self, parent, db_mngr, *db_maps, relationship_class_key=(), object_names_by_class_name=None, force_default=False
     ):
-        """Init class.
-
-        Args
+        """
+        Args:
             parent (DataStoreForm)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
-            relationship_class_key (tuple(str,str)): relationships class name, object class name list string
-            object_names_by_class_name (dict): mapping object class names to default object names
+            relationship_class_key (tuple(str,str)): relationships class name, object_class name list string
+            object_names_by_class_name (dict): mapping object_class names to default object names
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
@@ -548,7 +542,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
 
     @Slot(int)
     def reset_model(self, index):
-        """Setup model according to current relationship class selected in combobox.
+        """Setup model according to current relationship_class selected in combobox.
         """
         self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
         default_db_maps = [
@@ -561,8 +555,8 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         header = object_class_name_list + ['relationship name', 'databases']
         self.model.set_horizontal_header_labels(header)
         defaults = {'databases': db_names}
-        if self.object_names_by_class_name:
-            defaults.update({key: value for key, value in self.object_names_by_class_name.items()})
+        if self.object_names_by_class_name is not None:
+            defaults.update(self.object_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
 
@@ -612,7 +606,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
                 relationship_classes = self.db_map_rel_cls_lookup[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
                     self.parent().msg_error.emit(
-                        "Invalid relationship class '{}' for db '{}' at row {}".format(self.class_name, db_name, i + 1)
+                        "Invalid relationship_class '{}' for db '{}' at row {}".format(self.class_name, db_name, i + 1)
                     )
                     return
                 rel_cls = relationship_classes[self.class_name, self.object_class_name_list]
@@ -643,21 +637,22 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     """A dialog to query user's preferences for managing relationships.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Init class.
-
+    def __init__(self, parent, db_mngr, *db_maps, relationship_class_key=None):
+        """
         Args:
             parent (DataStoreForm): data store widget
             db_mngr (SpineDBManager): the manager to do the removal
             db_maps (iter): DiffDatabaseMapping instances
+            relationship_class_key (str, optional): relationships class name, object_class name list string.
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Manage relationships")
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.remove_rows_button.setToolTip("<p>Remove selected relationships.</p>")
         self.remove_rows_button.setIconSize(QSize(24, 24))
         self.db_map = db_maps[0]
-        self.relationships = dict()
+        self.relationship_ids = dict()
         layout = self.header_widget.layout()
         self.db_combo_box = QComboBox(self)
         layout.addSpacing(32)
@@ -693,7 +688,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.new_items_model = MinimalTableModel(self, lazy=False)
         self.model.sub_models = [self.new_items_model, self.existing_items_model]
         self.db_combo_box.addItems([db_map.codename for db_map in db_maps])
-        self.reset_relationship_class_combo_box(db_maps[0].codename)
+        self.reset_relationship_class_combo_box(db_maps[0].codename, relationship_class_key)
         self.connect_signals()
 
     def make_model(self):
@@ -709,11 +704,17 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.add_button.clicked.connect(self.add_relationships)
 
     @Slot(str)
-    def reset_relationship_class_combo_box(self, database):
+    def reset_relationship_class_combo_box(self, database, relationship_class_key=None):
         self.db_map = self.keyed_db_maps[database]
         self.relationship_class_keys = list(self.db_map_rel_cls_lookup[self.db_map])
         self.rel_cls_combo_box.addItems([f"{name}" for name, _ in self.relationship_class_keys])
-        self.rel_cls_combo_box.setCurrentIndex(-1)
+        try:
+            current_index = self.relationship_class_keys.index(relationship_class_key)
+            self.reset_model(current_index)
+            self._handle_model_reset()
+        except ValueError:
+            current_index = -1
+        self.rel_cls_combo_box.setCurrentIndex(current_index)
 
     @Slot(bool)
     def add_relationships(self, checked=True):
@@ -728,14 +729,14 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
 
     @Slot(int)
     def reset_model(self, index):
-        """Setup model according to current relationship class selected in combobox.
+        """Setup model according to current relationship_class selected in combobox.
         """
         self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
         object_class_name_list = self.object_class_name_list.split(",")
         self.model.set_horizontal_header_labels(object_class_name_list)
         self.existing_items_model.set_horizontal_header_labels(object_class_name_list)
         self.new_items_model.set_horizontal_header_labels(object_class_name_list)
-        self.relationships.clear()
+        self.relationship_ids.clear()
         for db_map in self.db_maps:
             relationship_classes = self.db_map_rel_cls_lookup[db_map]
             rel_cls = relationship_classes.get((self.class_name, self.object_class_name_list), None)
@@ -743,8 +744,8 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
                 continue
             for relationship in self.db_mngr.get_items_by_field(db_map, "relationship", "class_id", rel_cls["id"]):
                 key = tuple(relationship["object_name_list"].split(","))
-                self.relationships[key] = relationship
-        existing_items = list(self.relationships)
+                self.relationship_ids[key] = relationship["id"]
+        existing_items = list(self.relationship_ids)
         self.existing_items_model.reset_model(existing_items)
         self.model.refresh()
         self.model.modelReset.emit()
@@ -787,8 +788,8 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        keys_to_remove = set(self.relationships) - set(self.existing_items_model._main_data)
-        to_remove = [self.relationships[key] for key in keys_to_remove]
+        keys_to_remove = set(self.relationship_ids) - set(self.existing_items_model._main_data)
+        to_remove = [self.relationship_ids[key] for key in keys_to_remove]
         self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
         to_add = [[self.class_name, object_name_list] for object_name_list in self.new_items_model._main_data]
         self.db_mngr.import_data({self.db_map: {"relationships": to_add}}, command_text="Add relationships")
@@ -797,8 +798,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
 
 class AddOrManageObjectGroupDialog(QDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
-        """Init class.
-
+        """
         Args:
             parent (DataStoreForm): data store widget
             object_class_item (ObjectClassItem)
@@ -924,8 +924,7 @@ class AddOrManageObjectGroupDialog(QDialog):
 
 class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
-        """Init class.
-
+        """
         Args:
             parent (DataStoreForm): data store widget
             object_item (ObjectItem)
@@ -947,6 +946,9 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
         if not super()._check_validity():
             return False
         group_name = self.group_name_line_edit.text()
+        if not group_name:
+            self.parent().msg_error.emit(f"Please enter a name for the group.")
+            return False
         if group_name in self.db_map_object_ids[self.db_map]:
             self.parent().msg_error.emit(
                 f"An object called {group_name} already exists in this class. Please select a different group name."
@@ -964,7 +966,9 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
         db_map_data = {
             self.db_map: {
                 "objects": [(class_name, group_name)],
-                "object_groups": [(self.object_class_item.display_data, group_name, member_names)],
+                "object_groups": [
+                    (self.object_class_item.display_data, group_name, member_name) for member_name in member_names
+                ],
             }
         }
         self.db_mngr.import_data(db_map_data, command_text="Add object group")
@@ -973,8 +977,7 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
 
 class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
     def __init__(self, parent, object_item, db_mngr, *db_maps):
-        """Init class.
-
+        """
         Args:
             parent (DataStoreForm): data store widget
             object_item (ObjectItem)
@@ -1012,8 +1015,8 @@ class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
         }
         db_map_typed_data_to_remove = {
             self.db_map: {
-                "entity group": [
-                    x for x in self.object_item.db_map_entity_groups(self.db_map) if x["member_id"] in removed
+                "entity_group": [
+                    x["id"] for x in self.object_item.db_map_entity_groups(self.db_map) if x["member_id"] in removed
                 ]
             }
         }

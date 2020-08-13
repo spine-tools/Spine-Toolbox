@@ -25,6 +25,8 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
+from spinetoolbox.widgets.custom_qlineedits import PropertyQLineEdit
+
 from spinetoolbox import resources_icons_rc
 
 class Ui_Form(object):
@@ -109,7 +111,7 @@ class Ui_Form(object):
 
         self.verticalLayout_17.addLayout(self.horizontalLayout_9)
 
-        self.lineEdit_tool_args = QLineEdit(self.scrollAreaWidgetContents_3)
+        self.lineEdit_tool_args = PropertyQLineEdit(self.scrollAreaWidgetContents_3)
         self.lineEdit_tool_args.setObjectName(u"lineEdit_tool_args")
         self.lineEdit_tool_args.setClearButtonEnabled(True)
 

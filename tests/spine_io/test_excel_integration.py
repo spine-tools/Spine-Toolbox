@@ -31,7 +31,6 @@ from spinedb_api import (
 )
 from spinetoolbox.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
-from spinetoolbox.config import APPLICATION_PATH
 
 _TEMP_EXCEL_FILENAME = 'excel.xlsx'
 _TEMP_SQLITE_FILENAME = 'first.sqlite'
@@ -58,12 +57,12 @@ class TestExcelIntegration(unittest.TestCase):
         # delete all object_classes to empty database
         oc = set(oc.id for oc in db_map_test.object_class_list().all())
         if oc:
-            db_map_test.remove_items(object_class_ids=oc)
+            db_map_test.cascade_remove_items(object_class_ids=oc)
             db_map_test.commit_session('empty database')
 
         oc = set(oc.id for oc in db_map.object_class_list().all())
         if oc:
-            db_map.remove_items(object_class_ids=oc)
+            db_map.cascade_remove_items(object_class_ids=oc)
             db_map.commit_session('empty database')
 
         # create object classes
@@ -108,10 +107,22 @@ class TestExcelIntegration(unittest.TestCase):
 
         # add parameter values
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p1.id, 'object_id': oc1_obj1.id, 'object_class_id': oc_1.id, 'value': '0'}
+            **{
+                'parameter_definition_id': p1.id,
+                'object_id': oc1_obj1.id,
+                'object_class_id': oc_1.id,
+                'value': '0',
+                "alternative_id": 1,
+            }
         )
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p2.id, 'object_id': oc1_obj2.id, 'object_class_id': oc_1.id, 'value': '3.5'}
+            **{
+                'parameter_definition_id': p2.id,
+                'object_id': oc1_obj2.id,
+                'object_class_id': oc_1.id,
+                'value': '3.5',
+                "alternative_id": 1,
+            }
         )
         db_map.add_parameter_value(
             **{
@@ -119,6 +130,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'object_id': oc2_obj1.id,
                 'object_class_id': oc_2.id,
                 'value': '[1, 2, 3, 4]',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -127,6 +139,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'object_id': oc2_obj2.id,
                 'object_class_id': oc_2.id,
                 'value': '[5, 6, 7]',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -135,6 +148,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'relationship_id': rel1.id,
                 'relationship_class_id': relc1.id,
                 'value': '0',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -143,6 +157,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'relationship_id': rel2.id,
                 'relationship_class_id': relc1.id,
                 'value': '4',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -151,6 +166,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'relationship_id': rel1.id,
                 'relationship_class_id': relc1.id,
                 'value': '[5, 6, 7]',
+                "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
@@ -159,6 +175,7 @@ class TestExcelIntegration(unittest.TestCase):
                 'relationship_id': rel2.id,
                 'relationship_class_id': relc1.id,
                 'value': '[1, 2, 3, 4]',
+                "alternative_id": 1,
             }
         )
 
@@ -166,14 +183,26 @@ class TestExcelIntegration(unittest.TestCase):
         value = [1, 2, 3]
         ts_val = to_database(TimeSeriesVariableResolution(time, value, False, False))
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p5.id, 'object_id': oc3_obj1.id, 'object_class_id': oc_3.id, 'value': ts_val}
+            **{
+                'parameter_definition_id': p5.id,
+                'object_id': oc3_obj1.id,
+                'object_class_id': oc_3.id,
+                'value': ts_val,
+                "alternative_id": 1,
+            }
         )
 
         timepattern = ['m1', 'm2', 'm3']
         value = [1.1, 2.2, 3.3]
         ts_val = to_database(TimePattern(timepattern, value))
         db_map.add_parameter_value(
-            **{'parameter_definition_id': p6.id, 'object_id': oc3_obj1.id, 'object_class_id': oc_3.id, 'value': ts_val}
+            **{
+                'parameter_definition_id': p6.id,
+                'object_id': oc3_obj1.id,
+                'object_class_id': oc_3.id,
+                'value': ts_val,
+                "alternative_id": 1,
+            }
         )
 
         # commit
@@ -264,10 +293,10 @@ class TestExcelIntegration(unittest.TestCase):
         # table_mappings (Excel file) contains a sheet json_relationship_class which
         # adds a duplicate 'relationship_class' to data. A duplicate is considered
         # an error by spinedb_api import_data() function. Is this intentional?
-        data, errors = connector.get_mapped_data(table_mappings, table_options, {}, {})
+        data, _errors = connector.get_mapped_data(table_mappings, table_options, {}, {})
         # TODO: Check if db_map is supposed to have two relationship classes called relationship_class or not?
         import_num, import_errors = import_data(db_map, **data)
-        self.assertEqual(import_errors, ["Duplicate relationship class 'relationship_class'"])
+        self.assertEqual(import_errors, [])
         db_map.commit_session('Excel import')
         return import_num
 
@@ -280,7 +309,7 @@ class TestExcelIntegration(unittest.TestCase):
                 # export_spine_database_to_xlsx exports db_map to an Excel that has a
                 # sheet called json_relationship_class. When this Excel is imported
                 # back to a database in _import_xlsx_to_database() function there
-                # is a duplicate relationship class called relationship_class.
+                # is a duplicate relationship_class called relationship_class.
                 # Is this intentional?
                 export_spine_database_to_xlsx(db_map, excel_file_name)
                 import_num = self._import_xlsx_to_database(excel_file_name, empty_db_map)
@@ -303,8 +332,8 @@ class TestExcelIntegration(unittest.TestCase):
                 import_num = self._import_xlsx_to_database(excel_file_name, empty_db_map)
                 self.assertEqual(import_num, 32)
 
-                # delete 1 object class
-                db_map.remove_items(object_class_ids={1})
+                # delete 1 object_class
+                db_map.cascade_remove_items(object_class={1})
                 db_map.commit_session("Delete class")
 
                 # reimport data

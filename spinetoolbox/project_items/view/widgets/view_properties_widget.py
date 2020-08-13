@@ -26,7 +26,7 @@ class ViewPropertiesWidget(QWidget):
     """Widget for the View Item Properties.
 
     Args:
-        toolbox (ToolboxUI): The toolbox instance where this widget should be embeded
+        toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
     """
 
     def __init__(self, toolbox):
@@ -47,7 +47,7 @@ class ViewPropertiesWidget(QWidget):
         """Connect signals to slots."""
         self.ui.treeView_view.customContextMenuRequested.connect(self.show_view_properties_context_menu)
 
-    @Slot("QPoint", name="show_view_properties_context_menu")
+    @Slot("QPoint")
     def show_view_properties_context_menu(self, pos):
         """Create and show a context-menu in View properties.
 
@@ -60,7 +60,7 @@ class ViewPropertiesWidget(QWidget):
         global_pos = self.ui.treeView_view.viewport().mapToGlobal(pos)
         self.view_prop_context_menu = ViewPropertiesContextMenu(self, global_pos, ind)
         option = self.view_prop_context_menu.get_action()
-        if option == "Open view":
-            view.open_view()
+        if option == "Open editor":
+            view.open_db_editor()
         self.view_prop_context_menu.deleteLater()
         self.view_prop_context_menu = None

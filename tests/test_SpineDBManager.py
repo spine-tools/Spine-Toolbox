@@ -32,7 +32,7 @@ from spinetoolbox.spine_db_manager import SpineDBManager
 
 
 class TestParameterValueFormatting(unittest.TestCase):
-    """Tests for parameter value formatting in SpineDBManager."""
+    """Tests for parameter_value formatting in SpineDBManager."""
 
     @classmethod
     def setUpClass(cls):
@@ -46,7 +46,7 @@ class TestParameterValueFormatting(unittest.TestCase):
     def get_value(self, role):
         mock_db_map = Mock()
         id_ = 0
-        return self.db_mngr.get_value(mock_db_map, "parameter value", id_, role)
+        return self.db_mngr.get_value(mock_db_map, "parameter_value", id_, role)
 
     def test_plain_number_in_display_role(self):
         value = 2.3

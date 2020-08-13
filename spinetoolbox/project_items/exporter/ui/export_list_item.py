@@ -25,12 +25,14 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
+from spinetoolbox.widgets.custom_qlineedits import PropertyQLineEdit
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(400, 117)
+        Form.resize(400, 140)
         self.verticalLayout_2 = QVBoxLayout(Form)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.frame = QFrame(Form)
@@ -57,7 +59,7 @@ class Ui_Form(object):
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.file_name_label)
 
-        self.out_file_name_edit = QLineEdit(self.frame)
+        self.out_file_name_edit = PropertyQLineEdit(self.frame)
         self.out_file_name_edit.setObjectName(u"out_file_name_edit")
 
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.out_file_name_edit)

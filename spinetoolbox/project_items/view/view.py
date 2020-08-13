@@ -63,7 +63,7 @@ class View(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_view_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_view_open_ds_form.clicked] = self.open_view
+        s[self._properties_ui.pushButton_view_open_editor.clicked] = self.open_db_editor
         return s
 
     def restore_selections(self):
@@ -76,9 +76,8 @@ class View(ProjectItem):
         self._properties_ui.treeView_view.setModel(None)
 
     @Slot(bool)
-    def open_view(self, checked=False):
-        """Opens references in a view window.
-        """
+    def open_db_editor(self, checked=False):
+        """Opens selected db in the Spine database editor."""
         indexes = self._selected_indexes()
         db_url_codenames = self._db_url_codenames(indexes)
         if not db_url_codenames:

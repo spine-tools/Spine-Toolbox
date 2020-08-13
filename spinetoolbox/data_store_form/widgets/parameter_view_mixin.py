@@ -18,7 +18,6 @@ Contains the ParameterViewMixin class.
 
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QHeaderView
-from .toolbars import ParameterTagToolBar
 from .object_name_list_editor import ObjectNameListEditor
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -26,7 +25,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from .manage_items_dialogs import ManageParameterTagsDialog
+from ..mvcmodels.parameter_tag_model import ParameterTagModel
 
 
 class ParameterViewMixin:
@@ -38,11 +37,13 @@ class ParameterViewMixin:
         super().__init__(*args, **kwargs)
         self.filter_class_ids = {}
         self.filter_entity_ids = {}
+        self.filter_alternative_ids = {}
         self.filter_tag_ids = dict()
         self.tag_filter_class_ids = {}
         self.filter_parameter_ids = {}
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *self.db_maps)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
+        self.parameter_tag_model = ParameterTagModel(self, self.db_mngr, *self.db_maps)
+        self.ui.treeView_parameter_tag.setModel(self.parameter_tag_model)
+        self.ui.treeView_parameter_tag.connect_data_store_form(self)
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *self.db_maps)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(
             self, self.db_mngr, *self.db_maps
@@ -78,7 +79,7 @@ class ParameterViewMixin:
         """Adds toggle view actions to View menu."""
         super().add_menu_actions()
         self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.parameter_tag_toolbar.toggleViewAction())
+        self.ui.menuView.addAction(self.ui.dockWidget_parameter_tag.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
@@ -87,8 +88,10 @@ class ParameterViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
-        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
+        self.ui.treeView_alternative_scenario.alternative_selection_changed.connect(
+            self._handle_alternative_selection_changed
+        )
+        self.ui.treeView_parameter_tag.tag_selection_changed.connect(self._handle_tag_selection_changed)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_relationship.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
@@ -98,7 +101,11 @@ class ParameterViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
-        self.parameter_tag_toolbar.init_toolbar()
+        self.parameter_tag_model.build_tree()
+        for item in self.parameter_tag_model.visit_all():
+            index = self.parameter_tag_model.index_from_item(item)
+            self.ui.treeView_parameter_tag.expand(index)
+        self.ui.treeView_parameter_tag.resizeColumnToContents(0)
         self.object_parameter_value_model.init_model()
         self.object_parameter_definition_model.init_model()
         self.relationship_parameter_value_model.init_model()
@@ -111,7 +118,7 @@ class ParameterViewMixin:
 
     @Slot("QModelIndex", "QVariant")
     def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
-        """Updates (object or relationship) parameter definition or value with newly edited data."""
+        """Updates (object or relationship) parameter_definition or value with newly edited data."""
         index.model().setData(index, new_value)
 
     @Slot("QModelIndex", int, "QVariant")
@@ -123,13 +130,13 @@ class ParameterViewMixin:
             rel_cls_id (int)
             db_map (DiffDatabaseMapping)
         """
-        relationship_class = self.db_mngr.get_item(db_map, "relationship class", rel_cls_id)
+        relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id)
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []
         object_names_lists = []
         for id_ in object_class_id_list.split(","):
             id_ = int(id_)
-            object_class_name = self.db_mngr.get_item(db_map, "object class", id_).get("name")
+            object_class_name = self.db_mngr.get_item(db_map, "object_class", id_).get("name")
             object_names_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_)]
             object_class_names.append(object_class_name)
             object_names_lists.append(object_names_list)
@@ -163,7 +170,7 @@ class ParameterViewMixin:
         set_and_apply_default_rows(self.relationship_parameter_value_model, default_data)
 
     def _get_filter_class_ids(self):
-        """Returns filter class ids by combining filter class ids from entity tree *and* parameter tag toolbar.
+        """Returns filter class ids by combining filter class ids from entity tree *and* parameter_tag toolbar.
 
         Returns:
             dict, NoneType: mapping db maps to sets of ids, or None if no filter (none shall pass)
@@ -187,15 +194,16 @@ class ParameterViewMixin:
             model.set_filter_parameter_ids(self.filter_parameter_ids)
         for model in self._parameter_value_models:
             model.set_filter_entity_ids(self.filter_entity_ids)
+            model.set_filter_alternative_ids(self.filter_alternative_ids)
 
     @Slot(dict)
     def _handle_graph_selection_changed(self, selected_items):
         """Resets filter according to graph selection."""
         obj_items = selected_items["object"]
         rel_items = selected_items["relationship"]
-        active_objs = {self.db_map: [x.db_representation for x in obj_items]}
+        active_objs = {self.graph_db_map: [x.db_representation for x in obj_items]}
         cascading_rels = self.db_mngr.find_cascading_relationships(self.db_mngr.db_map_ids(active_objs))
-        active_rels = {self.db_map: [x.db_representation for x in rel_items] + cascading_rels[self.db_map]}
+        active_rels = {self.graph_db_map: [x.db_representation for x in rel_items] + cascading_rels[self.graph_db_map]}
         self.filter_class_ids = {}
         for db_map, items in active_objs.items():
             self.filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
@@ -208,9 +216,9 @@ class ParameterViewMixin:
     @Slot(dict)
     def _handle_object_tree_selection_changed(self, selected_indexes):
         """Resets filter according to object tree selection."""
-        obj_cls_inds = set(selected_indexes.get("object class", {}).keys())
+        obj_cls_inds = set(selected_indexes.get("object_class", {}).keys())
         obj_inds = set(selected_indexes.get("object", {}).keys())
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
+        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         # Compute active indexes by merging in the parents from lower levels recursively
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
@@ -232,48 +240,37 @@ class ParameterViewMixin:
     @Slot(dict)
     def _handle_relationship_tree_selection_changed(self, selected_indexes):
         """Resets filter according to relationship tree selection."""
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
+        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
         self.filter_class_ids = self._db_map_ids(active_rel_cls_inds)
         self.filter_entity_ids = self._db_map_class_ids(active_rel_inds)
         self.reset_filters()
 
-    @Slot("QVariant", bool)
-    def _handle_tag_button_toggled(self, db_map_ids, checked):
-        """Resets filter according to selection in parameter tag toolbar."""
-        for db_map, id_ in db_map_ids:
-            if checked:
-                self.filter_tag_ids.setdefault(db_map, set()).add(id_)
-            else:
-                self.filter_tag_ids[db_map].remove(id_)
-        self.filter_tag_ids = {db_map: ids for db_map, ids in self.filter_tag_ids.items() if ids}
-        filter_parameters = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.filter_tag_ids)
-        self.filter_parameter_ids = d = {}
+    @Slot(dict)
+    def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):
+        """Resets filter according to selection in alternative tree view."""
+        self.filter_alternative_ids = {db_map: alt_ids.copy() for db_map, alt_ids in selected_db_map_alt_ids.items()}
+        self.reset_filters()
+
+    @Slot(dict)
+    def _handle_tag_selection_changed(self, selected_db_map_tag_ids):
+        """Resets filter according to selection in parameter_tag tree view."""
+        filter_parameters = self.db_mngr.find_cascading_parameter_definitions_by_tag(selected_db_map_tag_ids)
+        self.filter_parameter_ids = {}
         for db_map, params in filter_parameters.items():
             for param in params:
-                d.setdefault((db_map, param["entity_class_id"]), set()).add(param["id"])
-        if self.filter_tag_ids and not any(filter_parameters.values()):
+                self.filter_parameter_ids.setdefault((db_map, param["entity_class_id"]), set()).add(param["id"])
+        if selected_db_map_tag_ids and not any(filter_parameters.values()):
             # There are tags selected but no matching parameter definitions ~> no class shall pass
             self.tag_filter_class_ids = None
             self.reset_filters()
             return
-        self.tag_filter_class_ids = d = {}
+        self.tag_filter_class_ids = {}
         for db_map, params in filter_parameters.items():
             for param in params:
-                d.setdefault(db_map, set()).add(param["entity_class_id"])
+                self.tag_filter_class_ids.setdefault(db_map, set()).add(param["entity_class_id"])
         self.reset_filters()
-
-    @Slot(bool)
-    def show_manage_parameter_tags_form(self, checked=False):
-        dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
-
-    def restore_dock_widgets(self):
-        """Restores parameter tag toolbar."""
-        super().restore_dock_widgets()
-        self.parameter_tag_toolbar.setVisible(True)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
 
     def restore_ui(self):
         """Restores UI state from previous session."""
@@ -314,9 +311,14 @@ class ParameterViewMixin:
         self.qsettings.setValue("relParValHeaderState", h.saveState())
         self.qsettings.endGroup()
 
+    def receive_alternatives_updated(self, db_map_data):
+        super().receive_alternatives_updated(db_map_data)
+        self.object_parameter_value_model.receive_alternatives_updated(db_map_data)
+        self.relationship_parameter_value_model.receive_alternatives_updated(db_map_data)
+
     def receive_parameter_tags_fetched(self, db_map_data):
         super().receive_parameter_tags_fetched(db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_model.receive_parameter_tags_added(db_map_data)
 
     def receive_parameter_definitions_fetched(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
@@ -330,7 +332,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_added(self, db_map_data):
         super().receive_parameter_tags_added(db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_model.receive_parameter_tags_added(db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
@@ -344,7 +346,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_updated(self, db_map_data):
         super().receive_parameter_tags_updated(db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_updated(db_map_data)
+        self.parameter_tag_model.receive_parameter_tags_updated(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
         super().receive_parameter_definitions_updated(db_map_data)
@@ -373,7 +375,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_removed(self, db_map_data):
         super().receive_parameter_tags_removed(db_map_data)
-        self.parameter_tag_toolbar.receive_parameter_tags_removed(db_map_data)
+        self.parameter_tag_model.receive_parameter_tags_removed(db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
         super().receive_parameter_definitions_removed(db_map_data)

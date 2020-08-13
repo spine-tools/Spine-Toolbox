@@ -21,12 +21,13 @@ from .parameter_mixins import (
     FillInParameterNameMixin,
     MakeRelationshipOnTheFlyMixin,
     InferEntityClassIdMixin,
+    FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
     FillInValueListIdMixin,
 )
-
+from ...mvcmodels.shared import PARSED_ROLE
 from ...helpers import rows_to_row_count_tuples
 
 
@@ -47,25 +48,34 @@ class EmptyParameterModel(EmptyRowModel):
         self.entity_class_id = None
 
     @property
+    def item_type(self):
+        """The item type, either 'parameter_value' or 'parameter_definition', required by the json_fields property."""
+        raise NotImplementedError()
+
+    @property
     def entity_class_type(self):
-        """Either 'object class' or 'relationship class'."""
+        """Either 'object_class' or 'relationship_class'."""
         raise NotImplementedError()
 
     @property
     def entity_class_id_key(self):
-        return {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
+        return {"object_class": "object_class_id", "relationship_class": "relationship_class_id"}[
             self.entity_class_type
         ]
 
     @property
     def entity_class_name_key(self):
-        return {"object class": "object_class_name", "relationship class": "relationship_class_name"}[
+        return {"object_class": "object_class_name", "relationship_class": "relationship_class_name"}[
             self.entity_class_type
         ]
 
     @property
     def can_be_filtered(self):
         return False
+
+    @property
+    def json_fields(self):
+        return {"parameter_definition": ["default_value"], "parameter_value": ["value"]}[self.item_type]
 
     def accepted_rows(self):
         return list(range(self.rowCount()))
@@ -81,6 +91,18 @@ class EmptyParameterModel(EmptyRowModel):
         if self.header[index.column()] == "parameter_tag_list":
             flags &= ~Qt.ItemIsEditable
         return flags
+
+    def data(self, index, role=Qt.DisplayRole):
+        if self.header[index.column()] in self.json_fields and role in (
+            Qt.DisplayRole,
+            Qt.ToolTipRole,
+            Qt.TextAlignmentRole,
+            PARSED_ROLE,
+        ):
+            data = super().data(index)
+            parsed_value = self.db_mngr.parse_value(data)
+            return self.db_mngr.format_value(parsed_value, role)
+        return super().data(index, role)
 
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
@@ -142,7 +164,11 @@ class EmptyParameterModel(EmptyRowModel):
 class EmptyParameterDefinitionModel(
     FillInValueListIdMixin, FillInEntityClassIdMixin, FillInParameterNameMixin, EmptyParameterModel
 ):
-    """An empty parameter definition model."""
+    """An empty parameter_definition model."""
+
+    @property
+    def item_type(self):
+        return "parameter_definition"
 
     @property
     def entity_class_type(self):
@@ -177,19 +203,19 @@ class EmptyParameterDefinitionModel(
 
 
 class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
-    """An empty object parameter definition model."""
+    """An empty object parameter_definition model."""
 
     @property
     def entity_class_type(self):
-        return "object class"
+        return "object_class"
 
 
 class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
-    """An empty relationship parameter definition model."""
+    """An empty relationship parameter_definition model."""
 
     @property
     def entity_class_type(self):
-        return "relationship class"
+        return "relationship_class"
 
     def flags(self, index):
         """Additional hack to make the object_class_name_list column non-editable."""
@@ -201,12 +227,17 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
 
 class EmptyParameterValueModel(
     InferEntityClassIdMixin,
+    FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
     EmptyParameterModel,
 ):
-    """An empty parameter value model."""
+    """An empty parameter_value model."""
+
+    @property
+    def item_type(self):
+        return "parameter_value"
 
     @property
     def entity_type(self):
@@ -253,15 +284,20 @@ class EmptyParameterValueModel(
 
     def _check_item(self, item):
         """Checks if a db item is ready to be inserted."""
-        return self.entity_class_id_key in item and self.entity_id_key in item and "parameter_definition_id" in item
+        return (
+            self.entity_class_id_key in item
+            and self.entity_id_key in item
+            and "parameter_definition_id" in item
+            and "alternative_id" in item
+        )
 
 
 class EmptyObjectParameterValueModel(EmptyParameterValueModel):
-    """An empty object parameter value model."""
+    """An empty object parameter_value model."""
 
     @property
     def entity_class_type(self):
-        return "object class"
+        return "object_class"
 
     @property
     def entity_type(self):
@@ -269,13 +305,13 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
 
 
 class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyParameterValueModel):
-    """An empty relationship parameter value model."""
+    """An empty relationship parameter_value model."""
 
     _add_entities_on_the_fly = True
 
     @property
     def entity_class_type(self):
-        return "relationship class"
+        return "relationship_class"
 
     @property
     def entity_type(self):
@@ -287,7 +323,7 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
         Args:
             rows (set): add data from these rows
         """
-        super().add_items_to_db(rows)  # This will also complete the relationship class name
+        super().add_items_to_db(rows)  # This will also complete the relationship_class name
         # Now we try to add relationships
         db_map_data = self._make_db_map_data(rows)
         self.build_lookup_dictionaries(db_map_data)

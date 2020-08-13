@@ -42,7 +42,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QLabel" name="label_view_name">
+    <widget class="QLabel" name="label_name">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
        <horstretch>0</horstretch>
@@ -104,7 +104,7 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_18">
        <item>
-        <widget class="ReferencesTreeView" name="treeView_view">
+        <widget class="ReferencesTreeView" name="treeView_files">
          <property name="font">
           <font>
            <pointsize>9</pointsize>
@@ -159,7 +159,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_view_open_ds_view">
+          <widget class="QPushButton" name="pushButton_combiner_open_editor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -182,7 +182,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data store view for selected db references&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
-            <string>Open view</string>
+            <string>Open editor</string>
            </property>
           </widget>
          </item>
@@ -211,7 +211,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QToolButton" name="toolButton_view_open_dir">
+          <widget class="QToolButton" name="toolButton_combiner_open_dir">
            <property name="minimumSize">
             <size>
              <width>22</width>

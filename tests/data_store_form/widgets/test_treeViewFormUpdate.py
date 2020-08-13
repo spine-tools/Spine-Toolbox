@@ -33,7 +33,7 @@ class TestTreeViewFormUpdateMixin:
         self.db_mngr.object_classes_updated.emit({self.mock_db_map: [self.fish_class]})
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
-        self.assertEqual(fish_item.item_type, "object class")
+        self.assertEqual(fish_item.item_type, "object_class")
         self.assertEqual(fish_item.display_data, "octopus")
 
     def test_update_objects_in_object_tree_model(self):
@@ -65,7 +65,7 @@ class TestTreeViewFormUpdateMixin:
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
-        self.assertEqual(pluto_fish_dog_item.item_type, "relationship class")
+        self.assertEqual(pluto_fish_dog_item.item_type, "relationship_class")
         self.assertEqual(pluto_fish_dog_item.display_data, "octopus__dog")
 
     @unittest.skip("TODO")

@@ -18,6 +18,7 @@ Classes for custom QDialogs to edit items in databases.
 
 from PySide2.QtCore import Slot
 from ...mvcmodels.minimal_table_model import MinimalTableModel
+from ...widgets.custom_delegates import CheckBoxDelegate
 from .custom_delegates import (
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
@@ -61,7 +62,7 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit object classes")
         self.model = MinimalTableModel(self)
-        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
+        self.model.set_horizontal_header_labels(['object_class name', 'description', 'display icon', 'databases'])
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
@@ -213,7 +214,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageRelationshipClassesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['relationship class name', 'description', 'databases'])
+        self.model.set_horizontal_header_labels(['relationship_class name', 'description', 'databases'])
         self.orig_data = list()
         model_data = list()
         for item in selected:
@@ -272,7 +273,7 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
             parent (DataStoreForm): data store widget
             db_mngr (SpineDBManager): the manager to do the update
             selected (set): set of RelationshipItem instances to edit
-            class_key (tuple): (class_name, object_class_name_list) for identifying the relationship class
+            class_key (tuple): (class_name, object_class_name_list) for identifying the relationship_class
         """
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit relationships")
@@ -338,7 +339,7 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
                 relationship_classes = self.db_map_rel_cls_lookup[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
                     self.parent().msg_error.emit(
-                        "Invalid relationship class '{}' for db '{}' at row {}".format(
+                        "Invalid relationship_class '{}' for db '{}' at row {}".format(
                             self.class_name, db_map.codename, i + 1
                         )
                     )
@@ -397,7 +398,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to remove items."""
-        db_map_data = dict()
+        db_map_typed_data = dict()
         for i in range(self.model.rowCount()):
             item_type, _, db_names = self.model.row_data(i)
             if db_names is None:
@@ -413,10 +414,10 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
             for db_map in db_maps:
-                data = item.db_map_data(db_map)
-                db_map_data.setdefault(db_map, {}).setdefault(item_type, []).append(data)
-        if not db_map_data:
+                id_ = item.db_map_id(db_map)
+                db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, set()).add(id_)
+        if not any(db_map_typed_data.values()):
             self.parent().msg_error.emit("Nothing to remove")
             return
-        self.db_mngr.remove_items(db_map_data)
+        self.db_mngr.remove_items(db_map_typed_data)
         super().accept()

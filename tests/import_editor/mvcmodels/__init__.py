@@ -8,38 +8,6 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
 """
-Contains ImportErrorWidget class.
-
-:author: P. Vennström (VTT)
-:date:   1.6.2019
+Contains unit tests for Import editor's MVC models.
 """
-
-from PySide2.QtWidgets import QWidget
-
-
-class ImportErrorsWidget(QWidget):
-    """Widget to display errors while importing and ask user for action."""
-
-    def __init__(self, parent=None):
-        from ..ui.import_errors import Ui_ImportErrors  # pylint: disable=import-outside-toplevel
-
-        super().__init__(parent)
-
-        # state
-        self._error_list = []
-
-        # ui
-        self._ui = Ui_ImportErrors()
-        self._ui.setupUi(self)
-
-    def set_import_state(self, errors):
-        """Sets state of error widget.
-
-        Arguments:
-            errors {list} -- list of errors.
-        """
-        self._ui.error_count_label.setText(f"Number of errors: {len(errors)}")
-        self._ui.error_list.clear()
-        self._ui.error_list.addItems(errors)

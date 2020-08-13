@@ -47,9 +47,9 @@ class TimePatternEditor(QWidget):
         handle_table_context_menu(pos, self._ui.pattern_edit_table, self._model, self)
 
     def set_value(self, value):
-        """Sets the parameter value to be edited."""
+        """Sets the parameter_value to be edited."""
         self._model.reset(value)
 
     def value(self):
-        """Returns the parameter value currently being edited."""
+        """Returns the parameter_value currently being edited."""
         return self._model.value

@@ -23,7 +23,7 @@ from spinedb_api import Array, from_database, ParameterValueFormatError, to_data
 
 class ArrayModel(QAbstractTableModel):
     """
-    Model for the Array parameter value type.
+    Model for the Array parameter_value type.
 
     Even if the array is empty this model's rowCount() will still return 1.
     This is to show an empty row in the table view.

@@ -25,12 +25,11 @@ from .combiner_worker import CombinerWorker
 
 
 class ExecutableItem(ExecutableItemBase, QObject):
-    def __init__(self, name, logs_dir, python_path, cancel_on_error, logger):
+    def __init__(self, name, logs_dir, cancel_on_error, logger):
         """
         Args:
             name (str): item's name
             logs_dir (str): path to the directory where logs should be stored
-            python_path (str): path to the system's python executable
             cancel_on_error (bool): if True, revert changes on error and move on
             logger (LoggerInterface): a logger
         """
@@ -38,7 +37,6 @@ class ExecutableItem(ExecutableItemBase, QObject):
         QObject.__init__(self)
         self._resources_from_downstream = list()
         self._logs_dir = logs_dir
-        self._python_path = python_path
         self._cancel_on_error = cancel_on_error
         self._worker = None
         self._worker_thread = None
@@ -53,9 +51,8 @@ class ExecutableItem(ExecutableItemBase, QObject):
         """See base class."""
         data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
         logs_dir = os.path.join(data_dir, "logs")
-        python_path = app_settings.value("appSettings/pythonPath", defaultValue="")
         cancel_on_error = item_dict["cancel_on_error"]
-        return cls(name, logs_dir, python_path, cancel_on_error, logger)
+        return cls(name, logs_dir, cancel_on_error, logger)
 
     def _execute_backward(self, resources):
         """See base class."""

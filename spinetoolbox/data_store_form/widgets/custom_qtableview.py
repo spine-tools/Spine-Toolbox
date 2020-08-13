@@ -35,6 +35,7 @@ from .custom_delegates import (
     ObjectNameDelegate,
     RelationshipClassNameDelegate,
     ObjectNameListDelegate,
+    AlternativeNameDelegate,
 )
 
 
@@ -85,7 +86,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._make_delegate("database", DatabaseNameDelegate)
 
     def open_in_editor(self):
-        """Opens the current index in a parameter value editor using the connected data store form."""
+        """Opens the current index in a parameter_value editor using the connected data store form."""
         index = self.currentIndex()
         self._data_store_form.show_parameter_value_editor(index)
 
@@ -203,8 +204,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
                 model.empty_model.removeRow(sub_row)
             else:
                 id_ = model.item_at_row(row)
-                item = model.db_mngr.get_item(db_map, model.item_type, id_)
-                db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(item)
+                db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
 
@@ -242,20 +242,21 @@ class ParameterValueTableView(ParameterTableView):
     def create_delegates(self):
         super().create_delegates()
         self._make_delegate("parameter_name", ParameterNameDelegate)
+        self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
 
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the object parameter definition pane in Data Store Form."""
+    """A custom QTableView for the object parameter_definition pane in Data Store Form."""
 
 
 class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the relationship parameter definition pane in Data Store Form."""
+    """A custom QTableView for the relationship parameter_definition pane in Data Store Form."""
 
 
 class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the object parameter value pane in Data Store Form."""
+    """A custom QTableView for the object parameter_value pane in Data Store Form."""
 
     def create_delegates(self):
         super().create_delegates()
@@ -263,7 +264,7 @@ class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTab
 
 
 class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the relationship parameter value pane in Data Store Form."""
+    """A custom QTableView for the relationship parameter_value pane in Data Store Form."""
 
     def create_delegates(self):
         super().create_delegates()
@@ -305,7 +306,7 @@ class PivotTableView(CopyPasteTableView):
 
     @property
     def db_map(self):
-        return self._data_store_form.db_map
+        return self.source_model.pivot_db_map
 
     def connect_data_store_form(self, data_store_form):
         self._data_store_form = data_store_form
@@ -347,36 +348,33 @@ class PivotTableView(CopyPasteTableView):
             column_mask.add(column)
         data = self.source_model.model.get_pivoted_data(row_mask, column_mask)
         ids = {item for row in data for item in row if item is not None}
-        parameter_values = [self.db_mngr.get_item(self.db_map, "parameter value", id_) for id_ in ids]
-        db_map_typed_data = {self.db_map: {"parameter value": parameter_values}}
+        db_map_typed_data = {self.db_map: {"parameter_value": ids}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_objects(self):
         ids = {self.source_model._header_id(index) for index in self._selected_entity_indexes}
-        objects = [self.db_mngr.get_item(self.db_map, "object", id_) for id_ in ids]
-        db_map_typed_data = {self.db_map: {"object": objects}}
+        db_map_typed_data = {self.db_map: {"object": ids}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_relationships(self):
         if self.model().sourceModel().item_type != "relationship":
             return
-        rels_by_object_ids = {rel["object_id_list"]: rel for rel in self._data_store_form._get_entities()}
-        relationships = []
+        rel_ids_by_object_ids = {rel["object_id_list"]: rel["id"] for rel in self._data_store_form._get_entities()}
+        relationship_ids = {}
         for index in self._selected_entity_indexes:
             object_ids, _ = self.source_model.object_and_parameter_ids(index)
             object_ids = ",".join([str(id_) for id_ in object_ids])
-            relationships.append(rels_by_object_ids[object_ids])
-        db_map_typed_data = {self.db_map: {"relationship": relationships}}
+            relationship_ids.add(rel_ids_by_object_ids[object_ids])
+        db_map_typed_data = {self.db_map: {"relationship": relationship_ids}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_parameters(self):
         ids = {self.source_model._header_id(index) for index in self._selected_parameter_indexes}
-        parameters = [self.db_mngr.get_item(self.db_map, "parameter definition", id_) for id_ in ids]
-        db_map_typed_data = {self.db_map: {"parameter definition": parameters}}
+        db_map_typed_data = {self.db_map: {"parameter_definition": ids}}
         self.db_mngr.remove_items(db_map_typed_data)
 
     def open_in_editor(self):
-        """Opens the parameter value editor for the first selected cell."""
+        """Opens the parameter_value editor for the first selected cell."""
         index = self._selected_value_indexes[0]
         self._data_store_form.show_parameter_value_editor(index)
 
@@ -452,7 +450,7 @@ class PivotTableView(CopyPasteTableView):
         if len(self._selected_parameter_indexes) == 1:
             index = self._selected_parameter_indexes[0]
             parameter_name = self.source_model.header_name(index)
-            self.remove_parameters_action.setText("Remove parameter definition: {}".format(parameter_name))
+            self.remove_parameters_action.setText("Remove parameter_definition: {}".format(parameter_name))
 
     @Slot("QAction")
     def _plot_in_window(self, action):

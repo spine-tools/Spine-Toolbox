@@ -279,7 +279,7 @@ class TestTreeViewForm(
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
             self.db_mngr.show_data_store_form({"mock_url": "mock_db"}, None)
             self.tree_view_form = self.db_mngr._ds_forms[("mock_url",)]
-            self.mock_db_map = self.tree_view_form.db_map
+            self.mock_db_map = self.tree_view_form.first_db_map
             self.tree_view_form.pivot_table_model = mock.MagicMock()
 
     def tearDown(self):
@@ -360,7 +360,7 @@ class TestTreeViewForm(
                 item.fetch_more()
 
     def test_set_object_parameter_definition_defaults(self):
-        """Test that defaults are set in object parameter definition models according the object tree selection."""
+        """Test that defaults are set in object parameter_definition models according the object tree selection."""
         self.tree_view_form.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
@@ -370,7 +370,7 @@ class TestTreeViewForm(
         fish_index = self.tree_view_form.object_tree_model.index_from_item(fish_item)
         self.tree_view_form.ui.treeView_object.setCurrentIndex(fish_index)
         self.tree_view_form.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
-        # Check default in object parameter definition
+        # Check default in object parameter_definition
         model = self.tree_view_form.object_parameter_definition_model
         model.empty_model.fetchMore()
         h = model.header.index
@@ -381,21 +381,21 @@ class TestTreeViewForm(
 
     @unittest.skip("TODO")
     def test_set_object_parameter_value_defaults(self):
-        """Test that defaults are set in relationship parameter definition
+        """Test that defaults are set in relationship parameter_definition
         models according the object tree selection.
         """
         self.fail()
 
     @unittest.skip("TODO")
     def test_set_relationship_parameter_definition_defaults(self):
-        """Test that defaults are set in relationship parameter definition
+        """Test that defaults are set in relationship parameter_definition
         models according the object tree selection.
         """
         self.fail()
 
     @unittest.skip("TODO")
     def test_set_relationship_parameter_value_defaults(self):
-        """Test that defaults are set in relationship parameter definition
+        """Test that defaults are set in relationship parameter_definition
         models according the object tree selection.
         """
         self.fail()

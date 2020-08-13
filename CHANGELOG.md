@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   or GAMS domain's name as the object class name.
 - It is now possible to execute a project from the command line without opening the Toolbox GUI.
   The headless execution is enabled by the new command line option ``--execute-only``.
+- Toolbox now supports scenarios and alternatives. They can be accessed via Data store view's new Alternative tree.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 

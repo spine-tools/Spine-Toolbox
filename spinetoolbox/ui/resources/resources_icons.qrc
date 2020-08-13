@@ -1,7 +1,5 @@
 <RCC>
   <qresource prefix="/symbols">
-    <file>menu_icons/tree.svg</file>
-    <file>menu_icons/table.svg</file>
     <file>Spine_symbol.png</file>
     <file>app.ico</file>
   </qresource>

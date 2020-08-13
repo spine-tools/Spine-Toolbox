@@ -25,7 +25,7 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
-from spinetoolbox.widgets.custom_qlineedit import CustomQLineEdit
+from spinetoolbox.widgets.custom_qlineedits import CustomQLineEdit
 from spinetoolbox.widgets.custom_qtreeview import SourcesTreeView
 from spinetoolbox.widgets.custom_qtreeview import CustomTreeView
 
@@ -42,7 +42,6 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(Form.sizePolicy().hasHeightForWidth())
         Form.setSizePolicy(sizePolicy)
-        Form.setStyleSheet(u"")
         self.verticalLayout_6 = QVBoxLayout(Form)
         self.verticalLayout_6.setSpacing(0)
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
@@ -120,7 +119,6 @@ class Ui_Form(object):
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.lineEdit_args = QLineEdit(Form)
         self.lineEdit_args.setObjectName(u"lineEdit_args")
-        self.lineEdit_args.setEnabled(True)
         sizePolicy1.setHeightForWidth(self.lineEdit_args.sizePolicy().hasHeightForWidth())
         self.lineEdit_args.setSizePolicy(sizePolicy1)
         self.lineEdit_args.setMinimumSize(QSize(220, 24))
@@ -445,7 +443,9 @@ class Ui_Form(object):
         QWidget.setTabOrder(self.checkBox_execute_in_work, self.textEdit_description)
         QWidget.setTabOrder(self.textEdit_description, self.lineEdit_main_program)
         QWidget.setTabOrder(self.lineEdit_main_program, self.toolButton_add_main_program)
-        QWidget.setTabOrder(self.toolButton_add_main_program, self.treeView_sourcefiles)
+        QWidget.setTabOrder(self.toolButton_add_main_program, self.lineEdit_args)
+        QWidget.setTabOrder(self.lineEdit_args, self.toolButton_add_cmdline_tag)
+        QWidget.setTabOrder(self.toolButton_add_cmdline_tag, self.treeView_sourcefiles)
         QWidget.setTabOrder(self.treeView_sourcefiles, self.toolButton_add_source_files)
         QWidget.setTabOrder(self.toolButton_add_source_files, self.toolButton_add_source_dirs)
         QWidget.setTabOrder(self.toolButton_add_source_dirs, self.toolButton_minus_source_files)

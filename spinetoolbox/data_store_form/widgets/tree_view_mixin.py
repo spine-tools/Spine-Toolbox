@@ -33,6 +33,7 @@ from .edit_or_remove_items_dialogs import (
     EditRelationshipsDialog,
     RemoveEntitiesDialog,
 )
+from ..mvcmodels.alternative_scenario_model import AlternativeScenarioModel
 from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
 from ...spine_db_parcel import SpineDBParcel
 
@@ -49,18 +50,23 @@ class TreeViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Selected ids
+        self.alternative_scenario_model = AlternativeScenarioModel(self, self.db_mngr, *self.db_maps)
         self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *self.db_maps)
         self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
-        self.ui.treeView_object.connect_data_Store_form(self)
-        self.ui.treeView_relationship.connect_data_Store_form(self)
+        self.ui.treeView_alternative_scenario.setModel(self.alternative_scenario_model)
+        self.ui.treeView_alternative_scenario.connect_data_store_form(self)
+        self.ui.treeView_object.connect_data_store_form(self)
+        self.ui.treeView_relationship.connect_data_store_form(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
         super().add_menu_actions()
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
+        self.ui.menuView.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -82,9 +88,41 @@ class TreeViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
+        self.alternative_scenario_model.build_tree()
+        for item in self.alternative_scenario_model.visit_all():
+            index = self.alternative_scenario_model.index_from_item(item)
+            self.ui.treeView_alternative_scenario.expand(index)
+        self.ui.treeView_alternative_scenario.resizeColumnToContents(0)
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_object_tree_selection_changed(self, selected, deselected):
+        """Updates object filter and sets default rows."""
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        self.object_tree_model.select_indexes(indexes)
+        self._clear_tree_selections_silently(self.ui.treeView_relationship)
+        self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
+        self._update_object_filter()
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_relationship_tree_selection_changed(self, selected, deselected):
+        """Updates relationship filter and sets default rows."""
+        indexes = self.ui.treeView_relationship.selectionModel().selectedIndexes()
+        self.relationship_tree_model.select_indexes(indexes)
+        self._clear_tree_selections_silently(self.ui.treeView_object)
+        self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
+        self._update_relationship_filter()
+
+    @staticmethod
+    def _clear_tree_selections_silently(tree_view):
+        """Clears the selections on a given abstract item view without emitting any signals."""
+        selection_model = tree_view.selectionModel()
+        if selection_model.hasSelection():
+            selection_model.blockSignals(True)
+            selection_model.clearSelection()
+            selection_model.blockSignals(False)
 
     @staticmethod
     def _db_map_items(indexes):
@@ -109,9 +147,9 @@ class TreeViewMixin:
     def export_selected(self, selected_indexes):
         """Exports data from given indexes in the entity tree."""
         parcel = SpineDBParcel(self.db_mngr)
-        obj_cls_inds = set(selected_indexes.get("object class", {}).keys())
+        obj_cls_inds = set(selected_indexes.get("object_class", {}).keys())
         obj_inds = set(selected_indexes.get("object", {}).keys())
-        rel_cls_inds = set(selected_indexes.get("relationship class", {}).keys())
+        rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         rel_inds = set(selected_indexes.get("relationship", {}).keys())
         db_map_obj_cls_ids = self._db_map_ids(obj_cls_inds)
         db_map_obj_ids = self._db_map_ids(obj_inds)
@@ -184,13 +222,12 @@ class TreeViewMixin:
 
     @Slot(bool)
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
-        """Shows dialog to add new relationship class."""
+        """Shows dialog to add new relationship_class."""
         dialog = AddRelationshipClassesDialog(
             self, self.db_mngr, *self.db_maps, object_class_one_name=object_class_one_name
         )
         dialog.show()
 
-    @Slot(bool)
     def show_add_relationships_form(self, checked=False, relationship_class_key=None, object_names_by_class_name=None):
         """Shows dialog to add new relationships."""
         dialog = AddRelationshipsDialog(
@@ -203,15 +240,17 @@ class TreeViewMixin:
         dialog.show()
 
     @Slot(bool)
-    def show_manage_relationships_form(self, checked=False):
-        dialog = ManageRelationshipsDialog(self, self.db_mngr, *self.db_maps)
+    def show_manage_relationships_form(self, checked=False, relationship_class_key=None):
+        dialog = ManageRelationshipsDialog(
+            self, self.db_mngr, *self.db_maps, relationship_class_key=relationship_class_key
+        )
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):
         """Starts editing given indexes."""
-        obj_cls_items = {ind.internalPointer() for ind in selected_indexes.get("object class", {})}
+        obj_cls_items = {ind.internalPointer() for ind in selected_indexes.get("object_class", {})}
         obj_items = {ind.internalPointer() for ind in selected_indexes.get("object", {})}
-        rel_cls_items = {ind.internalPointer() for ind in selected_indexes.get("relationship class", {})}
+        rel_cls_items = {ind.internalPointer() for ind in selected_indexes.get("relationship_class", {})}
         rel_items = {ind.internalPointer() for ind in selected_indexes.get("relationship", {})}
         self.show_edit_object_classes_form(obj_cls_items)
         self.show_edit_objects_form(obj_items)
@@ -234,6 +273,16 @@ class TreeViewMixin:
         if not items:
             return
         dialog = EditRelationshipClassesDialog(self, self.db_mngr, items)
+        dialog.show()
+
+    @Slot()
+    def show_remove_alternative_tree_items_form(self):
+        """Shows form to remove items from object treeview."""
+        selected = {
+            item_type: [ind.model().item_from_index(ind) for ind in indexes]
+            for item_type, indexes in self.alternative_scenario_model.selected_indexes.items()
+        }
+        dialog = RemoveEntitiesDialog(self, self.db_mngr, selected)
         dialog.show()
 
     def show_edit_relationships_form(self, items):
@@ -265,6 +314,16 @@ class TreeViewMixin:
         super().notify_items_changed(action, item_type, db_map_data)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
+    def receive_alternatives_fetched(self, db_map_data):
+        super().receive_alternatives_fetched(db_map_data)
+        self.alternative_scenario_model.add_alternatives(db_map_data)
+        self._alternatives_fetched.emit(list(db_map_data.keys()))
+
+    def receive_scenarios_fetched(self, db_map_data):
+        super().receive_scenarios_fetched(db_map_data)
+        self.alternative_scenario_model.add_scenarios(db_map_data)
+        self._scenarios_fetched.emit(list(db_map_data.keys()))
+
     def receive_object_classes_fetched(self, db_map_data):
         super().receive_object_classes_fetched(db_map_data)
         self._object_classes_fetched.emit()
@@ -272,6 +331,14 @@ class TreeViewMixin:
     def receive_relationship_classes_fetched(self, db_map_data):
         super().receive_object_classes_fetched(db_map_data)
         self._relationship_classes_fetched.emit()
+
+    def receive_alternatives_added(self, db_map_data):
+        super().receive_alternatives_added(db_map_data)
+        self.alternative_scenario_model.add_alternatives(db_map_data)
+
+    def receive_scenarios_added(self, db_map_data):
+        super().receive_scenarios_added(db_map_data)
+        self.alternative_scenario_model.add_scenarios(db_map_data)
 
     def receive_object_classes_added(self, db_map_data):
         super().receive_object_classes_added(db_map_data)
@@ -292,6 +359,14 @@ class TreeViewMixin:
         super().receive_relationships_added(db_map_data)
         self.object_tree_model.add_relationships(db_map_data)
         self.relationship_tree_model.add_relationships(db_map_data)
+
+    def receive_alternatives_updated(self, db_map_data):
+        super().receive_alternatives_updated(db_map_data)
+        self.alternative_scenario_model.update_alternatives(db_map_data)
+
+    def receive_scenarios_updated(self, db_map_data):
+        super().receive_scenarios_updated(db_map_data)
+        self.alternative_scenario_model.update_scenarios(db_map_data)
 
     def receive_entity_groups_added(self, db_map_data):
         super().receive_entity_groups_added(db_map_data)
@@ -315,6 +390,14 @@ class TreeViewMixin:
         super().receive_relationships_updated(db_map_data)
         self.object_tree_model.update_relationships(db_map_data)
         self.relationship_tree_model.update_relationships(db_map_data)
+
+    def receive_alternatives_removed(self, db_map_data):
+        super().receive_alternatives_removed(db_map_data)
+        self.alternative_scenario_model.remove_alternatives(db_map_data)
+
+    def receive_scenarios_removed(self, db_map_data):
+        super().receive_scenarios_removed(db_map_data)
+        self.alternative_scenario_model.remove_scenarios(db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
         super().receive_object_classes_removed(db_map_data)

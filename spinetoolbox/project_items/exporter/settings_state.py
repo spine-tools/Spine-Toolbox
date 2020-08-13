@@ -27,6 +27,6 @@ class SettingsState(enum.Enum):
     FETCHING = enum.auto()
     """Settings are still being fetched/constructed."""
     INDEXING_PROBLEM = enum.auto()
-    """There is a parameter value indexing issue."""
+    """There is a parameter_value indexing issue."""
     ERROR = enum.auto()
     """An error prevents the creation of export settings."""

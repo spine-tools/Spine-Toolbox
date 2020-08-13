@@ -34,9 +34,6 @@
   <property name="windowTitle">
    <string>Edit Tool Specification</string>
   </property>
-  <property name="styleSheet">
-   <string notr="true"/>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout_6">
    <property name="spacing">
     <number>0</number>
@@ -195,7 +192,7 @@
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create a new main program or select an existing one&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="icon">
-          <iconset resource="resources/resources_icons.qrc">
+          <iconset resource="../../../ui/resources/resources_icons.qrc">
            <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
          </property>
          <property name="popupMode">
@@ -209,9 +206,6 @@
       <layout class="QHBoxLayout" name="horizontalLayout_9">
        <item>
         <widget class="QLineEdit" name="lineEdit_args">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -253,7 +247,7 @@
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Insert @@ tags to command line arguments. See the User Guide for details.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="icon">
-          <iconset resource="resources/resources_icons.qrc">
+          <iconset resource="../../../ui/resources/resources_icons.qrc">
            <normaloff>:/icons/double-at.svg</normaloff>:/icons/double-at.svg</iconset>
          </property>
          <property name="popupMode">
@@ -348,7 +342,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/file-link.svg</normaloff>:/icons/file-link.svg</iconset>
              </property>
             </widget>
@@ -371,7 +365,7 @@
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add source code &lt;span style=&quot; font-weight:600;&quot;&gt;directory&lt;/span&gt; and all its contents.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/folder-link.svg</normaloff>:/icons/folder-link.svg</iconset>
              </property>
             </widget>
@@ -410,7 +404,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
              </property>
             </widget>
@@ -515,7 +509,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/file-link.svg</normaloff>:/icons/file-link.svg</iconset>
              </property>
             </widget>
@@ -554,7 +548,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
              </property>
             </widget>
@@ -647,7 +641,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/file-link.svg</normaloff>:/icons/file-link.svg</iconset>
              </property>
             </widget>
@@ -686,7 +680,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
              </property>
             </widget>
@@ -779,7 +773,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/file-link.svg</normaloff>:/icons/file-link.svg</iconset>
              </property>
             </widget>
@@ -818,7 +812,7 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset resource="../../../ui/resources/resources_icons.qrc">
                <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
              </property>
             </widget>
@@ -960,7 +954,6 @@
     </layout>
    </item>
   </layout>
-  <zorder></zorder>
  </widget>
  <customwidgets>
   <customwidget>
@@ -986,6 +979,8 @@
   <tabstop>textEdit_description</tabstop>
   <tabstop>lineEdit_main_program</tabstop>
   <tabstop>toolButton_add_main_program</tabstop>
+  <tabstop>lineEdit_args</tabstop>
+  <tabstop>toolButton_add_cmdline_tag</tabstop>
   <tabstop>treeView_sourcefiles</tabstop>
   <tabstop>toolButton_add_source_files</tabstop>
   <tabstop>toolButton_add_source_dirs</tabstop>
@@ -1003,7 +998,7 @@
   <tabstop>pushButton_cancel</tabstop>
  </tabstops>
  <resources>
-  <include location="resources/resources_icons.qrc"/>
+  <include location="../../../ui/resources/resources_icons.qrc"/>
  </resources>
  <connections/>
 </ui>

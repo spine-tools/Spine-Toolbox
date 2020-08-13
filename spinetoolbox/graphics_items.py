@@ -64,6 +64,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         super().__init__()
         self._toolbox = toolbox
         self._project_item = project_item
+        self.icon_file = icon_file
         self._moved_on_scene = False
         self._previous_pos = QPointF()
         self._current_pos = QPointF()

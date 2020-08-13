@@ -21,7 +21,7 @@ from PySide2.QtWidgets import QInputDialog, QMenu
 
 def handle_table_context_menu(click_pos, table_view, model, parent_widget):
     """
-    Shows a context menu for parameter value tables and handles the selection.
+    Shows a context menu for parameter_value tables and handles the selection.
 
     Args:
         click_pos {QPoint): position from the context menu event

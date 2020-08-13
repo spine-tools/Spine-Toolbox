@@ -19,7 +19,7 @@ Contains the DataStoreForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMenu
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from sqlalchemy.engine.url import URL, make_url
@@ -31,6 +31,7 @@ from spinedb_api import (
     DiffDatabaseMapping,
     SpineDBAPIError,
     SpineDBVersionError,
+    Anyone,
 )
 from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
 from .select_db_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
@@ -49,8 +50,9 @@ from ...helpers import (
     get_open_file_name_in_last_dir,
     format_string_list,
     open_url,
+    focused_widget_has_callable,
+    call_on_focused_widget,
 )
-from .import_dialog import ImportDialog
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.settings_widget import DataStoreSettingsWidget
 from ...spine_io.exporters.excel import export_spine_database_to_xlsx
@@ -78,11 +80,11 @@ class DataStoreFormBase(QMainWindow):
 
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self.db_map = self.db_maps[0]
+        self.db_maps_by_codename = {db_map.codename: db_map for db_map in db_maps}
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.db_url = self.db_urls[0]
         self.db_mngr.register_listener(self, *self.db_maps)
-        self.db_mngr.set_logger_for_db_map(self, self.db_map)
+        self.db_mngr.set_logger_for_db_map(self, self.first_db_map)  # FIXME
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -109,16 +111,29 @@ class DataStoreFormBase(QMainWindow):
         self.redo_action = None
         self.template_file_path = None
         db_names = ", ".join([f"{db_map.codename}" for db_map in self.db_maps])
-        self.setWindowTitle(f"{db_names}[*] - Data store view")
+        self.setWindowTitle(f"{db_names}[*] - Data store form")
         self.update_commit_enabled()
+
+    @property
+    def first_db_map(self):
+        return self.db_maps[0]
+
+    def _make_db_menu(self):
+        if len(self.db_maps) <= 1:
+            return None
+        menu = QMenu("Database", self)
+        actions = [menu.addAction(db_map.codename) for db_map in self.db_maps]
+        for action in actions:
+            action.setCheckable(True)
+        return menu
 
     def add_menu_actions(self):
         """Adds actions to View and Edit menu."""
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         before = self.ui.menuEdit.actions()[0]
-        self.undo_action = self.db_mngr.undo_action[self.db_map]
-        self.redo_action = self.db_mngr.redo_action[self.db_map]
+        self.undo_action = self.db_mngr.undo_action[self.first_db_map]
+        self.redo_action = self.db_mngr.redo_action[self.first_db_map]
         self.ui.menuEdit.insertAction(before, self.undo_action)
         self.ui.menuEdit.insertAction(before, self.redo_action)
         self.ui.menuEdit.insertSeparator(before)
@@ -139,14 +154,12 @@ class DataStoreFormBase(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.import_file)
-        self.ui.actionMapping_import.triggered.connect(self.show_mapping_import_file_dialog)
-        self.ui.actionExport.triggered.connect(self.show_get_items_for_export_dialog)
+        self.ui.actionExport.triggered.connect(self.show_mass_export_items_dialog)
         self.ui.actionExport_session.triggered.connect(self.export_session)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionRemove_selected.triggered.connect(self.remove_selected)
         self.ui.actionEdit_selected.triggered.connect(self.edit_selected)
-        self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
         self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
         self.ui.actionUser_guide.triggered.connect(self.show_user_guide)
@@ -157,8 +170,8 @@ class DataStoreFormBase(QMainWindow):
         redo_ages = {db_map: self.db_mngr.undo_stack[db_map].redo_age for db_map in self.db_maps}
         undo_ages = {db_map: age for db_map, age in undo_ages.items() if age is not None}
         redo_ages = {db_map: age for db_map, age in redo_ages.items() if age is not None}
-        new_undo_action = self.db_mngr.undo_action[max(undo_ages, key=undo_ages.get, default=self.db_map)]
-        new_redo_action = self.db_mngr.redo_action[min(redo_ages, key=redo_ages.get, default=self.db_map)]
+        new_undo_action = self.db_mngr.undo_action[max(undo_ages, key=undo_ages.get, default=self.first_db_map)]
+        new_redo_action = self.db_mngr.redo_action[min(redo_ages, key=redo_ages.get, default=self.first_db_map)]
         if new_undo_action != self.undo_action:
             self.ui.menuEdit.insertAction(self.undo_action, new_undo_action)
             self.ui.menuEdit.removeAction(self.undo_action)
@@ -225,36 +238,30 @@ class DataStoreFormBase(QMainWindow):
         """Runs when the edit menu from the main menubar is about to show.
         Enables or disables actions according to selection status."""
         # TODO: Try to also check if there's a selection to enable copy, remove, edit, etc.
-        self.ui.actionCopy.setEnabled(self._focused_widget_has_callable("copy"))
-        self.ui.actionPaste.setEnabled(self._focused_widget_has_callable("paste"))
-        self.ui.actionRemove_selected.setEnabled(self._focused_widget_has_callable("remove_selected"))
-        self.ui.actionEdit_selected.setEnabled(self._focused_widget_has_callable("edit_selected"))
+        self.ui.actionCopy.setEnabled(focused_widget_has_callable(self, "copy"))
+        self.ui.actionPaste.setEnabled(focused_widget_has_callable(self, "paste"))
+        self.ui.actionRemove_selected.setEnabled(focused_widget_has_callable(self, "remove_selected"))
+        self.ui.actionEdit_selected.setEnabled(focused_widget_has_callable(self, "edit_selected"))
 
     @Slot(bool)
     def remove_selected(self, checked=False):
         """Removes selected items."""
-        self._call_on_focused_widget("remove_selected")
+        call_on_focused_widget(self, "remove_selected")
 
     @Slot(bool)
     def edit_selected(self, checked=False):
         """Edits selected items."""
-        self._call_on_focused_widget("edit_selected")
+        call_on_focused_widget(self, "edit_selected")
 
     @Slot(bool)
     def copy(self, checked=False):
         """Copies data to clipboard."""
-        self._call_on_focused_widget("copy")
+        call_on_focused_widget(self, "copy")
 
     @Slot(bool)
     def paste(self, checked=False):
         """Pastes data from clipboard."""
-        self._call_on_focused_widget("paste")
-
-    @Slot(bool)
-    def show_mapping_import_file_dialog(self, checked=False):
-        """Shows dialog to allow user to select a file to import."""
-        dialog = ImportDialog(self.qsettings, parent=self)
-        dialog.exec()
+        call_on_focused_widget(self, "paste")
 
     @Slot(dict)
     def import_data(self, data):
@@ -309,7 +316,7 @@ class DataStoreFormBase(QMainWindow):
             mapped_data, errors = get_mapped_data_from_xlsx(file_path)
         except Exception as err:  # pylint: disable=broad-except
             self.msg.emit(f"Could'n import file {filename}: {str(err)}")
-            return
+            raise err  # NOTE: This is so the programmer gets to see the traceback
         if errors:
             msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
             self.error_box.emit("Parse error", msg)
@@ -325,17 +332,16 @@ class DataStoreFormBase(QMainWindow):
         return data
 
     @Slot(bool)
-    def show_get_items_for_export_dialog(self, checked=False):
+    def show_mass_export_items_dialog(self, checked=False):
         """Shows dialog for user to select dbs and items for export."""
         dialog = MassExportItemsDialog(self, self.db_mngr, *self.db_maps)
-        dialog.data_submitted.connect(self.export_data)
+        dialog.data_submitted.connect(self.mass_export_items)
         dialog.show()
 
     @Slot(bool)
     def export_session(self, checked=False):
         """Exports changes made in the current session as reported by DiffDatabaseMapping.
         """
-        parcel = SpineDBParcel(self.db_mngr)
         db_map_diff_ids = {db_map: db_map.diff_ids() for db_map in self.db_maps}
         db_map_obj_cls_ids = {db_map: diff_ids["object_class"] for db_map, diff_ids in db_map_diff_ids.items()}
         db_map_rel_cls_ids = {db_map: diff_ids["relationship_class"] for db_map, diff_ids in db_map_diff_ids.items()}
@@ -344,21 +350,57 @@ class DataStoreFormBase(QMainWindow):
         db_map_par_val_lst_ids = {
             db_map: diff_ids["parameter_value_list"] for db_map, diff_ids in db_map_diff_ids.items()
         }
-        db_map_obj_par_def_ids = db_map_rel_par_def_ids = {
-            db_map: diff_ids["parameter_definition"] for db_map, diff_ids in db_map_diff_ids.items()
-        }
-        db_map_obj_par_val_ids = db_map_rel_par_val_ids = {
-            db_map: diff_ids["parameter_value"] for db_map, diff_ids in db_map_diff_ids.items()
-        }
+        db_map_par_def_ids = {db_map: diff_ids["parameter_definition"] for db_map, diff_ids in db_map_diff_ids.items()}
+        db_map_par_val_ids = {db_map: diff_ids["parameter_value"] for db_map, diff_ids in db_map_diff_ids.items()}
+        db_map_ent_group_ids = {db_map: diff_ids["entity_group"] for db_map, diff_ids in db_map_diff_ids.items()}
+        parcel = SpineDBParcel(self.db_mngr)
         parcel._push_object_class_ids(db_map_obj_cls_ids)
         parcel._push_object_ids(db_map_obj_ids)
         parcel._push_relationship_class_ids(db_map_rel_cls_ids)
         parcel._push_relationship_ids(db_map_rel_ids)
-        parcel._push_parameter_definition_ids(db_map_obj_par_def_ids, "object")
-        parcel._push_parameter_definition_ids(db_map_rel_par_def_ids, "relationship")
-        parcel._push_parameter_value_ids(db_map_obj_par_val_ids, "object")
-        parcel._push_parameter_value_ids(db_map_rel_par_val_ids, "relationship")
+        parcel._push_parameter_definition_ids(db_map_par_def_ids, "object")
+        parcel._push_parameter_definition_ids(db_map_par_def_ids, "relationship")
+        parcel._push_parameter_value_ids(db_map_par_val_ids, "object")
+        parcel._push_parameter_value_ids(db_map_par_val_ids, "relationship")
         parcel._push_parameter_value_list_ids(db_map_par_val_lst_ids)
+        parcel._push_object_group_ids(db_map_ent_group_ids)
+        self.export_data(parcel.data)
+
+    def mass_export_items(self, db_map_item_types):
+        def _ids(t, types):
+            return (Anyone,) if t in types else ()
+
+        db_map_obj_cls_ids = {db_map: _ids("object_class", types) for db_map, types in db_map_item_types.items()}
+        db_map_rel_cls_ids = {db_map: _ids("relationship_class", types) for db_map, types in db_map_item_types.items()}
+        db_map_obj_ids = {db_map: _ids("object", types) for db_map, types in db_map_item_types.items()}
+        db_map_rel_ids = {db_map: _ids("relationship", types) for db_map, types in db_map_item_types.items()}
+        db_map_par_val_lst_ids = {
+            db_map: _ids("parameter_value_list", types) for db_map, types in db_map_item_types.items()
+        }
+        db_map_par_def_ids = {
+            db_map: _ids("parameter_definition", types) for db_map, types in db_map_item_types.items()
+        }
+        db_map_par_val_ids = {db_map: _ids("parameter_value", types) for db_map, types in db_map_item_types.items()}
+        db_map_ent_group_ids = {db_map: _ids("entity_group", types) for db_map, types in db_map_item_types.items()}
+        db_map_alt_ids = {db_map: _ids("alternative", types) for db_map, types in db_map_item_types.items()}
+        db_map_scen_ids = {db_map: _ids("scenario", types) for db_map, types in db_map_item_types.items()}
+        db_map_scen_alt_ids = {
+            db_map: _ids("scenario_alternative", types) for db_map, types in db_map_item_types.items()
+        }
+        parcel = SpineDBParcel(self.db_mngr)
+        parcel._push_object_class_ids(db_map_obj_cls_ids)
+        parcel._push_object_ids(db_map_obj_ids)
+        parcel._push_relationship_class_ids(db_map_rel_cls_ids)
+        parcel._push_relationship_ids(db_map_rel_ids)
+        parcel._push_parameter_definition_ids(db_map_par_def_ids, "object")
+        parcel._push_parameter_definition_ids(db_map_par_def_ids, "relationship")
+        parcel._push_parameter_value_ids(db_map_par_val_ids, "object")
+        parcel._push_parameter_value_ids(db_map_par_val_ids, "relationship")
+        parcel._push_parameter_value_list_ids(db_map_par_val_lst_ids)
+        parcel._push_object_group_ids(db_map_ent_group_ids)
+        parcel._push_alternative_ids(db_map_alt_ids)
+        parcel._push_scenario_ids(db_map_scen_ids)
+        parcel._push_scenario_alternative_ids(db_map_scen_alt_ids)
         self.export_data(parcel.data)
 
     @Slot(object)
@@ -585,7 +627,7 @@ class DataStoreFormBase(QMainWindow):
     @busy_effect
     @Slot("QModelIndex")
     def show_parameter_value_editor(self, index):
-        """Shows the parameter value editor for the given index of given table view.
+        """Shows the parameter_value editor for the given index of given table view.
         """
         editor = ParameterValueEditor(index, parent=self)
         editor.show()
@@ -602,6 +644,12 @@ class DataStoreFormBase(QMainWindow):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
+
+    def receive_scenarios_fetched(self, db_map_data):
+        pass
+
+    def receive_alternatives_fetched(self, db_map_data):
+        pass
 
     def receive_object_classes_fetched(self, db_map_data):
         pass
@@ -630,89 +678,107 @@ class DataStoreFormBase(QMainWindow):
     def receive_parameter_tags_fetched(self, db_map_data):
         pass
 
+    def receive_scenarios_added(self, db_map_data):
+        self.notify_items_changed("added", "scenario", db_map_data)
+
+    def receive_alternatives_added(self, db_map_data):
+        self.notify_items_changed("added", "alternative", db_map_data)
+
     def receive_object_classes_added(self, db_map_data):
-        self.notify_items_changed("added", "object class", db_map_data)
+        self.notify_items_changed("added", "object_class", db_map_data)
 
     def receive_objects_added(self, db_map_data):
         self.notify_items_changed("added", "object", db_map_data)
 
     def receive_relationship_classes_added(self, db_map_data):
-        self.notify_items_changed("added", "relationship class", db_map_data)
+        self.notify_items_changed("added", "relationship_class", db_map_data)
 
     def receive_relationships_added(self, db_map_data):
         self.notify_items_changed("added", "relationship", db_map_data)
 
     def receive_entity_groups_added(self, db_map_data):
-        self.notify_items_changed("added", "entity group", db_map_data)
+        self.notify_items_changed("added", "entity_group", db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter definition", db_map_data)
+        self.notify_items_changed("added", "parameter_definition", db_map_data)
 
     def receive_parameter_values_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter value", db_map_data)
+        self.notify_items_changed("added", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter value list", db_map_data)
+        self.notify_items_changed("added", "parameter_value_list", db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
 
     def receive_parameter_tags_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter tag", db_map_data)
+        self.notify_items_changed("added", "parameter_tag", db_map_data)
+
+    def receive_scenarios_updated(self, db_map_data):
+        self.notify_items_changed("updated", "scenario", db_map_data)
+
+    def receive_alternatives_updated(self, db_map_data):
+        self.notify_items_changed("updated", "alternative", db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
-        self.notify_items_changed("updated", "object class", db_map_data)
+        self.notify_items_changed("updated", "object_class", db_map_data)
 
     def receive_objects_updated(self, db_map_data):
         self.notify_items_changed("updated", "object", db_map_data)
 
     def receive_relationship_classes_updated(self, db_map_data):
-        self.notify_items_changed("updated", "relationship class", db_map_data)
+        self.notify_items_changed("updated", "relationship_class", db_map_data)
 
     def receive_relationships_updated(self, db_map_data):
         self.notify_items_changed("updated", "relationship", db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter definition", db_map_data)
+        self.notify_items_changed("updated", "parameter_definition", db_map_data)
 
     def receive_parameter_values_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter value", db_map_data)
+        self.notify_items_changed("updated", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter value list", db_map_data)
+        self.notify_items_changed("updated", "parameter_value_list", db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
 
     def receive_parameter_tags_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter tag", db_map_data)
+        self.notify_items_changed("updated", "parameter_tag", db_map_data)
 
     def receive_parameter_definition_tags_set(self, db_map_data):
-        self.notify_items_changed("set", "parameter definition tag", db_map_data)
+        self.notify_items_changed("set", "parameter_definition tag", db_map_data)
+
+    def receive_scenarios_removed(self, db_map_data):
+        self.notify_items_changed("removed", "scenarios", db_map_data)
+
+    def receive_alternatives_removed(self, db_map_data):
+        self.notify_items_changed("removed", "alternatives", db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
-        self.notify_items_changed("removed", "object class", db_map_data)
+        self.notify_items_changed("removed", "object_class", db_map_data)
 
     def receive_objects_removed(self, db_map_data):
         self.notify_items_changed("removed", "object", db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
-        self.notify_items_changed("removed", "relationship class", db_map_data)
+        self.notify_items_changed("removed", "relationship_class", db_map_data)
 
     def receive_relationships_removed(self, db_map_data):
         self.notify_items_changed("removed", "relationship", db_map_data)
 
     def receive_entity_groups_removed(self, db_map_data):
-        self.notify_items_changed("removed", "entity group", db_map_data)
+        self.notify_items_changed("removed", "entity_group", db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter definition", db_map_data)
+        self.notify_items_changed("removed", "parameter_definition", db_map_data)
 
     def receive_parameter_values_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter value", db_map_data)
+        self.notify_items_changed("removed", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter value list", db_map_data)
+        self.notify_items_changed("removed", "parameter_value_list", db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
 
     def receive_parameter_tags_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter tag", db_map_data)
+        self.notify_items_changed("removed", "parameter_tag", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -765,25 +831,11 @@ class DataStoreFormBase(QMainWindow):
 
     def _focused_widget_has_callable(self, callable_name):
         """Returns True if the currently focused widget or one of its ancestors has the given callable."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not None and focus_widget is not self:
-            if hasattr(focus_widget, callable_name):
-                method = getattr(focus_widget, callable_name)
-                if callable(method):
-                    return True
-            focus_widget = focus_widget.parentWidget()
-        return False
+        return focused_widget_has_callable(self, callable_name)
 
     def _call_on_focused_widget(self, callable_name):
         """Calls the given callable on the currently focused widget or one of its ancestors."""
-        focus_widget = self.focusWidget()
-        while focus_widget is not None and focus_widget is not self:
-            if hasattr(focus_widget, callable_name):
-                method = getattr(focus_widget, callable_name)
-                if callable(method):
-                    method()
-                    break
-            focus_widget = focus_widget.parentWidget()
+        call_on_focused_widget(self, callable_name)
 
 
 class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, DataStoreFormBase):
@@ -847,9 +899,13 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_parameter_value_list, Qt.Horizontal
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
         )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical
+        )
+        self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -868,7 +924,14 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_parameter_value_list,
         ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
+        docks = [
+            self.ui.dockWidget_alternative_scenario_tree,
+            self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_parameter_tag,
+        ]
+        height = sum(d.size().height() for d in docks)
+        self.resizeDocks(docks, [0.4 * height, 0.4 * height, 0.2 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot(bool)
@@ -878,28 +941,35 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical)
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_object_parameter_value.hide()
         self.ui.dockWidget_object_parameter_definition.hide()
         self.ui.dockWidget_relationship_parameter_value.hide()
         self.ui.dockWidget_relationship_parameter_definition.hide()
         self.ui.dockWidget_parameter_value_list.hide()
-        self.parameter_tag_toolbar.hide()
+        self.ui.dockWidget_parameter_tag.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
         self.end_style_change()
 
     @Slot(bool)
     def apply_graph_style(self, checked=False):
         """Applies the graph style, inspired in the former graph view."""
         self.begin_style_change()
-        self.ui.dockWidget_parameter_value_list.hide()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Horizontal)
-        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_entity_graph, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
+        )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical
+        )
+        self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,
@@ -908,12 +978,23 @@ class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
                 self.ui.dockWidget_relationship_parameter_definition,
             ]
         )
-        docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph]
+        docks = [
+            self.ui.dockWidget_object_tree,
+            self.ui.dockWidget_entity_graph,
+            self.ui.dockWidget_parameter_value_list,
+        ]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.3 * width, 0.7 * width], Qt.Horizontal)
+        self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
+        docks = [
+            self.ui.dockWidget_alternative_scenario_tree,
+            self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_parameter_tag,
+        ]
+        height = sum(d.size().height() for d in docks)
+        self.resizeDocks(docks, [0.4 * height, 0.4 * height, 0.2 * height], Qt.Vertical)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 

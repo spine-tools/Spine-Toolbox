@@ -17,18 +17,7 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 
-from PySide2.QtCore import (
-    Qt,
-    Slot,
-    Signal,
-    QItemSelectionModel,
-    QSortFilterProxyModel,
-    QEvent,
-    QCoreApplication,
-    QModelIndex,
-    QPoint,
-    QSize,
-)
+from PySide2.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide2.QtWidgets import (
     QComboBox,
     QLineEdit,
@@ -44,7 +33,7 @@ from PySide2.QtWidgets import (
     QStyle,
     QLabel,
 )
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QColor
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QColor, QIcon, QPixmap, QPainter
 from ..helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
 
 
@@ -94,7 +83,7 @@ class CustomComboEditor(QComboBox):
         return self.currentText()
 
 
-class CustomLineEditDelegate(QItemDelegate):
+class _CustomLineEditDelegate(QItemDelegate):
     """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
     """
 
@@ -129,7 +118,7 @@ class CustomLineEditDelegate(QItemDelegate):
 
 
 class SearchBarEditor(QTableView):
-    """A Google-like search bar, implemented as a QTableView with a CustomLineEditDelegate in the first row.
+    """A Google-like search bar, implemented as a QTableView with a _CustomLineEditDelegate in the first row.
     """
 
     data_committed = Signal()
@@ -157,7 +146,7 @@ class SearchBarEditor(QTableView):
         self.setShowGrid(False)
         self.setMouseTracking(True)
         self.setTabKeyNavigation(False)
-        delegate = CustomLineEditDelegate(self)
+        delegate = _CustomLineEditDelegate(self)
         delegate.text_edited.connect(self._handle_delegate_text_edited)
         self.setItemDelegateForRow(0, delegate)
 
@@ -186,7 +175,7 @@ class SearchBarEditor(QTableView):
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self._orig_pos = self.pos()
         if self._tutor:
-            self._orig_pos += self._tutor.mapTo(self.parent(), self._tutor.parent().pos())
+            self._orig_pos += self._tutor.mapTo(self.parent(), self._tutor.rect().topLeft())
         self.refit()
 
     def refit(self):
@@ -202,8 +191,7 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
-        data = self.first_index.data(Qt.EditRole)
-        return data
+        return self.first_index.data(Qt.EditRole)
 
     @Slot("QString")
     def _handle_delegate_text_edited(self, text):
@@ -272,10 +260,11 @@ class SearchBarEditor(QTableView):
 class CheckListEditor(QTableView):
     """A check list editor."""
 
-    def __init__(self, parent, tutor=None):
+    def __init__(self, parent, tutor=None, ranked=False):
         """Initialize class."""
         super().__init__(parent)
         self._tutor = tutor
+        self._ranked = ranked
         self._base_size = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
@@ -283,25 +272,60 @@ class CheckListEditor(QTableView):
         self.horizontalHeader().hide()
         self.setShowGrid(False)
         self.setMouseTracking(True)
+        self._icons = []
+        self._selected = []
+        self._items = {}
+        self._blank_icon = self._make_icon()
+
+    def _make_icon(self, i=None):
+        if not self._ranked:
+            return None
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.white)
+        if i is not None:
+            painter = QPainter(pixmap)
+            painter.drawText(0, 0, 16, 16, Qt.AlignCenter, str(i))
+            painter.end()
+        return QIcon(pixmap)
 
     def keyPressEvent(self, event):
         """Toggles checked state if the user presses space."""
         super().keyPressEvent(event)
         if event.key() == Qt.Key_Space:
             index = self.currentIndex()
-            self.toggle_checked_state(index)
+            self.toggle_selected(index)
 
-    def toggle_checked_state(self, index):
-        """Toggles checked state of given index.
+    def toggle_selected(self, index):
+        """Adds or removes given index from selected items.
 
         Args:
             index (QModelIndex)
         """
-        item = self.model.itemFromIndex(index)
-        if item.checkState() == Qt.Checked:
-            item.setCheckState(Qt.Unchecked)
+        item = self.model.itemFromIndex(index).text()
+        qitem = self._items[item]
+        if item not in self._selected:
+            rank = len(self._selected)
+            self._select_item(qitem, rank)
+            self._selected.append(item)
         else:
-            item.setCheckState(Qt.Checked)
+            self._selected.remove(item)
+            self._deselect_item(qitem, update_ranks=True)
+
+    def _select_item(self, qitem, rank):
+        if self._ranked:
+            qitem.setData(self._icons[rank], Qt.DecorationRole)
+        else:
+            qitem.setCheckState(Qt.Checked)
+
+    def _deselect_item(self, qitem, update_ranks=False):
+        if self._ranked:
+            qitem.setData(self._blank_icon, Qt.DecorationRole)
+            if update_ranks:
+                for rank, item in enumerate(self._selected):
+                    qitem = self._items[item]
+                    self._select_item(qitem, rank)
+        else:
+            qitem.setCheckState(Qt.Unchecked)
 
     def mouseMoveEvent(self, event):
         """Sets the current index to the one under mouse."""
@@ -311,7 +335,7 @@ class CheckListEditor(QTableView):
     def mousePressEvent(self, event):
         """Toggles checked state of pressed index."""
         index = self.indexAt(event.pos())
-        self.toggle_checked_state(index)
+        self.toggle_selected(index)
 
     def set_data(self, items, checked_items):
         """Sets data and updates geometry.
@@ -320,16 +344,18 @@ class CheckListEditor(QTableView):
             items (Sequence(str)): All items.
             checked_items (Sequence(str)): Initially checked items.
         """
+        self._icons = [self._make_icon(i + 1) for i in range(len(items))]
         for item in items:
             qitem = QStandardItem(item)
-            if item in checked_items:
-                qitem.setCheckState(Qt.Checked)
-            else:
-                qitem.setCheckState(Qt.Unchecked)
-            qitem.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsUserCheckable)
+            qitem.setFlags(~Qt.ItemIsEditable)
             qitem.setData(qApp.palette().window(), Qt.BackgroundRole)  # pylint: disable=undefined-variable
+            self._deselect_item(qitem)
+            self._items[item] = qitem
             self.model.appendRow(qitem)
-        self.selectionModel().select(self.model.index(0, 0), QItemSelectionModel.Select)
+        self._selected = [item for item in checked_items if item in items]
+        for rank, item in enumerate(self._selected):
+            qitem = self._items[item]
+            self._select_item(qitem, rank)
 
     def data(self):
         """Returns a comma separated list of checked items.
@@ -337,11 +363,7 @@ class CheckListEditor(QTableView):
         Returns
             str
         """
-        data = []
-        for q in self.model.findItems('*', Qt.MatchWildcard):
-            if q.checkState() == Qt.Checked:
-                data.append(q.text())
-        return ",".join(data)
+        return ",".join(self._selected)
 
     def set_base_size(self, size):
         self._base_size = size
@@ -355,7 +377,7 @@ class CheckListEditor(QTableView):
         size = QSize(self._base_size.width(), total_height).boundedTo(self.parent().size())
         self.resize(size)
         if self._tutor:
-            self.move(self.pos() + self._tutor.mapTo(self.parent(), self._tutor.parent().pos()))
+            self.move(self.pos() + self._tutor.mapTo(self.parent(), self._tutor.rect().topLeft()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self.parent().mapToGlobal(self.parent().rect().bottomRight())
@@ -364,7 +386,7 @@ class CheckListEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
 
-class IconPainterDelegate(QItemDelegate):
+class _IconPainterDelegate(QItemDelegate):
     """A delegate to highlight decorations in a QListWidget."""
 
     def paint(self, painter, option, index):
@@ -375,7 +397,7 @@ class IconPainterDelegate(QItemDelegate):
 
 
 class IconColorEditor(QDialog):
-    """An editor to let the user select an icon and a color for an object class.
+    """An editor to let the user select an icon and a color for an object_class.
     """
 
     def __init__(self, parent):
@@ -389,7 +411,7 @@ class IconColorEditor(QDialog):
         self.icon_list.setViewMode(QListView.IconMode)
         self.icon_list.setIconSize(icon_size)
         self.icon_list.setResizeMode(QListView.Adjust)
-        self.icon_list.setItemDelegate(IconPainterDelegate(self))
+        self.icon_list.setItemDelegate(_IconPainterDelegate(self))
         self.icon_list.setMovement(QListView.Static)
         self.icon_list.setMinimumHeight(400)
         icon_widget_layout = QVBoxLayout(self.icon_widget)

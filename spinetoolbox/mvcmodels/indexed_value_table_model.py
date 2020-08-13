@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A model for indexed parameter values, used by the parameter value editors.
+A model for indexed parameter values, used by the parameter_value editors.
 
 :authors: A. Soininen (VTT)
 :date:   18.6.2019
@@ -24,7 +24,7 @@ class IndexedValueTableModel(QAbstractTableModel):
         """A base class for time pattern and time series models.
 
         Args:
-            value (TimePattern, TimeSeriesFixedStep, TimeSeriesVariableStep): a parameter value
+            value (TimePattern, TimeSeriesFixedStep, TimeSeriesVariableStep): a parameter_value
             index_header (str): a header for the index column
             value_header (str): a header for the value column
         """
@@ -65,5 +65,5 @@ class IndexedValueTableModel(QAbstractTableModel):
 
     @property
     def value(self):
-        """Returns the parameter value associated with the model."""
+        """Returns the parameter_value associated with the model."""
         return self._value

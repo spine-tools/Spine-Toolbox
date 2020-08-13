@@ -18,54 +18,509 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>873</width>
+    <width>1197</width>
     <height>697</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Import preview</string>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <item>
-     <widget class="QDialogButtonBox" name="buttonBox">
-      <property name="standardButtons">
-       <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-      </property>
-      <property name="centerButtons">
-       <bool>false</bool>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
+  <property name="dockNestingEnabled">
+   <bool>true</bool>
+  </property>
+  <widget class="QWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>873</width>
-     <height>21</height>
+     <width>1197</width>
+     <height>22</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuFile">
+   <widget class="QMenu" name="file_menu">
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionExportMappings"/>
-    <addaction name="actionImportMappings"/>
+    <addaction name="export_mappings_action"/>
+    <addaction name="import_mappings_action"/>
     <addaction name="separator"/>
-    <addaction name="actionClose"/>
+    <addaction name="close_action"/>
    </widget>
-   <addaction name="menuFile"/>
+   <widget class="QMenu" name="edit_menu">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+   </widget>
+   <addaction name="file_menu"/>
+   <addaction name="edit_menu"/>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionExportMappings">
+  <widget class="QStatusBar" name="statusbar">
+   <property name="sizeGripEnabled">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_sources">
+   <property name="windowTitle">
+    <string>Sources</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="MultiCheckableListView" name="source_list">
+       <property name="contextMenuPolicy">
+        <enum>Qt::CustomContextMenu</enum>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_source_options">
+   <property name="windowTitle">
+    <string>Source options</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_2">
+    <layout class="QVBoxLayout" name="verticalLayout_5">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_source_data">
+   <property name="windowTitle">
+    <string>Source data</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_3">
+    <layout class="QVBoxLayout" name="verticalLayout_6">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QStackedWidget" name="source_preview_widget_stack">
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <widget class="QWidget" name="table_page">
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="TableViewWithButtonHeader" name="source_data_table"/>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="loading_page">
+        <layout class="QVBoxLayout" name="verticalLayout_4">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <item>
+            <spacer name="horizontalSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QLabel" name="waiting_label">
+             <property name="text">
+              <string>Loading preview...</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_mappings">
+   <property name="windowTitle">
+    <string>Mappings</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_4">
+    <layout class="QVBoxLayout" name="verticalLayout_7">
+     <property name="spacing">
+      <number>6</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <layout class="QHBoxLayout" name="button_layout">
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
+       <item>
+        <widget class="QPushButton" name="new_button">
+         <property name="text">
+          <string>New</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="remove_button">
+         <property name="text">
+          <string>Remove</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QListView" name="list_view"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_mapping_options">
+   <property name="windowTitle">
+    <string>Mapping options</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_5">
+    <layout class="QFormLayout" name="formLayout_2">
+     <property name="horizontalSpacing">
+      <number>6</number>
+     </property>
+     <property name="verticalSpacing">
+      <number>6</number>
+     </property>
+     <property name="leftMargin">
+      <number>9</number>
+     </property>
+     <property name="topMargin">
+      <number>9</number>
+     </property>
+     <property name="rightMargin">
+      <number>9</number>
+     </property>
+     <property name="bottomMargin">
+      <number>9</number>
+     </property>
+     <item row="0" column="0">
+      <widget class="QLabel" name="class_type_label">
+       <property name="text">
+        <string>Class type:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="class_type_combo_box">
+       <item>
+        <property name="text">
+         <string>Object</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Relationship</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Object group</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Alternative</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Scenario</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Scenario alternative</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="parameter_type_label">
+       <property name="text">
+        <string>Parameter type:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QComboBox" name="parameter_type_combo_box">
+       <item>
+        <property name="text">
+         <string>Single value</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Time series</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Time pattern</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Map</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Array</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Definition</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>None</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="read_start_row_label">
+       <property name="text">
+        <string>Read data from row:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QSpinBox" name="start_read_row_spin_box"/>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="ignore_columns_label">
+       <property name="text">
+        <string>Ignore columns:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QPushButton" name="ignore_columns_button">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="dimension_label">
+       <property name="text">
+        <string>Number of dimensions:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QSpinBox" name="dimension_spin_box">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="QCheckBox" name="time_series_repeat_check_box">
+       <property name="toolTip">
+        <string>Set the repeat flag for all imported time series</string>
+       </property>
+       <property name="text">
+        <string>Repeat time series</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="map_dimensions_label">
+       <property name="text">
+        <string>Map dimensions:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QSpinBox" name="map_dimension_spin_box">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QCheckBox" name="import_objects_check_box">
+       <property name="text">
+        <string>Import objects</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_mapping_spec">
+   <property name="windowTitle">
+    <string>Mapping specification</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_6">
+    <layout class="QVBoxLayout" name="verticalLayout_8">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QTableView" name="table_view_mappings"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <action name="export_mappings_action">
    <property name="text">
     <string>Export mappings...</string>
    </property>
   </action>
-  <action name="actionImportMappings">
+  <action name="import_mappings_action">
    <property name="text">
     <string>Import mappings...</string>
    </property>
@@ -75,7 +530,7 @@
     <string>Save</string>
    </property>
   </action>
-  <action name="actionClose">
+  <action name="close_action">
    <property name="text">
     <string>Close</string>
    </property>
@@ -84,6 +539,34 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TableViewWithButtonHeader</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/import_editor/widgets/table_view_with_button_header.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MultiCheckableListView</class>
+   <extends>QListView</extends>
+   <header>spinetoolbox/import_editor/widgets/multi_checkable_list_view.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>source_list</tabstop>
+  <tabstop>source_data_table</tabstop>
+  <tabstop>new_button</tabstop>
+  <tabstop>remove_button</tabstop>
+  <tabstop>list_view</tabstop>
+  <tabstop>class_type_combo_box</tabstop>
+  <tabstop>import_objects_check_box</tabstop>
+  <tabstop>parameter_type_combo_box</tabstop>
+  <tabstop>start_read_row_spin_box</tabstop>
+  <tabstop>ignore_columns_button</tabstop>
+  <tabstop>dimension_spin_box</tabstop>
+  <tabstop>time_series_repeat_check_box</tabstop>
+  <tabstop>map_dimension_spin_box</tabstop>
+  <tabstop>table_view_mappings</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

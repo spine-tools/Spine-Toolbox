@@ -40,6 +40,11 @@ class MapEditor(QWidget):
         self._ui.map_table_view.setModel(self._model)
         self._ui.map_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.map_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.convert_leaves_button.clicked.connect(self._convert_leaves)
+
+    @Slot(bool)
+    def _convert_leaves(self, _):
+        self._model.convert_leaf_maps()
 
     @Slot("QPoint")
     def _show_table_context_menu(self, pos):
@@ -70,9 +75,9 @@ class MapEditor(QWidget):
             self._model.trim_columns()
 
     def set_value(self, value):
-        """Sets the parameter value to be edited."""
+        """Sets the parameter_value to be edited."""
         self._model.reset(value)
 
     def value(self):
-        """Returns the parameter value currently being edited."""
+        """Returns the parameter_value currently being edited."""
         return self._model.value()
