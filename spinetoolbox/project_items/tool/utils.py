@@ -51,6 +51,8 @@ def file_paths_from_resources(resources):
             or (resource.type_ == "transient_file" and resource.url)
         ):
             file_paths += glob.glob(resource.path)
+        elif resource.type_ == "transient_file":
+            file_paths.append(resource.metadata["label"])
     return file_paths
 
 
