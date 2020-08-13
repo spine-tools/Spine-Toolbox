@@ -289,17 +289,17 @@ class Ui_Form(object):
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
-        self.pushButton_ds_form = QPushButton(self.scrollAreaWidgetContents_7)
-        self.pushButton_ds_form.setObjectName(u"pushButton_ds_form")
+        self.pushButton_ds_open_editor = QPushButton(self.scrollAreaWidgetContents_7)
+        self.pushButton_ds_open_editor.setObjectName(u"pushButton_ds_open_editor")
         sizePolicy5 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         sizePolicy5.setHorizontalStretch(0)
         sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.pushButton_ds_form.sizePolicy().hasHeightForWidth())
-        self.pushButton_ds_form.setSizePolicy(sizePolicy5)
-        self.pushButton_ds_form.setMinimumSize(QSize(75, 23))
-        self.pushButton_ds_form.setMaximumSize(QSize(16777215, 23))
+        sizePolicy5.setHeightForWidth(self.pushButton_ds_open_editor.sizePolicy().hasHeightForWidth())
+        self.pushButton_ds_open_editor.setSizePolicy(sizePolicy5)
+        self.pushButton_ds_open_editor.setMinimumSize(QSize(75, 23))
+        self.pushButton_ds_open_editor.setMaximumSize(QSize(16777215, 23))
 
-        self.horizontalLayout.addWidget(self.pushButton_ds_form)
+        self.horizontalLayout.addWidget(self.pushButton_ds_open_editor)
 
 
         self.verticalLayout_25.addLayout(self.horizontalLayout)
@@ -355,8 +355,8 @@ class Ui_Form(object):
         QWidget.setTabOrder(self.lineEdit_port, self.lineEdit_database)
         QWidget.setTabOrder(self.lineEdit_database, self.toolButton_open_sqlite_file)
         QWidget.setTabOrder(self.toolButton_open_sqlite_file, self.pushButton_create_new_spine_db)
-        QWidget.setTabOrder(self.pushButton_create_new_spine_db, self.pushButton_ds_form)
-        QWidget.setTabOrder(self.pushButton_ds_form, self.toolButton_copy_url)
+        QWidget.setTabOrder(self.pushButton_create_new_spine_db, self.pushButton_ds_open_editor)
+        QWidget.setTabOrder(self.pushButton_ds_open_editor, self.toolButton_copy_url)
         QWidget.setTabOrder(self.toolButton_copy_url, self.toolButton_ds_open_dir)
 
         self.retranslateUi(Form)
@@ -388,9 +388,9 @@ class Ui_Form(object):
 #endif // QT_CONFIG(tooltip)
         self.pushButton_create_new_spine_db.setText(QCoreApplication.translate("Form", u"New Spine db", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_ds_form.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open Data Store view</p></body></html>", None))
+        self.pushButton_ds_open_editor.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open Data Store view</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_ds_form.setText(QCoreApplication.translate("Form", u"Open form", None))
+        self.pushButton_ds_open_editor.setText(QCoreApplication.translate("Form", u"Open editor", None))
 #if QT_CONFIG(tooltip)
         self.toolButton_copy_url.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Copy current database url to clipboard.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)

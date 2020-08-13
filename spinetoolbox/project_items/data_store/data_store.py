@@ -86,7 +86,7 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_ds_open_dir.clicked] = lambda checked=False: self.open_directory()
-        s[self._properties_ui.pushButton_ds_form.clicked] = self.open_ds_form
+        s[self._properties_ui.pushButton_ds_open_editor.clicked] = self.open_ds_form
         s[self._properties_ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
         s[self._properties_ui.pushButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._properties_ui.toolButton_copy_url.clicked] = self.copy_url
@@ -296,7 +296,7 @@ class DataStore(ProjectItem):
 
     @Slot(bool)
     def open_ds_form(self, checked=False):
-        """Opens current url in the data store view."""
+        """Opens current url in the Spine database editor."""
         self._update_sa_url()
         self._project.db_mngr.show_data_store_form({self._sa_url: self.name}, self._logger)
 

@@ -88,17 +88,17 @@ class Ui_Form(object):
 
         self.horizontalLayout_8.addItem(self.horizontalSpacer_9)
 
-        self.pushButton_view_open_ds_form = QPushButton(self.scrollAreaWidgetContents_4)
-        self.pushButton_view_open_ds_form.setObjectName(u"pushButton_view_open_ds_form")
+        self.pushButton_view_open_editor = QPushButton(self.scrollAreaWidgetContents_4)
+        self.pushButton_view_open_editor.setObjectName(u"pushButton_view_open_editor")
         sizePolicy1 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.pushButton_view_open_ds_form.sizePolicy().hasHeightForWidth())
-        self.pushButton_view_open_ds_form.setSizePolicy(sizePolicy1)
-        self.pushButton_view_open_ds_form.setMinimumSize(QSize(75, 23))
-        self.pushButton_view_open_ds_form.setMaximumSize(QSize(16777215, 23))
+        sizePolicy1.setHeightForWidth(self.pushButton_view_open_editor.sizePolicy().hasHeightForWidth())
+        self.pushButton_view_open_editor.setSizePolicy(sizePolicy1)
+        self.pushButton_view_open_editor.setMinimumSize(QSize(75, 23))
+        self.pushButton_view_open_editor.setMaximumSize(QSize(16777215, 23))
 
-        self.horizontalLayout_8.addWidget(self.pushButton_view_open_ds_form)
+        self.horizontalLayout_8.addWidget(self.pushButton_view_open_editor)
 
 
         self.verticalLayout_18.addLayout(self.horizontalLayout_8)
@@ -143,9 +143,9 @@ class Ui_Form(object):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.label_view_name.setText(QCoreApplication.translate("Form", u"Name", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_view_open_ds_form.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open Data store view for selected db references</p></body></html>", None))
+        self.pushButton_view_open_editor.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open Data store view for selected db references</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_view_open_ds_form.setText(QCoreApplication.translate("Form", u"Open DS form", None))
+        self.pushButton_view_open_editor.setText(QCoreApplication.translate("Form", u"Open editor", None))
 #if QT_CONFIG(tooltip)
         self.toolButton_view_open_dir.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open this View's project directory in file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)

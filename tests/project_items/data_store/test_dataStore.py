@@ -193,7 +193,7 @@ class TestDataStore(unittest.TestCase):
             mock_qfile_dialog.getOpenFileName.assert_called_once()
         # Open form
         with mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
-            self.ds_properties_ui.pushButton_ds_form.click()
+            self.ds_properties_ui.pushButton_ds_open_editor.click()
         ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, DataStoreForm)
         expected_url = "sqlite:///" + temp_db_path
@@ -214,7 +214,7 @@ class TestDataStore(unittest.TestCase):
         self.ds_properties_ui.lineEdit_database.editingFinished.emit()
         # Open form
         with mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
-            self.ds_properties_ui.pushButton_ds_form.click()
+            self.ds_properties_ui.pushButton_ds_open_editor.click()
         ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, DataStoreForm)
         expected_url = "sqlite:///" + temp_db_path

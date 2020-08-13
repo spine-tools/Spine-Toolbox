@@ -34,4 +34,4 @@ class ViewPropertiesContextMenu(CustomContextMenu):
         if not index.isValid():
             # If no item at index
             return
-        self.add_action("Open view")
+        self.add_action("Open editor")

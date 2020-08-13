@@ -615,7 +615,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_ds_form">
+          <widget class="QPushButton" name="pushButton_ds_open_editor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -638,7 +638,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="text">
-            <string>Open form</string>
+            <string>Open editor</string>
            </property>
           </widget>
          </item>
@@ -755,7 +755,7 @@
   <tabstop>lineEdit_database</tabstop>
   <tabstop>toolButton_open_sqlite_file</tabstop>
   <tabstop>pushButton_create_new_spine_db</tabstop>
-  <tabstop>pushButton_ds_form</tabstop>
+  <tabstop>pushButton_ds_open_editor</tabstop>
   <tabstop>toolButton_copy_url</tabstop>
   <tabstop>toolButton_ds_open_dir</tabstop>
  </tabstops>
