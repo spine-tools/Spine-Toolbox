@@ -68,8 +68,7 @@ class Combiner(ProjectItem):
     def execution_item(self):
         """Creates project item's execution counterpart."""
         cancel_on_error = self.cancel_on_error
-        python_path = self._project.settings.value("appSettings/pythonPath", defaultValue="")
-        return ExecutableItem(self.name, self.logs_dir, python_path, cancel_on_error, self._logger)
+        return ExecutableItem(self.name, self.logs_dir, cancel_on_error, self._logger)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
