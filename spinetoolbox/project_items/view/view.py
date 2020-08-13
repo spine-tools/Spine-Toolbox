@@ -98,11 +98,6 @@ class View(ProjectItem):
         """Update View tab name label. Used only when renaming project items."""
         self._properties_ui.label_view_name.setText(self.name)
 
-    def execute_forward(self, resources):
-        """see base class"""
-        self._update_references_list(resources)
-        return True
-
     def _do_handle_dag_changed(self, resources):
         """Update the list of references that this item is viewing."""
         self._update_references_list(resources)
