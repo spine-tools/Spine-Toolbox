@@ -27,6 +27,7 @@ from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_items.tool.item_info import ItemInfo
 from spinetoolbox.project_items.tool.tool_specifications import ExecutableTool
 from spinetoolbox.project_items.tool.tool import Tool
+from spinetoolbox.project_items.tool.executable_item import ExecutableItem
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -55,6 +56,20 @@ class TestTool(unittest.TestCase):
 
     def test_item_category(self):
         self.assertEqual(Tool.item_category(), ItemInfo.item_category())
+
+    def test_execution_item(self):
+        """Tests that the ExecutableItem counterpart is created successfully."""
+        tool = self._add_tool()
+        exec_item = tool.execution_item()
+        self.assertIsInstance(exec_item, ExecutableItem)
+
+    def test_item_dict(self):
+        """Tests Item dictionary creation."""
+        tool = self._add_tool()
+        d = tool.item_dict()
+        a = ["type", "short name", "description", "x", "y", "tool", "execute_in_work", "cmd_line_args"]
+        for k in a:
+            self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
     def test_notify_destination(self):
         self.toolbox.msg = mock.MagicMock()

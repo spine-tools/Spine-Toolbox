@@ -12,7 +12,7 @@
 """
 Unit tests for DataStore class.
 
-:author: M. Marin (KTH)
+:author: M. Marin (KTH), P. Savolainen (VTT)
 :date:   6.12.2018
 """
 
@@ -26,6 +26,7 @@ from PySide2.QtWidgets import QApplication, QMessageBox
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
 from spinetoolbox.project_items.data_store.data_store import DataStore
+from spinetoolbox.project_items.data_store.executable_item import ExecutableItem
 from spinetoolbox.project_items.data_store.item_info import ItemInfo
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -93,6 +94,22 @@ class TestDataStore(unittest.TestCase):
     def test_item_category(self):
         """Tests that the item category is correct."""
         self.assertEqual(DataStore.item_category(), ItemInfo.item_category())
+
+    def test_execution_item(self):
+        """Tests that the ExecutableItem counterpart is created successfully."""
+        exec_item = self.ds.execution_item()
+        self.assertIsInstance(exec_item, ExecutableItem)
+
+    def test_item_dict(self):
+        """Tests Item dictionary creation."""
+        d = self.ds.item_dict()
+        a = ["type", "short name", "description", "x", "y", "url"]
+        url_keys = ["dialect", "username", "password", "host", "port", "database"]
+        for k in a:
+            self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
+            if k == "url":
+                for url_key in url_keys:
+                    self.assertTrue(url_key in d[k], f"Key '{url_key}' not in dict {d[k]}")
 
     def test_create_new_empty_spine_database(self):
         """Test that a new Spine database is created when clicking on 'New Spine db tool button'
