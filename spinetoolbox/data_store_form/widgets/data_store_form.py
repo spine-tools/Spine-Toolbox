@@ -61,7 +61,7 @@ from ...spine_db_parcel import SpineDBParcel
 
 
 class DataStoreFormBase(QMainWindow):
-    """Base class for DataStoreForm"""
+    """Base class for DataStoreForm (i.e. Spine database editor)."""
 
     msg = Signal(str)
     link_msg = Signal(str, "QVariant")
@@ -111,7 +111,7 @@ class DataStoreFormBase(QMainWindow):
         self.redo_action = None
         self.template_file_path = None
         db_names = ", ".join([f"{db_map.codename}" for db_map in self.db_maps])
-        self.setWindowTitle(f"{db_names}[*] - Data store form")
+        self.setWindowTitle(f"{db_names}[*] - Spine database editor")
         self.update_commit_enabled()
 
     @property

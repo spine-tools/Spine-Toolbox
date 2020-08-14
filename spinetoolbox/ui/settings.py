@@ -56,7 +56,7 @@ class Ui_SettingsForm(object):
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Normal, QIcon.Off)
         __qlistwidgetitem = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem.setTextAlignment(Qt.AlignCenter);
+        __qlistwidgetitem.setTextAlignment(Qt.AlignLeading|Qt.AlignVCenter);
         __qlistwidgetitem.setIcon(icon);
         __qlistwidgetitem.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
         icon1 = QIcon()
@@ -592,7 +592,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(3)
+        self.stackedWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -674,8 +674,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QCoreApplication.translate("SettingsForm", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
+"</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None))
         self.textEdit_project_description.setPlaceholderText("")
         self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
         self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
@@ -721,11 +721,11 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Python interpreter with file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.groupBox_data_store.setTitle(QCoreApplication.translate("SettingsForm", u"Data store form", None))
+        self.groupBox_data_store.setTitle(QCoreApplication.translate("SettingsForm", u"Spine database editor", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Does not commit session and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Commits session and does not show message box</p><p><br/></p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_commit_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Commit session when form is closed", None))
+        self.checkBox_commit_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Commit session when editor is closed", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_object_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
