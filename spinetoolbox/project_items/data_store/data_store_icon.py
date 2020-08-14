@@ -34,3 +34,12 @@ class DataStoreIcon(ProjectItemIcon):
         super().__init__(
             toolbox, x, y, project_item, icon, icon_color=QColor("#cc33ff"), background_color=QColor("#f9e6ff")
         )
+
+    def mouseDoubleClickEvent(self, e):
+        """Opens Spine database editor when this Data Store icon is double-clicked.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Event
+        """
+        super().mouseDoubleClickEvent(e)
+        self._project_item.open_ds_form()
