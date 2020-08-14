@@ -48,7 +48,9 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._cancel_on_error = cancel_on_error
         self._resources_from_downstream = list()
         self._worker = None
+        self._worker_thread = None
         self._worker_succeeded = None
+        self._loop = None
 
     @staticmethod
     def item_type():
@@ -82,7 +84,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
                 absolute_path_settings[absolute_path] = self._settings[label]
         source_settings = {"GdxConnector": {"gams_directory": self._gams_system_directory()}}
         self._destroy_current_worker()
-        loop = QEventLoop()
+        self._loop = QEventLoop()
         self._worker = ImporterWorker(
             list(absolute_paths.values()),
             absolute_path_settings,
@@ -92,11 +94,13 @@ class ExecutableItem(ExecutableItemBase, QObject):
             self._cancel_on_error,
             self._logger,
         )
-        self._worker.finished.connect(loop.quit)
-        self._worker.finished.connect(self._worker.deleteLater)
+        self._worker_thread = QThread()
+        self._worker.moveToThread(self._worker_thread)
         self._worker.import_finished.connect(self._handle_worker_finished)
-        self._worker.start()
-        loop.exec_()
+        self._worker.import_finished.connect(self._loop.quit)
+        self._worker_thread.started.connect(self._worker.do_work)
+        self._worker_thread.start()
+        self._loop.exec_()
         if not self._worker_succeeded:
             self._logger.msg_error.emit(f"Executing Importer {self.name} failed")
         else:
@@ -105,18 +109,23 @@ class ExecutableItem(ExecutableItemBase, QObject):
 
     @Slot(int)
     def _handle_worker_finished(self, exit_code):
-        self._destroy_current_worker()
         self._worker_succeeded = exit_code == 0
+        self._destroy_current_worker()
 
     def _destroy_current_worker(self):
-        """Runs when starting execution and after worker finishes.
-        Destroys current worker if present.
+        """Runs before starting execution and after worker finishes.
+        Destroys current worker and quits thread if present.
         """
+        if self._loop:
+            self._loop.deleteLater()
+            self._loop = None
         if self._worker:
-            self._worker.quit()
-            self._worker.wait()
             self._worker.deleteLater()
             self._worker = None
+        if self._worker_thread:
+            self._worker_thread.quit()
+            self._worker_thread.wait()
+            self._worker_thread = None
 
     def _gams_system_directory(self):
         """Returns GAMS system path or None if GAMS default is to be used."""

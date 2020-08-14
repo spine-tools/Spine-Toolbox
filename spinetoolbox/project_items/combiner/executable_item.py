@@ -40,6 +40,8 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._cancel_on_error = cancel_on_error
         self._worker = None
         self._worker_thread = None
+        self._loop = None
+        self._merge_succeeded = False
 
     @staticmethod
     def item_type():
@@ -67,27 +69,38 @@ class ExecutableItem(ExecutableItemBase, QObject):
         """See base class."""
         from_urls = self._urls_from_resources(resources)
         to_urls = self._urls_from_resources(self._resources_from_downstream)
-        if not from_urls or not to_urls:
-            # Moving on...
+        if not from_urls:
+            self._logger.msg_warning.emit("No input database(s) available. Moving on...")
             return True
-        loop = QEventLoop()
+        elif not to_urls:
+            self._logger.msg_warning.emit("No output database available. Moving on...")
+            return True
         self._destroy_current_worker()
+        self._loop = QEventLoop()
         self._worker = CombinerWorker(from_urls, to_urls, self._logs_dir, self._cancel_on_error, self._logger)
         self._worker_thread = QThread()
         self._worker.moveToThread(self._worker_thread)
-        self._worker.finished.connect(self._destroy_current_worker)  # Not *truly* needed, but anyways...
-        self._worker.finished.connect(loop.quit)
-        self._worker_thread.started.connect(loop.exec_)
+        self._worker.finished.connect(self._handle_worker_finished)
+        self._worker.finished.connect(self._loop.quit)
         self._worker_thread.started.connect(self._worker.do_work)
         self._worker_thread.start()
+        self._loop.exec_()
         self._logger.msg_success.emit(f"Executing Combiner {self.name} finished")
-        return True
+        return self._merge_succeeded
+
+    def _handle_worker_finished(self):
+        """Runs when Combiner worker has finished."""
+        self._destroy_current_worker()
+        self._merge_succeeded = True
 
     @Slot()
     def _destroy_current_worker(self):
-        """Runs when starting execution and after worker finishes.
-        Destroys current worker and quits thread, if any.
+        """Runs when starting execution and after worker has finished.
+        Destroys current loop, worker and quits thread, if any.
         """
+        if self._loop:
+            self._loop.deleteLater()
+            self._loop = None
         if self._worker:
             self._worker.deleteLater()
             self._worker = None

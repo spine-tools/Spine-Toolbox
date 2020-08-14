@@ -153,6 +153,16 @@ class Combiner(ProjectItem):
                 "This Combiner does not have any input data. "
                 "Connect Data Stores to this Combiner to use their data as input."
             )
+            return
+        successors = self._project.direct_successors(self)
+        for successor in successors:
+            if successor.item_type() == "Data Store":
+                return
+        self.add_notification(
+            "Output database missing. Please connect a Data Store "
+            "to this Combiner for the merged database."
+        )
+        return
 
     def _update_references_list(self, resources_upstream):
         """Updates the references list with resources upstream.

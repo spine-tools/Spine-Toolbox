@@ -43,10 +43,18 @@ class TestImporterExecutable(unittest.TestCase):
     def test_execute_backward(self):
         executable = ExecutableItem("name", {}, "", "", True, mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
+        # Check that _loop, _worker, and _worker_thread are None after execution
+        self.assertIsNone(executable._worker)
+        self.assertIsNone(executable._worker_thread)
+        self.assertIsNone(executable._loop)
 
     def test_execute_forward_simplest_case(self):
         executable = ExecutableItem("name", {}, "", "", True, mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
+        # Check that _loop, _worker, and _worker_thread are None after execution
+        self.assertIsNone(executable._worker)
+        self.assertIsNone(executable._worker_thread)
+        self.assertIsNone(executable._loop)
 
     def test_execute_forward_import_small_file(self):
         with TemporaryDirectory() as temp_dir:
@@ -62,6 +70,10 @@ class TestImporterExecutable(unittest.TestCase):
             self.assertTrue(executable.execute(database_resources, ExecutionDirection.BACKWARD))
             file_resources = [ProjectItemResource(None, "file", data_file.as_uri())]
             self.assertTrue(executable.execute(file_resources, ExecutionDirection.FORWARD))
+            # Check that _loop, _worker, and _worker_thread are None after execution
+            self.assertIsNone(executable._worker)
+            self.assertIsNone(executable._worker_thread)
+            self.assertIsNone(executable._loop)
             database_map = DatabaseMapping(database_url)
             class_list = database_map.object_class_list().all()
             self.assertEqual(len(class_list), 1)
@@ -85,6 +97,10 @@ class TestImporterExecutable(unittest.TestCase):
             self.assertTrue(executable.execute(database_resources, ExecutionDirection.BACKWARD))
             file_resources = [ProjectItemResource(None, "file", data_file.as_uri())]
             self.assertTrue(executable.execute(file_resources, ExecutionDirection.FORWARD))
+            # Check that _loop, _worker, and _worker_thread are None after execution
+            self.assertIsNone(executable._worker)
+            self.assertIsNone(executable._worker_thread)
+            self.assertIsNone(executable._loop)
             database_map = DatabaseMapping(database_url)
             class_list = database_map.object_class_list().all()
             self.assertEqual(len(class_list), 0)
