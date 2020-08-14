@@ -56,6 +56,16 @@ class ExecutableItem(ExecutableItemBase, QObject):
         cancel_on_error = item_dict["cancel_on_error"]
         return cls(name, logs_dir, cancel_on_error, logger)
 
+    def stop_execution(self):
+        """Stops execution."""
+        super().stop_execution()
+        if not self._worker:
+            return
+        self._worker.quit()
+        self._worker.wait()
+        self._worker.deleteLater()
+        self._worker = None
+
     def _execute_backward(self, resources):
         """See base class."""
         self._resources_from_downstream = resources.copy()

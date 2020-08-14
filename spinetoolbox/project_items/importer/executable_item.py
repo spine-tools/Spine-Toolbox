@@ -58,7 +58,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
         return ItemInfo.item_type()
 
     def stop_execution(self):
-        """Stops executing this ImporterExecutable."""
+        """Stops execution."""
         super().stop_execution()
         if not self._worker:
             return
