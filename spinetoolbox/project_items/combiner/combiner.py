@@ -159,8 +159,7 @@ class Combiner(ProjectItem):
             if successor.item_type() == "Data Store":
                 return
         self.add_notification(
-            "Output database missing. Please connect a Data Store "
-            "to this Combiner for the merged database."
+            "Output database missing. Please connect a Data Store " "to this Combiner for the merged database."
         )
         return
 

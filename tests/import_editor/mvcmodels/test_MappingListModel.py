@@ -12,18 +12,29 @@
 Contains unit tests for Import editor's MappingListModel.
 """
 import unittest
-from unittest.mock import MagicMock
+from PySide2.QtWidgets import QUndoStack
 from spinedb_api import ObjectClassMapping
 from spinetoolbox.import_editor.mvcmodels.mapping_list_model import MappingListModel
+from spinetoolbox.import_editor.mvcmodels.mapping_specification_model import MappingSpecificationModel
 
 
 class TestMappingListModel(unittest.TestCase):
     def test_construction(self):
-        undo_stack = MagicMock()
-        model = MappingListModel([ObjectClassMapping()], "table", undo_stack)
+        undo_stack = QUndoStack()
+        specification = MappingSpecificationModel("table_name", "mapping_name", ObjectClassMapping(), undo_stack)
+        model = MappingListModel([specification], "table", undo_stack)
         self.assertEqual(model.rowCount(), 1)
         index = model.index(0, 0)
-        self.assertEqual(index.data(), "Mapping 1")
+        self.assertEqual(index.data(), "mapping_name")
+
+    def test_setData(self):
+        undo_stack = QUndoStack()
+        specification = MappingSpecificationModel("table_name", "mapping_name", ObjectClassMapping(), undo_stack)
+        model = MappingListModel([specification], "table", undo_stack)
+        index = model.index(0, 0)
+        model.setData(index, "new_name")
+        index = model.index(0, 0)
+        self.assertEqual(index.data(), "new_name")
 
 
 if __name__ == '__main__':

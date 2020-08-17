@@ -97,7 +97,7 @@ class ImportMappings(QObject):
         m = None
         indexes = self._ui.list_view.selectedIndexes()
         if self._mappings_model and indexes:
-            m = self._mappings_model.data_mapping(indexes()[0])
+            m = self._mappings_model.data_mapping(indexes[0])
         self.mapping_data_changed.emit(m)
 
     @Slot()

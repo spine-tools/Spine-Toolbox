@@ -86,7 +86,10 @@ class TestCombinerExecutable(unittest.TestCase):
             db3_url = 'sqlite:///' + str(db3_path)
             create_new_spine_database(db3_url)
             executable = ExecutableItem("name", temp_dir, True, mock.MagicMock())
-            input_db_resources = [ProjectItemResource(None, "database", db1_url), ProjectItemResource(None, "database", db2_url)]
+            input_db_resources = [
+                ProjectItemResource(None, "database", db1_url),
+                ProjectItemResource(None, "database", db2_url),
+            ]
             output_db_resource = [ProjectItemResource(None, "database", db3_url)]
             self.assertTrue(executable.execute(output_db_resource, ExecutionDirection.BACKWARD))
             self.assertTrue(executable.execute(input_db_resources, ExecutionDirection.FORWARD))

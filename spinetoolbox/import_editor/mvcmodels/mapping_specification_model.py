@@ -17,24 +17,25 @@ Contains the mapping specification model.
 """
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, Signal, Slot
 from spinedb_api import (
-    EntityClassMapping,
-    ObjectClassMapping,
-    RelationshipClassMapping,
-    ObjectGroupMapping,
     AlternativeMapping,
-    ScenarioMapping,
-    ScenarioAlternativeMapping,
-    ParameterDefinitionMapping,
-    ParameterValueMapping,
-    ParameterMapMapping,
-    ParameterTimeSeriesMapping,
-    ParameterTimePatternMapping,
-    ParameterArrayMapping,
-    NoneMapping,
-    ConstantMapping,
     ColumnHeaderMapping,
     ColumnMapping,
+    ConstantMapping,
+    dict_to_map,
+    EntityClassMapping,
+    NoneMapping,
+    ObjectClassMapping,
+    ObjectGroupMapping,
+    ParameterArrayMapping,
+    ParameterDefinitionMapping,
+    ParameterMapMapping,
+    ParameterTimePatternMapping,
+    ParameterTimeSeriesMapping,
+    ParameterValueMapping,
+    RelationshipClassMapping,
     RowMapping,
+    ScenarioMapping,
+    ScenarioAlternativeMapping,
     TableNameMapping,
 )
 from spinetoolbox.spine_io.type_conversion import DateTimeConvertSpec, FloatConvertSpec, StringConvertSpec
@@ -104,6 +105,10 @@ class MappingSpecificationModel(QAbstractTableModel):
     @property
     def mapping_name(self):
         return self._mapping_name
+
+    @mapping_name.setter
+    def mapping_name(self, name):
+        self._mapping_name = name
 
     @property
     def source_table_name(self):
@@ -770,6 +775,34 @@ class MappingSpecificationModel(QAbstractTableModel):
         if self._item_mapping is None or not self._item_mapping.has_parameters():
             return None
         return self._item_mapping.parameters
+
+    def to_dict(self):
+        """
+        Serializes the mapping specification into a dict.
+
+        Returns:
+            dict: serialized specification
+        """
+        specification_dict = self._item_mapping.to_dict()
+        specification_dict["mapping_name"] = self._mapping_name
+        return specification_dict
+
+    @staticmethod
+    def from_dict(specification_dict, table_name, undo_stack):
+        """
+        Restores a serialized mapping specification.
+
+        Args:
+            specification_dict (dict): serialized specification model
+            table_name (str): source table name
+            undo_stack (QUndoStack): undo stack
+
+        Returns:
+            MappingSpecificationModel: mapping specification
+        """
+        mapping_name = specification_dict.pop("mapping_name", "")
+        mapping = dict_to_map(specification_dict)
+        return MappingSpecificationModel(table_name, mapping_name, mapping, undo_stack)
 
 
 def _name_index(name):

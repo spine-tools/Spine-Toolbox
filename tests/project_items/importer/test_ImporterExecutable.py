@@ -174,14 +174,14 @@ class UnitTestImporterWorker(QObject):
     import_finished = Signal(int)
 
     def __init__(
-            self,
-            checked_files,
-            all_import_settings,
-            all_source_settings,
-            urls_downstream,
-            logs_dir,
-            cancel_on_error,
-            logger,
+        self,
+        checked_files,
+        all_import_settings,
+        all_source_settings,
+        urls_downstream,
+        logs_dir,
+        cancel_on_error,
+        logger,
     ):
         """
         Args:

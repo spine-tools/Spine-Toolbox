@@ -19,10 +19,11 @@ Contains ImportEditor widget and MappingTableMenu.
 from copy import deepcopy
 from PySide2.QtCore import QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
-from spinedb_api import ObjectClassMapping, dict_to_map
+from spinedb_api import ObjectClassMapping
 from .options_widget import OptionsWidget
 from ..commands import PasteMappings, PasteOptions
 from ..mvcmodels.mapping_list_model import MappingListModel
+from ..mvcmodels.mapping_specification_model import MappingSpecificationModel
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ..mvcmodels.source_table_list_model import SourceTableItem, SourceTableListModel
 from ...spine_io.type_conversion import value_to_convert_spec
@@ -136,7 +137,7 @@ class ImportEditor(QObject):
     @Slot(QModelIndex, QModelIndex)
     def _change_selected_table(self, selected, deselected):
         """
-        Set selected table and request data from connector
+        Sets selected table and requests data from connector
         """
         item = self._source_table_model.table_at(selected.row())
         if item.name not in self._table_mappings:
@@ -171,7 +172,7 @@ class ImportEditor(QObject):
     @Slot(dict)
     def update_tables(self, tables):
         """
-        Update list of tables
+        Updates list of tables
         """
         new_tables = list()
         for t_name, t_mapping in tables.items():
@@ -233,8 +234,12 @@ class ImportEditor(QObject):
     def _restore_mappings(self, settings):
         try:
             self._table_mappings = {
-                table: MappingListModel([dict_to_map(m) for m in mappings], table, self._undo_stack)
-                for table, mappings in settings.get("table_mappings", {}).items()
+                table: MappingListModel(
+                    [MappingSpecificationModel.from_dict(m, table, self._undo_stack) for m in mapping_specifications],
+                    table,
+                    self._undo_stack,
+                )
+                for table, mapping_specifications in settings.get("table_mappings", {}).items()
             }
         except ValueError as error:
             self._ui_error.showMessage(f"{error}")
@@ -261,13 +266,13 @@ class ImportEditor(QObject):
         mappings for tables, selected tables.
 
         Returns:
-            [Dict] -- dict with settings
+            dict: dict with settings
         """
         tables = self._source_table_model.table_names()
         selected_tables = self._source_table_model.checked_table_names()
 
         table_mappings = {
-            t: [m.to_dict() for m in mappings.get_mappings()]
+            t: [m.to_dict() for m in mappings.mapping_specifications]
             for t, mappings in self._table_mappings.items()
             if t in tables
         }
@@ -337,17 +342,17 @@ class ImportEditor(QObject):
         option = source_list_menu.get_action()
         source_list_menu.deleteLater()
         if option == "Copy mappings":
-            self.copy_mappings(table)
+            self._copied_mapping = self._copy_mappings(table)
             return
         if option == "Copy options":
-            self.copy_options(table)
+            self._copied_options = self._options_to_dict(table)
             return
         if option == "Copy options and mappings":
-            self.copy_options(table)
-            self.copy_mappings(table)
+            self._copied_options = self._options_to_dict(table)
+            self._copied_mapping = self._copy_mappings(table)
             return
         if option == "Paste mappings":
-            previous = [deepcopy(m) for m in self._table_mappings[table].get_mappings()]
+            previous = self._copy_mappings(table)
             self._undo_stack.push(PasteMappings(self, table, self._copied_mapping, previous))
             return
         if option == "Paste options":
@@ -357,18 +362,29 @@ class ImportEditor(QObject):
         if option == "Paste options and mappings":
             previous_mappings = [deepcopy(m) for m in self._table_mappings[table].get_mappings()]
             previous_options = self._options_to_dict(table)
-            self._undo_stack.beginMacro("paste options and mapings")
+            self._undo_stack.beginMacro("paste options and mappings")
             self._undo_stack.push(PasteMappings(self, table, self._copied_mapping, previous_mappings))
             self._undo_stack.push(PasteOptions(self, table, self._copied_options, previous_options))
             self._undo_stack.endMacro()
             return
 
-    def copy_mappings(self, table):
-        if table in self._table_mappings:
-            self._copied_mapping = [deepcopy(m) for m in self._table_mappings[table].get_mappings()]
+    def _copy_mappings(self, table):
+        """
+        Copies the mappings of the given source table.
 
-    def copy_options(self, table):
-        self._copied_options = self._options_to_dict(table)
+        Args:
+            table (str): source table name
+
+        Returns:
+            dict: copied mappings
+        """
+        mapping_list = self._table_mappings.get(table)
+        if mapping_list is None:
+            return {}
+        return {
+            specification.mapping_name: deepcopy(specification.mapping)
+            for specification in mapping_list.mapping_specifications
+        }
 
     def _options_to_dict(self, table):
         """
@@ -394,10 +410,10 @@ class ImportEditor(QObject):
         Pastes mappings to given table
 
         Args:
-            table (src): source table name
-            mappings (Iterable): mappings to paste
+            table (str): source table name
+            mappings (dict): mappings to paste
         """
-        self._table_mappings[table].reset([deepcopy(m) for m in mappings], table)
+        self._table_mappings[table].reset(deepcopy(mappings), table)
         index = self._ui.source_list.selectionModel().currentIndex()
         current_table = index.data()
         if table == current_table:
@@ -410,7 +426,7 @@ class ImportEditor(QObject):
         Pastes all mapping options to given table.
 
         Args:
-            table (src): source table name
+            table (str): source table name
             options (dict): options
         """
         self._connector.set_table_options({table: deepcopy(options.get("options", {}))})

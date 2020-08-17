@@ -104,6 +104,32 @@ class SetTableChecked(QUndoCommand):
         self._model.set_checked(self._row, not self._checked)
 
 
+class RenameMapping(QUndoCommand):
+    """A command to change the name of a mapping."""
+
+    def __init__(self, row, mapping_list_model, name, previous_name):
+        """
+        Args:
+            mapping_list_model (MappingListModel): model holding the mapping names
+            name (str): new name
+            previous_name (str): original name
+        """
+        text = "rename mapping"
+        super().__init__(text)
+        self._row = row
+        self._model = mapping_list_model
+        self._name = name
+        self._previous_name = previous_name
+
+    def redo(self):
+        """Renames the mapping."""
+        self._model.rename_mapping(self._row, self._name)
+
+    def undo(self):
+        """Reverts renaming of the mapping."""
+        self._model.rename_mapping(self._row, self._previous_name)
+
+
 class SetComponentMappingType(QUndoCommand):
     """Sets the type of a component mapping."""
 
