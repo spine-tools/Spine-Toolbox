@@ -179,7 +179,8 @@ class ImportEditor(QObject):
             if t_name not in self._table_mappings:
                 if t_mapping is None:
                     t_mapping = ObjectClassMapping()
-                self._table_mappings[t_name] = MappingListModel([t_mapping], t_name, self._undo_stack)
+                specification = MappingSpecificationModel(t_name, "", t_mapping, self._undo_stack)
+                self._table_mappings[t_name] = MappingListModel([specification], t_name, self._undo_stack)
                 new_tables.append(t_name)
         for k in list(self._table_mappings.keys()):
             if k not in tables:
