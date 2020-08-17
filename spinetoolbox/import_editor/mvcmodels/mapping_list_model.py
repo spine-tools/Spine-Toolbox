@@ -42,8 +42,8 @@ class MappingListModel(QAbstractListModel):
         for m in mapping_specifications:
             name = m.mapping_name
             if not name:
-                # Legacy project files didn't save the mapping's name.
                 name = "Mapping " + str(self._counter)
+            m.mapping_name = name
             self._names.append(name)
             self._mapping_specifications.append(m)
             self._counter += 1
