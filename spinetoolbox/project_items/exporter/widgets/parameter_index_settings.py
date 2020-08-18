@@ -50,6 +50,7 @@ class ParameterIndexSettings(QWidget):
         super().__init__(parent)
         self._indexing_setting = indexing_setting
         self._state = IndexSettingsState.OK
+        self._using_pick_expression = False
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.box.setTitle(parameter_name)
@@ -73,7 +74,11 @@ class ParameterIndexSettings(QWidget):
                 self._ui.existing_domains_combo.setCurrentText(indexing_domain.name)
                 self._set_enabled_use_existing_domain_widgets(True)
                 self._set_enabled_create_domain_widgets(False)
-                self._indexing_table_model.set_selection(list(indexing_domain.pick_list))
+                pick_expression = indexing_domain.pick_expression
+                if pick_expression is not None:
+                    self._ui.pick_expression_edit.setText(pick_expression)
+                else:
+                    self._indexing_table_model.set_selection(list(indexing_domain.pick_list()))
             else:
                 self._ui.create_domain_radio_button.setChecked(True)
                 self._set_enabled_use_existing_domain_widgets(False)
@@ -81,13 +86,14 @@ class ParameterIndexSettings(QWidget):
                 self._ui.domain_name_edit.setText(indexing_domain.name)
                 self._ui.domain_description_edit.setText(indexing_domain.description)
                 self._indexing_table_model.set_indexes(
-                    new_domains[indexing_domain.name], list(indexing_domain.pick_list)
+                    new_domains[indexing_domain.name], list(indexing_domain.pick_list())
                 )
         else:
             self._set_enabled_use_existing_domain_widgets(True)
             self._set_enabled_create_domain_widgets(False)
         self._check_state()
         self._indexing_table_model.selection_changed.connect(self._check_state)
+        self._indexing_table_model.manual_selection.connect(self._clear_pick_expression_silently)
 
     @property
     def new_domain_name(self):
@@ -137,8 +143,11 @@ class ParameterIndexSettings(QWidget):
             base_domain = gdx.Set(domain_name, domain_description)
             base_domain.records += [gdx.Record((index,)) for index in indexes]
             new_domain = base_domain
-        pick_list = self._indexing_table_model.index_selection
-        indexing_domain = gdx.IndexingDomain.from_base_domain(base_domain, pick_list)
+        if self._using_pick_expression:
+            picking = self._ui.pick_expression_edit.text()
+        else:
+            picking = self._indexing_table_model.index_selection
+        indexing_domain = gdx.IndexingDomain.from_base_domain(base_domain, picking)
         return indexing_domain, new_domain
 
     def notification_message(self, message):
@@ -215,6 +224,14 @@ class ParameterIndexSettings(QWidget):
         )
         self._ui.indexing_domains_label.setText(label)
 
+    @Slot()
+    def _clear_pick_expression_silently(self):
+        """Clears the pick expression line edit."""
+        self._ui.pick_expression_edit.textChanged.disconnect(self._update_index_list_selection)
+        self._ui.pick_expression_edit.clear()
+        self._using_pick_expression = False
+        self._ui.pick_expression_edit.textChanged.connect(self._update_index_list_selection)
+
     @Slot(str)
     def _domain_name_changed(self, text):
         """Reacts to changes in indexing domain name."""
@@ -235,7 +252,7 @@ class ParameterIndexSettings(QWidget):
         self._ui.pick_expression_label.setEnabled(enabled)
         if enabled:
             self._existing_domain_changed(self._ui.existing_domains_combo.currentIndex())
-            self._update_index_list_selection(self._ui.pick_expression_edit.text(), False)
+            self._update_index_list_selection(self._ui.pick_expression_edit.text())
         self._update_indexing_domains_name()
 
     @Slot(bool)
@@ -262,20 +279,28 @@ class ParameterIndexSettings(QWidget):
         self._indexing_table_model.set_indexes(self._available_domains[selected_domain_name])
         self._update_indexing_domains_name()
 
-    @Slot("QString")
-    def _update_index_list_selection(self, expression, clear_selection_if_expression_empty=True):
+    @Slot(str)
+    def _update_index_list_selection(self, expression):
         """Updates selection according to changed selection expression."""
         if not expression:
             self._indexing_table_model.select_all()
+            self._using_pick_expression = False
             return
         selected_domain_name = self._ui.existing_domains_combo.currentText()
         length = len(self._available_domains[selected_domain_name])
-        is_selected = functools.partial(eval, expression, {})
+        try:
+            compiled = compile(expression, "<string>", "eval")
+        except (SyntaxError, ValueError):
+            self._using_pick_expression = False
+            return
+        is_selected = functools.partial(eval, compiled, {})
         try:
             pick_list = [bool(is_selected({"i": i})) for i in range(1, length + 1)]  # pylint: disable=eval-used
-        except (AttributeError, NameError, SyntaxError):
+        except (AttributeError, NameError, ValueError):
+            self._using_pick_expression = False
             return
         self._indexing_table_model.set_selection(pick_list)
+        self._using_pick_expression = True
 
     @Slot(str)
     def _generate_index(self, expression):
@@ -324,6 +349,8 @@ class _IndexingTableModel(QAbstractTableModel):
 
     selection_changed = Signal()
     """Emitted after the values have been spread over the selected indexes."""
+    manual_selection = Signal()
+    """Emitted when the selection has been changed by setData()."""
 
     def __init__(self, parameter):
         """
@@ -460,6 +487,7 @@ class _IndexingTableModel(QAbstractTableModel):
         self.dataChanged.emit(index, index, [Qt.CheckStateRole])
         self._spread_values_over_selected_rows(row)
         self.selection_changed.emit()
+        self.manual_selection.emit()
         return True
 
     def set_index_name(self, name):

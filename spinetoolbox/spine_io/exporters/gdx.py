@@ -25,6 +25,7 @@ to_gdx_file() that does basically everything needed for exporting is provided fo
 """
 
 import enum
+import functools
 import itertools
 import math
 import os
@@ -261,7 +262,7 @@ class IndexingDomain:
         description (str): domain's description
     """
 
-    def __init__(self, name, description, indexes, pick_list):
+    def __init__(self, name, description, indexes, picking):
         """
         Picks the keys from base_domain for which the corresponding element in pick_list holds True.
 
@@ -269,23 +270,24 @@ class IndexingDomain:
             name (str): indexing domain's name
             description (str): domain's description
             indexes (list): a list of indexing key tuples
-            pick_list (list): a list of booleans
+            picking (list or str): a list of booleans or Python expression returning a boolean value
         """
         self.name = name
         self.description = description
         self._picked_indexes = None
         self._all_indexes = indexes
-        self._pick_list = pick_list
+        self._picking = picking
+        self._uses_expression = isinstance(picking, str)
 
     @property
     def indexes(self):
         """a list of picked indexing key tuples"""
         if self._picked_indexes is None:
-            picked = list()
-            for index, pick in zip(self._all_indexes, self._pick_list):
-                if pick:
-                    picked.append(index)
-            self._picked_indexes = picked
+            if self._uses_expression:
+                pick_list = self._pick_list(self._picking, len(self._all_indexes))
+            else:
+                pick_list = self._picking
+            self._picked_indexes = [index for index, pick in zip(self._all_indexes, pick_list) if pick]
         return self._picked_indexes
 
     @property
@@ -294,9 +296,15 @@ class IndexingDomain:
         return self._all_indexes
 
     @property
+    def pick_expression(self):
+        """pick expression if it exists, or None"""
+        return self._picking if self._uses_expression else None
+
     def pick_list(self):
-        """list of boolean values where True means the corresponding index should be picked"""
-        return self._pick_list
+        """Returns a list of boolean values where True means the corresponding index should be picked"""
+        if self._uses_expression:
+            return self._pick_list(self._picking, len(self._all_indexes))
+        return self._picking
 
     def sort_indexes(self, set_settings):
         """
@@ -314,15 +322,18 @@ class IndexingDomain:
         domain_dict["name"] = self.name
         domain_dict["description"] = self.description
         domain_dict["indexes"] = self._all_indexes
-        domain_dict["pick_list"] = self._pick_list
+        domain_dict["picking"] = self._picking
         return domain_dict
 
     @staticmethod
     def from_dict(domain_dict):
         """Restores IndexingDomain from a dictionary."""
         indexes = [tuple(index) for index in domain_dict["indexes"]]
-        pick_list = domain_dict["pick_list"]
-        return IndexingDomain(domain_dict["name"], domain_dict["description"], indexes, pick_list)
+        picking = domain_dict.get("picking")
+        if picking is None:
+            # For 0.4 file format
+            picking = domain_dict["pick_list"]
+        return IndexingDomain(domain_dict["name"], domain_dict["description"], indexes, picking)
 
     @staticmethod
     def from_base_domain(base_domain, pick_list):
@@ -337,6 +348,31 @@ class IndexingDomain:
         for record in base_domain.records:
             indexes.append(record.keys)
         return IndexingDomain(base_domain.name, base_domain.description, indexes, pick_list)
+
+    @staticmethod
+    def _pick_list(expression, length):
+        """
+        Generates a pick list of booleans according to given Python expression.
+
+        The expression has a single parameter, ``i``, at it disposal. This is a one-based index to the pick list.
+
+        Args:
+            expression (str): a Python expression using element index ``i`` and returning ``bool``
+            length (int): length of the pick list
+
+        Returns:
+            list: a list of boolean values, True meaning that the corresponding index should be picked
+        """
+        try:
+            compiled = compile(expression, "<string>", "eval")
+        except (SyntaxError, ValueError):
+            raise GdxExportException("Failed to compile pick expression.")
+        is_selected = functools.partial(eval, compiled, {})
+        try:
+            pick_list = [bool(is_selected({"i": i})) for i in range(1, length + 1)]
+        except (AttributeError, NameError, ValueError):
+            raise GdxExportException("Failed to evaluate pick expression.")
+        return pick_list
 
 
 def sort_indexing_domain_indexes(indexing_settings, set_settings):
