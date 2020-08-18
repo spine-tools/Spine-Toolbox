@@ -17,12 +17,13 @@ Contains Exporter's executable item as well as support utilities.
 """
 import os.path
 import pathlib
-from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api import SpineDBAPIError
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.helpers import deserialize_path
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
+from .db_utils import scenario_filtered_database_map
 from .item_info import ItemInfo
 from .settings_pack import SettingsPack
 from .settings_state import SettingsState
@@ -78,7 +79,7 @@ class ExecutableItem(ExecutableItemBase):
                 return False
             out_path = os.path.join(self._data_dir, settings_pack.output_file_name)
             try:
-                database_map = DatabaseMapping(url)
+                database_map = scenario_filtered_database_map(url, settings_pack.scenario)
             except SpineDBAPIError as error:
                 self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
                 return

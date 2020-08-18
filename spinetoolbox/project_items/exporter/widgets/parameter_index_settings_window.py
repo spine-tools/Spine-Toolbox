@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QMessageBox, QWidget
 from spinedb_api import DatabaseMapping
 from .parameter_index_settings import IndexSettingsState, ParameterIndexSettings
 from ..mvcmodels.indexing_domain_list_model import IndexingDomainListModel
+from ..db_utils import scenario_filtered_database_map
 
 
 class ParameterIndexSettingsWindow(QWidget):
@@ -31,12 +32,13 @@ class ParameterIndexSettingsWindow(QWidget):
     settings_rejected = Signal()
     """Emitted when the settings have been rejected."""
 
-    def __init__(self, indexing_settings, set_settings, database_path, parent):
+    def __init__(self, indexing_settings, set_settings, database_path, scenario, parent):
         """
         Args:
             indexing_settings (dict): a map from parameter name to :class:`IndexingSetting`
             set_settings (SetSettings): export settings
             database_path (str): a database url
+            scenario (str): scenario name
             parent (QWidget): a parent widget
         """
         from ..ui.parameter_index_settings_window import Ui_Form  # pylint: disable=import-outside-toplevel
@@ -44,7 +46,7 @@ class ParameterIndexSettingsWindow(QWidget):
         super().__init__(parent, f=Qt.Window)
         self._indexing_settings = indexing_settings
         self._set_settings = set_settings
-        self._database_mapping = DatabaseMapping(database_path)
+        self._database_mapping = scenario_filtered_database_map(database_path, scenario)
         self._enable_domain_updates = True
         self._ui = Ui_Form()
         self._ui.setupUi(self)
