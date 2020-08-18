@@ -26,7 +26,7 @@ from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate
 
 
-class RelationshipPivotTableDelegate(CheckBoxDelegate):
+class RelationshipPivotTableDelegate(CheckBoxDelegate, QItemDelegate):
 
     data_committed = Signal("QModelIndex", "QVariant")
 
@@ -52,7 +52,7 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
     def setModelData(self, editor, model, index):
         """Send signal."""
         if self._is_relationship_index(index):
-            super().setModelData(self, editor, model, index)
+            super().setModelData(editor, model, index)
             return
         self.data_committed.emit(index, editor.data())
 
