@@ -18,7 +18,7 @@ Custom item delegates.
 
 from numbers import Number
 from PySide2.QtCore import Qt, Signal
-from PySide2.QtWidgets import QItemDelegate
+from PySide2.QtWidgets import QStyledItemDelegate
 from PySide2.QtGui import QIcon
 from spinedb_api import to_database
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
@@ -26,7 +26,7 @@ from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate
 
 
-class RelationshipPivotTableDelegate(CheckBoxDelegate, QItemDelegate):
+class RelationshipPivotTableDelegate(CheckBoxDelegate):
 
     data_committed = Signal("QModelIndex", "QVariant")
 
@@ -63,12 +63,12 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate, QItemDelegate):
         if self._is_relationship_index(index):
             super().paint(painter, option, index)
         else:
-            QItemDelegate.paint(self, painter, option, index)
+            QStyledItemDelegate.paint(self, painter, option, index)
 
     def editorEvent(self, event, model, option, index):
         if self._is_relationship_index(index):
             return super().editorEvent(event, model, option, index)
-        return QItemDelegate.editorEvent(self, event, model, option, index)
+        return QStyledItemDelegate.editorEvent(self, event, model, option, index)
 
     def createEditor(self, parent, option, index):
         if self._is_relationship_index(index):
@@ -76,7 +76,7 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate, QItemDelegate):
         return CustomLineEditor(parent)
 
 
-class ParameterPivotTableDelegate(QItemDelegate):
+class ParameterPivotTableDelegate(QStyledItemDelegate):
 
     parameter_value_editor_requested = Signal("QModelIndex")
     data_committed = Signal("QModelIndex", "QVariant")
@@ -112,7 +112,7 @@ class ParameterPivotTableDelegate(QItemDelegate):
         return CustomLineEditor(parent)
 
 
-class ParameterDelegate(QItemDelegate):
+class ParameterDelegate(QStyledItemDelegate):
     """Base class for all custom parameter delegates.
 
     Attributes:
@@ -376,7 +376,7 @@ class ObjectNameListDelegate(ParameterDelegate):
         self.object_name_list_editor_requested.emit(index, relationship_class_id, db_map)
 
 
-class ManageItemsDelegate(QItemDelegate):
+class ManageItemsDelegate(QStyledItemDelegate):
     """A custom delegate for the model in {Add/Edit}ItemDialogs.
 
     Attributes:
