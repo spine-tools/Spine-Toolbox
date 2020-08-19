@@ -170,6 +170,14 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(restored.pick_expression, "i in (1, 2)")
         self.assertEqual(restored.pick_list(), [True, True])
 
+    def test_IndexingDomain_all_indexes_from_list(self):
+        indexing = gdx.IndexingDomain("name", "description", [("A",), ("B",)], "True")
+        self.assertEqual(indexing.all_indexes, [("A",), ("B",)])
+
+    def test_IndexingDomain_all_indexes_from_expression(self):
+        indexing = gdx.IndexingDomain("name", "description", "['foo', 'bar'][i-1]", "True", 2)
+        self.assertEqual(indexing.all_indexes, [("foo",), ("bar",)])
+
     def test_IndexingDomain_pick_list_from_boolean_list(self):
         indexing = gdx.IndexingDomain("name", "description", [("A",), ("B",), ("C",)], [True, False, True])
         self.assertEqual(indexing.pick_list(), [True, False, True])

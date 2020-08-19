@@ -51,6 +51,7 @@ class ParameterIndexSettings(QWidget):
         self._indexing_setting = indexing_setting
         self._state = IndexSettingsState.OK
         self._using_pick_expression = False
+        self._using_indexing_expression = False
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.box.setTitle(parameter_name)
@@ -85,9 +86,12 @@ class ParameterIndexSettings(QWidget):
                 self._set_enabled_create_domain_widgets(True)
                 self._ui.domain_name_edit.setText(indexing_domain.name)
                 self._ui.domain_description_edit.setText(indexing_domain.description)
-                self._indexing_table_model.set_indexes(
-                    new_domains[indexing_domain.name], list(indexing_domain.pick_list())
-                )
+                if indexing_domain.indexing_expression:
+                    self._ui.generator_expression_edit.setText(indexing_domain.indexing_expression)
+                else:
+                    self._indexing_table_model.set_indexes(
+                        new_domains[indexing_domain.name], list(indexing_domain.pick_list())
+                    )
         else:
             self._set_enabled_use_existing_domain_widgets(True)
             self._set_enabled_create_domain_widgets(False)
@@ -132,22 +136,32 @@ class ParameterIndexSettings(QWidget):
             tuple: a tuple of IndexingDomain and a Set if a new domain is needed for indexing, otherwise None
         """
         new_domain = None
-        indexes = self._indexing_table_model.indexes
         if self._ui.use_existing_domain_radio_button.isChecked():
             domain_name = self._ui.existing_domains_combo.currentText()
             base_domain = gdx.Set(domain_name)
+            indexes = self._indexing_table_model.indexes
             base_domain.records = [gdx.Record((index,)) for index in indexes]
+            if self._using_pick_expression:
+                picking = self._ui.pick_expression_edit.text()
+            else:
+                picking = self._indexing_table_model.index_selection
+            indexing_domain = gdx.IndexingDomain.from_base_domain(base_domain, picking)
         else:
             domain_name = self._ui.domain_name_edit.text()
             domain_description = self._ui.domain_description_edit.text()
-            base_domain = gdx.Set(domain_name, domain_description)
-            base_domain.records += [gdx.Record((index,)) for index in indexes]
-            new_domain = base_domain
-        if self._using_pick_expression:
-            picking = self._ui.pick_expression_edit.text()
-        else:
-            picking = self._indexing_table_model.index_selection
-        indexing_domain = gdx.IndexingDomain.from_base_domain(base_domain, picking)
+            picking = "True"
+            if self._using_indexing_expression:
+                expression = self._ui.generator_expression_edit.text()
+                length = len(self._indexing_table_model.indexes)
+                indexing_domain = gdx.IndexingDomain(domain_name, domain_description, expression, picking, length)
+                new_domain = gdx.Set(domain_name, domain_description)
+                new_domain.records += [gdx.Record(index) for index in indexing_domain.all_indexes]
+            else:
+                base_domain = gdx.Set(domain_name, domain_description)
+                indexes = self._indexing_table_model.indexes
+                base_domain.records += [gdx.Record((index,)) for index in indexes]
+                new_domain = base_domain
+                indexing_domain = gdx.IndexingDomain.from_base_domain(base_domain, picking)
         return indexing_domain, new_domain
 
     def notification_message(self, message):
@@ -305,20 +319,28 @@ class ParameterIndexSettings(QWidget):
     @Slot(str)
     def _generate_index(self, expression):
         """Builds indexes according to given expression."""
+        if not expression:
+            self._using_indexing_expression = False
+            return
+        try:
+            compiled = compile(expression, "<string>", "eval")
+        except (SyntaxError, ValueError):
+            self._using_indexing_expression = False
+            return
         length = len(next(iter(self._indexing_setting.parameter.values)))
-        generate_index = functools.partial(eval, expression, {})
+        generate_index = functools.partial(eval, compiled, {})
         try:
             indexes = [generate_index({"i": i}) for i in range(1, length + 1)]  # pylint: disable=eval-used
-        except (AttributeError, NameError, SyntaxError, ValueError):
+        except (AttributeError, NameError, ValueError):
+            self._using_indexing_expression = False
             return
         self._indexing_table_model.set_indexes(indexes)
+        self._using_indexing_expression = True
 
     @Slot(bool)
     def _extract_index_from_parameter(self, _=True):
         """Assigns indexes from the parameter to the model."""
-        self._ui.generator_expression_edit.blockSignals(True)
         self._ui.generator_expression_edit.clear()
-        self._ui.generator_expression_edit.blockSignals(False)
         indexes = [str(index) for index in next(iter(self._indexing_setting.parameter.values)).indexes]
         self._indexing_table_model.set_indexes(indexes)
 

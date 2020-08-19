@@ -262,48 +262,68 @@ class IndexingDomain:
         description (str): domain's description
     """
 
-    def __init__(self, name, description, indexes, picking):
+    def __init__(self, name, description, indexes, picking, length=None):
         """
         Picks the keys from base_domain for which the corresponding element in pick_list holds True.
 
         Args:
             name (str): indexing domain's name
             description (str): domain's description
-            indexes (list): a list of indexing key tuples
+            indexes (list or str): a list of indexing key tuples or a Python generator expression
             picking (list or str): a list of booleans or Python expression returning a boolean value
+            length (int, optional): number of indexes, both picked and unpicked
         """
         self.name = name
         self.description = description
+        self._indexes = indexes
         self._picked_indexes = None
-        self._all_indexes = indexes
+        self._all_indexes = None
         self._picking = picking
-        self._uses_expression = isinstance(picking, str)
+        self._uses_indexing_expression = isinstance(indexes, str)
+        self._uses_pick_expression = isinstance(picking, str)
+        if self._uses_indexing_expression:
+            if length is None:
+                raise GdxExportException("IndexingDomain length cannot be None if indexing expression is used.")
+            self._length = length
+        else:
+            self._length = len(self._indexes)
 
     @property
     def indexes(self):
         """a list of picked indexing key tuples"""
         if self._picked_indexes is None:
-            if self._uses_expression:
-                pick_list = self._pick_list(self._picking, len(self._all_indexes))
+            if self._uses_pick_expression:
+                pick_list = self._pick_list(self._picking, self._length)
             else:
                 pick_list = self._picking
+            if self._all_indexes is None:
+                self._generate_all_indexes()
             self._picked_indexes = [index for index, pick in zip(self._all_indexes, pick_list) if pick]
         return self._picked_indexes
 
     @property
     def all_indexes(self):
         """a list of all indexing key tuples"""
+        if self._all_indexes is None:
+            self._generate_all_indexes()
         return self._all_indexes
+
+    @property
+    def indexing_expression(self):
+        """the indexing expression, or None if indexing is fixed."""
+        if not self._uses_indexing_expression:
+            return None
+        return self._indexes
 
     @property
     def pick_expression(self):
         """pick expression if it exists, or None"""
-        return self._picking if self._uses_expression else None
+        return self._picking if self._uses_pick_expression else None
 
     def pick_list(self):
         """Returns a list of boolean values where True means the corresponding index should be picked"""
-        if self._uses_expression:
-            return self._pick_list(self._picking, len(self._all_indexes))
+        if self._uses_pick_expression:
+            return self._pick_list(self._picking, self._length)
         return self._picking
 
     def sort_indexes(self, set_settings):
@@ -318,36 +338,74 @@ class IndexingDomain:
 
     def to_dict(self):
         """Stores IndexingDomain to a dictionary."""
-        domain_dict = dict()
-        domain_dict["name"] = self.name
-        domain_dict["description"] = self.description
-        domain_dict["indexes"] = self._all_indexes
-        domain_dict["picking"] = self._picking
+        domain_dict = {
+            "name": self.name,
+            "description": self.description,
+            "indexes": self._indexes,
+            "length": self._length,
+            "picking": self._picking,
+        }
         return domain_dict
 
     @staticmethod
     def from_dict(domain_dict):
         """Restores IndexingDomain from a dictionary."""
-        indexes = [tuple(index) for index in domain_dict["indexes"]]
+        indexes = domain_dict["indexes"]
+        if not isinstance(indexes, str):
+            indexes = [tuple(index) for index in indexes]
         picking = domain_dict.get("picking")
+        length = domain_dict.get("length")
         if picking is None:
             # For 0.4 file format
             picking = domain_dict["pick_list"]
-        return IndexingDomain(domain_dict["name"], domain_dict["description"], indexes, picking)
+            length = None
+        return IndexingDomain(domain_dict["name"], domain_dict["description"], indexes, picking, length)
 
     @staticmethod
-    def from_base_domain(base_domain, pick_list):
+    def from_base_domain(base_domain, picking):
         """
         Builds a new IndexingDomain from an existing Set.
 
         Args:
             base_domain (Set): a domain set that holds the indexes
-            pick_list (list): a list of booleans
+            picking (list or str): a list of booleans or a Python expression
         """
         indexes = list()
         for record in base_domain.records:
             indexes.append(record.keys)
-        return IndexingDomain(base_domain.name, base_domain.description, indexes, pick_list)
+        return IndexingDomain(base_domain.name, base_domain.description, indexes, picking)
+
+    def _generate_all_indexes(self):
+        if self._uses_indexing_expression:
+            indexes = self._index_list(self._indexes, self._length)
+        else:
+            indexes = self._indexes
+        self._all_indexes = indexes
+
+    @staticmethod
+    def _index_list(expression, length):
+        """
+        Generates indexes according to given Python expression.
+
+        The expression has a single parameter, ``i``, at it disposal. This is a one-based index to the pick list.
+
+        Args:
+            expression (str): a index-generating expression
+            length (int): number of generated indexes
+
+        Returns:
+            list: generated indexes
+        """
+        try:
+            compiled = compile(expression, "<string>", "eval")
+        except (SyntaxError, ValueError):
+            raise GdxExportException("Failed to compile index expression.")
+        generate_index = functools.partial(eval, compiled, {})
+        try:
+            indexes = [(generate_index({"i": i}),) for i in range(1, length + 1)]  # pylint: disable=eval-used
+        except (AttributeError, NameError, ValueError):
+            raise GdxExportException("Failed to evaluate index expression.")
+        return indexes
 
     @staticmethod
     def _pick_list(expression, length):
