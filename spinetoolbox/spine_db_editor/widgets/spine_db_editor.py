@@ -635,7 +635,7 @@ class SpineDBEditorBase(QMainWindow):
     @Slot(bool)
     def show_user_guide(self, checked=False):
         """Opens Spine Toolbox documentation Spine db editor page in browser."""
-        doc_url = f"{ONLINE_DOCUMENTATION_URL}/data_store_form/index.html"
+        doc_url = f"{ONLINE_DOCUMENTATION_URL}/spine_db_editor/index.html"
         if not open_url(doc_url):
             self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
 

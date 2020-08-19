@@ -1,10 +1,10 @@
-.. _Data store form:
+.. _Spine db editor:
 
 
-Welcome to Data store form's User Guide!
-========================================
+Welcome to Spine database editor's User Guide!
+==============================================
 
-Data store form is a dedicated component of Spine Toolbox,
+Spine database editor is a dedicated component of Spine Toolbox,
 that you can use to visualize and edit data in one or more Spine databases.
 
 

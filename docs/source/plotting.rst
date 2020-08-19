@@ -4,7 +4,7 @@
 Plotting
 ========
 
-Basic data visualization is available in the data store views.
+Basic data visualization is available in the Spine database editors.
 Currently, it is possible to plot plain parameter values as well as time series and maps.
 
 To plot a column, select the values from a table and then *Plot* from the **right click** popup menu.

@@ -46,7 +46,7 @@ The General tab contains the general application settings.
   Make sure to clean up the directory every now and then.
 
 - **Smooth zoom** Controls the way zooming (by using the mouse wheel) behaves in Design View and in
-  Data Store View. Controls if the zoom in/out is continuous or discrete. On older computers,
+  Spine database editor. Controls if the zoom in/out is continuous or discrete. On older computers,
   smooth zoom is not recommended (because it may be slower).
 
 - **Curved links** Controls the look of the arrows (connections) on Design View.
@@ -114,13 +114,13 @@ View settings
 .. image:: img/settings_view.png
    :align: center
 
-- **Commit session when view is closed** This checkbox controls what happens when you close the Data
-  Store View which has uncommitted changes. When this is unchecked, all changes are discarded without
+- **Commit session when view is closed** This checkbox controls what happens when you close the Spine
+  database editor which has uncommitted changes. When this is unchecked, all changes are discarded without
   notice. When this is partially checked (default), a message box warning you about uncommitted
   changes is shown. When this is checked, a commit message box is shown immediately without first
   showing the message box.
 
-- **Sticky selection in object tree** Controls how selecting items in Data Store View's Object tree
+- **Sticky selection in object tree** Controls how selecting items in Spine database editor's Object tree
   using the left mouse button works. If unchecked, single selection is enabled and pressing the
   Ctrl-button down enables multiple selection. If checked, Multiple selection is enabled and pressing
   the Ctrl-button down enables single selection.

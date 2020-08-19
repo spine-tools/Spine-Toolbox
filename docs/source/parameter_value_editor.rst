@@ -10,7 +10,7 @@ such as time series, time patterns or durations.
 It can also convert between different value types, e.g. from a time series to a time pattern.
 
 The editor is available from a **right click** popup menu
-or by **double clicking** a parameter value in one of the data store views.
+or by **double clicking** a parameter value in one of the Spine database editors.
 
 Choosing value type
 -------------------

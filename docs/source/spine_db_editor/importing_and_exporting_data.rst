@@ -10,7 +10,7 @@ This section describes the available tools to import and export data.
 Overview
 ========
 
-Data store form supports importing and exporting data in three different formats: SQLite, JSON, and Excel.
+Spine database editor supports importing and exporting data in three different formats: SQLite, JSON, and Excel.
 The SQLite import/export uses the Spine database format.
 The JSON and Excel import/export use a specific format described below.
 

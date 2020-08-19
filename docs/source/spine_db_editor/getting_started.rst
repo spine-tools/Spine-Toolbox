@@ -5,33 +5,34 @@ Getting started
 .. contents::
    :local:
 
-Launching the form
-------------------
+Launching the editor
+--------------------
 
 From Spine Toolbox
 ==================
 
-To open a single database in Data store form:
+To open a single database in Spine database editor:
 
 1. Create a *Data Store* project item.
 2. Select the *Data Store*.
 3. Enter the url of the database in *Data Store Properties*.
-4. Press the **Open form** button in *Data Store Properties*.
+4. Press the **Open editor** button in *Data Store Properties*.
 
-To open multiple databases in Data store form:
+To open multiple databases in Spine database editor:
 
 1. Repeat steps 1 to 3 above for each database.
 2. Create a *View* project item.
 3. Connect each *Data Store* item to the *View* item.
 4. Select the *View* item.
-5. Press **Open DS form** in *View Properties*.
+5. Press **Open editor** in *View Properties*.
 
 From the command line
 =====================
 
-To open a single SQLite database in Data store form, use the ``open_ds_form.py`` script in the ``bin`` folder::
+To open a single SQLite database in Spine database editor, use the ``open_spine_db_editor.py`` script
+in the ``bin`` folder::
 
-    open_ds_form.py "...path of the database file..."
+    open_spine_db_editor.py "...path of the database file..."
 
 
 Knowing the UI
