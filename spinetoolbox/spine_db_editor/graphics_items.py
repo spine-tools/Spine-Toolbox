@@ -64,20 +64,20 @@ def make_figure_graphics_item(scene, z=0, static=True):
 class EntityItem(QGraphicsPixmapItem):
     """Base class for ObjectItem and RelationshipItem."""
 
-    def __init__(self, data_store_form, x, y, extent, entity_id=None):
+    def __init__(self, spine_db_editor, x, y, extent, entity_id=None):
         """Initializes item
 
         Args:
-            data_store_form (SpineDBEditor): 'owner'
+            spine_db_editor (SpineDBEditor): 'owner'
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): Preferred extent
             entity_id (int): The entity id
         """
         super().__init__()
-        self._data_store_form = data_store_form
-        self.db_mngr = data_store_form.db_mngr
-        self.db_map = data_store_form.graph_db_map
+        self._spine_db_editor = spine_db_editor
+        self.db_mngr = spine_db_editor.db_mngr
+        self.db_map = spine_db_editor.graph_db_map
         self.entity_id = entity_id
         self.arc_items = list()
         self._extent = extent
@@ -261,16 +261,16 @@ class EntityItem(QGraphicsPixmapItem):
         self.setVisible(on)
 
     def _make_menu(self):
-        menu = QMenu(self._data_store_form)
-        menu.addAction(self._data_store_form.ui.actionSave_positions)
-        menu.addAction(self._data_store_form.ui.actionClear_positions)
+        menu = QMenu(self._spine_db_editor)
+        menu.addAction(self._spine_db_editor.ui.actionSave_positions)
+        menu.addAction(self._spine_db_editor.ui.actionClear_positions)
         menu.addSeparator()
-        menu.addAction(self._data_store_form.ui.actionHide_selected)
-        menu.addAction(self._data_store_form.ui.actionPrune_selected_entities)
-        menu.addAction(self._data_store_form.ui.actionPrune_selected_classes)
+        menu.addAction(self._spine_db_editor.ui.actionHide_selected)
+        menu.addAction(self._spine_db_editor.ui.actionPrune_selected_entities)
+        menu.addAction(self._spine_db_editor.ui.actionPrune_selected_classes)
         menu.addSeparator()
-        menu.addAction(self._data_store_form.ui.actionEdit_selected)
-        menu.addAction(self._data_store_form.ui.actionRemove_selected)
+        menu.addAction(self._spine_db_editor.ui.actionEdit_selected)
+        menu.addAction(self._spine_db_editor.ui.actionRemove_selected)
         return menu
 
     def contextMenuEvent(self, e):
@@ -283,24 +283,24 @@ class EntityItem(QGraphicsPixmapItem):
         if not self.isSelected() and not e.modifiers() & Qt.ControlModifier:
             self.scene().clearSelection()
         self.setSelected(True)
-        self._data_store_form._handle_menu_graph_about_to_show()
+        self._spine_db_editor._handle_menu_graph_about_to_show()
         self._menu.popup(e.screenPos())
 
 
 class RelationshipItem(EntityItem):
     """Represents a relationship in the Entity graph."""
 
-    def __init__(self, data_store_form, x, y, extent, entity_id=None):
+    def __init__(self, spine_db_editor, x, y, extent, entity_id=None):
         """Initializes the item.
 
         Args:
-            data_store_form (GraphViewForm): 'owner'
+            spine_db_editor (GraphViewForm): 'owner'
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
             entity_id (int): object id
         """
-        super().__init__(data_store_form, x, y, extent, entity_id=entity_id)
+        super().__init__(spine_db_editor, x, y, extent, entity_id=entity_id)
         self._menu = self._make_menu()
         self.setToolTip(self._make_tool_tip())
 
@@ -355,17 +355,17 @@ class RelationshipItem(EntityItem):
 class ObjectItem(EntityItem):
     """Represents an object in the Entity graph."""
 
-    def __init__(self, data_store_form, x, y, extent, entity_id=None):
+    def __init__(self, spine_db_editor, x, y, extent, entity_id=None):
         """Initializes the item.
 
         Args:
-            data_store_form (GraphViewForm): 'owner'
+            spine_db_editor (GraphViewForm): 'owner'
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
             entity_id (int): object id
         """
-        super().__init__(data_store_form, x, y, extent, entity_id=entity_id)
+        super().__init__(spine_db_editor, x, y, extent, entity_id=entity_id)
         self._add_relationships_menu = None
         self._relationship_class_per_action = {}
         self.label_item = ObjectLabelItem(self)
@@ -399,7 +399,7 @@ class ObjectItem(EntityItem):
 
     def block_move_by(self, dx, dy):
         super().block_move_by(dx, dy)
-        rel_items_follow = self._data_store_form.qsettings.value(
+        rel_items_follow = self._spine_db_editor.qsettings.value(
             "appSettings/relationshipItemsFollow", defaultValue="true"
         )
         if rel_items_follow == "false":
@@ -421,7 +421,7 @@ class ObjectItem(EntityItem):
         """
         self._add_relationships_menu.clear()
         if add_title:
-            title = TitleWidgetAction("Add relationships", self._data_store_form)
+            title = TitleWidgetAction("Add relationships", self._spine_db_editor)
             self._add_relationships_menu.addAction(title)
         self._relationship_class_per_action.clear()
         object_class_ids_in_graph = {x.entity_class_id for x in self.scene().items() if isinstance(x, ObjectItem)}
@@ -452,7 +452,7 @@ class ObjectItem(EntityItem):
 
     @Slot("QAction")
     def _start_relationship(self, action):
-        self._data_store_form.start_relationship(self._relationship_class_per_action[action], self)
+        self._spine_db_editor.start_relationship(self._relationship_class_per_action[action], self)
 
 
 class ArcItem(QGraphicsPathItem):
@@ -532,8 +532,8 @@ class ArcItem(QGraphicsPathItem):
 class CrossHairsItem(RelationshipItem):
     """Creates new relationships directly in the graph."""
 
-    def __init__(self, data_store_form, x, y, extent):
-        super().__init__(data_store_form, x, y, 0.8 * extent)
+    def __init__(self, spine_db_editor, x, y, extent):
+        super().__init__(spine_db_editor, x, y, 0.8 * extent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setZValue(2)
         self._current_icon = None

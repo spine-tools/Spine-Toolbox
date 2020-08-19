@@ -33,7 +33,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
         """
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
-        self._data_store_form = None
+        self._spine_db_editor = None
         self._menu = QMenu(self)
         self._hovered_obj_item = None
         self.relationship_class = None
@@ -63,23 +63,23 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.cross_hairs_items.clear()
         self.viewport().unsetCursor()
 
-    def connect_data_store_form(self, data_store_form):
-        self._data_store_form = data_store_form
+    def connect_data_store_form(self, spine_db_editor):
+        self._spine_db_editor = spine_db_editor
         self.create_context_menu()
 
     def create_context_menu(self):
-        self._menu.addAction(self._data_store_form.ui.actionExport_graph_as_pdf)
+        self._menu.addAction(self._spine_db_editor.ui.actionExport_graph_as_pdf)
         self._menu.addSeparator()
-        for action in self._data_store_form.ui.menuGraph.actions():
+        for action in self._spine_db_editor.ui.menuGraph.actions():
             self._menu.addAction(action)
 
     def edit_selected(self):
         """Edits selected items using the connected Spine db editor."""
-        self._data_store_form.edit_entity_graph_items()
+        self._spine_db_editor.edit_entity_graph_items()
 
     def remove_selected(self):
         """Removes selected items using the connected Spine db editor."""
-        self._data_store_form.remove_entity_graph_items()
+        self._spine_db_editor.remove_entity_graph_items()
 
     def mousePressEvent(self, event):
         """Handles relationship creation if one it's in process."""
@@ -94,7 +94,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             if self.relationship_class["object_class_ids_to_go"]:
                 # Add hovered as member and keep going, we're not done yet
                 ch_rel_item = self.cross_hairs_items[1]
-                ch_arc_item = CrossHairsArcItem(ch_rel_item, self._hovered_obj_item, self._data_store_form._ARC_WIDTH)
+                ch_arc_item = CrossHairsArcItem(ch_rel_item, self._hovered_obj_item, self._spine_db_editor._ARC_WIDTH)
                 ch_rel_item.refresh_icon()
                 self.scene().addItem(ch_arc_item)
                 ch_arc_item.apply_zoom(self.zoom_factor)
@@ -104,7 +104,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             ch_item, _, *ch_arc_items = self.cross_hairs_items
             obj_items = [arc_item.obj_item for arc_item in ch_arc_items]
             obj_items.remove(ch_item)
-            self._data_store_form.finalize_relationship(self.relationship_class, self._hovered_obj_item, *obj_items)
+            self._spine_db_editor.finalize_relationship(self.relationship_class, self._hovered_obj_item, *obj_items)
             self.clear_cross_hairs_items()
 
     def mouseMoveEvent(self, event):
@@ -146,7 +146,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         """Aborts relationship creation if user presses ESC."""
         super().keyPressEvent(event)
         if event.key() == Qt.Key_Escape and self.cross_hairs_items:
-            self._data_store_form.msg.emit("Relationship creation aborted.")
+            self._spine_db_editor.msg.emit("Relationship creation aborted.")
             self.clear_cross_hairs_items()
 
     def contextMenuEvent(self, e):
@@ -159,7 +159,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if e.isAccepted():
             return
         e.accept()
-        self._data_store_form._handle_menu_graph_about_to_show()
+        self._spine_db_editor._handle_menu_graph_about_to_show()
         self._menu.exec_(e.globalPos())
 
     def _use_smooth_zoom(self):

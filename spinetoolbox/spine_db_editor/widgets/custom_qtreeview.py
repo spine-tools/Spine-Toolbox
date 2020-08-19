@@ -33,20 +33,20 @@ class EntityTreeView(CopyTreeView):
         super().__init__(parent=parent)
         self._selected_indexes = {}
         self._menu = QMenu(self)
-        self._data_store_form = None
+        self._spine_db_editor = None
         self._fully_expand_action = None
         self._fully_collapse_action = None
         self._add_relationship_classes_action = None
         self._add_relationships_action = None
         self._manage_relationships_action = None
 
-    def connect_data_store_form(self, data_store_form):
+    def connect_data_store_form(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
 
         Args:
-             data_store_form (SpineDBEditor)
+             spine_db_editor (SpineDBEditor)
         """
-        self._data_store_form = data_store_form
+        self._spine_db_editor = spine_db_editor
         self._create_context_menu()
         self.connect_signals()
 
@@ -57,12 +57,12 @@ class EntityTreeView(CopyTreeView):
 
     def _create_context_menu(self):
         """Creates a context menu for this view."""
-        self._menu.addAction(self._data_store_form.ui.actionCopy)
+        self._menu.addAction(self._spine_db_editor.ui.actionCopy)
         self._menu.addSeparator()
         self._add_middle_actions()
         self._menu.addSeparator()
-        self._menu.addAction(self._data_store_form.ui.actionEdit_selected)
-        self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
+        self._menu.addAction(self._spine_db_editor.ui.actionEdit_selected)
+        self._menu.addAction(self._spine_db_editor.ui.actionRemove_selected)
         self._menu.addSeparator()
         self._fully_expand_action = self._menu.addAction(
             QIcon(":/icons/menu_icons/angle-double-right.svg"), "Fully expand", self.fully_expand
@@ -161,17 +161,17 @@ class EntityTreeView(CopyTreeView):
 
     def export_selected(self):
         """Exports data from selected indexes using the connected Spine db editor."""
-        self._data_store_form.export_selected(self._selected_indexes)
+        self._spine_db_editor.export_selected(self._selected_indexes)
 
     def remove_selected(self):
         """Removes selected indexes using the connected Spine db editor."""
-        self._data_store_form.show_remove_entity_tree_items_form(self._selected_indexes)
+        self._spine_db_editor.show_remove_entity_tree_items_form(self._selected_indexes)
 
     def manage_relationships(self):
         index = self.currentIndex()
         item = index.internalPointer()
         relationship_class_key = item.display_id
-        self._data_store_form.show_manage_relationships_form(relationship_class_key=relationship_class_key)
+        self._spine_db_editor.show_manage_relationships_form(relationship_class_key=relationship_class_key)
 
     def contextMenuEvent(self, event):
         """Shows context menu.
@@ -194,7 +194,7 @@ class EntityTreeView(CopyTreeView):
         Args:
             event (QMouseEvent)
         """
-        sticky_selection = self._data_store_form.qsettings.value("appSettings/stickySelection", defaultValue="false")
+        sticky_selection = self._spine_db_editor.qsettings.value("appSettings/stickySelection", defaultValue="false")
         if sticky_selection == "false":
             super().mousePressEvent(event)
             return
@@ -216,15 +216,15 @@ class EntityTreeView(CopyTreeView):
 
     def _add_relationship_actions(self):
         self._add_relationship_classes_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_relationship_classes.icon(),
+            self._spine_db_editor.ui.actionAdd_relationship_classes.icon(),
             "Add relationship classes",
             self.add_relationship_classes,
         )
         self._add_relationships_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_relationships.icon(), "Add relationships", self.add_relationships
+            self._spine_db_editor.ui.actionAdd_relationships.icon(), "Add relationships", self.add_relationships
         )
         self._manage_relationships_action = self._menu.addAction(
-            self._data_store_form.ui.actionManage_relationships.icon(),
+            self._spine_db_editor.ui.actionManage_relationships.icon(),
             "Manage relationships",
             self.manage_relationships,
         )
@@ -239,7 +239,7 @@ class EntityTreeView(CopyTreeView):
 
     def edit_selected(self):
         """Edits all selected indexes using the connected Spine db editor."""
-        self._data_store_form.edit_entity_tree_items(self._selected_indexes)
+        self._spine_db_editor.edit_entity_tree_items(self._selected_indexes)
 
 
 class ObjectTreeView(EntityTreeView):
@@ -267,10 +267,10 @@ class ObjectTreeView(EntityTreeView):
 
     def _add_middle_actions(self):
         self.add_object_classes_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_object_classes.icon(), "Add objects classes", self.add_object_classes
+            self._spine_db_editor.ui.actionAdd_object_classes.icon(), "Add objects classes", self.add_object_classes
         )
         self.add_objects_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_objects.icon(), "Add objects", self.add_objects
+            self._spine_db_editor.ui.actionAdd_objects.icon(), "Add objects", self.add_objects
         )
         self.add_object_group_action = self._menu.addAction("Add object group", self.add_object_group)
         self._add_relationship_actions()
@@ -280,7 +280,7 @@ class ObjectTreeView(EntityTreeView):
         )
         self.manage_object_group_action = self._menu.addAction("Manage object group", self.manage_object_group)
         self.duplicate_object_action = self._menu.addAction(
-            self._data_store_form.ui.actionAdd_objects.icon(), "Duplicate object", self.duplicate_object
+            self._spine_db_editor.ui.actionAdd_objects.icon(), "Duplicate object", self.duplicate_object
         )
         self._menu.addSeparator()
 
@@ -289,17 +289,17 @@ class ObjectTreeView(EntityTreeView):
         self.doubleClicked.connect(self.find_next_relationship)
 
     def add_object_classes(self):
-        self._data_store_form.show_add_object_classes_form()
+        self._spine_db_editor.show_add_object_classes_form()
 
     def add_objects(self):
         index = self.currentIndex()
         class_name = index.internalPointer().display_data
-        self._data_store_form.show_add_objects_form(class_name=class_name)
+        self._spine_db_editor.show_add_objects_form(class_name=class_name)
 
     def add_relationship_classes(self):
         index = self.currentIndex()
         object_class_one_name = index.internalPointer().display_data
-        self._data_store_form.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
+        self._spine_db_editor.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
 
     def add_relationships(self):
         index = self.currentIndex()
@@ -308,7 +308,7 @@ class ObjectTreeView(EntityTreeView):
         object_name = item.parent_item.display_data
         object_class_name = item.parent_item.parent_item.display_data
         object_names_by_class_name = {object_class_name: object_name}
-        self._data_store_form.show_add_relationships_form(
+        self._spine_db_editor.show_add_relationships_form(
             relationship_class_key=relationship_class_key, object_names_by_class_name=object_names_by_class_name
         )
 
@@ -325,17 +325,17 @@ class ObjectTreeView(EntityTreeView):
     def duplicate_object(self):
         """Duplicate the object at the current index using the connected Spine db editor."""
         index = self.currentIndex()
-        self._data_store_form.duplicate_object(index)
+        self._spine_db_editor.duplicate_object(index)
 
     def add_object_group(self):
         index = self.currentIndex()
         item = index.internalPointer()
-        self._data_store_form.show_add_object_group_form(item)
+        self._spine_db_editor.show_add_object_group_form(item)
 
     def manage_object_group(self):
         index = self.currentIndex()
         item = index.internalPointer()
-        self._data_store_form.show_manage_object_group_form(item)
+        self._spine_db_editor.show_manage_object_group_form(item)
 
 
 class RelationshipTreeView(EntityTreeView):
@@ -349,13 +349,13 @@ class RelationshipTreeView(EntityTreeView):
         self._add_relationship_classes_action.setVisible(item.item_type == "root")
 
     def add_relationship_classes(self):
-        self._data_store_form.show_add_relationship_classes_form()
+        self._spine_db_editor.show_add_relationship_classes_form()
 
     def add_relationships(self):
         index = self.currentIndex()
         item = index.internalPointer()
         relationship_class_key = item.display_id
-        self._data_store_form.show_add_relationships_form(relationship_class_key=relationship_class_key)
+        self._spine_db_editor.show_add_relationships_form(relationship_class_key=relationship_class_key)
 
 
 class ItemTreeView(CopyTreeView):
@@ -365,7 +365,7 @@ class ItemTreeView(CopyTreeView):
     def __init__(self, parent):
         """Initialize the view."""
         super().__init__(parent=parent)
-        self._data_store_form = None
+        self._spine_db_editor = None
         self._menu = QMenu(self)
 
     def connect_signals(self):
@@ -385,15 +385,15 @@ class ItemTreeView(CopyTreeView):
         """Updates the visible property of actions according to whether or not they apply to given item."""
         raise NotImplementedError()
 
-    def connect_data_store_form(self, data_store_form):
-        self._data_store_form = data_store_form
+    def connect_data_store_form(self, spine_db_editor):
+        self._spine_db_editor = spine_db_editor
         self.create_context_menu()
         self.connect_signals()
 
     def create_context_menu(self):
         """Creates a context menu for this view."""
-        self._menu.addAction(self._data_store_form.ui.actionCopy)
-        self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
+        self._menu.addAction(self._spine_db_editor.ui.actionCopy)
+        self._menu.addAction(self._spine_db_editor.ui.actionRemove_selected)
 
     def contextMenuEvent(self, event):
         """Shows context menu.
@@ -516,7 +516,7 @@ class ParameterValueListTreeView(ItemTreeView):
     def open_in_editor(self):
         """Opens the parameter_value editor for the first selected cell."""
         index = self.currentIndex()
-        self._data_store_form.show_parameter_value_editor(index)
+        self._spine_db_editor.show_parameter_value_editor(index)
 
     def remove_selected(self):
         """See base class."""

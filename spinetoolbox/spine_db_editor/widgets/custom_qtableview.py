@@ -44,7 +44,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         """Initialize the view."""
         super().__init__(parent=parent)
         self._menu = QMenu(self)
-        self._data_store_form = None
+        self._spine_db_editor = None
         self.open_in_editor_action = None
         self.plot_action = None
         self.plot_separator = None
@@ -55,13 +55,13 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         """
         raise NotImplementedError()
 
-    def connect_data_store_form(self, data_store_form):
+    def connect_data_store_form(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
 
         Args:
-             data_store_form (SpineDBEditor)
+             spine_db_editor (SpineDBEditor)
         """
-        self._data_store_form = data_store_form
+        self._spine_db_editor = spine_db_editor
         self.create_context_menu()
         self.create_delegates()
 
@@ -76,9 +76,9 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             ParameterDelegate
         """
         column = self.model().header.index(column_name)
-        delegate = delegate_class(self._data_store_form, self._data_store_form.db_mngr)
+        delegate = delegate_class(self._spine_db_editor, self._spine_db_editor.db_mngr)
         self.setItemDelegateForColumn(column, delegate)
-        delegate.data_committed.connect(self._data_store_form.set_parameter_data)
+        delegate.data_committed.connect(self._spine_db_editor.set_parameter_data)
         return delegate
 
     def create_delegates(self):
@@ -88,7 +88,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
     def open_in_editor(self):
         """Opens the current index in a parameter_value editor using the connected Spine db editor."""
         index = self.currentIndex()
-        self._data_store_form.show_parameter_value_editor(index)
+        self._spine_db_editor.show_parameter_value_editor(index)
 
     @Slot(bool)
     def plot(self, checked=False):
@@ -98,7 +98,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             hints = ParameterTablePlottingHints()
             plot_widget = plot_selection(self.model(), selection, hints)
         except PlottingError as error:
-            report_plotting_failure(error, self._data_store_form)
+            report_plotting_failure(error, self._spine_db_editor)
         else:
             plot_widget.use_as_window(self.window(), self.value_column_header)
             plot_widget.show()
@@ -114,7 +114,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             plot_selection(self.model(), selection, hints, plot_window)
             plot_window.raise_()
         except PlottingError as error:
-            report_plotting_failure(error, self._data_store_form)
+            report_plotting_failure(error, self._spine_db_editor)
 
     def create_context_menu(self):
         """Creates a context menu for this view."""
@@ -122,13 +122,13 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addSeparator()
         self.plot_action = self._menu.addAction("Plot", self.plot)
         self.plot_separator = self._menu.addSeparator()
-        self._menu.addAction(self._data_store_form.ui.actionCopy)
-        self._menu.addAction(self._data_store_form.ui.actionPaste)
+        self._menu.addAction(self._spine_db_editor.ui.actionCopy)
+        self._menu.addAction(self._spine_db_editor.ui.actionPaste)
         self._menu.addSeparator()
         self._menu.addAction("Filter by", self.filter_by_selection)
         self._menu.addAction("Filter excluding", self.filter_excluding_selection)
         self._menu.addSeparator()
-        self._menu.addAction(self._data_store_form.ui.actionRemove_selected)
+        self._menu.addAction(self._spine_db_editor.ui.actionRemove_selected)
 
     def contextMenuEvent(self, event):
         """Shows context menu.
@@ -231,7 +231,7 @@ class ParameterDefinitionTableView(ParameterTableView):
         self._make_delegate("parameter_tag_list", TagListDelegate)
         self._make_delegate("value_list_name", ValueListDelegate)
         delegate = self._make_delegate("default_value", ParameterDefaultValueDelegate)
-        delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
 
 class ParameterValueTableView(ParameterTableView):
@@ -244,7 +244,7 @@ class ParameterValueTableView(ParameterTableView):
         self._make_delegate("parameter_name", ParameterNameDelegate)
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
-        delegate.parameter_value_editor_requested.connect(self._data_store_form.show_parameter_value_editor)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
@@ -269,7 +269,7 @@ class RelationshipParameterValueTableView(RelationshipParameterTableMixin, Param
     def create_delegates(self):
         super().create_delegates()
         delegate = self._make_delegate("object_name_list", ObjectNameListDelegate)
-        delegate.object_name_list_editor_requested.connect(self._data_store_form.show_object_name_list_editor)
+        delegate.object_name_list_editor_requested.connect(self._spine_db_editor.show_object_name_list_editor)
 
 
 class PivotTableView(CopyPasteTableView):
@@ -283,7 +283,7 @@ class PivotTableView(CopyPasteTableView):
     def __init__(self, parent=None):
         """Initialize the class."""
         super().__init__(parent)
-        self._data_store_form = None
+        self._spine_db_editor = None
         self._menu = QMenu(self)
         self._selected_value_indexes = list()
         self._selected_entity_indexes = list()
@@ -308,15 +308,15 @@ class PivotTableView(CopyPasteTableView):
     def db_map(self):
         return self.source_model.pivot_db_map
 
-    def connect_data_store_form(self, data_store_form):
-        self._data_store_form = data_store_form
+    def connect_data_store_form(self, spine_db_editor):
+        self._spine_db_editor = spine_db_editor
         self.create_context_menu()
         h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
         h_header.setContextMenuPolicy(Qt.DefaultContextMenu)
-        h_header.setResizeContentsPrecision(data_store_form.visible_rows)
+        h_header.setResizeContentsPrecision(spine_db_editor.visible_rows)
         v_header = PivotTableHeaderView(Qt.Vertical, "rows", self)
         v_header.setContextMenuPolicy(Qt.NoContextMenu)
-        v_header.setDefaultSectionSize(data_store_form.default_row_height)
+        v_header.setDefaultSectionSize(spine_db_editor.default_row_height)
         self.setHorizontalHeader(h_header)
         self.setVerticalHeader(v_header)
 
@@ -359,7 +359,7 @@ class PivotTableView(CopyPasteTableView):
     def remove_relationships(self):
         if self.model().sourceModel().item_type != "relationship":
             return
-        rel_ids_by_object_ids = {rel["object_id_list"]: rel["id"] for rel in self._data_store_form._get_entities()}
+        rel_ids_by_object_ids = {rel["object_id_list"]: rel["id"] for rel in self._spine_db_editor._get_entities()}
         relationship_ids = {}
         for index in self._selected_entity_indexes:
             object_ids, _ = self.source_model.object_and_parameter_ids(index)
@@ -376,7 +376,7 @@ class PivotTableView(CopyPasteTableView):
     def open_in_editor(self):
         """Opens the parameter_value editor for the first selected cell."""
         index = self._selected_value_indexes[0]
-        self._data_store_form.show_parameter_value_editor(index)
+        self._spine_db_editor.show_parameter_value_editor(index)
 
     def plot(self):
         """Plots the selected cells in the pivot table."""
