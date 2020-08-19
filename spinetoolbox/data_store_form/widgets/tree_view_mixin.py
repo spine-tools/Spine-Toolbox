@@ -317,12 +317,10 @@ class TreeViewMixin:
     def receive_alternatives_fetched(self, db_map_data):
         super().receive_alternatives_fetched(db_map_data)
         self.alternative_scenario_model.add_alternatives(db_map_data)
-        self._alternatives_fetched.emit(list(db_map_data.keys()))
 
     def receive_scenarios_fetched(self, db_map_data):
         super().receive_scenarios_fetched(db_map_data)
         self.alternative_scenario_model.add_scenarios(db_map_data)
-        self._scenarios_fetched.emit(list(db_map_data.keys()))
 
     def receive_object_classes_fetched(self, db_map_data):
         super().receive_object_classes_fetched(db_map_data)

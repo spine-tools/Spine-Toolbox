@@ -460,7 +460,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
             self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
         for db_map, ids in selected_db_map_scen_alt_ids.items():
             self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
-        self._selected_alternative_ids = {db_map: ids for db_map, ids in self._selected_alternative_ids.items() if ids}
+        self._selected_alternative_ids.update({db_map: ids for db_map, ids in self._selected_alternative_ids.items()})
         self.alternative_selection_changed.emit(self._selected_alternative_ids)
 
     def remove_selected(self):
