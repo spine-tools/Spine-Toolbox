@@ -39,7 +39,7 @@ from spinedb_api import (
     TimePattern,
     Map,
 )
-from .data_store_form.widgets.data_store_form import DataStoreForm
+from .spine_db_editor.widgets.spine_db_editor import DataStoreForm
 from .helpers import IconManager, busy_effect, format_string_list
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher

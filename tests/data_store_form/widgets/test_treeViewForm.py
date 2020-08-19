@@ -24,7 +24,7 @@ from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.data_store_form.mvcmodels.compound_parameter_models import CompoundParameterModel
+from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_treeViewFormAdd import TestTreeViewFormAddMixin
 from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
 from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin
@@ -264,8 +264,8 @@ class TestTreeViewForm(
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of DataStoreForm classes."""
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
-            "spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.restore_ui"
-        ), mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.restore_ui"
+        ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.show"):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = SpineDBManager(mock_settings, None, None)
@@ -287,7 +287,7 @@ class TestTreeViewForm(
         Use this to free resources after a test if needed.
         """
         with mock.patch(
-            "spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.save_window_state"
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.save_window_state"
         ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.tree_view_form.close()
             mock_save_w_s.assert_called_once()

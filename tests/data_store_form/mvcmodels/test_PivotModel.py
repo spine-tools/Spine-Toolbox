@@ -17,7 +17,7 @@ Unit tests for PivotModel class.
 """
 
 import unittest
-from spinetoolbox.data_store_form.mvcmodels.pivot_model import PivotModel
+from spinetoolbox.spine_db_editor.mvcmodels.pivot_model import PivotModel
 
 
 class TestPivotModel(unittest.TestCase):

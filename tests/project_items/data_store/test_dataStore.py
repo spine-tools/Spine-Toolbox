@@ -24,7 +24,7 @@ import sys
 from spinedb_api import create_new_spine_database
 from PySide2.QtWidgets import QApplication, QMessageBox
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import DataStoreForm
 from spinetoolbox.project_items.data_store.data_store import DataStore
 from spinetoolbox.project_items.data_store.executable_item import ExecutableItem
 from spinetoolbox.project_items.data_store.item_info import ItemInfo
@@ -209,7 +209,7 @@ class TestDataStore(unittest.TestCase):
             self.ds_properties_ui.toolButton_open_sqlite_file.click()
             mock_qfile_dialog.getOpenFileName.assert_called_once()
         # Open form
-        with mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.show"):
             self.ds_properties_ui.pushButton_ds_open_editor.click()
         ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, DataStoreForm)
@@ -230,7 +230,7 @@ class TestDataStore(unittest.TestCase):
         self.ds_properties_ui.lineEdit_database.setText(temp_db_path)
         self.ds_properties_ui.lineEdit_database.editingFinished.emit()
         # Open form
-        with mock.patch("spinetoolbox.data_store_form.widgets.data_store_form.DataStoreForm.show"):
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.show"):
             self.ds_properties_ui.pushButton_ds_open_editor.click()
         ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, DataStoreForm)

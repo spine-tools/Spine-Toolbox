@@ -25,18 +25,18 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
-from spinetoolbox.data_store_form.widgets.custom_qgraphicsviews import EntityQGraphicsView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ObjectTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterValueListTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import FrozenTableView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import RelationshipTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import PivotTableView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterValueTableView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import ObjectParameterDefinitionTableView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterDefinitionTableView
-from spinetoolbox.data_store_form.widgets.custom_qtableview import RelationshipParameterValueTableView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import AlternativeScenarioTreeView
-from spinetoolbox.data_store_form.widgets.custom_qtreeview import ParameterTagTreeView
+from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ObjectTreeView
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ParameterValueListTreeView
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import FrozenTableView
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import RelationshipTreeView
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import PivotTableView
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import ObjectParameterValueTableView
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import ObjectParameterDefinitionTableView
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterDefinitionTableView
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterValueTableView
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeScenarioTreeView
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ParameterTagTreeView
 
 from spinetoolbox import resources_icons_rc
 

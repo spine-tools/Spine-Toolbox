@@ -32,8 +32,8 @@ from spinetoolbox.plotting import (
     PivotTablePlottingHints,
 )
 from spinetoolbox.widgets.plot_widget import PlotWidget
-from spinetoolbox.data_store_form.widgets.data_store_form import DataStoreForm
-from spinetoolbox.data_store_form.mvcmodels.pivot_table_models import ParameterValuePivotTableModel
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import DataStoreForm
+from spinetoolbox.spine_db_editor.mvcmodels.pivot_table_models import ParameterValuePivotTableModel
 
 
 def _make_pivot_proxy_model():
