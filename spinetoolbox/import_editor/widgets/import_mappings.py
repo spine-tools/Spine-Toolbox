@@ -47,7 +47,7 @@ class ImportMappings(QObject):
         self._mappings_model = None
         self._undo_stack = undo_stack
         # initialize interface
-        self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(None, MAPPING_CHOICES))
+        self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(MAPPING_CHOICES))
 
         # connect signals
         self._ui.new_button.clicked.connect(self.new_mapping)
@@ -97,7 +97,7 @@ class ImportMappings(QObject):
         m = None
         indexes = self._ui.list_view.selectedIndexes()
         if self._mappings_model and indexes:
-            m = self._mappings_model.data_mapping(indexes()[0])
+            m = self._mappings_model.data_mapping(indexes[0])
         self.mapping_data_changed.emit(m)
 
     @Slot()

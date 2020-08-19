@@ -23,13 +23,6 @@ from PySide2.QtWidgets import QListView
 class MultiCheckableListView(QListView):
     """A list view which allows all selected items to be checked/unchecked with space bar."""
 
-    def __init__(self, parent):
-        """
-        Args
-            parent (QWidget): a parent widget
-        """
-        super().__init__(parent)
-
     def keyPressEvent(self, event):
         """Handles key press events."""
         if event.key() != Qt.Key_Space or event.modifiers() != Qt.NoModifier:

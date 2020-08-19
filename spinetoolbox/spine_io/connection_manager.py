@@ -278,7 +278,7 @@ class ConnectionManager(QObject):
         self._table_row_types.update(types)
 
     def close_connection(self):
-        """Close and delete thread and worker
+        """Closes and deletes thread and worker
         """
         self._is_connected = False
         self.connection_closed.emit()

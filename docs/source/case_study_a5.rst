@@ -147,15 +147,15 @@ Creating input database
    #. Select the 'input' Data Store item in the *Design View*.
    #. Go to *Data Store Properties*, check the box that reads **For Spine Model** and press **New Spine db**.
 
-#. Still in *Data Store Properties*, click **Tree view**. This will open the newly created database
-   in the *Data store tree view*, looking similar to this:
+#. Still in *Data Store Properties*, click **Open editor**. This will open the newly created database
+   in the *Spine database editor*, looking similar to this:
 
    .. image:: img/case_study_a5_treeview_empty.png
       :align: center
 
    |
 
-   .. note:: The *Data store tree view* is a dedicated interface within Spine Toolbox
+   .. note:: The *Spine database editor* is a dedicated interface within Spine Toolbox
       for visualizing and managing Spine databases.
 
 Creating objects
@@ -197,7 +197,7 @@ Creating objects
           :align: center
 
    #. Click **Ok**.
-   #. Back in the *Data store tree view*, under *Object tree*, double click on ``unit``
+   #. Back in the *Spine database editor*, under *Object tree*, double click on ``unit``
       to confirm that the objects are effectively there.
    #. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.
       Enter "Add power plants" as the commit message and click **Commit**.
@@ -352,7 +352,7 @@ Establishing relationships
          target cells and press **Ctrl+V**.
 
    #. Click **Ok**.
-   #. Back in the *Data store tree view*, under *Relationship tree*, double click on
+   #. Back in the *Spine database editor*, under *Relationship tree*, double click on
       ``unit__node__direction__temporal_block``
       to confirm that the relationships are effectively there.
    #. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.

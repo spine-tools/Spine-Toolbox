@@ -21,7 +21,6 @@ as well.
 from itertools import takewhile
 from PySide2.QtCore import QAbstractListModel, QFileInfo, QModelIndex, Qt, Signal
 from PySide2.QtWidgets import QFileIconProvider
-from spinetoolbox.project_item import ProjectItem
 
 
 def _file_label(resource):

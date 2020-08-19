@@ -18,6 +18,7 @@ Contains the mapping list model.
 from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt
 from spinedb_api import ObjectClassMapping
 from .mapping_specification_model import MappingSpecificationModel
+from ..commands import RenameMapping
 
 
 class MappingListModel(QAbstractListModel):
@@ -25,19 +26,31 @@ class MappingListModel(QAbstractListModel):
     A model to hold a list of Mappings.
     """
 
-    def __init__(self, item_mappings, table_name, undo_stack):
+    def __init__(self, mapping_specifications, table_name, undo_stack):
+        """
+        Args:
+            mapping_specifications (list of MappingSpecificationModel): mapping specifications
+            table_name (str): source table name
+            undo_stack (QUndoStack): undo stack
+        """
         super().__init__()
         self._mapping_specifications = []
         self._names = []
         self._counter = 1
         self._table_name = table_name
         self._undo_stack = undo_stack
-        for m in item_mappings:
-            name = "Mapping " + str(self._counter)
+        for m in mapping_specifications:
+            name = m.mapping_name
+            if not name:
+                name = "Mapping " + str(self._counter)
+            m.mapping_name = name
             self._names.append(name)
-            specification = MappingSpecificationModel(self._table_name, name, m, self._undo_stack)
-            self._mapping_specifications.append(specification)
+            self._mapping_specifications.append(m)
             self._counter += 1
+
+    def flags(self, index):
+        """Returns flags for given index."""
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
 
     def get_mappings(self):
         return [m.mapping for m in self._mapping_specifications]
@@ -73,9 +86,31 @@ class MappingListModel(QAbstractListModel):
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
-            return
+            return None
         if self._mapping_specifications and role == Qt.DisplayRole and index.row() < self.rowCount():
             return self._names[index.row()]
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Renames a mapping."""
+        if not value or role != Qt.EditRole or not index.isValid():
+            return False
+        row = index.row()
+        previous_name = self._names[row]
+        self._undo_stack.push(RenameMapping(row, self, value, previous_name))
+        return True
+
+    def rename_mapping(self, row, name):
+        """
+        Renames a mapping.
+
+        Args:
+            row (int): mapping's row
+            name (str): new name
+        """
+        self._names[row] = name
+        self._mapping_specifications[row].mapping_name = name
+        index = self.index(row, 0)
+        self.dataChanged.emit(index, index, [Qt.DisplayRole])
 
     def add_mapping(self):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
@@ -122,18 +157,17 @@ class MappingListModel(QAbstractListModel):
         Resets the model.
 
         Args:
-            item_mappings (Iterable): item mappings
-            table_name (src): name of the source table
+            item_mappings (dict): item mappings
+            table_name (str): name of the source table
         """
         self.beginResetModel()
         self._mapping_specifications.clear()
         self._names.clear()
         self._counter = 1
         self._table_name = table_name
-        for m in item_mappings:
-            name = "Mapping " + str(self._counter)
-            self._names.append(name)
-            specification = MappingSpecificationModel(self._table_name, name, m, self._undo_stack)
+        for mapping_name, mapping in item_mappings.items():
+            self._names.append(mapping_name)
+            specification = MappingSpecificationModel(self._table_name, mapping_name, mapping, self._undo_stack)
             self._mapping_specifications.append(specification)
             self._counter += 1
         self.endResetModel()

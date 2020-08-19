@@ -497,7 +497,7 @@ class IconListManager:
 
 
 class IconManager:
-    """A class to manage object_class icons for data store forms."""
+    """A class to manage object_class icons for spine db editors."""
 
     ICON_SIZE = QSize(512, 512)
 

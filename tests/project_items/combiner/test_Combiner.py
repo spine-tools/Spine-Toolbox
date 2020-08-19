@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_items.combiner.combiner import Combiner
+from spinetoolbox.project_items.combiner.executable_item import ExecutableItem
 from spinetoolbox.project_items.combiner.item_info import ItemInfo
 from spinetoolbox.project_item_resource import ProjectItemResource
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
@@ -50,6 +51,18 @@ class TestCombiner(unittest.TestCase):
 
     def test_item_category(self):
         self.assertEqual(Combiner.item_category(), ItemInfo.item_category())
+
+    def test_execution_item(self):
+        """Tests that the ExecutableItem counterpart is created successfully."""
+        exec_item = self.combiner.execution_item()
+        self.assertIsInstance(exec_item, ExecutableItem)
+
+    def test_item_dict(self):
+        """Tests Item dictionary creation."""
+        d = self.combiner.item_dict()
+        a = ["type", "short name", "description", "x", "y", "cancel_on_error"]
+        for k in a:
+            self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
     def test_notify_destination(self):
         self.toolbox.msg = MagicMock()

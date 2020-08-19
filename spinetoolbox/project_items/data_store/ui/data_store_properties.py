@@ -388,7 +388,7 @@ class Ui_Form(object):
 #endif // QT_CONFIG(tooltip)
         self.pushButton_create_new_spine_db.setText(QCoreApplication.translate("Form", u"New Spine db", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_ds_open_editor.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open Data Store view</p></body></html>", None))
+        self.pushButton_ds_open_editor.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open URL in Spine database editor</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_ds_open_editor.setText(QCoreApplication.translate("Form", u"Open editor", None))
 #if QT_CONFIG(tooltip)

@@ -53,8 +53,7 @@ class CombinerWorker(QObject):
 
     @Slot()
     def do_work(self):
-        """Does the work and emits finished when done.
-        """
+        """Does the work and emits finished when done."""
         from_db_maps = [db_map for db_map in (self._get_db_map(url) for url in self._from_urls) if db_map]
         to_db_maps = [db_map for db_map in (self._get_db_map(url) for url in self._to_urls) if db_map]
         from_db_map_data = {from_db_map: export_data(from_db_map) for from_db_map in from_db_maps}

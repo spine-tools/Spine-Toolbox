@@ -45,7 +45,7 @@ class SpineDBFetcher(QObject):
 
         Args:
             db_mngr (SpineDBManager)
-            listener (DataStoreForm)
+            listener (SpineDBEditor)
         """
         super().__init__()
         self._db_mngr = db_mngr

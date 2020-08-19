@@ -16,7 +16,7 @@ Importing data with Importer
 Data importing is handled by the Importer project item
 which can import tabulated and to some degree tree-structured data
 into a Spine database from various formats.
-The same functionality is also available in **Data store view** from **File->Import**
+The same functionality is also available in **Spine database editor** from **File->Import**
 but using an Importer item is preferred because then the process is documented and repeatable.
 
 .. tip::

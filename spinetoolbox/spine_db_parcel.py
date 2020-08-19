@@ -22,7 +22,7 @@ from spinedb_api import Anyone
 class SpineDBParcel:
     """
     A class to create parcels of data from a Spine db.
-    Mainly intended for the *Export selection* action in the Data Store form.
+    Mainly intended for the *Export selection* action in the Spine db editor.
 
     The strategy is the following:
         - `_push` methods (with a leading underscore) push items with everything they need to live in a standalone db.

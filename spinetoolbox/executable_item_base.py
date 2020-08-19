@@ -84,7 +84,7 @@ class ExecutableItemBase:
         }[direction]()
 
     def stop_execution(self):
-        """Stops executing this View."""
+        """Stops executing this item."""
         self._logger.msg.emit(f"Stopping {self._name}")
 
     # pylint: disable=no-self-use

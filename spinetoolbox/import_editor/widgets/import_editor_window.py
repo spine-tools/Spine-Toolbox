@@ -217,7 +217,7 @@ class ImportEditorWindow(QMainWindow):
             self.setWindowState(Qt.WindowMaximized)
 
     def closeEvent(self, event=None):
-        """Handle close window.
+        """Handles close window.
 
         Args:
             event (QEvent): Closing event if 'X' is clicked.

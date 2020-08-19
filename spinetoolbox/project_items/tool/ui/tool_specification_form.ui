@@ -959,7 +959,7 @@
   <customwidget>
    <class>CustomQLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>spinetoolbox/widgets/custom_qlineedit.h</header>
+   <header>spinetoolbox/widgets/custom_qlineedits.h</header>
   </customwidget>
   <customwidget>
    <class>SourcesTreeView</class>

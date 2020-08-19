@@ -29,16 +29,15 @@ from .custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor
 
 
 class ComboBoxDelegate(QStyledItemDelegate):
-    def __init__(self, parent, choices):
-        super().__init__(parent)
-        self.editor = None
-        self.items = choices
+    def __init__(self, items):
+        super().__init__()
+        self._items = {item: k for k, item in enumerate(items)}
 
     def createEditor(self, parent, option, index):
-        self.editor = QComboBox(parent)
-        self.editor.addItems(self.items)
-        # self.editor.currentIndexChanged.connect(self.currentItemChanged)
-        return self.editor
+        editor = QComboBox(parent)
+        editor.addItems(self._items)
+        editor.activated.connect(lambda _: self._finalize_editing(editor))
+        return editor
 
     def paint(self, painter, option, index):
         value = index.data(Qt.DisplayRole)
@@ -51,8 +50,8 @@ class ComboBoxDelegate(QStyledItemDelegate):
 
     def setEditorData(self, editor, index):
         value = index.data(Qt.DisplayRole)
-        num = self.items.index(value)
-        editor.setCurrentIndex(num)
+        ind = self._items.get(value, -1)
+        editor.setCurrentIndex(ind)
 
     def setModelData(self, editor, model, index):
         value = editor.currentText()
@@ -60,9 +59,11 @@ class ComboBoxDelegate(QStyledItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
+        editor.showPopup()
 
-    def currentItemChanged(self):
-        self.commitData.emit(self.sender())
+    def _finalize_editing(self, editor):
+        self.commitData.emit(editor)
+        self.closeEditor.emit(editor)
 
 
 class LineEditDelegate(QStyledItemDelegate):

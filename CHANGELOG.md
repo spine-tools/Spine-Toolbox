@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Required PySide2 version is now 5.14. The version is checked at startup.
 - Import editor now supports multidimensional maps. The number of dimensions can be set using the 
   *Map dimensions* spin box in mappings options.
+- Data Store Form is now called 'Spine database editor'
 
 ### Deprecated
 ### Removed

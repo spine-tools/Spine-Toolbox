@@ -12,7 +12,7 @@
 """
 Unit tests for Importer project item.
 
-:author: A. Soininen (VTT)
+:author: A. Soininen (VTT), P. Savolainen (VTT)
 :date:   4.10.2019
 """
 
@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_items.importer.importer import Importer
+from spinetoolbox.project_items.importer.executable_item import ExecutableItem
 from spinetoolbox.project_items.importer.item_info import ItemInfo
 from spinetoolbox.project_item_resource import ProjectItemResource
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
@@ -50,6 +51,18 @@ class TestImporter(unittest.TestCase):
 
     def test_item_category(self):
         self.assertEqual(Importer.item_category(), ItemInfo.item_category())
+
+    def test_execution_item(self):
+        """Tests that the ExecutableItem counterpart is created successfully."""
+        exec_item = self.importer.execution_item()
+        self.assertIsInstance(exec_item, ExecutableItem)
+
+    def test_item_dict(self):
+        """Tests Item dictionary creation."""
+        d = self.importer.item_dict()
+        a = ["type", "short name", "description", "x", "y", "mappings", "cancel_on_error", "mapping_selection"]
+        for k in a:
+            self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
     def test_notify_destination(self):
         self.toolbox.msg = MagicMock()

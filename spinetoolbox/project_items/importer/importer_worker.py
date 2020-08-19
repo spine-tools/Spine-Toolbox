@@ -17,7 +17,7 @@ Contains importer_program script.
 """
 
 import os
-from PySide2.QtCore import Signal, QThread
+from PySide2.QtCore import Signal, QObject
 import spinedb_api
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
@@ -27,7 +27,7 @@ from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 from ..shared.helpers import create_log_file_timestamp
 
 
-class ImporterWorker(QThread):
+class ImporterWorker(QObject):
 
     import_finished = Signal(int)
     """Emitted when work is finished with 0 if successful, -1 otherwise."""
@@ -61,8 +61,8 @@ class ImporterWorker(QThread):
         self._cancel_on_error = cancel_on_error
         self._logger = logger
 
-    def run(self):
-        """Does the work and emits import_finished or failed when done."""
+    def do_work(self):
+        """Does the work and emits import_finished when done."""
         all_data = []
         all_errors = []
         for source in self._checked_files:

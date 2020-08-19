@@ -32,7 +32,7 @@ class VersionInfo(NamedTuple):
 
 major = 0
 minor = 4
-micro = 2
+micro = 3
 releaselevel = "alpha"
 serial = 0
 __version_info__ = VersionInfo(major, minor, micro, releaselevel, serial)

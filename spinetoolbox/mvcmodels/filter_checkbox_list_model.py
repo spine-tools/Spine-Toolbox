@@ -292,7 +292,7 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         """Init class.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             source_model (CompoundParameterModel): a model to lazily get data from
         """
         super().__init__(parent, show_empty=show_empty)
@@ -342,7 +342,7 @@ class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         """Init class.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             data_to_value (method): a method to translate item data to a value for display role
         """
         super().__init__(parent, show_empty=show_empty)

@@ -12,7 +12,7 @@
 """
 Unit tests for View project item.
 
-:author: A. Soininen (VTT)
+:author: A. Soininen (VTT), P. Savolainen (VTT)
 :date:   4.10.2019
 """
 
@@ -23,6 +23,7 @@ from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.project_items.view.item_info import ItemInfo
 from spinetoolbox.project_items.view.view import View
+from spinetoolbox.project_items.view.executable_item import ExecutableItem
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -49,6 +50,18 @@ class TestView(unittest.TestCase):
 
     def test_item_category(self):
         self.assertEqual(View.item_category(), ItemInfo.item_category())
+
+    def test_execution_item(self):
+        """Tests that the ExecutableItem counterpart is created successfully."""
+        exec_item = self.view.execution_item()
+        self.assertIsInstance(exec_item, ExecutableItem)
+
+    def test_item_dict(self):
+        """Tests Item dictionary creation."""
+        d = self.view.item_dict()
+        a = ["type", "short name", "description", "x", "y"]
+        for k in a:
+            self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
     def test_default_name_prefix(self):
         self.assertEqual(View.default_name_prefix(), "View")

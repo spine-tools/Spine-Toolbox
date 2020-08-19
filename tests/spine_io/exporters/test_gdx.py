@@ -145,7 +145,8 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(indexing_domain.description, "domain description")
         self.assertEqual(indexing_domain.all_indexes, [("key1",), ("key2",), ("key3",)])
         self.assertEqual(indexing_domain.indexes, [("key1",), ("key3",)])
-        self.assertEqual(indexing_domain.pick_list, [True, False, True])
+        self.assertIsNone(indexing_domain.pick_expression)
+        self.assertEqual(indexing_domain.pick_list(), [True, False, True])
 
     def test_IndexingDomain_from_dict(self):
         original = gdx.IndexingDomain("domain name", "domain description", [("A", "B"), ("C", "B")], [True, False])
@@ -155,7 +156,35 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(restored.description, "domain description")
         self.assertEqual(restored.all_indexes, [("A", "B"), ("C", "B")])
         self.assertEqual(restored.indexes, [("A", "B")])
-        self.assertEqual(restored.pick_list, [True, False])
+        self.assertIsNone(restored.pick_expression)
+        self.assertEqual(restored.pick_list(), [True, False])
+
+    def test_IndexingDomain_from_dict_with_pick_expression(self):
+        original = gdx.IndexingDomain("domain name", "domain description", [("A", "B"), ("C", "B")], "i in (1, 2)")
+        domain_dict = original.to_dict()
+        restored = gdx.IndexingDomain.from_dict(domain_dict)
+        self.assertEqual(restored.name, "domain name")
+        self.assertEqual(restored.description, "domain description")
+        self.assertEqual(restored.all_indexes, [("A", "B"), ("C", "B")])
+        self.assertEqual(restored.indexes, [("A", "B"), ("C", "B")])
+        self.assertEqual(restored.pick_expression, "i in (1, 2)")
+        self.assertEqual(restored.pick_list(), [True, True])
+
+    def test_IndexingDomain_all_indexes_from_list(self):
+        indexing = gdx.IndexingDomain("name", "description", [("A",), ("B",)], "True")
+        self.assertEqual(indexing.all_indexes, [("A",), ("B",)])
+
+    def test_IndexingDomain_all_indexes_from_expression(self):
+        indexing = gdx.IndexingDomain("name", "description", "['foo', 'bar'][i-1]", "True", 2)
+        self.assertEqual(indexing.all_indexes, [("foo",), ("bar",)])
+
+    def test_IndexingDomain_pick_list_from_boolean_list(self):
+        indexing = gdx.IndexingDomain("name", "description", [("A",), ("B",), ("C",)], [True, False, True])
+        self.assertEqual(indexing.pick_list(), [True, False, True])
+
+    def test_IndexingDomain_pick_list_from_expression(self):
+        indexing = gdx.IndexingDomain("name", "description", [("A",), ("B",), ("C",)], "i % 2 != 0")
+        self.assertEqual(indexing.pick_list(), [True, False, True])
 
     def test_SetSettings_construction(self):
         domain_names, set_names, records, settings = self._make_settings()

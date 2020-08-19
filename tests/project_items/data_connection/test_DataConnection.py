@@ -12,7 +12,7 @@
 """
 Unit tests for Data Connection project item.
 
-:author: A. Soininen (VTT)
+:author: A. Soininen (VTT), P. Savolainen (VTT)
 :date:   4.10.2019
 """
 
@@ -21,6 +21,7 @@ import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_items.data_connection.data_connection import DataConnection
+from spinetoolbox.project_items.data_connection.executable_item import ExecutableItem
 from spinetoolbox.project_items.data_connection.item_info import ItemInfo
 from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
@@ -49,6 +50,18 @@ class TestDataConnection(unittest.TestCase):
 
     def test_item_category(self):
         self.assertEqual(DataConnection.item_category(), ItemInfo.item_category())
+
+    def test_execution_item(self):
+        """Tests that the ExecutableItem counterpart is created successfully."""
+        exec_item = self.data_connection.execution_item()
+        self.assertIsInstance(exec_item, ExecutableItem)
+
+    def test_item_dict(self):
+        """Tests Item dictionary creation."""
+        d = self.data_connection.item_dict()
+        a = ["type", "short name", "description", "x", "y", "references"]
+        for k in a:
+            self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
     def test_notify_destination(self):
         self.toolbox.msg = MagicMock()

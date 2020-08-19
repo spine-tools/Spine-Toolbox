@@ -238,7 +238,7 @@ class SpineDBCommand(AgedUndoCommand):
         self._completed = False
 
     def silence_listener(self, func):
-        """Calls given function while silencing the listener Data Store forms.
+        """Calls given function while silencing the listener Spine db editors.
         This is so undo() and subsequent redo() calls don't trigger the same notifications over and over.
         """
         listeners = self.db_mngr.signaller.db_map_listeners(self.db_map)
@@ -253,7 +253,7 @@ class SpineDBCommand(AgedUndoCommand):
         """Returns a new redo method that determines if the command was completed.
         The command is completed if calling the function triggers the ``completed_signal``.
         Once the command is completed, we don't listen to the signal anymore
-        and we also silence the affected Data Store forms.
+        and we also silence the affected Spine db editors.
         If the signal is not received, then the command is declared obsolete.
         """
 
@@ -271,7 +271,7 @@ class SpineDBCommand(AgedUndoCommand):
 
     @staticmethod
     def undomethod(func):
-        """Returns a new undo method that silences the affected Data Store forms.
+        """Returns a new undo method that silences the affected Spine db editors.
         """
 
         def undo(self):
