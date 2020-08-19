@@ -204,7 +204,6 @@ class UnitTestImporterWorker(QObject):
 
     def do_work(self):
         """Does the work and emits import_finished or failed when done."""
-        print("Hello from UnitTestImporterWorker")
         a = 0
         step = 0.05
         while a > 3:

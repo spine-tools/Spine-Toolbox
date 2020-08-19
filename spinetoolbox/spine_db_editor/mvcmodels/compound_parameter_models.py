@@ -47,7 +47,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Initializes model.
 
         Args:
-            parent (DataStoreForm): the parent object
+            parent (SpineDBEditor): the parent object
             db_mngr (SpineDBManager): the database manager
             *db_maps (DiffDatabaseMapping): the database maps included in the model
         """

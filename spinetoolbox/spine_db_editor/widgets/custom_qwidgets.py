@@ -54,7 +54,7 @@ class LazyFilterWidget(FilterWidgetBase):
         """Init class.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             source_model (CompoundParameterModel, optional): a model to lazily get data from
         """
         super().__init__(parent)

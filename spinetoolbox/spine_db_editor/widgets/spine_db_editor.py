@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains the DataStoreForm class.
+Contains the SpineDBEditor class.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
@@ -60,8 +60,8 @@ from ...spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...spine_db_parcel import SpineDBParcel
 
 
-class DataStoreFormBase(QMainWindow):
-    """Base class for DataStoreForm (i.e. Spine database editor)."""
+class SpineDBEditorBase(QMainWindow):
+    """Base class for SpineDBEditor (i.e. Spine database editor)."""
 
     msg = Signal(str)
     link_msg = Signal(str, "QVariant")
@@ -106,7 +106,7 @@ class DataStoreFormBase(QMainWindow):
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
-        self.settings_group = 'dataStoreForm'
+        self.settings_group = "spineDBEditor"
         self.undo_action = None
         self.redo_action = None
         self.template_file_path = None
@@ -838,7 +838,7 @@ class DataStoreFormBase(QMainWindow):
         call_on_focused_widget(self, callable_name)
 
 
-class DataStoreForm(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, DataStoreFormBase):
+class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
 
     def __init__(self, db_mngr, *db_urls):

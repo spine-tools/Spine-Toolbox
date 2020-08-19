@@ -68,7 +68,7 @@ class EntityItem(QGraphicsPixmapItem):
         """Initializes item
 
         Args:
-            data_store_form (DataStoreForm): 'owner'
+            data_store_form (SpineDBEditor): 'owner'
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): Preferred extent

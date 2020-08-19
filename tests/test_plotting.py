@@ -32,7 +32,7 @@ from spinetoolbox.plotting import (
     PivotTablePlottingHints,
 )
 from spinetoolbox.widgets.plot_widget import PlotWidget
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import DataStoreForm
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.pivot_table_models import ParameterValuePivotTableModel
 
 
@@ -44,8 +44,8 @@ def _make_pivot_proxy_model():
     mock_db_map.codename = "codename"
     db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
     db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
-    with patch.object(DataStoreForm, "restore_ui"), patch.object(DataStoreForm, "show"):
-        data_store_widget = DataStoreForm(db_mngr, mock_db_map)
+    with patch.object(SpineDBEditor, "restore_ui"), patch.object(SpineDBEditor, "show"):
+        data_store_widget = SpineDBEditor(db_mngr, mock_db_map)
     data_store_widget.create_header_widget = lambda *args, **kwargs: None
     data_store_widget.load_parameter_value_data = lambda: {
         ('1', 'int_col', 'base_alternative'): '-3',

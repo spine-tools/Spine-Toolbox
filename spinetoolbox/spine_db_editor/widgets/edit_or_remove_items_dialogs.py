@@ -55,7 +55,7 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         """Init class.
 
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
             selected (set): set of ObjectClassItem instances to edit
         """
@@ -138,7 +138,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
         """Init class.
 
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
             selected (set): set of ObjectItem instances to edit
         """
@@ -204,7 +204,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         """Init class.
 
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
             selected (set): set of RelationshipClassItem instances to edit
         """
@@ -270,7 +270,7 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
         """Init class.
 
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the update
             selected (set): set of RelationshipItem instances to edit
             class_key (tuple): (class_name, object_class_name_list) for identifying the relationship_class
@@ -376,7 +376,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
         """Init class.
 
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the removal
             selected (dict): maps item type (class) to instances
         """

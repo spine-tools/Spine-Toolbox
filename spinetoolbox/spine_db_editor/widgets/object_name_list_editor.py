@@ -64,7 +64,7 @@ class ObjectNameListEditor(ManageItemsDialog):
         """Initializes widget.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             index (QModelIndex)
             object_class_names (list): string object_class names
             object_names_lists (list): lists of string object names

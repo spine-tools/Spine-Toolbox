@@ -33,7 +33,7 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
     def __init__(self, parent):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
         """
         super().__init__(parent)
         self.data_committed.connect(parent._set_model_data)
@@ -84,7 +84,7 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
     def __init__(self, parent):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
         """
         super().__init__(parent)
         self.data_committed.connect(parent._set_model_data)
@@ -116,7 +116,7 @@ class ParameterDelegate(QStyledItemDelegate):
     """Base class for all custom parameter delegates.
 
     Attributes:
-        parent (DataStoreForm): tree or graph view form
+        parent (SpineDBEditor): tree or graph view form
         db_mngr (SpineDBManager)
     """
 

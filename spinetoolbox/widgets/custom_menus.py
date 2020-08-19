@@ -319,7 +319,7 @@ class SimpleFilterMenu(FilterMenuBase):
     def __init__(self, parent, show_empty=True):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
         """
         super().__init__(parent)
         self._filter = SimpleFilterWidget(self, show_empty=show_empty)

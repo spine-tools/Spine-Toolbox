@@ -44,7 +44,7 @@ class EntityTreeView(CopyTreeView):
         """Connects a data store form to work with this view.
 
         Args:
-             data_store_form (DataStoreForm)
+             data_store_form (SpineDBEditor)
         """
         self._data_store_form = data_store_form
         self._create_context_menu()
@@ -243,7 +243,7 @@ class EntityTreeView(CopyTreeView):
 
 
 class ObjectTreeView(EntityTreeView):
-    """Custom QTreeView class for the object tree in DataStoreForm."""
+    """Custom QTreeView class for the object tree in SpineDBEditor."""
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -339,7 +339,7 @@ class ObjectTreeView(EntityTreeView):
 
 
 class RelationshipTreeView(EntityTreeView):
-    """Custom QTreeView class for the relationship tree in DataStoreForm."""
+    """Custom QTreeView class for the relationship tree in SpineDBEditor."""
 
     def _add_middle_actions(self):
         self._add_relationship_actions()
@@ -359,7 +359,7 @@ class RelationshipTreeView(EntityTreeView):
 
 
 class ItemTreeView(CopyTreeView):
-    """Custom QTreeView class for parameter_value_list in DataStoreForm.
+    """Custom QTreeView class for parameter_value_list in SpineDBEditor.
     """
 
     def __init__(self, parent):
@@ -410,7 +410,7 @@ class ItemTreeView(CopyTreeView):
 
 
 class AlternativeScenarioTreeView(ItemTreeView):
-    """Custom QTreeView class for the alternative scenario tree in DataStoreForm."""
+    """Custom QTreeView class for the alternative scenario tree in SpineDBEditor."""
 
     alternative_selection_changed = Signal(dict)
 
@@ -496,7 +496,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
 
 class ParameterValueListTreeView(ItemTreeView):
-    """Custom QTreeView class for parameter_value_list in DataStoreForm.
+    """Custom QTreeView class for parameter_value_list in SpineDBEditor.
     """
 
     def __init__(self, parent):
@@ -559,7 +559,7 @@ class ParameterValueListTreeView(ItemTreeView):
 
 
 class ParameterTagTreeView(ItemTreeView):
-    """Custom QTreeView class for the parameter_tag tree in DataStoreForm."""
+    """Custom QTreeView class for the parameter_tag tree in SpineDBEditor."""
 
     tag_selection_changed = Signal(dict)
 

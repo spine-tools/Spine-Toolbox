@@ -64,7 +64,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
     def __init__(self, parent, relationships_class, relationships, db_mngr, *db_maps):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             relationships_class (dict)
             relationships (list(list(str))
             db_mngr (SpineDBManager)
@@ -137,7 +137,7 @@ class AddItemsDialog(ManageItemsDialog):
     def __init__(self, parent, db_mngr, *db_maps):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
         """
@@ -174,7 +174,7 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
     def __init__(self, parent, db_mngr, *db_maps):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
         """
@@ -251,7 +251,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
     def __init__(self, parent, db_mngr, *db_maps, class_name=None, force_default=False):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
             class_name (str): default object_class name
@@ -318,7 +318,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     def __init__(self, parent, db_mngr, *db_maps, object_class_one_name=None, force_default=False):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
             object_class_one_name (str): default object_class name
@@ -461,7 +461,7 @@ class AddOrManageRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixi
     def __init__(self, parent, db_mngr, *db_maps):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
         """
@@ -508,7 +508,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
     ):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (iter) DiffDatabaseMapping instances
             relationship_class_key (tuple(str,str)): relationships class name, object_class name list string
@@ -640,7 +640,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     def __init__(self, parent, db_mngr, *db_maps, relationship_class_key=None):
         """
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the removal
             db_maps (iter): DiffDatabaseMapping instances
             relationship_class_key (str, optional): relationships class name, object_class name list string.
@@ -800,7 +800,7 @@ class AddOrManageObjectGroupDialog(QDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
         """
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             object_class_item (ObjectClassItem)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping)
@@ -926,7 +926,7 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
         """
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             object_item (ObjectItem)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping)
@@ -979,7 +979,7 @@ class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
     def __init__(self, parent, object_item, db_mngr, *db_maps):
         """
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             object_item (ObjectItem)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping)

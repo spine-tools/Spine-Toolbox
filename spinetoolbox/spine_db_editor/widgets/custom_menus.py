@@ -29,7 +29,7 @@ class ParameterViewFilterMenu(FilterMenuBase):
     def __init__(self, parent, source_model, field, show_empty=True):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             source_model (CompoundParameterModel): a model to lazily get data from
             field (str): the field name
         """
@@ -150,7 +150,7 @@ class TabularViewFilterMenu(FilterMenuBase):
     def __init__(self, parent, identifier, data_to_value, show_empty=True):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             identifier (int): index identifier
             data_to_value (method): a method to translate item data to a value for display role
         """

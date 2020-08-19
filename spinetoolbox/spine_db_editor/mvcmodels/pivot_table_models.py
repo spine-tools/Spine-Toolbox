@@ -33,7 +33,7 @@ class PivotTableModelBase(QAbstractTableModel):
     def __init__(self, parent):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
         """
         super().__init__()
         self._parent = parent
@@ -624,7 +624,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def __init__(self, parent):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
         """
         super().__init__(parent)
         self._object_class_count = None
@@ -877,7 +877,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
     def __init__(self, parent):
         """
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
         """
         super().__init__(parent)
         self._index_top_left_header = None

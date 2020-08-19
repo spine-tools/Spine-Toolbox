@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for DataStoreForm classes.
+Unit tests for SpineDBEditor classes.
 
 :author: M. Marin (KTH)
 :date:   6.12.2018
@@ -262,10 +262,10 @@ class TestTreeViewForm(
         )
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instances of DataStoreForm classes."""
+        """Overridden method. Runs before each test. Makes instances of SpineDBEditor classes."""
         with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.restore_ui"
-        ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.show"):
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
+        ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = SpineDBManager(mock_settings, None, None)
@@ -287,7 +287,7 @@ class TestTreeViewForm(
         Use this to free resources after a test if needed.
         """
         with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.save_window_state"
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
         ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.tree_view_form.close()
             mock_save_w_s.assert_called_once()

@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for DataStoreForm classes.
+Unit tests for SpineDBEditor classes.
 
 :author: M. Marin (KTH)
 :date:   6.12.2018
@@ -23,7 +23,7 @@ import os
 import sys
 from PySide2.QtWidgets import QApplication, QAction
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import DataStoreForm
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog
 
 
@@ -43,23 +43,23 @@ class TestAddItemsDialog(unittest.TestCase):
         )
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of DataStoreForm class."""
+        """Overridden method. Runs before each test. Makes instance of SpineDBEditor class."""
         with mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.restore_ui"
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
         ):
             self.mock_db_mngr = mock.MagicMock()
             self.mock_db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
             self.mock_db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
             self.mock_db_map = mock.MagicMock()
             self.mock_db_map.codename = "mock_db"
-            self.ds_view_form = DataStoreForm(self.mock_db_mngr, self.mock_db_map)
+            self.ds_view_form = SpineDBEditor(self.mock_db_mngr, self.mock_db_map)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
         with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.DataStoreForm.save_window_state"
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
         ) as mock_save_w_s:
             self.ds_view_form.close()
             mock_save_w_s.assert_called_once()

@@ -33,7 +33,7 @@ class AlternativeScenarioModel(MinimalTreeModel):
 
 
     Args:
-        parent (DataStoreForm)
+        parent (SpineDBEditor)
         db_mngr (SpineDBManager)
         db_maps (iter): DiffDatabaseMapping instances
     """

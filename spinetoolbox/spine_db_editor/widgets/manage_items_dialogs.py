@@ -32,7 +32,7 @@ class ManageItemsDialogBase(QDialog):
         """Init class.
 
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
         """
         super().__init__(parent)
@@ -81,7 +81,7 @@ class ManageItemsDialog(ManageItemsDialogBase):
         """Init class.
 
         Args:
-            parent (DataStoreForm): data store widget
+            parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager)
         """
         super().__init__(parent, db_mngr)

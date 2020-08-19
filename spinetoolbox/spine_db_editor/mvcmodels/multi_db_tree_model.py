@@ -26,7 +26,7 @@ class MultiDBTreeModel(MinimalTreeModel):
         """Init class.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager): A manager for the given db_maps
             db_maps (iter): DiffDatabaseMapping instances
         """

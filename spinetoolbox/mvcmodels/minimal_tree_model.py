@@ -207,7 +207,7 @@ class MinimalTreeModel(QAbstractItemModel):
         """Init class.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
         """
         super().__init__(parent)
         self._invisible_root_item = TreeItem(self)

@@ -54,7 +54,7 @@ class SelectDBItemsDialog(QDialog):
         """Initialize class.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping): the dbs to select items from
         """
@@ -106,7 +106,7 @@ class MassRemoveItemsDialog(SelectDBItemsDialog):
         """Initialize class.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping): the dbs to select items from
         """
@@ -136,7 +136,7 @@ class MassExportItemsDialog(SelectDBItemsDialog):
         """Initialize class.
 
         Args:
-            parent (DataStoreForm)
+            parent (SpineDBEditor)
             db_mngr (SpineDBManager)
             db_maps (DiffDatabaseMapping): the dbs to select items from
         """

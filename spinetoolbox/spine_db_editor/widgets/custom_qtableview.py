@@ -59,7 +59,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         """Connects a data store form to work with this view.
 
         Args:
-             data_store_form (DataStoreForm)
+             data_store_form (SpineDBEditor)
         """
         self._data_store_form = data_store_form
         self.create_context_menu()

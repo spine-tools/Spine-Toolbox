@@ -39,7 +39,7 @@ from spinedb_api import (
     TimePattern,
     Map,
 )
-from .spine_db_editor.widgets.spine_db_editor import DataStoreForm
+from .spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from .helpers import IconManager, busy_effect, format_string_list
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
@@ -195,7 +195,7 @@ class SpineDBManager(QObject):
         self._db_specific_loggers.clear()
 
     def show_data_store_form(self, db_url_codenames, logger):
-        """Creates a new DataStoreForm and shows it.
+        """Creates a new SpineDBEditor and shows it.
 
         Args:
             db_url_codenames (dict): Mapping db urls to codenames.
@@ -207,7 +207,7 @@ class SpineDBManager(QObject):
             db_maps = [self.get_db_map(url, logger, codename=codename) for url, codename in db_url_codenames.items()]
             if not all(db_maps):
                 return
-            self._ds_forms[key] = ds_form = DataStoreForm(self, *db_maps)
+            self._ds_forms[key] = ds_form = SpineDBEditor(self, *db_maps)
             ds_form.destroyed.connect(lambda: self._ds_forms.pop(key))
             ds_form.show()
         else:
@@ -286,7 +286,7 @@ class SpineDBManager(QObject):
         """Register given ds_form as listener for all given db_map's signals.
 
         Args:
-            ds_form (DataStoreForm)
+            ds_form (SpineDBEditor)
             db_maps (DiffDatabaseMapping)
         """
         for db_map in db_maps:
@@ -299,7 +299,7 @@ class SpineDBManager(QObject):
         """Unregisters given ds_form from given db_map signals.
 
         Args:
-            ds_form (DataStoreForm)
+            ds_form (SpineDBEditor)
             db_map (DiffDatabaseMapping)
         """
         listeners = self.signaller.db_map_listeners(db_map) - {ds_form}
@@ -328,7 +328,7 @@ class SpineDBManager(QObject):
         """Fetches given db_map for given listener.
 
         Args:
-            listener (DataStoreForm)
+            listener (SpineDBEditor)
             *db_maps: database maps to fetch
         """
         fetcher = SpineDBFetcher(self, listener)
