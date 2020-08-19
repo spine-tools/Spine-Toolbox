@@ -30,7 +30,7 @@ from ..mvcmodels.parameter_tag_model import ParameterTagModel
 
 class ParameterViewMixin:
     """
-    Provides stacked parameter tables for the data store form.
+    Provides stacked parameter tables for the Spine db editor.
     """
 
     def __init__(self, *args, **kwargs):

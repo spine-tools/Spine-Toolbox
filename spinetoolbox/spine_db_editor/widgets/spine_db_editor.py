@@ -634,7 +634,7 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def show_user_guide(self, checked=False):
-        """Opens Spine Toolbox documentation Data store form page in browser."""
+        """Opens Spine Toolbox documentation Spine db editor page in browser."""
         doc_url = f"{ONLINE_DOCUMENTATION_URL}/data_store_form/index.html"
         if not open_url(doc_url):
             self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
@@ -857,7 +857,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.apply_stacked_style()
         self.restore_ui()
         toc = time.process_time()
-        self.msg.emit("Data store view created in {0:.2f} seconds".format(toc - tic))
+        self.msg.emit("Spine database editor opened in {0:.2f} seconds".format(toc - tic))
         self.db_mngr.fetch_db_maps_for_listener(self, *self.db_maps)
 
     def connect_signals(self):

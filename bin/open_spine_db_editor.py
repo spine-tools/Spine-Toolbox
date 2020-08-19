@@ -29,7 +29,7 @@ class SimpleLogger(LoggerInterface):
 
 
 def main(argv):
-    """Launches Data Store view as it's own application.
+    """Launches Spine Db Editor as it's own application.
 
     Args:
         argv (list): Command line arguments

@@ -56,7 +56,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         raise NotImplementedError()
 
     def connect_data_store_form(self, data_store_form):
-        """Connects a data store form to work with this view.
+        """Connects a Spine db editor to work with this view.
 
         Args:
              data_store_form (SpineDBEditor)
@@ -86,7 +86,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._make_delegate("database", DatabaseNameDelegate)
 
     def open_in_editor(self):
-        """Opens the current index in a parameter_value editor using the connected data store form."""
+        """Opens the current index in a parameter_value editor using the connected Spine db editor."""
         index = self.currentIndex()
         self._data_store_form.show_parameter_value_editor(index)
 
@@ -248,15 +248,15 @@ class ParameterValueTableView(ParameterTableView):
 
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the object parameter_definition pane in Data Store Form."""
+    """A custom QTableView for the object parameter_definition pane in Spine db editor."""
 
 
 class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the relationship parameter_definition pane in Data Store Form."""
+    """A custom QTableView for the relationship parameter_definition pane in Spine db editor."""
 
 
 class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the object parameter_value pane in Data Store Form."""
+    """A custom QTableView for the object parameter_value pane in Spine db editor."""
 
     def create_delegates(self):
         super().create_delegates()
@@ -264,7 +264,7 @@ class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTab
 
 
 class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the relationship parameter_value pane in Data Store Form."""
+    """A custom QTableView for the relationship parameter_value pane in Spine db editor."""
 
     def create_delegates(self):
         super().create_delegates()

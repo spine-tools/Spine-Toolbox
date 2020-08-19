@@ -143,7 +143,7 @@ class Ui_Form(object):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.label_view_name.setText(QCoreApplication.translate("Form", u"Name", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_view_open_editor.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open Data store view for selected db references</p></body></html>", None))
+        self.pushButton_view_open_editor.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open selected database in Spine database editor</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_view_open_editor.setText(QCoreApplication.translate("Form", u"Open editor", None))
 #if QT_CONFIG(tooltip)

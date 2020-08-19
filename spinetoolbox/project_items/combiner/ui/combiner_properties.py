@@ -153,7 +153,7 @@ class Ui_Form(object):
 #endif // QT_CONFIG(tooltip)
         self.cancel_on_error_checkBox.setText(QCoreApplication.translate("Form", u"Cancel import on error", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_combiner_open_editor.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open Data store view for selected db references</p></body></html>", None))
+        self.pushButton_combiner_open_editor.setToolTip(QCoreApplication.translate("Form", u"<html><head/><body><p>Open selected database in Spine database editor</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_combiner_open_editor.setText(QCoreApplication.translate("Form", u"Open editor", None))
 #if QT_CONFIG(tooltip)

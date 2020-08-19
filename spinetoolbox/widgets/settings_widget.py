@@ -136,7 +136,7 @@ class DataStoreSettingsMixin:
 
 
 class DataStoreSettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
-    """A widget to change user's preferred settings, but only for the Data store form.
+    """A widget to change user's preferred settings, but only for the Spine db editor.
     """
 
     def __init__(self, qsettings):

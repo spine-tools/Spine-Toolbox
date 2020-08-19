@@ -41,7 +41,7 @@ class EntityTreeView(CopyTreeView):
         self._manage_relationships_action = None
 
     def connect_data_store_form(self, data_store_form):
-        """Connects a data store form to work with this view.
+        """Connects a Spine db editor to work with this view.
 
         Args:
              data_store_form (SpineDBEditor)
@@ -160,11 +160,11 @@ class EntityTreeView(CopyTreeView):
         self._resize_first_column_to_contents()
 
     def export_selected(self):
-        """Exports data from selected indexes using the connected data store form."""
+        """Exports data from selected indexes using the connected Spine db editor."""
         self._data_store_form.export_selected(self._selected_indexes)
 
     def remove_selected(self):
-        """Removes selected indexes using the connected data store form."""
+        """Removes selected indexes using the connected Spine db editor."""
         self._data_store_form.show_remove_entity_tree_items_form(self._selected_indexes)
 
     def manage_relationships(self):
@@ -238,7 +238,7 @@ class EntityTreeView(CopyTreeView):
         self._manage_relationships_action.setVisible(item.item_type == "relationship_class")
 
     def edit_selected(self):
-        """Edits all selected indexes using the connected data store form."""
+        """Edits all selected indexes using the connected Spine db editor."""
         self._data_store_form.edit_entity_tree_items(self._selected_indexes)
 
 
@@ -323,7 +323,7 @@ class ObjectTreeView(EntityTreeView):
         self.expand(next_index)
 
     def duplicate_object(self):
-        """Duplicate the object at the current index using the connected data store form."""
+        """Duplicate the object at the current index using the connected Spine db editor."""
         index = self.currentIndex()
         self._data_store_form.duplicate_object(index)
 

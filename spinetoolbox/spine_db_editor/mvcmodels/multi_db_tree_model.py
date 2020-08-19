@@ -20,7 +20,7 @@ from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 
 
 class MultiDBTreeModel(MinimalTreeModel):
-    """Base class for all data store view tree models."""
+    """Base class for all tree models in Spine db editor."""
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Init class.

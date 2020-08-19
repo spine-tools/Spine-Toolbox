@@ -39,7 +39,7 @@ from ...spine_db_parcel import SpineDBParcel
 
 
 class TreeViewMixin:
-    """Provides object and relationship trees for the data store form.
+    """Provides object and relationship trees for the Spine db editor.
     """
 
     _object_classes_added = Signal()

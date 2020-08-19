@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Interface logic for Data store form.
+Interface logic for Spine db editor.
 
 :authors: M. Marin (KTH)
 :date:    13.5.2020

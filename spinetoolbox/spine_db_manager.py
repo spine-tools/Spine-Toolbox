@@ -150,8 +150,8 @@ class SpineDBManager(QObject):
     def create_new_spine_database(self, url):
         if url in self._db_maps:
             message = (
-                f"The db at <b>{url}</b> is open in a Data store form. "
-                "Please close all Data store forms using this url and try again."
+                f"The db at <b>{url}</b> is open in a Spine db editor. "
+                "Please close all Spine db editors using this url and try again."
             )
             self._general_logger.error_box.emit("Error", message)
             return

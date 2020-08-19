@@ -74,11 +74,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self._menu.addAction(action)
 
     def edit_selected(self):
-        """Edits selected items using the connected data store form."""
+        """Edits selected items using the connected Spine db editor."""
         self._data_store_form.edit_entity_graph_items()
 
     def remove_selected(self):
-        """Removes selected items using the connected data store form."""
+        """Removes selected items using the connected Spine db editor."""
         self._data_store_form.remove_entity_graph_items()
 
     def mousePressEvent(self, event):
