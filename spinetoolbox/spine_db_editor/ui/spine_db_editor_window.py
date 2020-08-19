@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 ################################################################################
-## Form generated from reading UI file 'data_store_window.ui'
+## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.14.2
 ##
@@ -44,7 +44,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(969, 1029)
+        MainWindow.resize(969, 1136)
         MainWindow.setLayoutDirection(Qt.LeftToRight)
         MainWindow.setDockOptions(QMainWindow.AllowNestedDocks|QMainWindow.AllowTabbedDocks|QMainWindow.AnimatedDocks|QMainWindow.GroupedDragging)
         self.actionCommit = QAction(MainWindow)
@@ -219,7 +219,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 969, 28))
+        self.menubar.setGeometry(QRect(0, 0, 969, 26))
         self.menubar.setNativeMenuBar(False)
         self.menuSession = QMenu(self.menubar)
         self.menuSession.setObjectName(u"menuSession")

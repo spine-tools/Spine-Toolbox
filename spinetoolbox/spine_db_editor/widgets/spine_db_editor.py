@@ -76,7 +76,7 @@ class DataStoreFormBase(QMainWindow):
             *db_maps (DiffDatabaseMapping): The db map to visualize.
         """
         super().__init__(flags=Qt.Window)
-        from ..ui.data_store_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
+        from ..ui.spine_db_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_mngr = db_mngr
         self.db_maps = db_maps

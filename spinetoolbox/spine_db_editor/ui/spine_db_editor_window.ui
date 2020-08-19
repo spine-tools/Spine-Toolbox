@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>969</width>
-    <height>1029</height>
+    <height>1136</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -62,7 +62,7 @@
      <x>0</x>
      <y>0</y>
      <width>969</width>
-     <height>28</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -424,11 +424,11 @@
        <attribute name="verticalHeaderVisible">
         <bool>false</bool>
        </attribute>
-       <attribute name="verticalHeaderHighlightSections">
-        <bool>false</bool>
-       </attribute>
        <attribute name="verticalHeaderMinimumSectionSize">
         <number>20</number>
+       </attribute>
+       <attribute name="verticalHeaderHighlightSections">
+        <bool>false</bool>
        </attribute>
       </widget>
      </item>
@@ -1313,62 +1313,62 @@
   <customwidget>
    <class>EntityQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qgraphicsviews.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qgraphicsviews.h</header>
   </customwidget>
   <customwidget>
    <class>ObjectTreeView</class>
    <extends>QTreeView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>ParameterValueListTreeView</class>
    <extends>QTreeView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>FrozenTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>RelationshipTreeView</class>
    <extends>QTreeView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>PivotTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>ObjectParameterValueTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>ObjectParameterDefinitionTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>RelationshipParameterDefinitionTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>RelationshipParameterValueTableView</class>
    <extends>QTableView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>AlternativeScenarioTreeView</class>
    <extends>QTreeView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>ParameterTagTreeView</class>
    <extends>QTreeView</extends>
-   <header>spinetoolbox/data_store_form/widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
