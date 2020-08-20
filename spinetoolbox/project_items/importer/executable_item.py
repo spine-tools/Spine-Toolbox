@@ -60,12 +60,16 @@ class ExecutableItem(ExecutableItemBase, QObject):
     def stop_execution(self):
         """Stops execution."""
         super().stop_execution()
-        if not self._worker:
-            return
-        self._worker.quit()
-        self._worker.wait()
-        self._worker.deleteLater()
-        self._worker = None
+        if self._loop:
+            if self._loop.isRunning():
+                self._loop.exit(-1)
+        if self._worker:
+            self._worker.deleteLater()
+            self._worker = None
+        if self._worker_thread:
+            self._worker_thread.quit()
+            self._worker_thread.wait()
+            self._worker_thread = None
 
     def _execute_backward(self, resources):
         """See base class."""
@@ -100,7 +104,13 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._worker.import_finished.connect(self._loop.quit)
         self._worker_thread.started.connect(self._worker.do_work)
         self._worker_thread.start()
-        self._loop.exec_()
+        loop_retval = self._loop.exec_()
+        if loop_retval:
+            # If retval is not 0, loop exited with nonzero return value. Should happen when
+            # user stops execution
+            self._logger.msg_error.emit(f"Importer {self.name} stopped")
+            self._worker_succeeded = -1
+            return self._worker_succeeded
         if not self._worker_succeeded:
             self._logger.msg_error.emit(f"Executing Importer {self.name} failed")
         else:
