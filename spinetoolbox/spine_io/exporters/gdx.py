@@ -179,7 +179,7 @@ class Parameter:
         self.domain_names = domain_names
         if len(indexes) != len(values):
             raise GdxExportException("Parameter index and value length mismatch.")
-        if values and not all([isinstance(value, type(values[0])) for value in values[1:]]):
+        if values and not all([isinstance(value, type(values[0])) or value is None for value in values[1:]]):
             raise GdxExportException("Not all values are of the same type.")
         self.data = dict(zip(indexes, values))
 
@@ -658,7 +658,11 @@ def merge_parameters(parameters, merging_settings):
                 expanded_index = base_index[:index_position] + (name,) + base_index[index_position:]
                 indexes.append(expanded_index)
                 values.append(value)
-        merged[parameter_name] = Parameter(merged_domain_names, indexes, values)
+        try:
+            parameter = Parameter(merged_domain_names, indexes, values)
+        except GdxExportException as error:
+            raise GdxExportException(f"Error while merging parameter '{parameter_name}': {error}")
+        merged[parameter_name] = parameter
     return merged
 
 
