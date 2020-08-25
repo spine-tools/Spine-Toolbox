@@ -151,7 +151,7 @@ class AlternativeScenarioModel(MinimalTreeModel):
         Returns:
             QMimeData
         """
-        items = [self.item_from_index(i) for i in indexes]
+        items = {self.item_from_index(ind): None for ind in indexes}  # NOTE: this avoids dupes and keeps order
         d = {}
         for item in items:
             parent_item = item.parent_item
