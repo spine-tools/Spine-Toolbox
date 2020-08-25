@@ -206,7 +206,7 @@ class SpineDBManager(QObject):
         if ds_form is None:
             db_maps = [self.get_db_map(url, logger, codename=codename) for url, codename in db_url_codenames.items()]
             if not all(db_maps):
-                return
+                return False
             self._ds_forms[key] = ds_form = SpineDBEditor(self, *db_maps)
             ds_form.destroyed.connect(lambda: self._ds_forms.pop(key))
             ds_form.show()
@@ -214,6 +214,7 @@ class SpineDBManager(QObject):
             if ds_form.windowState() & Qt.WindowMinimized:
                 ds_form.setWindowState(ds_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
             ds_form.activateWindow()
+        return True
 
     def get_db_map(self, url, logger, upgrade=False, codename=None):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
