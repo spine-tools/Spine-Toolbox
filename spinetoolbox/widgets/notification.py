@@ -24,7 +24,7 @@ from PySide2.QtGui import QFont
 class Notification(QWidget):
     """Custom pop-up notification widget with fade-in and fade-out effect."""
 
-    def __init__(self, parent, txt, anim_duration=500, life_span=None):
+    def __init__(self, parent, txt, anim_duration=500, life_span=None, alignment=Qt.AlignCenter):
         """
 
         Args:
@@ -43,7 +43,7 @@ class Notification(QWidget):
         self._parent = parent
         self.label = QLabel(txt)
         self.label.setMaximumSize(parent.size())
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(alignment)
         self.label.setWordWrap(True)
         self.label.setMargin(8)
         self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -65,6 +65,7 @@ class Notification(QWidget):
             "border-style: groove; border-radius: 8px;}"
         )
         self.setStyleSheet(ss)
+        self.setAcceptDrops(True)
         self.effect = QGraphicsOpacityEffect()
         self.setGraphicsEffect(self.effect)
         self.effect.setOpacity(0.0)
@@ -111,11 +112,15 @@ class Notification(QWidget):
     def start_self_destruction(self):
         """Starts fade-out animation and closing of the notification."""
         self.fade_out_anim.start(QPropertyAnimation.DeleteWhenStopped)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents)
 
     def enterEvent(self, e):
         super().enterEvent(e)
         self.start_self_destruction()
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+
+    def dragEnterEvent(self, e):
+        super().dragEnterEvent(e)
+        self.start_self_destruction()
 
     def remaining_time(self):
         if self.timer.isActive():

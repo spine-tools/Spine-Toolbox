@@ -136,10 +136,13 @@ class AlternativeScenarioModel(MinimalTreeModel):
         self._remove_leaves(db_map_data, "scenario")
 
     @staticmethod
-    def db_row(item):
+    def db_item(item):
         while item.item_type != "db":
             item = item.parent_item
-        return item.child_number()
+        return item
+
+    def db_row(self, item):
+        return self.db_item(item).child_number()
 
     def supportedDropActions(self):
         return Qt.CopyAction | Qt.MoveAction
