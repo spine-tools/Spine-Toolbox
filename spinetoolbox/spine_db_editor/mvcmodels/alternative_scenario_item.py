@@ -103,7 +103,10 @@ class LeafItem(NonLazyTreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole):
-            return self.item_data.get(self.header_data(column))
+            data = self.item_data.get(self.header_data(column))
+            if data is None:
+                data = ""
+            return data
         return super().data(column, role)
 
     def set_data(self, column, value, role):

@@ -77,7 +77,10 @@ class TagItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole):
-            return self.item_data.get(self.header_data(column))
+            data = self.item_data.get(self.header_data(column))
+            if data is None:
+                data = ""
+            return data
         if role == Qt.DecorationRole and column == 0:
             engine = CharIconEngine("\uf02b", 0)
             return QIcon(engine.pixmap())
