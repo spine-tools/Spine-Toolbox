@@ -418,6 +418,16 @@ class AlternativeScenarioTreeView(ItemTreeView):
         """Initialize the view."""
         super().__init__(parent=parent)
         self._selected_alternative_ids = dict()
+        self.setMouseTracking(True)
+
+    def mouseMoveEvent(self, e):
+        super().mouseMoveEvent(e)
+        index = self.indexAt(e.pos())
+        if not index.isValid():
+            return
+        item = self.model().item_from_index(index)
+        cursor = Qt.OpenHandCursor if item.item_type == "alternative" else Qt.ArrowCursor
+        self.setCursor(cursor)
 
     def connect_signals(self):
         """Connects signals."""
@@ -460,7 +470,6 @@ class AlternativeScenarioTreeView(ItemTreeView):
             self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
         for db_map, ids in selected_db_map_scen_alt_ids.items():
             self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
-        self._selected_alternative_ids.update({db_map: ids for db_map, ids in self._selected_alternative_ids.items()})
         self.alternative_selection_changed.emit(self._selected_alternative_ids)
 
     def remove_selected(self):
