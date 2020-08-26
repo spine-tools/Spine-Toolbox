@@ -181,7 +181,7 @@ class AlternativeLeafItem(LastGrayMixin, EditableMixin, LeafItem):
 
     @property
     def tool_tip(self):
-        return "<p>Drag this item and drop it onto a <b>scenario</b> item below to create a scenario alternative.</p>"
+        return "<p>Drag this item and drop it onto a <b>scenario</b> item below to create a scenario alternative</p>"
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_alternatives({self.db_map: [db_item]})
@@ -202,7 +202,7 @@ class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
 
     @property
     def tool_tip(self):
-        return "<p>Drag an <b>alternative</b> item from above and drop it here to create a scenario alternative.</p>"
+        return "<p>Drag an <b>alternative</b> item from above and drop it here to create a scenario alternative</p>"
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_scenarios({self.db_map: [db_item]})
@@ -268,7 +268,7 @@ class ScenarioAlternativeLeafItem(LeafItem):
 
     @property
     def tool_tip(self):
-        return "<p>Drag and drop this item to reorder scenario alternatives.</p>"
+        return "<p>Drag and drop this item to reorder scenario alternatives</p>"
 
     @property
     def id(self):

@@ -81,7 +81,7 @@ The graph automatically includes relationships whenever *all* the member objects
 (even if these relationships are not selected in *Object tree* or *Relationship tree*).
 You can change this behavior to automatically include relationships
 whenever *any* of the member objects are included.
-To do this, enable **Full relationship expansion** via the **Graph** menu,
+To do this, enable **Show cascading relationships** via the **Graph** menu,
 or via *Entity graph*'s context menu.
 
 .. tip:: To *extend* the selection in *Object tree* or *Relationship tree*, press and hold the **Ctrl** key

@@ -55,7 +55,7 @@ class GraphViewMixin:
         self._full_relationship_expansion = (
             self.qsettings.value("appSettings/fullRelationshipExpansion", defaultValue="false") == "true"
         )
-        self.ui.actionFull_relationship_expansion.setChecked(self._full_relationship_expansion)
+        self.ui.actionShow_cascading_relationships.setChecked(self._full_relationship_expansion)
         self._persistent = False
         self.scene = None
         self.object_items = list()
@@ -126,7 +126,7 @@ class GraphViewMixin:
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
         self.ui.actionExport_graph_as_pdf.triggered.connect(self.export_as_pdf)
         self.ui.actionRebuild_graph.triggered.connect(self.build_graph)
-        self.ui.actionFull_relationship_expansion.toggled.connect(self.set_full_relationship_expansion)
+        self.ui.actionShow_cascading_relationships.toggled.connect(self.set_full_relationship_expansion)
         self.ui.menuAdd_parameter_heat_map.triggered.connect(self.add_heat_map)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
