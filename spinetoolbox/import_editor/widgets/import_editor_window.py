@@ -178,7 +178,7 @@ class ImportEditorWindow(QMainWindow):
         if not filename[0]:
             return
         with open(filename[0], 'w') as file_p:
-            settings = self.get_settings_dict()
+            settings = self._editor.get_settings_dict()
             json.dump(settings, file_p)
         self._ui.statusbar.showMessage(f"Mapping saved to: {filename[0]}", 10000)
 
