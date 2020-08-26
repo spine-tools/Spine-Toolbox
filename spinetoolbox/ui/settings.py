@@ -610,7 +610,7 @@ class Ui_SettingsForm(object):
         ___qlistwidgetitem2 = self.listWidget.item(2)
         ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Tools", None));
         ___qlistwidgetitem3 = self.listWidget.item(3)
-        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"View", None));
+        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None));
         self.listWidget.setSortingEnabled(__sortingEnabled)
 
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"General", None))

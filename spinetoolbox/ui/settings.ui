@@ -188,7 +188,7 @@
        </item>
        <item>
         <property name="text">
-         <string>View</string>
+         <string>Db editor</string>
         </property>
         <property name="icon">
          <iconset resource="resources/resources_icons.qrc">
