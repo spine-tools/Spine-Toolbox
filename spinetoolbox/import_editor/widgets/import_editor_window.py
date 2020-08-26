@@ -164,7 +164,7 @@ class ImportEditorWindow(QMainWindow):
         expected_options = ("table_mappings", "table_types", "table_row_types", "table_options", "selected_tables")
         if not isinstance(settings, dict) or not any(key in expected_options for key in settings.keys()):
             self._ui.statusbar.showMessage(f"{filename[0]} does not contain mapping options", 10000)
-        self.use_settings(settings)
+        self._editor._restore_mappings(settings)
         self._undo_stack.clear()
         self._ui.statusbar.showMessage(f"Mapping loaded from {filename[0]}", 10000)
 
