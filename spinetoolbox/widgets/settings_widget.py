@@ -45,8 +45,8 @@ class SettingsWidgetBase(QWidget):
 
     def connect_signals(self):
         """Connect signals."""
-        self.ui.pushButton_ok.clicked.connect(self.handle_ok_clicked)
-        self.ui.pushButton_cancel.clicked.connect(self.close)
+        self.ui.pushButton_ok.clicked.connect(self.save_and_close)
+        self.ui.pushButton_cancel.clicked.connect(self.update_ui_and_close)
 
     def keyPressEvent(self, e):
         """Close settings form when escape key is pressed.
@@ -55,7 +55,7 @@ class SettingsWidgetBase(QWidget):
             e (QKeyEvent): Received key press event.
         """
         if e.key() == Qt.Key_Escape:
-            self.close()
+            self.update_ui_and_close()
 
     def mousePressEvent(self, e):
         """Save mouse position at the start of dragging.
@@ -96,8 +96,37 @@ class SettingsWidgetBase(QWidget):
         self.move(newpos)
         self._mouseMovePos = globalpos
 
+    def update_ui(self):
+        """Updates UI to reflect current settings. Called when the user choses to cancel their changes.
+        Undoes all temporary UI changes that resulted from the user playing with certain settings."""
 
-class DataStoreSettingsMixin:
+    def save_settings(self):
+        """Gets selections and saves them to persistent memory."""
+
+    @Slot(bool)
+    def update_ui_and_close(self, checked=False):
+        """Updates UI to reflect current settings and close."""
+        self.update_ui()
+        self.close()
+
+    @Slot(bool)
+    def save_and_close(self, checked=False):
+        """Saves settings and close."""
+        self.save_settings()
+        self.close()
+
+
+class SpineDBEditorSettingsMixin:
+    def connect_signals(self):
+        """Connect signals."""
+        super().connect_signals()
+        self.ui.checkBox_show_cascading_relationships.clicked.connect(self.set_show_cascading_relationships)
+
+    @Slot(bool)
+    def set_show_cascading_relationships(self, checked=False):
+        for db_editor in self._db_mngr.db_editors:
+            db_editor.set_show_cascading_relationships(checked)
+
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
@@ -105,24 +134,24 @@ class DataStoreSettingsMixin:
         smooth_zoom = self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false")
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
+        show_cascading_relationships = self._qsettings.value(
+            "appSettings/showCascadingRelationships", defaultValue="true"
+        )
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
         elif commit_at_exit == 1:
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         else:  # commit_at_exit == "2":
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
-        if sticky_selection == "true":
-            self.ui.checkBox_object_tree_sticky_selection.setCheckState(Qt.Checked)
-        if smooth_zoom == "true":
-            self.ui.checkBox_smooth_entity_graph_zoom.setCheckState(Qt.Checked)
-        if smooth_rotation == "true":
-            self.ui.checkBox_smooth_entity_graph_rotation.setCheckState(Qt.Checked)
-        if relationship_items_follow == "true":
-            self.ui.checkBox_relationship_items_follow.setCheckState(Qt.Checked)
+        self.ui.checkBox_object_tree_sticky_selection.setChecked(sticky_selection == "true")
+        self.ui.checkBox_smooth_entity_graph_zoom.setChecked(smooth_zoom == "true")
+        self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
+        self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
+        self.ui.checkBox_show_cascading_relationships.setChecked(show_cascading_relationships == "true")
 
-    @Slot()
-    def handle_ok_clicked(self):
+    def save_settings(self):
         """Get selections and save them to persistent memory."""
+        super().save_settings()
         commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
         sticky_selection = "true" if int(self.ui.checkBox_object_tree_sticky_selection.checkState()) else "false"
@@ -133,28 +162,37 @@ class DataStoreSettingsMixin:
         self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
         relationship_items_follow = "true" if int(self.ui.checkBox_relationship_items_follow.checkState()) else "false"
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
+        show_cascading_relationships = (
+            "true" if int(self.ui.checkBox_show_cascading_relationships.checkState()) else "false"
+        )
+        self._qsettings.setValue("appSettings/showCascadingRelationships", show_cascading_relationships)
+
+    def update_ui(self):
+        super().update_ui()
+        show_cascading_relationships = (
+            self._qsettings.value("appSettings/showCascadingRelationships", defaultValue="true") == "true"
+        )
+        self.set_show_cascading_relationships(show_cascading_relationships)
 
 
-class DataStoreSettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
+class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     """A widget to change user's preferred settings, but only for the Spine db editor.
     """
 
-    def __init__(self, qsettings):
+    def __init__(self, db_mngr):
         """Initialize class."""
-        super().__init__(qsettings)
-        self.ui.stackedWidget.setCurrentWidget(self.ui.Views)
+        super().__init__(db_mngr.qsettings)
+        self._db_mngr = db_mngr
+        self.ui.stackedWidget.setCurrentWidget(self.ui.SpineDBEditor)
         self.ui.listWidget.hide()
         self.connect_signals()
+
+    def show(self):
+        super().show()
         self.read_settings()
 
-    @Slot()
-    def handle_ok_clicked(self):
-        """Get selections and save them to persistent memory."""
-        super().handle_ok_clicked()
-        self.close()
 
-
-class SettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
+class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     """A widget to change user's preferred settings."""
 
     def __init__(self, toolbox):
@@ -412,7 +450,7 @@ class SettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
             self.ui.textEdit_project_description.setText(self._project.description)
 
     @Slot()
-    def handle_ok_clicked(self):
+    def save_settings(self):
         """Get selections and save them to persistent memory.
         Note: On Linux, True and False are saved as boolean values into QSettings.
         On Windows, booleans and integers are saved as strings. To make it consistent,
@@ -421,7 +459,7 @@ class SettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
         # checkBox check states are casted from integers to string because of Linux
         # General
-        super().handle_ok_clicked()
+        super().save_settings()
         open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
         exit_prompt = str(int(self.ui.checkBox_exit_prompt.checkState()))
@@ -478,7 +516,6 @@ class SettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
         self.check_if_python_env_changed(python_path)
         # Project
         self.update_project_settings()
-        self.close()
 
     def update_project_settings(self):
         """Update project name and description if these have been changed."""
@@ -540,12 +577,8 @@ class SettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
             return False
         return True
 
-    def closeEvent(self, event=None):
-        """Handle close window.
-
-        Args:
-            event (QEvent): Closing event if 'X' is clicked.
-        """
+    def update_ui(self):
+        super().update_ui()
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
@@ -562,5 +595,3 @@ class SettingsWidget(DataStoreSettingsMixin, SettingsWidgetBase):
         else:
             self.bg_color = bg_color
         self.update_bg_color()
-        if event:
-            event.accept()

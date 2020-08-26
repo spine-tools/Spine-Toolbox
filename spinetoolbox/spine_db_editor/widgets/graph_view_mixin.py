@@ -52,10 +52,10 @@ class GraphViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.graph_db_map = self.first_db_map
-        self._full_relationship_expansion = (
-            self.qsettings.value("appSettings/fullRelationshipExpansion", defaultValue="false") == "true"
+        self._show_cascading_relationships = (
+            self.qsettings.value("appSettings/showCascadingRelationships", defaultValue="false") == "true"
         )
-        self.ui.actionShow_cascading_relationships.setChecked(self._full_relationship_expansion)
+        self.ui.actionShow_cascading_relationships.setChecked(self._show_cascading_relationships)
         self._persistent = False
         self.scene = None
         self.object_items = list()
@@ -126,7 +126,7 @@ class GraphViewMixin:
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
         self.ui.actionExport_graph_as_pdf.triggered.connect(self.export_as_pdf)
         self.ui.actionRebuild_graph.triggered.connect(self.build_graph)
-        self.ui.actionShow_cascading_relationships.toggled.connect(self.set_full_relationship_expansion)
+        self.ui.actionShow_cascading_relationships.toggled.connect(self.set_show_cascading_relationships)
         self.ui.menuAdd_parameter_heat_map.triggered.connect(self.add_heat_map)
         # Dock Widgets menu action
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_graph_about_to_show)
@@ -150,9 +150,9 @@ class GraphViewMixin:
         self.graph_selection_changed.emit({"object": selected_objs, "relationship": selected_rels})
 
     @Slot(bool)
-    def set_full_relationship_expansion(self, checked):
-        self._full_relationship_expansion = checked
-        self.qsettings.setValue("appSettings/fullRelationshipExpansion", "true" if checked else "false")
+    def set_show_cascading_relationships(self, checked):
+        self.ui.actionShow_cascading_relationships.setChecked(checked)
+        self._show_cascading_relationships = checked
         self.build_graph()
 
     def setup_widget_actions(self):
@@ -387,7 +387,7 @@ class GraphViewMixin:
         return selected_object_ids, selected_relationship_ids
 
     def _get_all_relationships_for_graph(self, object_ids, relationship_ids):
-        cond = any if self._full_relationship_expansion else all
+        cond = any if self._show_cascading_relationships else all
         return [
             x
             for x in self.db_mngr.get_items(self.graph_db_map, "relationship")

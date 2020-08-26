@@ -46,7 +46,7 @@ class CustomQLineEdit(QLineEdit):
     """A custom QLineEdit that accepts file drops and displays the path.
 
     Attributes:
-        parent (QMainWindow): Parent for line edit widget (DataStoreWidget)
+        parent (QMainWindow): Parent for line edit widget
     """
 
     file_dropped = Signal("QString", name="file_dropped")
