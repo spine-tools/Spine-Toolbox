@@ -211,7 +211,7 @@ class TestDataStore(unittest.TestCase):
         # Open form
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             self.ds_properties_ui.pushButton_ds_open_editor.click()
-        ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
+        ds_form = self.ds._project.db_mngr._db_editors[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, SpineDBEditor)
         expected_url = "sqlite:///" + temp_db_path
         self.assertEqual(expected_url, str(ds_form.db_url))
@@ -232,7 +232,7 @@ class TestDataStore(unittest.TestCase):
         # Open form
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             self.ds_properties_ui.pushButton_ds_open_editor.click()
-        ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
+        ds_form = self.ds._project.db_mngr._db_editors[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, SpineDBEditor)
         expected_url = "sqlite:///" + temp_db_path
         self.assertEqual(expected_url, str(ds_form.db_maps[0].db_url))
