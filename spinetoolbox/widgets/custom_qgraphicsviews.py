@@ -450,13 +450,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_item = dst_leaf_item.project_item
         dst_item.notify_destination(src_item)
 
-    @Slot("QVariant")
-    def connect_engine_signals(self, engine):
-        """Connects signals needed for icon animations from given engine."""
-        engine.dag_node_execution_started.connect(self._start_animation)
-        engine.dag_node_execution_finished.connect(self._stop_animation)
-        engine.dag_node_execution_finished.connect(self._run_leave_animation)
-
     @Slot(str, "QVariant")
     def _start_animation(self, item_name, direction):
         """Starts item icon animation when executing forward."""

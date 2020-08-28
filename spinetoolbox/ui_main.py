@@ -1802,5 +1802,4 @@ class ToolboxUI(QMainWindow):
 
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
-        self._project.dag_execution_about_to_start.connect(self.ui.graphicsView.connect_engine_signals)
         self._project.project_execution_about_to_start.connect(self._scroll_event_log_to_end)

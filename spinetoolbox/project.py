@@ -41,8 +41,6 @@ class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
     dag_execution_finished = Signal()
-    dag_execution_about_to_start = Signal("QVariant")
-    """Emitted just before an engine runs. Provides a reference to the engine."""
     project_execution_about_to_start = Signal()
     """Emitted just before the entire project is executed."""
 
@@ -495,8 +493,10 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
+        self.engine.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
+        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
+        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
         self.engine.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
-        self.dag_execution_about_to_start.emit(self.engine)
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
@@ -506,6 +506,9 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
+        self.engine.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
+        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
+        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._run_leave_animation)
         self.engine.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
 
     def execute_selected(self):
