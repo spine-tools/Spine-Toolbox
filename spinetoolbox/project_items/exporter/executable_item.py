@@ -87,7 +87,6 @@ class ExecutableItem(ExecutableItemBase):
                 gdx.to_gdx_file(
                     database_map,
                     out_path,
-                    settings_pack.indexing_domains + settings_pack.merging_domains,
                     settings_pack.settings,
                     settings_pack.indexing_settings,
                     settings_pack.merging_settings,

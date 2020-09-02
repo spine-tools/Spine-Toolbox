@@ -26,6 +26,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Import editor now supports multidimensional maps. The number of dimensions can be set using the 
   *Map dimensions* spin box in mappings options.
 - Data Store Form is now called 'Spine database editor'
+- Indexed parameter handling has been overhauled in Exporter allowing parameters to share indexing domains.
+  **Note**: Due to numerous changes in the backend, Exporters in old project files will not load properly
+  and need to be re-configured.
 
 ### Deprecated
 ### Removed
