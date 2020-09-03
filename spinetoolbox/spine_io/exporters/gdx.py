@@ -2230,28 +2230,31 @@ class SetSettings:
         Returns:
             SetSettings: restored settings
         """
-        domain_dicts = dictionary.get("domains", {})
-        domain_names = set()
-        domain_tiers = dict()
-        records = dict()
-        metadatas = dict()
-        for name, domain_dict in domain_dicts.items():
-            domain_names.add(name)
-            domain_tiers[name] = domain_dict["tier"]
-            records[name] = _records_from_dict(domain_dict["records"])
-            metadatas[name] = SetMetadata.from_dict(domain_dict["metadata"])
-        set_dicts = dictionary.get("sets", {})
-        set_names = set()
-        set_tiers = dict()
-        for name, set_dict in set_dicts.items():
-            set_names.add(name)
-            set_tiers[name] = set_dict["tier"]
-            records[name] = _records_from_dict(set_dict["records"])
-            metadatas[name] = SetMetadata.from_dict(set_dict["metadata"])
-        global_parameters_domain_name = dictionary.get("global_parameters_domain_name", "")
-        settings = SetSettings(
-            domain_names, set_names, records, domain_tiers, set_tiers, metadatas, global_parameters_domain_name
-        )
+        try:
+            domain_dicts = dictionary["domains"]
+            domain_names = set()
+            domain_tiers = dict()
+            records = dict()
+            metadatas = dict()
+            for name, domain_dict in domain_dicts.items():
+                domain_names.add(name)
+                domain_tiers[name] = domain_dict["tier"]
+                records[name] = _records_from_dict(domain_dict["records"])
+                metadatas[name] = SetMetadata.from_dict(domain_dict["metadata"])
+            set_dicts = dictionary["sets"]
+            set_names = set()
+            set_tiers = dict()
+            for name, set_dict in set_dicts.items():
+                set_names.add(name)
+                set_tiers[name] = set_dict["tier"]
+                records[name] = _records_from_dict(set_dict["records"])
+                metadatas[name] = SetMetadata.from_dict(set_dict["metadata"])
+            global_parameters_domain_name = dictionary["global_parameters_domain_name"]
+            settings = SetSettings(
+                domain_names, set_names, records, domain_tiers, set_tiers, metadatas, global_parameters_domain_name
+            )
+        except KeyError as missing_key:
+            raise GdxExportException(f"'{missing_key}' field missing from settings dict.")
         return settings
 
 

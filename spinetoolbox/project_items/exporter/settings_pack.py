@@ -90,7 +90,11 @@ class SettingsPack(QObject):
         pack.state = SettingsState(pack_dict["state"])
         if pack.state not in (SettingsState.OK, SettingsState.INDEXING_PROBLEM):
             return pack
-        pack.settings = gdx.SetSettings.from_dict(pack_dict["settings"])
+        try:
+            pack.settings = gdx.SetSettings.from_dict(pack_dict["settings"])
+        except gdx.GdxExportException as error:
+            logger.msg_error.emit(f"Failed to fully restore Exporter settings: {error}")
+            return pack
         try:
             db_map = DatabaseMapping(database_url)
             value_type_logger = _UnsupportedValueTypeLogger(
