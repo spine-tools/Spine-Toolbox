@@ -397,6 +397,10 @@ class ToolboxUI(QMainWindow):
         # Update recentProjectStorages
         OpenProjectDialog.update_recents(os.path.abspath(os.path.join(location, os.path.pardir)), self.qsettings())
         self.save_project()
+        # Clear text browsers
+        self.ui.textBrowser_eventlog.clear()
+        self.ui.textBrowser_process_output.clear()
+        self.msg.emit("New project <b>{0}</b> is now open".format(self._project.name))
 
     @Slot()
     def open_project(self, load_dir=None, clear_logs=True):
