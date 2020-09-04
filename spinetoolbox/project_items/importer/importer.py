@@ -387,7 +387,12 @@ class Importer(ProjectItem):
                 f"<b>{source_item.name}</b> using item <b>{self.name}</b>."
             )
         elif source_item.item_type() == "Data Store":
-            self._logger.msg.emit("Link established.")
+            self._logger.msg.emit("Link established")
+        elif source_item.item_type() == "Gimlet":
+            self._logger.msg.emit(
+                "Link established. You can define mappings on output files from "
+                f"<b>{source_item.name}</b> using item <b>{self.name}</b>."
+            )
         else:
             super().notify_destination(source_item)
 

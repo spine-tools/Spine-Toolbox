@@ -24,6 +24,7 @@ from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.helpers import open_url
+from spinetoolbox.project_items.shared.helpers import split_cmdline_args
 from .commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
 from .item_info import ItemInfo
 from .tool_specifications import ToolSpecification
@@ -164,7 +165,7 @@ class Tool(ProjectItem):
         to undo stack if the args were changed.
         """
         txt = self._properties_ui.lineEdit_tool_args.text()
-        cmd_line_args = ToolSpecification.split_cmdline_args(txt)
+        cmd_line_args = split_cmdline_args(txt)
         if self.cmd_line_args == cmd_line_args:
             return
         self._toolbox.undo_stack.push(UpdateToolCmdLineArgsCommand(self, cmd_line_args))
@@ -482,7 +483,7 @@ class Tool(ProjectItem):
         else:
             d["tool"] = self.specification().name
         d["execute_in_work"] = self.execute_in_work
-        d["cmd_line_args"] = ToolSpecification.split_cmdline_args(" ".join(self.cmd_line_args))
+        d["cmd_line_args"] = split_cmdline_args(" ".join(self.cmd_line_args))
         return d
 
     def custom_context_menu(self, parent, pos):
@@ -548,7 +549,12 @@ class Tool(ProjectItem):
                 f"be passed to Tool <b>{self.name}</b> when executing."
             )
         elif source_item.item_type() == "Tool":
-            self._logger.msg.emit("Link established.")
+            self._logger.msg.emit("Link established")
+        elif source_item.item_type() == "Gimlet":
+            self._logger.msg.emit(
+                f"Link established. Tool <b>{self.name}</b> will look for input "
+                f"files from <b>{source_item.name}</b>."
+            )
         else:
             super().notify_destination(source_item)
 

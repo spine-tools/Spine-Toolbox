@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - It is now possible to execute a project from the command line without opening the Toolbox GUI.
   The headless execution is enabled by the new command line option ``--execute-only``.
 - Toolbox now supports scenarios and alternatives. They can be accessed via Data store view's new Alternative tree.
+- New Project Item: Gimlet. Can be used to run any command as part of the workflow 
+  with or without a shell. Supported shells at the moment are cmd and powershell for 
+  Windows and bash for other OS's. 
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 

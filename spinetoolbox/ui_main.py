@@ -81,6 +81,7 @@ from .helpers import (
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
+# from .project_items import data_store, data_connection, tool, view, importer, exporter, gimlet
 from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, UpdateSpecificationCommand
 from .configuration_assistants import spine_model
 

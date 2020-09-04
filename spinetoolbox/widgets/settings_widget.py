@@ -458,7 +458,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
         # checkBox check states are casted from integers to string because of Linux
-        # General
         super().save_settings()
         open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
