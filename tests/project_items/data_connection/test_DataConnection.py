@@ -72,10 +72,10 @@ class TestDataConnection(unittest.TestCase):
         source_item.name = "source name"
         source_item.item_type = MagicMock(return_value="Importer")
         self.data_connection.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = MagicMock(return_value="Data Store")
         self.data_connection.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = MagicMock(return_value="Exporter")
         self.data_connection.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(

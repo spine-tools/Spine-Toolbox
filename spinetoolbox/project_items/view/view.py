@@ -135,7 +135,7 @@ class View(ProjectItem):
         """See base class."""
         if source_item.item_type() == "Tool":
             self._logger.msg.emit(
-                "Link established. You can visualize the ouput from Tool "
+                "Link established. You can visualize the output from Tool "
                 f"<b>{source_item.name}</b> in View <b>{self.name}</b>."
             )
         elif source_item.item_type() == "Data Store":

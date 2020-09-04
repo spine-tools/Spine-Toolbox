@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+######################################################################################################################
+# Copyright (C) 2017-2020 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
+######################################################################################################################
+-->
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>395</width>
+    <height>396</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QLabel" name="label_gimlet_name">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <pointsize>10</pointsize>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: #ecd8c6;</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Sunken</enum>
+     </property>
+     <property name="text">
+      <string>Name</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QScrollArea" name="scrollArea_4">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents_4">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>393</width>
+        <height>374</height>
+       </rect>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QCheckBox" name="checkBox_shell">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, command is executed with the specified shell.&lt;/p&gt;&lt;p&gt;If unchecked, command is executed without a shell.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Shell</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="comboBox_shell">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="PropertyQLineEdit" name="lineEdit_cmd">
+         <property name="placeholderText">
+          <string>Command</string>
+         </property>
+         <property name="clearButtonEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTreeView" name="treeView_files">
+         <property name="textElideMode">
+          <enum>Qt::ElideLeft</enum>
+         </property>
+         <property name="indentation">
+          <number>5</number>
+         </property>
+         <property name="rootIsDecorated">
+          <bool>false</bool>
+         </property>
+         <property name="uniformRowHeights">
+          <bool>true</bool>
+         </property>
+         <attribute name="headerMinimumSectionSize">
+          <number>54</number>
+         </attribute>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line_5">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Work directory</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_16">
+         <item>
+          <widget class="QRadioButton" name="radioButton_default">
+           <property name="text">
+            <string>Default</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_unique">
+           <property name="text">
+            <string>Unique</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_12">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QToolButton" name="toolButton_gimlet_open_dir">
+           <property name="minimumSize">
+            <size>
+             <width>22</width>
+             <height>22</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>22</width>
+             <height>22</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this View's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="icon">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
+             <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PropertyQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>spinetoolbox/widgets/custom_qlineedits.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>scrollArea_4</tabstop>
+  <tabstop>checkBox_shell</tabstop>
+  <tabstop>comboBox_shell</tabstop>
+  <tabstop>lineEdit_cmd</tabstop>
+  <tabstop>treeView_files</tabstop>
+  <tabstop>radioButton_default</tabstop>
+  <tabstop>radioButton_unique</tabstop>
+  <tabstop>toolButton_gimlet_open_dir</tabstop>
+ </tabstops>
+ <resources>
+  <include location="../../../ui/resources/resources_icons.qrc"/>
+ </resources>
+ <connections/>
+</ui>

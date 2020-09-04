@@ -47,6 +47,9 @@ ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/latest"
 # Tool output directory name
 TOOL_OUTPUT_DIR = "output"
 
+# Gimlet default work directory name
+GIMLET_WORK_DIR_NAME = "work"
+
 _on_windows = sys.platform == "win32"
 
 

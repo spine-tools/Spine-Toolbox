@@ -25,7 +25,8 @@ from PySide2.QtCore import Slot, Qt, QFileInfo
 from spinetoolbox.config import STATUSBAR_SS, TREEVIEW_HEADER_SS
 from spinetoolbox.helpers import busy_effect, open_url
 from ..item_info import ItemInfo
-from ..tool_specifications import CmdlineTag, TOOL_TYPES, REQUIRED_KEYS, CMDLINE_TAG_EDGE, ToolSpecification
+from spinetoolbox.project_items.shared.helpers import CmdlineTag, CMDLINE_TAG_EDGE, split_cmdline_args
+from ..tool_specifications import TOOL_TYPES, REQUIRED_KEYS, ToolSpecification
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
@@ -506,7 +507,7 @@ class ToolSpecificationWidget(QWidget):
         self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
         self.definition["outputfiles"] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
         # Strip whitespace from args before saving it to JSON
-        self.definition["cmdline_args"] = ToolSpecification.split_cmdline_args(self.ui.lineEdit_args.text())
+        self.definition["cmdline_args"] = split_cmdline_args(self.ui.lineEdit_args.text())
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k), 3000)
