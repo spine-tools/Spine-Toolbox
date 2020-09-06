@@ -33,6 +33,8 @@ from .edit_or_remove_items_dialogs import (
     EditRelationshipsDialog,
     RemoveEntitiesDialog,
 )
+from ..mvcmodels.tool_feature_model import ToolFeatureModel
+from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.alternative_scenario_model import AlternativeScenarioModel
 from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
 from ...spine_db_parcel import SpineDBParcel
@@ -50,16 +52,23 @@ class TreeViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Selected ids
-        self.alternative_scenario_model = AlternativeScenarioModel(self, self.db_mngr, *self.db_maps)
         self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *self.db_maps)
         self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
+        self.tool_feature_model = ToolFeatureModel(self, self.db_mngr, *self.db_maps)
+        self.alternative_scenario_model = AlternativeScenarioModel(self, self.db_mngr, *self.db_maps)
+        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
+        # Set models
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
+        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
         self.ui.treeView_alternative_scenario.setModel(self.alternative_scenario_model)
-        self.ui.treeView_alternative_scenario.connect_data_store_form(self)
-        self.ui.treeView_object.connect_data_store_form(self)
-        self.ui.treeView_relationship.connect_data_store_form(self)
+        self.ui.treeView_tool_feature.setModel(self.tool_feature_model)
+        # Connect DS form to view
+        self.ui.treeView_object.connect_spine_db_editor(self)
+        self.ui.treeView_relationship.connect_spine_db_editor(self)
+        self.ui.treeView_parameter_value_list.connect_spine_db_editor(self)
+        self.ui.treeView_alternative_scenario.connect_spine_db_editor(self)
+        self.ui.treeView_tool_feature.connect_spine_db_editor(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -88,11 +97,12 @@ class TreeViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
-        self.alternative_scenario_model.build_tree()
-        for item in self.alternative_scenario_model.visit_all():
-            index = self.alternative_scenario_model.index_from_item(item)
-            self.ui.treeView_alternative_scenario.expand(index)
-        self.ui.treeView_alternative_scenario.resizeColumnToContents(0)
+        for view in (self.ui.treeView_tool_feature, self.ui.treeView_alternative_scenario):
+            view.model().build_tree()
+            for item in view.model().visit_all():
+                index = view.model().index_from_item(item)
+                view.expand(index)
+            view.resizeColumnToContents(0)
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
@@ -330,6 +340,14 @@ class TreeViewMixin:
         super().receive_object_classes_fetched(db_map_data)
         self._relationship_classes_fetched.emit()
 
+    def receive_features_fetched(self, db_map_data):
+        super().receive_features_fetched(db_map_data)
+        self.tool_feature_model.add_features(db_map_data)
+
+    def receive_tools_fetched(self, db_map_data):
+        super().receive_tools_fetched(db_map_data)
+        self.tool_feature_model.add_tools(db_map_data)
+
     def receive_alternatives_added(self, db_map_data):
         super().receive_alternatives_added(db_map_data)
         self.alternative_scenario_model.add_alternatives(db_map_data)
@@ -358,6 +376,23 @@ class TreeViewMixin:
         self.object_tree_model.add_relationships(db_map_data)
         self.relationship_tree_model.add_relationships(db_map_data)
 
+    def receive_entity_groups_added(self, db_map_data):
+        super().receive_entity_groups_added(db_map_data)
+        self.object_tree_model.raise_entity_groups(db_map_data)
+        self.ui.treeView_object.refresh_active_member_indexes()
+
+    def receive_parameter_value_lists_added(self, db_map_data):
+        super().receive_parameter_value_lists_added(db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
+
+    def receive_features_added(self, db_map_data):
+        super().receive_features_added(db_map_data)
+        self.tool_feature_model.add_features(db_map_data)
+
+    def receive_tools_added(self, db_map_data):
+        super().receive_tools_added(db_map_data)
+        self.tool_feature_model.add_tools(db_map_data)
+
     def receive_alternatives_updated(self, db_map_data):
         super().receive_alternatives_updated(db_map_data)
         self.alternative_scenario_model.update_alternatives(db_map_data)
@@ -365,11 +400,6 @@ class TreeViewMixin:
     def receive_scenarios_updated(self, db_map_data):
         super().receive_scenarios_updated(db_map_data)
         self.alternative_scenario_model.update_scenarios(db_map_data)
-
-    def receive_entity_groups_added(self, db_map_data):
-        super().receive_entity_groups_added(db_map_data)
-        self.object_tree_model.raise_entity_groups(db_map_data)
-        self.ui.treeView_object.refresh_active_member_indexes()
 
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
@@ -388,6 +418,10 @@ class TreeViewMixin:
         super().receive_relationships_updated(db_map_data)
         self.object_tree_model.update_relationships(db_map_data)
         self.relationship_tree_model.update_relationships(db_map_data)
+
+    def receive_parameter_value_lists_updated(self, db_map_data):
+        super().receive_parameter_value_lists_updated(db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
 
     def receive_alternatives_removed(self, db_map_data):
         super().receive_alternatives_removed(db_map_data)
@@ -418,3 +452,7 @@ class TreeViewMixin:
     def receive_entity_groups_removed(self, db_map_data):
         super().receive_entity_groups_removed(db_map_data)
         QTimer.singleShot(0, self.ui.treeView_object.refresh_active_member_indexes)
+
+    def receive_parameter_value_lists_removed(self, db_map_data):
+        super().receive_parameter_value_lists_removed(db_map_data)
+        self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)

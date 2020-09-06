@@ -40,7 +40,7 @@ class EntityTreeView(CopyTreeView):
         self._add_relationships_action = None
         self._manage_relationships_action = None
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
 
         Args:
@@ -385,7 +385,7 @@ class ItemTreeView(CopyTreeView):
         """Updates the visible property of actions according to whether or not they apply to given item."""
         raise NotImplementedError()
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
         self.create_context_menu()
         self.connect_signals()
@@ -407,6 +407,11 @@ class ItemTreeView(CopyTreeView):
         item = index.model().item_from_index(index)
         self.update_actions_visibility(item)
         self._menu.exec_(event.globalPos())
+
+
+class ToolFeatureTreeView(ItemTreeView):
+    """Custom QTreeView class for tools and features in SpineDBEditor.
+    """
 
 
 class AlternativeScenarioTreeView(ItemTreeView):

@@ -37,6 +37,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipP
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterValueTableView
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeScenarioTreeView
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ParameterTagTreeView
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ToolFeatureTreeView
 
 from spinetoolbox import resources_icons_rc
 
@@ -212,10 +213,6 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
         self.centralwidget.setSizePolicy(sizePolicy)
-        self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
-        self.verticalLayout_2.setSpacing(0)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -402,8 +399,8 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_relationship_parameter_definition)
         self.dockWidget_object_tree = QDockWidget(MainWindow)
         self.dockWidget_object_tree.setObjectName(u"dockWidget_object_tree")
-        self.dockWidget_object_tree.setFeatures(QDockWidget.NoDockWidgetFeatures)
-        self.dockWidget_object_tree.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self.dockWidget_object_tree.setFeatures(QDockWidget.AllDockWidgetFeatures)
+        self.dockWidget_object_tree.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.dockWidgetContents_6 = QWidget()
         self.dockWidgetContents_6.setObjectName(u"dockWidgetContents_6")
         self.verticalLayout_4 = QVBoxLayout(self.dockWidgetContents_6)
@@ -543,6 +540,22 @@ class Ui_MainWindow(object):
 
         self.dockWidget_parameter_tag.setWidget(self.dockWidgetContents_9)
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_parameter_tag)
+        self.dockWidget_tool_feature_tree = QDockWidget(MainWindow)
+        self.dockWidget_tool_feature_tree.setObjectName(u"dockWidget_tool_feature_tree")
+        self.dockWidgetContents_13 = QWidget()
+        self.dockWidgetContents_13.setObjectName(u"dockWidgetContents_13")
+        self.verticalLayout_2 = QVBoxLayout(self.dockWidgetContents_13)
+        self.verticalLayout_2.setSpacing(0)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.treeView_tool_feature = ToolFeatureTreeView(self.dockWidgetContents_13)
+        self.treeView_tool_feature.setObjectName(u"treeView_tool_feature")
+        self.treeView_tool_feature.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.EditKeyPressed)
+
+        self.verticalLayout_2.addWidget(self.treeView_tool_feature)
+
+        self.dockWidget_tool_feature_tree.setWidget(self.dockWidgetContents_13)
+        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_tool_feature_tree)
         QWidget.setTabOrder(self.tableView_object_parameter_value, self.tableView_object_parameter_definition)
         QWidget.setTabOrder(self.tableView_object_parameter_definition, self.tableView_relationship_parameter_value)
         QWidget.setTabOrder(self.tableView_relationship_parameter_value, self.tableView_relationship_parameter_definition)
@@ -758,5 +771,6 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(accessibility)
         self.treeView_parameter_tag.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter value list", None))
 #endif // QT_CONFIG(accessibility)
+        self.dockWidget_tool_feature_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Tool/Feature tree", None))
     # retranslateUi
 

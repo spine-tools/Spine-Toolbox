@@ -9,26 +9,25 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """
-Models to represent alternatives, scenarios and scenario alternatives in a tree.
+Models to represent tools and features in a tree.
 
-:authors: P. Vennström (VTT), M. Marin (KTH)
-:date:    17.6.2020
+:authors: M. Marin (KTH)
+:date:    1.0.2020
 """
 import json
 from PySide2.QtCore import QMimeData, Qt, QModelIndex
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from .tree_item_utility import NonLazyDBItem, NonLazyTreeItem
-from .alternative_scenario_item import (
-    AlternativeRootItem,
-    ScenarioRootItem,
-    AlternativeLeafItem,
-    ScenarioLeafItem,
+from .tool_feature_item import (
+    FeatureRootItem,
+    ToolRootItem,
+    FeatureLeafItem,
+    ToolLeafItem,
 )
 
 
-class AlternativeScenarioModel(MinimalTreeModel):
-
-    """A model to display alternatives and scenarios in a tree view.
+class ToolFeatureModel(MinimalTreeModel):
+    """A model to display tools and features in a tree view.
 
 
     Args:
@@ -61,14 +60,14 @@ class AlternativeScenarioModel(MinimalTreeModel):
         for db_map in self.db_maps:
             db_item = NonLazyDBItem(db_map)
             self._invisible_root_item.append_children(db_item)
-            alt_root_item = AlternativeRootItem()
-            scen_root_item = ScenarioRootItem()
-            db_item.append_children(alt_root_item, scen_root_item)
+            feature_root_item = FeatureRootItem()
+            tool_root_item = ToolRootItem()
+            db_item.append_children(
+                feature_root_item, tool_root_item,
+            )
 
     def _add_leaves(self, db_map_data, leaf_type):
-        root_number, leaf_maker = {"alternative": (0, AlternativeLeafItem), "scenario": (1, ScenarioLeafItem)}[
-            leaf_type
-        ]
+        root_number, leaf_maker = {"feature": (0, FeatureLeafItem), "tool": (1, ToolLeafItem)}[leaf_type]
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
@@ -86,7 +85,7 @@ class AlternativeScenarioModel(MinimalTreeModel):
             root_item.insert_children(root_item.child_count() - 1, *children)
 
     def _update_leaves(self, db_map_data, leaf_type):
-        root_number = {"alternative": 0, "scenario": 1}[leaf_type]
+        root_number = {"feature": 0, "tool": 1}[leaf_type]
         self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
@@ -100,7 +99,7 @@ class AlternativeScenarioModel(MinimalTreeModel):
         self.layoutChanged.emit()
 
     def _remove_leaves(self, db_map_data, leaf_type):
-        root_number = {"alternative": 0, "scenario": 1}[leaf_type]
+        root_number = {"feature": 0, "tool": 1}[leaf_type]
         self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
@@ -116,23 +115,23 @@ class AlternativeScenarioModel(MinimalTreeModel):
                 root_item.remove_children(row, 1)
         self.layoutChanged.emit()
 
-    def add_alternatives(self, db_map_data):
-        self._add_leaves(db_map_data, "alternative")
+    def add_features(self, db_map_data):
+        self._add_leaves(db_map_data, "feature")
 
-    def add_scenarios(self, db_map_data):
-        self._add_leaves(db_map_data, "scenario")
+    def add_tools(self, db_map_data):
+        self._add_leaves(db_map_data, "tool")
 
-    def update_alternatives(self, db_map_data):
-        self._update_leaves(db_map_data, "alternative")
+    def update_features(self, db_map_data):
+        self._update_leaves(db_map_data, "feature")
 
-    def update_scenarios(self, db_map_data):
-        self._update_leaves(db_map_data, "scenario")
+    def update_tools(self, db_map_data):
+        self._update_leaves(db_map_data, "tool")
 
-    def remove_alternatives(self, db_map_data):
-        self._remove_leaves(db_map_data, "alternative")
+    def remove_features(self, db_map_data):
+        self._remove_leaves(db_map_data, "feature")
 
-    def remove_scenarios(self, db_map_data):
-        self._remove_leaves(db_map_data, "scenario")
+    def remove_tools(self, db_map_data):
+        self._remove_leaves(db_map_data, "tool")
 
     @staticmethod
     def db_item(item):

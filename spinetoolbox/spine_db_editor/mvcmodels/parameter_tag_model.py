@@ -19,11 +19,9 @@ A tree model for parameter_tags.
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QIcon
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
-from spinetoolbox.helpers import try_number_from_string
 from .tree_item_utility import (
     EmptyChildMixin,
     LastGrayMixin,
-    AllBoldMixin,
     EditableMixin,
     NonLazyTreeItem,
     NonLazyDBItem,

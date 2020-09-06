@@ -39,6 +39,9 @@ class SpineDBFetcher(QObject):
     _parameter_values_fetched = Signal(object)
     _parameter_value_lists_fetched = Signal(object)
     _parameter_tags_fetched = Signal(object)
+    _features_fetched = Signal(object)
+    _tools_fetched = Signal(object)
+    _tool_features_fetched = Signal(object)
 
     def __init__(self, db_mngr, listener):
         """Initializes the fetcher object.
@@ -72,6 +75,9 @@ class SpineDBFetcher(QObject):
         self._parameter_values_fetched.connect(self._receive_parameter_values_fetched)
         self._parameter_value_lists_fetched.connect(self._receive_parameter_value_lists_fetched)
         self._parameter_tags_fetched.connect(self._receive_parameter_tags_fetched)
+        self._features_fetched.connect(self._receive_features_fetched)
+        self._tools_fetched.connect(self._receive_tools_fetched)
+        self._tool_features_fetched.connect(self._receive_tool_features_fetched)
 
     def fetch(self, db_maps):
         """Fetches items from the database and emit fetched signals.
@@ -104,6 +110,12 @@ class SpineDBFetcher(QObject):
         self._scenarios_fetched.emit(scenarios)
         scenario_alternatives = {x: self._db_mngr.get_scenario_alternatives(x) for x in db_maps}
         self._scenarios_alternatives_fetched.emit(scenario_alternatives)
+        features = {x: self._db_mngr.get_features(x) for x in db_maps}
+        self._features_fetched.emit(features)
+        tools = {x: self._db_mngr.get_tools(x) for x in db_maps}
+        self._tools_fetched.emit(tools)
+        tool_features = {x: self._db_mngr.get_tool_features(x) for x in db_maps}
+        self._tool_features_fetched.emit(tool_features)
         self._ready_to_finish.emit()
 
     def clean_up(self):
@@ -178,6 +190,20 @@ class SpineDBFetcher(QObject):
     def _receive_parameter_tags_fetched(self, db_map_data):
         self._db_mngr.cache_items("parameter_tag", db_map_data)
         self._listener.receive_parameter_tags_fetched(db_map_data)
+
+    @Slot(object)
+    def _receive_features_fetched(self, db_map_data):
+        self._db_mngr.cache_items("feature", db_map_data)
+        self._listener.receive_features_fetched(db_map_data)
+
+    @Slot(object)
+    def _receive_tools_fetched(self, db_map_data):
+        self._db_mngr.cache_items("tool", db_map_data)
+        self._listener.receive_tools_fetched(db_map_data)
+
+    @Slot(object)
+    def _receive_tool_features_fetched(self, db_map_data):
+        self._db_mngr.cache_items("tool_feature", db_map_data)
 
     @Slot()
     def _emit_finished_signal(self):

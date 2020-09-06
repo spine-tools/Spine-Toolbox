@@ -63,7 +63,7 @@ class TabularViewMixin:
         self.pivot_table_model = None
         self.frozen_table_model = FrozenTableModel(self)
         self.ui.pivot_table.setModel(self.pivot_table_proxy)
-        self.ui.pivot_table.connect_data_store_form(self)
+        self.ui.pivot_table.connect_spine_db_editor(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
 
