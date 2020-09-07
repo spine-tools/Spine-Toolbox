@@ -192,7 +192,7 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
         self.read_settings()
 
 
-class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
+class SettingsWidget(SettingsWidgetBase, SpineDBEditorSettingsMixin):
     """A widget to change user's preferred settings."""
 
     def __init__(self, toolbox):
