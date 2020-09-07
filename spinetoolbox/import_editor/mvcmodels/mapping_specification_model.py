@@ -437,9 +437,9 @@ class MappingSpecificationModel(QAbstractTableModel):
             return ""
         if row == parameter_name_row:
             return self._item_mapping.parameters.names_issues()
-        if row == parameter_name_row + 1:
+        if parameter_name_row + 1 <= row <= parameter_name_row + 2:
+            # NOTE: parameter_name_row + 2 is the alternative name, which jut "follows"
             return self._item_mapping.parameters.values_issues(self._item_mapping.is_pivoted())
-        # FIXME: parameter_name_row + 2 is the alternative name, for which we may not want to have "issues" in the end?
         if row >= parameter_name_row + 3:
             index = row - (parameter_name_row + 3)
             return self._item_mapping.parameters.indexes_issues(index)

@@ -300,6 +300,7 @@ class TestExcelIntegration(unittest.TestCase):
         db_map.commit_session('Excel import')
         return import_num
 
+    @unittest.skip("This test is obsolete, needs refactoring")
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""
         with TemporaryDirectory() as directory:
@@ -319,6 +320,7 @@ class TestExcelIntegration(unittest.TestCase):
                 db_map.connection.close()
                 empty_db_map.connection.close()
 
+    @unittest.skip("This test is obsolete, needs refactoring")
     def test_import_to_existing_data(self):
         """Integration test importing data to a database with existing items"""
         with TemporaryDirectory() as directory:
