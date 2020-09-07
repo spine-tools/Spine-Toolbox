@@ -83,11 +83,6 @@ class ExecutableItem(ExecutableItemBase, QObject):
         Returns:
             True if execution succeeded, False otherwise
         """
-        # files = list()
-        # for resource in resources:
-        #     if resource.type_ == "file":
-        #         files.append(resource.path)
-
         if not self.cmd_list:
             self._logger.msg_warning.emit("No command to execute.")
             return False
@@ -224,15 +219,30 @@ class ExecutableItem(ExecutableItemBase, QObject):
         Returns:
             list: Expanded command
         """
+        files = _file_paths_from_resources(resources)
         input_urls = _database_urls_from_resources(resources)
         output_urls = _database_urls_from_resources(self._successor_resources)
-
-        tags_expanded, args = helpers.expand_tags(cmd, [], input_urls, output_urls)
+        tags_expanded, args = helpers.expand_tags(cmd, files, input_urls, output_urls)
         while tags_expanded:
             # Keep expanding until there is no tag left to expand.
-            tags_expanded, args = helpers.expand_tags(args, [], input_urls, output_urls)
+            tags_expanded, args = helpers.expand_tags(args, files, input_urls, output_urls)
         return args
 
+
+def _file_paths_from_resources(resources):
+    """Pries file paths from resources.
+
+    Args:
+        resources (list): a list of ProjectItemResource objects
+
+    Returns:
+        list: List of file paths.
+    """
+    files = list()
+    for resource in resources:
+        if resource.type_ == "file":
+            files.append(resource.path)
+    return files
 
 def _database_urls_from_resources(resources):
     """Pries database URLs and their providers' names from resources.
