@@ -124,6 +124,8 @@ class SpineDBEditorSettingsMixin:
 
     @Slot(bool)
     def set_show_cascading_relationships(self, checked=False):
+        if not self._db_mngr:
+            return
         for db_editor in self._db_mngr.db_editors:
             db_editor.set_show_cascading_relationships(checked)
 
@@ -192,7 +194,7 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
         self.read_settings()
 
 
-class SettingsWidget(SettingsWidgetBase, SpineDBEditorSettingsMixin):
+class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     """A widget to change user's preferred settings."""
 
     def __init__(self, toolbox):
@@ -204,6 +206,7 @@ class SettingsWidget(SettingsWidgetBase, SpineDBEditorSettingsMixin):
         super().__init__(toolbox.qsettings())
         self._toolbox = toolbox  # QWidget parent
         self._project = self._toolbox.project()
+        self._db_mngr = self._project.db_mngr if self._project else None
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self.orig_python_env = ""  # Used in determining if Python environment was changed
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
