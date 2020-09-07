@@ -90,6 +90,8 @@ class ExecutableItem(ExecutableItemBase):
                     settings_pack.settings,
                     settings_pack.indexing_settings,
                     settings_pack.merging_settings,
+                    settings_pack.none_fallback,
+                    settings_pack.none_export,
                     gams_system_directory,
                     export_logger,
                 )

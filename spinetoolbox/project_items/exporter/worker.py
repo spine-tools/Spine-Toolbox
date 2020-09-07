@@ -42,14 +42,16 @@ class Worker(QObject):
     msg_warning = Signal(str, str)
     msg_error = Signal(str, str)
 
-    def __init__(self, database_url):
+    def __init__(self, database_url, none_fallback):
         """
         Args:
             database_url (str): database's URL
+            none_fallback (NoneFallback): how to handle None parameter values
         """
         super().__init__()
         self.thread = QThread()
         self.moveToThread(self.thread)
+        self._none_fallback = none_fallback
         self._database_url = str(database_url)
         self._previous_settings = None
         self._previous_indexing_settings = None
@@ -94,14 +96,14 @@ class Worker(QObject):
         """Reads fresh gdx settings from the database."""
         try:
             database_map = DatabaseMapping(self._database_url)
-        except SpineDBAPIError as error:
+        except SpineDBAPIError:
             self.database_unavailable.emit(self._database_url)
             return None, None, None
         try:
             time_stamp = latest_database_commit_time_stamp(database_map)
             settings = gdx.make_set_settings(database_map)
             logger = _Logger(self._database_url, self)
-            indexing_settings = gdx.make_indexing_settings(database_map, logger)
+            indexing_settings = gdx.make_indexing_settings(database_map, self._none_fallback, logger)
         except gdx.GdxExportException as error:
             self.errored.emit(self._database_url, error)
             return None, None, None

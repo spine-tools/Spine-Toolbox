@@ -32,11 +32,13 @@ class SettingsPack(QObject):
         settings (gdx.SetSettings): export settings
         indexing_settings (dict): parameter indexing settings
         merging_settings (dict): parameter merging settings
+        none_fallback (NoneFallback): fallback for None parameter values
+        none_export (NoneExport): how to handle None values while exporting
         last_database_commit (datetime): latest database commit time stamp
         settings_window (GdxExportSettings): settings editor window
     """
 
-    state_changed = Signal("QVariant")
+    state_changed = Signal(object)
     """Emitted when the pack's state changes."""
 
     def __init__(self, output_file_name):
@@ -49,6 +51,8 @@ class SettingsPack(QObject):
         self.settings = None
         self.indexing_settings = None
         self.merging_settings = dict()
+        self.none_fallback = gdx.NoneFallback.USE_IT
+        self.none_export = gdx.NoneExport.DO_NOT_EXPORT
         self.last_database_commit = None
         self.settings_window = None
         self._state = SettingsState.FETCHING
@@ -78,6 +82,8 @@ class SettingsPack(QObject):
         d["merging_settings"] = {
             parameter_name: setting.to_dict() for parameter_name, setting in self.merging_settings.items()
         }
+        d["none_fallback"] = self.none_fallback.value
+        d["none_export"] = self.none_export.value
         d["latest_database_commit"] = (
             self.last_database_commit.isoformat() if self.last_database_commit is not None else None
         )
@@ -90,6 +96,12 @@ class SettingsPack(QObject):
         pack.state = SettingsState(pack_dict["state"])
         if pack.state not in (SettingsState.OK, SettingsState.INDEXING_PROBLEM):
             return pack
+        value = pack_dict.get("none_fallback")
+        if value is not None:
+            pack.none_fallback = gdx.NoneFallback(value)
+        value = pack_dict.get("none_export")
+        if value is not None:
+            pack.none_export = gdx.NoneExport(value)
         try:
             pack.settings = gdx.SetSettings.from_dict(pack_dict["settings"])
         except gdx.GdxExportException as error:
@@ -101,7 +113,7 @@ class SettingsPack(QObject):
                 f"Exporter settings ignoring some parameters from database '{database_url}':", logger
             )
             pack.indexing_settings = gdx.indexing_settings_from_dict(
-                pack_dict["indexing_settings"], db_map, value_type_logger
+                pack_dict["indexing_settings"], db_map, pack.none_fallback, value_type_logger
             )
         except SpineDBAPIError as error:
             logger.msg_error.emit(

@@ -49,12 +49,16 @@ class GdxExportSettings(QWidget):
     settings_rejected = Signal(str)
     """Emitted when the Cancel button has been clicked."""
 
-    def __init__(self, set_settings, indexing_settings, merging_settings, database_url, parent):
+    def __init__(
+        self, set_settings, indexing_settings, merging_settings, none_fallback, none_export, database_url, parent
+    ):
         """
         Args:
             set_settings (gdx.SetSettings): export settings for GAMS sets
             indexing_settings (dict): indexing domain information for indexed parameter values
             merging_settings (dict): parameter merging settings
+            none_fallback (NoneFallback): fallback for None parameter values
+            none_export (NoneExport): how to handle None values while exporting
             database_url (str): database URL
             parent (QWidget): a parent widget
         """
@@ -93,6 +97,12 @@ class GdxExportSettings(QWidget):
         self._indexed_parameter_settings_window = None
         self._merging_settings = merging_settings
         self._parameter_merging_settings_window = None
+        self._none_fallback = none_fallback
+        self._none_export = none_export
+        self._init_none_fallback_combo_box(none_fallback)
+        self._init_none_export_combo_box(none_export)
+        self._ui.none_fallback_combo_box.currentTextChanged.connect(self._set_none_fallback)
+        self._ui.none_export_combo_box.currentTextChanged.connect(self._set_none_export)
         self._state = State.OK
         self._check_state()
 
@@ -110,6 +120,14 @@ class GdxExportSettings(QWidget):
     def merging_settings(self):
         """dictionary of merging settings"""
         return self._merging_settings
+
+    @property
+    def none_fallback(self):
+        return self._none_fallback
+
+    @property
+    def none_export(self):
+        return self._none_export
 
     def reset_settings(self, set_settings, indexing_settings, merging_settings):
         """Resets all settings."""
@@ -143,6 +161,76 @@ class GdxExportSettings(QWidget):
                 return
         self._state = State.OK
         self._ui.indexing_status_label.setText("")
+
+    @Slot(str)
+    def _set_none_fallback(self, option):
+        """
+        Sets the None fallback option.
+
+        Args:
+            option (str): option as a label in the combo box
+        """
+        if option == "Use it":
+            self._none_fallback = gdx.NoneFallback.USE_IT
+        else:
+            self._none_fallback = gdx.NoneFallback.USE_DEFAULT_VALUE
+        try:
+            database_map = DatabaseMapping(self._database_url)
+        except SpineDBAPIError as error:
+            QMessageBox.warning(self, f"Error", "Could not open database '{self._database_url}'.")
+            return
+        try:
+            indexing_settings = gdx.make_indexing_settings(database_map, self._none_fallback, logger=None)
+        except gdx.GdxExportException as error:
+            QMessageBox.warning(
+                self, "Error", f"Failed to read indexing settings from database '{self._database_url}':\n{error}"
+            )
+            return
+        finally:
+            database_map.connection.close()
+        self._indexing_settings = gdx.update_indexing_settings(
+            self._indexing_settings, indexing_settings, self._set_settings
+        )
+        if self._indexed_parameter_settings_window is not None:
+            self._indexed_parameter_settings_window.close()
+            self._indexed_parameter_settings_window = None
+
+    def _init_none_fallback_combo_box(self, fallback):
+        """
+        Sets the current text in None fallback combo box.
+
+        Args:
+            fallback (NoneFallback): option
+        """
+        if fallback == gdx.NoneFallback.USE_IT:
+            self._ui.none_fallback_combo_box.setCurrentText("Use it")
+        else:
+            self._ui.none_fallback_combo_box.setCurrentText("Replace by default value")
+
+    @Slot(str)
+    def _set_none_export(self, option):
+        """
+        Sets the None export option.
+
+        Args:
+            option (str): option as a label in the combo box
+        """
+        if option == "Do not export":
+            self._none_export = gdx.NoneExport.DO_NOT_EXPORT
+        else:
+            self._none_export = gdx.NoneExport.EXPORT_AS_NAN
+
+    def _init_none_export_combo_box(self, export):
+        """
+        Sets the current text in None export combo box
+
+        Args:
+            export (NoneExport): option
+        """
+        if export == gdx.NoneExport.DO_NOT_EXPORT:
+            self._ui.none_export_combo_box.setCurrentText("Do not export")
+        else:
+            self._ui.none_export_combo_box.setCurrentText("Export as not-a-number")
 
     def _populate_global_parameters_combo_box(self, settings):
         """(Re)populates the global parameters combo box."""

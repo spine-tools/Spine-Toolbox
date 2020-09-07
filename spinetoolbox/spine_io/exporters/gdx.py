@@ -37,6 +37,26 @@ if sys.platform == 'win32':
     import winreg
 
 
+@enum.unique
+class NoneExport(enum.Enum):
+    """Options to export None values."""
+
+    DO_NOT_EXPORT = 0
+    """Does not export Nones."""
+    EXPORT_AS_NAN = 1
+    """Replace Nones with NaNs while exporting."""
+
+
+@enum.unique
+class NoneFallback(enum.Enum):
+    """Options load None values from the database."""
+
+    USE_IT = 0
+    """Keep using the value."""
+    USE_DEFAULT_VALUE = 1
+    """Replace None by the default value."""
+
+
 class GdxExportException(Exception):
     """An exception raised when something goes wrong within the gdx module."""
 
@@ -253,8 +273,8 @@ class Parameter:
         new_data = dict()
         for parameter_index, parameter_value in self.data.items():
             if parameter_value is None:
-                values = len(self.domain_names) * [None]
-            elif isinstance(parameter_value, IndexedValue):
+                continue
+            if isinstance(parameter_value, IndexedValue):
                 values = parameter_value.values
             else:
                 raise GdxExportException("Cannot expand indexes of a scalar value.")
@@ -1054,13 +1074,14 @@ def sets_to_gams(gdx_file, sets, omitted_set=None):
             raise GdxExportException(f"Failed to write to .gdx file: {error}.")
 
 
-def parameters_to_gams(gdx_file, parameters):
+def parameters_to_gams(gdx_file, parameters, none_export):
     """
     Writes parameters to .gdx file as GAMS parameters.
 
     Args:
         gdx_file (GdxFile): a target file
         parameters (dict): a list of Parameter objects
+        none_export (NoneExport): option how to handle None values
     """
     for parameter_name, parameter in parameters.items():
         indexed_values = dict()
@@ -1073,6 +1094,8 @@ def parameters_to_gams(gdx_file, parameters):
                     + " parameter contains indexed values but indexing domain information is missing."
                 )
             if value is None:
+                if none_export == NoneExport.DO_NOT_EXPORT:
+                    continue
                 value = math.nan
             if not isinstance(value, float) and index is not None:
                 raise GdxExportException(
@@ -1142,99 +1165,6 @@ def object_classes_to_domains(db_map, domain_names):
     return domains
 
 
-def object_parameters(db_map, domains_with_ids, logger):
-    """
-    Converts object parameters from database to :class:`Parameter` objects.
-
-    Args:
-        db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object_class ids to corresponding :class:`Set` objects
-        logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
-            raising an exception
-    Returns:
-        dict: a map from parameter name to corresponding :class:`Parameter`
-    """
-    classes_with_ignored_parameters = set() if logger is not None else None
-    parameters = _object_parameter_default_values(db_map, domains_with_ids, classes_with_ignored_parameters)
-    _update_using_existing_object_parameter_values(
-        parameters, db_map, domains_with_ids, classes_with_ignored_parameters
-    )
-    for name, parameter in parameters.items():
-        if not parameter.is_consistent():
-            raise GdxExportException(f"Parameter '{name}' contains a mixture of different value types.")
-    if classes_with_ignored_parameters:
-        class_list = ", ".join(classes_with_ignored_parameters)
-        logger.msg_warning.emit(
-            "Some object parameter values were of unsupported types and were ignored."
-            f" The values were from these object classes: {class_list}"
-        )
-    return parameters
-
-
-def _object_parameter_default_values(db_map, domains_with_ids, classes_with_ignored_parameters):
-    """
-    Constructs an initial parameters dict from object parameter definitions.
-
-    Args:
-        db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object_class ids to corresponding :class:`Set` objects
-        classes_with_ignored_parameters (set, optional): a set of problematic object_class names; if not None,
-            object_class names are added to this set in case of errors instead of raising an exception
-    Returns:
-        dict: a map from parameter name to corresponding :class:`Parameter`
-    """
-    parameters = dict()
-    for definition_row in db_map.object_parameter_definition_list():
-        domain = domains_with_ids.get(definition_row.object_class_id)
-        if domain is None:
-            continue
-        name = definition_row.parameter_name
-        if name in parameters:
-            raise GdxExportException(f"Duplicate parameter name '{name}' found in different object classes.")
-        try:
-            parsed_default_value = _read_value(definition_row.default_value)
-        except GdxUnsupportedValueTypeException:
-            if classes_with_ignored_parameters is not None:
-                class_name = domains_with_ids[definition_row.object_class_id].name
-                classes_with_ignored_parameters.add(class_name)
-                continue
-            raise
-        domain = domains_with_ids[definition_row.object_class_id]
-        indexes = [record.keys for record in domain.records]
-        values = len(domain.records) * [parsed_default_value]
-        parameters[name] = Parameter([domain.name], indexes, values)
-    return parameters
-
-
-def _update_using_existing_object_parameter_values(
-    parameters, db_map, domains_with_ids, classes_with_ignored_parameters
-):
-    """
-    Updates an existing object parameter dict using actual parameter values.
-
-    Args:
-        parameters (dict): a mapping from object parameter names to :class:`Parameter` objects to update
-        db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        domains_with_ids (dict): mapping from object_class ids to corresponding :class:`Set` objects
-        classes_with_ignored_parameters (set, optional): a set of problematic object_class names; if not None,
-            object_class names are added to this set in case of errors instead of raising an exception
-    """
-    for parameter_row in db_map.object_parameter_value_list():
-        name = parameter_row.parameter_name
-        parameter = parameters.get(name)
-        if parameter is None:
-            continue
-        try:
-            parsed_value = _read_value(parameter_row.value)
-        except GdxUnsupportedValueTypeException:
-            if classes_with_ignored_parameters is not None:
-                class_name = domains_with_ids[parameter_row.object_class_id].name
-                classes_with_ignored_parameters.add(class_name)
-                continue
-            raise
-        parameter.data[(parameter_row.object_name,)] = parsed_value
-
-
 def relationship_classes_to_sets(db_map, domain_names, set_names):
     """
     Converts relationship classes and relationships from a database to the intermediate format.
@@ -1265,23 +1195,101 @@ def relationship_classes_to_sets(db_map, domain_names, set_names):
     return sets
 
 
-def relationship_parameters(db_map, sets_with_ids, logger):
+def object_parameters(db_map, domains_with_ids, fallback_on_none, logger):
+    """
+    Converts object parameters from database to :class:`Parameter` objects.
+
+    Args:
+        db_map (DatabaseMapping or DiffDatabaseMapping): a database map
+        domains_with_ids (dict): mapping from object_class ids to corresponding :class:`Set` objects
+        fallback_on_none (NoneFallback): fallback when encountering Nones
+        logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
+            raising an exception
+    Returns:
+        dict: a map from parameter name to corresponding :class:`Parameter`
+    """
+    parameters = dict()
+    classes_with_ignored_parameters = set() if logger is not None else None
+    if fallback_on_none == NoneFallback.USE_DEFAULT_VALUE:
+        default_values = _default_values(
+            db_map, db_map.object_parameter_definition_sq, domains_with_ids, classes_with_ignored_parameters
+        )
+    else:
+        default_values = None
+    for parameter_row in db_map.query(db_map.object_parameter_value_sq).all():
+        domain = domains_with_ids.get(parameter_row.object_class_id)
+        if domain is None:
+            continue
+        name = parameter_row.parameter_name
+        try:
+            parsed_value = _read_value(parameter_row.value)
+        except GdxUnsupportedValueTypeException:
+            if classes_with_ignored_parameters is not None:
+                class_name = domains_with_ids[parameter_row.object_class_id].name
+                classes_with_ignored_parameters.add(class_name)
+                continue
+            raise
+        if fallback_on_none == NoneFallback.USE_DEFAULT_VALUE and parsed_value is None:
+            parsed_value = default_values[name]
+        parameter = parameters.get(name)
+        if parameter is None:
+            parameters[name] = Parameter([domain.name], [(parameter_row.object_name,)], [parsed_value])
+            continue
+        parameter.data[(parameter_row.object_name,)] = parsed_value
+    for name, parameter in parameters.items():
+        if not parameter.is_consistent():
+            raise GdxExportException(f"Parameter '{name}' contains a mixture of different value types.")
+    if classes_with_ignored_parameters:
+        class_list = ", ".join(classes_with_ignored_parameters)
+        logger.msg_warning.emit(
+            "Some object parameter values were of unsupported types and were ignored."
+            f" The values were from these object classes: {class_list}"
+        )
+    return parameters
+
+
+def relationship_parameters(db_map, sets_with_ids, fallback_on_none, logger):
     """
     Converts relationship parameters from database to :class:`Parameter` objects.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
         sets_with_ids (dict): mapping from relationship_class ids to corresponding :class:`Set` objects
+        fallback_on_none (NoneFallback): fallback when encountering Nones
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
     Returns:
         dict: a map from parameter name to corresponding :class:`Parameter`
     """
+    parameters = dict()
     classes_with_ignored_parameters = set() if logger is not None else None
-    parameters = _relationship_parameter_default_values(db_map, sets_with_ids, classes_with_ignored_parameters)
-    _update_using_existing_relationship_parameter_values(
-        parameters, db_map, sets_with_ids, classes_with_ignored_parameters
-    )
+    if fallback_on_none == NoneFallback.USE_DEFAULT_VALUE:
+        default_values = _default_values(
+            db_map, db_map.relationship_parameter_definition_sq, sets_with_ids, classes_with_ignored_parameters
+        )
+    else:
+        default_values = None
+    for parameter_row in db_map.query(db_map.relationship_parameter_value_sq).all():
+        set_ = sets_with_ids.get(parameter_row.relationship_class_id)
+        if set_ is None:
+            continue
+        name = parameter_row.parameter_name
+        try:
+            parsed_value = _read_value(parameter_row.value)
+        except GdxUnsupportedValueTypeException:
+            if classes_with_ignored_parameters is not None:
+                class_name = sets_with_ids[parameter_row.relationship_class_id].name
+                classes_with_ignored_parameters.add(class_name)
+                continue
+            raise
+        if fallback_on_none == NoneFallback.USE_DEFAULT_VALUE and parsed_value is None:
+            parsed_value = default_values[name]
+        parameter = parameters.get(name)
+        keys = tuple(parameter_row.object_name_list.split(","))
+        if parameter is None:
+            parameters[name] = Parameter(set_.domain_names, [keys], [parsed_value])
+            continue
+        parameter.data[keys] = parsed_value
     for name, parameter in parameters.items():
         if not parameter.is_consistent():
             raise GdxExportException(f"Parameter '{name}' contains a mixture of different value types.")
@@ -1294,39 +1302,37 @@ def relationship_parameters(db_map, sets_with_ids, logger):
     return parameters
 
 
-def _relationship_parameter_default_values(db_map, sets_with_ids, classes_with_ignored_parameters):
+def _default_values(db_map, subquery, sets_with_ids, classes_with_ignored_parameters):
     """
-    Constructs an initial parameters dict from relationship parameter definitions.
+    Reads default parameter values from the database.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
+        subquery (Alias): ``object_parameter_definition_sq`` or ``relationship_parameter_definition_sq``
         sets_with_ids (dict): mapping from relationship_class ids to corresponding :class:`Set` objects
         classes_with_ignored_parameters (set, optional): a set of problematic relationship_class names; if not None,
             relationship_class names are added to this set in case of errors instead of raising an exception
     Returns:
-        dict: a map from parameter name to corresponding :class:`Parameter`
+        dict: a map from parameter name to the parsed default value
     """
-    parameters = dict()
-    for definition_row in db_map.relationship_parameter_definition_list():
-        set_ = sets_with_ids.get(definition_row.relationship_class_id)
+    values = dict()
+    for definition_row in db_map.query(subquery).all():
+        set_ = sets_with_ids.get(definition_row.entity_class_id)
         if set_ is None:
             continue
         name = definition_row.parameter_name
-        if name in parameters:
+        if name in values:
             raise GdxExportException(f"Duplicate parameter name '{name}' found in different relationship classes.")
         try:
             parsed_default_value = _read_value(definition_row.default_value)
         except GdxUnsupportedValueTypeException:
             if classes_with_ignored_parameters is not None:
-                class_name = sets_with_ids[definition_row.relationship_class_id].name
+                class_name = set_.name
                 classes_with_ignored_parameters.add(class_name)
                 continue
             raise
-        set_ = sets_with_ids[definition_row.relationship_class_id]
-        indexes = [record.keys for record in set_.records]
-        values = len(set_.records) * [parsed_default_value]
-        parameters[name] = Parameter(set_.domain_names, indexes, values)
-    return parameters
+        values[name] = parsed_default_value
+    return values
 
 
 def _update_using_existing_relationship_parameter_values(
@@ -1355,8 +1361,9 @@ def _update_using_existing_relationship_parameter_values(
                 classes_with_ignored_parameters.add(class_name)
                 continue
             raise
-        keys = tuple(parameter_row.object_name_list.split(","))
-        parameter.data[keys] = parsed_value
+        if parsed_value is not None:
+            keys = tuple(parameter_row.object_name_list.split(","))
+            parameter.data[keys] = parsed_value
 
 
 def domain_names_and_records(db_map):
@@ -1471,27 +1478,29 @@ class IndexingSetting:
         return setting
 
 
-def make_indexing_settings(db_map, logger):
+def make_indexing_settings(db_map, none_fallback, logger):
     """
     Constructs skeleton indexing settings for parameter indexed value expansion.
 
     Args:
         db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
+        none_fallback (NoneFallback): how to handle None values
         logger (LoggerInterface, optional): a logger
     Returns:
         dict: a mapping from parameter name to IndexingSetting
     """
-    settings = _object_indexing_settings(db_map, logger)
-    settings.update(_relationship_indexing_settings(db_map, logger))
+    settings = _object_indexing_settings(db_map, none_fallback, logger)
+    settings.update(_relationship_indexing_settings(db_map, none_fallback, logger))
     return settings
 
 
-def _object_indexing_settings(db_map, logger):
+def _object_indexing_settings(db_map, none_fallback, logger):
     """
     Constructs skeleton indexing settings from object parameters.
 
     Args:
         db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
+        none_fallback: how to handle Nones
         logger (LoggingInterface, optional): a logger
     Returns:
         dict: a mapping from parameter name to IndexingSetting
@@ -1515,47 +1524,23 @@ def _object_indexing_settings(db_map, logger):
                 classes_with_unsupported_value_types,
             )
             parameter_names_to_skip_on_second_pass.add(parameter_row.parameter_name)
-        elif value is None:
-            name = parameter_row.parameter_name
-            for definition_row in db_map.object_parameter_definition_list(parameter_row.object_class_id):
-                if definition_row.parameter_name != name:
-                    continue
-                parameter_names_to_skip_on_second_pass.add(name)
-                value = _read_value(definition_row.default_value)
-                if not isinstance(value, IndexedValue):
-                    break
-                object_class_name = parameter_row.object_class_name
-                dimensions = [object_class_name]
-                index_keys = (parameter_row.object_name,)
-                _add_to_indexing_settings(
-                    settings,
-                    name,
-                    object_class_name,
-                    dimensions,
-                    value,
-                    index_keys,
-                    classes_with_unsupported_value_types,
-                )
+        if none_fallback != NoneFallback.USE_DEFAULT_VALUE:
+            continue
+        name = parameter_row.parameter_name
+        for definition_row in db_map.object_parameter_definition_list(parameter_row.object_class_id):
+            if definition_row.parameter_name != name:
+                continue
+            parameter_names_to_skip_on_second_pass.add(name)
+            value = _read_value(definition_row.default_value)
+            if not isinstance(value, IndexedValue):
                 break
-    for definition_row in db_map.object_parameter_definition_list():
-        if definition_row.parameter_name in parameter_names_to_skip_on_second_pass:
-            continue
-        value = _read_value(definition_row.default_value)
-        if not isinstance(value, IndexedValue):
-            continue
-        object_class_name = definition_row.object_class_name
-        dimensions = [object_class_name]
-        for object_row in db_map.object_list(class_id=definition_row.object_class_id):
-            index_keys = (object_row.name,)
+            object_class_name = parameter_row.object_class_name
+            dimensions = [object_class_name]
+            index_keys = (parameter_row.object_name,)
             _add_to_indexing_settings(
-                settings,
-                definition_row.parameter_name,
-                object_class_name,
-                dimensions,
-                value,
-                index_keys,
-                classes_with_unsupported_value_types,
+                settings, name, object_class_name, dimensions, value, index_keys, classes_with_unsupported_value_types
             )
+            break
     if classes_with_unsupported_value_types:
         class_list = ', '.join(classes_with_unsupported_value_types)
         logger.msg_warning.emit(
@@ -1564,12 +1549,13 @@ def _object_indexing_settings(db_map, logger):
     return settings
 
 
-def _relationship_indexing_settings(db_map, logger):
+def _relationship_indexing_settings(db_map, none_fallback, logger):
     """
     Constructs skeleton indexing settings from relationship parameters.
 
     Args:
         db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
+        none_fallback (NoneFallback): how to handle Nones
         logger (LoggingInterface, optional): a logger
     Returns:
         dict: a mapping from parameter name to IndexingSetting
@@ -1592,45 +1578,28 @@ def _relationship_indexing_settings(db_map, logger):
                 classes_with_unsupported_value_types,
             )
             parameter_names_to_skip_on_second_pass.add(parameter_row.parameter_name)
-        elif value is None:
-            name = parameter_row.parameter_name
-            for definition_row in db_map.relationship_parameter_definition_list(parameter_row.relationship_class_id):
-                if definition_row.parameter_name != name:
-                    continue
-                parameter_names_to_skip_on_second_pass.add(name)
-                value = _read_value(definition_row.default_value)
-                if not isinstance(value, IndexedValue):
-                    break
-                dimensions = parameter_row.object_class_name_list.split(",")
-                index_keys = tuple(parameter_row.object_name_list.split(","))
-                _add_to_indexing_settings(
-                    settings,
-                    name,
-                    parameter_row.relationship_class_name,
-                    dimensions,
-                    value,
-                    index_keys,
-                    classes_with_unsupported_value_types,
-                )
+        if none_fallback != NoneFallback.USE_DEFAULT_VALUE:
+            continue
+        name = parameter_row.parameter_name
+        for definition_row in db_map.relationship_parameter_definition_list(parameter_row.relationship_class_id):
+            if definition_row.parameter_name != name:
+                continue
+            parameter_names_to_skip_on_second_pass.add(name)
+            value = _read_value(definition_row.default_value)
+            if not isinstance(value, IndexedValue):
                 break
-    for definition_row in db_map.relationship_parameter_definition_list():
-        if definition_row.parameter_name in parameter_names_to_skip_on_second_pass:
-            continue
-        value = _read_value(definition_row.default_value)
-        if not isinstance(value, IndexedValue):
-            continue
-        dimensions = definition_row.object_class_name_list.split(",")
-        for relationship_row in db_map.wide_relationship_list(class_id=definition_row.relationship_class_id):
-            index_keys = tuple(relationship_row.object_name_list.split(","))
+            dimensions = parameter_row.object_class_name_list.split(",")
+            index_keys = tuple(parameter_row.object_name_list.split(","))
             _add_to_indexing_settings(
                 settings,
-                definition_row.parameter_name,
-                definition_row.relationship_class_name,
+                name,
+                parameter_row.relationship_class_name,
                 dimensions,
                 value,
                 index_keys,
                 classes_with_unsupported_value_types,
             )
+            break
     if classes_with_unsupported_value_types:
         class_list = ', '.join(classes_with_unsupported_value_types)
         logger.msg_warning.emit(
@@ -1700,12 +1669,11 @@ def update_indexing_settings(old_indexing_settings, new_indexing_settings, set_s
             updated[parameter_name] = setting
             if old_setting.indexing_domain_name is not None:
                 old_records = set_settings.records(old_setting.indexing_domain_name).records
-                if len(old_records) == len(setting.parameter.indexes):
+                if len(old_records) >= len(next(iter(setting.parameter.values))):
                     setting.indexing_domain_name = old_setting.indexing_domain_name
                 else:
                     setting.indexing_domain_name = None
-                    set_settings.remove_domain(old_setting.indexing_domain_name)
-                continue
+            continue
         updated[parameter_name] = old_setting
     return updated
 
@@ -1722,89 +1690,90 @@ def indexing_settings_to_dict(settings):
     return {parameter_name: setting.to_dict() for parameter_name, setting in settings.items()}
 
 
-def indexing_settings_from_dict(settings_dict, db_map, logger):
+def indexing_settings_from_dict(settings_dict, db_map, none_fallback, logger):
     """
     Restores indexing settings from a json compatible dictionary.
 
     Args:
         settings_dict (dict): a JSON compatible dictionary representing parameter indexing settings.
         db_map (DatabaseMapping): database mapping
+        none_fallback (NoneFallback): how to handle None parameter values
         logger (LoggerInterface, optional): a logger
     Returns:
         dict: a dictionary mapping parameter name to IndexingSetting.
     """
     settings = dict()
     for parameter_name, setting_dict in settings_dict.items():
-        parameter, entity_class_name = _find_indexed_parameter(parameter_name, db_map, logger)
+        parameter, entity_class_name = _find_indexed_parameter(parameter_name, db_map, none_fallback, logger)
         if parameter is None:
             continue
         settings[parameter_name] = IndexingSetting.from_dict(setting_dict, parameter, entity_class_name)
     return settings
 
 
-def _find_indexed_parameter(parameter_name, db_map, logger=None):
+def _find_indexed_parameter(parameter_name, db_map, none_fallback, logger=None):
     """Searches for parameter_name in db_map and returns Parameter and its entity_class name."""
     object_classes_with_unsupported_parameter_types = set() if logger is not None else None
     relationship_classes_with_unsupported_parameter_types = set()
-    definition = (
+    definition_row = (
         db_map.parameter_definition_list().filter(db_map.parameter_definition_sq.c.name == parameter_name).first()
     )
-    if definition is None:
+    if definition_row is None:
         raise GdxExportException(f"Cannot find parameter '{parameter_name}' in the database.")
-    if definition.object_class_id is not None:
-        class_id = definition.object_class_id
-        class_name = db_map.object_class_list(id_list=[class_id], ordered=False).first().name
+    class_name = (
+        db_map.query(db_map.entity_class_sq)
+        .filter(db_map.entity_class_sq.c.id == definition_row.entity_class_id)
+        .first()
+        .name
+    )
+    value_rows = db_map.query(db_map.parameter_value_sq).filter(
+        db_map.parameter_value_sq.c.parameter_definition_id == definition_row.id
+    )
+    default_value = None
+    parameter = None
+    for value_row in value_rows:
         try:
-            parsed_default_value = _read_value(definition.default_value)
+            parsed_value = _read_value(value_row.value)
         except GdxUnsupportedValueTypeException:
             if object_classes_with_unsupported_parameter_types is not None:
                 object_classes_with_unsupported_parameter_types.add(class_name)
                 return None, class_name
             raise
-        if isinstance(parsed_default_value, IndexedValue):
-            key_list = [(object_row.name,) for object_row in db_map.object_list(class_id=class_id)]
-            value_list = len(key_list) * [parsed_default_value]
-            parameter = Parameter([class_name], key_list, value_list)
+        if parsed_value is None and none_fallback == NoneFallback.USE_DEFAULT_VALUE:
+            if default_value is None:
+                try:
+                    default_value = _read_value(definition_row.default_value)
+                except GdxUnsupportedValueTypeException:
+                    if object_classes_with_unsupported_parameter_types is not None:
+                        object_classes_with_unsupported_parameter_types.add(class_name)
+                        return None, class_name
+                    raise
+            parsed_value = default_value
+        if not isinstance(parsed_value, IndexedValue):
+            continue
+        if value_row.object_id is not None:
+            object_row = db_map.query(db_map.object_sq).filter(db_map.object_sq.c.id == value_row.object_id).first()
+            keys = (object_row.name,)
         else:
-            parameter = Parameter([class_name], [], [])
-        for parameter_row in db_map.object_parameter_value_list(parameter_name=parameter_name):
-            try:
-                parsed_value = _read_value(parameter_row.value)
-            except GdxUnsupportedValueTypeException:
-                if object_classes_with_unsupported_parameter_types is not None:
-                    object_classes_with_unsupported_parameter_types.add(class_name)
-                    return None, class_name
-                raise
-            parameter.data[(parameter_row.object_name,)] = parsed_value
-    else:
-        class_id = definition.relationship_class_id
-        relationship_class_row = db_map.wide_relationship_class_list(id_list=[class_id]).first()
-        class_name = relationship_class_row.name
-        try:
-            parsed_default_value = _read_value(definition.default_value)
-        except GdxUnsupportedValueTypeException:
-            if relationship_classes_with_unsupported_parameter_types is not None:
-                relationship_classes_with_unsupported_parameter_types.add(class_name)
-                return None, class_name
-            raise
-        if isinstance(parsed_default_value, IndexedValue):
-            key_list = [
-                tuple(relationship_row.object_name_list.split(","))
-                for relationship_row in db_map.wide_relationship_list(class_id=class_id)
-            ]
-            value_list = len(key_list) * [parsed_default_value]
-            parameter = Parameter(relationship_class_row.object_class_name_list.split(","), key_list, value_list)
+            relationship_row = (
+                db_map.query(db_map.wide_relationship_sq)
+                .filter(db_map.wide_relationship_sq.c.id == value_row.relationship_id)
+                .first()
+            )
+            keys = tuple(relationship_row.object_name_list.split(","))
+        if parameter is None:
+            if value_row.object_class_id is not None:
+                domain_list = [class_name]
+            else:
+                relationship_class_row = (
+                    db_map.query(db_map.wide_relationship_class_sq)
+                    .filter(db_map.wide_relationship_class_sq.c.id == value_row.relationship_class_id)
+                    .first()
+                )
+                domain_list = relationship_class_row.object_class_name_list.split(",")
+            parameter = Parameter(domain_list, [keys], [parsed_value])
         else:
-            parameter = Parameter(relationship_class_row.object_class_name_list.split(","), [], [])
-        for parameter_row in db_map.relationship_parameter_value_list(parameter_name=parameter_name):
-            try:
-                parsed_value = _read_value(parameter_row.value)
-            except GdxUnsupportedValueTypeException:
-                if relationship_classes_with_unsupported_parameter_types is not None:
-                    relationship_classes_with_unsupported_parameter_types.add(class_name)
-                    return None, class_name
-                raise
-            parameter.data[tuple(parameter_row.object_name_list.split(","))] = parsed_value
+            parameter.data[keys] = parsed_value
     if parameter is None:
         raise GdxExportException(f"Cannot find values for parameter '{parameter_name}' in the database.")
     if logger is not None:
@@ -1909,7 +1878,15 @@ def extract_domain(domains, name_to_extract):
 
 
 def to_gdx_file(
-    database_map, file_name, set_settings, indexing_settings, merging_settings, gams_system_directory=None, logger=None
+    database_map,
+    file_name,
+    set_settings,
+    indexing_settings,
+    merging_settings,
+    none_fallback,
+    none_export,
+    gams_system_directory=None,
+    logger=None,
 ):
     """
     Exports given database map into .gdx file.
@@ -1920,6 +1897,8 @@ def to_gdx_file(
         set_settings (SetSettings): export settings
         indexing_settings (dict): a dictionary containing settings for indexed parameter expansion
         merging_settings (dict): a list of merging settings for parameter merging
+        none_fallback (NoneFallback): options how to handle none parameter values on database read
+        none_export (NoneExport): option how to handle none parameter values on export
         gams_system_directory (str, optional): path to GAMS system directory or None to let GAMS choose one for you
         logger (LoggingInterface, optional): a logger; if None given all error conditions raise GdxExportException
             otherwise some errors are logged and ignored
@@ -1929,7 +1908,7 @@ def to_gdx_file(
         exported_domain_names.add(set_settings.global_parameters_domain_name)
     domains_with_ids = object_classes_to_domains(database_map, exported_domain_names)
     domains = list(domains_with_ids.values())
-    domain_parameters = object_parameters(database_map, domains_with_ids, logger)
+    domain_parameters = object_parameters(database_map, domains_with_ids, none_fallback, logger)
     domains, global_parameters_domain = extract_domain(domains, set_settings.global_parameters_domain_name)
     domains += _create_additional_domains(set_settings)
     domains = sort_sets(domains, set_settings.domain_tiers)
@@ -1941,7 +1920,7 @@ def to_gdx_file(
     sets = list(sets_with_ids.values())
     sets = sort_sets(sets, set_settings.set_tiers)
     sort_records_inplace(sets, set_settings)
-    set_parameters = relationship_parameters(database_map, sets_with_ids, logger)
+    set_parameters = relationship_parameters(database_map, sets_with_ids, none_fallback, logger)
     expand_indexed_parameter_values(set_parameters, indexing_settings, domains_with_names)
     parameters = {**domain_parameters, **set_parameters}
     merged_parameters = merge_parameters(parameters, merging_settings)
@@ -1956,7 +1935,7 @@ def to_gdx_file(
             )
         for name in deletable_parameter_names:
             del parameters[name]
-        parameters_to_gams(output_file, parameters)
+        parameters_to_gams(output_file, parameters, none_export)
 
 
 def make_set_settings(database_map):

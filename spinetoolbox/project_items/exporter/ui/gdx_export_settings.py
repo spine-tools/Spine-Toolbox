@@ -133,26 +133,17 @@ class Ui_Form(object):
 
         self.horizontalLayout_4.addWidget(self.indexing_status_label)
 
+        self.open_parameter_merging_settings_button = QPushButton(self.misc_control_holder)
+        self.open_parameter_merging_settings_button.setObjectName(u"open_parameter_merging_settings_button")
+
+        self.horizontalLayout_4.addWidget(self.open_parameter_merging_settings_button)
+
         self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         self.horizontalLayout_4.addItem(self.horizontalSpacer_2)
 
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_4)
-
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.open_parameter_merging_settings_button = QPushButton(self.misc_control_holder)
-        self.open_parameter_merging_settings_button.setObjectName(u"open_parameter_merging_settings_button")
-
-        self.horizontalLayout_5.addWidget(self.open_parameter_merging_settings_button)
-
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout_5.addItem(self.horizontalSpacer_3)
-
-
-        self.verticalLayout_3.addLayout(self.horizontalLayout_5)
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
@@ -167,6 +158,30 @@ class Ui_Form(object):
         self.global_parameters_combo_box.setObjectName(u"global_parameters_combo_box")
 
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.global_parameters_combo_box)
+
+        self.label_2 = QLabel(self.misc_control_holder)
+        self.label_2.setObjectName(u"label_2")
+
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label_2)
+
+        self.none_export_combo_box = QComboBox(self.misc_control_holder)
+        self.none_export_combo_box.addItem("")
+        self.none_export_combo_box.addItem("")
+        self.none_export_combo_box.setObjectName(u"none_export_combo_box")
+
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.none_export_combo_box)
+
+        self.label_3 = QLabel(self.misc_control_holder)
+        self.label_3.setObjectName(u"label_3")
+
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label_3)
+
+        self.none_fallback_combo_box = QComboBox(self.misc_control_holder)
+        self.none_fallback_combo_box.addItem("")
+        self.none_fallback_combo_box.addItem("")
+        self.none_fallback_combo_box.setObjectName(u"none_fallback_combo_box")
+
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.none_fallback_combo_box)
 
 
         self.horizontalLayout_3.addLayout(self.formLayout)
@@ -219,5 +234,13 @@ class Ui_Form(object):
 "The domain itself is not exported.", None))
 #endif // QT_CONFIG(tooltip)
         self.label.setText(QCoreApplication.translate("Form", u"Global parameters domain:", None))
+        self.label_2.setText(QCoreApplication.translate("Form", u"None values:", None))
+        self.none_export_combo_box.setItemText(0, QCoreApplication.translate("Form", u"Do not export", None))
+        self.none_export_combo_box.setItemText(1, QCoreApplication.translate("Form", u"Export as not-a-number", None))
+
+        self.label_3.setText(QCoreApplication.translate("Form", u"If parameter value is None:", None))
+        self.none_fallback_combo_box.setItemText(0, QCoreApplication.translate("Form", u"Use it", None))
+        self.none_fallback_combo_box.setItemText(1, QCoreApplication.translate("Form", u"Replace by default value", None))
+
     # retranslateUi
 

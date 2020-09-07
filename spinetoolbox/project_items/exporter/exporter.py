@@ -190,7 +190,8 @@ class Exporter(ProjectItem):
         if worker is not None:
             worker.thread.quit()
             worker.thread.wait()
-        worker = Worker(database_url)
+        pack = self._settings_packs[database_url]
+        worker = Worker(database_url, pack.none_fallback)
         self._workers[database_url] = worker
         worker.database_unavailable.connect(self._cancel_worker)
         worker.finished.connect(self._worker_finished)
@@ -199,7 +200,6 @@ class Exporter(ProjectItem):
         worker.msg_warning.connect(self._worker_msg_warning)
         worker.msg_error.connect(self._worker_msg_error)
         if update_settings:
-            pack = self._settings_packs[database_url]
             worker.set_previous_settings(pack.settings, pack.indexing_settings, pack.merging_settings)
         self._settings_packs[database_url].state = SettingsState.FETCHING
         worker.thread.start()
@@ -222,7 +222,7 @@ class Exporter(ProjectItem):
             error = f"<b>{self.name}</b>: While initializing export settings database '{database_url}': {text}"
             self._logger.msg_error.emit(error)
 
-    @Slot(str, "Qvariant", "QVariant")
+    @Slot(str, object, object)
     def _worker_finished(self, database_url, result):
         """Gets and updates and export settings pack from a worker."""
         worker = self._workers.get(database_url)
@@ -244,7 +244,7 @@ class Exporter(ProjectItem):
         self._toolbox.update_window_modified(False)
         self._check_state()
 
-    @Slot(str, "QVariant")
+    @Slot(str, object)
     def _worker_failed(self, database_url, exception):
         """Clean up after a worker has failed fetching export settings."""
         worker = self._workers[database_url]
@@ -352,7 +352,13 @@ class Exporter(ProjectItem):
         merging_settings = deepcopy(settings_pack.merging_settings)
         if settings_pack.settings_window is None:
             settings_pack.settings_window = GdxExportSettings(
-                settings, indexing_settings, merging_settings, database_url, self._toolbox
+                settings,
+                indexing_settings,
+                merging_settings,
+                settings_pack.none_fallback,
+                settings_pack.none_export,
+                database_url,
+                self._toolbox,
             )
             settings_pack.settings_window.settings_accepted.connect(self._update_settings_from_settings_window)
             settings_pack.settings_window.settings_rejected.connect(self._dispose_settings_window)
@@ -385,7 +391,15 @@ class Exporter(ProjectItem):
         indexing_settings = window.indexing_settings
         merging_settings = window.merging_settings
         self._toolbox.undo_stack.push(
-            UpdateExporterSettingsCommand(self, settings, indexing_settings, merging_settings, database_path)
+            UpdateExporterSettingsCommand(
+                self,
+                settings,
+                indexing_settings,
+                merging_settings,
+                window.none_fallback,
+                window.none_export,
+                database_path,
+            )
         )
 
     @Slot(int)
@@ -415,12 +429,16 @@ class Exporter(ProjectItem):
         self._report_notifications()
         self.item_changed.emit()
 
-    def undo_or_redo_settings(self, settings, indexing_settings, merging_settings, database_path):
+    def undo_or_redo_settings(
+        self, settings, indexing_settings, merging_settings, none_fallback, none_export, database_path
+    ):
         """Updates the export settings for given database."""
         settings_pack = self._settings_packs[database_path]
         settings_pack.settings = settings
         settings_pack.indexing_settings = indexing_settings
         settings_pack.merging_settings = merging_settings
+        settings_pack.none_fallback = none_fallback
+        settings_pack.none_export = none_export
         window = settings_pack.settings_window
         if window is not None:
             self._send_settings_to_window(database_path)
