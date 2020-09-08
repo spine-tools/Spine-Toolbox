@@ -16,7 +16,7 @@ An editor widget for editing a map type parameter values.
 :date:   11.2.2020
 """
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import QPoint, Qt, Slot
 from PySide2.QtWidgets import QMenu, QWidget
 from spinedb_api import Map
 from ..mvcmodels.map_model import MapModel
@@ -34,7 +34,7 @@ class MapEditor(QWidget):
         from ..ui.map_editor import Ui_MapEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
-        self._model = MapModel(Map(["key_1"], [0.0]))
+        self._model = MapModel(Map(["key"], [0.0]))
         self._ui = Ui_MapEditor()
         self._ui.setupUi(self)
         self._ui.map_table_view.setModel(self._model)
@@ -46,7 +46,7 @@ class MapEditor(QWidget):
     def _convert_leaves(self, _):
         self._model.convert_leaf_maps()
 
-    @Slot("QPoint")
+    @Slot(QPoint)
     def _show_table_context_menu(self, pos):
         menu = QMenu(self._ui.map_table_view)
         menu.addAction("Insert row before")

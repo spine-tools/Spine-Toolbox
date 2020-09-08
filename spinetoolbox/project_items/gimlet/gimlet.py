@@ -25,8 +25,7 @@ from spinetoolbox.config import DEFAULT_WORK_DIR, GIMLET_WORK_DIR_NAME
 from .item_info import ItemInfo
 from .executable_item import ExecutableItem
 from .utils import SHELLS
-from .commands import UpdateShellCheckBoxCommand, UpdateShellComboboxCommand, \
-    UpdatecmdCommand, UpdateWorkDirModeCommand
+from .commands import UpdateShellCheckBoxCommand, UpdateShellComboboxCommand, UpdatecmdCommand, UpdateWorkDirModeCommand
 from ..shared.commands import ChangeItemSelectionCommand
 from ..shared.models import FileListModel
 from ..shared.helpers import deserialize_checked_states, serialize_checked_states, split_cmdline_args
@@ -36,19 +35,20 @@ class Gimlet(ProjectItem):
     """Gimlet class."""
 
     def __init__(
-            self,
-            toolbox,
-            project,
-            logger,
-            name,
-            description,
-            x,
-            y,
-            use_shell=True,
-            shell_index=0,
-            cmd="",
-            selections=None,
-            work_dir_mode=True):
+        self,
+        toolbox,
+        project,
+        logger,
+        name,
+        description,
+        x,
+        y,
+        use_shell=True,
+        shell_index=0,
+        cmd="",
+        selections=None,
+        work_dir_mode=True,
+    ):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
@@ -284,8 +284,9 @@ class Gimlet(ProjectItem):
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Data Connection":
-            self._logger.msg.emit(f"Link established. Files from <b>{source_item.name}</b> "
-                                  f"are now available in <b>{self.name}</b>")
+            self._logger.msg.emit(
+                f"Link established. Files from <b>{source_item.name}</b> " f"are now available in <b>{self.name}</b>"
+            )
             return
         elif source_item.item_type() in ["Data Store", "Data Connection", "Tool", "Exporter", "Gimlet"]:
             self._logger.msg.emit("Link established")

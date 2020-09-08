@@ -294,6 +294,27 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(value_from_model.values[1].indexes, ["a"])
         self.assertEqual(value_from_model.values[1].values, [1.1])
 
+    def test_value_interleaved_rows(self):
+        model = MapModel(Map(["a"], [0.0]))
+        model.insertRows(1, 2)
+        self.assertEqual(model.rowCount(), 3)
+        model.append_column()
+        self.assertEqual(model.columnCount(), 3)
+        model.setData(model.index(0, 0), '"key1"')
+        model.setData(model.index(0, 1), '"a"')
+        model.setData(model.index(0, 2), '-2.0')
+        model.setData(model.index(1, 0), '"key2"')
+        model.setData(model.index(1, 1), '23.0')
+        model.setData(model.index(2, 0), '"key1"')
+        model.setData(model.index(2, 1), '"b"')
+        model.setData(model.index(2, 2), '-3.0')
+        map_ = model.value()
+        self.assertEqual(map_.indexes, ["key1", "key2"])
+        self.assertIsInstance(map_.values[0], Map)
+        self.assertEqual(map_.values[0].indexes, ["a", "b"])
+        self.assertEqual(map_.values[0].values, [-2.0, -3.0])
+        self.assertEqual(map_.values[1], 23.0)
+
     def test_value_map_missing_index_raises(self):
         root = Map([None], [1.1])
         model = MapModel(root)

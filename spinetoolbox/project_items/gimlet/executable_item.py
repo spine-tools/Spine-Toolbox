@@ -114,15 +114,13 @@ class ExecutableItem(ExecutableItemBase, QObject):
             return False
         # Make work directory anchor with path as tooltip
         work_anchor = (
-                "<a style='color:#99CCFF;' title='"
-                + self._work_dir
-                + "' href='file:///"
-                + self._work_dir
-                + "'>work directory</a>"
+            "<a style='color:#99CCFF;' title='"
+            + self._work_dir
+            + "' href='file:///"
+            + self._work_dir
+            + "'>work directory</a>"
         )
-        self._logger.msg.emit(
-            f"*** Executing in <b>{work_anchor}</b> ***"
-        )
+        self._logger.msg.emit(f"*** Executing in <b>{work_anchor}</b> ***")
         self._gimlet_process.execution_finished.connect(self._handle_gimlet_process_finished)
         self._gimlet_process.start_execution(workdir=self._work_dir)
         loop = QEventLoop()

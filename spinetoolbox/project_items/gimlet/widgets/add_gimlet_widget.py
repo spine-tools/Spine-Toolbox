@@ -23,6 +23,7 @@ from ..item_info import ItemInfo
 
 class AddGimletWidget(AddProjectItemWidget):
     """A widget to query user's preferences for a new item."""
+
     def __init__(self, toolbox, x, y, spec=""):
         """
 
@@ -36,6 +37,7 @@ class AddGimletWidget(AddProjectItemWidget):
 
     def call_add_item(self):
         """Creates new project item according to user's selections."""
-        item = dict(name=self.name, description=self.description, x=self._x, y=self._y, use_shell=True, shell_index=0, cmd="")
+        item = dict(
+            name=self.name, description=self.description, x=self._x, y=self._y, use_shell=True, shell_index=0, cmd=""
+        )
         self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)
-
