@@ -18,7 +18,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Toolbox now supports scenarios and alternatives. They can be accessed via Data store view's new Alternative tree.
 - New Project Item: Gimlet. Can be used to run any command as part of the workflow 
   with or without a shell. Supported shells at the moment are cmd and powershell for 
-  Windows and bash for other OS's. 
+  Windows and bash for other OS's.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
@@ -32,6 +32,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Indexed parameter handling has been overhauled in Exporter allowing parameters to share indexing domains.
   **Note**: Due to numerous changes in the backend, Exporters in old project files will not load properly
   and need to be re-configured.
+- The way Exporter handles missing parameter values and None values has changed. The item now ignores missing
+  values instead of replacing them by the default value. Further, there is a new option to replace None values by
+  the default value and another option to replace Nones by not-a-numbers or skip exporting them.
+
 
 ### Deprecated
 ### Removed
