@@ -380,7 +380,7 @@ class GdxExportSettings(QWidget):
         for domain_to_drop in old_domain_names - new_domain_names:
             self._set_list_model.drop_domain(domain_to_drop)
         for domain_to_update in old_domain_names & new_domain_names:
-            self._set_list_model.update_records(domain_to_update, new_records[domain_to_update])
+            self._set_list_model.update_domain(domain_to_update, new_records[domain_to_update])
         for domain_to_add in new_domain_names - old_domain_names:
             self._set_list_model.add_domain(domain_to_add, new_records[domain_to_add], gdx.Origin.MERGING)
         self._merging_settings = new_merging_settings
