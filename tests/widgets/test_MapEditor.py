@@ -31,7 +31,7 @@ class TestDictionaryEditor(unittest.TestCase):
     def test_initial_value(self):
         editor = MapEditor()
         value = editor.value()
-        self.assertEqual(value, Map(["key_1"], [0.0]))
+        self.assertEqual(value, Map(["key"], [0.0]))
 
     def test_value_access(self):
         editor = MapEditor()
