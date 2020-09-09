@@ -83,16 +83,23 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
         return "<p>Drag this item and drop it onto a <b>tool</b> item below to create a tool feature</p>"
 
     def add_item_to_db(self, db_item):
+        if db_item is None:
+            return
         self.db_mngr.add_features({self.db_map: [db_item]})
 
     def update_item_in_db(self, db_item):
+        if db_item is None:
+            return
         self.db_mngr.update_features({self.db_map: [db_item]})
 
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDragEnabled
 
     def _make_item_to_add(self, value):
-        parameter_definition_id, parameter_value_list_id = value
+        ids = self._get_ids_from_feat_name(value)
+        if not ids:
+            return None
+        parameter_definition_id, parameter_value_list_id = ids
         return dict(
             parameter_definition_id=parameter_definition_id,
             parameter_value_list_id=parameter_value_list_id,
@@ -102,10 +109,24 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def _make_item_to_update(self, column, value):
         if column != 0:
             return super()._make_item_to_update(column, value)
-        parameter_definition_id, parameter_value_list_id = value
+        ids = self._get_ids_from_feat_name(value)
+        if not ids:
+            return None
+        parameter_definition_id, parameter_value_list_id = ids
         return dict(
             id=self.id, parameter_definition_id=parameter_definition_id, parameter_value_list_id=parameter_value_list_id
         )
+
+    def _get_ids_from_feat_name(self, feature_name):
+        ids = self.model.get_feature_data(self.db_map, feature_name)
+        if ids is None:
+            self.model._parent.error_box.emit(
+                "Error",
+                f"<p>Invalid feature '{feature_name}'. </p>"
+                "<p>Please enter a valid combination of entity class/parameter definition.</p>",
+            )
+            return None
+        return ids
 
 
 class ToolLeafItem(LastGrayMixin, EditableMixin, LeafItem):
@@ -133,30 +154,7 @@ class ToolLeafItem(LastGrayMixin, EditableMixin, LeafItem):
 
     @property
     def feature_id_list(self):
-        feature_id_list = self.item_data.get("feature_id_list")
-        if not feature_id_list:
-            return []
-        return [int(id_) for id_ in feature_id_list.split(",")]
-
-    def fetch_more(self):
-        children = [ToolFeatureLeafItem() for _ in self.feature_id_list]
-        self.append_children(*children)
-        self._fetched = True
-
-    def handle_updated_in_db(self):
-        super().handle_updated_in_db()
-        self._update_feature_id_list()
-
-    def _update_feature_id_list(self):
-        feat_count = len(self.feature_id_list)
-        curr_feat_count = self.child_count()
-        if feat_count > curr_feat_count:
-            added_count = feat_count - curr_feat_count
-            children = [ToolFeatureLeafItem() for _ in range(added_count)]
-            self.insert_children(curr_feat_count, *children)
-        elif curr_feat_count > feat_count:
-            removed_count = curr_feat_count - feat_count
-            self.remove_children(feat_count, removed_count)
+        return [child.id for child in self.children]
 
 
 class ToolFeatureLeafItem(LeafItem):
@@ -164,11 +162,18 @@ class ToolFeatureLeafItem(LeafItem):
 
     @property
     def item_type(self):
-        return "feature"
+        return "tool_feature"
 
     @property
-    def id(self):
-        return self.parent_item.feature_id_list[self.child_number()]
+    def item_data(self):
+        if not self.id:
+            return self._item_data
+        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        feature_data = self.db_mngr.get_item(self.db_map, "feature", item_data["feature_id"])
+        name = self.model.make_feature_name(
+            feature_data["entity_class_name"], feature_data["parameter_definition_name"]
+        )
+        return dict(name=name, **item_data)
 
     def add_item_to_db(self, db_item):
         raise NotImplementedError()

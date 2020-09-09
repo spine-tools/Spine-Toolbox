@@ -348,6 +348,10 @@ class TreeViewMixin:
         super().receive_tools_fetched(db_map_data)
         self.tool_feature_model.add_tools(db_map_data)
 
+    def receive_tool_features_fetched(self, db_map_data):
+        super().receive_tool_features_fetched(db_map_data)
+        self.tool_feature_model.add_tool_features(db_map_data)
+
     def receive_alternatives_added(self, db_map_data):
         super().receive_alternatives_added(db_map_data)
         self.alternative_scenario_model.add_alternatives(db_map_data)
@@ -393,6 +397,10 @@ class TreeViewMixin:
         super().receive_tools_added(db_map_data)
         self.tool_feature_model.add_tools(db_map_data)
 
+    def receive_tool_features_added(self, db_map_data):
+        super().receive_tool_features_added(db_map_data)
+        self.tool_feature_model.add_tool_features(db_map_data)
+
     def receive_alternatives_updated(self, db_map_data):
         super().receive_alternatives_updated(db_map_data)
         self.alternative_scenario_model.update_alternatives(db_map_data)
@@ -431,6 +439,10 @@ class TreeViewMixin:
         super().receive_tools_updated(db_map_data)
         self.tool_feature_model.update_tools(db_map_data)
 
+    def receive_tool_features_updated(self, db_map_data):
+        super().receive_tool_features_updated(db_map_data)
+        self.tool_feature_model.update_tool_features(db_map_data)
+
     def receive_alternatives_removed(self, db_map_data):
         super().receive_alternatives_removed(db_map_data)
         self.alternative_scenario_model.remove_alternatives(db_map_data)
@@ -465,10 +477,14 @@ class TreeViewMixin:
         super().receive_parameter_value_lists_removed(db_map_data)
         self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
 
+    def receive_features_removed(self, db_map_data):
+        super().receive_features_removed(db_map_data)
+        self.tool_feature_model.remove_features(db_map_data)
+
     def receive_tools_removed(self, db_map_data):
         super().receive_tools_removed(db_map_data)
         self.tool_feature_model.remove_tools(db_map_data)
 
-    def receive_features_removed(self, db_map_data):
-        super().receive_features_removed(db_map_data)
-        self.tool_feature_model.remove_features(db_map_data)
+    def receive_tool_features_removed(self, db_map_data):
+        super().receive_tool_features_removed(db_map_data)
+        self.tool_feature_model.remove_tool_features(db_map_data)

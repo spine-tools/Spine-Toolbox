@@ -204,6 +204,7 @@ class SpineDBFetcher(QObject):
     @Slot(object)
     def _receive_tool_features_fetched(self, db_map_data):
         self._db_mngr.cache_items("tool_feature", db_map_data)
+        self._listener.receive_tool_features_fetched(db_map_data)
 
     @Slot()
     def _emit_finished_signal(self):

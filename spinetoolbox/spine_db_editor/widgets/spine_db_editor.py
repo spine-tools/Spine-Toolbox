@@ -680,6 +680,9 @@ class SpineDBEditorBase(QMainWindow):
     def receive_tools_fetched(self, db_map_data):
         pass
 
+    def receive_tool_features_fetched(self, db_map_data):
+        pass
+
     def receive_scenarios_added(self, db_map_data):
         self.notify_items_changed("added", "scenario", db_map_data)
 
@@ -718,6 +721,9 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tools_added(self, db_map_data):
         self.notify_items_changed("added", "tool", db_map_data)
+
+    def receive_tool_features_added(self, db_map_data):
+        self.notify_items_changed("added", "tool_feature", db_map_data)
 
     def receive_scenarios_updated(self, db_map_data):
         self.notify_items_changed("updated", "scenario", db_map_data)

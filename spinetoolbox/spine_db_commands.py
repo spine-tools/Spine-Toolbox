@@ -126,6 +126,7 @@ class SpineDBCommand(AgedUndoCommand):
         "scenario": "add scenario",
         "feature": "add feature",
         "tool": "add tool",
+        "tool_feature": "add tool features",
     }
     _update_command_name = {
         "object_class": "update object classes",
@@ -138,8 +139,9 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_tag": "update parameter tags",
         "alternative": "update alternative",
         "scenario": "update scenario",
-        "feature": "update feature",  # FIXME: Is this needed?
+        "feature": "update feature",
         "tool": "update tool",
+        "tool_feature": "update tool features",
     }
     _add_method_name = {
         "object_class": "add_object_classes",
@@ -191,7 +193,7 @@ class SpineDBCommand(AgedUndoCommand):
         "scenario_alternative": "_update_scenario_alternatives",
         "feature": "update_features",
         "tool": "update_tools",
-        "tool_feature": "_update_tool_features",
+        "tool_feature": "update_tool_features",
     }
     _get_method_name = {
         "object_class": "get_object_classes",
@@ -227,7 +229,7 @@ class SpineDBCommand(AgedUndoCommand):
         "scenario_alternative": "_scenario_alternatives_added",
         "feature": "features_added",
         "tool": "tools_added",
-        "tool_feature": "_tool_features_added",
+        "tool_feature": "tool_features_added",
     }
     _updated_signal_name = {
         "object_class": "object_classes_updated",
@@ -243,7 +245,7 @@ class SpineDBCommand(AgedUndoCommand):
         "scenario_alternative": "_scenario_alternatives_updated",
         "feature": "features_updated",
         "tool": "tools_updated",
-        "tool_feature": "_tool_features_updated",
+        "tool_feature": "tool_features_updated",
     }
 
     def __init__(self, db_mngr, db_map, parent=None):

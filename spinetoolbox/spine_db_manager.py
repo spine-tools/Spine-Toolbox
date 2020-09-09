@@ -86,6 +86,7 @@ class SpineDBManager(QObject):
     parameter_tags_added = Signal(object)
     features_added = Signal(object)
     tools_added = Signal(object)
+    tool_features_added = Signal(object)
     # Removed
     scenarios_removed = Signal(object)
     alternatives_removed = Signal(object)
@@ -100,6 +101,7 @@ class SpineDBManager(QObject):
     parameter_tags_removed = Signal(object)
     features_removed = Signal(object)
     tools_removed = Signal(object)
+    tool_features_removed = Signal(object)
     # Updated
     scenarios_updated = Signal(object)
     alternatives_updated = Signal(object)
@@ -114,6 +116,7 @@ class SpineDBManager(QObject):
     parameter_definition_tags_set = Signal(object)
     features_updated = Signal(object)
     tools_updated = Signal(object)
+    tool_features_updated = Signal(object)
     # Uncached
     items_removed_from_cache = Signal(object)
     # Internal
@@ -536,6 +539,7 @@ class SpineDBManager(QObject):
             "parameter_value": (self.parameter_values_added, self.parameter_values_updated),
             "feature": (self.features_added, self.features_updated),
             "tool": (self.tools_added, self.tools_updated),
+            "tool_feature": (self.tool_features_added, self.tool_features_updated),
         }
         for item_type, signals in ordered_signals.items():
             for signal in signals:
@@ -1311,6 +1315,15 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool"))
+
+    def add_tool_features(self, db_map_data):
+        """Adds tool features to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool_feature"))
 
     def update_alternatives(self, db_map_data):
         """Updates alternatives in db.

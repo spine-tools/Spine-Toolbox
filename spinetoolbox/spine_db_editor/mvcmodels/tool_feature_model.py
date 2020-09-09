@@ -18,12 +18,7 @@ import json
 from PySide2.QtCore import QMimeData, Qt, QModelIndex
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from .tree_item_utility import NonLazyDBItem, NonLazyTreeItem
-from .tool_feature_item import (
-    FeatureRootItem,
-    ToolRootItem,
-    FeatureLeafItem,
-    ToolLeafItem,
-)
+from .tool_feature_item import FeatureRootItem, ToolRootItem, FeatureLeafItem, ToolLeafItem, ToolFeatureLeafItem
 
 
 class ToolFeatureModel(MinimalTreeModel):
@@ -41,6 +36,7 @@ class ToolFeatureModel(MinimalTreeModel):
         super().__init__(parent)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
+        self._db_map_feature_data = {}
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 1.
@@ -70,7 +66,23 @@ class ToolFeatureModel(MinimalTreeModel):
     def make_feature_name(entity_class_name, parameter_definition_name):
         return entity_class_name + "/" + parameter_definition_name
 
-    def _add_leaves(self, db_map_data, leaf_type):
+    def _begin_edit_features(self, db_map):
+        parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition")
+        key = lambda x: self.make_feature_name(
+            x.get("object_class_name") or x.get("relationship_class_name"), x["parameter_name"]
+        )
+        self._db_map_feature_data[db_map] = {
+            key(x): (x["id"], x["value_list_id"]) for x in parameter_definitions if x["value_list_id"]
+        }
+
+    def get_all_features_names(self, db_map):
+        self._begin_edit_features(db_map)
+        return list(self._db_map_feature_data.get(db_map, {}).keys())
+
+    def get_feature_data(self, db_map, feature_name):
+        return self._db_map_feature_data.get(db_map, {}).get(feature_name)
+
+    def _add_tools_or_features(self, db_map_data, item_type):
         root_number, leaf_maker, name_maker = {
             "feature": (
                 0,
@@ -78,7 +90,7 @@ class ToolFeatureModel(MinimalTreeModel):
                 lambda x: self.make_feature_name(x["entity_class_name"], x["parameter_definition_name"]),
             ),
             "tool": (1, ToolLeafItem, lambda x: x["name"]),
-        }[leaf_type]
+        }[item_type]
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
@@ -95,8 +107,33 @@ class ToolFeatureModel(MinimalTreeModel):
             children = [leaf_maker(id_) for id_ in ids.values()]
             root_item.insert_children(root_item.child_count() - 1, *children)
 
-    def _update_leaves(self, db_map_data, leaf_type):
-        root_number = {"feature": 0, "tool": 1}[leaf_type]
+    def add_features(self, db_map_data):
+        self._add_tools_or_features(db_map_data, "feature")
+
+    def add_tools(self, db_map_data):
+        self._add_tools_or_features(db_map_data, "tool")
+
+    def add_tool_features(self, db_map_data):
+        print(db_map_data)
+        db_map_ids_per_tool_id = {}
+        for db_map, data in db_map_data.items():
+            for item in data:
+                tool_id = item["tool_id"]
+                db_map_ids_per_tool_id.setdefault(db_map, {}).setdefault(tool_id, []).append(item["id"])
+        for db_item in self._invisible_root_item.children:
+            ids_per_tool_id = db_map_ids_per_tool_id.get(db_item.db_map)
+            if not ids_per_tool_id:
+                continue
+            tool_root_item = db_item.child(1)
+            for tool_id, ids in ids_per_tool_id.items():
+                tool_leaf_item = next(iter(child for child in tool_root_item.children if child.id == tool_id), None)
+                if tool_leaf_item is None:
+                    continue
+                children = [ToolFeatureLeafItem(id_) for id_ in ids]
+                tool_leaf_item.append_children(*children)
+
+    def _update_tools_or_features(self, db_map_data, item_type):
+        root_number = {"feature": 0, "tool": 1}[item_type]
         self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
@@ -109,8 +146,14 @@ class ToolFeatureModel(MinimalTreeModel):
                 leaf_items[id_].handle_updated_in_db()
         self.layoutChanged.emit()
 
-    def _remove_leaves(self, db_map_data, leaf_type):
-        root_number = {"feature": 0, "tool": 1}[leaf_type]
+    def update_features(self, db_map_data):
+        self._update_tools_or_features(db_map_data, "feature")
+
+    def update_tools(self, db_map_data):
+        self._update_tools_or_features(db_map_data, "tool")
+
+    def _remove_tools_or_features(self, db_map_data, item_type):
+        root_number = {"feature": 0, "tool": 1}[item_type]
         self.layoutAboutToBeChanged.emit()
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
@@ -126,23 +169,11 @@ class ToolFeatureModel(MinimalTreeModel):
                 root_item.remove_children(row, 1)
         self.layoutChanged.emit()
 
-    def add_features(self, db_map_data):
-        self._add_leaves(db_map_data, "feature")
-
-    def add_tools(self, db_map_data):
-        self._add_leaves(db_map_data, "tool")
-
-    def update_features(self, db_map_data):
-        self._update_leaves(db_map_data, "feature")
-
-    def update_tools(self, db_map_data):
-        self._update_leaves(db_map_data, "tool")
-
     def remove_features(self, db_map_data):
-        self._remove_leaves(db_map_data, "feature")
+        self._remove_tools_or_features(db_map_data, "feature")
 
     def remove_tools(self, db_map_data):
-        self._remove_leaves(db_map_data, "tool")
+        self._remove_tools_or_features(db_map_data, "tool")
 
     @staticmethod
     def db_item(item):
@@ -169,7 +200,7 @@ class ToolFeatureModel(MinimalTreeModel):
             parent_item = item.parent_item
             db_row = self.db_row(parent_item)
             parent_type = parent_item.item_type
-            master_key = ";;".join([str(db_row), parent_type, str(parent_item.child_number())])
+            master_key = ";;".join([str(db_row), parent_type])
             d.setdefault(master_key, []).append(item.child_number())
         data = json.dumps(d)
         mime = QMimeData()
@@ -189,37 +220,34 @@ class ToolFeatureModel(MinimalTreeModel):
         if len(data) != 1:
             return False
         master_key = next(iter(data))
-        db_row, parent_type, parent_row = master_key.split(";;")
+        db_row, parent_type = master_key.split(";;")
         db_row = int(db_row)
-        if parent_type not in ("alternative root", "scenario"):
+        if parent_type != "feature root":
             return False
         # Check that target is in the same db as source
-        scenario_item = self.item_from_index(parent)
-        if db_row != self.db_row(scenario_item):
+        tool_item = self.item_from_index(parent)
+        if db_row != self.db_row(tool_item):
             return False
-        if parent_type == "scenario":
-            # Check that reordering only happens within the same scenario
-            scenario_row = parent_row
-            if int(scenario_row) != scenario_item.child_number():
-                return False
         return True
 
     def dropMimeData(self, data, drop_action, row, column, parent):
-        scenario_item = self.item_from_index(parent)
-        alternative_id_list = scenario_item.alternative_id_list
-        if row == -1:
-            row = len(alternative_id_list)
-        master_key, alternative_rows = json.loads(data.text()).popitem()
-        db_row, parent_type, _parent_row = master_key.split(";;")
+        tool_item = self.item_from_index(parent)
+        master_key, feature_rows = json.loads(data.text()).popitem()
+        db_row, _parent_type = master_key.split(";;")
         db_row = int(db_row)
-        if parent_type == "alternative root":
-            alt_root_item = self._invisible_root_item.child(db_row).child(0)
-            alternative_ids = [alt_root_item.child(row).id for row in alternative_rows]
-            alternative_ids = [id_ for id_ in alternative_ids if id_ not in set(alternative_id_list) | {None}]
-        elif parent_type == "scenario":
-            alternative_ids = [scenario_item.child(row).id for row in alternative_rows]
-            alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alternative_ids]
-        alternative_id_list[row:row] = alternative_ids
-        db_item = {"id": scenario_item.id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
-        self.db_mngr.set_scenario_alternatives({scenario_item.db_map: [db_item]})
+        feat_root_item = self._invisible_root_item.child(db_row).child(0)
+        db_items = []
+        for feat_row in feature_rows:
+            item = feat_root_item.child(feat_row)
+            feature_id = item.id
+            if feature_id in tool_item.feature_id_list:
+                continue
+            parameter_value_list_id = item.item_data.get("parameter_value_list_id")
+            db_item = {
+                "tool_id": tool_item.id,
+                "feature_id": feature_id,
+                "parameter_value_list_id": parameter_value_list_id,
+            }
+            db_items.append(db_item)
+        self.db_mngr.add_tool_features({tool_item.db_map: db_items})
         return True
