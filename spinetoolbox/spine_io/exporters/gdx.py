@@ -894,7 +894,10 @@ def expand_indexed_parameter_values(parameters, indexing_settings, sets):
             indexing_setting = indexing_settings[parameter_name]
         except KeyError:
             continue
-        parameter.expand_indexes(indexing_setting, sets)
+        try:
+            parameter.expand_indexes(indexing_setting, sets)
+        except GdxExportException as error:
+            raise GdxExportException(f"Problem with parameter '{parameter_name}': {error}")
 
 
 class MergingSetting:
