@@ -124,6 +124,8 @@ class SpineDBEditorSettingsMixin:
 
     @Slot(bool)
     def set_show_cascading_relationships(self, checked=False):
+        if not self._db_mngr:
+            return
         for db_editor in self._db_mngr.db_editors:
             db_editor.set_show_cascading_relationships(checked)
 
@@ -204,6 +206,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         super().__init__(toolbox.qsettings())
         self._toolbox = toolbox  # QWidget parent
         self._project = self._toolbox.project()
+        self._db_mngr = self._project.db_mngr if self._project else None
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self.orig_python_env = ""  # Used in determining if Python environment was changed
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
@@ -458,7 +461,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
         # checkBox check states are casted from integers to string because of Linux
-        # General
         super().save_settings()
         open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)

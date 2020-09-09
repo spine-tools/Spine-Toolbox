@@ -425,9 +425,9 @@ class DataStore(ProjectItem):
                 "Link established. "
                 f"Data from <b>{source_item.name}</b> will be merged into <b>{self.name}'s upon execution</b>."
             )
-        elif source_item.item_type() in ["Data Connection", "Tool"]:
+        elif source_item.item_type() in ["Data Connection", "Tool", "Gimlet"]:
             # Does this type of link do anything?
-            self._logger.msg.emit("Link established.")
+            self._logger.msg.emit("Link established")
         else:
             super().notify_destination(source_item)
 

@@ -44,26 +44,25 @@ class UpdateExporterOutFileNameCommand(SpineToolboxCommand):
 
 class UpdateExporterSettingsCommand(SpineToolboxCommand):
     def __init__(
-        self, exporter, settings, indexing_settings, indexing_domains, merging_settings, merging_domains, database_path
+        self, exporter, settings, indexing_settings, merging_settings, none_fallback, none_export, database_path
     ):
         """Command to update Exporter settings.
 
         Args:
             exporter (Exporter): the Exporter
+            settings (SetSettings): gdx settings
+            indexing_settings (dict): parameter indexing settings
+            merging_settings (dict): parameter merging settings
+            none_fallback (NoneFallback): fallback option on None values
+            none_export (NoneExport): how to handle Nones while exporting
             database_path (str): the db path to update settings for
         """
         super().__init__()
         self.exporter = exporter
         self.database_path = database_path
-        self.redo_settings_tuple = (settings, indexing_settings, indexing_domains, merging_settings, merging_domains)
+        self.redo_settings_tuple = (settings, indexing_settings, merging_settings, none_fallback, none_export)
         p = exporter.settings_pack(database_path)
-        self.undo_settings_tuple = (
-            p.settings,
-            p.indexing_settings,
-            p.indexing_domains,
-            p.merging_settings,
-            p.merging_domains,
-        )
+        self.undo_settings_tuple = (p.settings, p.indexing_settings, p.merging_settings)
         self.setText(f"change settings of {exporter.name}")
 
     def redo(self):

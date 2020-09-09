@@ -103,7 +103,7 @@ class TestTool(unittest.TestCase):
         )
         source_item.item_type = mock.MagicMock(return_value="Tool")
         tool.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = mock.MagicMock(return_value="View")
         tool.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(

@@ -106,19 +106,9 @@
           <item>
            <layout class="QVBoxLayout" name="verticalLayout_6">
             <item>
-             <widget class="QRadioButton" name="use_existing_domain_radio_button">
-              <property name="text">
-               <string>Use existing domain</string>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
              <layout class="QHBoxLayout" name="horizontalLayout">
               <item>
-               <widget class="QComboBox" name="existing_domains_combo"/>
+               <widget class="QComboBox" name="domains_combo"/>
               </item>
              </layout>
             </item>
@@ -130,7 +120,7 @@
                  <string>Select rows for which this Python expression evaluates to True. Use &lt;i&gt;i&lt;/i&gt; as the row index.</string>
                 </property>
                 <property name="text">
-                 <string>Label picking expression:</string>
+                 <string>Index selection:</string>
                 </property>
                </widget>
               </item>
@@ -138,80 +128,6 @@
                <widget class="QLineEdit" name="pick_expression_edit">
                 <property name="placeholderText">
                  <string/>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout">
-            <item>
-             <widget class="QRadioButton" name="create_domain_radio_button">
-              <property name="text">
-               <string>Create new index domain</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QFormLayout" name="formLayout">
-              <item row="0" column="0">
-               <widget class="QLabel" name="domain_name_label">
-                <property name="text">
-                 <string>Domain name:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="domain_name_edit">
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="placeholderText">
-                 <string>Type domain's name here...</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="domain_description_label">
-                <property name="text">
-                 <string>Description:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="domain_description_edit">
-                <property name="placeholderText">
-                 <string>Type explanatory text here...</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QVBoxLayout" name="verticalLayout_2">
-              <item>
-               <layout class="QFormLayout" name="formLayout_2">
-                <item row="0" column="0">
-                 <widget class="QLabel" name="generator_expression_label">
-                  <property name="toolTip">
-                   <string>Generate index labels from Python expression. Use &lt;i&gt;i&lt;/i&gt; as the row number.</string>
-                  </property>
-                  <property name="text">
-                   <string>Generator expression:</string>
-                  </property>
-                 </widget>
-                </item>
-                <item row="0" column="1">
-                 <widget class="QLineEdit" name="generator_expression_edit"/>
-                </item>
-               </layout>
-              </item>
-              <item>
-               <widget class="QPushButton" name="extract_indexes_button">
-                <property name="text">
-                 <string>Extract index from parameter</string>
                 </property>
                </widget>
               </item>

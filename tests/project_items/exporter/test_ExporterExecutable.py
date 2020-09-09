@@ -55,7 +55,9 @@ class TestExporterExecutable(unittest.TestCase):
             import_functions.import_objects(database_map, [("domain", "record")])
             settings_pack = SettingsPack("output.gdx")
             settings_pack.settings = gdx.make_set_settings(database_map)
-            settings_pack.indexing_settings = gdx.make_indexing_settings(database_map, logger=mock.MagicMock())
+            settings_pack.indexing_settings = gdx.make_indexing_settings(
+                database_map, gdx.NoneFallback.USE_IT, logger=mock.MagicMock()
+            )
             settings_pack.state = SettingsState.OK
             database_map.commit_session("Add an entity_class and an entity for unit tests.")
             database_map.connection.close()

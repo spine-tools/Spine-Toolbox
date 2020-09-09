@@ -144,7 +144,7 @@ class QProcessExecutionManager(ExecutionManager):
         if not self._silent and not self._semisilent:  # Loud
             self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
             self._process.readyReadStandardError.connect(self.on_ready_stderr)
-            self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
+            self._process.errorOccurred.connect(self.on_process_error)
             self._process.stateChanged.connect(self.on_state_changed)
         elif self._semisilent:  # semi-silent
             self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
@@ -201,7 +201,7 @@ class QProcessExecutionManager(ExecutionManager):
         elif new_state == QProcess.Running:
             self._logger.msg_warning.emit("\tExecution is in progress. See Process Log for messages " "(stdout&stderr)")
         elif new_state == QProcess.NotRunning:
-            # logging.debug("QProcess is not running")
+            # logging.debug("Process is not running")
             pass
         else:
             self._logger.msg_error.emit("Process is in an unspecified state")
@@ -209,7 +209,7 @@ class QProcessExecutionManager(ExecutionManager):
 
     @Slot("QProcess::ProcessError")
     def on_process_error(self, process_error):
-        """Run if there is an error in the running QProcess.
+        """Runs if there is an error in the running QProcess.
 
         Args:
             process_error (QProcess::ProcessError): Process error number
@@ -217,6 +217,7 @@ class QProcessExecutionManager(ExecutionManager):
         if process_error == QProcess.FailedToStart:
             self.process_failed = True
             self.process_failed_to_start = True
+            self._logger.msg_error.emit("Process failed to start")
         elif process_error == QProcess.Timedout:
             self.process_failed = True
             self._logger.msg_error.emit("Timed out")
@@ -232,6 +233,25 @@ class QProcessExecutionManager(ExecutionManager):
             self._logger.msg_error.emit("Unknown error in process")
         else:
             self._logger.msg_error.emit("Unspecified error in process: {0}".format(process_error))
+        self.teardown_process()
+
+    def teardown_process(self):
+        """Tears down the QProcess in case a QProcess.ProcessError occurred.
+        Emits execution_finished signal."""
+        # self._logger.msg.emit("Tearing down process")
+        if not self._process:
+            pass
+        else:
+            out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
+            errout = str(self._process.readAllStandardError().data(), "utf-8", errors="replace")
+            if out is not None:
+                self._logger.msg_proc.emit(out.strip())
+            if errout is not None:
+                self._logger.msg_proc.emit(errout.strip())
+            self._process.deleteLater()
+            self._process = None
+        self.data_to_inject = None
+        self.execution_finished.emit(-9998)
 
     def stop_execution(self):
         """See base class."""
@@ -256,6 +276,7 @@ class QProcessExecutionManager(ExecutionManager):
 
         Args:
             exit_code (int): Return code from external program (only valid for normal exits)
+            exit_status (QProcess.ExitStatus): Crash or normal exit
         """
         # logging.debug("Error that occurred last: {0}".format(self._process.error()))
         if not self._process:

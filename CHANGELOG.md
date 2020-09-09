@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - It is now possible to execute a project from the command line without opening the Toolbox GUI.
   The headless execution is enabled by the new command line option ``--execute-only``.
 - Toolbox now supports scenarios and alternatives. They can be accessed via Data store view's new Alternative tree.
+- New Project Item: Gimlet. Can be used to run any command as part of the workflow 
+  with or without a shell. Supported shells at the moment are cmd and powershell for 
+  Windows and bash for other OS's. 
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
@@ -26,6 +29,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Import editor now supports multidimensional maps. The number of dimensions can be set using the 
   *Map dimensions* spin box in mappings options.
 - Data Store Form is now called 'Spine database editor'
+- Indexed parameter handling has been overhauled in Exporter allowing parameters to share indexing domains.
+  **Note**: Due to numerous changes in the backend, Exporters in old project files will not load properly
+  and need to be re-configured.
 
 ### Deprecated
 ### Removed

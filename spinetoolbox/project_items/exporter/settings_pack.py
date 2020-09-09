@@ -31,14 +31,14 @@ class SettingsPack(QObject):
         output_file_name (str): name of the export file
         settings (gdx.SetSettings): export settings
         indexing_settings (dict): parameter indexing settings
-        indexing_domains (list): extra domains needed for parameter indexing
         merging_settings (dict): parameter merging settings
-        merging_domains (list): extra domains needed for parameter merging
+        none_fallback (NoneFallback): fallback for None parameter values
+        none_export (NoneExport): how to handle None values while exporting
         last_database_commit (datetime): latest database commit time stamp
         settings_window (GdxExportSettings): settings editor window
     """
 
-    state_changed = Signal("QVariant")
+    state_changed = Signal(object)
     """Emitted when the pack's state changes."""
 
     def __init__(self, output_file_name):
@@ -50,9 +50,9 @@ class SettingsPack(QObject):
         self.output_file_name = output_file_name
         self.settings = None
         self.indexing_settings = None
-        self.indexing_domains = list()
         self.merging_settings = dict()
-        self.merging_domains = list()
+        self.none_fallback = gdx.NoneFallback.USE_IT
+        self.none_export = gdx.NoneExport.DO_NOT_EXPORT
         self.last_database_commit = None
         self.settings_window = None
         self._state = SettingsState.FETCHING
@@ -79,11 +79,11 @@ class SettingsPack(QObject):
             return d
         d["settings"] = self.settings.to_dict()
         d["indexing_settings"] = gdx.indexing_settings_to_dict(self.indexing_settings)
-        d["indexing_domains"] = [domain.to_dict() for domain in self.indexing_domains]
         d["merging_settings"] = {
             parameter_name: setting.to_dict() for parameter_name, setting in self.merging_settings.items()
         }
-        d["merging_domains"] = [domain.to_dict() for domain in self.merging_domains]
+        d["none_fallback"] = self.none_fallback.value
+        d["none_export"] = self.none_export.value
         d["latest_database_commit"] = (
             self.last_database_commit.isoformat() if self.last_database_commit is not None else None
         )
@@ -96,14 +96,24 @@ class SettingsPack(QObject):
         pack.state = SettingsState(pack_dict["state"])
         if pack.state not in (SettingsState.OK, SettingsState.INDEXING_PROBLEM):
             return pack
-        pack.settings = gdx.SetSettings.from_dict(pack_dict["settings"])
+        value = pack_dict.get("none_fallback")
+        if value is not None:
+            pack.none_fallback = gdx.NoneFallback(value)
+        value = pack_dict.get("none_export")
+        if value is not None:
+            pack.none_export = gdx.NoneExport(value)
+        try:
+            pack.settings = gdx.SetSettings.from_dict(pack_dict["settings"])
+        except gdx.GdxExportException as error:
+            logger.msg_error.emit(f"Failed to fully restore Exporter settings: {error}")
+            return pack
         try:
             db_map = DatabaseMapping(database_url)
             value_type_logger = _UnsupportedValueTypeLogger(
                 f"Exporter settings ignoring some parameters from database '{database_url}':", logger
             )
             pack.indexing_settings = gdx.indexing_settings_from_dict(
-                pack_dict["indexing_settings"], db_map, value_type_logger
+                pack_dict["indexing_settings"], db_map, pack.none_fallback, value_type_logger
             )
         except SpineDBAPIError as error:
             logger.msg_error.emit(
@@ -113,12 +123,10 @@ class SettingsPack(QObject):
             return pack
         else:
             db_map.connection.close()
-        pack.indexing_domains = [gdx.Set.from_dict(set_dict) for set_dict in pack_dict["indexing_domains"]]
         pack.merging_settings = {
             parameter_name: gdx.MergingSetting.from_dict(setting_dict)
             for parameter_name, setting_dict in pack_dict["merging_settings"].items()
         }
-        pack.merging_domains = [gdx.Set.from_dict(set_dict) for set_dict in pack_dict["merging_domains"]]
         latest_commit = pack_dict.get("latest_database_commit")
         if latest_commit is not None:
             try:

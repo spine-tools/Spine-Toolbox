@@ -446,8 +446,9 @@ class ProjectItemFactory:
 
         Args:
             toolbox (ToolboxUI)
-            x, y (int): Icon coordinates
-            project_item (ProjectItem)
+            x (int): Icon X coordinate
+            y (int): Icon Y coordinate
+            project_item (ProjectItem): Project item
 
         Returns:
             ProjectItemIcon

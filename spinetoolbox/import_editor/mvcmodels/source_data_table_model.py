@@ -245,6 +245,8 @@ class SourceDataTableModel(MinimalTableModel):
                         return MAPPING_COLORS["parameter_value"]
                 elif self.index_in_mapping(mapping.parameters.value, index):
                     return MAPPING_COLORS["parameter_value"]
+                elif self.index_in_mapping(mapping.parameters.alternative_name, index):
+                    return MAPPING_COLORS["alternative"]
             if isinstance(mapping.parameters, ParameterArrayMapping) and mapping.parameters.extra_dimensions:
                 # parameter extra dimensions color
                 for ed in mapping.parameters.extra_dimensions:

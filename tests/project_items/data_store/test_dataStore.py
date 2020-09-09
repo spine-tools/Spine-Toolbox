@@ -248,7 +248,7 @@ class TestDataStore(unittest.TestCase):
         source_item.name = "source name"
         source_item.item_type = mock.MagicMock(return_value="Data Connection")
         self.ds.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = mock.MagicMock(return_value="Importer")
         self.ds.notify_destination(source_item)
         self.toolbox.msg.emit.assert_called_with(
@@ -262,7 +262,7 @@ class TestDataStore(unittest.TestCase):
         )
         source_item.item_type = mock.MagicMock(return_value="Tool")
         self.ds.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = mock.MagicMock(return_value="View")
         self.ds.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(
