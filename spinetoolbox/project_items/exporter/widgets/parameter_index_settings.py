@@ -15,7 +15,7 @@ Parameter indexing settings window for .gdx export.
 :author: A. Soininen (VTT)
 :date:   26.11.2019
 """
-
+from contextlib import contextmanager
 import enum
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
@@ -46,6 +46,7 @@ class ParameterIndexSettings(QWidget):
         super().__init__(parent)
         self._indexing_setting = indexing_setting
         self._state = IndexSettingsState.OK
+        self._monitor_domains_combo_box = True
         self._using_pick_expression = False
         self._ui = Ui_Form()
         self._ui.setupUi(self)
@@ -118,14 +119,22 @@ class ParameterIndexSettings(QWidget):
         """
         self._available_domains = domains
         current = self._ui.domains_combo.currentText()
-        self._ui.domains_combo.blockSignals(True)
-        self._ui.domains_combo.clear()
-        self._ui.domains_combo.addItems(sorted(domains.keys()))
-        self._ui.domains_combo.blockSignals(False)
+        with _freely_update_domains_combo(self):
+            self._ui.domains_combo.clear()
+            self._ui.domains_combo.addItems(sorted(domains.keys()))
         if current in domains:
             self._ui.domains_combo.setCurrentText(current)
         else:
             self._ui.domains_combo.setCurrentIndex(-1)
+
+    def set_domains_combo_monitoring_enabled(self, enabled):
+        """
+        Enables or disables monitoring of current text in domains combo box.
+
+        Args:
+            enabled (bool): True enables monitoring, False disables
+        """
+        self._monitor_domains_combo_box = enabled
 
     def update_domain_name(self, old_name, new_name):
         """
@@ -189,13 +198,8 @@ class ParameterIndexSettings(QWidget):
             return True
         return False
 
-    def _update_indexing_domains_name(self, domain_name=None):
-        """
-        Updates the model's header and the label showing the indexing domains.
-
-        Args:
-            domain_name (str): indexing domain's name or None to read it from the other widgets.
-        """
+    def _update_indexing_domains_name(self):
+        """Updates the model's header and the label showing the indexing domains."""
         parameter = self._indexing_setting.parameter
         index_position = self._indexing_setting.index_position
         domain_name = self._ui.domains_combo.currentText()
@@ -219,8 +223,14 @@ class ParameterIndexSettings(QWidget):
     @Slot(str)
     def _change_domain(self, domain_name):
         """Change the domain used on the table."""
-        self._indexing_table_model.set_records(self._available_domains[domain_name])
+        if not self._monitor_domains_combo_box:
+            return
+        if domain_name:
+            self._indexing_table_model.set_records(self._available_domains[domain_name])
+        else:
+            self._indexing_table_model.set_records(gdx.LiteralRecords([]))
         self._update_indexing_domains_name()
+
 
     @Slot(str)
     def _update_index_list_selection(self, expression):
@@ -245,3 +255,17 @@ class ParameterIndexSettings(QWidget):
         if self._indexing_setting.index_position < len(self._indexing_setting.parameter.domain_names):
             self._indexing_setting.index_position += 1
             self._update_indexing_domains_name()
+
+@contextmanager
+def _freely_update_domains_combo(widget):
+    """
+    A context manager which temporarily disables the monitoring of current text changes in domains combo box.
+
+    Args:
+        widget (ParameterIndexSettings): settings widget
+    """
+    widget.set_domains_combo_monitoring_enabled(False)
+    try:
+        yield None
+    finally:
+        widget.set_domains_combo_monitoring_enabled(True)

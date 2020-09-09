@@ -187,7 +187,11 @@ class ParameterIndexSettingsWindow(QWidget):
     @Slot(QModelIndex, int, int)
     def _send_domains_to_indexing_widgets(self, parent, first, last):
         """Updates the available domains combo boxes in indexing widgets."""
-        domains = {name: self._set_settings.records(name) for name in self._set_settings.domain_names}
+        domains = {
+            name: self._set_settings.records(name)
+            for name in self._set_settings.domain_names
+            if not self._set_settings.metadata(name).is_additional()
+        }
         domains.update(self._additional_domains_model.gather_domains(self._database_mapping))
         for widget in self._settings_widgets.values():
             widget.set_domains(domains)
