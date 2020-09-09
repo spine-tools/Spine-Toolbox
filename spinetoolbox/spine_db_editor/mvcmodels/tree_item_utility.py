@@ -27,7 +27,7 @@ class NonLazyTreeItem(TreeItem):
 
     @property
     def item_type(self):
-        raise NotImplementedError()
+        return "unknown"
 
     @property
     def db_mngr(self):
@@ -168,7 +168,10 @@ class LeafItem(NonLazyTreeItem):
     def __init__(self, identifier=None):
         super().__init__()
         self._id = identifier
-        self._item_data = {"name": f"Type new {self.item_type} name here...", "description": ""}
+        self._item_data = self._make_item_data()
+
+    def _make_item_data(self):
+        return {"name": f"Type new {self.item_type} name here...", "description": ""}
 
     @property
     def item_type(self):
@@ -224,9 +227,12 @@ class LeafItem(NonLazyTreeItem):
             self.update_item_in_db(db_item)
             return True
         if column == 0:
-            db_item = dict(name=value, description=self._item_data["description"])
+            db_item = self._make_item_to_add(value)
             self.add_item_to_db(db_item)
         return True
+
+    def _make_item_to_add(self, name):
+        return dict(name=name, description=self._item_data["description"])
 
     def handle_updated_in_db(self):
         index = self.index()

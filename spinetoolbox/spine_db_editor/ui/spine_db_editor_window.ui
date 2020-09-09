@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>969</width>
-    <height>1136</height>
+    <height>1167</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -922,7 +922,7 @@
      <item>
       <widget class="ToolFeatureTreeView" name="treeView_tool_feature">
        <property name="editTriggers">
-        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::EditKeyPressed</set>
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
        </property>
       </widget>
      </item>

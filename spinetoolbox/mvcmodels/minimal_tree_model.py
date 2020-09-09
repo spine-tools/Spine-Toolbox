@@ -27,8 +27,6 @@ class TreeItem:
         Args:
             model (MinimalTreeModel, NoneType): The model where the item belongs.
         """
-        if model is None:
-            model = MinimalTreeModel()
         self._model = model
         self._children = None
         self._parent_item = None
@@ -203,13 +201,14 @@ class TreeItem:
 class MinimalTreeModel(QAbstractItemModel):
     """Base class for all tree models."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         """Init class.
 
         Args:
             parent (SpineDBEditor)
         """
         super().__init__(parent)
+        self._parent = parent
         self._invisible_root_item = TreeItem(self)
 
     def visit_all(self, index=QModelIndex()):

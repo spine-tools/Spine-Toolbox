@@ -84,8 +84,8 @@ class SpineDBManager(QObject):
     parameter_values_added = Signal(object)
     parameter_value_lists_added = Signal(object)
     parameter_tags_added = Signal(object)
+    features_added = Signal(object)
     tools_added = Signal(object)
-    alternatives_added = Signal(object)
     # Removed
     scenarios_removed = Signal(object)
     alternatives_removed = Signal(object)
@@ -98,8 +98,8 @@ class SpineDBManager(QObject):
     parameter_values_removed = Signal(object)
     parameter_value_lists_removed = Signal(object)
     parameter_tags_removed = Signal(object)
+    features_removed = Signal(object)
     tools_removed = Signal(object)
-    alternatives_removed = Signal(object)
     # Updated
     scenarios_updated = Signal(object)
     alternatives_updated = Signal(object)
@@ -112,8 +112,8 @@ class SpineDBManager(QObject):
     parameter_value_lists_updated = Signal(object)
     parameter_tags_updated = Signal(object)
     parameter_definition_tags_set = Signal(object)
+    features_updated = Signal(object)
     tools_updated = Signal(object)
-    alternatives_updated = Signal(object)
     # Uncached
     items_removed_from_cache = Signal(object)
     # Internal
@@ -534,6 +534,8 @@ class SpineDBManager(QObject):
             "relationship": (self.relationships_added, self.relationships_updated),
             "entity_group": (self.entity_groups_added,),
             "parameter_value": (self.parameter_values_added, self.parameter_values_updated),
+            "feature": (self.features_added, self.features_updated),
+            "tool": (self.tools_added, self.tools_updated),
         }
         for item_type, signals in ordered_signals.items():
             for signal in signals:
@@ -1086,7 +1088,10 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "feature_sq", ids=ids), key=lambda x: x["name"])
+        return self.get_db_items(
+            self._make_query(db_map, "ext_feature_sq", ids=ids),
+            key=lambda x: (x["entity_class_name"], x["parameter_definition_name"]),
+        )
 
     def get_tools(self, db_map, ids=()):
         """Get tools from database.
@@ -1429,6 +1434,24 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_tag"))
 
+    def update_features(self, db_map_data):
+        """Updates features tags in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "feature"))
+
+    def update_tools(self, db_map_data):
+        """Updates tools tags in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool"))
+
     def set_scenario_alternatives(self, db_map_data):
         """Sets scenario alternatives in db.
 
@@ -1537,6 +1560,9 @@ class SpineDBManager(QObject):
             "parameter_tag": self.parameter_tags_removed,
             "relationship_class": self.relationship_classes_removed,
             "object_class": self.object_classes_removed,
+            # FIXME: check if order is correct here
+            "feature": self.features_removed,
+            "tool": self.tools_removed,
         }
         typed_db_map_data = {}
         for item_type, signal in ordered_signals.items():

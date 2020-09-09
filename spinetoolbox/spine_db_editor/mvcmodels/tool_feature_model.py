@@ -66,15 +66,26 @@ class ToolFeatureModel(MinimalTreeModel):
                 feature_root_item, tool_root_item,
             )
 
+    @staticmethod
+    def make_feature_name(entity_class_name, parameter_definition_name):
+        return entity_class_name + ": " + parameter_definition_name
+
     def _add_leaves(self, db_map_data, leaf_type):
-        root_number, leaf_maker = {"feature": (0, FeatureLeafItem), "tool": (1, ToolLeafItem)}[leaf_type]
+        root_number, leaf_maker, name_maker = {
+            "feature": (
+                0,
+                FeatureLeafItem,
+                lambda x: self.make_feature_name(x["entity_class_name"], x["parameter_definition_name"]),
+            ),
+            "tool": (1, ToolLeafItem, lambda x: x["name"]),
+        }[leaf_type]
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
                 continue
             root_item = db_item.child(root_number)
             # First realize the ones added locally
-            ids = {x["name"]: x["id"] for x in items}
+            ids = {name_maker(x): x["id"] for x in items}
             for leaf_item in root_item.children[:-1]:
                 id_ = ids.pop(leaf_item.name, None)
                 if not id_:

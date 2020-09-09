@@ -376,6 +376,53 @@ class ObjectNameListDelegate(ParameterDelegate):
         self.object_name_list_editor_requested.emit(index, relationship_class_id, db_map)
 
 
+class FeatureDelegate(ParameterDelegate):
+    """A delegate for feature."""
+
+    def __init__(self, parent, db_mngr):
+        super().__init__(parent, db_mngr)
+        self.db_mngr = db_mngr
+        self._id_tuples = {}
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        model = index.model()
+        item = model.item_from_index(index)
+        if item.item_type != "feature":
+            self.data_committed.emit(index, editor.data())
+            return
+        param_def = editor.data()
+        id_tuple = self._id_tuples.get(editor.data())
+        if id_tuple is None:
+            model._parent.error_box.emit("Error", f"Invalid class parameter definition '{param_def}'")
+            return
+        self.data_committed.emit(index, id_tuple)
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        model = index.model()
+        item = model.item_from_index(index)
+        if item.item_type != "feature":
+            editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
+            return editor
+        editor = SearchBarEditor(self.parent(), parent)
+        parameter_definitions = self.db_mngr.get_items(item.db_map, "parameter_definition")
+        key = lambda x: model.make_feature_name(
+            x.get("object_class_name") or x.get("relationship_class_name"), x["parameter_name"]
+        )
+        self._id_tuples = {key(x): (x["id"], x["value_list_id"]) for x in parameter_definitions if x["value_list_id"]}
+        if not self._id_tuples:
+            model._parent.error_box.emit(
+                "Error",
+                "There isn't any parameter definitions with an associated parameter value list to create features.",
+            )
+            return None
+        editor.set_data(index.data(Qt.EditRole), self._id_tuples)
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        return editor
+
+
 class ManageItemsDelegate(QStyledItemDelegate):
     """A custom delegate for the model in {Add/Edit}ItemDialogs.
 

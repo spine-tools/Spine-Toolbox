@@ -21,6 +21,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QEvent
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect
+from .custom_delegates import FeatureDelegate
 
 
 class EntityTreeView(CopyTreeView):
@@ -413,6 +414,44 @@ class ToolFeatureTreeView(ItemTreeView):
     """Custom QTreeView class for tools and features in SpineDBEditor.
     """
 
+    def connect_spine_db_editor(self, spine_db_editor):
+        """see base class"""
+        super().connect_spine_db_editor(spine_db_editor)
+        delegate = FeatureDelegate(self._spine_db_editor, self._spine_db_editor.db_mngr)
+        delegate.data_committed.connect(self.model().setData)
+        self.setItemDelegateForColumn(0, delegate)
+
+    def remove_selected(self):
+        """See base class."""
+        if not self.selectionModel().hasSelection():
+            return
+        db_map_typed_data_to_rm = {}
+        db_map_tool_feat_data = {}
+        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
+        for db_item in self.model()._invisible_root_item.children:
+            db_map_typed_data_to_rm[db_item.db_map] = {"feature": set(), "tool": set()}
+            db_map_tool_feat_data[db_item.db_map] = []
+            for feat_item in reversed(db_item.child(0).children[:-1]):
+                if feat_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["feature"].add(feat_item.id)
+            for tool_item in reversed(db_item.child(1).children[:-1]):
+                if tool_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["tool"].add(tool_item.id)
+                    continue
+                curr_feat_id_list = tool_item.feature_id_list
+                new_feat_id_list = [
+                    id_ for feat_item, id_ in zip(tool_item.children, curr_feat_id_list) if feat_item not in items
+                ]
+                if new_feat_id_list != curr_feat_id_list:
+                    item = {"id": tool_item.id, "feature_id_list": ",".join([str(id_) for id_ in new_feat_id_list])}
+                    db_map_tool_feat_data[db_item.db_map].append(item)
+        # FIXME: self.model().db_mngr.set_tool_features(db_map_tool_feat_data)
+        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
+        self.selectionModel().clearSelection()
+
+    def update_actions_visibility(self, item):
+        """See base class."""
+
 
 class AlternativeScenarioTreeView(ItemTreeView):
     """Custom QTreeView class for the alternative scenario tree in SpineDBEditor."""
@@ -424,15 +463,6 @@ class AlternativeScenarioTreeView(ItemTreeView):
         super().__init__(parent=parent)
         self._selected_alternative_ids = dict()
         self.setMouseTracking(True)
-
-    def mouseMoveEvent(self, e):
-        super().mouseMoveEvent(e)
-        index = self.indexAt(e.pos())
-        if not index.isValid():
-            return
-        item = self.model().item_from_index(index)
-        cursor = Qt.OpenHandCursor if item.item_type == "alternative" else Qt.ArrowCursor
-        self.setCursor(cursor)
 
     def connect_signals(self):
         """Connects signals."""

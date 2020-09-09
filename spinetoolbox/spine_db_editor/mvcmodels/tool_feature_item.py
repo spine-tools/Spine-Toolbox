@@ -67,6 +67,17 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def item_type(self):
         return "feature"
 
+    def _make_item_data(self):
+        return {"name": "Enter new feature here...", "description": ""}
+
+    @property
+    def item_data(self):
+        if not self.id:
+            return self._item_data
+        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        name = self.model.make_feature_name(item_data["entity_class_name"], item_data["parameter_definition_name"])
+        return dict(name=name, **item_data)
+
     @property
     def tool_tip(self):
         return "<p>Drag this item and drop it onto a <b>tool</b> item below to create a tool feature</p>"
@@ -79,6 +90,14 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
 
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDragEnabled
+
+    def _make_item_to_add(self, id_tuple):
+        parameter_definition_id, parameter_value_list_id = id_tuple
+        return dict(
+            parameter_definition_id=parameter_definition_id,
+            parameter_value_list_id=parameter_value_list_id,
+            description=self._item_data["description"],
+        )
 
 
 class ToolLeafItem(LastGrayMixin, EditableMixin, LeafItem):
@@ -118,7 +137,7 @@ class ToolLeafItem(LastGrayMixin, EditableMixin, LeafItem):
 
     def handle_updated_in_db(self):
         super().handle_updated_in_db()
-        self._update_alternative_id_list()
+        self._update_feature_id_list()
 
     def _update_feature_id_list(self):
         feat_count = len(self.feature_id_list)

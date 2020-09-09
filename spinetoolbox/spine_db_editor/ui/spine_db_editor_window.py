@@ -45,7 +45,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(969, 1136)
+        MainWindow.resize(969, 1167)
         MainWindow.setLayoutDirection(Qt.LeftToRight)
         MainWindow.setDockOptions(QMainWindow.AllowNestedDocks|QMainWindow.AllowTabbedDocks|QMainWindow.AnimatedDocks|QMainWindow.GroupedDragging)
         self.actionCommit = QAction(MainWindow)
@@ -550,7 +550,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.treeView_tool_feature = ToolFeatureTreeView(self.dockWidgetContents_13)
         self.treeView_tool_feature.setObjectName(u"treeView_tool_feature")
-        self.treeView_tool_feature.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.EditKeyPressed)
+        self.treeView_tool_feature.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
 
         self.verticalLayout_2.addWidget(self.treeView_tool_feature)
 
