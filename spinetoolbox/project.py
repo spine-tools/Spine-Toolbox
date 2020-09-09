@@ -592,10 +592,20 @@ class SpineToolboxProject(MetaObject):
                 self._logger.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
             i += 1
 
-    @Slot("QVariant")
+    @Slot(object)
     def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""
         node_successors = self.dag_handler.node_successors(dag)
+        reduced_node_successors = dict(node_successors)
+        reversed_ranking = []
+        while reduced_node_successors:
+            same_ranks = [node for node, successors in reduced_node_successors.items() if not successors]
+            for ranked_node in same_ranks:
+                del reduced_node_successors[ranked_node]
+                for node, successors in reduced_node_successors.items():
+                    reduced_node_successors[node] = [s for s in successors if s != ranked_node]
+            reversed_ranking.append(same_ranks)
+        ranks = {node: rank for rank, nodes in enumerate(reversed(reversed_ranking)) for node in nodes}
         if not node_successors:
             # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
@@ -606,13 +616,13 @@ class SpineToolboxProject(MetaObject):
             return
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
-        for rank, item_name in enumerate(node_successors):
+        for item_name in node_successors:
             item = self._project_item_model.get_item(item_name).project_item
             resources = []
             for parent_name in node_predecessors.get(item_name, set()):
                 parent_item = self._project_item_model.get_item(parent_name).project_item
                 resources += parent_item.resources_for_direct_successors()
-            item.handle_dag_changed(rank, resources)
+            item.handle_dag_changed(ranks[item_name], resources)
 
     def notify_changes_in_all_dags(self):
         """Notifies all items of changes in all dags in the project."""
