@@ -27,11 +27,44 @@ class NonLazyTreeItem(TreeItem):
 
     @property
     def item_type(self):
-        return "unknown"
+        return None
 
     @property
     def db_mngr(self):
         return self.model.db_mngr
+
+    @property
+    def display_data(self):
+        return None
+
+    @property
+    def icon_code(self):
+        return None
+
+    @property
+    def tool_tip(self):
+        return None
+
+    @property
+    def display_icon(self):
+        if self.icon_code is None:
+            return None
+        engine = CharIconEngine(self.icon_code, 0)
+        return QIcon(engine.pixmap())
+
+    def data(self, column, role=Qt.DisplayRole):
+        if column != 0:
+            return None
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            return self.display_data
+        if role == Qt.DecorationRole:
+            return self.display_icon
+        if role == Qt.ToolTipRole:
+            return self.tool_tip
+        return super().data(column, role)
+
+    def set_data(self, column, value, role=Qt.DisplayRole):
+        return False
 
     def can_fetch_more(self):
         """Disables lazy loading by returning False."""
@@ -119,12 +152,8 @@ class NonLazyDBItem(NonLazyTreeItem):
         if role in (Qt.DisplayRole, Qt.EditRole):
             return self.db_map.codename
 
-    def set_data(self, column, value, role):
-        """See base class."""
-        return False
 
-
-class RootItem(EmptyChildMixin, AllBoldMixin, NonLazyTreeItem):
+class RootItem(AllBoldMixin, NonLazyTreeItem):
     """A root item."""
 
     @property
@@ -132,34 +161,11 @@ class RootItem(EmptyChildMixin, AllBoldMixin, NonLazyTreeItem):
         raise NotImplementedError
 
     @property
-    def display_data(self):
-        raise NotImplementedError
-
-    @property
-    def icon_code(self):
-        raise NotImplementedError
-
-    @property
     def db_map(self):
         return self.parent_item.db_map
 
-    @property
-    def display_icon(self):
-        engine = CharIconEngine(self.icon_code, 0)
-        return QIcon(engine.pixmap())
 
-    def data(self, column, role=Qt.DisplayRole):
-        if column != 0:
-            return None
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return self.display_data
-        if role == Qt.DecorationRole:
-            return self.display_icon
-        return super().data(column, role)
-
-    def set_data(self, column, value, role):
-        return False
-
+class EmptyChildRootItem(EmptyChildMixin, RootItem):
     def empty_child(self):
         raise NotImplementedError
 
@@ -176,10 +182,6 @@ class LeafItem(NonLazyTreeItem):
     @property
     def item_type(self):
         raise NotImplementedError()
-
-    @property
-    def tool_tip(self):
-        return None
 
     @property
     def db_map(self):
@@ -214,11 +216,9 @@ class LeafItem(NonLazyTreeItem):
             if data is None:
                 data = ""
             return data
-        if role == Qt.ToolTipRole:
-            return self.tool_tip
         return super().data(column, role)
 
-    def set_data(self, column, value, role):
+    def set_data(self, column, value, role=Qt.EditRole):
         if role != Qt.EditRole or value == self.data(column, role):
             return False
         if self.id:

@@ -1117,7 +1117,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "tool_feature_sq", ids=ids))
+        return self.get_db_items(self._make_query(db_map, "ext_tool_feature_sq", ids=ids))
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -1448,7 +1448,7 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_tag"))
 
     def update_features(self, db_map_data):
-        """Updates features tags in db.
+        """Updates features in db.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
@@ -1457,13 +1457,22 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "feature"))
 
     def update_tools(self, db_map_data):
-        """Updates tools tags in db.
+        """Updates tools in db.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool"))
+
+    def update_tool_features(self, db_map_data):
+        """Updates tools features in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature"))
 
     def set_scenario_alternatives(self, db_map_data):
         """Sets scenario alternatives in db.
@@ -1568,15 +1577,15 @@ class SpineDBManager(QObject):
             "scenario": self.scenarios_removed,
             "alternative": self.alternatives_removed,
             "parameter_definition_tag": self._parameter_definition_tags_removed,
+            "tool_feature": self.tool_features_removed,
+            "feature": self.features_removed,
+            "tool": self.tools_removed,
             "parameter_definition": self.parameter_definitions_removed,
             "parameter_value_list": self.parameter_value_lists_removed,
             "parameter_tag": self.parameter_tags_removed,
             "relationship_class": self.relationship_classes_removed,
             "object_class": self.object_classes_removed,
-            # FIXME: check if order is correct here
-            "feature": self.features_removed,
-            "tool": self.tools_removed,
-        }
+        }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
         typed_db_map_data = {}
         for item_type, signal in ordered_signals.items():
             db_map_ids = {db_map: ids_per_type.get(item_type) for db_map, ids_per_type in db_map_typed_ids.items()}

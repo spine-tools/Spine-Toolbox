@@ -159,7 +159,8 @@ class AlternativeScenarioModel(MinimalTreeModel):
             parent_item = item.parent_item
             db_row = self.db_row(parent_item)
             parent_type = parent_item.item_type
-            master_key = ";;".join([str(db_row), parent_type, str(parent_item.child_number())])
+            scen_row = parent_item.parent_item.child_number() if parent_type == "scenario_alternative root" else None
+            master_key = ";;".join([str(db_row), parent_type, str(scen_row)])
             d.setdefault(master_key, []).append(item.child_number())
         data = json.dumps(d)
         mime = QMimeData()
@@ -179,24 +180,24 @@ class AlternativeScenarioModel(MinimalTreeModel):
         if len(data) != 1:
             return False
         master_key = next(iter(data))
-        db_row, parent_type, parent_row = master_key.split(";;")
+        db_row, parent_type, scen_row = master_key.split(";;")
         db_row = int(db_row)
-        if parent_type not in ("alternative root", "scenario"):
+        if parent_type not in ("alternative root", "scenario_alternative root"):
             return False
         # Check that target is in the same db as source
-        scenario_item = self.item_from_index(parent)
-        if db_row != self.db_row(scenario_item):
+        scen_alt_root_item = self.item_from_index(parent)
+        if db_row != self.db_row(scen_alt_root_item):
             return False
-        if parent_type == "scenario":
+        if parent_type == "scenario_alternative root":
             # Check that reordering only happens within the same scenario
-            scenario_row = parent_row
-            if int(scenario_row) != scenario_item.child_number():
+            scen_row = int(scen_row)
+            if scen_row != scen_alt_root_item.parent_item.child_number():
                 return False
         return True
 
     def dropMimeData(self, data, drop_action, row, column, parent):
-        scenario_item = self.item_from_index(parent)
-        alternative_id_list = scenario_item.alternative_id_list
+        scen_alt_root_item = self.item_from_index(parent)
+        alternative_id_list = scen_alt_root_item.alternative_id_list
         if row == -1:
             row = len(alternative_id_list)
         master_key, alternative_rows = json.loads(data.text()).popitem()
@@ -206,10 +207,13 @@ class AlternativeScenarioModel(MinimalTreeModel):
             alt_root_item = self._invisible_root_item.child(db_row).child(0)
             alternative_ids = [alt_root_item.child(row).id for row in alternative_rows]
             alternative_ids = [id_ for id_ in alternative_ids if id_ not in set(alternative_id_list) | {None}]
-        elif parent_type == "scenario":
-            alternative_ids = [scenario_item.child(row).id for row in alternative_rows]
+        elif parent_type == "scenario_alternative root":
+            alternative_ids = [scen_alt_root_item.child(row).id for row in alternative_rows]
             alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alternative_ids]
         alternative_id_list[row:row] = alternative_ids
-        db_item = {"id": scenario_item.id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
-        self.db_mngr.set_scenario_alternatives({scenario_item.db_map: [db_item]})
+        db_item = {
+            "id": scen_alt_root_item.parent_item.id,
+            "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
+        }
+        self.db_mngr.set_scenario_alternatives({scen_alt_root_item.db_map: [db_item]})
         return True

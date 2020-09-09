@@ -762,6 +762,9 @@ class SpineDBEditorBase(QMainWindow):
     def receive_tools_updated(self, db_map_data):
         self.notify_items_changed("updated", "tool", db_map_data)
 
+    def receive_tool_features_updated(self, db_map_data):
+        self.notify_items_changed("updated", "tool_feature", db_map_data)
+
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter_definition tag", db_map_data)
 
@@ -804,6 +807,9 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tools_removed(self, db_map_data):
         self.notify_items_changed("removed", "tool", db_map_data)
+
+    def receive_tool_features_removed(self, db_map_data):
+        self.notify_items_changed("removed", "tool_feature", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

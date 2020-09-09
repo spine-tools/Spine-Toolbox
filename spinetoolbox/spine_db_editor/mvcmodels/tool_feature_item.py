@@ -16,13 +16,13 @@ Classes to represent tool and feature items in a tree.
 :date:    1.9.2020
 """
 from PySide2.QtCore import Qt
-from .tree_item_utility import LastGrayMixin, EditableMixin, RootItem, LeafItem
+from .tree_item_utility import LastGrayMixin, EditableMixin, RootItem, EmptyChildRootItem, LeafItem, NonLazyTreeItem
 
 _FEATURE_ICON = "\uf5bc"  # splotch
 _TOOL_ICON = "\uf6e3"  # hammer
 
 
-class FeatureRootItem(RootItem):
+class FeatureRootItem(EmptyChildRootItem):
     """A feature root item."""
 
     @property
@@ -41,7 +41,7 @@ class FeatureRootItem(RootItem):
         return FeatureLeafItem()
 
 
-class ToolRootItem(RootItem):
+class ToolRootItem(EmptyChildRootItem):
     """A tool root item."""
 
     @property
@@ -80,7 +80,7 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
 
     @property
     def tool_tip(self):
-        return "<p>Drag this item and drop it onto a <b>tool</b> item below to create a tool feature</p>"
+        return "<p>Drag this item and drop it onto a <b>tool feature</b> item below to create a tool feature</p>"
 
     def add_item_to_db(self, db_item):
         if db_item is None:
@@ -136,25 +136,44 @@ class ToolLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def item_type(self):
         return "tool"
 
-    @property
-    def tool_tip(self):
-        return "<p>Drag a <b>feature</b> item from above and drop it here to create a tool feature</p>"
-
     def add_item_to_db(self, db_item):
         self.db_mngr.add_tools({self.db_map: [db_item]})
 
     def update_item_in_db(self, db_item):
         self.db_mngr.update_tools({self.db_map: [db_item]})
 
-    def flags(self, column):
-        flags = super().flags(column)
-        if self.id:
-            flags |= Qt.ItemIsDropEnabled
-        return flags
+    def fetch_more(self):
+        if not self.id:
+            return
+        self.append_children(ToolFeatureRootItem())
+        self._fetched = True
+
+
+class ToolFeatureRootItem(RootItem):
+    """A tool_feature root item."""
+
+    @property
+    def item_type(self):
+        return "tool_feature root"
+
+    @property
+    def display_data(self):
+        return "tool_feature"
+
+    @property
+    def tool_tip(self):
+        return "<p>Drag a <b>feature</b> item from above and drop it here to create a tool feature</p>"
+
+    @property
+    def icon_code(self):
+        return _FEATURE_ICON
 
     @property
     def feature_id_list(self):
         return [child.id for child in self.children]
+
+    def flags(self, column):
+        return super().flags(column) | Qt.ItemIsDropEnabled
 
 
 class ToolFeatureLeafItem(LeafItem):
@@ -166,8 +185,6 @@ class ToolFeatureLeafItem(LeafItem):
 
     @property
     def item_data(self):
-        if not self.id:
-            return self._item_data
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
         feature_data = self.db_mngr.get_item(self.db_map, "feature", item_data["feature_id"])
         name = self.model.make_feature_name(
@@ -175,8 +192,83 @@ class ToolFeatureLeafItem(LeafItem):
         )
         return dict(name=name, **item_data)
 
+    def fetch_more(self):
+        self.append_children(ToolFeatureRequiredItem(), ToolFeatureMethodItem())
+        self._fetched = True
+
     def add_item_to_db(self, db_item):
         raise NotImplementedError()
 
     def update_item_in_db(self, db_item):
-        raise NotImplementedError()
+        self.db_mngr.update_tool_features({self.db_map: [db_item]})
+
+
+class ToolFeatureRequiredItem(NonLazyTreeItem):
+    """A tool feature required item."""
+
+    @property
+    def item_type(self):
+        return "tool_feature required"
+
+    def flags(self, column):
+        flags = super().flags(column)
+        if column == 0:
+            flags |= Qt.ItemIsEditable
+        return flags
+
+    def data(self, column, role=Qt.DisplayRole):
+        if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
+            required = "yes" if self.parent_item.item_data["required"] else "no"
+            return "required: " + required
+        return super().data(column, role)
+
+    def set_data(self, column, value, role=Qt.EditRole):
+        if role == Qt.EditRole and column == 0:
+            required = {"yes": True, "no": False}.get(value)
+            if required is None:
+                return False
+            db_item = {"id": self.parent_item.id, "required": required}
+            self.parent_item.update_item_in_db(db_item)
+            return True
+        return False
+
+
+class ToolFeatureMethodItem(NonLazyTreeItem):
+    """A tool feature method item."""
+
+    @property
+    def item_type(self):
+        return "tool_feature method"
+
+    def flags(self, column):
+        flags = super().flags(column)
+        if column == 0:
+            flags |= Qt.ItemIsEditable
+        return flags
+
+    def data(self, column, role=Qt.DisplayRole):
+        if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
+            method = self.parent_item.item_data["method"]
+            return "method: " + str(method)
+        return super().data(column, role)
+
+    def set_data(self, column, value, role=Qt.EditRole):
+        if role == Qt.EditRole and column == 0:
+            method_index = self._get_method_index(value)
+            if method_index is None:
+                return False
+            db_item = {"id": self.parent_item.id, "method_index": method_index}
+            self.parent_item.update_item_in_db(db_item)
+            return True
+        return False
+
+    def _get_method_index(self, method):
+        method_index = self.model.get_method_index(
+            self.parent_item.db_map, self.parent_item.item_data["parameter_value_list_id"], method
+        )
+        if method_index is None:
+            self.model._parent.error_box.emit(
+                "Error", f"<p>Invalid method '{method}'. </p>" "<p>Please enter a valid method for the feature.</p>",
+            )
+            return None
+        return method_index

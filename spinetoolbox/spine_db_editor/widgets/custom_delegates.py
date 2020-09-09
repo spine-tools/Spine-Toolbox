@@ -17,9 +17,9 @@ Custom item delegates.
 """
 
 from numbers import Number
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Qt, Signal, QPoint
 from PySide2.QtWidgets import QStyledItemDelegate
-from PySide2.QtGui import QIcon
+from PySide2.QtGui import QIcon, QFontMetrics
 from spinedb_api import to_database
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
@@ -376,13 +376,10 @@ class ObjectNameListDelegate(ParameterDelegate):
         self.object_name_list_editor_requested.emit(index, relationship_class_id, db_map)
 
 
-class FeatureDelegate(ParameterDelegate):
-    """A delegate for feature."""
+class ToolFeatureDelegate(QStyledItemDelegate):
+    """A delegate for the tool feature tree."""
 
-    def __init__(self, parent, db_mngr):
-        super().__init__(parent, db_mngr)
-        self.db_mngr = db_mngr
-        self._id_tuples = {}
+    data_committed = Signal("QModelIndex", "QVariant")
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -390,25 +387,119 @@ class FeatureDelegate(ParameterDelegate):
             return
         self.data_committed.emit(index, editor.data())
 
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
+
     def createEditor(self, parent, option, index):
         """Returns editor."""
         model = index.model()
         item = model.item_from_index(index)
-        if item.item_type != "feature":
+        if item.item_type == "feature":
+            editor = SearchBarEditor(self.parent(), parent)
+            feature_names = model.get_all_feature_names(item.db_map)
+            if not feature_names:
+                model._parent.error_box.emit(
+                    "Error",
+                    "There isn't any parameter definitions with an associated parameter value list to create features.",
+                )
+                return None
+            editor.set_data(index.data(Qt.EditRole), feature_names)
+            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+            return editor
+        if item.item_type == "tool_feature required":
+            editor = SearchBarEditor(self.parent(), parent)
+            required = index.data(Qt.EditRole).split(": ")[1]
+            editor.set_data(required, ["yes", "no"])
+            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+            return editor
+        if item.item_type == "tool_feature method":
+            editor = SearchBarEditor(self.parent(), parent)
+            method = index.data(Qt.EditRole).split(": ")[1]
+            tool_feat_item = item.parent_item
+            methods = model.get_all_feature_methods(
+                tool_feat_item.db_map, tool_feat_item.item_data["parameter_value_list_id"]
+            )
+            editor.set_data(method, methods)
+            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+            return editor
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data(Qt.EditRole))
+        return editor
+
+    def updateEditorGeometry(self, editor, option, index):
+        super().updateEditorGeometry(editor, option, index)
+        item = index.model().item_from_index(index)
+        if item.item_type == "feature":
+            size = option.rect.size()
+            editor.set_base_size(size)
+            editor.update_geometry()
+        elif item.item_type == "tool_feature required":
+            size = option.rect.size()
+            fm = QFontMetrics(index.data(Qt.FontRole))
+            dx = fm.horizontalAdvance("required:")
+            size.setWidth(size.width() - dx)
+            editor.set_base_size(size)
+            editor.set_base_offset(QPoint(dx, 0))
+            editor.update_geometry()
+        elif item.item_type == "tool_feature method":
+            size = option.rect.size()
+            fm = QFontMetrics(index.data(Qt.FontRole))
+            dx = fm.horizontalAdvance("method:")
+            size.setWidth(size.width() - dx)
+            editor.set_base_size(size)
+            editor.set_base_offset(QPoint(dx, 0))
+            editor.update_geometry()
+
+    def _close_editor(self, editor, index):
+        """Closes editor. Needed by SearchBarEditor."""
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, index.model(), index)
+
+
+class AlternativeScenarioDelegate(QStyledItemDelegate):
+    """A delegate for the alternative scenario tree."""
+
+    data_committed = Signal("QModelIndex", "QVariant")
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        if editor.data() == index.data():
+            return
+        self.data_committed.emit(index, editor.data())
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        model = index.model()
+        item = model.item_from_index(index)
+        if item.item_type != "scenario active":
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
             return editor
         editor = SearchBarEditor(self.parent(), parent)
-        feature_names = model.get_all_features_names(item.db_map)
-        if not feature_names:
-            model._parent.error_box.emit(
-                "Error",
-                "There isn't any parameter definitions with an associated parameter value list to create features.",
-            )
-            return None
-        editor.set_data(index.data(Qt.EditRole), feature_names)
+        active = index.data(Qt.EditRole).split(": ")[1]
+        editor.set_data(active, ["yes", "no"])
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
+
+    def updateEditorGeometry(self, editor, option, index):
+        super().updateEditorGeometry(editor, option, index)
+        item = index.model().item_from_index(index)
+        if item.item_type == "scenario active":
+            size = option.rect.size()
+            fm = QFontMetrics(index.data(Qt.FontRole))
+            dx = fm.horizontalAdvance("active:")
+            size.setWidth(size.width() - dx)
+            editor.set_base_size(size)
+            editor.set_base_offset(QPoint(dx, 0))
+            editor.update_geometry()
+
+    def _close_editor(self, editor, index):
+        """Closes editor. Needed by SearchBarEditor."""
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, index.model(), index)
 
 
 class ManageItemsDelegate(QStyledItemDelegate):

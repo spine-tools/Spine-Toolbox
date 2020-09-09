@@ -37,6 +37,7 @@ class ToolFeatureModel(MinimalTreeModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._db_map_feature_data = {}
+        self._db_map_feature_methods = {}
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 1.
@@ -66,7 +67,7 @@ class ToolFeatureModel(MinimalTreeModel):
     def make_feature_name(entity_class_name, parameter_definition_name):
         return entity_class_name + "/" + parameter_definition_name
 
-    def _begin_edit_features(self, db_map):
+    def _begin_set_features(self, db_map):
         parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition")
         key = lambda x: self.make_feature_name(
             x.get("object_class_name") or x.get("relationship_class_name"), x["parameter_name"]
@@ -75,12 +76,27 @@ class ToolFeatureModel(MinimalTreeModel):
             key(x): (x["id"], x["value_list_id"]) for x in parameter_definitions if x["value_list_id"]
         }
 
-    def get_all_features_names(self, db_map):
-        self._begin_edit_features(db_map)
+    def get_all_feature_names(self, db_map):
+        self._begin_set_features(db_map)
         return list(self._db_map_feature_data.get(db_map, {}).keys())
 
     def get_feature_data(self, db_map, feature_name):
         return self._db_map_feature_data.get(db_map, {}).get(feature_name)
+
+    def _begin_set_feature_method(self, db_map, parameter_value_list_id):
+        parameter_value_list = self.db_mngr.get_item(db_map, "parameter_value_list", parameter_value_list_id)
+        value_index_list = [int(ind) for ind in parameter_value_list["value_index_list"].split(";")]
+        display_value_list = self.db_mngr.get_parameter_value_list(db_map, parameter_value_list_id, Qt.DisplayRole)
+        self._db_map_feature_methods.setdefault(db_map, {})[parameter_value_list_id] = dict(
+            zip(display_value_list, value_index_list)
+        )
+
+    def get_all_feature_methods(self, db_map, parameter_value_list_id):
+        self._begin_set_feature_method(db_map, parameter_value_list_id)
+        return list(self._db_map_feature_methods.get(db_map, {}).get(parameter_value_list_id, {}).keys())
+
+    def get_method_index(self, db_map, parameter_value_list_id, method):
+        return self._db_map_feature_methods.get(db_map, {}).get(parameter_value_list_id, {}).get(method)
 
     def _add_tools_or_features(self, db_map_data, item_type):
         root_number, leaf_maker, name_maker = {
@@ -107,31 +123,6 @@ class ToolFeatureModel(MinimalTreeModel):
             children = [leaf_maker(id_) for id_ in ids.values()]
             root_item.insert_children(root_item.child_count() - 1, *children)
 
-    def add_features(self, db_map_data):
-        self._add_tools_or_features(db_map_data, "feature")
-
-    def add_tools(self, db_map_data):
-        self._add_tools_or_features(db_map_data, "tool")
-
-    def add_tool_features(self, db_map_data):
-        print(db_map_data)
-        db_map_ids_per_tool_id = {}
-        for db_map, data in db_map_data.items():
-            for item in data:
-                tool_id = item["tool_id"]
-                db_map_ids_per_tool_id.setdefault(db_map, {}).setdefault(tool_id, []).append(item["id"])
-        for db_item in self._invisible_root_item.children:
-            ids_per_tool_id = db_map_ids_per_tool_id.get(db_item.db_map)
-            if not ids_per_tool_id:
-                continue
-            tool_root_item = db_item.child(1)
-            for tool_id, ids in ids_per_tool_id.items():
-                tool_leaf_item = next(iter(child for child in tool_root_item.children if child.id == tool_id), None)
-                if tool_leaf_item is None:
-                    continue
-                children = [ToolFeatureLeafItem(id_) for id_ in ids]
-                tool_leaf_item.append_children(*children)
-
     def _update_tools_or_features(self, db_map_data, item_type):
         root_number = {"feature": 0, "tool": 1}[item_type]
         self.layoutAboutToBeChanged.emit()
@@ -145,12 +136,6 @@ class ToolFeatureModel(MinimalTreeModel):
             for id_ in ids.intersection(leaf_items):
                 leaf_items[id_].handle_updated_in_db()
         self.layoutChanged.emit()
-
-    def update_features(self, db_map_data):
-        self._update_tools_or_features(db_map_data, "feature")
-
-    def update_tools(self, db_map_data):
-        self._update_tools_or_features(db_map_data, "tool")
 
     def _remove_tools_or_features(self, db_map_data, item_type):
         root_number = {"feature": 0, "tool": 1}[item_type]
@@ -169,11 +154,62 @@ class ToolFeatureModel(MinimalTreeModel):
                 root_item.remove_children(row, 1)
         self.layoutChanged.emit()
 
+    def add_features(self, db_map_data):
+        self._add_tools_or_features(db_map_data, "feature")
+
+    def add_tools(self, db_map_data):
+        self._add_tools_or_features(db_map_data, "tool")
+
+    def update_features(self, db_map_data):
+        self._update_tools_or_features(db_map_data, "feature")
+
+    def update_tools(self, db_map_data):
+        self._update_tools_or_features(db_map_data, "tool")
+
     def remove_features(self, db_map_data):
         self._remove_tools_or_features(db_map_data, "feature")
 
     def remove_tools(self, db_map_data):
         self._remove_tools_or_features(db_map_data, "tool")
+
+    def _tool_feature_ids_per_root_item(self, db_map_data):
+        d = {}
+        db_map_ids_per_tool_id = {}
+        for db_map, data in db_map_data.items():
+            for item in data:
+                tool_id = item["tool_id"]
+                db_map_ids_per_tool_id.setdefault(db_map, {}).setdefault(tool_id, []).append(item["id"])
+        for db_item in self._invisible_root_item.children:
+            ids_per_tool_id = db_map_ids_per_tool_id.get(db_item.db_map)
+            if not ids_per_tool_id:
+                continue
+            tool_root_item = db_item.child(1)
+            for tool_id, ids in ids_per_tool_id.items():
+                tool_leaf_item = next(iter(child for child in tool_root_item.children if child.id == tool_id), None)
+                if tool_leaf_item is None:
+                    continue
+                tool_feat_root_item = tool_leaf_item.child(0)
+                d[tool_feat_root_item] = ids
+        return d
+
+    def add_tool_features(self, db_map_data):
+        for tool_feat_root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
+            children = [ToolFeatureLeafItem(id_) for id_ in ids]
+            tool_feat_root_item.append_children(*children)
+
+    def update_tool_features(self, db_map_data):
+        for tool_feat_root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
+            for tool_feat_leaf_item in tool_feat_root_item.children:
+                if tool_feat_leaf_item.id in ids:
+                    top_left = self.index_from_item(tool_feat_leaf_item.child(0))
+                    bottom_right = self.index_from_item(tool_feat_leaf_item.child(-1))
+                    self.dataChanged.emit(top_left, bottom_right)
+
+    def remove_tool_features(self, db_map_data):
+        for tool_feat_root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
+            for row, tool_feat_leaf_item in reversed(list(enumerate(tool_feat_root_item.children))):
+                if tool_feat_leaf_item.id in ids:
+                    tool_feat_root_item.remove_children(row, 1)
 
     @staticmethod
     def db_item(item):
@@ -231,7 +267,7 @@ class ToolFeatureModel(MinimalTreeModel):
         return True
 
     def dropMimeData(self, data, drop_action, row, column, parent):
-        tool_item = self.item_from_index(parent)
+        tool_feat_root_item = self.item_from_index(parent)
         master_key, feature_rows = json.loads(data.text()).popitem()
         db_row, _parent_type = master_key.split(";;")
         db_row = int(db_row)
@@ -240,14 +276,14 @@ class ToolFeatureModel(MinimalTreeModel):
         for feat_row in feature_rows:
             item = feat_root_item.child(feat_row)
             feature_id = item.id
-            if feature_id in tool_item.feature_id_list:
+            if feature_id in tool_feat_root_item.feature_id_list:
                 continue
             parameter_value_list_id = item.item_data.get("parameter_value_list_id")
             db_item = {
-                "tool_id": tool_item.id,
+                "tool_id": tool_feat_root_item.parent_item.id,
                 "feature_id": feature_id,
                 "parameter_value_list_id": parameter_value_list_id,
             }
             db_items.append(db_item)
-        self.db_mngr.add_tool_features({tool_item.db_map: db_items})
+        self.db_mngr.add_tool_features({tool_feat_root_item.db_map: db_items})
         return True

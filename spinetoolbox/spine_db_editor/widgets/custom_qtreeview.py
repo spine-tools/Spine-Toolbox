@@ -21,7 +21,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QEvent
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect
-from .custom_delegates import FeatureDelegate
+from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate
 
 
 class EntityTreeView(CopyTreeView):
@@ -417,7 +417,7 @@ class ToolFeatureTreeView(ItemTreeView):
     def connect_spine_db_editor(self, spine_db_editor):
         """see base class"""
         super().connect_spine_db_editor(spine_db_editor)
-        delegate = FeatureDelegate(self._spine_db_editor, self._spine_db_editor.db_mngr)
+        delegate = ToolFeatureDelegate(self._spine_db_editor)
         delegate.data_committed.connect(self.model().setData)
         self.setItemDelegateForColumn(0, delegate)
 
@@ -426,11 +426,9 @@ class ToolFeatureTreeView(ItemTreeView):
         if not self.selectionModel().hasSelection():
             return
         db_map_typed_data_to_rm = {}
-        db_map_tool_feat_data = {}
         items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
         for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"feature": set(), "tool": set()}
-            db_map_tool_feat_data[db_item.db_map] = []
+            db_map_typed_data_to_rm[db_item.db_map] = {"feature": set(), "tool": set(), "tool_feature": set()}
             for feat_item in reversed(db_item.child(0).children[:-1]):
                 if feat_item in items:
                     db_map_typed_data_to_rm[db_item.db_map]["feature"].add(feat_item.id)
@@ -438,14 +436,10 @@ class ToolFeatureTreeView(ItemTreeView):
                 if tool_item in items:
                     db_map_typed_data_to_rm[db_item.db_map]["tool"].add(tool_item.id)
                     continue
-                curr_feat_id_list = tool_item.feature_id_list
-                new_feat_id_list = [
-                    id_ for feat_item, id_ in zip(tool_item.children, curr_feat_id_list) if feat_item not in items
-                ]
-                if new_feat_id_list != curr_feat_id_list:
-                    item = {"id": tool_item.id, "feature_id_list": ",".join([str(id_) for id_ in new_feat_id_list])}
-                    db_map_tool_feat_data[db_item.db_map].append(item)
-        # FIXME: self.model().db_mngr.set_tool_features(db_map_tool_feat_data)
+                tool_feat_root_item = tool_item.child(0)
+                for tool_feat_item in reversed(tool_feat_root_item.children):
+                    if tool_feat_item in items:
+                        db_map_typed_data_to_rm[db_item.db_map]["tool_feature"].add(tool_feat_item.id)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()
 
@@ -469,6 +463,13 @@ class AlternativeScenarioTreeView(ItemTreeView):
         super().connect_signals()
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
 
+    def connect_spine_db_editor(self, spine_db_editor):
+        """see base class"""
+        super().connect_spine_db_editor(spine_db_editor)
+        delegate = AlternativeScenarioDelegate(self._spine_db_editor)
+        delegate.data_committed.connect(self.model().setData)
+        self.setItemDelegateForColumn(0, delegate)
+
     def _db_map_alt_ids_from_selection(self, selection):
         db_map_ids = {}
         for index in selection.indexes():
@@ -485,7 +486,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
             if index.column() != 0:
                 continue
             item = self.model().item_from_index(index)
-            if item.item_type == "scenario" and item.id:
+            if item.item_type == "scenario_alternative root":
                 db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
         return db_map_ids
 
@@ -524,9 +525,10 @@ class AlternativeScenarioTreeView(ItemTreeView):
                 if scen_item in items:
                     db_map_typed_data_to_rm[db_item.db_map]["scenario"].add(scen_item.id)
                     continue
-                curr_alt_id_list = scen_item.alternative_id_list
+                scen_alt_root_item = scen_item.scenario_alternative_root_item
+                curr_alt_id_list = scen_alt_root_item.alternative_id_list
                 new_alt_id_list = [
-                    id_ for alt_item, id_ in zip(scen_item.children, curr_alt_id_list) if alt_item not in items
+                    id_ for alt_item, id_ in zip(scen_alt_root_item.children, curr_alt_id_list) if alt_item not in items
                 ]
                 if new_alt_id_list != curr_alt_id_list:
                     item = {"id": scen_item.id, "alternative_id_list": ",".join([str(id_) for id_ in new_alt_id_list])}
