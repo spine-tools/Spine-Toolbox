@@ -386,6 +386,8 @@ class FeatureDelegate(ParameterDelegate):
 
     def setModelData(self, editor, model, index):
         """Send signal."""
+        if editor.data() == index.data():
+            return
         model = index.model()
         item = model.item_from_index(index)
         if item.item_type != "feature":

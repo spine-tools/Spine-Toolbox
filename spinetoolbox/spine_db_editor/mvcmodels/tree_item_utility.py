@@ -222,8 +222,7 @@ class LeafItem(NonLazyTreeItem):
         if role != Qt.EditRole or value == self.data(column, role):
             return False
         if self.id:
-            field = self.header_data(column)
-            db_item = {"id": self.id, field: value}
+            db_item = self._make_item_to_update(column, value)
             self.update_item_in_db(db_item)
             return True
         if column == 0:
@@ -231,8 +230,12 @@ class LeafItem(NonLazyTreeItem):
             self.add_item_to_db(db_item)
         return True
 
-    def _make_item_to_add(self, name):
-        return dict(name=name, description=self._item_data["description"])
+    def _make_item_to_add(self, value):
+        return dict(name=value, description=self._item_data["description"])
+
+    def _make_item_to_update(self, column, value):
+        field = self.header_data(column)
+        return {"id": self.id, field: value}
 
     def handle_updated_in_db(self):
         index = self.index()

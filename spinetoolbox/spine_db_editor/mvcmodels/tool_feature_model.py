@@ -68,7 +68,7 @@ class ToolFeatureModel(MinimalTreeModel):
 
     @staticmethod
     def make_feature_name(entity_class_name, parameter_definition_name):
-        return entity_class_name + ": " + parameter_definition_name
+        return entity_class_name + "/" + parameter_definition_name
 
     def _add_leaves(self, db_map_data, leaf_type):
         root_number, leaf_maker, name_maker = {

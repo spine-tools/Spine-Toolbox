@@ -91,12 +91,20 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDragEnabled
 
-    def _make_item_to_add(self, id_tuple):
-        parameter_definition_id, parameter_value_list_id = id_tuple
+    def _make_item_to_add(self, value):
+        parameter_definition_id, parameter_value_list_id = value
         return dict(
             parameter_definition_id=parameter_definition_id,
             parameter_value_list_id=parameter_value_list_id,
             description=self._item_data["description"],
+        )
+
+    def _make_item_to_update(self, column, value):
+        if column != 0:
+            return super()._make_item_to_update(column, value)
+        parameter_definition_id, parameter_value_list_id = value
+        return dict(
+            id=self.id, parameter_definition_id=parameter_definition_id, parameter_value_list_id=parameter_value_list_id
         )
 
 
