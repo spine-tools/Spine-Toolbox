@@ -543,6 +543,35 @@ class SetMapDimensions(QUndoCommand):
         )
 
 
+class SetMapCompressFlag(QUndoCommand):
+    """Command to change the Map compress flag."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, compress):
+        """
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            options_widget (ImportMappingOptions): options widget
+            compress (bool): compress flag value
+        """
+        text = ("enable" if compress else "disable") + " Map compression"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._compress = compress
+
+    def redo(self):
+        """Sets the compress flag."""
+        self._options_widget.set_map_compress(self._source_table_name, self._mapping_specification_name, self._compress)
+
+    def undo(self):
+        """Resets the compress flag to previous value."""
+        self._options_widget.set_map_compress(
+            self._source_table_name, self._mapping_specification_name, not self._compress
+        )
+
+
 class SetColumnOrRowType(QUndoCommand):
     """Command to change the type of columns or rows."""
 

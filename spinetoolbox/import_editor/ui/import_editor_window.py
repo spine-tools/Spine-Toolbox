@@ -263,6 +263,11 @@ class Ui_MainWindow(object):
 
         self.formLayout_2.setWidget(1, QFormLayout.FieldRole, self.import_objects_check_box)
 
+        self.map_compression_check_box = QCheckBox(self.dockWidgetContents_5)
+        self.map_compression_check_box.setObjectName(u"map_compression_check_box")
+
+        self.formLayout_2.setWidget(8, QFormLayout.FieldRole, self.map_compression_check_box)
+
         self.dockWidget_mapping_options.setWidget(self.dockWidgetContents_5)
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_mapping_options)
         self.dockWidget_mapping_spec = QDockWidget(MainWindow)
@@ -355,6 +360,7 @@ class Ui_MainWindow(object):
         self.time_series_repeat_check_box.setText(QCoreApplication.translate("MainWindow", u"Repeat time series", None))
         self.map_dimensions_label.setText(QCoreApplication.translate("MainWindow", u"Map dimensions:", None))
         self.import_objects_check_box.setText(QCoreApplication.translate("MainWindow", u"Import objects", None))
+        self.map_compression_check_box.setText(QCoreApplication.translate("MainWindow", u"Compress Maps", None))
         self.dockWidget_mapping_spec.setWindowTitle(QCoreApplication.translate("MainWindow", u"Mapping specification", None))
     # retranslateUi
 

@@ -745,7 +745,6 @@ class MappingSpecificationModel(QAbstractTableModel):
             return
         self._item_mapping.parameters.options.repeat = repeat
 
-    @Slot(int)
     def set_map_dimensions(self, dimensions):
         if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterMapMapping):
             return
@@ -773,6 +772,17 @@ class MappingSpecificationModel(QAbstractTableModel):
             self._display_names = self._display_names[:first]
             self._component_mappings = self._component_mappings[:first]
             self.endRemoveRows()
+
+    def set_map_compress_flag(self, compress):
+        """
+        Sets the compress flag for Map type parameters.
+
+        Args:
+            compress (bool): flag value
+        """
+        if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterMapMapping):
+            return
+        self._item_mapping.parameters.compress = compress
 
     def mapping_has_parameters(self):
         """Returns True if the item mapping has parameters."""
