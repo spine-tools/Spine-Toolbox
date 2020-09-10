@@ -15,7 +15,11 @@ Contains utility functions to help with Spine databases.
 :author: A. Soininen (VTT)
 :date:   5.9.2019
 """
-from spinedb_api import apply_alternative_filter_to_parameter_value_sq, apply_scenario_filter_to_parameter_value_sq, DatabaseMapping
+from spinedb_api import (
+    apply_alternative_filter_to_parameter_value_sq,
+    apply_scenario_filter_to_parameter_value_sq,
+    DatabaseMapping,
+)
 
 
 def latest_database_commit_time_stamp(database_map):

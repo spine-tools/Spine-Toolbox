@@ -79,7 +79,7 @@ class Exporter(ProjectItem):
         else:
             self._cancel_on_error = cancel_on_export_error if cancel_on_export_error is not None else True
         self._settings_packs = dict()
-        self. _scenarios = dict()
+        self._scenarios = dict()
         self._export_list_items = dict()
         self._workers = dict()
         if settings_packs is None:

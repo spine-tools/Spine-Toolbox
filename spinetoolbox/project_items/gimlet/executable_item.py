@@ -242,6 +242,7 @@ def _file_paths_from_resources(resources):
             files.append(resource.path)
     return files
 
+
 def _database_urls_from_resources(resources):
     """Pries database URLs and their providers' names from resources.
 

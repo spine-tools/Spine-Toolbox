@@ -51,7 +51,15 @@ class GdxExportSettings(QWidget):
     """Emitted when the Cancel button has been clicked."""
 
     def __init__(
-        self, set_settings, indexing_settings, merging_settings, none_fallback, none_export, scenario, database_url, parent
+        self,
+        set_settings,
+        indexing_settings,
+        merging_settings,
+        none_fallback,
+        none_export,
+        scenario,
+        database_url,
+        parent,
     ):
         """
         Args:

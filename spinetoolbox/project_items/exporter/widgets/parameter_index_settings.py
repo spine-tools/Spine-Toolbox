@@ -231,7 +231,6 @@ class ParameterIndexSettings(QWidget):
             self._indexing_table_model.set_records(gdx.LiteralRecords([]))
         self._update_indexing_domains_name()
 
-
     @Slot(str)
     def _update_index_list_selection(self, expression):
         """Updates selection according to changed selection expression."""
@@ -255,6 +254,7 @@ class ParameterIndexSettings(QWidget):
         if self._indexing_setting.index_position < len(self._indexing_setting.parameter.domain_names):
             self._indexing_setting.index_position += 1
             self._update_indexing_domains_name()
+
 
 @contextmanager
 def _freely_update_domains_combo(widget):
