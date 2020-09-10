@@ -15,7 +15,6 @@ Contains :class:`MultiCheckableListView`.
 :author: A. Soininen (VTT)
 :date:   13.8.2020
 """
-from functools import partial
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QListView
 
@@ -33,9 +32,10 @@ class MultiCheckableListView(QListView):
             super().keyPressEvent(event)
             return
         selected = selection_model.selectedIndexes()
-        first = selected[0]
-        check_state = Qt.Unchecked if first.data(Qt.CheckStateRole) == Qt.Checked else Qt.Checked
         model = self.model()
-        check_item = partial(model.setData, value=check_state, role=Qt.CheckStateRole)
-        for index in selected:
-            check_item(index)
+        check_state = Qt.Unchecked if selected[0].data(Qt.CheckStateRole) == Qt.Checked else Qt.Checked
+        if len(selected) == 1:
+            model.setData(selected[0], check_state, Qt.CheckStateRole)
+        else:
+            rows = [index.row() for index in selected]
+            model.set_multiple_checked_undoable(rows, check_state)

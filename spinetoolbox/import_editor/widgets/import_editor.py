@@ -262,6 +262,17 @@ class ImportEditor(QObject):
         table_items = [SourceTableItem(name, name in selected_tables) for name in self._table_mappings]
         self._source_table_model.reset(table_items)
 
+    def import_mappings(self, mappings_dict):
+        """
+        Restores mappings from a dict.
+
+        Args:
+            mappings_dict (dict): serialized mappings
+        """
+        current = self._ui.source_list.selectionModel().currentIndex()
+        self._restore_mappings(mappings_dict)
+        self._ui.source_list.selectionModel().setCurrentIndex(current, QItemSelectionModel.ClearAndSelect)
+
     def get_settings_dict(self):
         """Returns a dictionary with type of connector, connector options for tables,
         mappings for tables, selected tables.

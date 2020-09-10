@@ -570,3 +570,26 @@ class SetColumnOrRowType(QUndoCommand):
     def undo(self):
         """Restores column/row type to its previous value."""
         self._header_widget.set_data_types(self._source_table_name, self._sections, self._previous_type)
+
+
+class RestoreMappingsFromDict(QUndoCommand):
+    """Restores mappings from a dict."""
+
+    def __init__(self, import_editor, mapping_dict):
+        """
+        Args:
+            import_editor (ImportEditor): import editor
+            mapping_dict (dict): mappings to
+        """
+        super().__init__("import mappings")
+        self._import_editor = import_editor
+        self._mapping_dict = mapping_dict
+        self._previous_mapping_dict = import_editor.get_settings_dict()
+
+    def redo(self):
+        """Restores the mappings."""
+        self._import_editor.import_mappings(self._mapping_dict)
+
+    def undo(self):
+        """Reverts back to previous mappings."""
+        self._import_editor.import_mappings(self._previous_mapping_dict)

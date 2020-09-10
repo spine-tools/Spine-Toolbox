@@ -20,6 +20,7 @@ import json
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QGuiApplication, QKeySequence
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QFileDialog, QDialogButtonBox, QDockWidget, QUndoStack
+from ..commands import RestoreMappingsFromDict
 from ...helpers import ensure_window_is_on_screen
 from ...spine_io.connection_manager import ConnectionManager
 from .import_editor import ImportEditor
@@ -164,8 +165,7 @@ class ImportEditorWindow(QMainWindow):
         expected_options = ("table_mappings", "table_types", "table_row_types", "table_options", "selected_tables")
         if not isinstance(settings, dict) or not any(key in expected_options for key in settings.keys()):
             self._ui.statusbar.showMessage(f"{filename[0]} does not contain mapping options", 10000)
-        self._editor._restore_mappings(settings)
-        self._undo_stack.clear()
+        self._undo_stack.push(RestoreMappingsFromDict(self._editor, settings))
         self._ui.statusbar.showMessage(f"Mapping loaded from {filename[0]}", 10000)
 
     def export_mapping_to_file(self):
