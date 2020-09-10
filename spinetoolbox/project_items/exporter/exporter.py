@@ -182,7 +182,7 @@ class Exporter(ProjectItem):
         self._export_list_items.clear()
         for url, pack in self._settings_packs.items():
             item = self._export_list_items[url] = ExportListItem(url, pack.output_file_name, pack.state)
-            item.update_scenarios(self._scenarios[url], pack.scenario)
+            item.update_scenarios(self._scenarios.get(url, dict()), pack.scenario)
             database_list_storage.addWidget(item)
             item.open_settings_clicked.connect(self._show_settings)
             item.file_name_changed.connect(self._update_out_file_name)

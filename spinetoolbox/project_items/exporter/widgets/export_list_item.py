@@ -101,7 +101,7 @@ class ExportListItem(QWidget):
 
         Args:
             scenarios (dict): a map from scenario name to boolean active flag
-            selected (str, None): currently selected scenario, None for the 'Base' alternative
+            selected (str, optional): currently selected scenario, None for the 'Base' alternative
         """
         active = [_BASE_ALTERNATIVE_TEXT] + [name + " (active)" for name, active in scenarios.items() if active]
         inactive = [name for name, active in scenarios.items() if not active]
