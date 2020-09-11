@@ -19,6 +19,7 @@ import dateutil.parser
 from PySide2.QtCore import QObject, Signal, Slot
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinetoolbox.spine_io.exporters import gdx
+from .db_utils import scenario_filtered_database_map
 from .notifications import Notifications
 from .settings_state import SettingsState
 
@@ -34,6 +35,7 @@ class SettingsPack(QObject):
         merging_settings (dict): parameter merging settings
         none_fallback (NoneFallback): fallback for None parameter values
         none_export (NoneExport): how to handle None values while exporting
+        scenario (str): name of the scenario to export; None for 'Base' alternative
         last_database_commit (datetime): latest database commit time stamp
         settings_window (GdxExportSettings): settings editor window
     """
@@ -53,6 +55,7 @@ class SettingsPack(QObject):
         self.merging_settings = dict()
         self.none_fallback = gdx.NoneFallback.USE_IT
         self.none_export = gdx.NoneExport.DO_NOT_EXPORT
+        self.scenario = None
         self.last_database_commit = None
         self.settings_window = None
         self._state = SettingsState.FETCHING
@@ -84,6 +87,7 @@ class SettingsPack(QObject):
         }
         d["none_fallback"] = self.none_fallback.value
         d["none_export"] = self.none_export.value
+        d["scenario"] = self.scenario
         d["latest_database_commit"] = (
             self.last_database_commit.isoformat() if self.last_database_commit is not None else None
         )
@@ -107,8 +111,9 @@ class SettingsPack(QObject):
         except gdx.GdxExportException as error:
             logger.msg_error.emit(f"Failed to fully restore Exporter settings: {error}")
             return pack
+        pack.scenario = pack_dict.get("scenario")
         try:
-            db_map = DatabaseMapping(database_url)
+            db_map = scenario_filtered_database_map(database_url, pack.scenario)
             value_type_logger = _UnsupportedValueTypeLogger(
                 f"Exporter settings ignoring some parameters from database '{database_url}':", logger
             )

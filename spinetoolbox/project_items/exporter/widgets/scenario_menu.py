@@ -10,34 +10,9 @@
 ######################################################################################################################
 
 """
-Unit tests for the MapEditor widget.
+Contains a menu widget for scenario selection.
 
-:authors: A. Soininen (VTT)
-:date:   12.2.2020
+:author: A. Soininen (VTT)
+:date:   18.8.2020
 """
-
-import unittest
-from PySide2.QtWidgets import QApplication
-from spinedb_api import Map
-from spinetoolbox.widgets.map_editor import MapEditor
-
-
-class TestDictionaryEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
-    def test_initial_value(self):
-        editor = MapEditor()
-        value = editor.value()
-        self.assertEqual(value, Map(["key"], [0.0]))
-
-    def test_value_access(self):
-        editor = MapEditor()
-        editor.set_value(Map(["A", "B"], [2.2, 2.1]))
-        self.assertEqual(editor.value(), Map(["A", "B"], [2.2, 2.1]))
-
-
-if __name__ == '__main__':
-    unittest.main()
+from PySide2.QtWidgets import QMenu

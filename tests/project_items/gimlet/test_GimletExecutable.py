@@ -112,9 +112,10 @@ class TestGimletExecutable(unittest.TestCase):
         # self.assertEqual(args, ["--url=sqlite:///Q:\\databases\\base.sqlite"])
 
 
-class FakeProvider():
+class FakeProvider:
     def __init__(self, name):
         self.name = name
+
 
 if __name__ == '__main__':
     unittest.main()

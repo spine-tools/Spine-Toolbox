@@ -24,7 +24,6 @@ from .widgets.add_gimlet_widget import AddGimletWidget
 
 
 class GimletFactory(ProjectItemFactory):
-
     @staticmethod
     def icon():
         return ":/icons/project_item_icons/screwdriver.svg"

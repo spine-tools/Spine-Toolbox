@@ -894,7 +894,10 @@ def expand_indexed_parameter_values(parameters, indexing_settings, sets):
             indexing_setting = indexing_settings[parameter_name]
         except KeyError:
             continue
-        parameter.expand_indexes(indexing_setting, sets)
+        try:
+            parameter.expand_indexes(indexing_setting, sets)
+        except GdxExportException as error:
+            raise GdxExportException(f"Problem with parameter '{parameter_name}': {error}")
 
 
 class MergingSetting:
@@ -1025,13 +1028,15 @@ def merge_parameters(parameters, merging_settings):
         dict: a mapping from merged parameter name to its Parameter object
     """
     merged = dict()
+    used_parameters = set()
     for parameter_name, setting in merging_settings.items():
         indexes = list()
         values = list()
         index_position = setting.index_position
         merged_domain_names = setting.domain_names()
         for name in setting.parameter_names:
-            parameter = parameters.pop(name)
+            used_parameters.add(name)
+            parameter = parameters[name]
             if len(merged_domain_names) < len(parameter.domain_names) + 1:
                 raise GdxExportException(
                     f"Merged parameter '{parameter_name}' contains indexed values and therefore cannot be merged."
@@ -1045,6 +1050,8 @@ def merge_parameters(parameters, merging_settings):
         except GdxExportException as error:
             raise GdxExportException(f"Error while merging parameter '{parameter_name}': {error}")
         merged[parameter_name] = parameter
+    for name in used_parameters:
+        del parameters[name]
     return merged
 
 

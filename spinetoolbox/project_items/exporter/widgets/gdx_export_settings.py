@@ -22,6 +22,7 @@ from PySide2.QtCore import QItemSelection, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QAbstractButton, QDialogButtonBox, QMessageBox, QWidget
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 import spinetoolbox.spine_io.exporters.gdx as gdx
+from ..db_utils import scenario_filtered_database_map
 from ..list_utils import move_selected_elements_by
 from ..mvcmodels.record_list_model import RecordListModel
 from ..mvcmodels.set_list_model import SetListModel
@@ -50,7 +51,7 @@ class GdxExportSettings(QWidget):
     """Emitted when the Cancel button has been clicked."""
 
     def __init__(
-        self, set_settings, indexing_settings, merging_settings, none_fallback, none_export, database_url, parent
+        self, set_settings, indexing_settings, merging_settings, none_fallback, none_export, scenario, database_url, parent
     ):
         """
         Args:
@@ -59,6 +60,7 @@ class GdxExportSettings(QWidget):
             merging_settings (dict): parameter merging settings
             none_fallback (NoneFallback): fallback for None parameter values
             none_export (NoneExport): how to handle None values while exporting
+            scenario (str, optional): scenario name
             database_url (str): database URL
             parent (QWidget): a parent widget
         """
@@ -69,6 +71,7 @@ class GdxExportSettings(QWidget):
         self._ui.setupUi(self)
         self.setWindowTitle("Gdx Export settings    -- {} --".format(database_url))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
+        self._scenario = scenario
         self._database_url = database_url
         self._ui.button_box.accepted.connect(self._accept)
         self._ui.button_box.rejected.connect(self._reject)
@@ -175,9 +178,9 @@ class GdxExportSettings(QWidget):
         else:
             self._none_fallback = gdx.NoneFallback.USE_DEFAULT_VALUE
         try:
-            database_map = DatabaseMapping(self._database_url)
+            database_map = scenario_filtered_database_map(self._database_url, self._scenario)
         except SpineDBAPIError as error:
-            QMessageBox.warning(self, f"Error", "Could not open database '{self._database_url}'.")
+            QMessageBox.warning(self, f"Error", f"Could not open database '{self._database_url}'.")
             return
         try:
             indexing_settings = gdx.make_indexing_settings(database_map, self._none_fallback, logger=None)
@@ -340,7 +343,7 @@ class GdxExportSettings(QWidget):
         if self._indexed_parameter_settings_window is None:
             indexing_settings = deepcopy(self._indexing_settings)
             self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
-                indexing_settings, self._set_settings, self._database_url, self
+                indexing_settings, self._set_settings, self._database_url, self._scenario, self
             )
             self._indexed_parameter_settings_window.settings_approved.connect(self._gather_parameter_indexing_settings)
             self._indexed_parameter_settings_window.settings_rejected.connect(
@@ -380,9 +383,10 @@ class GdxExportSettings(QWidget):
         for domain_to_drop in old_domain_names - new_domain_names:
             self._set_list_model.drop_domain(domain_to_drop)
         for domain_to_update in old_domain_names & new_domain_names:
-            self._set_list_model.update_records(domain_to_update, new_records[domain_to_update])
+            self._set_list_model.update_domain(domain_to_update, new_records[domain_to_update])
         for domain_to_add in new_domain_names - old_domain_names:
             self._set_list_model.add_domain(domain_to_add, new_records[domain_to_add], gdx.Origin.MERGING)
+        self._merging_settings = new_merging_settings
 
     @Slot()
     def _dispose_parameter_indexing_settings_window(self):

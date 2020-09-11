@@ -27,7 +27,6 @@ from ...mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_wi
 
 
 class TestGimlet(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():

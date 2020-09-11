@@ -22,7 +22,7 @@ import logging
 import json
 import pathlib
 import numpy as np
-from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
+from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor
 from PySide2.QtWidgets import (
     QMainWindow,
@@ -837,7 +837,7 @@ class ToolboxUI(QMainWindow):
                     return False
         return True
 
-    @Slot("QItemSelection", "QItemSelection")
+    @Slot(QItemSelection, QItemSelection)
     def item_selection_changed(self, selected, deselected):
         """Synchronize selection with scene. Check if only one item is selected and make it the
         active item: disconnect signals of previous active item, connect signals of current active item

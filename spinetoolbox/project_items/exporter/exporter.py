@@ -25,7 +25,7 @@ from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.helpers import deserialize_path, serialize_url
 from spinetoolbox.spine_io.exporters import gdx
-from .commands import UpdateExporterOutFileNameCommand, UpdateExporterSettingsCommand
+from .commands import UpdateExporterOutFileName, UpdateExporterSettings, UpdateScenario
 from ..shared.commands import UpdateCancelOnErrorCommand
 from .db_utils import latest_database_commit_time_stamp
 from .executable_item import ExecutableItem
@@ -79,6 +79,7 @@ class Exporter(ProjectItem):
         else:
             self._cancel_on_error = cancel_on_export_error if cancel_on_export_error is not None else True
         self._settings_packs = dict()
+        self. _scenarios = dict()
         self._export_list_items = dict()
         self._workers = dict()
         if settings_packs is None:
@@ -99,6 +100,8 @@ class Exporter(ProjectItem):
                 self._start_worker(url)
             elif pack.last_database_commit != _latest_database_commit_time_stamp(url):
                 self._start_worker(url, update_settings=True)
+            else:
+                self._scenarios[url] = self._read_scenarios(url)
 
     def set_up(self):
         """See base class."""
@@ -145,8 +148,33 @@ class Exporter(ProjectItem):
             if pack.state == SettingsState.ERROR:
                 self._start_worker(url)
 
+    def _read_scenarios(self, database_url):
+        """
+        Reads scenarios from database.
+
+        Args:
+            database_url (str): database url
+
+        Returns:
+            dict: a mapping from scenario name to boolean 'active' flag
+        """
+        try:
+            database_map = DatabaseMapping(database_url)
+        except SpineDBAPIError as error:
+            self._logger.msg_error.emit(f"Could not read scenario information for '{database_url}: {error}")
+            return {}
+        try:
+            scenario_rows = database_map.query(database_map.scenario_sq).all()
+            scenarios = {row.name: row.active for row in scenario_rows}
+            return scenarios
+        except SpineDBAPIError as error:
+            self._logger.msg_error.emit(f"Could not read scenario information for '{database_url}: {error}")
+            return {}
+        finally:
+            database_map.connection.close()
+
     def _update_properties_tab(self):
-        """Updates the database list in the properties tab."""
+        """Updates the database list and scenario combo boxes in the properties tab."""
         database_list_storage = self._properties_ui.databases_list_layout
         while not database_list_storage.isEmpty():
             widget_to_remove = database_list_storage.takeAt(0)
@@ -154,10 +182,12 @@ class Exporter(ProjectItem):
         self._export_list_items.clear()
         for url, pack in self._settings_packs.items():
             item = self._export_list_items[url] = ExportListItem(url, pack.output_file_name, pack.state)
+            item.update_scenarios(self._scenarios[url], pack.scenario)
             database_list_storage.addWidget(item)
             item.open_settings_clicked.connect(self._show_settings)
             item.file_name_changed.connect(self._update_out_file_name)
-            pack.state_changed.connect(item.handle_settings_state_changed)
+            item.scenario_changed.connect(self._update_scenario)
+            pack.state_changed.connect(item.update_notification_label)
         self._properties_ui.cancel_on_error_check_box.setCheckState(
             Qt.Checked if self._cancel_on_error else Qt.Unchecked
         )
@@ -168,7 +198,7 @@ class Exporter(ProjectItem):
         if database_urls == set(self._settings_packs):
             self._check_state()
             return
-        # Drop settings packs without connected databases.
+        # Drop settings packs and scenario lists without connected databases.
         for database_url in list(self._settings_packs):
             if database_url not in database_urls:
                 pack = self._settings_packs[database_url]
@@ -191,7 +221,7 @@ class Exporter(ProjectItem):
             worker.thread.quit()
             worker.thread.wait()
         pack = self._settings_packs[database_url]
-        worker = Worker(database_url, pack.none_fallback)
+        worker = Worker(database_url, pack.scenario, pack.none_fallback)
         self._workers[database_url] = worker
         worker.database_unavailable.connect(self._cancel_worker)
         worker.finished.connect(self._worker_finished)
@@ -238,6 +268,7 @@ class Exporter(ProjectItem):
         pack.settings = result.set_settings
         pack.indexing_settings = result.indexing_settings
         pack.merging_settings = result.merging_settings
+        self._scenarios[database_url] = result.scenarios
         if pack.settings_window is not None:
             self._send_settings_to_window(database_url)
         pack.state = SettingsState.OK
@@ -357,6 +388,7 @@ class Exporter(ProjectItem):
                 merging_settings,
                 settings_pack.none_fallback,
                 settings_pack.none_export,
+                settings_pack.scenario,
                 database_url,
                 self._toolbox,
             )
@@ -381,7 +413,32 @@ class Exporter(ProjectItem):
     @Slot(str, str)
     def _update_out_file_name(self, file_name, database_path):
         """Pushes a new UpdateExporterOutFileNameCommand to the toolbox undo stack."""
-        self._toolbox.undo_stack.push(UpdateExporterOutFileNameCommand(self, file_name, database_path))
+        self._toolbox.undo_stack.push(UpdateExporterOutFileName(self, file_name, database_path))
+
+    @Slot(str, str)
+    def _update_scenario(self, scenario, database_url):
+        """
+        Updates the selected scenario.
+
+        Args:
+            scenario (str or NoneType): selected scenario
+            database_url (str): database URL
+        """
+        self._toolbox.undo_stack.push(UpdateScenario(self, scenario, database_url))
+
+    def set_scenario(self, scenario, database_url):
+        """
+        Sets the selected scenario in settings pack.
+
+        Args:
+            scenario (str or NoneType): selected scenario
+            database_url (str): database URL
+        """
+        self._settings_packs[database_url].scenario = scenario
+        if self._active:
+            export_list_item = self._export_list_items[database_url]
+            export_list_item.make_sure_this_scenario_is_shown_in_the_combo_box(scenario)
+        self._start_worker(database_url, update_settings=True)
 
     @Slot(str)
     def _update_settings_from_settings_window(self, database_path):
@@ -391,7 +448,7 @@ class Exporter(ProjectItem):
         indexing_settings = window.indexing_settings
         merging_settings = window.merging_settings
         self._toolbox.undo_stack.push(
-            UpdateExporterSettingsCommand(
+            UpdateExporterSettings(
                 self,
                 settings,
                 indexing_settings,
@@ -421,7 +478,7 @@ class Exporter(ProjectItem):
     def undo_redo_out_file_name(self, file_name, database_path):
         """Updates the output file name for given database"""
         if self._active:
-            export_list_item = self._export_list_items.get(database_path)
+            export_list_item = self._export_list_items[database_path]
             export_list_item.out_file_name_edit.setText(file_name)
         self._settings_packs[database_path].output_file_name = file_name
         self._settings_packs[database_path].notifications.missing_output_file_name = not file_name
