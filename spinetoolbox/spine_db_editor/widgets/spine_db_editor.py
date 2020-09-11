@@ -669,7 +669,7 @@ class SpineDBEditorBase(QMainWindow):
         pass
 
     def receive_parameter_value_lists_fetched(self, db_map_data):
-        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
+        self.parameter_value_list_model.add_parameter_value_lists(db_map_data)
 
     def receive_parameter_tags_fetched(self, db_map_data):
         pass
@@ -681,6 +681,9 @@ class SpineDBEditorBase(QMainWindow):
         pass
 
     def receive_tool_features_fetched(self, db_map_data):
+        pass
+
+    def receive_tool_feature_methods_fetched(self, db_map_data):
         pass
 
     def receive_scenarios_added(self, db_map_data):
@@ -725,6 +728,9 @@ class SpineDBEditorBase(QMainWindow):
     def receive_tool_features_added(self, db_map_data):
         self.notify_items_changed("added", "tool_feature", db_map_data)
 
+    def receive_tool_feature_methods_added(self, db_map_data):
+        self.notify_items_changed("added", "tool_feature_method", db_map_data)
+
     def receive_scenarios_updated(self, db_map_data):
         self.notify_items_changed("updated", "scenario", db_map_data)
 
@@ -751,7 +757,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter_value_list", db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
 
     def receive_parameter_tags_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter_tag", db_map_data)
@@ -810,6 +815,9 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tool_features_removed(self, db_map_data):
         self.notify_items_changed("removed", "tool_feature", db_map_data)
+
+    def receive_tool_feature_methods_removed(self, db_map_data):
+        self.notify_items_changed("removed", "tool_feature_method", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

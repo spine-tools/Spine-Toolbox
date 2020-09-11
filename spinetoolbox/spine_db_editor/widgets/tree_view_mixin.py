@@ -352,6 +352,10 @@ class TreeViewMixin:
         super().receive_tool_features_fetched(db_map_data)
         self.tool_feature_model.add_tool_features(db_map_data)
 
+    def receive_tool_feature_methods_fetched(self, db_map_data):
+        super().receive_tool_feature_methods_fetched(db_map_data)
+        self.tool_feature_model.add_tool_feature_methods(db_map_data)
+
     def receive_alternatives_added(self, db_map_data):
         super().receive_alternatives_added(db_map_data)
         self.alternative_scenario_model.add_alternatives(db_map_data)
@@ -387,7 +391,7 @@ class TreeViewMixin:
 
     def receive_parameter_value_lists_added(self, db_map_data):
         super().receive_parameter_value_lists_added(db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
+        self.parameter_value_list_model.add_parameter_value_lists(db_map_data)
 
     def receive_features_added(self, db_map_data):
         super().receive_features_added(db_map_data)
@@ -400,6 +404,10 @@ class TreeViewMixin:
     def receive_tool_features_added(self, db_map_data):
         super().receive_tool_features_added(db_map_data)
         self.tool_feature_model.add_tool_features(db_map_data)
+
+    def receive_tool_feature_methods_added(self, db_map_data):
+        super().receive_tool_feature_methods_added(db_map_data)
+        self.tool_feature_model.add_tool_feature_methods(db_map_data)
 
     def receive_alternatives_updated(self, db_map_data):
         super().receive_alternatives_updated(db_map_data)
@@ -429,7 +437,7 @@ class TreeViewMixin:
 
     def receive_parameter_value_lists_updated(self, db_map_data):
         super().receive_parameter_value_lists_updated(db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
+        self.parameter_value_list_model.update_parameter_value_lists(db_map_data)
 
     def receive_features_updated(self, db_map_data):
         super().receive_features_updated(db_map_data)
@@ -475,7 +483,7 @@ class TreeViewMixin:
 
     def receive_parameter_value_lists_removed(self, db_map_data):
         super().receive_parameter_value_lists_removed(db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
+        self.parameter_value_list_model.remove_parameter_value_lists(db_map_data)
 
     def receive_features_removed(self, db_map_data):
         super().receive_features_removed(db_map_data)
@@ -488,3 +496,7 @@ class TreeViewMixin:
     def receive_tool_features_removed(self, db_map_data):
         super().receive_tool_features_removed(db_map_data)
         self.tool_feature_model.remove_tool_features(db_map_data)
+
+    def receive_tool_feature_methods_removed(self, db_map_data):
+        super().receive_tool_feature_methods_removed(db_map_data)
+        self.tool_feature_model.remove_tool_feature_methods(db_map_data)

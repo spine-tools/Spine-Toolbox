@@ -42,6 +42,7 @@ class SpineDBFetcher(QObject):
     _features_fetched = Signal(object)
     _tools_fetched = Signal(object)
     _tool_features_fetched = Signal(object)
+    _tool_feature_methods_fetched = Signal(object)
 
     def __init__(self, db_mngr, listener):
         """Initializes the fetcher object.
@@ -55,7 +56,7 @@ class SpineDBFetcher(QObject):
         self._listener = listener
         self._thread = QThread()
         # NOTE: by moving this to another thread, all the slots defined below are called on that thread too
-        self.moveToThread(self._thread)
+        # self.moveToThread(self._thread)
         self._thread.start()
         self.connect_signals()
 
@@ -78,6 +79,7 @@ class SpineDBFetcher(QObject):
         self._features_fetched.connect(self._receive_features_fetched)
         self._tools_fetched.connect(self._receive_tools_fetched)
         self._tool_features_fetched.connect(self._receive_tool_features_fetched)
+        self._tool_feature_methods_fetched.connect(self._receive_tool_feature_methods_fetched)
 
     def fetch(self, db_maps):
         """Fetches items from the database and emit fetched signals.
@@ -116,6 +118,8 @@ class SpineDBFetcher(QObject):
         self._tools_fetched.emit(tools)
         tool_features = {x: self._db_mngr.get_tool_features(x) for x in db_maps}
         self._tool_features_fetched.emit(tool_features)
+        tool_feature_methods = {x: self._db_mngr.get_tool_feature_methods(x) for x in db_maps}
+        self._tool_feature_methods_fetched.emit(tool_feature_methods)
         self._ready_to_finish.emit()
 
     def clean_up(self):
@@ -205,6 +209,11 @@ class SpineDBFetcher(QObject):
     def _receive_tool_features_fetched(self, db_map_data):
         self._db_mngr.cache_items("tool_feature", db_map_data)
         self._listener.receive_tool_features_fetched(db_map_data)
+
+    @Slot(object)
+    def _receive_tool_feature_methods_fetched(self, db_map_data):
+        self._db_mngr.cache_items("tool_feature_method", db_map_data)
+        self._listener.receive_tool_feature_methods_fetched(db_map_data)
 
     @Slot()
     def _emit_finished_signal(self):

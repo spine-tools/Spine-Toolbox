@@ -15,13 +15,20 @@ Models to represent tools and features in a tree.
 :date:    1.0.2020
 """
 import json
-from PySide2.QtCore import QMimeData, Qt, QModelIndex
-from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
-from .tree_item_utility import NonLazyDBItem, NonLazyTreeItem
-from .tool_feature_item import FeatureRootItem, ToolRootItem, FeatureLeafItem, ToolLeafItem, ToolFeatureLeafItem
+from PySide2.QtCore import QMimeData, Qt
+from .tree_model_base import TreeModelBase
+from .tree_item_utility import NonLazyDBItem
+from .tool_feature_item import (
+    FeatureRootItem,
+    ToolRootItem,
+    FeatureLeafItem,
+    ToolLeafItem,
+    ToolFeatureLeafItem,
+    ToolFeatureMethodLeafItem,
+)
 
 
-class ToolFeatureModel(MinimalTreeModel):
+class ToolFeatureModel(TreeModelBase):
     """A model to display tools and features in a tree view.
 
 
@@ -33,35 +40,17 @@ class ToolFeatureModel(MinimalTreeModel):
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Initialize class"""
-        super().__init__(parent)
-        self.db_mngr = db_mngr
-        self.db_maps = db_maps
+        super().__init__(parent, db_mngr, *db_maps)
         self._db_map_feature_data = {}
         self._db_map_feature_methods = {}
 
-    def columnCount(self, parent=QModelIndex()):
-        """Returns the number of columns under the given parent. Always 1.
-        """
-        return 2
+    @staticmethod
+    def _make_db_item(db_map):
+        return NonLazyDBItem(db_map)
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return ("name", "description")[section]
-        return None
-
-    def build_tree(self):
-        """Builds tree."""
-        self.beginResetModel()
-        self._invisible_root_item = NonLazyTreeItem(self)
-        self.endResetModel()
-        for db_map in self.db_maps:
-            db_item = NonLazyDBItem(db_map)
-            self._invisible_root_item.append_children(db_item)
-            feature_root_item = FeatureRootItem()
-            tool_root_item = ToolRootItem()
-            db_item.append_children(
-                feature_root_item, tool_root_item,
-            )
+    @staticmethod
+    def _top_children():
+        return [FeatureRootItem(), ToolRootItem()]
 
     @staticmethod
     def make_feature_name(entity_class_name, parameter_definition_name):
@@ -98,127 +87,103 @@ class ToolFeatureModel(MinimalTreeModel):
     def get_method_index(self, db_map, parameter_value_list_id, method):
         return self._db_map_feature_methods.get(db_map, {}).get(parameter_value_list_id, {}).get(method)
 
-    def _add_tools_or_features(self, db_map_data, item_type):
-        root_number, leaf_maker, name_maker = {
-            "feature": (
-                0,
-                FeatureLeafItem,
-                lambda x: self.make_feature_name(x["entity_class_name"], x["parameter_definition_name"]),
-            ),
-            "tool": (1, ToolLeafItem, lambda x: x["name"]),
-        }[item_type]
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            root_item = db_item.child(root_number)
-            # First realize the ones added locally
-            ids = {name_maker(x): x["id"] for x in items}
-            for leaf_item in root_item.children[:-1]:
-                id_ = ids.pop(leaf_item.name, None)
-                if not id_:
-                    continue
-                leaf_item.handle_added_to_db(identifier=id_)
-            # Now append the ones added externally
-            children = [leaf_maker(id_) for id_ in ids.values()]
-            root_item.insert_children(root_item.child_count() - 1, *children)
+    def _tool_ids_per_root_item(self, db_map_data):
+        return self._ids_per_root_item(db_map_data, root_number=1)
 
-    def _update_tools_or_features(self, db_map_data, item_type):
-        root_number = {"feature": 0, "tool": 1}[item_type]
-        self.layoutAboutToBeChanged.emit()
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            root_item = db_item.child(root_number)
-            ids = {x["id"] for x in items}
-            leaf_items = {leaf_item.id: leaf_item for leaf_item in root_item.children[:-1]}
-            for id_ in ids.intersection(leaf_items):
-                leaf_items[id_].handle_updated_in_db()
-        self.layoutChanged.emit()
-
-    def _remove_tools_or_features(self, db_map_data, item_type):
-        root_number = {"feature": 0, "tool": 1}[item_type]
-        self.layoutAboutToBeChanged.emit()
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            root_item = db_item.child(root_number)
-            ids = {x["id"] for x in items}
-            removed_rows = []
-            for row, leaf_item in enumerate(root_item.children[:-1]):
-                if leaf_item.id in ids:
-                    removed_rows.append(row)
-            for row in sorted(removed_rows, reverse=True):
-                root_item.remove_children(row, 1)
-        self.layoutChanged.emit()
-
-    def add_features(self, db_map_data):
-        self._add_tools_or_features(db_map_data, "feature")
-
-    def add_tools(self, db_map_data):
-        self._add_tools_or_features(db_map_data, "tool")
-
-    def update_features(self, db_map_data):
-        self._update_tools_or_features(db_map_data, "feature")
-
-    def update_tools(self, db_map_data):
-        self._update_tools_or_features(db_map_data, "tool")
-
-    def remove_features(self, db_map_data):
-        self._remove_tools_or_features(db_map_data, "feature")
-
-    def remove_tools(self, db_map_data):
-        self._remove_tools_or_features(db_map_data, "tool")
+    def _feature_ids_per_root_item(self, db_map_data):
+        return self._ids_per_root_item(db_map_data, root_number=0)
 
     def _tool_feature_ids_per_root_item(self, db_map_data):
+        db_map_data_per_tool_id = self._db_map_data_per_id(db_map_data, "tool_id")
         d = {}
-        db_map_ids_per_tool_id = {}
-        for db_map, data in db_map_data.items():
-            for item in data:
-                tool_id = item["tool_id"]
-                db_map_ids_per_tool_id.setdefault(db_map, {}).setdefault(tool_id, []).append(item["id"])
         for db_item in self._invisible_root_item.children:
-            ids_per_tool_id = db_map_ids_per_tool_id.get(db_item.db_map)
-            if not ids_per_tool_id:
+            items_per_tool_id = db_map_data_per_tool_id.get(db_item.db_map)
+            if not items_per_tool_id:
                 continue
             tool_root_item = db_item.child(1)
-            for tool_id, ids in ids_per_tool_id.items():
+            for tool_id, items in items_per_tool_id.items():
                 tool_leaf_item = next(iter(child for child in tool_root_item.children if child.id == tool_id), None)
                 if tool_leaf_item is None:
                     continue
                 tool_feat_root_item = tool_leaf_item.child(0)
-                d[tool_feat_root_item] = ids
+                d[tool_feat_root_item] = [x["id"] for x in items]
         return d
 
+    def _tool_feature_method_ids_per_root_item(self, db_map_data):
+        db_map_data_per_tool_feat_id = self._db_map_data_per_id(db_map_data, "tool_feature_id")
+        d = {}
+        for db_item in self._invisible_root_item.children:
+            items_per_tool_feat_id = db_map_data_per_tool_feat_id.get(db_item.db_map)
+            if not items_per_tool_feat_id:
+                continue
+            tool_root_item = db_item.child(1)
+            for tool_feat_id, items in items_per_tool_feat_id.items():
+                tool_feat_leaf_item = next(
+                    iter(
+                        child
+                        for tool_leaf_item in tool_root_item.children
+                        for child in tool_leaf_item.child(0).children
+                        if child.id == tool_feat_id
+                    ),
+                    None,
+                )
+                if tool_feat_leaf_item is None:
+                    continue
+                tool_feat_meth_root_item = tool_feat_leaf_item.child(1)
+                d[tool_feat_meth_root_item] = [x["id"] for x in items]
+        return d
+
+    def add_features(self, db_map_data):
+        for root_item, ids in self._feature_ids_per_root_item(db_map_data).items():
+            children = [FeatureLeafItem(id_) for id_ in ids]
+            root_item.insert_children(root_item.child_count() - 1, *children)
+
+    def add_tools(self, db_map_data):
+        for root_item, ids in self._tool_ids_per_root_item(db_map_data).items():
+            children = [ToolLeafItem(id_) for id_ in ids]
+            root_item.insert_children(root_item.child_count() - 1, *children)
+
     def add_tool_features(self, db_map_data):
-        for tool_feat_root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
+        for root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
             children = [ToolFeatureLeafItem(id_) for id_ in ids]
-            tool_feat_root_item.append_children(*children)
+            root_item.append_children(*children)
+
+    def add_tool_feature_methods(self, db_map_data):
+        for root_item, ids in self._tool_feature_method_ids_per_root_item(db_map_data).items():
+            children = [ToolFeatureMethodLeafItem(id_) for id_ in ids]
+            root_item.insert_children(root_item.child_count() - 1, *children)
+
+    def update_features(self, db_map_data):
+        for root_item, ids in self._feature_ids_per_root_item(db_map_data).items():
+            self._update_leaf_items(root_item, ids)
+
+    def update_tools(self, db_map_data):
+        for root_item, ids in self._tool_ids_per_root_item(db_map_data).items():
+            self._update_leaf_items(root_item, ids)
 
     def update_tool_features(self, db_map_data):
-        for tool_feat_root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
-            for tool_feat_leaf_item in tool_feat_root_item.children:
-                if tool_feat_leaf_item.id in ids:
-                    top_left = self.index_from_item(tool_feat_leaf_item.child(0))
-                    bottom_right = self.index_from_item(tool_feat_leaf_item.child(-1))
-                    self.dataChanged.emit(top_left, bottom_right)
+        for root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
+            self._update_leaf_items(root_item, ids)
+
+    def update_tool_feature_methods(self, db_map_data):
+        for root_item, ids in self._tool_feature_method_ids_per_root_item(db_map_data).items():
+            self._update_leaf_items(root_item, ids)
+
+    def remove_features(self, db_map_data):
+        for root_item, ids in self._feature_ids_per_root_item(db_map_data).items():
+            self._remove_leaf_items(root_item, ids)
+
+    def remove_tools(self, db_map_data):
+        for root_item, ids in self._tool_ids_per_root_item(db_map_data).items():
+            self._remove_leaf_items(root_item, ids)
 
     def remove_tool_features(self, db_map_data):
-        for tool_feat_root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
-            for row, tool_feat_leaf_item in reversed(list(enumerate(tool_feat_root_item.children))):
-                if tool_feat_leaf_item.id in ids:
-                    tool_feat_root_item.remove_children(row, 1)
+        for root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
+            self._remove_leaf_items(root_item, ids)
 
-    @staticmethod
-    def db_item(item):
-        while item.item_type != "db":
-            item = item.parent_item
-        return item
-
-    def db_row(self, item):
-        return self.db_item(item).child_number()
+    def remove_tool_feature_methods(self, db_map_data):
+        for root_item, ids in self._tool_feature_method_ids_per_root_item(db_map_data).items():
+            self._remove_leaf_items(root_item, ids)
 
     def supportedDropActions(self):
         return Qt.CopyAction | Qt.MoveAction

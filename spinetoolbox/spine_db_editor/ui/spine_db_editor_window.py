@@ -274,7 +274,7 @@ class Ui_MainWindow(object):
         self.treeView_parameter_value_list = ParameterValueListTreeView(self.dockWidgetContents)
         self.treeView_parameter_value_list.setObjectName(u"treeView_parameter_value_list")
         self.treeView_parameter_value_list.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.EditKeyPressed)
+        self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.treeView_parameter_value_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.treeView_parameter_value_list.setUniformRowHeights(True)
 
@@ -553,6 +553,7 @@ class Ui_MainWindow(object):
         self.treeView_tool_feature.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.treeView_tool_feature.setDragEnabled(True)
         self.treeView_tool_feature.setDragDropMode(QAbstractItemView.InternalMove)
+        self.treeView_tool_feature.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         self.verticalLayout_2.addWidget(self.treeView_tool_feature)
 

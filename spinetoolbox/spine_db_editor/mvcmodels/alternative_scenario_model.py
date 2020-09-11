@@ -15,9 +15,9 @@ Models to represent alternatives, scenarios and scenario alternatives in a tree.
 :date:    17.6.2020
 """
 import json
-from PySide2.QtCore import QMimeData, Qt, QModelIndex
-from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
-from .tree_item_utility import NonLazyDBItem, NonLazyTreeItem
+from PySide2.QtCore import QMimeData, Qt
+from .tree_model_base import TreeModelBase
+from .tree_item_utility import NonLazyDBItem
 from .alternative_scenario_item import (
     AlternativeRootItem,
     ScenarioRootItem,
@@ -26,7 +26,7 @@ from .alternative_scenario_item import (
 )
 
 
-class AlternativeScenarioModel(MinimalTreeModel):
+class AlternativeScenarioModel(TreeModelBase):
 
     """A model to display alternatives and scenarios in a tree view.
 
@@ -37,111 +37,56 @@ class AlternativeScenarioModel(MinimalTreeModel):
         db_maps (iter): DiffDatabaseMapping instances
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initialize class"""
-        super().__init__(parent)
-        self.db_mngr = db_mngr
-        self.db_maps = db_maps
-
-    def columnCount(self, parent=QModelIndex()):
-        """Returns the number of columns under the given parent. Always 1.
-        """
-        return 2
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return ("name", "description")[section]
-        return None
-
-    def build_tree(self):
-        """Builds tree."""
-        self.beginResetModel()
-        self._invisible_root_item = NonLazyTreeItem(self)
-        self.endResetModel()
-        for db_map in self.db_maps:
-            db_item = NonLazyDBItem(db_map)
-            self._invisible_root_item.append_children(db_item)
-            alt_root_item = AlternativeRootItem()
-            scen_root_item = ScenarioRootItem()
-            db_item.append_children(alt_root_item, scen_root_item)
-
-    def _add_leaves(self, db_map_data, leaf_type):
-        root_number, leaf_maker = {"alternative": (0, AlternativeLeafItem), "scenario": (1, ScenarioLeafItem)}[
-            leaf_type
-        ]
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            root_item = db_item.child(root_number)
-            # First realize the ones added locally
-            ids = {x["name"]: x["id"] for x in items}
-            for leaf_item in root_item.children[:-1]:
-                id_ = ids.pop(leaf_item.name, None)
-                if not id_:
-                    continue
-                leaf_item.handle_added_to_db(identifier=id_)
-            # Now append the ones added externally
-            children = [leaf_maker(id_) for id_ in ids.values()]
-            root_item.insert_children(root_item.child_count() - 1, *children)
-
-    def _update_leaves(self, db_map_data, leaf_type):
-        root_number = {"alternative": 0, "scenario": 1}[leaf_type]
-        self.layoutAboutToBeChanged.emit()
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            root_item = db_item.child(root_number)
-            ids = {x["id"] for x in items}
-            leaf_items = {leaf_item.id: leaf_item for leaf_item in root_item.children[:-1]}
-            for id_ in ids.intersection(leaf_items):
-                leaf_items[id_].handle_updated_in_db()
-        self.layoutChanged.emit()
-
-    def _remove_leaves(self, db_map_data, leaf_type):
-        root_number = {"alternative": 0, "scenario": 1}[leaf_type]
-        self.layoutAboutToBeChanged.emit()
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            root_item = db_item.child(root_number)
-            ids = {x["id"] for x in items}
-            removed_rows = []
-            for row, leaf_item in enumerate(root_item.children[:-1]):
-                if leaf_item.id in ids:
-                    removed_rows.append(row)
-            for row in sorted(removed_rows, reverse=True):
-                root_item.remove_children(row, 1)
-        self.layoutChanged.emit()
-
-    def add_alternatives(self, db_map_data):
-        self._add_leaves(db_map_data, "alternative")
-
-    def add_scenarios(self, db_map_data):
-        self._add_leaves(db_map_data, "scenario")
-
-    def update_alternatives(self, db_map_data):
-        self._update_leaves(db_map_data, "alternative")
-
-    def update_scenarios(self, db_map_data):
-        self._update_leaves(db_map_data, "scenario")
-
-    def remove_alternatives(self, db_map_data):
-        self._remove_leaves(db_map_data, "alternative")
-
-    def remove_scenarios(self, db_map_data):
-        self._remove_leaves(db_map_data, "scenario")
+    @staticmethod
+    def _make_db_item(db_map):
+        return NonLazyDBItem(db_map)
 
     @staticmethod
-    def db_item(item):
-        while item.item_type != "db":
-            item = item.parent_item
-        return item
+    def _top_children():
+        return [AlternativeRootItem(), ScenarioRootItem()]
 
-    def db_row(self, item):
-        return self.db_item(item).child_number()
+    def _alternative_or_scenario_ids_per_root_item(self, db_map_data, alternative_or_scenario):
+        root_number = {"alternative": 0, "scenario": 1}[alternative_or_scenario]
+        d = {}
+        for db_item in self._invisible_root_item.children:
+            items = db_map_data.get(db_item.db_map)
+            if not items:
+                continue
+            root_item = db_item.child(root_number)
+            d[root_item] = [x["id"] for x in items]
+        return d
+
+    def _scenario_ids_per_root_item(self, db_map_data):
+        return self._ids_per_root_item(db_map_data, root_number=1)
+
+    def _alternative_ids_per_root_item(self, db_map_data):
+        return self._ids_per_root_item(db_map_data, root_number=0)
+
+    def add_alternatives(self, db_map_data):
+        for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
+            children = [AlternativeLeafItem(id_) for id_ in ids]
+            root_item.insert_children(root_item.child_count() - 1, *children)
+
+    def add_scenarios(self, db_map_data):
+        for root_item, ids in self._scenario_ids_per_root_item(db_map_data).items():
+            children = [ScenarioLeafItem(id_) for id_ in ids]
+            root_item.insert_children(root_item.child_count() - 1, *children)
+
+    def update_alternatives(self, db_map_data):
+        for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
+            self._update_leaf_items(root_item, ids)
+
+    def update_scenarios(self, db_map_data):
+        for root_item, ids in self._scenario_ids_per_root_item(db_map_data).items():
+            self._update_leaf_items(root_item, ids)
+
+    def remove_alternatives(self, db_map_data):
+        for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
+            self._remove_leaf_items(root_item, ids)
+
+    def remove_scenarios(self, db_map_data):
+        for root_item, ids in self._scenario_ids_per_root_item(db_map_data).items():
+            self._remove_leaf_items(root_item, ids)
 
     def supportedDropActions(self):
         return Qt.CopyAction | Qt.MoveAction

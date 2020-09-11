@@ -21,7 +21,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QEvent
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect
-from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate
+from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate, ParameterValueListDelegate
 
 
 class EntityTreeView(CopyTreeView):
@@ -549,6 +549,14 @@ class ParameterValueListTreeView(ItemTreeView):
         """Initialize the view."""
         super().__init__(parent=parent)
         self.open_in_editor_action = None
+
+    def connect_spine_db_editor(self, spine_db_editor):
+        """see base class"""
+        super().connect_spine_db_editor(spine_db_editor)
+        delegate = ParameterValueListDelegate(self._spine_db_editor)
+        delegate.data_committed.connect(self.model().setData)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+        self.setItemDelegateForColumn(0, delegate)
 
     def create_context_menu(self):
         """Creates a context menu for this view."""

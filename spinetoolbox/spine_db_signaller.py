@@ -64,6 +64,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.features_added.connect(self.receive_features_added)
         self.db_mngr.tools_added.connect(self.receive_tools_added)
         self.db_mngr.tool_features_added.connect(self.receive_tool_features_added)
+        self.db_mngr.tool_feature_methods_added.connect(self.receive_tool_feature_methods_added)
         # Updated
         self.db_mngr.scenarios_updated.connect(self.receive_scenarios_updated)
         self.db_mngr.alternatives_updated.connect(self.receive_alternatives_updated)
@@ -94,6 +95,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.features_removed.connect(self.receive_features_removed)
         self.db_mngr.tools_removed.connect(self.receive_tools_removed)
         self.db_mngr.tool_features_removed.connect(self.receive_tool_features_removed)
+        self.db_mngr.tool_feature_methods_removed.connect(self.receive_tool_feature_methods_removed)
         # Commit, rollback, refresh
         self.db_mngr.session_refreshed.connect(self.receive_session_refreshed)
         self.db_mngr.session_committed.connect(self.receive_session_committed)
@@ -200,6 +202,13 @@ class SpineDBSignaller(QObject):
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 listener.receive_tool_features_added(shared_db_map_data)
+
+    @Slot(object)
+    def receive_tool_feature_methods_added(self, db_map_data):
+        for listener, db_maps in self.listeners.items():
+            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
+            if shared_db_map_data:
+                listener.receive_tool_feature_methods_added(shared_db_map_data)
 
     @Slot(object)
     def receive_scenarios_updated(self, db_map_data):
@@ -396,6 +405,13 @@ class SpineDBSignaller(QObject):
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 listener.receive_tool_features_removed(shared_db_map_data)
+
+    @Slot(object)
+    def receive_tool_feature_methods_removed(self, db_map_data):
+        for listener, db_maps in self.listeners.items():
+            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
+            if shared_db_map_data:
+                listener.receive_tool_feature_methods_removed(shared_db_map_data)
 
     @Slot(set)
     def receive_session_refreshed(self, db_maps):

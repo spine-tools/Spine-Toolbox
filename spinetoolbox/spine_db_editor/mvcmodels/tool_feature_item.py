@@ -20,6 +20,7 @@ from .tree_item_utility import LastGrayMixin, EditableMixin, RootItem, EmptyChil
 
 _FEATURE_ICON = "\uf5bc"  # splotch
 _TOOL_ICON = "\uf6e3"  # hammer
+_METHOD_ICON = "\uf1de"  # sliders-h
 
 
 class FeatureRootItem(EmptyChildRootItem):
@@ -193,7 +194,7 @@ class ToolFeatureLeafItem(LeafItem):
         return dict(name=name, **item_data)
 
     def fetch_more(self):
-        self.append_children(ToolFeatureRequiredItem(), ToolFeatureMethodItem())
+        self.append_children(ToolFeatureRequiredItem(), ToolFeatureMethodRootItem())
         self._fetched = True
 
     def add_item_to_db(self, db_item):
@@ -233,12 +234,48 @@ class ToolFeatureRequiredItem(NonLazyTreeItem):
         return False
 
 
-class ToolFeatureMethodItem(NonLazyTreeItem):
-    """A tool feature method item."""
+class ToolFeatureMethodRootItem(EmptyChildRootItem):
+    """A tool_feature_method root item."""
 
     @property
     def item_type(self):
-        return "tool_feature method"
+        return "tool_feature_method root"
+
+    @property
+    def display_data(self):
+        return "tool_feature_method"
+
+    @property
+    def icon_code(self):
+        return _METHOD_ICON
+
+    def empty_child(self):
+        return ToolFeatureMethodLeafItem()
+
+
+class ToolFeatureMethodLeafItem(LastGrayMixin, LeafItem):
+    """A tool_feature_method leaf item."""
+
+    @property
+    def item_type(self):
+        return "tool_feature_method"
+
+    @property
+    def tool_feature_item(self):
+        return self.parent_item.parent_item
+
+    @property
+    def item_data(self):
+        if not self.id:
+            return self._item_data
+        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        name = self.db_mngr.get_value_list_item(
+            self.db_map, item_data["parameter_value_list_id"], item_data["method_index"]
+        )
+        return dict(name=name, **item_data)
+
+    def _make_item_data(self):
+        return {"name": "Enter new method here...", "description": ""}
 
     def flags(self, column):
         flags = super().flags(column)
@@ -246,29 +283,30 @@ class ToolFeatureMethodItem(NonLazyTreeItem):
             flags |= Qt.ItemIsEditable
         return flags
 
-    def data(self, column, role=Qt.DisplayRole):
-        if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
-            method = self.parent_item.item_data["method"]
-            return "method: " + str(method)
-        return super().data(column, role)
-
-    def set_data(self, column, value, role=Qt.EditRole):
-        if role == Qt.EditRole and column == 0:
-            method_index = self._get_method_index(value)
-            if method_index is None:
-                return False
-            db_item = {"id": self.parent_item.id, "method_index": method_index}
-            self.parent_item.update_item_in_db(db_item)
-            return True
-        return False
-
-    def _get_method_index(self, method):
-        method_index = self.model.get_method_index(
-            self.parent_item.db_map, self.parent_item.item_data["parameter_value_list_id"], method
+    def _make_item_to_add(self, value):
+        tool_feat_item = self.tool_feature_item
+        tool_feature_id = tool_feat_item.id
+        parameter_value_list_id = tool_feat_item.item_data["parameter_value_list_id"]
+        method_index = self._get_method_index(parameter_value_list_id, value)
+        if method_index is None:
+            return None
+        return dict(
+            tool_feature_id=tool_feature_id, parameter_value_list_id=parameter_value_list_id, method_index=method_index
         )
+
+    def _get_method_index(self, parameter_value_list_id, method):
+        method_index = self.model.get_method_index(self.tool_feature_item.db_map, parameter_value_list_id, method)
         if method_index is None:
             self.model._parent.error_box.emit(
-                "Error", f"<p>Invalid method '{method}'. </p>" "<p>Please enter a valid method for the feature.</p>",
+                "Error",
+                f"<p>Invalid method '{method}'. </p>"
+                f"<p>Please enter a valid method for feature '{self.tool_feature_item.name}'.</p>",
             )
             return None
         return method_index
+
+    def add_item_to_db(self, db_item):
+        self.db_mngr.add_tool_feature_methods({self.db_map: [db_item]})
+
+    def update_item_in_db(self, db_item):
+        self.db_mngr.update_tool_feature_methods({self.db_map: [db_item]})

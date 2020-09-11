@@ -318,7 +318,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_fetched(self, db_map_data):
         super().receive_parameter_tags_fetched(db_map_data)
-        self.parameter_tag_model.receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_model.add_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_fetched(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
@@ -332,7 +332,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_added(self, db_map_data):
         super().receive_parameter_tags_added(db_map_data)
-        self.parameter_tag_model.receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_model.add_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
@@ -346,7 +346,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_updated(self, db_map_data):
         super().receive_parameter_tags_updated(db_map_data)
-        self.parameter_tag_model.receive_parameter_tags_updated(db_map_data)
+        self.parameter_tag_model.update_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
         super().receive_parameter_definitions_updated(db_map_data)
@@ -375,7 +375,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_removed(self, db_map_data):
         super().receive_parameter_tags_removed(db_map_data)
-        self.parameter_tag_model.receive_parameter_tags_removed(db_map_data)
+        self.parameter_tag_model.remove_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
         super().receive_parameter_definitions_removed(db_map_data)

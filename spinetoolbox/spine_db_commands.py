@@ -127,6 +127,7 @@ class SpineDBCommand(AgedUndoCommand):
         "feature": "add feature",
         "tool": "add tool",
         "tool_feature": "add tool features",
+        "tool_feature_method": "add tool feature methods",
     }
     _update_command_name = {
         "object_class": "update object classes",
@@ -160,6 +161,7 @@ class SpineDBCommand(AgedUndoCommand):
         "feature": "add_features",
         "tool": "add_tools",
         "tool_feature": "add_tool_features",
+        "tool_feature_method": "add_tool_feature_methods",
     }
     _readd_method_name = {
         "object_class": "readd_object_classes",
@@ -178,6 +180,7 @@ class SpineDBCommand(AgedUndoCommand):
         "feature": "readd_features",
         "tool": "readd_tools",
         "tool_feature": "readd_tool_features",
+        "tool_feature_method": "readd_tool_feature_methods",
     }
     _update_method_name = {
         "object_class": "update_object_classes",
@@ -212,6 +215,7 @@ class SpineDBCommand(AgedUndoCommand):
         "feature": "get_features",
         "tool": "get_tools",
         "tool_feature": "get_tool_features",
+        "tool_feature_method": "get_tool_feature_methods",
     }
     _added_signal_name = {
         "object_class": "object_classes_added",
@@ -230,6 +234,7 @@ class SpineDBCommand(AgedUndoCommand):
         "feature": "features_added",
         "tool": "tools_added",
         "tool_feature": "tool_features_added",
+        "tool_feature_method": "tool_feature_methods_added",
     }
     _updated_signal_name = {
         "object_class": "object_classes_updated",
