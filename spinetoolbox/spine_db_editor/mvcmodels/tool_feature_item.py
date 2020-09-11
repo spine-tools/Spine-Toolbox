@@ -294,6 +294,16 @@ class ToolFeatureMethodLeafItem(LastGrayMixin, LeafItem):
             tool_feature_id=tool_feature_id, parameter_value_list_id=parameter_value_list_id, method_index=method_index
         )
 
+    def _make_item_to_update(self, column, value):
+        if column != 0:
+            return super()._make_item_to_update(column, value)
+        tool_feat_item = self.tool_feature_item
+        parameter_value_list_id = tool_feat_item.item_data["parameter_value_list_id"]
+        method_index = self._get_method_index(parameter_value_list_id, value)
+        if method_index is None:
+            return None
+        return dict(id=self.id, method_index=method_index)
+
     def _get_method_index(self, parameter_value_list_id, method):
         method_index = self.model.get_method_index(self.tool_feature_item.db_map, parameter_value_list_id, method)
         if method_index is None:

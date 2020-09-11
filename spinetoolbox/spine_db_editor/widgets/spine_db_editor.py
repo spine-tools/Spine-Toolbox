@@ -770,6 +770,9 @@ class SpineDBEditorBase(QMainWindow):
     def receive_tool_features_updated(self, db_map_data):
         self.notify_items_changed("updated", "tool_feature", db_map_data)
 
+    def receive_tool_feature_methods_updated(self, db_map_data):
+        self.notify_items_changed("updated", "tool_feature_method", db_map_data)
+
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter_definition tag", db_map_data)
 

@@ -451,6 +451,10 @@ class TreeViewMixin:
         super().receive_tool_features_updated(db_map_data)
         self.tool_feature_model.update_tool_features(db_map_data)
 
+    def receive_tool_feature_methods_updated(self, db_map_data):
+        super().receive_tool_feature_methods_updated(db_map_data)
+        self.tool_feature_model.update_tool_feature_methods(db_map_data)
+
     def receive_alternatives_removed(self, db_map_data):
         super().receive_alternatives_removed(db_map_data)
         self.alternative_scenario_model.remove_alternatives(db_map_data)

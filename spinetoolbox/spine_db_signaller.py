@@ -80,6 +80,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.features_updated.connect(self.receive_features_updated)
         self.db_mngr.tools_updated.connect(self.receive_tools_updated)
         self.db_mngr.tool_features_updated.connect(self.receive_tool_features_updated)
+        self.db_mngr.tool_feature_methods_updated.connect(self.receive_tool_feature_methods_updated)
         # Removed
         self.db_mngr.scenarios_removed.connect(self.receive_scenarios_removed)
         self.db_mngr.alternatives_removed.connect(self.receive_alternatives_removed)
@@ -300,6 +301,13 @@ class SpineDBSignaller(QObject):
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 listener.receive_tool_features_updated(shared_db_map_data)
+
+    @Slot(object)
+    def receive_tool_feature_methods_updated(self, db_map_data):
+        for listener, db_maps in self.listeners.items():
+            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
+            if shared_db_map_data:
+                listener.receive_tool_feature_methods_updated(shared_db_map_data)
 
     @Slot(object)
     def receive_parameter_definition_tags_set(self, db_map_data):

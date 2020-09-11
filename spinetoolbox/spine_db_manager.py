@@ -119,6 +119,7 @@ class SpineDBManager(QObject):
     features_updated = Signal(object)
     tools_updated = Signal(object)
     tool_features_updated = Signal(object)
+    tool_feature_methods_updated = Signal(object)
     # Uncached
     items_removed_from_cache = Signal(object)
     # Internal
@@ -539,7 +540,7 @@ class SpineDBManager(QObject):
             "feature": (self.features_added, self.features_updated),
             "tool": (self.tools_added, self.tools_updated),
             "tool_feature": (self.tool_features_added, self.tool_features_updated),
-            "tool_feature_method": (self.tool_feature_methods_added,),
+            "tool_feature_method": (self.tool_feature_methods_added, self.tool_feature_methods_updated),
         }
         for item_type, signals in ordered_signals.items():
             for signal in signals:
@@ -1496,6 +1497,15 @@ class SpineDBManager(QObject):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature"))
+
+    def update_tool_feature_methods(self, db_map_data):
+        """Updates tools feature methods in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature_method"))
 
     def set_scenario_alternatives(self, db_map_data):
         """Sets scenario alternatives in db.
