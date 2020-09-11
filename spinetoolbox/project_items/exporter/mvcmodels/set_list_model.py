@@ -31,20 +31,13 @@ class SetListModel(QAbstractListModel):
     Both the ordering of the items within each list as well as their exportability flags are handled here.
     """
 
-    def __init__(self, set_settings, domain_dependencies, set_exportable_dependencies):
+    def __init__(self, set_settings):
         """
         Args:
             set_settings (gdx.SetSettings): settings whose domain and set name lists should be modelled
-            domain_dependencies (dict): mapping from domain names to list of names of the sets
-                that are indexed by that domain
-            set_exportable_dependencies (dict): mapping from set names to mappings from domain names to boolean values;
-                the domain names are of domains that index the set
-                while the boolean value is True if that domain is exportable, False otherwise
         """
         super().__init__()
         self._set_settings = set_settings
-        self._domain_dependencies = domain_dependencies
-        self._set_exportable_dependencies = set_exportable_dependencies
         self._sorted_domains = sorted(set_settings.domain_names, key=lambda name: set_settings.domain_tiers[name])
         self._sorted_sets = sorted(set_settings.set_names, key=lambda name: set_settings.set_tiers[name])
 
@@ -57,7 +50,7 @@ class SetListModel(QAbstractListModel):
             records (gdx.Records): domain's sorted records
             origin (gdx.Origin): domain's origin
         """
-        metadata = gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, origin)
+        metadata = gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, origin)
         if not self._set_settings.add_or_replace_domain(domain_name, records, metadata):
             first = len(self._set_settings.domain_names)
             last = first
@@ -151,11 +144,7 @@ class SetListModel(QAbstractListModel):
             else:
                 exportable = self._set_settings.metadata(self._sorted_sets[row - domain_count]).exportable
             if exportable == gdx.ExportFlag.FORCED_NON_EXPORTABLE:
-                if row < domain_count:
-                    return "This domain is the global parameter domain\nand cannot be exported as is."
-                return "Cannot export this set because not all its\ndomains are checked for export."
-            if exportable == gdx.ExportFlag.FORCED_EXPORTABLE:
-                return "Domain is used for parameter indexing\nand must be exported."
+                return "This domain is the global parameter domain\nand cannot be exported as is."
         return None
 
     def flags(self, index):
@@ -239,7 +228,6 @@ class SetListModel(QAbstractListModel):
                 return False
             exportable = gdx.ExportFlag.EXPORTABLE if value == Qt.Checked else gdx.ExportFlag.NON_EXPORTABLE
             metadata.exportable = exportable
-            self._force_sets_non_exportable(name, value)
         else:
             metadata = self._set_settings.metadata(self._sorted_sets[row - domain_count])
             if metadata.is_forced():
@@ -263,21 +251,3 @@ class SetListModel(QAbstractListModel):
             row = self._set_settings.domain_tiers[domain_name]
             index = self.index(row, 0)
             self.dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])
-
-    def _force_sets_non_exportable(self, domain_name, domain_checked):
-        depending_sets = self._domain_dependencies[domain_name]
-        for set_name in depending_sets:
-            depending_domains = self._set_exportable_dependencies[set_name]
-            if domain_checked == Qt.Unchecked:
-                depending_domains[domain_name] = False
-                set_row = self._set_settings.set_tiers[set_name]
-                self._set_settings.metadata(set_name).exportable = gdx.ExportFlag.FORCED_NON_EXPORTABLE
-                model_index = self.index(set_row + len(self._sorted_domains), 0)
-                self.dataChanged.emit(model_index, model_index, [Qt.CheckStateRole, Qt.ToolTipRole])
-                continue
-            depending_domains[domain_name] = True
-            if all(exportable for exportable in depending_domains.values()):
-                set_row = self._set_settings.set_tiers[set_name]
-                self._set_settings.metadata(set_name).exportable = gdx.ExportFlag.EXPORTABLE
-                model_index = self.index(set_row + len(self._sorted_domains), 0)
-                self.dataChanged.emit(model_index, model_index, [Qt.CheckStateRole, Qt.ToolTipRole])
