@@ -200,17 +200,24 @@ class ParameterValueListModel(TreeModelBase):
     """
 
     def add_parameter_value_lists(self, db_map_data):
-        for db_item, ids in self._ids_per_db_item(db_map_data).items():
-            children = [ListItem(id_) for id_ in ids]
+        for db_item, items in self._items_per_db_item(db_map_data).items():
+            # First realize the ones added locally
+            ids = {x["name"]: x["id"] for x in items}
+            for list_item in db_item.children[:-1]:
+                id_ = ids.pop(list_item.name, None)
+                if not id_:
+                    continue
+                list_item.handle_added_to_db(identifier=id_)
+            children = [ListItem(id_) for id_ in ids.values()]
             db_item.insert_children(db_item.child_count() - 1, *children)
 
     def update_parameter_value_lists(self, db_map_data):
-        for root_item, ids in self._ids_per_db_item(db_map_data).items():
-            self._update_leaf_items(root_item, ids)
+        for root_item, items in self._items_per_db_item(db_map_data).items():
+            self._update_leaf_items(root_item, {x["id"] for x in items})
 
     def remove_parameter_value_lists(self, db_map_data):
-        for root_item, ids in self._ids_per_db_item(db_map_data).items():
-            self._remove_leaf_items(root_item, ids)
+        for root_item, items in self._items_per_db_item(db_map_data).items():
+            self._remove_leaf_items(root_item, {x["id"] for x in items})
 
     @staticmethod
     def _make_db_item(db_map):

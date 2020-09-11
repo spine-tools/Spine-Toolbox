@@ -76,6 +76,8 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
         if not self.id:
             return self._item_data
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        if not item_data:
+            return {}
         name = self.model.make_feature_name(item_data["entity_class_name"], item_data["parameter_definition_name"])
         return dict(name=name, **item_data)
 
@@ -187,6 +189,8 @@ class ToolFeatureLeafItem(LeafItem):
     @property
     def item_data(self):
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        if not item_data:
+            return {}
         feature_data = self.db_mngr.get_item(self.db_map, "feature", item_data["feature_id"])
         name = self.model.make_feature_name(
             feature_data["entity_class_name"], feature_data["parameter_definition_name"]
@@ -219,6 +223,8 @@ class ToolFeatureRequiredItem(NonLazyTreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
+            if not self.parent_item.item_data:
+                return None
             required = "yes" if self.parent_item.item_data["required"] else "no"
             return "required: " + required
         return super().data(column, role)
@@ -269,6 +275,8 @@ class ToolFeatureMethodLeafItem(LastGrayMixin, LeafItem):
         if not self.id:
             return self._item_data
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        if not item_data:
+            return {}
         name = self.db_mngr.get_value_list_item(
             self.db_map, item_data["parameter_value_list_id"], item_data["method_index"]
         )

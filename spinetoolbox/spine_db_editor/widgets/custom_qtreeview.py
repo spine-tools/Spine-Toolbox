@@ -428,7 +428,12 @@ class ToolFeatureTreeView(ItemTreeView):
         db_map_typed_data_to_rm = {}
         items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
         for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"feature": set(), "tool": set(), "tool_feature": set()}
+            db_map_typed_data_to_rm[db_item.db_map] = {
+                "feature": set(),
+                "tool": set(),
+                "tool_feature": set(),
+                "tool_feature_method": set(),
+            }
             for feat_item in reversed(db_item.child(0).children[:-1]):
                 if feat_item in items:
                     db_map_typed_data_to_rm[db_item.db_map]["feature"].add(feat_item.id)
@@ -440,6 +445,11 @@ class ToolFeatureTreeView(ItemTreeView):
                 for tool_feat_item in reversed(tool_feat_root_item.children):
                     if tool_feat_item in items:
                         db_map_typed_data_to_rm[db_item.db_map]["tool_feature"].add(tool_feat_item.id)
+                        continue
+                    tool_feat_meth_root_item = tool_feat_item.child(1)
+                    for tool_feat_meth_item in reversed(tool_feat_meth_root_item.children):
+                        if tool_feat_meth_item in items:
+                            db_map_typed_data_to_rm[db_item.db_map]["tool_feature_method"].add(tool_feat_meth_item.id)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()
 

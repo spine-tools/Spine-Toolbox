@@ -805,7 +805,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter_value_list", db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
 
     def receive_parameter_tags_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter_tag", db_map_data)

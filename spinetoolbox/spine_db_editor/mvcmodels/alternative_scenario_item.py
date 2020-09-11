@@ -196,7 +196,10 @@ class ScenarioAlternativeLeafItem(LeafItem):
 
     @property
     def id(self):
-        return self.parent_item.alternative_id_list[self.child_number()]
+        try:
+            return self.parent_item.alternative_id_list[self.child_number()]
+        except IndexError:
+            return None
 
     def add_item_to_db(self, db_item):
         raise NotImplementedError()

@@ -63,13 +63,13 @@ class TreeModelBase(MinimalTreeModel):
     def _top_children():
         raise NotImplementedError()
 
-    def _ids_per_db_item(self, db_map_data):
+    def _items_per_db_item(self, db_map_data):
         d = {}
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
                 continue
-            d[db_item] = [x["id"] for x in items]
+            d[db_item] = items
         return d
 
     def _ids_per_root_item(self, db_map_data, root_number=0):

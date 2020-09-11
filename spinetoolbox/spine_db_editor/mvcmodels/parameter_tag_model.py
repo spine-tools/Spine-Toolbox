@@ -114,17 +114,17 @@ class ParameterTagModel(TreeModelBase):
     """
 
     def add_parameter_tags(self, db_map_data):
-        for db_item, ids in self._ids_per_db_item(db_map_data).items():
-            children = [TagItem(id_) for id_ in ids]
+        for db_item, items in self._items_per_db_item(db_map_data).items():
+            children = [TagItem(id_) for id_ in {x["id"] for x in items}]
             db_item.insert_children(db_item.child_count() - 1, *children)
 
     def update_parameter_tags(self, db_map_data):
-        for root_item, ids in self._ids_per_db_item(db_map_data).items():
-            self._update_leaf_items(root_item, ids)
+        for root_item, items in self._items_per_db_item(db_map_data).items():
+            self._update_leaf_items(root_item, {x["id"] for x in items})
 
     def remove_parameter_tags(self, db_map_data):
-        for root_item, ids in self._ids_per_db_item(db_map_data).items():
-            self._remove_leaf_items(root_item, ids)
+        for root_item, items in self._items_per_db_item(db_map_data).items():
+            self._remove_leaf_items(root_item, {x["id"] for x in items})
 
     @staticmethod
     def _make_db_item(db_map):
