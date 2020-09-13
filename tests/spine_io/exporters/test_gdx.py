@@ -159,7 +159,7 @@ class TestGdx(unittest.TestCase):
     def test_SetSettings_serialization_to_dictionary(self):
         domain_metadatas = [
             gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, gdx.Origin.INDEXING),
-            gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE),
+            gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
         ]
         set_metadatas = [
             gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
@@ -1086,7 +1086,7 @@ class TestGdx(unittest.TestCase):
             {"a": gdx.LiteralRecords([]), "b": gdx.LiteralRecords([])},
             metadatas={
                 "a": gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
-                "b": gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE),
+                "b": gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
             },
         )
         update_settings = gdx.SetSettings(
@@ -1100,7 +1100,7 @@ class TestGdx(unittest.TestCase):
         )
         base_settings.update(update_settings)
         self.assertEqual(base_settings._domain_names, {"b", "c"})
-        self.assertEqual(base_settings.metadata("b"), gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE))
+        self.assertEqual(base_settings.metadata("b"), gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE))
         self.assertEqual(
             base_settings.metadata("c"), gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, gdx.Origin.INDEXING)
         )
@@ -1116,7 +1116,7 @@ class TestGdx(unittest.TestCase):
             {"a": gdx.LiteralRecords([]), "b": gdx.LiteralRecords([])},
             metadatas={
                 "a": gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
-                "b": gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE),
+                "b": gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE),
             },
         )
         update_settings = gdx.SetSettings(
@@ -1133,7 +1133,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(base_settings.domain_tiers, dict())
         self.assertEqual(base_settings.set_names, {"b", "c"})
         self.assertEqual(base_settings.set_tiers, {"b": 0, "c": 1})
-        self.assertEqual(base_settings.metadata("b"), gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE))
+        self.assertEqual(base_settings.metadata("b"), gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE))
         self.assertEqual(
             base_settings.metadata("c"), gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, gdx.Origin.MERGING)
         )
@@ -1171,7 +1171,7 @@ class TestGdx(unittest.TestCase):
                 "c": gdx.LiteralRecords([("C",), ("CC",)]),
             },
             metadatas={
-                "a": gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE),
+                "a": gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE),
                 "b": gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, gdx.Origin.INDEXING),
                 "c": gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE),
             },
@@ -1186,8 +1186,8 @@ class TestGdx(unittest.TestCase):
             },
             metadatas={
                 "b": gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE),
-                "d": gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE),
-                "c": gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, gdx.Origin.MERGING),
+                "d": gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE),
+                "c": gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, gdx.Origin.MERGING),
             },
         )
         base_settings.update(update_settings)
@@ -1196,7 +1196,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(
             base_settings.metadata("b"), gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, gdx.Origin.INDEXING)
         )
-        self.assertEqual(base_settings.metadata("d"), gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE))
+        self.assertEqual(base_settings.metadata("d"), gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE))
         self.assertEqual(base_settings.set_names, {"c"})
         self.assertEqual(base_settings.metadata("c"), gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE))
         self.assertEqual(base_settings.global_parameters_domain_name, "")
@@ -1209,7 +1209,7 @@ class TestGdx(unittest.TestCase):
             {"a"},
             set(),
             {"a": gdx.LiteralRecords([("A",)])},
-            metadatas={"a": gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, gdx.Origin.MERGING)},
+            metadatas={"a": gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, gdx.Origin.MERGING)},
         )
         domain = gdx.Set("b")
         domain.records.append(gdx.Record(("B",)))
@@ -1220,7 +1220,7 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(settings.domain_tiers, {"a": 0, "b": 1})
         self.assertEqual(settings.records("a").records, [("A",)])
         self.assertEqual(settings.records("b").records, [("B",)])
-        self.assertEqual(settings.metadata("a"), gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, gdx.Origin.MERGING))
+        self.assertEqual(settings.metadata("a"), gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, gdx.Origin.MERGING))
         self.assertEqual(settings.metadata("b"), gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE))
         self.assertFalse(settings.set_names)
         self.assertFalse(settings.set_tiers)
@@ -1231,7 +1231,7 @@ class TestGdx(unittest.TestCase):
             {"a"},
             set(),
             {"a": gdx.LiteralRecords([("A",)])},
-            metadatas={"a": gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, gdx.Origin.INDEXING)},
+            metadatas={"a": gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, gdx.Origin.INDEXING)},
         )
         domain = gdx.Set("a")
         domain.records.append(gdx.Record(("B",)))
@@ -1250,7 +1250,7 @@ class TestGdx(unittest.TestCase):
             {"a"},
             set(),
             {"a": gdx.LiteralRecords([("A",)])},
-            metadatas={"a": gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, gdx.Origin.INDEXING)},
+            metadatas={"a": gdx.SetMetadata(gdx.ExportFlag.EXPORTABLE, gdx.Origin.INDEXING)},
         )
         settings.remove_domain("a")
         self.assertEqual(settings.domain_names, set())

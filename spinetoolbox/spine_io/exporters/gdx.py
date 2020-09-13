@@ -894,6 +894,8 @@ def expand_indexed_parameter_values(parameters, indexing_settings, sets):
             indexing_setting = indexing_settings[parameter_name]
         except KeyError:
             continue
+        if parameter.domain_names != indexing_setting.parameter.domain_names:
+            continue
         try:
             parameter.expand_indexes(indexing_setting, sets)
         except GdxExportException as error:
@@ -1113,7 +1115,7 @@ def parameters_to_gams(gdx_file, parameters, none_export):
         try:
             gams_parameter = GAMSParameter(indexed_values, domain=parameter.domain_names)
         except ValueError as error:
-            raise GdxExportException(f"Failed to create GAMS parameter: {error}")
+            raise GdxExportException(f"Failed to create GAMS parameter '{parameter_name}': {error}")
         try:
             gdx_file[parameter_name] = gams_parameter
         except NotImplementedError as error:
@@ -2251,8 +2253,6 @@ class ExportFlag(enum.Enum):
     """User has declared that the set should be exported."""
     NON_EXPORTABLE = enum.auto()
     """User has declared that the set should not be exported."""
-    FORCED_EXPORTABLE = enum.auto()
-    """Set must be exported no matter what."""
     FORCED_NON_EXPORTABLE = enum.auto()
     """Set must never be exported."""
 
@@ -2304,11 +2304,11 @@ class SetMetadata:
 
     def is_exportable(self):
         """Returns True if Set should be exported."""
-        return self.exportable in [ExportFlag.EXPORTABLE, ExportFlag.FORCED_EXPORTABLE]
+        return self.exportable == ExportFlag.EXPORTABLE
 
     def is_forced(self):
-        """Returns True if user's export choices should be overriden."""
-        return self.exportable in [ExportFlag.FORCED_EXPORTABLE, ExportFlag.FORCED_NON_EXPORTABLE]
+        """Returns True if user's export choices should be overridden."""
+        return self.exportable == ExportFlag.FORCED_NON_EXPORTABLE
 
     def to_dict(self):
         """Serializes metadata to a dictionary."""

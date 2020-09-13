@@ -51,7 +51,15 @@ class GdxExportSettings(QWidget):
     """Emitted when the Cancel button has been clicked."""
 
     def __init__(
-        self, set_settings, indexing_settings, merging_settings, none_fallback, none_export, scenario, database_url, parent
+        self,
+        set_settings,
+        indexing_settings,
+        merging_settings,
+        none_fallback,
+        none_export,
+        scenario,
+        database_url,
+        parent,
     ):
         """
         Args:
@@ -87,8 +95,7 @@ class GdxExportSettings(QWidget):
         self._ui.record_move_up_button.clicked.connect(self._move_records_up)
         self._ui.record_move_down_button.clicked.connect(self._move_records_down)
         self._set_settings = set_settings
-        domain_dependencies, set_export_dependencies = _set_domain_export_dependencies(set_settings, database_url)
-        self._set_list_model = SetListModel(set_settings, domain_dependencies, set_export_dependencies)
+        self._set_list_model = SetListModel(set_settings,)
         self._set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
         self._ui.set_list_view.setModel(self._set_list_model)
         record_list_model = RecordListModel()
@@ -143,8 +150,7 @@ class GdxExportSettings(QWidget):
         self._ui.global_parameters_combo_box.clear()
         self._populate_global_parameters_combo_box(set_settings)
         self._set_settings = set_settings
-        domain_dependencies, set_export_dependencies = _set_domain_export_dependencies(set_settings, self._database_url)
-        self._set_list_model = SetListModel(set_settings, domain_dependencies, set_export_dependencies)
+        self._set_list_model = SetListModel(set_settings)
         self._set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
         self._ui.set_list_view.setModel(self._set_list_model)
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
@@ -405,43 +411,3 @@ class GdxExportSettings(QWidget):
             if name == setting.set_name:
                 self._check_state()
                 return
-
-
-def _set_domain_export_dependencies(set_settings, database_url):
-    """
-    Returns data structures that are useful when determining if a set is eligible for export.
-
-    Args:
-        set_settings (gdx.SetSettings): export settings
-
-    Returns:
-        dict: export dependencies
-    """
-    domain_dependencies = {name: [] for name in set_settings.domain_names}
-    try:
-        database_map = DatabaseMapping(database_url)
-    except SpineDBAPIError:
-        return dict(), dict()
-    try:
-        set_dependencies = dict()
-        for domain_name in set_settings.domain_names:
-            domain_metadata = set_settings.metadata(domain_name)
-            if domain_metadata.is_additional():
-                continue
-            object_class_id = (
-                database_map.query(database_map.object_class_sq)
-                .filter(database_map.object_class_sq.c.name == domain_name)
-                .first()
-                .id
-            )
-            relationships = database_map.wide_relationship_class_list(object_class_id=object_class_id).all()
-            depending_relationships = domain_dependencies[domain_name]
-            for relationship in relationships:
-                depending_relationships.append(relationship.name)
-                depending_domains = set_dependencies.setdefault(relationship.name, dict())
-                depending_domains[domain_name] = domain_metadata.is_exportable()
-    except SpineDBAPIError:
-        return dict(), dict()
-    finally:
-        database_map.connection.close()
-    return domain_dependencies, set_dependencies

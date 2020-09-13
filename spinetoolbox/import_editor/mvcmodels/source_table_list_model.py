@@ -74,12 +74,34 @@ class SourceTableListModel(QAbstractListModel):
             item = self._tables[row]
             checked = value == Qt.Checked
             self._undo_stack.push(SetTableChecked(item.name, self, row, checked))
-        return False
+        return True
 
     def set_checked(self, row, checked):
+        """
+        Sets the checked status of a list item.
+
+        Args:
+            row (int): item row
+            checked (bool): True for checked, False for unchecked
+        """
         self._tables[row].checked = checked
         index = self.index(row, 0)
         self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+
+    def set_multiple_checked_undoable(self, rows, checked):
+        """
+        Sets the checked status of multiple list items.
+
+        This action is undoable.
+
+        Args:
+            rows (Iterable of int): item rows
+            checked (bool): True for checked, False for unchecked
+        """
+        self._undo_stack.beginMacro("select" if checked else "deselect" + " source tables")
+        for row in rows:
+            self._undo_stack.push(SetTableChecked(self._tables[row].name, self, row, checked))
+        self._undo_stack.endMacro()
 
     def table_at(self, row):
         return self._tables[row]

@@ -18,7 +18,12 @@ A worker based machinery to construct the settings data structures needed for gd
 
 from copy import deepcopy
 from PySide2.QtCore import QObject, QThread, Signal, Slot
-from spinedb_api import apply_scenario_filter_to_parameter_value_sq, apply_alternative_filter_to_parameter_value_sq, DatabaseMapping, SpineDBAPIError
+from spinedb_api import (
+    apply_scenario_filter_to_parameter_value_sq,
+    apply_alternative_filter_to_parameter_value_sq,
+    DatabaseMapping,
+    SpineDBAPIError,
+)
 from spinetoolbox.spine_io.exporters import gdx
 from .db_utils import latest_database_commit_time_stamp, scenario_filtered_database_map
 
