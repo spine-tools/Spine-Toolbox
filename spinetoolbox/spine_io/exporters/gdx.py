@@ -204,7 +204,7 @@ class Parameter:
 
     def __eq__(self, other):
         """
-        Compares two :class:`Parameter`s for equality.
+        Compares two :class:`Parameter` objects for equality.
 
         Args:
             other (Parameter): a parameter
@@ -552,7 +552,7 @@ class LiteralRecords(Records):
         self._records = new_order
 
     def is_shufflable(self):
-        """Retuns True; :class:`LiteralRecords` is shufflable."""
+        """Returns True; :class:`LiteralRecords` is shufflable."""
         return True
 
     @staticmethod
@@ -1807,7 +1807,7 @@ def _create_additional_domains(set_settings):
         set_settings (SetSettings): settings
 
     Returns:
-        list: a list of additional :class:`Set`s
+        list: a list of additional :class:`Set` objects
     """
     domains = list()
     for name in set_settings.domain_names:
