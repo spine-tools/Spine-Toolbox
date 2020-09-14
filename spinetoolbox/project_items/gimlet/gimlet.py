@@ -22,6 +22,7 @@ from collections import Counter
 from PySide2.QtCore import Slot, Qt
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.config import DEFAULT_WORK_DIR, GIMLET_WORK_DIR_NAME
+from spinetoolbox.helpers import shorten
 from .item_info import ItemInfo
 from .executable_item import ExecutableItem
 from .utils import SHELLS
@@ -104,7 +105,7 @@ class Gimlet(ProjectItem):
             app_work_dir = self._toolbox.qsettings().value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
             if not app_work_dir:
                 app_work_dir = DEFAULT_WORK_DIR
-            unique_dir_name = "{0}".format(self.name) + "__" + uuid.uuid4().hex + "__toolbox"
+            unique_dir_name = "{0}".format(shorten(self.name)) + "__" + uuid.uuid4().hex + "__toolbox"
             work_dir = os.path.join(app_work_dir, unique_dir_name)
         # Only selected files in properties are sent to the executable item
         selected_files = list()
