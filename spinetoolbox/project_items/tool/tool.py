@@ -24,6 +24,7 @@ from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 from spinetoolbox.helpers import open_url
+from spinetoolbox.project_items.shared.helpers import split_cmdline_args
 from .commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
 from .item_info import ItemInfo
 from .tool_specifications import ToolSpecification
@@ -34,7 +35,7 @@ from .utils import flatten_file_path_duplicates, find_file, find_last_output_fil
 
 class Tool(ProjectItem):
     def __init__(
-        self, toolbox, project, logger, name, description, x, y, tool="", execute_in_work=True, cmd_line_args=None
+        self, toolbox, project, logger, name, description, x, y, specification="", execute_in_work=True, cmd_line_args=None
     ):
         """Tool class.
 
@@ -46,7 +47,7 @@ class Tool(ProjectItem):
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            tool (str): Name of this Tool's Tool specification
+            specification (str): Tool specification name
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
             cmd_line_args (list): Tool command line arguments
         """
@@ -67,10 +68,10 @@ class Tool(ProjectItem):
         self.undo_execute_in_work = None
         self.source_files = list()
         self.cmd_line_args = list() if not cmd_line_args else cmd_line_args
-        self._specification = self._toolbox.specification_model.find_specification(tool)
-        if tool and not self._specification:
+        self._specification = self._toolbox.specification_model.find_specification(specification)
+        if specification and not self._specification:
             self._logger.msg_error.emit(
-                f"Tool <b>{self.name}</b> should have a Tool specification <b>{tool}</b> but it was not found"
+                f"Tool <b>{self.name}</b> should have a Tool specification <b>{specification}</b> but it was not found"
             )
         self.do_set_specification(self._specification)
         self.do_update_execution_mode(execute_in_work)
@@ -164,7 +165,7 @@ class Tool(ProjectItem):
         to undo stack if the args were changed.
         """
         txt = self._properties_ui.lineEdit_tool_args.text()
-        cmd_line_args = ToolSpecification.split_cmdline_args(txt)
+        cmd_line_args = split_cmdline_args(txt)
         if self.cmd_line_args == cmd_line_args:
             return
         self._toolbox.undo_stack.push(UpdateToolCmdLineArgsCommand(self, cmd_line_args))
@@ -478,11 +479,11 @@ class Tool(ProjectItem):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
         if not self.specification():
-            d["tool"] = ""
+            d["specification"] = ""
         else:
-            d["tool"] = self.specification().name
+            d["specification"] = self.specification().name
         d["execute_in_work"] = self.execute_in_work
-        d["cmd_line_args"] = ToolSpecification.split_cmdline_args(" ".join(self.cmd_line_args))
+        d["cmd_line_args"] = split_cmdline_args(" ".join(self.cmd_line_args))
         return d
 
     def custom_context_menu(self, parent, pos):
@@ -548,7 +549,12 @@ class Tool(ProjectItem):
                 f"be passed to Tool <b>{self.name}</b> when executing."
             )
         elif source_item.item_type() == "Tool":
-            self._logger.msg.emit("Link established.")
+            self._logger.msg.emit("Link established")
+        elif source_item.item_type() == "Gimlet":
+            self._logger.msg.emit(
+                f"Link established. Tool <b>{self.name}</b> will look for input "
+                f"files from <b>{source_item.name}</b>."
+            )
         else:
             super().notify_destination(source_item)
 
@@ -572,3 +578,20 @@ class Tool(ProjectItem):
             return
         for duplicate in duplicates:
             self.add_notification("Duplicate input files from upstream items:<br>{}".format("<br>".join(duplicate)))
+
+    @staticmethod
+    def upgrade_v1_to_v2(item_name, item_dict):
+        """Upgrades item's dictionary from v1 to v2.
+
+        Changes:
+        - 'tool' key is renamed to 'specification'
+
+        Args:
+            item_name (str): item's name
+            item_dict (dict): Version 1 item dictionary
+
+        Returns:
+            dict: Version 2 Tool dictionary
+        """
+        item_dict["specification"] = item_dict.pop("tool", "")
+        return item_dict

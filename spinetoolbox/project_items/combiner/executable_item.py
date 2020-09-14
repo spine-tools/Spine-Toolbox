@@ -20,6 +20,7 @@ import os
 import pathlib
 from PySide2.QtCore import QObject, QEventLoop, Slot, QThread
 from spinetoolbox.executable_item_base import ExecutableItemBase
+from spinetoolbox.helpers import shorten
 from .item_info import ItemInfo
 from .combiner_worker import CombinerWorker
 
@@ -51,7 +52,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
     @classmethod
     def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         """See base class."""
-        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", shorten(name))
         logs_dir = os.path.join(data_dir, "logs")
         cancel_on_error = item_dict["cancel_on_error"]
         return cls(name, logs_dir, cancel_on_error, logger)
@@ -59,12 +60,16 @@ class ExecutableItem(ExecutableItemBase, QObject):
     def stop_execution(self):
         """Stops execution."""
         super().stop_execution()
-        if not self._worker:
-            return
-        self._worker.quit()
-        self._worker.wait()
-        self._worker.deleteLater()
-        self._worker = None
+        if self._loop:
+            if self._loop.isRunning():
+                self._loop.exit(-1)
+        if self._worker:
+            self._worker.deleteLater()
+            self._worker = None
+        if self._worker_thread:
+            self._worker_thread.quit()
+            self._worker_thread.wait()
+            self._worker_thread = None
 
     def _execute_backward(self, resources):
         """See base class."""
@@ -94,8 +99,14 @@ class ExecutableItem(ExecutableItemBase, QObject):
         self._worker.finished.connect(self._loop.quit)
         self._worker_thread.started.connect(self._worker.do_work)
         self._worker_thread.start()
-        self._loop.exec_()
-        self._logger.msg_success.emit(f"Executing Combiner {self.name} finished")
+        loop_retval = self._loop.exec_()
+        if loop_retval:
+            # If retval is not 0, loop exited with nonzero return value. Should happen when
+            # user stops execution
+            self._logger.msg_error.emit(f"Combiner {self.name} stopped")
+            return False
+        else:
+            self._logger.msg_success.emit(f"Executing Combiner {self.name} finished")
         return self._merge_succeeded
 
     def _handle_worker_finished(self):

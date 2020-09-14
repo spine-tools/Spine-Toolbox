@@ -103,7 +103,7 @@ class TestDataStore(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.ds.item_dict()
-        a = ["type", "short name", "description", "x", "y", "url"]
+        a = ["type", "description", "x", "y", "url"]
         url_keys = ["dialect", "username", "password", "host", "port", "database"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
@@ -211,7 +211,7 @@ class TestDataStore(unittest.TestCase):
         # Open form
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             self.ds_properties_ui.pushButton_ds_open_editor.click()
-        ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
+        ds_form = self.ds._project.db_mngr._db_editors[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, SpineDBEditor)
         expected_url = "sqlite:///" + temp_db_path
         self.assertEqual(expected_url, str(ds_form.db_url))
@@ -232,7 +232,7 @@ class TestDataStore(unittest.TestCase):
         # Open form
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             self.ds_properties_ui.pushButton_ds_open_editor.click()
-        ds_form = self.ds._project.db_mngr._ds_forms[(self.ds._sa_url,)]
+        ds_form = self.ds._project.db_mngr._db_editors[(self.ds._sa_url,)]
         self.assertIsInstance(ds_form, SpineDBEditor)
         expected_url = "sqlite:///" + temp_db_path
         self.assertEqual(expected_url, str(ds_form.db_maps[0].db_url))
@@ -248,7 +248,7 @@ class TestDataStore(unittest.TestCase):
         source_item.name = "source name"
         source_item.item_type = mock.MagicMock(return_value="Data Connection")
         self.ds.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = mock.MagicMock(return_value="Importer")
         self.ds.notify_destination(source_item)
         self.toolbox.msg.emit.assert_called_with(
@@ -262,7 +262,7 @@ class TestDataStore(unittest.TestCase):
         )
         source_item.item_type = mock.MagicMock(return_value="Tool")
         self.ds.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = mock.MagicMock(return_value="View")
         self.ds.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(

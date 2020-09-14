@@ -18,13 +18,12 @@ Undo/redo commands for the Exporter project item.
 from spinetoolbox.project_commands import SpineToolboxCommand
 
 
-class UpdateExporterOutFileNameCommand(SpineToolboxCommand):
+class UpdateExporterOutFileName(SpineToolboxCommand):
     def __init__(self, exporter, file_name, database_path):
         """Command to update Exporter output file name.
 
         Args:
             exporter (Exporter): the Exporter
-            export_list_item (ExportListItem): the widget that holds the name
             file_name (str): the output filename
             database_path (str): the associated db path
         """
@@ -42,32 +41,53 @@ class UpdateExporterOutFileNameCommand(SpineToolboxCommand):
         self.exporter.undo_redo_out_file_name(self.undo_file_name, self.database_path)
 
 
-class UpdateExporterSettingsCommand(SpineToolboxCommand):
+class UpdateScenario(SpineToolboxCommand):
+    def __init__(self, exporter, scenario, database_url):
+        """
+        Args:
+            exporter (Exporter): the Exporter
+            scenario (str, optional): new scenario name
+            database_url (str): database URL
+        """
+        super().__init__()
+        self._exporter = exporter
+        self._scenario = scenario
+        self._previous_scenario = exporter.settings_pack(database_url).scenario
+        self._url = database_url
+        self.setText(f"change {exporter.name}'s scenario")
+
+    def redo(self):
+        self._exporter.set_scenario(self._scenario, self._url)
+
+    def undo(self):
+        self._exporter.set_scenario(self._previous_scenario, self._url)
+
+
+class UpdateExporterSettings(SpineToolboxCommand):
     def __init__(
-        self, exporter, settings, indexing_settings, indexing_domains, merging_settings, merging_domains, database_path
+        self, exporter, settings, indexing_settings, merging_settings, none_fallback, none_export, database_path
     ):
         """Command to update Exporter settings.
 
         Args:
             exporter (Exporter): the Exporter
+            settings (SetSettings): gdx settings
+            indexing_settings (dict): parameter indexing settings
+            merging_settings (dict): parameter merging settings
+            none_fallback (NoneFallback): fallback option on None values
+            none_export (NoneExport): how to handle Nones while exporting
             database_path (str): the db path to update settings for
         """
         super().__init__()
-        self.exporter = exporter
-        self.database_path = database_path
-        self.redo_settings_tuple = (settings, indexing_settings, indexing_domains, merging_settings, merging_domains)
+        self._exporter = exporter
+        self._database_path = database_path
+        self._redo_settings_tuple = (settings, indexing_settings, merging_settings, none_fallback, none_export)
         p = exporter.settings_pack(database_path)
-        self.undo_settings_tuple = (
-            p.settings,
-            p.indexing_settings,
-            p.indexing_domains,
-            p.merging_settings,
-            p.merging_domains,
-        )
+        self._undo_settings_tuple = (p.settings, p.indexing_settings, p.merging_settings)
         self.setText(f"change settings of {exporter.name}")
 
     def redo(self):
-        self.exporter.undo_or_redo_settings(*self.redo_settings_tuple, self.database_path)
+        self._exporter.undo_or_redo_settings(*self._redo_settings_tuple, self._database_path)
 
     def undo(self):
-        self.exporter.undo_or_redo_settings(*self.undo_settings_tuple, self.database_path)
+        self._exporter.undo_or_redo_settings(*self._undo_settings_tuple, self._database_path)

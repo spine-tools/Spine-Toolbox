@@ -188,7 +188,7 @@
        </item>
        <item>
         <property name="text">
-         <string>View</string>
+         <string>Db editor</string>
         </property>
         <property name="icon">
          <iconset resource="resources/resources_icons.qrc">
@@ -206,7 +206,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -669,8 +669,8 @@
                <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="acceptRichText">
                <bool>false</bool>
@@ -997,7 +997,7 @@ p, li { white-space: pre-wrap; }
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="Views">
+       <widget class="QWidget" name="SpineDBEditor">
         <layout class="QVBoxLayout" name="verticalLayout_9">
          <item>
           <widget class="QGroupBox" name="groupBox_data_store">
@@ -1058,6 +1058,16 @@ p, li { white-space: pre-wrap; }
              <widget class="QCheckBox" name="checkBox_smooth_entity_graph_rotation">
               <property name="text">
                <string>Smooth Entity graph rotation</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBox_show_cascading_relationships">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Checked&lt;/span&gt;: Whenever an object is included in the Entity graph, the graph automatically includes &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; its relationships.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Unchecked&lt;/span&gt;: Whenever &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;p&gt;Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Show cascading relationships by default in Entity graph</string>
               </property>
              </widget>
             </item>

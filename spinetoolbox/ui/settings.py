@@ -472,11 +472,11 @@ class Ui_SettingsForm(object):
         self.verticalLayout_8.addItem(self.verticalSpacer_8)
 
         self.stackedWidget.addWidget(self.ExternalTools)
-        self.Views = QWidget()
-        self.Views.setObjectName(u"Views")
-        self.verticalLayout_9 = QVBoxLayout(self.Views)
+        self.SpineDBEditor = QWidget()
+        self.SpineDBEditor.setObjectName(u"SpineDBEditor")
+        self.verticalLayout_9 = QVBoxLayout(self.SpineDBEditor)
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
-        self.groupBox_data_store = QGroupBox(self.Views)
+        self.groupBox_data_store = QGroupBox(self.SpineDBEditor)
         self.groupBox_data_store.setObjectName(u"groupBox_data_store")
         sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         sizePolicy6.setHorizontalStretch(0)
@@ -512,6 +512,11 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_rotation)
 
+        self.checkBox_show_cascading_relationships = QCheckBox(self.groupBox_data_store)
+        self.checkBox_show_cascading_relationships.setObjectName(u"checkBox_show_cascading_relationships")
+
+        self.verticalLayout_4.addWidget(self.checkBox_show_cascading_relationships)
+
 
         self.verticalLayout_9.addWidget(self.groupBox_data_store)
 
@@ -519,7 +524,7 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_9.addItem(self.verticalSpacer_9)
 
-        self.stackedWidget.addWidget(self.Views)
+        self.stackedWidget.addWidget(self.SpineDBEditor)
 
         self.horizontalLayout_2.addWidget(self.stackedWidget)
 
@@ -592,7 +597,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(3)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -610,7 +615,7 @@ class Ui_SettingsForm(object):
         ___qlistwidgetitem2 = self.listWidget.item(2)
         ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Tools", None));
         ___qlistwidgetitem3 = self.listWidget.item(3)
-        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"View", None));
+        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None));
         self.listWidget.setSortingEnabled(__sortingEnabled)
 
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"General", None))
@@ -674,8 +679,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QCoreApplication.translate("SettingsForm", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None))
+"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
         self.textEdit_project_description.setPlaceholderText("")
         self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
         self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
@@ -736,6 +741,10 @@ class Ui_SettingsForm(object):
         self.checkBox_relationship_items_follow.setText(QCoreApplication.translate("SettingsForm", u"Move relationships along with objects in Entity graph", None))
         self.checkBox_smooth_entity_graph_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph zoom", None))
         self.checkBox_smooth_entity_graph_rotation.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph rotation", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_show_cascading_relationships.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_show_cascading_relationships.setText(QCoreApplication.translate("SettingsForm", u"Show cascading relationships by default in Entity graph", None))
 #if QT_CONFIG(tooltip)
         self.pushButton_ok.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Saves changes and closes the window</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)

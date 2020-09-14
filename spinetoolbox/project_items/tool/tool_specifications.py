@@ -16,13 +16,13 @@ Contains Tool specification classes.
 :date:   24.1.2018
 """
 
-from collections import ChainMap, OrderedDict
+from collections import OrderedDict
 import logging
 import os
-import re
 import json
 from spinetoolbox.project_item_specification import ProjectItemSpecification
 from spinetoolbox.helpers import open_url
+from spinetoolbox.project_items.shared.helpers import split_cmdline_args, expand_tags
 from .item_info import ItemInfo
 from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
@@ -30,26 +30,17 @@ from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstan
 TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
 
 # Required and optional keywords for Tool specification dictionaries
-REQUIRED_KEYS = ['name', 'tooltype', 'includes']
+REQUIRED_KEYS = ["name", "tooltype", "includes"]
 OPTIONAL_KEYS = [
-    'description',
-    'short_name',
-    'inputfiles',
-    'inputfiles_opt',
-    'outputfiles',
-    'cmdline_args',
-    'execute_in_work',
+    "description",
+    "short_name",
+    "inputfiles",
+    "inputfiles_opt",
+    "outputfiles",
+    "cmdline_args",
+    "execute_in_work",
 ]
-LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
-
-CMDLINE_TAG_EDGE = "@@"
-
-
-class CmdlineTag:
-    URL = CMDLINE_TAG_EDGE + "url:<data-store-name>" + CMDLINE_TAG_EDGE
-    URL_INPUTS = CMDLINE_TAG_EDGE + "url_inputs" + CMDLINE_TAG_EDGE
-    URL_OUTPUTS = CMDLINE_TAG_EDGE + "url_outputs" + CMDLINE_TAG_EDGE
-    OPTIONAL_INPUTS = CMDLINE_TAG_EDGE + "optional_inputs" + CMDLINE_TAG_EDGE
+LIST_REQUIRED_KEYS = ["includes", "inputfiles", "inputfiles_opt", "outputfiles"]  # These should be lists
 
 
 class ToolSpecification(ProjectItemSpecification):
@@ -98,7 +89,7 @@ class ToolSpecification(ProjectItemSpecification):
         if cmdline_args is not None:
             if isinstance(cmdline_args, str):
                 # Old tool spec files may have the command line arguments as plain strings.
-                self.cmdline_args = self.split_cmdline_args(cmdline_args)
+                self.cmdline_args = split_cmdline_args(cmdline_args)
             else:
                 self.cmdline_args = cmdline_args
         else:
@@ -131,7 +122,6 @@ class ToolSpecification(ProjectItemSpecification):
         with open(definition_path, "w") as fp:
             try:
                 json.dump(definition, fp, indent=4)
-                self._logger.msg.emit("Tool specification <b>{0}</b> saved.".format(self.name))
                 return True
             except ValueError:
                 self.statusbar.showMessage("Error saving file", 3000)
@@ -214,10 +204,10 @@ class ToolSpecification(ProjectItemSpecification):
         Returns:
             list: a list of expanded command line arguments
         """
-        tags_expanded, args = self._expand_tags(self.cmdline_args, optional_input_files, input_urls, output_urls)
+        tags_expanded, args = expand_tags(self.cmdline_args, optional_input_files, input_urls, output_urls)
         while tags_expanded:
             # Keep expanding until there is no tag left to expand.
-            tags_expanded, args = self._expand_tags(args, optional_input_files, input_urls, output_urls)
+            tags_expanded, args = expand_tags(args, optional_input_files, input_urls, output_urls)
         return args
 
     def create_tool_instance(self, basedir):
@@ -228,111 +218,6 @@ class ToolSpecification(ProjectItemSpecification):
             basedir (str): Path to directory where the instance will run
         """
         raise NotImplementedError
-
-    @staticmethod
-    def split_cmdline_args(arg_string):
-        """
-        Splits a string of command line into a list of tokens.
-
-        Things in single ('') and double ("") quotes are kept as single tokens
-        while the quotes themselves are stripped away.
-        Thus, `--file="a long quoted 'file' name.txt` becomes ["--file=a long quoted 'file' name.txt"]
-
-        Args:
-            arg_string (str): command line arguments as a string
-        Returns:
-            list: a list of tokens
-        """
-        # The expandable tags may include whitespaces, particularly in Data Store names.
-        # We replace the tags temporarily by '@_@_@' to simplify splitting
-        # and put them back to the args list after the string has been split.
-        tag_safe = list()
-        tag_fingerprint = re.compile(CMDLINE_TAG_EDGE + "url:.+?" + CMDLINE_TAG_EDGE)
-        match = tag_fingerprint.search(arg_string)
-        while match:
-            tag_safe.append(match.group())
-            arg_string = arg_string[: match.start()] + "@_@_@" + arg_string[match.end() :]
-            match = tag_fingerprint.search(arg_string)
-        tokens = list()
-        current_word = ""
-        quoted_context = False
-        for character in arg_string:
-            if character in ("'", '"') and not quoted_context:
-                quoted_context = character
-            elif character == quoted_context:
-                quoted_context = False
-            elif not character.isspace() or quoted_context:
-                current_word = current_word + character
-            else:
-                tokens.append(current_word)
-                current_word = ""
-        if current_word:
-            tokens.append(current_word)
-        for index, token in enumerate(tokens):
-            preface, tag_token, prologue = token.partition("@_@_@")
-            if tag_token:
-                tokens[index] = preface + tag_safe.pop(0) + prologue
-        return tokens
-
-    @staticmethod
-    def _expand_tags(args, optional_input_files, input_urls, output_urls):
-        """"
-        Expands first @@ tags found in given list of command line arguments.
-
-        Args:
-            args (list): a list of command line arguments
-            optional_input_files (list): a list of Tool's optional input file names
-            input_urls (dict): a mapping from URL provider (input Data Store name) to URL string
-            output_urls (dict): a mapping from URL provider (output Data Store name) to URL string
-        Returns:
-            tuple: a boolean flag, if True, indicates that tags were expanded and a list of
-                expanded command line arguments
-        """
-
-        def expand_list(arg, tag, things, expanded_args):
-            preface, tag_found, postscript = arg.partition(tag)
-            if tag_found:
-                if things:
-                    first_input_arg = preface + things[0]
-                    expanded_args.append(first_input_arg)
-                    expanded_args += things[1:]
-                    expanded_args[-1] = expanded_args[-1] + postscript
-                else:
-                    expanded_args.append(preface + postscript)
-                return True
-            return False
-
-        expanded_args = list()
-        named_data_store_tag_fingerprint = re.compile(CMDLINE_TAG_EDGE + "url:.+" + CMDLINE_TAG_EDGE)
-        all_urls = ChainMap(input_urls, output_urls)
-        input_url_list = list(input_urls.values())
-        output_url_list = list(output_urls.values())
-        did_expand = False
-        for arg in args:
-            if expand_list(arg, CmdlineTag.OPTIONAL_INPUTS, optional_input_files, expanded_args):
-                did_expand = True
-                continue
-            if expand_list(arg, CmdlineTag.URL_INPUTS, input_url_list, expanded_args):
-                did_expand = True
-                continue
-            if expand_list(arg, CmdlineTag.URL_OUTPUTS, output_url_list, expanded_args):
-                did_expand = True
-                continue
-            match = named_data_store_tag_fingerprint.search(arg)
-            if match:
-                preface = arg[: match.start()]
-                tag = match.group()
-                postscript = arg[match.end() :]
-                data_store_name = tag[6:-2]
-                try:
-                    url = all_urls[data_store_name]
-                except KeyError:
-                    raise RuntimeError(f"Cannot replace tag '{tag}' since '{data_store_name}' was not found.")
-                expanded_args.append(preface + url + postscript)
-                did_expand = True
-                continue
-            expanded_args.append(arg)
-        return did_expand, expanded_args
 
     @staticmethod
     def toolbox_load(
@@ -457,7 +342,7 @@ class GAMSTool(ToolSpecification):
         )
         main_file = includes[0]
         # Add .lst file to list of output files
-        self.lst_file = os.path.splitext(main_file)[0] + '.lst'
+        self.lst_file = os.path.splitext(main_file)[0] + ".lst"
         self.outputfiles.add(self.lst_file)
         # Split main_prgm to main_dir and main_prgm
         # because GAMS needs to run in the directory of the main program
@@ -481,7 +366,7 @@ class GAMSTool(ToolSpecification):
         }
 
     def update_gams_options(self, key, value):
-        """[OBSOLETE?] Updates GAMS command line options. Only 'cerr and 'logoption' keywords supported.
+        """[OBSOLETE?] Updates GAMS command line options. Only 'cerr' and 'logoption' keywords supported.
 
         Args:
             key (str): Option name
@@ -490,7 +375,7 @@ class GAMSTool(ToolSpecification):
         # Supported GAMS logoption values
         # 3 writes LOG output to standard output
         # 4 writes LOG output to a file and standard output  [Not supported in GAMS v24.0]
-        if key in ['logoption', 'cerr']:
+        if key in ["logoption", "cerr"]:
             self.gams_options[key] = "{0}={1}".format(key, value)
         else:
             logging.error("Updating GAMS options failed. Unknown key: %s", key)

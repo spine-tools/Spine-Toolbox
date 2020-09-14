@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [0.5.0-beta.0] - 2020-09-14
+
+### Added
 - Now it's possible to export graphs as PDF files from the *Graph* menu in the Data Store form.
 - Now it's possible to prune entire classes from the graph view. The option is available both from the *Graph* menu and
   from *Entity Graph* context menus. Also, pruned items can be restored gradually.
@@ -16,6 +25,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - It is now possible to execute a project from the command line without opening the Toolbox GUI.
   The headless execution is enabled by the new command line option ``--execute-only``.
 - Toolbox now supports scenarios and alternatives. They can be accessed via Data store view's new Alternative tree.
+- New Project Item: Gimlet. Can be used to run any command as part of the workflow 
+  with or without a shell. Supported shells at the moment are cmd and powershell for 
+  Windows and bash for other OS's.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
@@ -26,11 +38,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Import editor now supports multidimensional maps. The number of dimensions can be set using the 
   *Map dimensions* spin box in mappings options.
 - Data Store Form is now called 'Spine database editor'
-
-### Deprecated
-### Removed
-### Fixed
-### Security
+- Indexed parameter handling has been overhauled in Exporter allowing parameters to share indexing domains.
+  **Note**: Due to numerous changes in the backend, Exporters in old project files will not load properly
+  and need to be re-configured.
+- The way Exporter handles missing parameter values and None values has changed. The item now ignores missing
+  values instead of replacing them by the default value. Further, there is a new option to replace None values by
+  the default value and another option to replace Nones by not-a-numbers or skip exporting them.
+- The numerical indicator on the upper left corner of project items no longer indicates the execution order for
+  each individual item because the exact order is not know before the Execute button is actually clicked.
+  The number still indicates the execution order but may show the same numbers for items in different parallel
+  branches.
+- Project.json file format has been upgraded to version 2. Version 1 project.json files are upgraded to version 2
+  automatically when a project is opened. 
 
 ## [0.4.0-final.0] - 2020-04-03
 

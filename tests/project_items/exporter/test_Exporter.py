@@ -59,7 +59,7 @@ class TestExporter(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.exporter.item_dict()
-        a = ["type", "short name", "description", "x", "y", "settings_packs", "cancel_on_error"]
+        a = ["type", "description", "x", "y", "settings_packs", "cancel_on_error"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 

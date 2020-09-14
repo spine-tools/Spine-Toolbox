@@ -20,8 +20,8 @@ import sys
 import os
 
 REQUIRED_SPINE_ENGINE_VERSION = "0.5.0"
-REQUIRED_SPINEDB_API_VERSION = "0.7.12"
-LATEST_PROJECT_VERSION = 1
+REQUIRED_SPINEDB_API_VERSION = "0.7.15"
+LATEST_PROJECT_VERSION = 2
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
 # Invalid characters for directory names
@@ -46,6 +46,9 @@ ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/latest"
 
 # Tool output directory name
 TOOL_OUTPUT_DIR = "output"
+
+# Gimlet default work directory name
+GIMLET_WORK_DIR_NAME = "work"
 
 _on_windows = sys.platform == "win32"
 

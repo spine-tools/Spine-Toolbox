@@ -60,7 +60,7 @@ class TestImporter(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.importer.item_dict()
-        a = ["type", "short name", "description", "x", "y", "mappings", "cancel_on_error", "mapping_selection"]
+        a = ["type", "description", "x", "y", "mappings", "cancel_on_error", "mapping_selection"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
@@ -78,7 +78,7 @@ class TestImporter(unittest.TestCase):
         )
         source_item.item_type = MagicMock(return_value="Data Store")
         self.importer.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = MagicMock(return_value="Exporter")
         self.importer.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(

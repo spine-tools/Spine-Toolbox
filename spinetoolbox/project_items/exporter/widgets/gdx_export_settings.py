@@ -18,12 +18,14 @@ Export item's settings window for .gdx export.
 
 from copy import deepcopy
 import enum
-from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
-from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QDialogButtonBox, QMessageBox, QWidget
+from PySide2.QtCore import QItemSelection, QModelIndex, Qt, Signal, Slot
+from PySide2.QtWidgets import QAbstractButton, QDialogButtonBox, QMessageBox, QWidget
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 import spinetoolbox.spine_io.exporters.gdx as gdx
-from ..list_utils import move_list_elements, move_selected_elements_by
+from ..db_utils import scenario_filtered_database_map
+from ..list_utils import move_selected_elements_by
+from ..mvcmodels.record_list_model import RecordListModel
+from ..mvcmodels.set_list_model import SetListModel
 from ..settings_state import SettingsState
 from .parameter_index_settings_window import ParameterIndexSettingsWindow
 from .parameter_merging_settings_window import ParameterMergingSettingsWindow
@@ -52,9 +54,10 @@ class GdxExportSettings(QWidget):
         self,
         set_settings,
         indexing_settings,
-        new_indexing_domains,
         merging_settings,
-        new_merging_domains,
+        none_fallback,
+        none_export,
+        scenario,
         database_url,
         parent,
     ):
@@ -62,9 +65,10 @@ class GdxExportSettings(QWidget):
         Args:
             set_settings (gdx.SetSettings): export settings for GAMS sets
             indexing_settings (dict): indexing domain information for indexed parameter values
-            new_indexing_domains (list): list of additional domains needed for indexed parameter
             merging_settings (dict): parameter merging settings
-            new_merging_domains (list): list of additional domains needed for parameter merging
+            none_fallback (NoneFallback): fallback for None parameter values
+            none_export (NoneExport): how to handle None values while exporting
+            scenario (str, optional): scenario name
             database_url (str): database URL
             parent (QWidget): a parent widget
         """
@@ -75,6 +79,7 @@ class GdxExportSettings(QWidget):
         self._ui.setupUi(self)
         self.setWindowTitle("Gdx Export settings    -- {} --".format(database_url))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
+        self._scenario = scenario
         self._database_url = database_url
         self._ui.button_box.accepted.connect(self._accept)
         self._ui.button_box.rejected.connect(self._reject)
@@ -90,23 +95,24 @@ class GdxExportSettings(QWidget):
         self._ui.record_move_up_button.clicked.connect(self._move_records_up)
         self._ui.record_move_down_button.clicked.connect(self._move_records_down)
         self._set_settings = set_settings
-        domain_dependencies, set_export_dependencies = _set_domain_export_dependencies(
-            set_settings.sorted_domain_names, set_settings.domain_metadatas, database_url
-        )
-        set_list_model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
-        set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
-        self._ui.set_list_view.setModel(set_list_model)
-        record_list_model = GAMSRecordListModel()
+        self._set_list_model = SetListModel(set_settings,)
+        self._set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
+        self._ui.set_list_view.setModel(self._set_list_model)
+        record_list_model = RecordListModel()
         self._ui.record_list_view.setModel(record_list_model)
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
         self._ui.open_indexed_parameter_settings_button.clicked.connect(self._show_indexed_parameter_settings)
         self._ui.open_parameter_merging_settings_button.clicked.connect(self._show_parameter_merging_settings)
         self._indexing_settings = indexing_settings
-        self._new_domains_for_indexing = new_indexing_domains
         self._indexed_parameter_settings_window = None
         self._merging_settings = merging_settings
-        self._new_domains_for_merging = new_merging_domains
         self._parameter_merging_settings_window = None
+        self._none_fallback = none_fallback
+        self._none_export = none_export
+        self._init_none_fallback_combo_box(none_fallback)
+        self._init_none_export_combo_box(none_export)
+        self._ui.none_fallback_combo_box.currentTextChanged.connect(self._set_none_fallback)
+        self._ui.none_export_combo_box.currentTextChanged.connect(self._set_none_export)
         self._state = State.OK
         self._check_state()
 
@@ -121,23 +127,19 @@ class GdxExportSettings(QWidget):
         return self._indexing_settings
 
     @property
-    def indexing_domains(self):
-        """list of additional domains needed for indexing"""
-        return self._new_domains_for_indexing
-
-    @property
     def merging_settings(self):
         """dictionary of merging settings"""
         return self._merging_settings
 
     @property
-    def merging_domains(self):
-        """list of additional domains needed for parameter merging"""
-        return self._new_domains_for_merging
+    def none_fallback(self):
+        return self._none_fallback
 
-    def reset_settings(
-        self, set_settings, indexing_settings, new_indexing_domains, merging_settings, new_merging_domains
-    ):
+    @property
+    def none_export(self):
+        return self._none_export
+
+    def reset_settings(self, set_settings, indexing_settings, merging_settings):
         """Resets all settings."""
         if self._indexed_parameter_settings_window is not None:
             self._indexed_parameter_settings_window.close()
@@ -148,24 +150,19 @@ class GdxExportSettings(QWidget):
         self._ui.global_parameters_combo_box.clear()
         self._populate_global_parameters_combo_box(set_settings)
         self._set_settings = set_settings
-        domain_dependencies, set_export_dependencies = _set_domain_export_dependencies(
-            set_settings.sorted_domain_names, set_settings.domain_metadatas, self._database_url
-        )
-        set_list_model = GAMSSetListModel(set_settings, domain_dependencies, set_export_dependencies)
-        set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
-        self._ui.set_list_view.setModel(set_list_model)
+        self._set_list_model = SetListModel(set_settings)
+        self._set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
+        self._ui.set_list_view.setModel(self._set_list_model)
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
-        self._ui.record_list_view.setModel(GAMSRecordListModel())
+        self._ui.record_list_view.setModel(RecordListModel())
         self._indexing_settings = indexing_settings
-        self._new_domains_for_indexing = new_indexing_domains
         self._merging_settings = merging_settings
-        self._new_domains_for_merging = new_merging_domains
         self._check_state()
 
     def _check_state(self):
         """Checks if there are parameters in need for indexing."""
         for setting in self.indexing_settings.values():
-            if setting.indexing_domain is None and self._set_settings.is_exportable(setting.set_name):
+            if setting.indexing_domain_name is None and self._set_settings.is_exportable(setting.set_name):
                 self._ui.indexing_status_label.setText(
                     "<span style='color:#ff3333;white-space: pre-wrap;'>Not all parameters correctly indexed.</span>"
                 )
@@ -174,37 +171,96 @@ class GdxExportSettings(QWidget):
         self._state = State.OK
         self._ui.indexing_status_label.setText("")
 
+    @Slot(str)
+    def _set_none_fallback(self, option):
+        """
+        Sets the None fallback option.
+
+        Args:
+            option (str): option as a label in the combo box
+        """
+        if option == "Use it":
+            self._none_fallback = gdx.NoneFallback.USE_IT
+        else:
+            self._none_fallback = gdx.NoneFallback.USE_DEFAULT_VALUE
+        try:
+            database_map = scenario_filtered_database_map(self._database_url, self._scenario)
+        except SpineDBAPIError as error:
+            QMessageBox.warning(self, f"Error", f"Could not open database '{self._database_url}'.")
+            return
+        try:
+            indexing_settings = gdx.make_indexing_settings(database_map, self._none_fallback, logger=None)
+        except gdx.GdxExportException as error:
+            QMessageBox.warning(
+                self, "Error", f"Failed to read indexing settings from database '{self._database_url}':\n{error}"
+            )
+            return
+        finally:
+            database_map.connection.close()
+        self._indexing_settings = gdx.update_indexing_settings(
+            self._indexing_settings, indexing_settings, self._set_settings
+        )
+        if self._indexed_parameter_settings_window is not None:
+            self._indexed_parameter_settings_window.close()
+            self._indexed_parameter_settings_window = None
+
+    def _init_none_fallback_combo_box(self, fallback):
+        """
+        Sets the current text in None fallback combo box.
+
+        Args:
+            fallback (NoneFallback): option
+        """
+        if fallback == gdx.NoneFallback.USE_IT:
+            self._ui.none_fallback_combo_box.setCurrentText("Use it")
+        else:
+            self._ui.none_fallback_combo_box.setCurrentText("Replace by default value")
+
+    @Slot(str)
+    def _set_none_export(self, option):
+        """
+        Sets the None export option.
+
+        Args:
+            option (str): option as a label in the combo box
+        """
+        if option == "Do not export":
+            self._none_export = gdx.NoneExport.DO_NOT_EXPORT
+        else:
+            self._none_export = gdx.NoneExport.EXPORT_AS_NAN
+
+    def _init_none_export_combo_box(self, export):
+        """
+        Sets the current text in None export combo box
+
+        Args:
+            export (NoneExport): option
+        """
+        if export == gdx.NoneExport.DO_NOT_EXPORT:
+            self._ui.none_export_combo_box.setCurrentText("Do not export")
+        else:
+            self._ui.none_export_combo_box.setCurrentText("Export as not-a-number")
+
     def _populate_global_parameters_combo_box(self, settings):
         """(Re)populates the global parameters combo box."""
         self._ui.global_parameters_combo_box.addItem("Nothing selected")
-        for domain_name in sorted(settings.sorted_domain_names):
-            self._ui.global_parameters_combo_box.addItem(domain_name)
+        usable_domains = [name for name in settings.domain_names if not settings.metadata(name).is_additional()]
+        self._ui.global_parameters_combo_box.addItems(usable_domains)
         if settings.global_parameters_domain_name:
             self._ui.global_parameters_combo_box.setCurrentText(settings.global_parameters_domain_name)
 
-    def _update_new_domains_list(self, domains, old_list):
-        """Merges entries from new and old domain lists."""
-        model = self._ui.set_list_view.model()
-        for old_domain in old_list:
-            domain_found = False
-            for new_domain in domains:
-                if old_domain.name == new_domain.name:
-                    model.update_domain(new_domain)
-                    domain_found = True
-                    break
-            if not domain_found:
-                model.drop_domain(old_domain)
-        for new_domain in domains:
-            domain_found = False
-            for old_domain in old_list:
-                if new_domain.name == old_domain.name:
-                    domain_found = True
-                    break
-            if not domain_found:
-                model.add_domain(new_domain)
-        old_list[:] = list(domains)
+    def _set_records_ordering_controls_enabled(self, enabled):
+        """
+        Sets or unsets the enabled state of buttons that control the record key order.
 
-    @Slot("QVariant")
+        Args:
+            enabled: True if the buttons should be enabled, False otherwise
+        """
+        self._ui.record_sort_alphabetic.setEnabled(enabled)
+        self._ui.record_move_down_button.setEnabled(enabled)
+        self._ui.record_move_up_button.setEnabled(enabled)
+
+    @Slot(object)
     def handle_settings_state_changed(self, state):
         enabled = state != SettingsState.FETCHING
         self._ui.set_group_box.setEnabled(enabled)
@@ -248,14 +304,14 @@ class GdxExportSettings(QWidget):
 
     @Slot()
     def _reject(self):
-        """Hides the window."""
+        """Closes the window."""
         self.close()
 
     def closeEvent(self, event):
         super().closeEvent(event)
         self.settings_rejected.emit(self._database_url)
 
-    @Slot("QAbstractButton")
+    @Slot(QAbstractButton)
     def _reset_settings(self, button):
         """Requests for fresh settings to be read from the database."""
         if self._ui.button_box.standardButton(button) != QDialogButtonBox.RestoreDefaults:
@@ -266,25 +322,20 @@ class GdxExportSettings(QWidget):
     def _update_global_parameters_domain(self, text):
         """Updates the global parameters domain name."""
         if text == "Nothing selected":
-            index = self._ui.set_list_view.model().index_for_domain(self._set_settings.global_parameters_domain_name)
-            self._set_settings.global_parameters_domain_name = ""
-        else:
-            self._set_settings.global_parameters_domain_name = text
-            index = self._ui.set_list_view.model().index_for_domain(text)
-        if index.isValid():
-            index.model().dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])
+            text = ""
+        self._set_list_model.update_global_parameters_domain(text)
 
-    @Slot("QItemSelection", "QItemSelection")
+    @Slot(QItemSelection, QItemSelection)
     def _populate_set_contents(self, selected, _):
         """Populates the record list by the selected domain's or set's records."""
         selected_indexes = selected.indexes()
         if not selected_indexes:
             return
-        set_model = self._ui.set_list_view.model()
-        selected_set_name = set_model.data(selected_indexes[0])
-        record_keys = self._set_settings.sorted_record_key_lists(selected_set_name)
+        selected_set_name = self._set_list_model.data(selected_indexes[0])
+        records = self._set_settings.records(selected_set_name)
         record_model = self._ui.record_list_view.model()
-        record_model.reset(record_keys, selected_set_name)
+        record_model.reset(records, selected_set_name)
+        self._set_records_ordering_controls_enabled(records.is_shufflable())
 
     @Slot(bool)
     def _sort_records_alphabetically(self, _):
@@ -296,28 +347,13 @@ class GdxExportSettings(QWidget):
     def _show_indexed_parameter_settings(self, _):
         """Shows the indexed parameter settings window."""
         if self._indexed_parameter_settings_window is None:
-            available_domains = dict()
-            for domain_name, metadata in zip(
-                self._set_settings.sorted_domain_names, self._set_settings.domain_metadatas
-            ):
-                if metadata.is_exportable():
-                    record_keys = self._set_settings.sorted_record_key_lists(domain_name)
-                    keys = [key_list[0] for key_list in record_keys]
-                    if not metadata.is_additional:
-                        available_domains[domain_name] = keys
-            new_domains = dict()
-            for domain in self._new_domains_for_indexing:
-                new_domains[domain.name] = [record.keys[0] for record in domain.records]
             indexing_settings = deepcopy(self._indexing_settings)
             self._indexed_parameter_settings_window = ParameterIndexSettingsWindow(
-                indexing_settings, available_domains, new_domains, self._database_url, self
+                indexing_settings, self._set_settings, self._database_url, self._scenario, self
             )
-            self._indexed_parameter_settings_window.settings_approved.connect(self._approve_parameter_indexing_settings)
+            self._indexed_parameter_settings_window.settings_approved.connect(self._gather_parameter_indexing_settings)
             self._indexed_parameter_settings_window.settings_rejected.connect(
                 self._dispose_parameter_indexing_settings_window
-            )
-            self._ui.record_list_view.model().domain_records_reordered.connect(
-                self._indexed_parameter_settings_window.reorder_indexes
             )
         self._indexed_parameter_settings_window.show()
 
@@ -333,20 +369,30 @@ class GdxExportSettings(QWidget):
         self._parameter_merging_settings_window.show()
 
     @Slot()
-    def _approve_parameter_indexing_settings(self):
+    def _gather_parameter_indexing_settings(self):
         """Gathers settings from the indexed parameters settings window."""
         self._indexing_settings = self._indexed_parameter_settings_window.indexing_settings
-        new_domains = self._indexed_parameter_settings_window.new_domains
-        self._update_new_domains_list(new_domains, self._new_domains_for_indexing)
+        indexing_domains = self._indexed_parameter_settings_window.additional_indexing_domains()
+        self._set_list_model.update_indexing_domains(indexing_domains)
         self._state = State.OK
         self._ui.indexing_status_label.setText("")
 
     @Slot()
     def _parameter_merging_approved(self):
         """Collects merging settings from the parameter merging window."""
-        self._merging_settings = self._parameter_merging_settings_window.merging_settings
-        new_domains = list(map(gdx.merging_domain, self._merging_settings.values()))
-        self._update_new_domains_list(new_domains, self._new_domains_for_merging)
+        new_merging_settings = self._parameter_merging_settings_window.merging_settings
+        old_domain_names = {s.new_domain_name for s in self._merging_settings.values()}
+        new_domain_names = {s.new_domain_name for s in new_merging_settings.values()}
+        new_records = {
+            setting.new_domain_name: gdx.merging_records(setting) for setting in new_merging_settings.values()
+        }
+        for domain_to_drop in old_domain_names - new_domain_names:
+            self._set_list_model.drop_domain(domain_to_drop)
+        for domain_to_update in old_domain_names & new_domain_names:
+            self._set_list_model.update_domain(domain_to_update, new_records[domain_to_update])
+        for domain_to_add in new_domain_names - old_domain_names:
+            self._set_list_model.add_domain(domain_to_add, new_records[domain_to_add], gdx.Origin.MERGING)
+        self._merging_settings = new_merging_settings
 
     @Slot()
     def _dispose_parameter_indexing_settings_window(self):
@@ -358,324 +404,10 @@ class GdxExportSettings(QWidget):
         """Removes references to the parameter merging settings window."""
         self._parameter_merging_settings_window = None
 
-    @Slot("QModelIndex", "QModelIndex", list)
+    @Slot(QModelIndex, QModelIndex, list)
     def _domains_sets_exportable_state_changed(self, top_left, bottom_right, _):
-        row = top_left.row()
-        domain_count = len(self._set_settings.sorted_domain_names)
-        if row < domain_count:
-            name = self._set_settings.sorted_domain_names[row]
-        else:
-            row -= domain_count
-            name = self._set_settings.sorted_set_names[row]
+        name = self._set_list_model.data(top_left)
         for setting in self._indexing_settings.values():
             if name == setting.set_name:
                 self._check_state()
                 return
-
-
-class GAMSSetListModel(QAbstractListModel):
-    """
-    A model to configure the domain and set name lists in gdx export settings.
-
-    This model combines the domain and set name lists into a single list.
-    The two 'parts' are differentiated by different background colors.
-    Items from each part cannot be mixed with the other.
-    Both the ordering of the items within each list as well as their exportability flags are handled here.
-    """
-
-    def __init__(self, set_settings, domain_dependencies, set_exportable_dependencies):
-        """
-        Args:
-            set_settings (gdx.SetSettings): settings whose domain and set name lists should be modelled
-            domain_dependencies (dict): mapping from domain names to list of names of the sets
-                that are indexed by that domain
-            set_exportable_dependencies (dict): mapping from set names to mappings from domain names to boolean values;
-                the domain names are of domains that index the set
-                while the boolean value is True if that domain is exportable, False otherwise
-        """
-        super().__init__()
-        self._set_settings = set_settings
-        self._domain_dependencies = domain_dependencies
-        self._set_exportable_dependencies = set_exportable_dependencies
-
-    def add_domain(self, domain):
-        """Adds a new domain."""
-        if self._set_settings.add_or_replace_domain(domain, gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)):
-            first = len(self._set_settings.sorted_domain_names)
-            last = first
-            self.beginInsertRows(QModelIndex(), first, last)
-            self.endInsertRows()
-
-    def drop_domain(self, domain):
-        """Removes a domain."""
-        index = self._set_settings.domain_index(domain)
-        self.beginRemoveRows(QModelIndex(), index, index)
-        self._set_settings.del_domain_at(index)
-        self.endRemoveRows()
-
-    def update_domain(self, domain):
-        """Updates an existing domain."""
-        index = self._set_settings.domain_index(domain)
-        self._set_settings.update_domain(domain)
-        cell = self.index(index, 0)
-        self.dataChanged.emit(cell, cell, [Qt.DisplayRole])
-
-    def data(self, index, role=Qt.DisplayRole):
-        """
-        Returns the value for given role at given index.
-
-        Qt.DisplayRole returns the name of the domain or set
-        while Qt.CheckStateRole returns whether the exportable flag has been set or not.
-        Qt.BackgroundRole gives the item's background depending whether it is a domain or a set.
-
-        Args:
-            index (QModelIndex): an index to the model
-            role (int): the query's role
-
-        Returns:
-            the requested value or `None`
-        """
-        if not index.isValid() or index.column() != 0 or index.row() >= self.rowCount():
-            return None
-        row = index.row()
-        domain_count = len(self._set_settings.sorted_domain_names)
-        if role == Qt.DisplayRole:
-            if row < domain_count:
-                return self._set_settings.sorted_domain_names[row]
-            return self._set_settings.sorted_set_names[row - domain_count]
-        if role == Qt.BackgroundRole:
-            if row < domain_count:
-                return QColor(Qt.lightGray)
-            return None
-        if role == Qt.CheckStateRole:
-            if row < domain_count:
-                checked = self._set_settings.domain_metadatas[row].is_exportable()
-            else:
-                checked = self._set_settings.set_metadatas[row - domain_count].is_exportable()
-            return Qt.Checked if checked else Qt.Unchecked
-        if role == Qt.ToolTipRole:
-            if row < domain_count:
-                exportable = self._set_settings.domain_metadatas[row].exportable
-            else:
-                exportable = self._set_settings.set_metadatas[row - domain_count].exportable
-            if exportable == gdx.ExportFlag.FORCED_NON_EXPORTABLE:
-                if row < domain_count:
-                    return "This domain is the global parameter domain\nand cannot be exported as is."
-                return "Cannot export this set because not all its\ndomains are checked for export."
-            if exportable == gdx.ExportFlag.FORCED_EXPORTABLE:
-                return "Domain is used for parameter indexing\nand must be exported."
-        return None
-
-    def flags(self, index):
-        """Returns an item's flags."""
-        if not index.isValid():
-            return Qt.NoItemFlags
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        """Returns an empty string for horizontal header and row number for vertical header."""
-        if orientation == Qt.Horizontal:
-            return ""
-        return section + 1
-
-    def index_for_domain(self, domain_name):
-        """Returns the model index for a domain."""
-        for i, name in enumerate(self._set_settings.sorted_domain_names):
-            if name == domain_name:
-                return self.index(i, 0)
-        return QModelIndex()
-
-    def is_domain(self, index):
-        """Returns True if index points to a domain name, otherwise returns False."""
-        if not index.isValid():
-            return False
-        return index.row() < len(self._set_settings.sorted_domain_names)
-
-    def moveRows(self, sourceParent, sourceRow, count, destinationParent, destinationChild):
-        """
-        Moves the domain and set names around.
-
-        The names cannot be mixed between domains and sets.
-
-        Args:
-            sourceParent (QModelIndex): parent from which the rows are moved
-            sourceRow (int): index of the first row to be moved
-            count (int): number of rows to move
-            destinationParent (QModelIndex): parent to which the rows are moved
-            destinationChild (int): index where to insert the moved rows
-
-        Returns:
-            True if the operation was successful, False otherwise
-        """
-        row_count = self.rowCount()
-        if destinationChild < 0 or destinationChild >= row_count:
-            return False
-        last_source_row = sourceRow + count - 1
-        domain_count = len(self._set_settings.sorted_domain_names)
-        # Cannot move domains to ordinary sets and vice versa.
-        if sourceRow < domain_count <= last_source_row:
-            return False
-        if sourceRow < domain_count <= destinationChild:
-            return False
-        if destinationChild < domain_count <= sourceRow:
-            return False
-        row_after = destinationChild if sourceRow > destinationChild else destinationChild + 1
-        self.beginMoveRows(sourceParent, sourceRow, last_source_row, destinationParent, row_after)
-        if sourceRow < domain_count:
-            names = self._set_settings.sorted_domain_names
-            metadatas = self._set_settings.domain_metadatas
-        else:
-            names = self._set_settings.sorted_set_names
-            metadatas = self._set_settings.set_metadatas
-            sourceRow -= domain_count
-            last_source_row -= domain_count
-            destinationChild -= domain_count
-        names[:] = move_list_elements(names, sourceRow, last_source_row, destinationChild)
-        metadatas[:] = move_list_elements(metadatas, sourceRow, last_source_row, destinationChild)
-        self.endMoveRows()
-        return True
-
-    def rowCount(self, parent=QModelIndex()):
-        """Returns the number of rows."""
-        return len(self._set_settings.sorted_domain_names) + len(self._set_settings.sorted_set_names)
-
-    def setData(self, index, value, role=Qt.EditRole):
-        """Sets the exportable flag status for given row."""
-        if not index.isValid() or role != Qt.CheckStateRole:
-            return False
-        row = index.row()
-        domain_count = len(self._set_settings.sorted_domain_names)
-        if row < domain_count:
-            if self._set_settings.domain_metadatas[row].is_forced():
-                return False
-            exportable = gdx.ExportFlag.EXPORTABLE if value == Qt.Checked else gdx.ExportFlag.NON_EXPORTABLE
-            self._set_settings.domain_metadatas[row].exportable = exportable
-            self._force_sets_non_exportable(row, value)
-        else:
-            if self._set_settings.set_metadatas[row - domain_count].is_forced():
-                return False
-            exportable = gdx.ExportFlag.EXPORTABLE if value == Qt.Checked else gdx.ExportFlag.NON_EXPORTABLE
-            self._set_settings.set_metadatas[row - domain_count].exportable = exportable
-            self.dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])
-        self.dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])
-        return True
-
-    def _force_sets_non_exportable(self, row, domain_checked):
-        domain_name = self._set_settings.sorted_domain_names[row]
-        depending_sets = self._domain_dependencies[domain_name]
-        for set_name in depending_sets:
-            depending_domains = self._set_exportable_dependencies[set_name]
-            if domain_checked == Qt.Unchecked:
-                depending_domains[domain_name] = False
-                set_index = self._set_settings.sorted_set_names.index(set_name)
-                self._set_settings.set_metadatas[set_index].exportable = gdx.ExportFlag.FORCED_NON_EXPORTABLE
-                model_index = self.index(set_index + len(self._set_settings.sorted_domain_names), 0)
-                self.dataChanged.emit(model_index, model_index, [Qt.CheckStateRole, Qt.ToolTipRole])
-                continue
-            depending_domains[domain_name] = True
-            if all(exportable for exportable in depending_domains.values()):
-                set_index = self._set_settings.sorted_set_names.index(set_name)
-                self._set_settings.set_metadatas[set_index].exportable = gdx.ExportFlag.EXPORTABLE
-                model_index = self.index(set_index + len(self._set_settings.sorted_domain_names), 0)
-                self.dataChanged.emit(model_index, model_index, [Qt.CheckStateRole, Qt.ToolTipRole])
-
-
-class GAMSRecordListModel(QAbstractListModel):
-    """A model to manage record ordering within domains and sets."""
-
-    domain_records_reordered = Signal(str, int, int, int)
-
-    def __init__(self):
-        super().__init__()
-        self._records = list()
-        self._set_name = ""
-
-    def data(self, index, role=Qt.DisplayRole):
-        """With `role == Qt.DisplayRole` returns the record's keys as comma separated string."""
-        if not index.isValid():
-            return None
-        if role == Qt.DisplayRole:
-            keys = self._records[index.row()]
-            return ", ".join(keys)
-        return None
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        """Returns row and column header data."""
-        if orientation == Qt.Horizontal:
-            return ''
-        return section + 1
-
-    def moveRows(self, sourceParent, sourceRow, count, destinationParent, destinationChild):
-        """
-        Moves the records around.
-
-        Args:
-            sourceParent (QModelIndex): parent from which the rows are moved
-            sourceRow (int): index of the first row to be moved
-            count (int): number of rows to move
-            destinationParent (QModelIndex): parent to which the rows are moved
-            destinationChild (int): index where to insert the moved rows
-
-        Returns:
-            True if the operation was successful, False otherwise
-        """
-        row_count = self.rowCount()
-        if destinationChild < 0 or destinationChild >= row_count:
-            return False
-        last_source_row = sourceRow + count - 1
-        row_after = destinationChild if sourceRow > destinationChild else destinationChild + 1
-        self.beginMoveRows(sourceParent, sourceRow, last_source_row, destinationParent, row_after)
-        self._records[:] = move_list_elements(self._records, sourceRow, last_source_row, destinationChild)
-        self.endMoveRows()
-        if len(self._records[0]) == 1:
-            self.domain_records_reordered.emit(self._set_name, sourceRow, last_source_row, destinationChild)
-        return True
-
-    def reset(self, records, set_name):
-        """Resets the model's record data."""
-        self._set_name = set_name
-        self.beginResetModel()
-        self._records = records
-        self.endResetModel()
-
-    def rowCount(self, parent=QModelIndex()):
-        """Returns the number of records in the model."""
-        return len(self._records)
-
-    def sort_alphabetically(self):
-        """Sorts the record alphabetically"""
-        self._records = sorted(self._records)
-        top_left = self.index(0, 0)
-        bottom_right = self.index(len(self._records) - 1, 0)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
-
-
-def _set_domain_export_dependencies(domain_names, domain_metadatas, database_url):
-    """Returns data structures that are useful when determining if a set is eligible for export."""
-    domain_dependencies = {name: [] for name in domain_names}
-    try:
-        database_map = DatabaseMapping(database_url)
-    except SpineDBAPIError:
-        return dict(), dict()
-    try:
-        set_dependencies = dict()
-        for domain_name, domain_metadata in zip(domain_names, domain_metadatas):
-            if domain_metadata.is_additional:
-                continue
-            object_class_id = (
-                database_map.query(database_map.object_class_sq)
-                .filter(database_map.object_class_sq.c.name == domain_name)
-                .first()
-                .id
-            )
-            relationships = database_map.wide_relationship_class_list(object_class_id=object_class_id).all()
-            depending_relationships = domain_dependencies[domain_name]
-            for relationship in relationships:
-                depending_relationships.append(relationship.name)
-                depending_domains = set_dependencies.setdefault(relationship.name, dict())
-                depending_domains[domain_name] = domain_metadata.is_exportable()
-    except SpineDBAPIError:
-        return dict(), dict()
-    finally:
-        database_map.connection.close()
-    return domain_dependencies, set_dependencies

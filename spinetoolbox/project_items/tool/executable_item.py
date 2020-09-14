@@ -28,6 +28,7 @@ from PySide2.QtCore import QEventLoop, Slot
 from spinetoolbox.config import DEFAULT_WORK_DIR, TOOL_OUTPUT_DIR
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.project_item_resource import ProjectItemResource
+from spinetoolbox.helpers import shorten
 from .item_info import ItemInfo
 from .utils import (
     file_paths_from_resources,
@@ -57,7 +58,7 @@ class ExecutableItem(ExecutableItemBase):
         self._output_dir = output_dir
         self._tool_specification = tool_specification
         self._cmd_line_args = cmd_line_args
-        self._downstream_resources = list()
+        self._downstream_resources = list()  # TODO: Rename to _successor_resources
         self._tool_instance = None
         self._last_return_code = None
 
@@ -330,6 +331,7 @@ class ExecutableItem(ExecutableItemBase):
 
         Args:
             resources (list): a list of resources from direct predecessor items
+
         Returns:
             True if execution succeeded, False otherwise
         """
@@ -354,7 +356,7 @@ class ExecutableItem(ExecutableItemBase):
                 f"</b> source files to {work_anchor} ***"
             )
             if not self._copy_program_files(execution_dir):
-                self._logger.msg_error.emit("Copying program files to base directory failed.")
+                self._logger.msg_error.emit("Copying program files to work directory failed.")
                 return False
         else:
             work_or_source = "source"
@@ -594,7 +596,7 @@ class ExecutableItem(ExecutableItemBase):
                 work_dir = DEFAULT_WORK_DIR
         else:
             work_dir = None
-        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", shorten(name))
         output_dir = pathlib.Path(data_dir, TOOL_OUTPUT_DIR)
         specification_name = item_dict["tool"]
         if not specification_name:

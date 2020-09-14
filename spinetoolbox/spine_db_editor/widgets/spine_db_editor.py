@@ -54,7 +54,7 @@ from ...helpers import (
     call_on_focused_widget,
 )
 from ...widgets.parameter_value_editor import ParameterValueEditor
-from ...widgets.settings_widget import DataStoreSettingsWidget
+from ...widgets.settings_widget import SpineDBEditorSettingsWidget
 from ...spine_io.exporters.excel import export_spine_database_to_xlsx
 from ...spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...spine_db_parcel import SpineDBParcel
@@ -93,7 +93,7 @@ class SpineDBEditorBase(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = self.db_mngr.qsettings
-        self.settings_form = DataStoreSettingsWidget(self.qsettings)
+        self.settings_form = SpineDBEditorSettingsWidget(self.db_mngr)
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)

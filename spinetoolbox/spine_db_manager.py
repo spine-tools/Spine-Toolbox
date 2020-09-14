@@ -133,7 +133,7 @@ class SpineDBManager(QObject):
         self._db_specific_loggers = dict()
         self._db_maps = {}
         self._cache = {}
-        self._ds_forms = {}
+        self._db_editors = {}
         self.qsettings = settings
         self.undo_stack = {}
         self.undo_action = {}
@@ -146,6 +146,10 @@ class SpineDBManager(QObject):
     @property
     def db_maps(self):
         return set(self._db_maps.values())
+
+    @property
+    def db_editors(self):
+        return set(self._db_editors.values())
 
     def create_new_spine_database(self, url):
         if url in self._db_maps:
@@ -202,18 +206,19 @@ class SpineDBManager(QObject):
             logger (LoggingInterface): Where to log SpineDBAPIError
         """
         key = tuple(db_url_codenames.keys())
-        ds_form = self._ds_forms.get(key)
-        if ds_form is None:
+        db_editor = self._db_editors.get(key)
+        if db_editor is None:
             db_maps = [self.get_db_map(url, logger, codename=codename) for url, codename in db_url_codenames.items()]
             if not all(db_maps):
-                return
-            self._ds_forms[key] = ds_form = SpineDBEditor(self, *db_maps)
-            ds_form.destroyed.connect(lambda: self._ds_forms.pop(key))
-            ds_form.show()
+                return False
+            self._db_editors[key] = db_editor = SpineDBEditor(self, *db_maps)
+            db_editor.destroyed.connect(lambda: self._db_editors.pop(key))
+            db_editor.show()
         else:
-            if ds_form.windowState() & Qt.WindowMinimized:
-                ds_form.setWindowState(ds_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-            ds_form.activateWindow()
+            if db_editor.windowState() & Qt.WindowMinimized:
+                db_editor.setWindowState(db_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+            db_editor.activateWindow()
+        return True
 
     def get_db_map(self, url, logger, upgrade=False, codename=None):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.

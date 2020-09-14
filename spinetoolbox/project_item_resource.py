@@ -34,7 +34,7 @@ class ProjectItemResource:
                 - "transient_file": a file that may not yet be available or may change its location;
                   url points to latest version or is empty, metadata contains the "label" key
                   and an optional "pattern" key
-                - "file_pattern": a file patter with wildcards that acts as a placeholder;
+                - "file_pattern": a file pattern with wildcards that acts as a placeholder;
                   url is empty, metadata contains the "label" key
             url (str): The url of the resource
             metadata (dict): Some metadata providing extra information about the resource.

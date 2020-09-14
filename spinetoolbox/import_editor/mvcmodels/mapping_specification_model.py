@@ -305,7 +305,9 @@ class MappingSpecificationModel(QAbstractTableModel):
             self._component_mappings.append(self._item_mapping.parameters.name)
         if isinstance(self._item_mapping.parameters, ParameterValueMapping):
             self._display_names.append("Parameter values")
+            self._display_names.append("Alternative names")
             self._component_mappings.append(self._item_mapping.parameters.value)
+            self._component_mappings.append(self._item_mapping.parameters.alternative_name)
         if isinstance(self._item_mapping.parameters, ParameterMapMapping):
             for i, dimension in enumerate(self._item_mapping.parameters.extra_dimensions):
                 self._display_names.append(f"Parameter index {i + 1}")
@@ -435,10 +437,11 @@ class MappingSpecificationModel(QAbstractTableModel):
             return ""
         if row == parameter_name_row:
             return self._item_mapping.parameters.names_issues()
-        if row == parameter_name_row + 1:
+        if parameter_name_row + 1 <= row <= parameter_name_row + 2:
+            # NOTE: parameter_name_row + 2 is the alternative name, which jut "follows"
             return self._item_mapping.parameters.values_issues(self._item_mapping.is_pivoted())
-        if row >= parameter_name_row + 2:
-            index = row - (parameter_name_row + 2)
+        if row >= parameter_name_row + 3:
+            index = row - (parameter_name_row + 3)
             return self._item_mapping.parameters.indexes_issues(index)
         return ""
 
@@ -594,14 +597,16 @@ class MappingSpecificationModel(QAbstractTableModel):
             return None
         if name in ("Relationship class names", "Object class names"):
             return self._item_mapping.name
-        if name in ("Alternative names", "Scenario names") and not isinstance(
-            self._item_mapping, ScenarioAlternativeMapping
-        ):
-            return self._item_mapping.name
         if name == "Scenario names":
-            return self._item_mapping.scenario_name
+            if isinstance(self._item_mapping, ScenarioAlternativeMapping):
+                return self._item_mapping.scenario_name
+            return self._item_mapping.name
         if name == "Alternative names":
-            return self._item_mapping.alternative_name
+            if isinstance(self._item_mapping, ScenarioAlternativeMapping):
+                return self._item_mapping.alternative_name
+            if isinstance(self._item_mapping, AlternativeMapping):
+                return self._item_mapping.name
+            return self._item_mapping.parameters.alternative_name
         if name == "Before Alternative names":
             return self._item_mapping.before_alternative_name
         if name == "Scenario active flags":
@@ -632,16 +637,19 @@ class MappingSpecificationModel(QAbstractTableModel):
         if name in ("Relationship class names", "Object class names"):
             self._item_mapping.name = mapping
             self._recommend_string_type(mapping)
-        elif name in ("Alternative names", "Scenario names") and not isinstance(
-            self._item_mapping, ScenarioAlternativeMapping
-        ):
-            self._item_mapping.name = mapping
-            self._recommend_string_type(mapping)
         elif name == "Scenario names":
-            self._item_mapping.scenario_name = mapping
+            if isinstance(self._item_mapping, ScenarioAlternativeMapping):
+                self._item_mapping.scenario_name = mapping
+            else:
+                self._item_mapping.name = mapping
             self._recommend_string_type(mapping)
         elif name == "Alternative names":
-            self._item_mapping.alternative_name = mapping
+            if isinstance(self._item_mapping, ScenarioAlternativeMapping):
+                self._item_mapping.alternative_name = mapping
+            elif isinstance(self._item_mapping, AlternativeMapping):
+                self._item_mapping.name = mapping
+            else:
+                self._item_mapping.parameters.alternative_name = mapping
             self._recommend_string_type(mapping)
         elif name == "Before Alternative names":
             self._item_mapping.before_alternative_name = mapping
@@ -737,7 +745,6 @@ class MappingSpecificationModel(QAbstractTableModel):
             return
         self._item_mapping.parameters.options.repeat = repeat
 
-    @Slot(int)
     def set_map_dimensions(self, dimensions):
         if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterMapMapping):
             return
@@ -765,6 +772,17 @@ class MappingSpecificationModel(QAbstractTableModel):
             self._display_names = self._display_names[:first]
             self._component_mappings = self._component_mappings[:first]
             self.endRemoveRows()
+
+    def set_map_compress_flag(self, compress):
+        """
+        Sets the compress flag for Map type parameters.
+
+        Args:
+            compress (bool): flag value
+        """
+        if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterMapMapping):
+            return
+        self._item_mapping.parameters.compress = compress
 
     def mapping_has_parameters(self):
         """Returns True if the item mapping has parameters."""

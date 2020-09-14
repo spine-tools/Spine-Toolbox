@@ -30,6 +30,7 @@ from ..commands import (
     SetImportObjectsFlag,
     SetItemMappingDimension,
     SetItemMappingType,
+    SetMapCompressFlag,
     SetMapDimensions,
     SetParameterType,
     SetReadStartRow,
@@ -72,6 +73,7 @@ class ImportMappingOptions(QObject):
         self._ui.start_read_row_spin_box.valueChanged.connect(self._change_read_start_row)
         self._ui.time_series_repeat_check_box.stateChanged.connect(self._change_time_series_repeat_flag)
         self._ui.map_dimension_spin_box.valueChanged.connect(self._change_map_dimensions)
+        self._ui.map_compression_check_box.stateChanged.connect(self._change_map_compression_flag)
         self.update_ui()
 
     @Slot(int)
@@ -431,7 +433,41 @@ class ImportMappingOptions(QObject):
         self._ui.map_dimension_spin_box.setValue(dimensions)
         self._executing_command = False
 
+    @Slot(bool)
+    def _change_map_compression_flag(self, compress):
+        """
+        Pushes :class:`SetMapCompressFlag` to the undo stack.
+
+        Args:
+            compress (CheckState): if ``Qt.Checked``, Maps will be compressed
+        """
+        if self._executing_command or self._block_signals:
+            return
+        source_table_name = self._mapping_specification_model.source_table_name
+        specification_name = self._mapping_specification_model.mapping_name
+        self._undo_stack.push(
+            SetMapCompressFlag(source_table_name, specification_name, self, compress == Qt.Checked)
+        )
+
+    def set_map_compress(self, source_table_name, mapping_specification_name, compress):
+        """
+        Sets map compress flag.
+
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            compress (bool): new flag value
+        """
+        if self._mapping_specification_model is None:
+            return
+        self._executing_command = True
+        self.about_to_undo.emit(source_table_name, mapping_specification_name)
+        self._mapping_specification_model.set_map_compress_flag(compress)
+        self._ui.map_compression_check_box.setChecked(Qt.Checked if compress else Qt.Unchecked)
+        self._executing_command = False
+
     def _update_time_series_options(self):
+        """Updates widgets that concern time series type parameters"""
         if self._mapping_specification_model is None:
             return
         par = self._mapping_specification_model.model_parameters()
@@ -445,6 +481,7 @@ class ImportMappingOptions(QObject):
         )
 
     def _update_map_options(self):
+        """Updates widgets that concern map type parameters."""
         if self._mapping_specification_model is None:
             return
         mapping = self._mapping_specification_model.model_parameters()
@@ -454,3 +491,5 @@ class ImportMappingOptions(QObject):
         is_map = isinstance(mapping, ParameterMapMapping)
         self._ui.map_dimension_spin_box.setEnabled(is_map)
         self._ui.map_dimension_spin_box.setValue(len(mapping.extra_dimensions) if is_map else 1)
+        self._ui.map_compression_check_box.setEnabled(is_map)
+        self._ui.map_compression_check_box.setChecked(Qt.Checked if is_map and mapping.compress else Qt.Unchecked)

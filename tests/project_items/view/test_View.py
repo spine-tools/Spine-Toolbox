@@ -59,7 +59,7 @@ class TestView(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.view.item_dict()
-        a = ["type", "short name", "description", "x", "y"]
+        a = ["type", "description", "x", "y"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
@@ -97,7 +97,7 @@ class TestView(unittest.TestCase):
         source_item.item_type = MagicMock(return_value="Tool")
         self.view.notify_destination(source_item)
         self.toolbox.msg.emit.assert_called_with(
-            "Link established. You can visualize the ouput from Tool <b>source name</b> in View <b>V</b>."
+            "Link established. You can visualize the output from Tool <b>source name</b> in View <b>V</b>."
         )
 
     def test_rename(self):

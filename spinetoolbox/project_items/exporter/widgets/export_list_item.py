@@ -21,19 +21,25 @@ from PySide2.QtWidgets import QWidget
 from ..settings_state import SettingsState
 
 
+_BASE_ALTERNATIVE_TEXT = "Export 'Base' alternative"
+
+
 class ExportListItem(QWidget):
     """A widget with few controls to select the output file name and open a settings window."""
 
     open_settings_clicked = Signal(str)
-    """signal that is triggered when settings window should be opened"""
+    """Emitted when settings window should be opened."""
     file_name_changed = Signal(str, str)
-    """signal that is fired when the file name field is changed"""
+    """Emitted when the file name field is changed."""
+    scenario_changed = Signal(str, str)
+    """Emitted when selected scenario has changed."""
 
     def __init__(self, url, file_name, settings_state, parent=None):
         """
         Args:
             url (str): database's identifier to be shown on a label
             file_name (str): relative path to the exported file name
+            settings_state (SettingsState): settings state
             parent (QWidget): a parent widget
         """
         from ..ui.export_list_item import Ui_Form  # pylint: disable=import-outside-toplevel
@@ -47,8 +53,9 @@ class ExportListItem(QWidget):
         self._ui.url_field.setToolTip(url)
         self._ui.out_file_name_edit.setText(file_name)
         self._ui.out_file_name_edit.editingFinished.connect(self._emit_file_name_changed)
+        self._ui.scenario_combo_box.currentTextChanged.connect(self._emit_scenario_changed)
         self._ui.settings_button.clicked.connect(self._emit_open_settings_clicked)
-        self.handle_settings_state_changed(settings_state)
+        self.update_notification_label(settings_state)
 
     @property
     def out_file_name_edit(self):
@@ -60,8 +67,14 @@ class ExportListItem(QWidget):
         """Text in the database URL field."""
         return self._ui.url_field
 
-    @Slot("QVariant")
-    def handle_settings_state_changed(self, state):
+    @Slot(object)
+    def update_notification_label(self, state):
+        """
+        Updates the UI and the message label according to settings pack state.
+
+        Args:
+            state (SettingsState): settings state
+        """
         self._ui.notification_label.setText("")
         if state == SettingsState.FETCHING:
             self._ui.settings_button.setEnabled(False)
@@ -82,6 +95,39 @@ class ExportListItem(QWidget):
                     + "Open settings to set up parameter indexing.</span>"
                 )
 
+    def update_scenarios(self, scenarios, selected):
+        """
+        Updates the scenarios combo box.
+
+        Args:
+            scenarios (dict): a map from scenario name to boolean active flag
+            selected (str, optional): currently selected scenario, None for the 'Base' alternative
+        """
+        active = [_BASE_ALTERNATIVE_TEXT] + [name + " (active)" for name, active in scenarios.items() if active]
+        inactive = [name for name, active in scenarios.items() if not active]
+        self._ui.scenario_combo_box.clear()
+        self._ui.scenario_combo_box.addItems(active)
+        self._ui.scenario_combo_box.addItems(inactive)
+        if selected is None:
+            self._ui.scenario_combo_box.setCurrentIndex(0)
+        else:
+            self._ui.scenario_combo_box.setCurrentText(selected)
+
+    def make_sure_this_scenario_is_shown_in_the_combo_box(self, scenario):
+        """
+        Makes sure the given scenario is selected in the combo box.
+
+        Args:
+            scenario (str, optional): scenario name
+        """
+        if scenario is None:
+            scenario = _BASE_ALTERNATIVE_TEXT
+        if scenario == self._ui.scenario_combo_box.currentText():
+            return
+        self._ui.scenario_combo_box.blockSignals(True)
+        self._ui.scenario_combo_box.setCurrentText(scenario)
+        self._ui.scenario_combo_box.blockSignals(False)
+
     @Slot()
     def _emit_file_name_changed(self):
         """Emits file_name_changed signal."""
@@ -95,3 +141,14 @@ class ExportListItem(QWidget):
     def _emit_open_settings_clicked(self, _):
         """Emits open_settings_clicked signal."""
         self.open_settings_clicked.emit(self._url)
+
+    @Slot(str)
+    def _emit_scenario_changed(self, selected):
+        """Emits scenario_changed signal."""
+        if selected == _BASE_ALTERNATIVE_TEXT:
+            self.scenario_changed.emit(None, self._url)
+        else:
+            scenario_name, _, active = selected.rpartition(" ")
+            if active == "(active)":
+                selected = scenario_name
+            self.scenario_changed.emit(selected, self._url)

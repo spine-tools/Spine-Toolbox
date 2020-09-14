@@ -67,7 +67,7 @@ class TestTool(unittest.TestCase):
         """Tests Item dictionary creation."""
         tool = self._add_tool()
         d = tool.item_dict()
-        a = ["type", "short name", "description", "x", "y", "tool", "execute_in_work", "cmd_line_args"]
+        a = ["type", "description", "x", "y", "specification", "execute_in_work", "cmd_line_args"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
@@ -103,7 +103,7 @@ class TestTool(unittest.TestCase):
         )
         source_item.item_type = mock.MagicMock(return_value="Tool")
         tool.notify_destination(source_item)
-        self.toolbox.msg.emit.assert_called_with("Link established.")
+        self.toolbox.msg.emit.assert_called_with("Link established")
         source_item.item_type = mock.MagicMock(return_value="View")
         tool.notify_destination(source_item)
         self.toolbox.msg_warning.emit.assert_called_with(
@@ -136,7 +136,7 @@ class TestTool(unittest.TestCase):
         """Test that specification is loaded into selections on Tool creation,
         and then shown in the ui when Tool is activated.
         """
-        item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec", execute_in_work=False)
+        item = dict(name="Tool", description="", x=0, y=0, specification="simple_exec", execute_in_work=False)
         self.toolbox.project().add_project_items("Tool", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.item(ind).project_item
@@ -146,7 +146,7 @@ class TestTool(unittest.TestCase):
     def test_save_and_restore_selections(self):
         """Test that selections are saved and restored when deactivating a Tool and activating it again.
         """
-        item = dict(name="Tool", description="", x=0, y=0, tool="")
+        item = dict(name="Tool", description="", x=0, y=0, specification="")
         self.toolbox.project().add_project_items("Tool", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.item(ind).project_item

@@ -75,6 +75,10 @@ class LeafItem(NonLazyTreeItem):
         raise NotImplementedError()
 
     @property
+    def tool_tip(self):
+        return None
+
+    @property
     def db_map(self):
         return self.parent_item.db_map
 
@@ -103,7 +107,12 @@ class LeafItem(NonLazyTreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole):
-            return self.item_data.get(self.header_data(column))
+            data = self.item_data.get(self.header_data(column))
+            if data is None:
+                data = ""
+            return data
+        if role == Qt.ToolTipRole:
+            return self.tool_tip
         return super().data(column, role)
 
     def set_data(self, column, value, role):
@@ -170,6 +179,10 @@ class AlternativeLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def item_type(self):
         return "alternative"
 
+    @property
+    def tool_tip(self):
+        return "<p>Drag this item and drop it onto a <b>scenario</b> item below to create a scenario alternative</p>"
+
     def add_item_to_db(self, db_item):
         self.db_mngr.add_alternatives({self.db_map: [db_item]})
 
@@ -186,6 +199,10 @@ class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     @property
     def item_type(self):
         return "scenario"
+
+    @property
+    def tool_tip(self):
+        return "<p>Drag an <b>alternative</b> item from above and drop it here to create a scenario alternative</p>"
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_scenarios({self.db_map: [db_item]})
@@ -248,6 +265,10 @@ class ScenarioAlternativeLeafItem(LeafItem):
     @property
     def item_type(self):
         return "alternative"
+
+    @property
+    def tool_tip(self):
+        return "<p>Drag and drop this item to reorder scenario alternatives</p>"
 
     @property
     def id(self):

@@ -21,7 +21,6 @@ import json
 from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
-from .category import CATEGORIES
 from .metaobject import MetaObject
 from .helpers import create_dir, inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
@@ -41,8 +40,6 @@ class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
     dag_execution_finished = Signal()
-    dag_execution_about_to_start = Signal("QVariant")
-    """Emitted just before an engine runs. Provides a reference to the engine."""
     project_execution_about_to_start = Signal()
     """Emitted just before the entire project is executed."""
 
@@ -187,53 +184,44 @@ class SpineToolboxProject(MetaObject):
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        project_dict["tool_specifications"] = spec_paths
+        project_dict["specifications"] = dict()
+        project_dict["specifications"]["Tool"] = spec_paths
         # Compute connections directly from Links on scene
         project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._project_item_model.root().children():
             category = category_item.name
-            category_dict = items_dict[category] = dict()
+            # Store item dictionaries with item name as key and item_dict as value
             for item in self._project_item_model.items(category):
-                category_dict[item.name] = item.project_item.item_dict()
+                items_dict[item.name] = item.project_item.item_dict()
         # Save project to file
-        saved_dict = dict(project=project_dict, objects=items_dict)
+        saved_dict = dict(project=project_dict, items=items_dict)
         # Write into JSON file
         with open(self.config_file, "w") as fp:
             json.dump(saved_dict, fp, indent=4)
         return True
 
-    def load(self, objects_dict):
+    def load(self, items_dict):
         """Populates project item model with items loaded from project file.
 
         Args:
-            objects_dict (dict): Dictionary containing all project items in JSON format
+            items_dict (dict): Dictionary containing all project items in JSON format
 
         Returns:
             bool: True if successful, False otherwise
         """
         self._logger.msg.emit("Loading project items...")
         empty = True
-        for category_name, category_dict in objects_dict.items():
-            if category_name not in CATEGORIES:
-                self._logger.msg_warning.emit(
-                    f"The project contains an unknown project item category: '{category_name}'. " "Moving on..."
-                )
-                continue
-            items_in_category = dict()
-            for name, item_dict in category_dict.items():
-                item_dict.pop("short name", None)
-                item_dict["name"] = name
-                try:
-                    item_type = item_dict.pop("type")
-                except KeyError:
-                    item_type = _legacy_type_from_category(category_name)
-                items_in_category.setdefault(item_type, list()).append(item_dict)
-                empty = False
-            for item_type, items in items_in_category.items():
-                if not self.make_and_add_project_items(item_type, items, verbosity=False):
-                    return False
+        items_by_type = dict()  # Key: item_type, value: list of items
+        for item_name, item_dict in items_dict.items():
+            empty = False
+            item_type = item_dict.pop("type")  # ProjectItem constructors do not need this
+            item_dict["name"] = item_name  # ProjectItem constructors need this
+            items_by_type.setdefault(item_type, list()).append(item_dict)
+        for item_type, items in items_by_type.items():
+            if not self.make_and_add_project_items(item_type, items, verbosity=False):
+                return False
         if empty:
             self._logger.msg_warning.emit("Project has no items")
         return True
@@ -346,8 +334,7 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler.add_dag_node(item_name)
 
     def remove_all_items(self):
-        """Pushes a RemoveAllProjectItemsCommand to the toolbox undo stack.
-        """
+        """Pushes a RemoveAllProjectItemsCommand to the toolbox undo stack."""
         items_per_category = self._project_item_model.items_per_category()
         if not any(v for v in items_per_category.values()):
             self._logger.msg.emit("No project items to remove")
@@ -416,8 +403,7 @@ class SpineToolboxProject(MetaObject):
         self._remove_item(category_ind, item)
 
     def _remove_item(self, category_ind, item, delete_data=False):
-        """
-        Removes LeafProjectTreeItem from project.
+        """Removes LeafProjectTreeItem from project.
 
         Args:
             category_ind (QModelIndex): The category index
@@ -495,8 +481,10 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
+        self.engine.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
+        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
+        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
         self.engine.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
-        self.dag_execution_about_to_start.emit(self.engine)
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
@@ -506,6 +494,9 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
+        self.engine.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
+        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
+        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._run_leave_animation)
         self.engine.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
 
     def execute_selected(self):
@@ -589,10 +580,20 @@ class SpineToolboxProject(MetaObject):
                 self._logger.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
             i += 1
 
-    @Slot("QVariant")
+    @Slot(object)
     def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""
         node_successors = self.dag_handler.node_successors(dag)
+        reduced_node_successors = dict(node_successors)
+        reversed_ranking = []
+        while reduced_node_successors:
+            same_ranks = [node for node, successors in reduced_node_successors.items() if not successors]
+            for ranked_node in same_ranks:
+                del reduced_node_successors[ranked_node]
+                for node, successors in reduced_node_successors.items():
+                    reduced_node_successors[node] = [s for s in successors if s != ranked_node]
+            reversed_ranking.append(same_ranks)
+        ranks = {node: rank for rank, nodes in enumerate(reversed(reversed_ranking)) for node in nodes}
         if not node_successors:
             # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
@@ -603,13 +604,13 @@ class SpineToolboxProject(MetaObject):
             return
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
-        for rank, item_name in enumerate(node_successors):
+        for item_name in node_successors:
             item = self._project_item_model.get_item(item_name).project_item
             resources = []
             for parent_name in node_predecessors.get(item_name, set()):
                 parent_item = self._project_item_model.get_item(parent_name).project_item
                 resources += parent_item.resources_for_direct_successors()
-            item.handle_dag_changed(rank, resources)
+            item.handle_dag_changed(ranks[item_name], resources)
 
     def notify_changes_in_all_dags(self):
         """Notifies all items of changes in all dags in the project."""
@@ -648,26 +649,3 @@ class SpineToolboxProject(MetaObject):
             if items_successors is not None:
                 return [self._project_item_model.get_item(successor).project_item for successor in items_successors]
         return []
-
-
-def _legacy_type_from_category(category_name):
-    """
-    Returns an item type for a project item in given category if item_type is missing from item dict.
-
-    This is for backwards compatibility with old .proj files where the project items did not store their type
-    in the item dict.
-
-    Args:
-        category_name (str): category name
-    Returns:
-        str: item type
-    """
-    category_to_item_type = {
-        "Data Connections": "Data Connection",
-        "Data Stores": "Data Store",
-        "Exporters": "Exporter",
-        "Importers": "Importer",
-        "Tools": "Tool",
-        "Views": "View",
-    }
-    return category_to_item_type[category_name]

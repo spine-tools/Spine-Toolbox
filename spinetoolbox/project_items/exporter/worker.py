@@ -18,9 +18,14 @@ A worker based machinery to construct the settings data structures needed for gd
 
 from copy import deepcopy
 from PySide2.QtCore import QObject, QThread, Signal, Slot
-from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api import (
+    apply_scenario_filter_to_parameter_value_sq,
+    apply_alternative_filter_to_parameter_value_sq,
+    DatabaseMapping,
+    SpineDBAPIError,
+)
 from spinetoolbox.spine_io.exporters import gdx
-from .db_utils import latest_database_commit_time_stamp
+from .db_utils import latest_database_commit_time_stamp, scenario_filtered_database_map
 
 
 class Worker(QObject):
@@ -33,27 +38,30 @@ class Worker(QObject):
 
     database_unavailable = Signal(str)
     """Emitted when opening the database fails."""
-    errored = Signal(str, "QVariant")
+    errored = Signal(str, object)
     """Emitted when an error occurs."""
-    finished = Signal(str, "QVariant")
+    finished = Signal(str, object)
     """Emitted when the worker has finished."""
     # LoggerInterface signals
     msg = Signal(str, str)
     msg_warning = Signal(str, str)
     msg_error = Signal(str, str)
 
-    def __init__(self, database_url):
+    def __init__(self, database_url, scenario, none_fallback):
         """
         Args:
             database_url (str): database's URL
+            scenario (str, optional): scenario name or None if 'Base' alternative should be used
+            none_fallback (NoneFallback): how to handle None parameter values
         """
         super().__init__()
         self.thread = QThread()
         self.moveToThread(self.thread)
+        self._scenario = scenario
+        self._none_fallback = none_fallback
         self._database_url = str(database_url)
         self._previous_settings = None
         self._previous_indexing_settings = None
-        self._previous_indexing_domains = None
         self._previous_merging_settings = None
         self.thread.started.connect(self._fetch_settings)
 
@@ -66,74 +74,74 @@ class Worker(QObject):
         if self._previous_settings is not None:
             updated_settings = deepcopy(self._previous_settings)
             updated_settings.update(result.set_settings)
-            updated_indexing_settings, updated_indexing_domains = self._update_indexing_settings(
-                updated_settings, result.indexing_settings
-            )
+            updated_indexing_settings = self._update_indexing_settings(updated_settings, result.indexing_settings)
             if updated_indexing_settings is None:
                 return
-            updated_merging_settings, updated_merging_domains = self._update_merging_settings(updated_settings)
+            updated_merging_settings = self._update_merging_settings(updated_settings)
             if updated_merging_settings is None:
                 return
             result.set_settings = updated_settings
             result.indexing_settings = updated_indexing_settings
-            result.indexing_domains = updated_indexing_domains
             result.merging_settings = updated_merging_settings
-            result.merging_domains = updated_merging_domains
         self.finished.emit(self._database_url, result)
         self.thread.quit()
 
-    def set_previous_settings(
-        self, previous_settings, previous_indexing_settings, previous_indexing_domains, previous_merging_settings
-    ):
+    def set_previous_settings(self, previous_settings, previous_indexing_settings, previous_merging_settings):
         """
         Makes worker update existing settings instead of just making new ones.
 
         Args:
             previous_settings (gdx.SetSettings): existing set settings
             previous_indexing_settings (dict): existing indexing settings
-            previous_indexing_domains (list) existing indexing domains
             previous_merging_settings (dict): existing merging settings
         """
         self._previous_settings = previous_settings
         self._previous_indexing_settings = previous_indexing_settings
-        self._previous_indexing_domains = previous_indexing_domains
         self._previous_merging_settings = previous_merging_settings
+
+    @staticmethod
+    def _read_scenarios(database_map):
+        scenario_rows = database_map.query(database_map.scenario_sq).all()
+        scenarios = {row.name: row.active for row in scenario_rows}
+        return scenarios
 
     def _read_settings(self):
         """Reads fresh gdx settings from the database."""
         try:
             database_map = DatabaseMapping(self._database_url)
-        except SpineDBAPIError as error:
+        except SpineDBAPIError:
             self.database_unavailable.emit(self._database_url)
-            return None, None, None
+            return None, None, None, None
+        try:
+            scenarios = self._read_scenarios(database_map)
+            if self._scenario is not None and self._scenario not in scenarios:
+                self.errored.emit(self._database_url, f"Scenario {self._scenario} not found.")
+                return None, None, None, None
+            if self._scenario is None:
+                apply_alternative_filter_to_parameter_value_sq(database_map, ["Base"])
+            else:
+                apply_scenario_filter_to_parameter_value_sq(database_map, self._scenario)
+        except SpineDBAPIError as error:
+            self.errored.emit(self._database_url, error)
+            return None, None, None, None
         try:
             time_stamp = latest_database_commit_time_stamp(database_map)
             settings = gdx.make_set_settings(database_map)
             logger = _Logger(self._database_url, self)
-            indexing_settings = gdx.make_indexing_settings(database_map, logger)
+            indexing_settings = gdx.make_indexing_settings(database_map, self._none_fallback, logger)
         except gdx.GdxExportException as error:
             self.errored.emit(self._database_url, error)
-            return None, None, None
+            return None, None, None, None
         finally:
             database_map.connection.close()
-        return time_stamp, settings, indexing_settings
+        return time_stamp, settings, indexing_settings, scenarios
 
     def _update_indexing_settings(self, updated_settings, new_indexing_settings):
         """Updates the parameter indexing settings according to changes in the database."""
         updated_indexing_settings = gdx.update_indexing_settings(
             self._previous_indexing_settings, new_indexing_settings, updated_settings
         )
-        indexing_domain_names = list()
-        for indexing_setting in updated_indexing_settings.values():
-            if indexing_setting.indexing_domain is not None:
-                indexing_domain_names.append(indexing_setting.indexing_domain.name)
-        updated_indexing_domains = [
-            domain for domain in self._previous_indexing_domains if domain.name in indexing_domain_names
-        ]
-        for indexing_domain in updated_indexing_domains:
-            metadata = gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)
-            updated_settings.add_or_replace_domain(indexing_domain, metadata)
-        return updated_indexing_settings, updated_indexing_domains
+        return updated_indexing_settings
 
     def _update_merging_settings(self, updated_settings):
         """Updates the parameter merging settings according to changes in the database"""
@@ -141,21 +149,17 @@ class Worker(QObject):
             database_map = DatabaseMapping(self._database_url)
         except SpineDBAPIError as error:
             self.errored.emit(self._database_url, error)
-            return None, None
+            return None
         try:
             updated_merging_settings = gdx.update_merging_settings(
                 self._previous_merging_settings, updated_settings, database_map
             )
         except gdx.GdxExportException as error:
             self.errored.emit(self._database_url, error)
-            return None, None
+            return None
         finally:
             database_map.connection.close()
-        updated_merging_domains = list(map(gdx.merging_domain, updated_merging_settings.values()))
-        for domain in updated_merging_domains:
-            metadata = gdx.SetMetadata(gdx.ExportFlag.FORCED_EXPORTABLE, True)
-            updated_settings.add_or_replace_domain(domain, metadata)
-        return updated_merging_settings, updated_merging_domains
+        return updated_merging_settings
 
 
 class _Result:
@@ -166,24 +170,23 @@ class _Result:
         commit_time_stamp (datetime): time of the database's last commit
         set_settings (gdx.SetSettings): gdx export settings
         indexing_settings (dict): parameter indexing settings
-        indexing_domains (list): additional domains needed for parameter indexing
         merging_settings (dict): parameter merging settings
-        merging_domains (list): additional domains needed for parameter merging
+        scenarios (dict): map from scenario name to boolean 'active' flag
     """
 
-    def __init__(self, time_stamp, set_settings, indexing_settings):
+    def __init__(self, time_stamp, set_settings, indexing_settings, scenarios):
         """
         Args:
             time_stamp (datetime): time of the database's last commit
             set_settings (gdx.SetSettings): gdx export settings
             indexing_settings (dict): parameter indexing settings
+            scenarios (dict): map from scenario name to boolean 'active' flag
         """
         self.commit_time_stamp = time_stamp
         self.set_settings = set_settings
         self.indexing_settings = indexing_settings
-        self.indexing_domains = list()
         self.merging_settings = dict()
-        self.merging_domains = list()
+        self.scenarios = scenarios
 
 
 class _Logger(QObject):

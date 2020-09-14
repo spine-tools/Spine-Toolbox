@@ -1,13 +1,14 @@
 {
     "name": "BuildDocs",
-    "description": "",
     "tooltype": "executable",
-    "execute_in_work": false,
     "includes": [
         "build_doc.bat"
     ],
+    "description": "",
     "inputfiles": [],
     "inputfiles_opt": [],
     "outputfiles": [],
-    "cmdline_args": ""
+    "cmdline_args": [],
+    "execute_in_work": false,
+    "includes_main_path": "."
 }

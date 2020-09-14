@@ -12,10 +12,7 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
-    <file>menu_icons/pivot-table.svg</file>
-    <file>menu_icons/table.svg</file>
-    <file>menu_icons/history.svg</file>
-    <file>menu_icons/level-up-alt.svg</file>
+    <file>project_item_icons/screwdriver.svg</file>
     <file>book.svg</file>
     <file>slash.svg</file>
     <file>home.svg</file>
@@ -78,6 +75,10 @@
     <file>menu_icons/times.svg</file>
     <file>menu_icons/redo.svg</file>
     <file>menu_icons/undo.svg</file>
+    <file>menu_icons/pivot-table.svg</file>
+    <file>menu_icons/table.svg</file>
+    <file>menu_icons/history.svg</file>
+    <file>menu_icons/level-up-alt.svg</file>
     <file>double-at.svg</file>
   </qresource>
 </RCC>

@@ -434,7 +434,7 @@ class DataConnection(ProjectItem):
             )
         elif source_item.item_type() in ["Data Store", "Importer"]:
             # Does this type of link do anything?
-            self._logger.msg.emit("Link established.")
+            self._logger.msg.emit("Link established")
         else:
             super().notify_destination(source_item)
 

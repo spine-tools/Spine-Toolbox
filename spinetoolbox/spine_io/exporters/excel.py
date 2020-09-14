@@ -71,19 +71,19 @@ def _get_objects_and_parameters(db):
     object_ts = []
     object_timepattern = []
     for d in object_and_par:
-        if d[3] is None or isinstance(d[3], (int, float, str, DateTime, Duration)):
+        if d[-1] is None or isinstance(d[-1], (int, float, str, DateTime, Duration)):
             object_par.append(d)
-        elif isinstance(d[3], list):
+        elif isinstance(d[-1], list):
             object_json.append(d)
             object_par.append(d[:-1] + (None,))
-        elif isinstance(d[3], TimeSeries):
+        elif isinstance(d[-1], TimeSeries):
             object_ts.append(d)
             object_par.append(d[:-1] + (None,))
-        elif isinstance(d[3], TimePattern):
+        elif isinstance(d[-1], TimePattern):
             object_timepattern.append(d)
             object_par.append(d[:-1] + (None,))
         else:
-            warnings.warn(f"Skipping export of unsuported parameter type: {type(d[3])}")
+            warnings.warn(f"Skipping export of unsuported parameter type: {type(d[-1])}")
 
     return object_par, object_json, object_ts, object_timepattern
 

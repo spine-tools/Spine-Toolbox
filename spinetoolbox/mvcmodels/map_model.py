@@ -238,7 +238,8 @@ class MapModel(QAbstractTableModel):
 
     def value(self):
         """Returns the Map."""
-        return _reconstruct_map(self._rows, 0, len(self._rows) - 1, 0)
+        tree = _rows_to_dict(self._rows)
+        return _reconstruct_map(tree)
 
 
 def _as_rows(map_value, row_this_far=None):
@@ -266,42 +267,50 @@ def _make_square(rows):
     return equal_length_rows
 
 
-def _reconstruct_map(rows, first_row, last_row, column_index):
-    if not rows:
-        return Map([], [])
-    block_start_row = first_row
-    index = None
+def _rows_to_dict(rows):
+    """
+    Turns table into nested dictionaries.
+
+    Args:
+        rows (list): a list of row data
+
+    Returns:
+        dict: a nested dictionary
+    """
+    tree = dict()
+    for row in rows:
+        current = tree
+        for i, column in enumerate(row):
+            if column is None:
+                raise ParameterValueFormatError(f"Index missing on row {rows.index(row) + 1} column {i + 1}.")
+            if i < len(row) - 2 and row[i + 2] is not None:
+                if not isinstance(column, (str, int, float, DateTime, Duration)):
+                    raise ParameterValueFormatError(f"Index on row {rows.index(row) + 1} column {i + 1} is not scalar.")
+                current = current.setdefault(column, dict())
+            else:
+                value = row[i + 1]
+                if value is None:
+                    raise ParameterValueFormatError(f"Value missing on row {rows.index(row) + 1} column {i + 1}.")
+                current[column] = value
+                break
+    return tree
+
+
+def _reconstruct_map(tree):
+    """
+    Constructs a :class:`Map` from a nested dictionary.
+
+    Args:
+        tree (dict): a nested dictionary
+
+    Returns:
+        Map: reconstructed Map
+    """
     indexes = list()
     values = list()
-    for row_index in range(first_row, last_row + 1):
-        row = rows[row_index][column_index:]
-        if index is None:
-            index = row[0]
-            if index is None:
-                raise ParameterValueFormatError(f"Index missing on row {first_row + row_index} column {column_index}.")
-        if not isinstance(index, (str, float, DateTime, Duration)):
-            raise ParameterValueFormatError(f"Index not scalar on row {first_row + row_index} column {column_index}.")
-        is_leaf = len(row) == 2 or row[2] is None
-        if is_leaf:
-            indexes.append(index)
-            value = row[1]
-            if value is None:
-                raise ParameterValueFormatError(f"Value missing on row {first_row + row_index} column {column_index}.")
-            values.append(value)
-            index = None
-            block_start_row = row_index + 1
-            continue
-        if row_index < last_row:
-            next_index = rows[row_index + 1][column_index]
-            if next_index == index:
-                continue
-            value = _reconstruct_map(rows, block_start_row, row_index, column_index + 1)
-            indexes.append(index)
-            values.append(value)
-            index = None
-            block_start_row = row_index + 1
-            continue
-        value = _reconstruct_map(rows, block_start_row, row_index, column_index + 1)
-        indexes.append(index)
+    for key, value in tree.items():
+        if isinstance(value, dict):
+            value = _reconstruct_map(value)
+        indexes.append(key)
         values.append(value)
     return Map(indexes, values)

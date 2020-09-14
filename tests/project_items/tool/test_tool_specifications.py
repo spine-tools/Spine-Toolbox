@@ -18,6 +18,7 @@ Contains unit tests for Tool specification classes.
 
 import unittest
 from spinetoolbox.project_items.tool.tool_specifications import ToolSpecification
+from spinetoolbox.project_items.shared.helpers import split_cmdline_args
 
 
 class TestToolSpecification(unittest.TestCase):
@@ -93,29 +94,29 @@ class TestToolSpecification(unittest.TestCase):
         self.assertEqual(args, ["--inputs=file.dat", "table.csvfile.dat", "table.csv"])
 
     def test_split_cmdline_args(self):
-        splitted = ToolSpecification.split_cmdline_args("")
+        splitted = split_cmdline_args("")
         self.assertFalse(bool(splitted))
-        splitted = ToolSpecification.split_cmdline_args("--version")
+        splitted = split_cmdline_args("--version")
         self.assertEqual(splitted, ["--version"])
-        splitted = ToolSpecification.split_cmdline_args("--input=data.dat -h 5")
+        splitted = split_cmdline_args("--input=data.dat -h 5")
         self.assertEqual(splitted, ["--input=data.dat", "-h", "5"])
-        splitted = ToolSpecification.split_cmdline_args('--output="a long file name.txt"')
+        splitted = split_cmdline_args('--output="a long file name.txt"')
         self.assertEqual(splitted, ['--output=a long file name.txt'])
-        splitted = ToolSpecification.split_cmdline_args("--file='file name with spaces.dat' -i 3")
+        splitted = split_cmdline_args("--file='file name with spaces.dat' -i 3")
         self.assertEqual(splitted, ["--file=file name with spaces.dat", "-i", "3"])
-        splitted = ToolSpecification.split_cmdline_args("'quotation \"within\" a quotation'")
+        splitted = split_cmdline_args("'quotation \"within\" a quotation'")
         self.assertEqual(splitted, ['quotation \"within\" a quotation'])
 
     def test_split_cmdline_args_with_expandable_tags(self):
-        splitted = ToolSpecification.split_cmdline_args("@@optional_inputs@@")
+        splitted = split_cmdline_args("@@optional_inputs@@")
         self.assertEqual(splitted, ["@@optional_inputs@@"])
-        splitted = ToolSpecification.split_cmdline_args("@@url:database name with spaces@@")
+        splitted = split_cmdline_args("@@url:database name with spaces@@")
         self.assertEqual(splitted, ["@@url:database name with spaces@@"])
-        splitted = ToolSpecification.split_cmdline_args("@@url:spaced name@@ -a @@url:another spaced tag@@")
+        splitted = split_cmdline_args("@@url:spaced name@@ -a @@url:another spaced tag@@")
         self.assertEqual(splitted, ["@@url:spaced name@@", "-a", "@@url:another spaced tag@@"])
 
     def test_split_cmdline_args_with_consecutive_tags(self):
-        splitted = ToolSpecification.split_cmdline_args("@@optional_inputs@@@@optional_inputs@@")
+        splitted = split_cmdline_args("@@optional_inputs@@@@optional_inputs@@")
         self.assertEqual(splitted, ["@@optional_inputs@@@@optional_inputs@@"])
 
 

@@ -186,23 +186,6 @@
          </widget>
         </item>
         <item>
-         <spacer name="horizontalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
-        <item>
          <widget class="QPushButton" name="open_parameter_merging_settings_button">
           <property name="toolTip">
            <string>Merge multiple parameters into one.</string>
@@ -213,7 +196,7 @@
          </widget>
         </item>
         <item>
-         <spacer name="horizontalSpacer_3">
+         <spacer name="horizontalSpacer_2">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -244,6 +227,48 @@ The domain itself is not exported.</string>
           </item>
           <item row="0" column="1">
            <widget class="QComboBox" name="global_parameters_combo_box"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>None values:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="none_export_combo_box">
+            <item>
+             <property name="text">
+              <string>Do not export</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Export as not-a-number</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>If parameter value is None:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="none_fallback_combo_box">
+            <item>
+             <property name="text">
+              <string>Use it</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Replace by default value</string>
+             </property>
+            </item>
+           </widget>
           </item>
          </layout>
         </item>

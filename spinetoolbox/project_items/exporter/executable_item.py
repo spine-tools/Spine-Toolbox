@@ -17,12 +17,13 @@ Contains Exporter's executable item as well as support utilities.
 """
 import os.path
 import pathlib
-from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api import SpineDBAPIError
 from spinetoolbox.executable_item_base import ExecutableItemBase
-from spinetoolbox.helpers import deserialize_path
+from spinetoolbox.helpers import deserialize_path, shorten
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
+from .db_utils import scenario_filtered_database_map
 from .item_info import ItemInfo
 from .settings_pack import SettingsPack
 from .settings_state import SettingsState
@@ -78,7 +79,7 @@ class ExecutableItem(ExecutableItemBase):
                 return False
             out_path = os.path.join(self._data_dir, settings_pack.output_file_name)
             try:
-                database_map = DatabaseMapping(url)
+                database_map = scenario_filtered_database_map(url, settings_pack.scenario)
             except SpineDBAPIError as error:
                 self._logger.msg_error.emit(f"Failed to export <b>{url}</b> to .gdx: {error}")
                 return
@@ -87,10 +88,11 @@ class ExecutableItem(ExecutableItemBase):
                 gdx.to_gdx_file(
                     database_map,
                     out_path,
-                    settings_pack.indexing_domains + settings_pack.merging_domains,
                     settings_pack.settings,
                     settings_pack.indexing_settings,
                     settings_pack.merging_settings,
+                    settings_pack.none_fallback,
+                    settings_pack.none_export,
                     gams_system_directory,
                     export_logger,
                 )
@@ -140,6 +142,6 @@ class ExecutableItem(ExecutableItemBase):
         cancel_on_error = item_dict.get("cancel_on_error")
         if cancel_on_error is None:
             cancel_on_error = True
-        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", shorten(name))
         gams_path = app_settings.value("appSettings/gamsPath", defaultValue=None)
         return cls(name, settings_packs, cancel_on_error, data_dir, gams_path, logger)
