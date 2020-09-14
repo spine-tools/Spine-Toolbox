@@ -93,13 +93,7 @@ class Importer(ProjectItem):
         # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
         self._file_model = FileListModel()
-        if not mapping_selection or isinstance(mapping_selection[0], bool):
-            # This is for legacy selections which either did not exist in the item dict
-            # or were just a list of booleans which caused problems with empty mappings.
-            # Consider removing this if in Toolbox 0.6
-            mapping_selection = {}
-        else:
-            mapping_selection = deserialize_checked_states(mapping_selection, self._project.project_dir)
+        mapping_selection = deserialize_checked_states(mapping_selection, self._project.project_dir)
         self._file_model.set_initial_state(mapping_selection)
         self._file_model.selected_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
@@ -438,6 +432,34 @@ class Importer(ProjectItem):
             list_of_mappings.append([new_path, mapping])
         new_importer["mappings"] = list_of_mappings
         return new_importer
+
+    @staticmethod
+    def upgrade_v1_to_v2(item_name, item_dict):
+        """Upgrades item's dictionary from v1 to v2.
+
+        Changes:
+        - if mapping_selection does not exist or if it
+        is a list of booleans, reset mapping_selection
+        to an empty list.
+
+        Args:
+            item_name (str): item's name
+            item_dict (dict): Version 1 item dictionary
+
+        Returns:
+            dict: Version 2 Exporter dictionary
+        """
+        print("Upgrading Importer")
+        try:
+            mapping_selection = item_dict["mapping_selection"]
+        except KeyError:
+            item_dict["mapping_selection"] = list()
+            return item_dict
+        if len(mapping_selection) == 0:
+            return item_dict
+        if isinstance(mapping_selection[0], bool):
+            item_dict["mapping_selection"] = list()
+        return item_dict
 
     @staticmethod
     def serialize_mappings(mappings, project_path):

@@ -253,7 +253,6 @@ class ProjectItem(MetaObject):
         """Returns a dictionary corresponding to this item."""
         return {
             "type": self.item_type(),
-            "short name": self.short_name,
             "description": self.description,
             "x": self.get_icon().sceneBoundingRect().center().x(),
             "y": self.get_icon().sceneBoundingRect().center().y(),
@@ -346,7 +345,7 @@ class ProjectItem(MetaObject):
 
         Args:
             item_name (str): item's name
-            old_item_dict (str): no version item dictionary
+            old_item_dict (dict): no version item dictionary
             old_project_dir (str): path to the previous project dir. We use old project directory
                 here since the new project directory may be empty at this point and the directories
                 for the new project items have not been created yet.
@@ -355,6 +354,22 @@ class ProjectItem(MetaObject):
             version 1 item dictionary
         """
         return old_item_dict
+
+    @staticmethod
+    def upgrade_v1_to_v2(item_name, item_dict):
+        """
+        Upgrades item's dictionary from v1 to v2.
+
+        Subclasses should reimplement this method if there are changes between version 1 and version 2.
+
+        Args:
+            item_name (str): item's name
+            item_dict (dict): Version 1 item dictionary
+
+        Returns:
+            dict: Version 2 item dictionary
+        """
+        return item_dict
 
 
 class ProjectItemFactory:

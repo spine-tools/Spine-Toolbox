@@ -596,6 +596,31 @@ class Exporter(ProjectItem):
             worker.deleteLater()
         self._workers.clear()
 
+    @staticmethod
+    def upgrade_v1_to_v2(item_name, item_dict):
+        """Upgrades item's dictionary from v1 to v2.
+
+        Changes:
+        - output_file_name and database_url stay the same but state is set to Fetching.
+
+        Args:
+            item_name (str): item's name
+            item_dict (dict): Version 1 item dictionary
+
+        Returns:
+            dict: Version 2 Exporter dictionary
+        """
+        old_settings_packs = item_dict.pop("settings_packs", list())
+        new_settings_packs = list()
+        for pack in old_settings_packs:
+            new_pack = dict()
+            new_pack["output_file_name"] = pack["output_file_name"]
+            new_pack["state"] = SettingsState.FETCHING.value
+            new_pack["database_url"] = pack["database_url"]
+            new_settings_packs.append(new_pack)
+        item_dict["settings_packs"] = new_settings_packs
+        return item_dict
+
 
 def _normalize_url(url):
     """

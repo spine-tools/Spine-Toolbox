@@ -135,7 +135,7 @@ def add_dc(project, name, x=0, y=0):
 
 def add_tool(project, name, tool_spec="", x=0, y=0):
     """Helper function to add a Tool to given project."""
-    item = dict(name=name, description="", tool=tool_spec, execute_in_work=False, x=x, y=y)
+    item = dict(name=name, description="", specification=tool_spec, execute_in_work=False, x=x, y=y)
     with mock.patch("spinetoolbox.project_item.create_dir"):
         project.add_project_items("Tool", item)
     return

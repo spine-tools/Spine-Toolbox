@@ -59,7 +59,7 @@ class TestDataConnection(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.data_connection.item_dict()
-        a = ["type", "short name", "description", "x", "y", "references"]
+        a = ["type", "description", "x", "y", "references"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 

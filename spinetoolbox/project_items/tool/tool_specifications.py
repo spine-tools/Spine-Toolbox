@@ -122,7 +122,6 @@ class ToolSpecification(ProjectItemSpecification):
         with open(definition_path, "w") as fp:
             try:
                 json.dump(definition, fp, indent=4)
-                self._logger.msg.emit("Tool specification <b>{0}</b> saved.".format(self.name))
                 return True
             except ValueError:
                 self.statusbar.showMessage("Error saving file", 3000)

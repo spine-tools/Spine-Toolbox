@@ -18,7 +18,7 @@ Contains Data Connection's executable item as well as support utilities.
 import os
 import pathlib
 from spinetoolbox.executable_item_base import ExecutableItemBase
-from spinetoolbox.helpers import deserialize_path
+from spinetoolbox.helpers import deserialize_path, shorten
 from spinetoolbox.project_item_resource import ProjectItemResource
 from .item_info import ItemInfo
 
@@ -50,7 +50,7 @@ class ExecutableItem(ExecutableItemBase):
         """See base class."""
         references = item_dict["references"]
         file_references = [deserialize_path(r, project_dir) for r in references]
-        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", shorten(name))
         data_files = list()
         with os.scandir(data_dir) as scan_iterator:
             for entry in scan_iterator:

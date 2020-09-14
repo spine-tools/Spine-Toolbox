@@ -66,6 +66,7 @@ from .config import (
     _program_root,
     LATEST_PROJECT_VERSION,
     DEFAULT_WORK_DIR,
+    PROJECT_FILENAME
 )
 from .helpers import (
     ensure_window_is_on_screen,
@@ -421,7 +422,7 @@ class ToolboxUI(QMainWindow):
             if not dialog.exec():
                 return False
             load_dir = dialog.selection()
-        load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
+        load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", PROJECT_FILENAME))
         try:
             with open(load_path, "r") as fh:
                 try:
@@ -447,23 +448,25 @@ class ToolboxUI(QMainWindow):
         Returns:
             bool: True when restoring project succeeded, False otherwise
         """
-        # Check that project info is valid
-        if not ProjectUpgrader(self).is_valid(project_info):
-            self.msg_error.emit("Opening project in directory {0} failed".format(project_dir))
-            return False
-        version = project_info["project"]["version"]
-        # Upgrade project dictionary if needed
-        if version < LATEST_PROJECT_VERSION:
-            project_info = ProjectUpgrader(self).upgrade(project_info, project_dir, project_dir)
         self.undo_critical_commands()
         # Make room for a new project
         self.clear_ui()
+        # Clear text browsers
+        if clear_logs:
+            self.ui.textBrowser_eventlog.clear()
+            self.ui.textBrowser_process_output.clear()
+        # Check if project dictionary needs to be upgraded
+        project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
+        # Check that project info is valid
+        if not ProjectUpgrader(self).is_valid(LATEST_PROJECT_VERSION, project_info):
+            self.msg_error.emit(f"Opening project in directory {project_dir} failed")
+            return False
         # Parse project info
         name = project_info["project"]["name"]  # Project name
         desc = project_info["project"]["description"]  # Project description
-        spec_paths = project_info["project"].get("tool_specifications", [])
+        tool_specs = project_info["project"]["specifications"]["Tool"]
         connections = project_info["project"]["connections"]
-        project_items = project_info["objects"]
+        project_items = project_info["items"]
         # Init project item model
         self.init_project_item_model()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
@@ -484,12 +487,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setEnabled(True)
         # Init tool spec model
-        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in spec_paths]
+        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_specs]
         self.init_specification_model(deserialized_paths)
-        # Clear text browsers
-        if clear_logs:
-            self.ui.textBrowser_eventlog.clear()
-            self.ui.textBrowser_process_output.clear()
         # Populate project model with project items
         if not self._project.load(project_items):
             self.msg_error.emit("Loading project items failed")
@@ -607,7 +606,7 @@ class ToolboxUI(QMainWindow):
             return
         fp = answer[0]
         upgrader = ProjectUpgrader(self)
-        proj_dir = upgrader.get_project_directory()
+        proj_dir = upgrader.get_project_directory()  # New project directory
         if not proj_dir:
             self.msg.emit("Project upgrade canceled")
             return
@@ -620,7 +619,21 @@ class ToolboxUI(QMainWindow):
             self.msg_warning.emit("Project directory <b>{0}</b> does not exist".format(old_project_dir))
             return
         # Upgrade project info dict to latest version
-        upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
+        project_dict_v1 = upgrader.upgrade_to_v1(proj_info, old_project_dir)
+        # Make version 1 project.json file to new project directory.
+        # Needs to be done so that upgrade() is able to make a backup and force save project.json
+        # version 2 file.
+        spinetoolbox_dir = os.path.abspath(os.path.join(proj_dir, ".spinetoolbox"))
+        try:
+            create_dir(spinetoolbox_dir)
+        except OSError:
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(spinetoolbox_dir))
+            return
+        project_json_path = os.path.join(spinetoolbox_dir, PROJECT_FILENAME)
+        with open(project_json_path, "w") as project_json_fp:
+            json.dump(project_dict_v1, project_json_fp, indent=4)
+        # Upgrade to latest version
+        upgraded_project_dict = upgrader.upgrade(project_dict_v1, proj_dir)
         # Copy project item data from old project to new project directory
         if not upgrader.copy_data(fp, proj_dir):
             self.msg_warning.emit(
@@ -630,7 +643,7 @@ class ToolboxUI(QMainWindow):
                 )
             )
         # Open the upgraded project
-        if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs=False):
+        if not self.restore_project(upgraded_project_dict, proj_dir, clear_logs=False):
             return
         # Save project to finish the upgrade process
         self.save_project()
@@ -653,14 +666,13 @@ class ToolboxUI(QMainWindow):
         Args:
             specification_paths (list): List of tool definition file paths used in this project
         """
-
         factory_icons = {name: QIcon(factory.icon()) for name, factory in self.item_factories.items()}
         self.specification_model = ProjectItemSpecFactoryModel(factory_icons)
         self.filtered_spec_factory_models = {name: FilteredSpecFactoryModel(name) for name in self.item_factories}
         for model in self.filtered_spec_factory_models.values():
             model.setSourceModel(self.specification_model)
-        n_tools = 0
-        self.msg.emit("Loading Custom Item specifications...")
+        n_specs = 0
+        self.msg.emit("Loading specifications...")
         for path in specification_paths:
             if not path:
                 continue
@@ -668,7 +680,7 @@ class ToolboxUI(QMainWindow):
             spec = self.load_specification_from_file(path)
             if not spec:
                 continue
-            n_tools += 1
+            n_specs += 1
             # Add tool definition file path to tool instance variable
             spec.definition_file_path = path
             # Insert tool into model
@@ -701,7 +713,7 @@ class ToolboxUI(QMainWindow):
             logging.error("Number of receivers for QListView customContextMenuRequested signal is now: %d", n_recv_sig2)
         else:
             pass  # signal already connected
-        if n_tools == 0:
+        if n_specs == 0:
             self.msg_warning.emit("Project has no specifications")
 
     def load_specification_from_file(self, def_path):
@@ -1696,7 +1708,6 @@ class ToolboxUI(QMainWindow):
                     new_name = self.propose_item_name(name)
                     item["name"] = new_name
                 self._set_deserialized_item_position(item, shift_x, shift_y, scene_rect)
-                item.pop("short name")
                 item.pop("type")
             self._project.add_project_items(item_type, *item_dicts, set_selected=True, verbosity=False)
 

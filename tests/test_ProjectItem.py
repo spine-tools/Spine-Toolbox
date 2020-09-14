@@ -70,7 +70,6 @@ class TestProjectItem(unittest.TestCase):
         item_dict = item.item_dict()
         expected = {
             "type": "item type",
-            "short name": "item_name",
             "description": "Item's description.",
             "x": -2.3,
             "y": 5.5,

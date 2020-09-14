@@ -888,3 +888,8 @@ def call_on_focused_widget(parent, callable_name):
                 method()
                 break
         focus_widget = focus_widget.parentWidget()
+
+
+def shorten(name):
+    """Returns the 'short name' version of given name."""
+    return name.lower().replace(' ', '_')
