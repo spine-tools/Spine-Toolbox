@@ -233,30 +233,32 @@ def _specifications(project_dict, project_dir, specification_factories, app_sett
         app_settings (QSettings): Toolbox settings
         logger (LoggerInterface): a logger
     Returns:
-        dict: a mapping from specification name to corresponding specification
+        dict: a mapping from item type and specification name to specification
     """
     specifications = dict()
-    path_dicts = project_dict["project"].get("tool_specifications", [])
-    definition_file_paths = [deserialize_path(path, project_dir) for path in path_dicts]
-    for definition_path in definition_file_paths:
-        try:
-            with open(definition_path, "r") as definition_file:
-                try:
-                    definition = json.load(definition_file)
-                except ValueError:
-                    logger.msg_error.emit(f"Item specification file '{definition_path}' not valid")
-                    continue
-        except FileNotFoundError:
-            logger.msg_error.emit(f"Specification file <b>{definition_path}</b> does not exist")
-            continue
-        item_type = definition.get("item_type", "Tool")
-        factory = specification_factories.get(item_type)
-        if factory is None:
-            continue
-        specification = factory.make_specification(
-            definition, definition_path, app_settings, logger, embedded_julia_console=None, embedded_python_console=None
-        )
-        specifications[specification.name] = specification
+    specifications_dict = project_dict["project"].get("specifications", {})
+    definition_file_paths = dict()
+    for item_type, serialized_paths in specifications_dict.items():
+        definition_file_paths[item_type] = [deserialize_path(path, project_dir) for path in serialized_paths]
+    for item_type, paths in definition_file_paths.items():
+        for definition_path in paths:
+            try:
+                with open(definition_path, "r") as definition_file:
+                    try:
+                        definition = json.load(definition_file)
+                    except ValueError:
+                        logger.msg_error.emit(f"Item specification file '{definition_path}' not valid")
+                        continue
+            except FileNotFoundError:
+                logger.msg_error.emit(f"Specification file <b>{definition_path}</b> does not exist")
+                continue
+            factory = specification_factories.get(item_type)
+            if factory is None:
+                continue
+            specification = factory.make_specification(
+                definition, definition_path, app_settings, logger, embedded_julia_console=None, embedded_python_console=None
+            )
+            specifications.setdefault(item_type, dict())[specification.name] = specification
     return specifications
 
 
