@@ -1,5 +1,5 @@
-git+https://github.com/Spine-project/Spine-Database-API.git#egg=spinedb_api
-git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
+git+https://github.com/Spine-project/Spine-Database-API.git@0.7.15
+git+https://github.com/Spine-project/spine-engine.git@0.5.0
 # cchardet is a  dependency of datapackage and version 2.1.6 requires users to install Visual C++
 cchardet!=2.1.6
 # matplotlib == 3.2.1 is broken; importing e.g. networkx after matplotlib.backends.backend_qt5agg backgtraces
