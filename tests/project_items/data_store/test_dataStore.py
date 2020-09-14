@@ -103,7 +103,7 @@ class TestDataStore(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.ds.item_dict()
-        a = ["type", "short name", "description", "x", "y", "url"]
+        a = ["type", "description", "x", "y", "url"]
         url_keys = ["dialect", "username", "password", "host", "port", "database"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")

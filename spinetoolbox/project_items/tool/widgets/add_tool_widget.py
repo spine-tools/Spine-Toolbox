@@ -38,5 +38,6 @@ class AddToolWidget(AddProjectItemWidget):
     def call_add_item(self):
         """Creates new Item according to user's selections."""
         spec = self.ui.comboBox_specification.currentText()
-        item = dict(name=self.name, description=self.description, x=self._x, y=self._y, tool=spec, execute_in_work=True)
+        item = dict(name=self.name, description=self.description,
+                    x=self._x, y=self._y, specification=spec, execute_in_work=True)
         self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)

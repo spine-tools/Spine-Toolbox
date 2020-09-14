@@ -60,7 +60,7 @@ class TestImporter(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.importer.item_dict()
-        a = ["type", "short name", "description", "x", "y", "mappings", "cancel_on_error", "mapping_selection"]
+        a = ["type", "description", "x", "y", "mappings", "cancel_on_error", "mapping_selection"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 

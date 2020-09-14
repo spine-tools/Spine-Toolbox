@@ -59,7 +59,7 @@ class TestView(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.view.item_dict()
-        a = ["type", "short name", "description", "x", "y"]
+        a = ["type", "description", "x", "y"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 

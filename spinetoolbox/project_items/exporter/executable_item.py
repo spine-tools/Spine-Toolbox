@@ -19,7 +19,7 @@ import os.path
 import pathlib
 from spinedb_api import SpineDBAPIError
 from spinetoolbox.executable_item_base import ExecutableItemBase
-from spinetoolbox.helpers import deserialize_path
+from spinetoolbox.helpers import deserialize_path, shorten
 from spinetoolbox.project_item_resource import ProjectItemResource
 from spinetoolbox.spine_io import gdx_utils
 from spinetoolbox.spine_io.exporters import gdx
@@ -142,6 +142,6 @@ class ExecutableItem(ExecutableItemBase):
         cancel_on_error = item_dict.get("cancel_on_error")
         if cancel_on_error is None:
             cancel_on_error = True
-        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", shorten(name))
         gams_path = app_settings.value("appSettings/gamsPath", defaultValue=None)
         return cls(name, settings_packs, cancel_on_error, data_dir, gams_path, logger)

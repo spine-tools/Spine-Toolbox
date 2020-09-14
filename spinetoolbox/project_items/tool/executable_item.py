@@ -28,6 +28,7 @@ from PySide2.QtCore import QEventLoop, Slot
 from spinetoolbox.config import DEFAULT_WORK_DIR, TOOL_OUTPUT_DIR
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.project_item_resource import ProjectItemResource
+from spinetoolbox.helpers import shorten
 from .item_info import ItemInfo
 from .utils import (
     file_paths_from_resources,
@@ -595,7 +596,7 @@ class ExecutableItem(ExecutableItemBase):
                 work_dir = DEFAULT_WORK_DIR
         else:
             work_dir = None
-        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", shorten(name))
         output_dir = pathlib.Path(data_dir, TOOL_OUTPUT_DIR)
         specification_name = item_dict["tool"]
         if not specification_name:

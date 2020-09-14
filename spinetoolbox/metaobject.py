@@ -17,11 +17,7 @@ MetaObject class.
 """
 
 from PySide2.QtCore import QObject
-
-
-def shorten(name):
-    """Returns a 'shortened' version of given name."""
-    return name.lower().replace(' ', '_')
+from spinetoolbox.helpers import shorten
 
 
 class MetaObject(QObject):
