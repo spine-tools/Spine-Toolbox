@@ -43,29 +43,30 @@ class TestGimletExecutable(unittest.TestCase):
 
     def test_from_dict(self):
         selections = [
-            [
-                {
-                    "type": "path",
-                    "relative": True,
-                    "path": ".spinetoolbox/items/input_files/a.txt"
-                },
-                True
-            ],
-            [
-                {
-                    "type": "path",
-                    "relative": True,
-                    "path": ".spinetoolbox/items/input_files/b.txt"
-                },
-                False
-            ]
+            [{"type": "path", "relative": True, "path": ".spinetoolbox/items/input_files/a.txt"}, True],
+            [{"type": "path", "relative": True, "path": ".spinetoolbox/items/input_files/b.txt"}, False],
         ]
-        item_dict = {"type": "Gimlet", "x": 0, "y": 0, "description": "", "use_shell": True,
-                     "shell_index": 0, "cmd": "dir", "selections": selections, "work_dir_mode": True}
+        item_dict = {
+            "type": "Gimlet",
+            "x": 0,
+            "y": 0,
+            "description": "",
+            "use_shell": True,
+            "shell_index": 0,
+            "cmd": "dir",
+            "selections": selections,
+            "work_dir_mode": True,
+        }
         mock_settings = _MockSettings()
         with TemporaryDirectory() as temp_dir:
-            item = ExecutableItem.from_dict(item_dict, name="G", project_dir=temp_dir,
-                                            app_settings=mock_settings, specifications=dict(), logger=mock.MagicMock())
+            item = ExecutableItem.from_dict(
+                item_dict,
+                name="G",
+                project_dir=temp_dir,
+                app_settings=mock_settings,
+                specifications=dict(),
+                logger=mock.MagicMock(),
+            )
             self.assertIsInstance(item, ExecutableItem)
             self.assertEqual("cmd.exe", item.shell_name)
             self.assertTrue(os.path.join(temp_dir, "G", "work"), item._work_dir)
@@ -74,20 +75,34 @@ class TestGimletExecutable(unittest.TestCase):
             # Modify item_dict
             item_dict["use_shell"] = False
             item_dict["work_dir_mode"] = False
-            item = ExecutableItem.from_dict(item_dict, name="G", project_dir=temp_dir,
-                                            app_settings=mock_settings, specifications=dict(), logger=mock.MagicMock())
+            item = ExecutableItem.from_dict(
+                item_dict,
+                name="G",
+                project_dir=temp_dir,
+                app_settings=mock_settings,
+                specifications=dict(),
+                logger=mock.MagicMock(),
+            )
             self.assertIsInstance(item, ExecutableItem)
             self.assertEqual("", item.shell_name)
             prefix, work_dir_name = os.path.split(item._work_dir)
             self.assertEqual("some_path", prefix)
             self.assertEqual("g__", work_dir_name[0:3])  # work dir name must start with 'g__'
             self.assertEqual("__toolbox", work_dir_name[-9:])  # work dir name must end with '__toolbox'
-            self.assertEqual([os.path.abspath(os.path.join(temp_dir, ".spinetoolbox/items/input_files/a.txt"))], item._selected_files)
+            self.assertEqual(
+                [os.path.abspath(os.path.join(temp_dir, ".spinetoolbox/items/input_files/a.txt"))], item._selected_files
+            )
             # Modify item_dict
             item_dict["use_shell"] = True
             item_dict["shell_index"] = 99  # Unsupported shell
-            item = ExecutableItem.from_dict(item_dict, name="G", project_dir=temp_dir,
-                                            app_settings=mock_settings, specifications=dict(), logger=mock.MagicMock())
+            item = ExecutableItem.from_dict(
+                item_dict,
+                name="G",
+                project_dir=temp_dir,
+                app_settings=mock_settings,
+                specifications=dict(),
+                logger=mock.MagicMock(),
+            )
             self.assertIsNone(item)
 
     @unittest.skipIf(sys.platform != "win32", "Windows test")
