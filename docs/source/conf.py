@@ -92,7 +92,7 @@ autoapi_ignore = [
     '*/spinetoolbox/setup.py',
     '*/spinetoolbox/project_items/*/ui/*',
 ]  # ignored modules
-
+autoapi_keep_files=True
 
 # -- Options for HTML output -------------------------------------------------
 
