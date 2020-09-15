@@ -158,7 +158,7 @@ class TestGdx(unittest.TestCase):
 
     def test_SetSettings_serialization_to_dictionary(self):
         domain_metadatas = [
-            gdx.SetMetadata(gdx.ExportFlag.FORCED_NON_EXPORTABLE, gdx.Origin.INDEXING),
+            gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE, gdx.Origin.INDEXING),
             gdx.SetMetadata(gdx.ExportFlag.NON_EXPORTABLE),
         ]
         set_metadatas = [
