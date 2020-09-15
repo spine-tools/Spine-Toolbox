@@ -66,6 +66,7 @@ from .config import (
     _program_root,
     LATEST_PROJECT_VERSION,
     DEFAULT_WORK_DIR,
+    PROJECT_FILENAME
 )
 from .helpers import (
     ensure_window_is_on_screen,
@@ -78,10 +79,10 @@ from .helpers import (
     serialize_path,
     deserialize_path,
     open_url,
+    ChildCyclingKeyPressFilter
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
-# from .project_items import data_store, data_connection, tool, view, importer, exporter, gimlet
 from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, UpdateSpecificationCommand
 from .configuration_assistants import spine_model
 
@@ -115,6 +116,8 @@ class ToolboxUI(QMainWindow):
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
         self.ui.graphicsView.set_ui(self)
+        self.key_press_filter = ChildCyclingKeyPressFilter()
+        self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._project_item_actions = list()
         self._item_edit_actions()
         # Set style sheets
@@ -126,6 +129,7 @@ class ToolboxUI(QMainWindow):
         # Class variables
         self.undo_stack = QUndoStack(self)
         self._item_categories = dict()
+        self._item_properties_uis = dict()
         self.item_factories = dict()  # maps item types to `ProjectItemFactory` objects
         self._item_specification_factories = dict()  # maps item types to `ProjectItemSpecificationFactory` objects
         self._project = None
@@ -234,11 +238,11 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
-        """Collects attributes from project item modules into a dict.
-        This dict is then used to perform all project item related tasks.
-        """
+        """Collects data from project item factories."""
         self._item_categories, self.item_factories = load_project_items(self)
         self._item_specification_factories = load_item_specification_factories()
+        for item_type, factory in self.item_factories.items():
+            self._item_properties_uis[item_type] = factory.make_properties_widget(self)
         self.init_project_item_factory_model()
         self.add_specification_popup_menu = AddSpecificationPopupMenu(self)
 
@@ -421,7 +425,7 @@ class ToolboxUI(QMainWindow):
             if not dialog.exec():
                 return False
             load_dir = dialog.selection()
-        load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", "project.json"))
+        load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", PROJECT_FILENAME))
         try:
             with open(load_path, "r") as fh:
                 try:
@@ -447,23 +451,25 @@ class ToolboxUI(QMainWindow):
         Returns:
             bool: True when restoring project succeeded, False otherwise
         """
-        # Check that project info is valid
-        if not ProjectUpgrader(self).is_valid(project_info):
-            self.msg_error.emit("Opening project in directory {0} failed".format(project_dir))
-            return False
-        version = project_info["project"]["version"]
-        # Upgrade project dictionary if needed
-        if version < LATEST_PROJECT_VERSION:
-            project_info = ProjectUpgrader(self).upgrade(project_info, project_dir, project_dir)
         self.undo_critical_commands()
         # Make room for a new project
         self.clear_ui()
+        # Clear text browsers
+        if clear_logs:
+            self.ui.textBrowser_eventlog.clear()
+            self.ui.textBrowser_process_output.clear()
+        # Check if project dictionary needs to be upgraded
+        project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
+        # Check that project info is valid
+        if not ProjectUpgrader(self).is_valid(LATEST_PROJECT_VERSION, project_info):
+            self.msg_error.emit(f"Opening project in directory {project_dir} failed")
+            return False
         # Parse project info
         name = project_info["project"]["name"]  # Project name
         desc = project_info["project"]["description"]  # Project description
-        spec_paths = project_info["project"].get("tool_specifications", [])
+        tool_specs = project_info["project"]["specifications"]["Tool"]
         connections = project_info["project"]["connections"]
-        project_items = project_info["objects"]
+        project_items = project_info["items"]
         # Init project item model
         self.init_project_item_model()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
@@ -484,12 +490,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setEnabled(True)
         # Init tool spec model
-        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in spec_paths]
+        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_specs]
         self.init_specification_model(deserialized_paths)
-        # Clear text browsers
-        if clear_logs:
-            self.ui.textBrowser_eventlog.clear()
-            self.ui.textBrowser_process_output.clear()
         # Populate project model with project items
         if not self._project.load(project_items):
             self.msg_error.emit("Loading project items failed")
@@ -607,7 +609,7 @@ class ToolboxUI(QMainWindow):
             return
         fp = answer[0]
         upgrader = ProjectUpgrader(self)
-        proj_dir = upgrader.get_project_directory()
+        proj_dir = upgrader.get_project_directory()  # New project directory
         if not proj_dir:
             self.msg.emit("Project upgrade canceled")
             return
@@ -620,7 +622,21 @@ class ToolboxUI(QMainWindow):
             self.msg_warning.emit("Project directory <b>{0}</b> does not exist".format(old_project_dir))
             return
         # Upgrade project info dict to latest version
-        upgraded_proj_info = upgrader.upgrade(proj_info, old_project_dir, proj_dir)
+        project_dict_v1 = upgrader.upgrade_to_v1(proj_info, old_project_dir)
+        # Make version 1 project.json file to new project directory.
+        # Needs to be done so that upgrade() is able to make a backup and force save project.json
+        # version 2 file.
+        spinetoolbox_dir = os.path.abspath(os.path.join(proj_dir, ".spinetoolbox"))
+        try:
+            create_dir(spinetoolbox_dir)
+        except OSError:
+            self._toolbox.msg_error.emit("Creating directory {0} failed".format(spinetoolbox_dir))
+            return
+        project_json_path = os.path.join(spinetoolbox_dir, PROJECT_FILENAME)
+        with open(project_json_path, "w") as project_json_fp:
+            json.dump(project_dict_v1, project_json_fp, indent=4)
+        # Upgrade to latest version
+        upgraded_project_dict = upgrader.upgrade(project_dict_v1, proj_dir)
         # Copy project item data from old project to new project directory
         if not upgrader.copy_data(fp, proj_dir):
             self.msg_warning.emit(
@@ -630,7 +646,7 @@ class ToolboxUI(QMainWindow):
                 )
             )
         # Open the upgraded project
-        if not self.restore_project(upgraded_proj_info, proj_dir, clear_logs=False):
+        if not self.restore_project(upgraded_project_dict, proj_dir, clear_logs=False):
             return
         # Save project to finish the upgrade process
         self.save_project()
@@ -653,14 +669,13 @@ class ToolboxUI(QMainWindow):
         Args:
             specification_paths (list): List of tool definition file paths used in this project
         """
-
         factory_icons = {name: QIcon(factory.icon()) for name, factory in self.item_factories.items()}
         self.specification_model = ProjectItemSpecFactoryModel(factory_icons)
         self.filtered_spec_factory_models = {name: FilteredSpecFactoryModel(name) for name in self.item_factories}
         for model in self.filtered_spec_factory_models.values():
             model.setSourceModel(self.specification_model)
-        n_tools = 0
-        self.msg.emit("Loading Custom Item specifications...")
+        n_specs = 0
+        self.msg.emit("Loading specifications...")
         for path in specification_paths:
             if not path:
                 continue
@@ -668,7 +683,7 @@ class ToolboxUI(QMainWindow):
             spec = self.load_specification_from_file(path)
             if not spec:
                 continue
-            n_tools += 1
+            n_specs += 1
             # Add tool definition file path to tool instance variable
             spec.definition_file_path = path
             # Insert tool into model
@@ -701,7 +716,7 @@ class ToolboxUI(QMainWindow):
             logging.error("Number of receivers for QListView customContextMenuRequested signal is now: %d", n_recv_sig2)
         else:
             pass  # signal already connected
-        if n_tools == 0:
+        if n_specs == 0:
             self.msg_warning.emit("Project has no specifications")
 
     def load_specification_from_file(self, def_path):
@@ -1083,7 +1098,7 @@ class ToolboxUI(QMainWindow):
         if not factory.supports_specifications():
             return
         global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
-        self.specification_context_menu = factory.specification_menu_maker(self, ind)
+        self.specification_context_menu = factory.make_specification_menu(self, ind)
         self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
@@ -1303,7 +1318,7 @@ class ToolboxUI(QMainWindow):
         if factory is None:
             self.msg_error.emit(f"{item_type} not found in factories")
             return
-        self.add_project_item_form = factory.add_form_maker(self, x, y, spec)
+        self.add_project_item_form = factory.make_add_item_widget(self, x, y, spec)
         self.add_project_item_form.show()
 
     @Slot()
@@ -1315,7 +1330,7 @@ class ToolboxUI(QMainWindow):
         factory = self.item_factories[item_type]
         if not factory.supports_specifications():
             return
-        form = factory.specification_form_maker(self, specification)
+        form = factory.make_specification_widget(self, specification)
         form.show()
 
     @Slot()
@@ -1618,28 +1633,22 @@ class ToolboxUI(QMainWindow):
         Serializes selected project items into a dictionary.
 
         The serialization protocol tries to imitate the format in which projects are saved.
-        The format of the dictionary is following:
-        `{"item_category_1": [{"name": "item_1_name", ...}, ...], ...}`
 
         Returns:
-             a dict containing serialized version of selected project items
+             dict: a dict containing serialized version of selected project items
         """
         selected_project_items = self.ui.graphicsView.scene().selectedItems()
-        serialized_items = dict()
+        items_dict = dict()
         for item_icon in selected_project_items:
             if not isinstance(item_icon, ProjectItemIcon):
                 continue
             name = item_icon.name()
             index = self.project_item_model.find_item(name)
             project_item = self.project_item_model.item(index).project_item
-            item_type = project_item.item_type()
-            items = serialized_items.setdefault(item_type, list())
-            item_dict = project_item.item_dict()
-            item_dict["name"] = project_item.name
-            items.append(item_dict)
-        return serialized_items
+            items_dict[name] = project_item.item_dict()
+        return items_dict
 
-    def _deserialized_item_position_shifts(self, serialized_items):
+    def _deserialized_item_position_shifts(self, item_dicts):
         """
         Calculates horizontal and vertical shifts for project items being deserialized.
 
@@ -1648,9 +1657,9 @@ class ToolboxUI(QMainWindow):
         In case the items don't fit the scene rect we clamp their coordinates within it.
 
         Args:
-            serialized_items (dict): a dictionary of serialized items being deserialized
+            item_dicts (dict): a dictionary of serialized items being deserialized
         Returns:
-            a tuple of (horizontal shift, vertical shift) in scene's coordinates
+            tuple: a tuple of (horizontal shift, vertical shift) in scene's coordinates
         """
         mouse_position = self.ui.graphicsView.mapFromGlobal(QCursor.pos())
         if self.ui.graphicsView.rect().contains(mouse_position):
@@ -1658,7 +1667,7 @@ class ToolboxUI(QMainWindow):
         else:
             mouse_over_design_view = None
         if mouse_over_design_view is not None:
-            first_item = next(iter(serialized_items.values()))[0]
+            first_item = next(iter(item_dicts.values()))
             x = first_item["x"]
             y = first_item["y"]
             shift_x = x - mouse_over_design_view.x()
@@ -1676,29 +1685,28 @@ class ToolboxUI(QMainWindow):
         item_dict["x"] = new_x
         item_dict["y"] = new_y
 
-    def _deserialize_items(self, serialized_items):
+    def _deserialize_items(self, items_dict):
         """
         Deserializes project items from a dictionary and adds them to the current project.
 
         Args:
-            serialized_items (dict): serialized project items
+            items_dict (dict): serialized project items
         """
         if self._project is None:
             return
         scene = self.ui.graphicsView.scene()
         scene.clearSelection()
-        shift_x, shift_y = self._deserialized_item_position_shifts(serialized_items)
+        shift_x, shift_y = self._deserialized_item_position_shifts(items_dict)
         scene_rect = scene.sceneRect()
-        for item_type, item_dicts in serialized_items.items():
-            for item in item_dicts:
-                name = item["name"]
-                if self.project_item_model.find_item(name) is not None:
-                    new_name = self.propose_item_name(name)
-                    item["name"] = new_name
-                self._set_deserialized_item_position(item, shift_x, shift_y, scene_rect)
-                item.pop("short name")
-                item.pop("type")
-            self._project.add_project_items(item_type, *item_dicts, set_selected=True, verbosity=False)
+        final_items_dict = dict()
+        for name, item_dict in items_dict.items():
+            if self.project_item_model.find_item(name) is not None:
+                new_name = self.propose_item_name(name)
+                final_items_dict[new_name] = item_dict
+            else:
+                final_items_dict[name] = item_dict
+            self._set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect)
+        self._project.add_project_items(final_items_dict, set_selected=True, verbosity=False)
 
     @Slot()
     def project_item_to_clipboard(self):
@@ -1721,14 +1729,16 @@ class ToolboxUI(QMainWindow):
         if byte_data.isNull():
             return
         item_dump = str(byte_data.data(), "utf-8")
-        serialized_items = json.loads(item_dump)
-        self._deserialize_items(serialized_items)
+        item_dicts = json.loads(item_dump)
+        self._deserialize_items(item_dicts)
 
     @Slot()
     def duplicate_project_item(self):
         """Duplicates the selected project items."""
-        serialized_items = self._serialize_selected_items()
-        self._deserialize_items(serialized_items)
+        item_dicts = self._serialize_selected_items()
+        if not item_dicts:
+            return
+        self._deserialize_items(item_dicts)
 
     def propose_item_name(self, prefix):
         """
@@ -1808,3 +1818,14 @@ class ToolboxUI(QMainWindow):
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
         self._project.project_execution_about_to_start.connect(self._scroll_event_log_to_end)
+
+    def project_item_properties_ui(self, item_type):
+        """
+        Returns the properties tab widget's ui.
+
+        Args:
+            item_type (str): project item's type
+        Returns:
+            QWidget: item's properties tab widget
+        """
+        return self._item_properties_uis[item_type].ui

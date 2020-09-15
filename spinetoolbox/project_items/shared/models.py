@@ -96,8 +96,7 @@ class FileListItem:
 
 
 class FileListModel(QAbstractListModel):
-    """A model for files to be shown in a file list view.
-    Used by Importer."""
+    """A model for checkable files to be shown in a file list view."""
 
     selected_state_changed = Signal(bool, str)
     """Emitted when a file check box state changes."""

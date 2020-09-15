@@ -17,11 +17,11 @@ and project dicts from earlier versions to the latest version.
 :date:   8.11.2019
 """
 
-import logging
+import shutil
 import os
 import json
 from PySide2.QtWidgets import QFileDialog, QMessageBox
-from .config import LATEST_PROJECT_VERSION
+from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .helpers import create_dir, recursive_overwrite, serialize_path
 
 
@@ -36,95 +36,106 @@ class ProjectUpgrader:
         """
         self._toolbox = toolbox
 
-    def is_valid(self, p):
-        """Checks that the given project JSON dictionary contains
-        a valid version 1 Spine Toolbox project. Valid meaning, that
-        it contains all required keys and values are of the correct
-        type.
+    def upgrade_to_v1(self, project_dict, old_project_dir):
+        """Upgrades no version project dict to version 1.
+        This may be removed when we no longer want to support
+        upgrading legacy .proj projects to current ones."""
+        return self.upgrade_from_no_version_to_version_1(project_dict, old_project_dir)
+
+    def upgrade(self, project_dict, project_dir):
+        """Upgrades the project described in given project dictionary to the latest version.
 
         Args:
-            p (dict): Project information JSON
-
-        Returns:
-            bool: True if project is a valid version 1 project, False if it is not
-        """
-        if "project" not in p.keys():
-            self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
-            return False
-        if "objects" not in p.keys():
-            self._toolbox.msg_error.emit("Invalid project.json file. Key 'objects' not found.")
-            return False
-        required_project_keys = ["version", "name", "description", "tool_specifications", "connections"]
-        project = p["project"]
-        objects = p["objects"]
-        if not isinstance(project, dict):
-            self._toolbox.msg_error.emit("Invalid project.json file. 'project' must be a dict.")
-            return False
-        if not isinstance(objects, dict):
-            self._toolbox.msg_error.emit("Invalid project.json file. 'objects' must be a dict.")
-            return False
-        for req_key in required_project_keys:
-            if req_key not in project:
-                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
-                return False
-        # Check types in project dict
-        if not project["version"] == 1:
-            self._toolbox.msg_error.emit("Invalid project version")
-            return False
-        if not isinstance(project["name"], str) or not isinstance(project["description"], str):
-            self._toolbox.msg_error.emit("Invalid project.json file. 'name' and 'description' must be strings.")
-            return False
-        if not isinstance(project["tool_specifications"], list):
-            self._toolbox.msg_error.emit("Invalid project.json file. 'tool_specifications' must be a list.")
-            return False
-        if not isinstance(project["connections"], list):
-            self._toolbox.msg_error.emit("Invalid project.json file. 'connections' must be a list.")
-            return False
-        return True
-
-    def upgrade(self, project_dict, old_project_dir, new_project_dir):
-        """Converts the project described in given project description file to the latest version.
-
-        Args:
-            project_dict (dict): Full path to project description file, ie. .proj or .json
-            old_project_dir (str): Path to the original project directory
-            new_project_dir (str): New project directory
+            project_dict (dict): Project configuration dictionary
+            project_dir (str): Path to current project directory
 
         Returns:
             dict: Latest version of the project info dictionary
         """
-        try:
-            v = project_dict["project"]["version"]
-        except KeyError:
-            return self.upgrade_from_no_version_to_version_1(project_dict, old_project_dir, new_project_dir)
-        return self.upgrade_to_latest(v, project_dict)
+        v = project_dict["project"]["version"]
+        if v < LATEST_PROJECT_VERSION:
+            # Back up project.json file before upgrading
+            if not self.backup_project_file(project_dir):
+                self._toolbox.msg_error.emit("Upgrading project failed")
+                return False
+            self._toolbox.msg_warning.emit("Backed up project.json -> project.json.bak")
+            upgraded_dict = self.upgrade_to_latest(v, project_dict)
+            # Force save project dict to project.json
+            if not self.force_save(upgraded_dict, project_dir):
+                self._toolbox.msg_error.emit("Upgrading project failed")
+                return False
+            return upgraded_dict
+        else:
+            return project_dict
 
-    @staticmethod
-    def upgrade_to_latest(v, project_dict):
+    def upgrade_to_latest(self, v, project_dict):
         """Upgrades the given project dictionary to the latest version.
 
-        NOTE: Implement this when the structure of the project file needs
-        to be changed.
-
         Args:
-            v (int): project version
-            project_dict (dict): Project JSON to be converted
+            v (int): Current version of the project dictionary
+            project_dict (dict): Project dictionary (JSON) to be upgraded
 
         Returns:
-            dict: Upgraded project information JSON
+            dict: Upgraded project dictionary
         """
-        logging.debug(
-            "Implementation of upgrading project JSON from version %s->%s is missing", v, LATEST_PROJECT_VERSION
-        )
-        raise NotImplementedError()
+        while v < LATEST_PROJECT_VERSION:
+            if v == 1:
+                project_dict = self.upgrade_v1_to_v2(project_dict, self._toolbox.item_factories)
+                self._toolbox.msg_success.emit("Project upgraded successfully")
+                v += 1
+            # Example on what to do when version 3 comes
+            # if v == 2:
+            #     project_dict = self.upgrade_v2_to_v3(project_dict)
+            #     v += 1
+        return project_dict
 
-    def upgrade_from_no_version_to_version_1(self, old, old_project_dir, new_project_dir):
+    @staticmethod
+    def upgrade_v1_to_v2(old, factories):
+        """Upgrades version 1 project dictionary to version 2.
+
+        Changes:
+            objects -> items, tool_specifications -> specifications
+            store project item dicts under ["items"][<project item name>] instead of using their categories as keys
+            specifications must be a dict instead of a list
+            Add specifications["Tool"] that must be a dict
+            Remove "short name" from all project items
+
+        Args:
+            old (dict): Version 1 project dictionary
+            factories (dict): Mapping of item type to item factory
+
+        Returns:
+            dict: Version 2 project dictionary
+        """
+        new = dict()
+        new["version"] = 2
+        new["name"] = old["project"]["name"]
+        new["description"] = old["project"]["description"]
+        new["specifications"] = dict()
+        new["specifications"]["Tool"] = old["project"]["tool_specifications"]
+        new["connections"] = old["project"]["connections"]
+        # Change 'objects' to 'items' and remove all 'short name' entries
+        # Also stores item_dict under their name and not under category
+        items = dict()
+        for category in old["objects"].keys():
+            for item_name in old["objects"][category].keys():
+                old["objects"][category][item_name].pop("short name", "")  # Remove 'short name'
+                # Add type to old item_dict if not there
+                if "type" not in old["objects"][category][item_name]:
+                    old["objects"][category][item_name]["type"] = category[:-1]  # Hackish, but should do the trick
+                # Upgrade item_dict to version 2 if needed
+                v1_item_dict = old["objects"][category][item_name]
+                item_type = old["objects"][category][item_name]["type"]
+                v2_item_dict = factories[item_type].item_class().upgrade_v1_to_v2(item_name, v1_item_dict)
+                items[item_name] = v2_item_dict  # Store items using their name as key
+        return dict(project=new, items=items)
+
+    def upgrade_from_no_version_to_version_1(self, old, old_project_dir):
         """Converts project information dictionaries without 'version' to version 1.
 
         Args:
             old (dict): Project information JSON
             old_project_dir (str): Path to old project directory
-            new_project_dir (str): Path to new project directory
 
         Returns:
              dict: Project information JSON upgraded to version 1
@@ -181,7 +192,7 @@ class ProjectUpgrader:
             if item_type not in self._toolbox.item_factories:
                 self._toolbox.msg_error.emit(f"Upgrading project item failed. Unknown item type '{item_type}'.")
                 continue
-            item_class = self._toolbox.item_factories[item_type].item_maker
+            item_class = self._toolbox.item_factories[item_type].item_class()
             for item_name, item_dict in old["objects"][category].items():
                 new_item_dict = item_class.upgrade_from_no_version_to_version_1(item_name, item_dict, old_project_dir)
                 new_objects[category][item_name] = new_item_dict
@@ -260,7 +271,7 @@ class ProjectUpgrader:
             proj_file_path (str): Full path to the old .proj project file
 
         Returns:
-            dict: Upgraded project information JSON or None if the operation failed
+            dict: Project dictionary or None if the operation fails.
         """
         try:
             with open(proj_file_path, "r") as fh:
@@ -343,4 +354,130 @@ class ProjectUpgrader:
         src_dir = os.path.abspath(old_project_dir)
         dst_dir = os.path.abspath(items_dir)
         recursive_overwrite(self._toolbox, src_dir, dst_dir, ignore=None, silent=False)
+        return True
+
+    def is_valid(self, v, p):
+        """Checks given project dict if it is valid for given version."""
+        if v == 1:
+            is_valid = self.is_valid_v1(p)
+        elif v == 2:
+            is_valid = self.is_valid_v2(p)
+        else:
+            raise NotImplementedError(f"No validity check available for version {v}")
+        return is_valid
+
+    def is_valid_v1(self, p):
+        """Checks that the given project JSON dictionary contains
+        a valid version 1 Spine Toolbox project. Valid meaning, that
+        it contains all required keys and values are of the correct
+        type.
+
+        Args:
+            p (dict): Project information JSON
+
+        Returns:
+            bool: True if project is a valid version 1 project, False if it is not
+        """
+        if "project" not in p.keys():
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
+            return False
+        if "objects" not in p.keys():
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'objects' not found.")
+            return False
+        required_project_keys = ["version", "name", "description", "tool_specifications", "connections"]
+        project = p["project"]
+        objects = p["objects"]
+        if not isinstance(project, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'project' must be a dict.")
+            return False
+        if not isinstance(objects, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'objects' must be a dict.")
+            return False
+        for req_key in required_project_keys:
+            if req_key not in project:
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
+                return False
+        # Check types in project dict
+        if not project["version"] == 1:
+            self._toolbox.msg_error.emit("Invalid project version")
+            return False
+        if not isinstance(project["name"], str) or not isinstance(project["description"], str):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'name' and 'description' must be strings.")
+            return False
+        if not isinstance(project["tool_specifications"], list):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'tool_specifications' must be a list.")
+            return False
+        if not isinstance(project["connections"], list):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'connections' must be a list.")
+            return False
+        return True
+
+    def is_valid_v2(self, p):
+        """Checks that the given project JSON dictionary contains
+        a valid version 2 Spine Toolbox project. Valid meaning, that
+        it contains all required keys and values are of the correct
+        type.
+
+        Args:
+            p (dict): Project information JSON
+
+        Returns:
+            bool: True if project is a valid version 2 project, False if it is not
+        """
+        if "project" not in p.keys():
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
+            return False
+        if "items" not in p.keys():
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'items' not found.")
+            return False
+        required_project_keys = ["version", "name", "description", "specifications", "connections"]
+        project = p["project"]
+        items = p["items"]
+        if not isinstance(project, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'project' must be a dict.")
+            return False
+        if not isinstance(items, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'items' must be a dict.")
+            return False
+        for req_key in required_project_keys:
+            if req_key not in project:
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
+                return False
+        # Check types in project dict
+        if not project["version"] == 2:
+            self._toolbox.msg_error.emit("Invalid project version:'{0}'".format(project["version"]))
+            return False
+        if not isinstance(project["name"], str) or not isinstance(project["description"], str):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'name' and 'description' must be strings.")
+            return False
+        if not isinstance(project["specifications"], dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'specifications' must be a dictionary.")
+            return False
+        if not isinstance(project["connections"], list):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'connections' must be a list.")
+            return False
+        return True
+
+    def backup_project_file(self, project_dir):
+        """Makes a backup copy of project.json file."""
+        src = os.path.join(project_dir, ".spinetoolbox", PROJECT_FILENAME)
+        dst = os.path.join(project_dir, ".spinetoolbox", "project.json.bak")
+        try:
+            shutil.copyfile(src, dst)
+        except OSError:
+            self._toolbox.msg_error.emit(f"Making a backup of '{src}' failed. Check permissions.")
+            return False
+        return True
+
+    def force_save(self, p, project_dir):
+        """Saves given project dictionary to project.json file.
+        Used to force save project.json file when the project
+        dictionary has been upgraded."""
+        project_json_path = os.path.join(project_dir, ".spinetoolbox", PROJECT_FILENAME)
+        try:
+            with open(project_json_path, "w") as fp:
+                json.dump(p, fp, indent=4)
+        except OSError:
+            self._toolbox.msg_error.emit("Saving project.json file failed. Check permissions.")
+            return False
         return True

@@ -32,8 +32,8 @@ class TestCombiner(unittest.TestCase):
     def setUp(self):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
-        item_dict = dict(name="combiner", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Combiner", item_dict)
+        item_dict = {"combiner": {"type": "Combiner", "description": "", "cancel_on_error": False, "x": 0, "y": 0}}
+        self.toolbox.project().add_project_items(item_dict)
         index = self.toolbox.project_item_model.find_item("combiner")
         self.combiner = self.toolbox.project_item_model.item(index).project_item
 
@@ -60,7 +60,7 @@ class TestCombiner(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.combiner.item_dict()
-        a = ["type", "short name", "description", "x", "y", "cancel_on_error"]
+        a = ["type", "description", "x", "y", "cancel_on_error"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 

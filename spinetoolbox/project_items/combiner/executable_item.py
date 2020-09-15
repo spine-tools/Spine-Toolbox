@@ -20,6 +20,7 @@ import os
 import pathlib
 from PySide2.QtCore import QObject, QEventLoop, Slot, QThread
 from spinetoolbox.executable_item_base import ExecutableItemBase
+from spinetoolbox.helpers import shorten
 from .item_info import ItemInfo
 from .combiner_worker import CombinerWorker
 
@@ -51,7 +52,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
     @classmethod
     def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         """See base class."""
-        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", shorten(name))
         logs_dir = os.path.join(data_dir, "logs")
         cancel_on_error = item_dict["cancel_on_error"]
         return cls(name, logs_dir, cancel_on_error, logger)

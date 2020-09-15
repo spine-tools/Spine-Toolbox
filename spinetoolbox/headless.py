@@ -143,7 +143,7 @@ class ExecuteProject(QObject):
         for dag in dags:
             node_successors = dag_handler.node_successors(dag)
             if not node_successors:
-                logger.msg_error("The project contains a graph that is not a Directed Acyclic Graph.")
+                logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
                 return _Status.ERROR
             items_in_dag = tuple(item for item in executable_items if item.name in dag.nodes)
             execution_permits = {item_name: True for item_name in dag.nodes}
@@ -194,28 +194,27 @@ def open_project(project_dict, project_dir, logger):
     executable_classes = load_executable_items()
     executable_items = list()
     dag_handler = DirectedGraphHandler()
-    for item_dicts in project_dict["objects"].values():
-        for item_name, item_dict in item_dicts.items():
-            dag_handler.add_dag_node(item_name)
-            try:
-                item_type = item_dict["type"]
-            except KeyError:
-                logger.msg_error.emit(
-                    "Project item is missing the 'type' attribute in the project.json file."
-                    " This might be caused by an outdated project file."
-                )
-                return None, None
-            executable_class = executable_classes[item_type]
-            try:
-                item = executable_class.from_dict(
-                    item_dict, item_name, project_dir, app_settings, item_specifications, logger
-                )
-            except KeyError as missing_key:
-                logger.msg_error.emit(f"'{missing_key}' is missing in the project.json file.")
-                item = None
-            if item is None:
-                return None, None
-            executable_items.append(item)
+    for item_name, item_dict in project_dict["items"].items():
+        dag_handler.add_dag_node(item_name)
+        try:
+            item_type = item_dict["type"]
+        except KeyError:
+            logger.msg_error.emit(
+                "Project item is missing the 'type' attribute in the project.json file."
+                " This might be caused by an outdated project file."
+            )
+            return None, None
+        executable_class = executable_classes[item_type]
+        try:
+            item = executable_class.from_dict(
+                item_dict, item_name, project_dir, app_settings, item_specifications, logger
+            )
+        except KeyError as missing_key:
+            logger.msg_error.emit(f"'{missing_key}' is missing in the project.json file.")
+            item = None
+        if item is None:
+            return None, None
+        executable_items.append(item)
     for connection in project_dict["project"]["connections"]:
         from_name = connection["from"][0]
         to_name = connection["to"][0]
@@ -234,30 +233,37 @@ def _specifications(project_dict, project_dir, specification_factories, app_sett
         app_settings (QSettings): Toolbox settings
         logger (LoggerInterface): a logger
     Returns:
-        dict: a mapping from specification name to corresponding specification
+        dict: a mapping from item type and specification name to specification
     """
     specifications = dict()
-    path_dicts = project_dict["project"].get("tool_specifications", [])
-    definition_file_paths = [deserialize_path(path, project_dir) for path in path_dicts]
-    for definition_path in definition_file_paths:
-        try:
-            with open(definition_path, "r") as definition_file:
-                try:
-                    definition = json.load(definition_file)
-                except ValueError:
-                    logger.msg_error.emit(f"Item specification file '{definition_path}' not valid")
-                    continue
-        except FileNotFoundError:
-            logger.msg_error.emit(f"Specification file <b>{definition_path}</b> does not exist")
-            continue
-        item_type = definition.get("item_type", "Tool")
-        factory = specification_factories.get(item_type)
-        if factory is None:
-            continue
-        specification = factory.make_specification(
-            definition, definition_path, app_settings, logger, embedded_julia_console=None, embedded_python_console=None
-        )
-        specifications[specification.name] = specification
+    specifications_dict = project_dict["project"].get("specifications", {})
+    definition_file_paths = dict()
+    for item_type, serialized_paths in specifications_dict.items():
+        definition_file_paths[item_type] = [deserialize_path(path, project_dir) for path in serialized_paths]
+    for item_type, paths in definition_file_paths.items():
+        for definition_path in paths:
+            try:
+                with open(definition_path, "r") as definition_file:
+                    try:
+                        definition = json.load(definition_file)
+                    except ValueError:
+                        logger.msg_error.emit(f"Item specification file '{definition_path}' not valid")
+                        continue
+            except FileNotFoundError:
+                logger.msg_error.emit(f"Specification file <b>{definition_path}</b> does not exist")
+                continue
+            factory = specification_factories.get(item_type)
+            if factory is None:
+                continue
+            specification = factory.make_specification(
+                definition,
+                definition_path,
+                app_settings,
+                logger,
+                embedded_julia_console=None,
+                embedded_python_console=None,
+            )
+            specifications.setdefault(item_type, dict())[specification.name] = specification
     return specifications
 
 

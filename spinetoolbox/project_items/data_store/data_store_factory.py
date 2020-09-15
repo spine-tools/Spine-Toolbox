@@ -25,30 +25,34 @@ from .widgets.add_data_store_widget import AddDataStoreWidget
 
 class DataStoreFactory(ProjectItemFactory):
     @staticmethod
+    def item_class():
+        return DataStore
+
+    @staticmethod
     def icon():
         return ":/icons/project_item_icons/database.svg"
 
-    @property
-    def item_maker(self):
-        return DataStore
+    @staticmethod
+    def make_add_item_widget(toolbox, x, y, specification):
+        return AddDataStoreWidget(toolbox, x, y, specification)
 
-    @property
-    def icon_maker(self):
-        return DataStoreIcon
+    @staticmethod
+    def make_icon(toolbox, x, y, project_item):
+        return DataStoreIcon(toolbox, x, y, project_item, DataStoreFactory.icon())
 
-    @property
-    def add_form_maker(self):
-        return AddDataStoreWidget
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project, logger):
+        return DataStore.from_dict(name, item_dict, toolbox, project, logger)
 
-    @property
-    def specification_form_maker(self):
-        raise NotImplementedError()
+    @staticmethod
+    def make_properties_widget(toolbox):
+        """See base class"""
+        return DataStorePropertiesWidget(toolbox)
 
-    @property
-    def specification_menu_maker(self):
+    @staticmethod
+    def make_specification_menu(parent, index):
         raise NotImplementedError()
 
     @staticmethod
-    def _make_properties_widget(toolbox):
-        """See base class"""
-        return DataStorePropertiesWidget(toolbox)
+    def make_specification_widget(toolbox):
+        raise NotImplementedError()

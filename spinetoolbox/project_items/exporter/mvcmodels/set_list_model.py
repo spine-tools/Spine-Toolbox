@@ -139,12 +139,8 @@ class SetListModel(QAbstractListModel):
                 checked = self._set_settings.metadata(self._sorted_sets[row - domain_count]).is_exportable()
             return Qt.Checked if checked else Qt.Unchecked
         if role == Qt.ToolTipRole:
-            if row < domain_count:
-                exportable = self._set_settings.metadata(self._sorted_domains[row]).exportable
-            else:
-                exportable = self._set_settings.metadata(self._sorted_sets[row - domain_count]).exportable
-            if exportable == gdx.ExportFlag.FORCED_NON_EXPORTABLE:
-                return "This domain is the global parameter domain\nand cannot be exported as is."
+            if row < domain_count and self._sorted_domains[row] == self._set_settings.global_parameters_domain_name:
+                return "This domain has been set as the global\nparameters domain."
         return None
 
     def flags(self, index):
@@ -224,14 +220,10 @@ class SetListModel(QAbstractListModel):
         if row < domain_count:
             name = self._sorted_domains[row]
             metadata = self._set_settings.metadata(name)
-            if metadata.is_forced():
-                return False
             exportable = gdx.ExportFlag.EXPORTABLE if value == Qt.Checked else gdx.ExportFlag.NON_EXPORTABLE
             metadata.exportable = exportable
         else:
             metadata = self._set_settings.metadata(self._sorted_sets[row - domain_count])
-            if metadata.is_forced():
-                return False
             exportable = gdx.ExportFlag.EXPORTABLE if value == Qt.Checked else gdx.ExportFlag.NON_EXPORTABLE
             metadata.exportable = exportable
             self.dataChanged.emit(index, index, [Qt.CheckStateRole, Qt.ToolTipRole])

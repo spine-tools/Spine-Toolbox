@@ -35,8 +35,20 @@ class TestGimlet(unittest.TestCase):
     def setUp(self):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
-        item_dict = dict(name="G", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Gimlet", item_dict)
+        item_dict = {
+            "G": {
+                "type": "Gimlet",
+                "description": "",
+                "use_shell": True,
+                "shell_index": 0,
+                "cmd": "",
+                "selections": {},
+                "work_dir_mode": True,
+                "x": 0,
+                "y": 0,
+            }
+        }
+        self.toolbox.project().add_project_items(item_dict)
         index = self.toolbox.project_item_model.find_item("G")
         self.gimlet = self.toolbox.project_item_model.item(index).project_item
 

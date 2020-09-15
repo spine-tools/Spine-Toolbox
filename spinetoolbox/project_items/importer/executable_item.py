@@ -20,6 +20,7 @@ import pathlib
 from PySide2.QtCore import QObject, QEventLoop, Signal, Slot, QThread
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.spine_io.gdx_utils import find_gams_directory
+from spinetoolbox.helpers import shorten
 from .importer_worker import ImporterWorker
 from .item_info import ItemInfo
 from .utils import deserialize_mappings
@@ -150,7 +151,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
     def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         """See base class."""
         settings = deserialize_mappings(item_dict["mappings"], project_dir)
-        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", item_dict["short name"])
+        data_dir = pathlib.Path(project_dir, ".spinetoolbox", "items", shorten(name))
         logs_dir = os.path.join(data_dir, "logs")
         gams_path = app_settings.value("appSettings/gamsPath", defaultValue=None)
         cancel_on_error = item_dict["cancel_on_error"]

@@ -37,7 +37,15 @@ class AddGimletWidget(AddProjectItemWidget):
 
     def call_add_item(self):
         """Creates new project item according to user's selections."""
-        item = dict(
-            name=self.name, description=self.description, x=self._x, y=self._y, use_shell=True, shell_index=0, cmd=""
-        )
-        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)
+        item = {
+            self.name: {
+                "type": ItemInfo.item_type(),
+                "description": self.description,
+                "x": self._x,
+                "y": self._y,
+                "use_shell": True,
+                "shell_index": 0,
+                "cmd": "",
+            }
+        }
+        self._project.add_project_items(item, set_selected=True)

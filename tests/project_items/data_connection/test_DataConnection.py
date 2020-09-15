@@ -30,8 +30,8 @@ class TestDataConnection(unittest.TestCase):
     def setUp(self):
         """Set up toolbox."""
         self.toolbox = create_toolboxui_with_project()
-        item_dict = dict(name="DC", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Data Connection", item_dict)
+        item_dict = {"DC": {"type": "Data Connection", "description": "", "references": [], "x": 0, "y": 0}}
+        self.toolbox.project().add_project_items(item_dict)
         index = self.toolbox.project_item_model.find_item("DC")
         self.data_connection = self.toolbox.project_item_model.item(index).project_item
 
@@ -59,7 +59,7 @@ class TestDataConnection(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.data_connection.item_dict()
-        a = ["type", "short name", "description", "x", "y", "references"]
+        a = ["type", "description", "x", "y", "references"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 

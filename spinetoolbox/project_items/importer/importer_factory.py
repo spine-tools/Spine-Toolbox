@@ -25,29 +25,33 @@ from .widgets.add_importer_widget import AddImporterWidget
 
 class ImporterFactory(ProjectItemFactory):
     @staticmethod
+    def item_class():
+        return Importer
+
+    @staticmethod
     def icon():
         return ":/icons/project_item_icons/database-import.svg"
 
-    @property
-    def item_maker(self):
-        return Importer
+    @staticmethod
+    def make_add_item_widget(toolbox, x, y, specification):
+        return AddImporterWidget(toolbox, x, y, specification)
 
-    @property
-    def icon_maker(self):
-        return ImporterIcon
+    @staticmethod
+    def make_icon(toolbox, x, y, project_item):
+        return ImporterIcon(toolbox, x, y, project_item, ImporterFactory.icon())
 
-    @property
-    def add_form_maker(self):
-        return AddImporterWidget
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project, logger):
+        return Importer.from_dict(name, item_dict, toolbox, project, logger)
 
-    @property
-    def specification_form_maker(self):
-        raise NotImplementedError()
+    @staticmethod
+    def make_properties_widget(toolbox):
+        return ImporterPropertiesWidget(toolbox)
 
-    @property
-    def specification_menu_maker(self):
+    @staticmethod
+    def make_specification_menu(parent, index):
         raise NotImplementedError()
 
     @staticmethod
-    def _make_properties_widget(toolbox):
-        return ImporterPropertiesWidget(toolbox)
+    def make_specification_widget(toolbox):
+        raise NotImplementedError()

@@ -1,9 +1,11 @@
 {
     "project": {
-        "version": 1,
+        "version": 2,
         "name": "UnitTest Project",
-        "description": "Project for testing open_project() method in ToolboxUI.",
-        "tool_specifications": [],
+        "description": "Project for unit tests.",
+        "specifications": {
+            "Tool": []
+        },
         "connections": [
             {
                 "from": [
@@ -35,48 +37,36 @@
                     "left"
                 ]
             }
-        ],
-        "scene_x": -14.5,
-        "scene_y": -23.0,
-        "scene_w": 464.0,
-        "scene_h": 324.0
+        ]
     },
-    "objects": {
-        "Data Stores": {
-            "a": {
-                "short name": "a",
-                "description": "",
-                "x": 38.0,
-                "y": 100.0,
-                "url": null
-            }
+    "items": {
+        "a": {
+            "description": "",
+            "x": 38.0,
+            "y": 100.0,
+            "url": null,
+            "type": "Data Store"
         },
-        "Data Connections": {
-            "b": {
-                "short name": "b",
-                "description": "",
-                "x": 155.0,
-                "y": 101.0,
-                "references": []
-            }
+        "b": {
+            "description": "",
+            "x": 155.0,
+            "y": 101.0,
+            "references": [],
+            "type": "Data Connection"
         },
-        "Tools": {
-            "c": {
-                "short name": "c",
-                "description": "",
-                "x": 277.0,
-                "y": 101.0,
-                "tool": "",
-                "execute_in_work": true
-            }
+        "c": {
+            "description": "",
+            "x": 277.0,
+            "y": 101.0,
+            "execute_in_work": true,
+            "type": "Tool",
+            "specification": ""
         },
-        "Views": {
-            "d": {
-                "short name": "d",
-                "description": "",
-                "x": 395.0,
-                "y": 100.0
-            }
+        "d": {
+            "description": "",
+            "x": 395.0,
+            "y": 100.0,
+            "type": "View"
         }
     }
 }

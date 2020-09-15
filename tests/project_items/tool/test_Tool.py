@@ -67,7 +67,7 @@ class TestTool(unittest.TestCase):
         """Tests Item dictionary creation."""
         tool = self._add_tool()
         d = tool.item_dict()
-        a = ["type", "short name", "description", "x", "y", "tool", "execute_in_work", "cmd_line_args"]
+        a = ["type", "description", "x", "y", "specification", "execute_in_work", "cmd_line_args"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 
@@ -136,8 +136,17 @@ class TestTool(unittest.TestCase):
         """Test that specification is loaded into selections on Tool creation,
         and then shown in the ui when Tool is activated.
         """
-        item = dict(name="Tool", description="", x=0, y=0, tool="simple_exec", execute_in_work=False)
-        self.toolbox.project().add_project_items("Tool", item)  # Add Tool to project
+        item = {
+            "Tool": {
+                "type": "Tool",
+                "description": "",
+                "x": 0,
+                "y": 0,
+                "specification": "simple_exec",
+                "execute_in_work": False,
+            }
+        }
+        self.toolbox.project().add_project_items(item)
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
@@ -146,8 +155,8 @@ class TestTool(unittest.TestCase):
     def test_save_and_restore_selections(self):
         """Test that selections are saved and restored when deactivating a Tool and activating it again.
         """
-        item = dict(name="Tool", description="", x=0, y=0, tool="")
-        self.toolbox.project().add_project_items("Tool", item)  # Add Tool to project
+        item = {"Tool": {"type": "Tool", "description": "", "x": 0, "y": 0, "specification": ""}}
+        self.toolbox.project().add_project_items(item)
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.item(ind).project_item
         tool.activate()
@@ -159,8 +168,8 @@ class TestTool(unittest.TestCase):
         self._assert_is_simple_exec_tool(tool)
 
     def _add_tool(self):
-        item_dict = dict(name="T", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("Tool", item_dict)
+        item_dict = {"T": {"type": "Tool", "description": "", "x": 0, "y": 0}}
+        self.toolbox.project().add_project_items(item_dict)
         index = self.toolbox.project_item_model.find_item("T")
         return self.toolbox.project_item_model.item(index).project_item
 

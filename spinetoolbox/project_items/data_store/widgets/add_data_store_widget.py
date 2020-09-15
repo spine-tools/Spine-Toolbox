@@ -22,19 +22,27 @@ from ..item_info import ItemInfo
 
 
 class AddDataStoreWidget(AddProjectItemWidget):
-    """A widget to query user's preferences for a new item.
-
-    Attributes:
-        toolbox (ToolboxUI): Parent widget
-        x (int): X coordinate of new item
-        y (int): Y coordinate of new item
-    """
+    """A widget to query user's preferences for a new item."""
 
     def __init__(self, toolbox, x, y, spec=""):
-        """Initialize class."""
+        """
+        Args:
+            toolbox (ToolboxUI): Parent widget
+            x (int): X coordinate of new item
+            y (int): Y coordinate of new item
+            spec (str): item specification's name
+        """
         super().__init__(toolbox, x, y, DataStore, spec=spec)
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        item = dict(name=self.name, description=self.description, x=self._x, y=self._y, url=dict())
-        self._project.add_project_items(ItemInfo.item_type(), item, set_selected=True)
+        item = {
+            self.name: {
+                "type": ItemInfo.item_type(),
+                "description": self.description,
+                "x": self._x,
+                "y": self._y,
+                "url": dict(),
+            }
+        }
+        self._project.add_project_items(item, set_selected=True)

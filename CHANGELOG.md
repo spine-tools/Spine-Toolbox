@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+
+## [0.5.0-beta.0] - 2020-09-14
+
+### Added
 - Now it's possible to export graphs as PDF files from the *Graph* menu in the Data Store form.
 - Now it's possible to prune entire classes from the graph view. The option is available both from the *Graph* menu and
   from *Entity Graph* context menus. Also, pruned items can be restored gradually.
@@ -39,12 +48,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   each individual item because the exact order is not know before the Execute button is actually clicked.
   The number still indicates the execution order but may show the same numbers for items in different parallel
   branches.
-
-
-### Deprecated
-### Removed
-### Fixed
-### Security
+- Project.json file format has been upgraded to version 2. Version 1 project.json files are upgraded to version 2
+  automatically when a project is opened. 
 
 ## [0.4.0-final.0] - 2020-04-03
 

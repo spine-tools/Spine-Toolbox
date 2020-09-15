@@ -47,22 +47,31 @@ _CONNECTOR_NAME_TO_CLASS = {
 
 class Importer(ProjectItem):
     def __init__(
-        self, toolbox, project, logger, name, description, mappings, x, y, cancel_on_error=True, mapping_selection=None
+        self,
+        name,
+        description,
+        x,
+        y,
+        toolbox,
+        project,
+        logger,
+        mapping_settings,
+        cancel_on_error=True,
+        mapping_selection=None,
     ):
         """Importer class.
 
         Args:
+            name (str): Project item name
+            description (str): Project item description
+            mapping_selection (dict): a map from label to a bool indicating if the file item is checked
+            x (float): Initial icon scene X coordinate
+            y (float): Initial icon scene Y coordinate
             toolbox (ToolboxUI): QMainWindow instance
             project (SpineToolboxProject): the project this item belongs to
             logger (LoggerInterface): a logger instance
-            name (str): Project item name
-            description (str): Project item description
-            mappings (list): List where each element contains two dicts (path dict and mapping dict)
-            x (float): Initial icon scene X coordinate
-            y (float): Initial icon scene Y coordinate
-            cancel_on_error (bool, optional): if True the item's execution will stop on import error
-            mapping_selection (list, optional): serialized checked states for each file item
-                either selected or unselected
+            cancel_on_error (bool): if True the item's execution will stop on import error
+            mapping_settings (dict, optional): a map from label to its mappings
        """
         super().__init__(name, description, x, y, project, logger)
         # Make logs subdirectory for this item
@@ -73,34 +82,11 @@ class Importer(ProjectItem):
         except OSError:
             self._logger.msg_error.emit(f"[OSError] Creating directory {self.logs_dir} failed. Check permissions.")
         # Variables for saving selections when item is (de)activated
-        if not mappings:
-            mappings = list()
-        # convert table_types and table_row_types keys to int since json always has strings as keys.
-        for _, mapping in mappings:
-            table_types = mapping.get("table_types", {})
-            mapping["table_types"] = {
-                table_name: {int(col): t for col, t in col_types.items()}
-                for table_name, col_types in table_types.items()
-            }
-            table_row_types = mapping.get("table_row_types", {})
-            mapping["table_row_types"] = {
-                table_name: {int(row): t for row, t in row_types.items()}
-                for table_name, row_types in table_row_types.items()
-            }
-        # Convert serialized paths to absolute in mappings
-        _fix_1d_array_to_array(mappings)
-        self.settings = deserialize_mappings(mappings, self._project.project_dir)
+        self.settings = mapping_settings
         # self.settings is now a dictionary, where elements have the absolute path as the key and the mapping as value
         self.cancel_on_error = cancel_on_error
         self._file_model = FileListModel()
-        if not mapping_selection or isinstance(mapping_selection[0], bool):
-            # This is for legacy selections which either did not exist in the item dict
-            # or were just a list of booleans which caused problems with empty mappings.
-            # Consider removing this if in Toolbox 0.6
-            mapping_selection = {}
-        else:
-            mapping_selection = deserialize_checked_states(mapping_selection, self._project.project_dir)
-        self._file_model.set_initial_state(mapping_selection)
+        self._file_model.set_initial_state(mapping_selection if mapping_selection is not None else dict())
         self._file_model.selected_state_changed.connect(self._push_file_selection_change_to_undo_stack)
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportEditorWindow instance
@@ -374,6 +360,35 @@ class Importer(ProjectItem):
         d["mapping_selection"] = serialize_checked_states(self._file_model.files, self._project.project_dir)
         return d
 
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        """See base class."""
+        description, x, y = ProjectItem.parse_item_dict(item_dict)
+        mappings = item_dict.get("mappings")
+        if mappings is None:
+            mappings = list()
+        # convert table_types and table_row_types keys to int since json always has strings as keys.
+        for _, mapping in mappings:
+            table_types = mapping.get("table_types", {})
+            mapping["table_types"] = {
+                table_name: {int(col): t for col, t in col_types.items()}
+                for table_name, col_types in table_types.items()
+            }
+            table_row_types = mapping.get("table_row_types", {})
+            mapping["table_row_types"] = {
+                table_name: {int(row): t for row, t in row_types.items()}
+                for table_name, row_types in table_row_types.items()
+            }
+        # Convert serialized paths to absolute in mappings
+        _fix_1d_array_to_array(mappings)
+        mapping_settings = deserialize_mappings(mappings, project.project_dir)
+        cancel_on_error = item_dict.get("cancel_on_error", False)
+        mapping_selection = item_dict.get("mapping_selection")
+        mapping_selection = deserialize_checked_states(mapping_selection, project.project_dir)
+        return Importer(
+            name, description, x, y, toolbox, project, logger, mapping_settings, cancel_on_error, mapping_selection
+        )
+
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type() == "Data Connection":
@@ -438,6 +453,34 @@ class Importer(ProjectItem):
             list_of_mappings.append([new_path, mapping])
         new_importer["mappings"] = list_of_mappings
         return new_importer
+
+    @staticmethod
+    def upgrade_v1_to_v2(item_name, item_dict):
+        """Upgrades item's dictionary from v1 to v2.
+
+        Changes:
+        - if mapping_selection does not exist or if it
+        is a list of booleans, reset mapping_selection
+        to an empty list.
+
+        Args:
+            item_name (str): item's name
+            item_dict (dict): Version 1 item dictionary
+
+        Returns:
+            dict: Version 2 Exporter dictionary
+        """
+        print("Upgrading Importer")
+        try:
+            mapping_selection = item_dict["mapping_selection"]
+        except KeyError:
+            item_dict["mapping_selection"] = list()
+            return item_dict
+        if len(mapping_selection) == 0:
+            return item_dict
+        if isinstance(mapping_selection[0], bool):
+            item_dict["mapping_selection"] = list()
+        return item_dict
 
     @staticmethod
     def serialize_mappings(mappings, project_path):

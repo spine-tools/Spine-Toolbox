@@ -147,17 +147,15 @@ class ParameterIndexSettings(QWidget):
         index = self._ui.domains_combo.findText(old_name)
         self._ui.domains_combo.setItemText(index, new_name)
 
-    def update_records(self, domain_name, records):
+    def update_records(self, domain_name):
         """
         Updates existing domain's records.
 
         Args:
             domain_name (str): domain's name
-            records (Records): new records
         """
-        self._available_domains[domain_name] = records
         if domain_name == self._ui.domains_combo.currentText():
-            self._indexing_table_model.set_records(records)
+            self._indexing_table_model.set_records(self._available_domains[domain_name])
 
     def notification_message(self, message):
         """Shows a notification message on the widget."""

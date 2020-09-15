@@ -20,7 +20,7 @@ from copy import deepcopy
 import enum
 from PySide2.QtCore import QItemSelection, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QAbstractButton, QDialogButtonBox, QMessageBox, QWidget
-from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api import SpineDBAPIError
 import spinetoolbox.spine_io.exporters.gdx as gdx
 from ..db_utils import scenario_filtered_database_map
 from ..list_utils import move_selected_elements_by
@@ -95,7 +95,7 @@ class GdxExportSettings(QWidget):
         self._ui.record_move_up_button.clicked.connect(self._move_records_up)
         self._ui.record_move_down_button.clicked.connect(self._move_records_down)
         self._set_settings = set_settings
-        self._set_list_model = SetListModel(set_settings,)
+        self._set_list_model = SetListModel(set_settings)
         self._set_list_model.dataChanged.connect(self._domains_sets_exportable_state_changed)
         self._ui.set_list_view.setModel(self._set_list_model)
         record_list_model = RecordListModel()

@@ -64,9 +64,9 @@ class ToolSpecification(ProjectItemSpecification):
         """
 
         Args:
-            name (str): Name of the tool
+            name (str): Tool specification name
             tooltype (str): Type of Tool (e.g. Python, Julia, ..)
-            path (str): Path to tool
+            path (str): Path to Tool specification
             includes (list): List of files belonging to the tool specification (relative to 'path')
             settings (QSettings): Toolbox settings
             logger (LoggerInterface): a logger instance
@@ -117,12 +117,11 @@ class ToolSpecification(ProjectItemSpecification):
             "outputfiles": list(self.outputfiles),
             "cmdline_args": self.cmdline_args,
             "execute_in_work": self.execute_in_work,
-            "includes_main_path": os.path.relpath(self.path, os.path.dirname(definition_path)),
+            "includes_main_path": os.path.relpath(self.path, os.path.dirname(definition_path)).replace(os.sep, "/"),
         }
         with open(definition_path, "w") as fp:
             try:
                 json.dump(definition, fp, indent=4)
-                self._logger.msg.emit("Tool specification <b>{0}</b> saved.".format(self.name))
                 return True
             except ValueError:
                 self.statusbar.showMessage("Error saving file", 3000)

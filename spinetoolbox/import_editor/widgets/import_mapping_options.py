@@ -445,9 +445,7 @@ class ImportMappingOptions(QObject):
             return
         source_table_name = self._mapping_specification_model.source_table_name
         specification_name = self._mapping_specification_model.mapping_name
-        self._undo_stack.push(
-            SetMapCompressFlag(source_table_name, specification_name, self, compress == Qt.Checked)
-        )
+        self._undo_stack.push(SetMapCompressFlag(source_table_name, specification_name, self, compress == Qt.Checked))
 
     def set_map_compress(self, source_table_name, mapping_specification_name, compress):
         """

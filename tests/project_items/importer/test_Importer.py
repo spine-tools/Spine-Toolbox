@@ -32,8 +32,18 @@ class TestImporter(unittest.TestCase):
     def setUp(self):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
-        item_dict = dict(name="importer", description="", mappings=dict(), x=0, y=0)
-        self.toolbox.project().add_project_items("Importer", item_dict)
+        item_dict = {
+            "importer": {
+                "type": "Importer",
+                "description": "",
+                "mappings": list(),
+                "cancel_on_error": True,
+                "mapping_selection": list(),
+                "x": 0,
+                "y": 0,
+            }
+        }
+        self.toolbox.project().add_project_items(item_dict)
         index = self.toolbox.project_item_model.find_item("importer")
         self.importer = self.toolbox.project_item_model.item(index).project_item
 
@@ -60,7 +70,7 @@ class TestImporter(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.importer.item_dict()
-        a = ["type", "short name", "description", "x", "y", "mappings", "cancel_on_error", "mapping_selection"]
+        a = ["type", "description", "x", "y", "mappings", "cancel_on_error", "mapping_selection"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 

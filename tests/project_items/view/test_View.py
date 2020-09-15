@@ -31,8 +31,8 @@ class TestView(unittest.TestCase):
     def setUp(self):
         """Set up."""
         self.toolbox = create_toolboxui_with_project()
-        item_dict = dict(name="V", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("View", item_dict)
+        item_dict = {"V": {"type": "View", "description": "", "x": 0, "y": 0}}
+        self.toolbox.project().add_project_items(item_dict)
         index = self.toolbox.project_item_model.find_item("V")
         self.view = self.toolbox.project_item_model.item(index).project_item
 
@@ -59,7 +59,7 @@ class TestView(unittest.TestCase):
     def test_item_dict(self):
         """Tests Item dictionary creation."""
         d = self.view.item_dict()
-        a = ["type", "short name", "description", "x", "y"]
+        a = ["type", "description", "x", "y"]
         for k in a:
             self.assertTrue(k in d, f"Key '{k}' not in dict {d}")
 

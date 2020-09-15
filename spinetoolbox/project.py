@@ -21,11 +21,11 @@ import json
 from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
-from .category import CATEGORIES
 from .metaobject import MetaObject
 from .helpers import create_dir, inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
+from .project_item import finish_project_item_construction
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
 from .project_commands import (
@@ -185,95 +185,76 @@ class SpineToolboxProject(MetaObject):
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        project_dict["tool_specifications"] = spec_paths
+        project_dict["specifications"] = dict()
+        project_dict["specifications"]["Tool"] = spec_paths
         # Compute connections directly from Links on scene
         project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._project_item_model.root().children():
             category = category_item.name
-            category_dict = items_dict[category] = dict()
+            # Store item dictionaries with item name as key and item_dict as value
             for item in self._project_item_model.items(category):
-                category_dict[item.name] = item.project_item.item_dict()
+                items_dict[item.name] = item.project_item.item_dict()
         # Save project to file
-        saved_dict = dict(project=project_dict, objects=items_dict)
+        saved_dict = dict(project=project_dict, items=items_dict)
         # Write into JSON file
         with open(self.config_file, "w") as fp:
             json.dump(saved_dict, fp, indent=4)
         return True
 
-    def load(self, objects_dict):
+    def load(self, items_dict):
         """Populates project item model with items loaded from project file.
 
         Args:
-            objects_dict (dict): Dictionary containing all project items in JSON format
+            items_dict (dict): Dictionary containing all project items in JSON format
 
         Returns:
             bool: True if successful, False otherwise
         """
         self._logger.msg.emit("Loading project items...")
-        empty = True
-        for category_name, category_dict in objects_dict.items():
-            if category_name not in CATEGORIES:
-                self._logger.msg_warning.emit(
-                    f"The project contains an unknown project item category: '{category_name}'. " "Moving on..."
-                )
-                continue
-            items_in_category = dict()
-            for name, item_dict in category_dict.items():
-                item_dict.pop("short name", None)
-                item_dict["name"] = name
-                try:
-                    item_type = item_dict.pop("type")
-                except KeyError:
-                    item_type = _legacy_type_from_category(category_name)
-                items_in_category.setdefault(item_type, list()).append(item_dict)
-                empty = False
-            for item_type, items in items_in_category.items():
-                if not self.make_and_add_project_items(item_type, items, verbosity=False):
-                    return False
-        if empty:
+        if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
+        self.make_and_add_project_items(items_dict, verbosity=False)
         return True
 
-    def add_project_items(self, item_type, *items, set_selected=False, verbosity=True):
+    def add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.
         """
-        if not items:
+        if not items_dict:
             return
         self._toolbox.undo_stack.push(
-            AddProjectItemsCommand(self, item_type, items, set_selected=set_selected, verbosity=verbosity)
+            AddProjectItemsCommand(self, items_dict, set_selected=set_selected, verbosity=verbosity)
         )
 
-    def make_project_tree_items(self, item_type, items):
+    def make_project_tree_items(self, items_dict):
         """Creates and returns a dictionary mapping category indexes to a list of corresponding LeafProjectTreeItem instances.
 
         Args:
-            item_type (str): item type
-            items (list): one or more dicts of items to add
+            items_dict (dict): a mapping from item name to item dict
 
         Returns:
             dict(QModelIndex, list(LeafProjectTreeItem))
         """
-        factory = self._toolbox.item_factories.get(item_type)
-        if factory is None:
-            self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
-            for item in items:
-                self._logger.msg_error.emit(f"Loading project item <b>{item['name']}</b> failed")
-            return {None: None}
         project_items_by_category = {}
-        for item_dict in items:
+        for item_name, item_dict in items_dict.items():
+            item_type = item_dict["type"]
+            factory = self._toolbox.item_factories.get(item_type)
+            if factory is None:
+                self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
+                self._logger.msg_error.emit(f"Loading project item <b>{item_name}</b> failed")
+                return {}
             try:
-                project_item = factory.make_item(self._toolbox, self, self._logger, **item_dict)
+                project_item = factory.make_item(item_name, item_dict, self._toolbox, self, self._logger)
             except TypeError:
                 self._logger.msg_error.emit(
-                    f"Creating <b>{item_type}</b> project item <b>{item_dict['name']}</b> failed. "
+                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     "This is most likely caused by an outdated project file."
                 )
                 continue
             except KeyError as error:
                 self._logger.msg_error.emit(
-                    f"Creating <b>{item_type}</b> project item <b>{item_dict['name']}</b> failed. "
+                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     f"This is most likely caused by an outdated or corrupted project file "
                     f"(missing JSON key: {str(error)})."
                 )
@@ -300,8 +281,7 @@ class SpineToolboxProject(MetaObject):
         for project_tree_item in project_tree_items:
             project_item = project_tree_item.project_item
             self._project_item_model.insert_item(project_tree_item, category_ind)
-            factory = self._toolbox.item_factories[project_item.item_type()]
-            factory.activate_project_item(self._toolbox, project_item)
+            finish_project_item_construction(project_item, self._toolbox)
             # Append new node to networkx graph
             self.add_to_dag(project_item.name)
             if verbosity:
@@ -322,30 +302,25 @@ class SpineToolboxProject(MetaObject):
         ind = self._project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
-    def make_and_add_project_items(self, item_type, items, set_selected=False, verbosity=True):
+    def make_and_add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Adds items to project at loading.
 
         Args:
-            item_type (str): Item type e.g. "Tool"
-            items (list): one or more dict of items to add
+            items_dict (dict): a mapping from item name to item dict
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        for category_ind, project_tree_items in self.make_project_tree_items(item_type, items).items():
-            if not category_ind:
-                continue
+        for category_ind, project_tree_items in self.make_project_tree_items(items_dict).items():
             self.do_add_project_tree_items(
                 category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity
             )
-        return True
 
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""
         self.dag_handler.add_dag_node(item_name)
 
     def remove_all_items(self):
-        """Pushes a RemoveAllProjectItemsCommand to the toolbox undo stack.
-        """
+        """Pushes a RemoveAllProjectItemsCommand to the toolbox undo stack."""
         items_per_category = self._project_item_model.items_per_category()
         if not any(v for v in items_per_category.values()):
             self._logger.msg.emit("No project items to remove")
@@ -414,8 +389,7 @@ class SpineToolboxProject(MetaObject):
         self._remove_item(category_ind, item)
 
     def _remove_item(self, category_ind, item, delete_data=False):
-        """
-        Removes LeafProjectTreeItem from project.
+        """Removes LeafProjectTreeItem from project.
 
         Args:
             category_ind (QModelIndex): The category index
@@ -642,7 +616,7 @@ class SpineToolboxProject(MetaObject):
     def settings(self):
         return self._settings
 
-    @Slot(str, "QVariant", "QVariant")
+    @Slot(str, object, object)
     def _handle_dag_node_execution_finished(self, item_name, execution_direction, engine_state):
         """Handles successful execution of a dag node.
         Performs post successful execution actions in corresponding project item."""
@@ -661,26 +635,3 @@ class SpineToolboxProject(MetaObject):
             if items_successors is not None:
                 return [self._project_item_model.get_item(successor).project_item for successor in items_successors]
         return []
-
-
-def _legacy_type_from_category(category_name):
-    """
-    Returns an item type for a project item in given category if item_type is missing from item dict.
-
-    This is for backwards compatibility with old .proj files where the project items did not store their type
-    in the item dict.
-
-    Args:
-        category_name (str): category name
-    Returns:
-        str: item type
-    """
-    category_to_item_type = {
-        "Data Connections": "Data Connection",
-        "Data Stores": "Data Store",
-        "Exporters": "Exporter",
-        "Importers": "Importer",
-        "Tools": "Tool",
-        "Views": "View",
-    }
-    return category_to_item_type[category_name]

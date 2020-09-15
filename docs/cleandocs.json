@@ -1,13 +1,16 @@
 {
     "name": "CleanDocs",
-    "description": "",
     "tooltype": "executable",
-    "execute_in_work": false,
     "includes": [
         "make.bat"
     ],
+    "description": "",
     "inputfiles": [],
     "inputfiles_opt": [],
     "outputfiles": [],
-    "cmdline_args": "clean"
+    "cmdline_args": [
+        "clean"
+    ],
+    "execute_in_work": false,
+    "includes_main_path": "."
 }

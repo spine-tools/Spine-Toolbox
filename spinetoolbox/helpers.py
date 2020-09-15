@@ -26,7 +26,7 @@ import shutil
 import sys
 import urllib.parse
 import matplotlib
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle, QFileDialog
@@ -44,6 +44,7 @@ from PySide2.QtGui import (
     QDesktopServices,
     QPainterPath,
     QPen,
+    QKeySequence,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
@@ -888,3 +889,20 @@ def call_on_focused_widget(parent, callable_name):
                 method()
                 break
         focus_widget = focus_widget.parentWidget()
+
+
+def shorten(name):
+    """Returns the 'short name' version of given name."""
+    return name.lower().replace(' ', '_')
+
+
+class ChildCyclingKeyPressFilter(QObject):
+    """Event filter class for catching next and previous child key presses.
+    Used in filtering the Ctrl+Tab and Ctrl+Shift+Tab key presses in the
+    Item Properties tab widget."""
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.KeyPress:
+            if event.matches(QKeySequence.NextChild) or event.matches(QKeySequence.PreviousChild):
+                return True
+        return QObject.eventFilter(self, obj, event)  # Pass event further

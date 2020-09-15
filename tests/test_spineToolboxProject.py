@@ -220,30 +220,32 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
-        item = dict(name="DS", description="", url=dict(), x=0, y=0)
+        item = {"DS": {"type": "Data Store", "description": "", "url": dict(), "x": 0, "y": 0}}
         with mock.patch("spinetoolbox.project_item.create_dir"):
-            self.toolbox.project().add_project_items("Data Store", item)
+            self.toolbox.project().add_project_items(item)
         return "DS"
 
     def add_dc(self):
         """Helper method to add Data Connection. Returns created items name."""
-        item = dict(name="DC", description="", references=list(), x=0, y=0)
+        item = {"DC": {"type": "Data Connection", "description": "", "references": list(), "x": 0, "y": 0}}
         with mock.patch("spinetoolbox.project_item.create_dir"):
-            self.toolbox.project().add_project_items("Data Connection", item)
+            self.toolbox.project().add_project_items(item)
         return "DC"
 
     def add_tool(self):
         """Helper method to add Tool. Returns created items name."""
-        item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
+        item = {
+            "tool": {"type": "Tool", "description": "", "specification": "", "execute_in_work": False, "x": 0, "y": 0}
+        }
         with mock.patch("spinetoolbox.project_item.create_dir"):
-            self.toolbox.project().add_project_items("Tool", item)
+            self.toolbox.project().add_project_items(item)
         return "tool"
 
     def add_view(self):
         """Helper method to add View. Returns created items name."""
-        item = dict(name="view", description="", x=0, y=0)
+        item = {"view": {"type": "View", "description": "", "x": 0, "y": 0}}
         with mock.patch("spinetoolbox.project_item.create_dir"):
-            self.toolbox.project().add_project_items("View", item)
+            self.toolbox.project().add_project_items(item)
         return "view"
 
     def _make_item(self, add_item_function):

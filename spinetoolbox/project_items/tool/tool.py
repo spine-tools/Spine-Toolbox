@@ -27,7 +27,6 @@ from spinetoolbox.helpers import open_url
 from spinetoolbox.project_items.shared.helpers import split_cmdline_args
 from .commands import UpdateToolExecuteInWorkCommand, UpdateToolCmdLineArgsCommand
 from .item_info import ItemInfo
-from .tool_specifications import ToolSpecification
 from .widgets.custom_menus import ToolContextMenu, ToolSpecificationMenu
 from .executable_item import ExecutableItem
 from .utils import flatten_file_path_duplicates, find_file, find_last_output_files, is_pattern
@@ -35,21 +34,31 @@ from .utils import flatten_file_path_duplicates, find_file, find_last_output_fil
 
 class Tool(ProjectItem):
     def __init__(
-        self, toolbox, project, logger, name, description, x, y, tool="", execute_in_work=True, cmd_line_args=None
+        self,
+        name,
+        description,
+        x,
+        y,
+        toolbox,
+        project,
+        logger,
+        specification_name="",
+        execute_in_work=True,
+        cmd_line_args=None,
     ):
         """Tool class.
 
         Args:
-            toolbox (ToolboxUI): QMainWindow instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            tool (str): Name of this Tool's Tool specification
+            toolbox (ToolboxUI): QMainWindow instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
+            specification_name (str): Name of this Tool's Tool specification
             execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
-            cmd_line_args (list): Tool command line arguments
+            cmd_line_args (list, optional): Tool command line arguments
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
@@ -67,11 +76,11 @@ class Tool(ProjectItem):
         self.execute_in_work = None
         self.undo_execute_in_work = None
         self.source_files = list()
-        self.cmd_line_args = list() if not cmd_line_args else cmd_line_args
-        self._specification = self._toolbox.specification_model.find_specification(tool)
-        if tool and not self._specification:
+        self.cmd_line_args = cmd_line_args if cmd_line_args is not None else list()
+        self._specification = self._toolbox.specification_model.find_specification(specification_name)
+        if specification_name and not self._specification:
             self._logger.msg_error.emit(
-                f"Tool <b>{self.name}</b> should have a Tool specification <b>{tool}</b> but it was not found"
+                f"Tool <b>{self.name}</b> should have a Tool specification <b>{specification_name}</b> but it was not found"
             )
         self.do_set_specification(self._specification)
         self.do_update_execution_mode(execute_in_work)
@@ -479,12 +488,23 @@ class Tool(ProjectItem):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
         if not self.specification():
-            d["tool"] = ""
+            d["specification"] = ""
         else:
-            d["tool"] = self.specification().name
+            d["specification"] = self.specification().name
         d["execute_in_work"] = self.execute_in_work
         d["cmd_line_args"] = split_cmdline_args(" ".join(self.cmd_line_args))
         return d
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        """See base class."""
+        description, x, y = ProjectItem.parse_item_dict(item_dict)
+        specification_name = item_dict.get("specification", "")
+        execute_in_work = item_dict.get("execute_in_work", True)
+        cmd_line_args = item_dict.get("cmd_line_args")
+        return Tool(
+            name, description, x, y, toolbox, project, logger, specification_name, execute_in_work, cmd_line_args
+        )
 
     def custom_context_menu(self, parent, pos):
         """Returns the context menu for this item.
@@ -578,3 +598,20 @@ class Tool(ProjectItem):
             return
         for duplicate in duplicates:
             self.add_notification("Duplicate input files from upstream items:<br>{}".format("<br>".join(duplicate)))
+
+    @staticmethod
+    def upgrade_v1_to_v2(item_name, item_dict):
+        """Upgrades item's dictionary from v1 to v2.
+
+        Changes:
+        - 'tool' key is renamed to 'specification'
+
+        Args:
+            item_name (str): item's name
+            item_dict (dict): Version 1 item dictionary
+
+        Returns:
+            dict: Version 2 Tool dictionary
+        """
+        item_dict["specification"] = item_dict.pop("tool", "")
+        return item_dict

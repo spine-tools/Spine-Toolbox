@@ -29,19 +29,19 @@ from .executable_item import ExecutableItem
 
 
 class Combiner(ProjectItem):
-    def __init__(self, toolbox, project, logger, name, description, x, y, cancel_on_error=False):
+    def __init__(self, name, description, x, y, toolbox, project, logger, cancel_on_error=False):
         """
         Combiner class.
 
         Args:
-            toolbox (ToolboxUI): a toolbox instance
-            project (SpineToolboxProject): the project this item belongs to
-            logger (LoggerInterface): a logger instance
             name (str): Object name
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            cancel_on_error (bool, optional): if True, changes will be reverted on errors
+            toolbox (ToolboxUI): a toolbox instance
+            project (SpineToolboxProject): the project this item belongs to
+            logger (LoggerInterface): a logger instance
+            cancel_on_error (bool): if True, changes will be reverted on errors
         """
         super().__init__(name, description, x, y, project, logger)
         self._toolbox = toolbox
@@ -197,6 +197,13 @@ class Combiner(ProjectItem):
         d = super().item_dict()
         d["cancel_on_error"] = self._properties_ui.cancel_on_error_checkBox.isChecked()
         return d
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project, logger):
+        """See base class."""
+        description, x, y = ProjectItem.parse_item_dict(item_dict)
+        cancel_on_error = item_dict.get("cancel_on_error", False)
+        return Combiner(name, description, x, y, toolbox, project, logger, cancel_on_error)
 
     def notify_destination(self, source_item):
         """See base class."""
