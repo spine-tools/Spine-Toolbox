@@ -527,8 +527,9 @@ class ToolSpecificationWidget(QWidget):
         Returns:
             ToolSpecification
         """
-        self.definition["includes_main_path"] = os.path.relpath(
-            self.program_path, os.path.dirname(def_path)).replace(os.sep, "/")
+        self.definition["includes_main_path"] = os.path.relpath(self.program_path, os.path.dirname(def_path)).replace(
+            os.sep, "/"
+        )
         tool = self._toolbox.load_specification(self.definition, def_path)
         if not tool:
             self.statusbar.showMessage("Adding Tool specification failed", 3000)
