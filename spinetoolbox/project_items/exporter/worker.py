@@ -25,7 +25,7 @@ from spinedb_api import (
     SpineDBAPIError,
 )
 from spinetoolbox.spine_io.exporters import gdx
-from .db_utils import latest_database_commit_time_stamp, scenario_filtered_database_map
+from .db_utils import latest_database_commit_time_stamp
 
 
 class Worker(QObject):
