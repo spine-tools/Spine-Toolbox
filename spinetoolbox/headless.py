@@ -143,7 +143,7 @@ class ExecuteProject(QObject):
         for dag in dags:
             node_successors = dag_handler.node_successors(dag)
             if not node_successors:
-                logger.msg_error("The project contains a graph that is not a Directed Acyclic Graph.")
+                logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
                 return _Status.ERROR
             items_in_dag = tuple(item for item in executable_items if item.name in dag.nodes)
             execution_permits = {item_name: True for item_name in dag.nodes}
