@@ -105,7 +105,7 @@ class Gimlet(ProjectItem):
             app_work_dir = self._toolbox.qsettings().value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
             if not app_work_dir:
                 app_work_dir = DEFAULT_WORK_DIR
-            unique_dir_name = "{0}".format(shorten(self.name)) + "__" + uuid.uuid4().hex + "__toolbox"
+            unique_dir_name = shorten(self.name) + "__" + uuid.uuid4().hex + "__toolbox"
             work_dir = os.path.join(app_work_dir, unique_dir_name)
         # Only selected files in properties are sent to the executable item
         selected_files = list()
