@@ -20,7 +20,7 @@ from copy import deepcopy
 import enum
 from PySide2.QtCore import QItemSelection, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QAbstractButton, QDialogButtonBox, QMessageBox, QWidget
-from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api import SpineDBAPIError
 import spinetoolbox.spine_io.exporters.gdx as gdx
 from ..db_utils import scenario_filtered_database_map
 from ..list_utils import move_selected_elements_by

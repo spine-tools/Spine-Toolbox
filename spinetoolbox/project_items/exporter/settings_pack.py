@@ -17,7 +17,7 @@ Contains the SettingsPack class.
 """
 import dateutil.parser
 from PySide2.QtCore import QObject, Signal, Slot
-from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api import SpineDBAPIError
 from spinetoolbox.spine_io.exporters import gdx
 from .db_utils import scenario_filtered_database_map
 from .notifications import Notifications
