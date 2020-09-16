@@ -496,7 +496,7 @@ class MappingTableMenu(QMenu):
             ("Map column to...", "Column", col),
             ("Map header to...", "Column Header", col),
             ("Map row to...", "Row", row),
-            ("Map all headers to...", "Headers", -1),
+            ("Map all headers to...", "Headers", 0),
         ]
 
         for title, map_type, value in menus:
