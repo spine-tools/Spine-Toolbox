@@ -35,6 +35,113 @@ class TestExporterExecutable(unittest.TestCase):
     def test_item_type(self):
         self.assertEqual(ExecutableItem.item_type(), "Exporter")
 
+    def test_from_dict(self):
+        # From a project.json, true changed to True, null changed to None
+        item_dict = {"type": "Exporter", "description": "", "x": 0, "y": 0,
+                     "settings_packs": [
+                        {
+                            "output_file_name": "output.gdx",
+                            "state": 1,
+                            "settings": {
+                                "domains": {
+                                    "connection": {
+                                        "tier": 0,
+                                        "records": {
+                                            "indexing_type": "fixed",
+                                            "indexes": []
+                                        },
+                                        "metadata": {
+                                            "exportable": 1,
+                                            "origin": 1
+                                        }
+                                    },
+                                    "unit": {
+                                        "tier": 2,
+                                        "records": {
+                                            "indexing_type": "fixed",
+                                            "indexes": [
+                                                [
+                                                    "a"
+                                                ],
+                                                [
+                                                    "b"
+                                                ],
+                                                [
+                                                    "c"
+                                                ]
+                                            ]
+                                        },
+                                        "metadata": {
+                                            "exportable": 1,
+                                            "origin": 1
+                                        }
+                                    },
+                                    "pipe": {
+                                        "tier": 1,
+                                        "records": {
+                                            "indexing_type": "fixed",
+                                            "indexes": []
+                                        },
+                                        "metadata": {
+                                            "exportable": 1,
+                                            "origin": 1
+                                        }
+                                    }
+                                },
+                                "sets": {},
+                                "global_parameters_domain_name": ""
+                            },
+                            "indexing_settings": {},
+                            "merging_settings": {},
+                            "none_fallback": 0,
+                            "none_export": 0,
+                            "scenario": None,
+                            "latest_database_commit": "2020-09-10T11:43:39.906672",
+                            "database_url": {
+                                "type": "file_url",
+                                "relative": True,
+                                "path": ".spinetoolbox/items/data_store/Data Store.sqlite",
+                                "scheme": "sqlite"
+                            }
+                        }
+            ],
+            "cancel_on_error": True
+        }
+        logger = mock.MagicMock()
+        with TemporaryDirectory() as temp_dir:
+            item = ExecutableItem.from_dict(item_dict, "Exporter 1", temp_dir, _MockSettings(), dict(), logger)
+            self.assertIsInstance(item, ExecutableItem)
+            self.assertEqual("Exporter", item.item_type())
+            for url, settings_pack in item._settings_packs.items():
+                self.assertIsInstance(settings_pack, SettingsPack)
+            # Make SettingsPack.from_dict raise gdx.GdxExportException
+            with mock.patch(
+                    "spinetoolbox.project_items.exporter.executable_item.SettingsPack.from_dict") \
+                    as mocksetfromdict:
+                mocksetfromdict.side_effect = gdx.GdxExportException("hello")
+                item = ExecutableItem.from_dict(item_dict, "Exporter 1", temp_dir, _MockSettings(), dict(), logger)
+                self.assertIsInstance(item, ExecutableItem)
+                self.assertEqual("Exporter", item.item_type())
+                for url, settings_pack in item._settings_packs.items():
+                    self.assertIsInstance(settings_pack, SettingsPack)
+            # Modify item_dict
+            item_dict.pop("cancel_on_error")
+            item = ExecutableItem.from_dict(item_dict, "Exporter 1", temp_dir, _MockSettings(), dict(), logger)
+            self.assertIsInstance(item, ExecutableItem)
+            self.assertEqual("Exporter", item.item_type())
+            self.assertTrue(item._cancel_on_error)
+            for url, settings_pack in item._settings_packs.items():
+                self.assertIsInstance(settings_pack, SettingsPack)
+
+    def test_stop_execution(self):
+        # TODO: Seems that there is no way to stop the Exporting process at the moment.
+        # TODO: Implement this test when Exporter ExecutableItem stop_execution() method is implemented
+        with TemporaryDirectory() as temp_data_dir:
+            executable = ExecutableItem("name", {}, True, temp_data_dir, "", mock.MagicMock())
+            with mock.patch("spinetoolbox.executable_item_base.ExecutableItemBase.stop_execution") as mock_stop_execution:
+                executable.stop_execution()
+                mock_stop_execution.assert_called_once()
+
     def test_execute_backward(self):
         executable = ExecutableItem("name", {}, False, "", "", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
@@ -90,6 +197,12 @@ class TestExporterExecutable(unittest.TestCase):
         executable = ExecutableItem("name", packs, False, data_dir, "", mock.MagicMock())
         resources = executable.output_resources(ExecutionDirection.FORWARD)
         self.assertEqual(len(resources), 2)
+
+
+class _MockSettings:
+    @staticmethod
+    def value(key, defaultValue=None):
+        return {"appSettings/gamsPath": ""}.get(key, defaultValue)
 
 
 if __name__ == '__main__':

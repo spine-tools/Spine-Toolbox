@@ -25,6 +25,7 @@ from PySide2.QtCore import QCoreApplication
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_items.gimlet.executable_item import ExecutableItem
 from spinetoolbox.project_item_resource import ProjectItemResource
+from spinetoolbox.execution_managers import QProcessExecutionManager
 
 
 class TestGimletExecutable(unittest.TestCase):
@@ -68,6 +69,7 @@ class TestGimletExecutable(unittest.TestCase):
                 logger=mock.MagicMock(),
             )
             self.assertIsInstance(item, ExecutableItem)
+            self.assertEqual("Gimlet", item.item_type())
             self.assertEqual("cmd.exe", item.shell_name)
             self.assertTrue(os.path.join(temp_dir, "G", "work"), item._work_dir)
             self.assertIsInstance(item._selected_files, list)
@@ -84,6 +86,7 @@ class TestGimletExecutable(unittest.TestCase):
                 logger=mock.MagicMock(),
             )
             self.assertIsInstance(item, ExecutableItem)
+            self.assertEqual("Gimlet", item.item_type())
             self.assertEqual("", item.shell_name)
             prefix, work_dir_name = os.path.split(item._work_dir)
             self.assertEqual("some_path", prefix)
@@ -111,16 +114,12 @@ class TestGimletExecutable(unittest.TestCase):
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
     @unittest.skipIf(sys.platform != "win32", "Windows test")
-    def test_execute_forward1(self):
-        """Test executing command 'cd' in cmd.exe."""
+    def test_execute_forward(self):
         with TemporaryDirectory() as temp_dir:
+            # Test executing command 'cd' in cmd.exe.
             executable = ExecutableItem("name", mock.MagicMock(), "cmd.exe", ["cd"], temp_dir, selected_files=[])
             self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
-
-    @unittest.skipIf(sys.platform != "win32", "Windows test")
-    def test_execute_forward2(self):
-        """Test that bash shell execution fails on Windows."""
-        with TemporaryDirectory() as temp_dir:
+            # Test that bash shell execution fails on Windows.
             executable = ExecutableItem("name", mock.MagicMock(), "bash", ["ls"], temp_dir, selected_files=[])
             self.assertFalse(executable.execute([], ExecutionDirection.FORWARD))
 
@@ -169,6 +168,14 @@ class TestGimletExecutable(unittest.TestCase):
             expanded = executable._expand_gimlet_tags(["a", "-z", "@@url:DATA STORE 3@@", "--output"], resources)
             self.assertEqual(["a", "-z", db3_url, "--output"], expanded)
 
+    def test_stop_execution(self):
+        logger = mock.MagicMock()
+        prgm = "cmd.exe"
+        cmd_list = ["dir"]
+        executable = ExecutableItem("name", logger, prgm, cmd_list, "", selected_files=[])
+        executable._gimlet_process = QProcessExecutionManager(logger, prgm, cmd_list)
+        executable.stop_execution()
+        self.assertIsNone(executable._gimlet_process)
 
 class FakeProvider:
     def __init__(self, name):

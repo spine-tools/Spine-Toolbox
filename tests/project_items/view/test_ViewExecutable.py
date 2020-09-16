@@ -25,6 +25,19 @@ class TestViewExecutable(unittest.TestCase):
     def test_item_type(self):
         self.assertEqual(ExecutableItem.item_type(), "View")
 
+    def test_from_dict(self):
+        logger = mock.MagicMock()
+        item_dict = {"type": "View", "description": "", "x": 0, "y": 0}
+        item = ExecutableItem.from_dict(item_dict, "Viewer", "", None, dict(), logger)
+        self.assertIsInstance(item, ExecutableItem)
+        self.assertEqual("View", item.item_type())
+
+    def test_stop_execution(self):
+        executable = ExecutableItem(name="Viewer", logger=mock.MagicMock())
+        with mock.patch("spinetoolbox.executable_item_base.ExecutableItemBase.stop_execution") as mock_stop_execution:
+            executable.stop_execution()
+            mock_stop_execution.assert_called_once()
+
     def test_execute_backward(self):
         executable = ExecutableItem("name", mock.MagicMock())
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
