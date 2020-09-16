@@ -154,7 +154,7 @@ class TestSourceDataTableModel(unittest.TestCase):
             "source table",
             "mapping",
             dict_to_map(
-                {"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}, "skip_columns": [1]}
+                {"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}, "skip_columns": [0]}
             ),
             undo_stack,
         )
@@ -180,8 +180,8 @@ class TestSourceDataTableModel(unittest.TestCase):
         entity_class_color = mapping.data_color("Object class names")
         entity_color = mapping.data_color("Object names")
         self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundRole), None)
-        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundRole), entity_class_color)
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundRole), entity_color)
+        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundRole), entity_color)
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundRole), entity_class_color)
         self.assertEqual(model.data(model.index(1, 1), role=Qt.BackgroundRole), None)
 
 
