@@ -60,8 +60,7 @@ class ObjectTreeRootItem(EntityRootItem):
 
     def _get_children_ids(self, db_map):
         """See super class."""
-        for x in self.db_mngr.get_items(db_map, "object_class"):
-            yield x["id"]
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "object_class")]
 
 
 class RelationshipTreeRootItem(EntityRootItem):
@@ -80,8 +79,7 @@ class RelationshipTreeRootItem(EntityRootItem):
 
     def _get_children_ids(self, db_map):
         """See super class."""
-        for x in self.db_mngr.get_items(db_map, "relationship_class"):
-            yield x["id"]
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "relationship_class")]
 
 
 class EntityClassItem(MultiDBTreeItem):
@@ -188,9 +186,7 @@ class ObjectClassItem(EntityClassItem):
 
     def _get_children_ids(self, db_map):
         """see super class."""
-        for x in self.db_mngr.get_items(db_map, "object"):
-            if x["class_id"] == self.db_map_id(db_map):
-                yield x["id"]
+        return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
 
 
 class RelationshipClassItemBase(EntityClassItem):
@@ -212,22 +208,6 @@ class RelationshipClassItemBase(EntityClassItem):
         """See base class."""
         raise NotImplementedError()
 
-    def _get_children_ids(self, db_map):
-        """see super class."""
-        if not isinstance(self.parent_item, ObjectItem):
-            return [
-                x["id"]
-                for x in self.db_mngr.get_items(db_map, "relationship")
-                if x["class_id"] == self.db_map_id(db_map)
-            ]
-        object_id = self.parent_item.db_map_id(db_map)
-        return [
-            x["id"]
-            for items in self.db_mngr.find_cascading_relationships({db_map: {object_id}}).values()
-            for x in items
-            if x["class_id"] == self.db_map_id(db_map)
-        ]
-
 
 class RelationshipClassItem(RelationshipClassItemBase):
     def set_data(self, column, value, role):
@@ -236,9 +216,9 @@ class RelationshipClassItem(RelationshipClassItemBase):
 
     def _get_children_ids(self, db_map):
         """see super class."""
-        for x in self.db_mngr.get_items(db_map, "relationship"):
-            if x["class_id"] == self.db_map_id(db_map):
-                yield x["id"]
+        return [
+            x["id"] for x in self.db_mngr.get_items(db_map, "relationship") if x["class_id"] == self.db_map_id(db_map)
+        ]
 
 
 class ObjectRelationshipClassItem(RelationshipClassItemBase):
@@ -249,10 +229,12 @@ class ObjectRelationshipClassItem(RelationshipClassItemBase):
     def _get_children_ids(self, db_map):
         """see super class."""
         object_id = self.parent_item.db_map_id(db_map)
-        for items in self.db_mngr.find_cascading_relationships({db_map: {object_id}}).values():
-            for x in items:
-                if x["class_id"] == self.db_map_id(db_map):
-                    yield x["id"]
+        return [
+            x["id"]
+            for items in self.db_mngr.find_cascading_relationships({db_map: {object_id}}).values()
+            for x in items
+            if x["class_id"] == self.db_map_id(db_map)
+        ]
 
 
 class EntityItem(MultiDBTreeItem):
@@ -323,9 +305,11 @@ class ObjectItem(EntityItem):
     def _get_children_ids(self, db_map):
         """See base class"""
         object_class_id = self.db_map_data_field(db_map, 'class_id')
-        for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values():
-            for x in items:
-                yield x["id"]
+        return [
+            x["id"]
+            for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
+            for x in items
+        ]
 
 
 class RelationshipItem(EntityItem):

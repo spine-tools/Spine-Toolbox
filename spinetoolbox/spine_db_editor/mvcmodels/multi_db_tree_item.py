@@ -39,6 +39,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_id = {}
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
+        self._has_children_cache = None
 
     @property
     def db_mngr(self):
@@ -204,14 +205,16 @@ class MultiDBTreeItem(TreeItem):
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
-        if self.can_fetch_more():
-            return any(self._get_children_ids(db_map) for db_map in self.db_maps)
-        return bool(self.child_count())
+        if not self.can_fetch_more():
+            return bool(self.child_count())
+        if self._has_children_cache is None:
+            self._has_children_cache = any(self._get_children_ids(db_map) for db_map in self.db_maps)
+        return self._has_children_cache
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
         super().fetch_more()
-        db_map_ids = {db_map: list(self._get_children_ids(db_map)) for db_map in self.db_maps}
+        db_map_ids = {db_map: self._get_children_ids(db_map) for db_map in self.db_maps}
         self.append_children_by_id(db_map_ids)
 
     def _get_children_ids(self, db_map):
@@ -227,6 +230,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
         if self.can_fetch_more():
+            self._has_children_cache = None
             self.model.layoutChanged.emit()
             return
         new_children = []
@@ -242,6 +246,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
         if self.can_fetch_more():
+            self._has_children_cache = None
             self.model.layoutChanged.emit()
             return
         for db_map, ids in db_map_ids.items():
