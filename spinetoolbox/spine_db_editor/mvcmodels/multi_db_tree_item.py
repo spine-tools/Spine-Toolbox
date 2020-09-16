@@ -365,9 +365,15 @@ class MultiDBTreeItem(TreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
-        if role == Qt.DisplayRole:
-            return (self.display_data, self.display_database)[column]
-        return None
+        if column == 0:
+            if role == Qt.DecorationRole:
+                return self.display_icon
+            if role == Qt.DisplayRole:
+                return self.display_data
+            if role == Qt.EditRole:
+                return self.edit_data
+        if column and role == Qt.DisplayRole:
+            return self.display_database
 
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""

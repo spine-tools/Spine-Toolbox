@@ -59,8 +59,9 @@ class ObjectTreeRootItem(EntityRootItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object_class ids."""
-        return [x["id"] for x in self.db_mngr.get_items(db_map, "object_class")]
+        """See super class."""
+        for x in self.db_mngr.get_items(db_map, "object_class"):
+            yield x["id"]
 
 
 class RelationshipTreeRootItem(EntityRootItem):
@@ -78,8 +79,9 @@ class RelationshipTreeRootItem(EntityRootItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object_class ids."""
-        return [x["id"] for x in self.db_mngr.get_items(db_map, "relationship_class")]
+        """See super class."""
+        for x in self.db_mngr.get_items(db_map, "relationship_class"):
+            yield x["id"]
 
 
 class EntityClassItem(MultiDBTreeItem):
@@ -114,7 +116,7 @@ class EntityClassItem(MultiDBTreeItem):
         return super().data(column, role)
 
     def _get_children_ids(self, db_map):
-        """See base class"""
+        """See super class"""
         raise NotImplementedError()
 
     def fetch_more(self):
@@ -185,11 +187,13 @@ class ObjectClassItem(EntityClassItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object_class ids."""
-        return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
+        """see super class."""
+        for x in self.db_mngr.get_items(db_map, "object"):
+            if x["class_id"] == self.db_map_id(db_map):
+                yield x["id"]
 
 
-class RelationshipClassItem(EntityClassItem):
+class RelationshipClassItemBase(EntityClassItem):
     """A relationship_class item."""
 
     visual_key = ["name", "object_class_name_list"]
@@ -209,7 +213,7 @@ class RelationshipClassItem(EntityClassItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object_class ids."""
+        """see super class."""
         if not isinstance(self.parent_item, ObjectItem):
             return [
                 x["id"]
@@ -223,6 +227,32 @@ class RelationshipClassItem(EntityClassItem):
             for x in items
             if x["class_id"] == self.db_map_id(db_map)
         ]
+
+
+class RelationshipClassItem(RelationshipClassItemBase):
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
+    def _get_children_ids(self, db_map):
+        """see super class."""
+        for x in self.db_mngr.get_items(db_map, "relationship"):
+            if x["class_id"] == self.db_map_id(db_map):
+                yield x["id"]
+
+
+class ObjectRelationshipClassItem(RelationshipClassItemBase):
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
+    def _get_children_ids(self, db_map):
+        """see super class."""
+        object_id = self.parent_item.db_map_id(db_map)
+        for items in self.db_mngr.find_cascading_relationships({db_map: {object_id}}).values():
+            for x in items:
+                if x["class_id"] == self.db_map_id(db_map):
+                    yield x["id"]
 
 
 class EntityItem(MultiDBTreeItem):
@@ -276,7 +306,7 @@ class ObjectItem(EntityItem):
     @property
     def child_item_type(self):
         """Returns RelationshipClassItem."""
-        return RelationshipClassItem
+        return ObjectRelationshipClassItem
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -291,12 +321,11 @@ class ObjectItem(EntityItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
+        """See base class"""
         object_class_id = self.db_map_data_field(db_map, 'class_id')
-        return [
-            x["id"]
-            for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
-            for x in items
-        ]
+        for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values():
+            for x in items:
+                yield x["id"]
 
 
 class RelationshipItem(EntityItem):
