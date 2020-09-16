@@ -90,11 +90,10 @@ class ExecutableItem(ExecutableItemBase, QObject):
 
     def stop_execution(self):
         """Stops executing this Gimlet."""
-        self._logger.msg.emit(f"Stopping {self._name}")
         super().stop_execution()
-        if self._gimlet_process is None:
-            return
-        self._gimlet_process.kill()
+        if self._gimlet_process is not None:
+            self._gimlet_process.stop_execution()
+            self._gimlet_process = None
 
     def _execute_forward(self, resources):
         """See base class.

@@ -1,5 +1,4 @@
 import sys
-import os
 import locale
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication, QErrorMessage
@@ -50,7 +49,7 @@ def main(argv):
     settings = QSettings("SpineProject", "Spine Toolbox")
     logger = SimpleLogger()
     db_mngr = SpineDBManager(settings, logger, None)
-    if not db_mngr.show_data_store_form({url: None}, logger):
+    if not db_mngr.show_data_store_form({url: None}, logger, create=True):
         return 3
     return_code = app.exec_()
     return return_code

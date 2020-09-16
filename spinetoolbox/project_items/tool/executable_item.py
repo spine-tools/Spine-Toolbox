@@ -528,6 +528,7 @@ class ExecutableItem(ExecutableItemBase):
         Args:
             paths (dict): key is the optional file name pattern, value is a list of paths to source files
             execution_dir (str): a path to the execution directory
+
         Returns:
             dict: a map from source path to destination path
         """

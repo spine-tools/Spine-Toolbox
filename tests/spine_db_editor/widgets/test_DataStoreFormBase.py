@@ -39,7 +39,7 @@ class TestSpineDBEditorBase(unittest.TestCase):
             self.db_mngr = SpineDBManager(mock_settings, None, None)
             self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
-            def DiffDBMapping_side_effect(url, upgrade=False, codename=None):
+            def DiffDBMapping_side_effect(url, codename=None, upgrade=False, create=False):
                 mock_db_map = mock.MagicMock()
                 mock_db_map.codename = codename
                 return mock_db_map

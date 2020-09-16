@@ -210,7 +210,7 @@ class SpineDBManager(QObject):
                 db_map.connection.close()
         self._db_specific_loggers.clear()
 
-    def show_data_store_form(self, db_url_codenames, logger):
+    def show_data_store_form(self, db_url_codenames, logger, create=False):
         """Creates a new SpineDBEditor and shows it.
 
         Args:
@@ -220,7 +220,10 @@ class SpineDBManager(QObject):
         key = tuple(db_url_codenames.keys())
         db_editor = self._db_editors.get(key)
         if db_editor is None:
-            db_maps = [self.get_db_map(url, logger, codename=codename) for url, codename in db_url_codenames.items()]
+            db_maps = [
+                self.get_db_map(url, logger, codename=codename, create=create)
+                for url, codename in db_url_codenames.items()
+            ]
             if not all(db_maps):
                 return False
             self._db_editors[key] = db_editor = SpineDBEditor(self, *db_maps)
@@ -232,7 +235,7 @@ class SpineDBManager(QObject):
             db_editor.activateWindow()
         return True
 
-    def get_db_map(self, url, logger, upgrade=False, codename=None):
+    def get_db_map(self, url, logger, codename=None, upgrade=False, create=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
@@ -246,7 +249,7 @@ class SpineDBManager(QObject):
             DiffDatabaseMapping, NoneType
         """
         try:
-            return self._do_get_db_map(url, upgrade, codename)
+            return self._do_get_db_map(url, codename, upgrade, create)
         except SpineDBVersionError:
             msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
             msg.setIcon(QMessageBox.Question)
@@ -266,20 +269,21 @@ class SpineDBManager(QObject):
             ret = msg.exec_()  # Show message box
             if ret == QMessageBox.Cancel:
                 return None
-            return self.get_db_map(url, logger, upgrade=True, codename=codename)
+            return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)
         except SpineDBAPIError as err:
             logger.msg_error.emit(err.msg)
             return None
 
     @busy_effect
-    def _do_get_db_map(self, url, upgrade, codename):
+    def _do_get_db_map(self, url, codename, upgrade, create):
         """Returns a memorized DiffDatabaseMapping instance from url.
         Called by `get_db_map`.
 
         Args:
             url (str, URL)
-            upgrade (bool, optional)
-            codename (str, NoneType, optional)
+            codename (str, NoneType)
+            upgrade (bool)
+            create (bool)
 
         Returns:
             DiffDatabaseMapping
@@ -289,7 +293,7 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        db_map = self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
+        db_map = self._db_maps[url] = DiffDatabaseMapping(url, codename=codename, upgrade=upgrade, create=create)
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
         undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
         redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
