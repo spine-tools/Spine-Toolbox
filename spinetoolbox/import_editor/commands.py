@@ -256,17 +256,17 @@ class SetConnectorOption(QUndoCommand):
 class CreateMapping(QUndoCommand):
     """Creates a new mapping."""
 
-    def __init__(self, source_table_name, import_mappings, row):
+    def __init__(self, source_table_name, mapping_specification, row):
         """
         Args:
             source_table_name (src): source table name
-            import_mappings (ImportMappings): mappings manager
+            mapping_specification (ImportMappingSpecification): mappings manager
             row (int): row where the new mapping should be created
         """
         text = "new mapping"
         super().__init__(text)
         self._source_table_name = source_table_name
-        self._import_mappings = import_mappings
+        self._mapping_specification = mapping_specification
         self._mapping_name = None
         self._row = row
         self._stored_mapping_specification = None
@@ -274,15 +274,15 @@ class CreateMapping(QUndoCommand):
     def redo(self):
         """Creates a new mapping at the given row in mappings list."""
         if self._mapping_name is None:
-            self._mapping_name = self._import_mappings.create_mapping()
+            self._mapping_name = self._mapping_specification.create_mapping()
         else:
-            self._import_mappings.insert_mapping_specification(
+            self._mapping_specification.insert_mapping_specification(
                 self._source_table_name, self._mapping_name, self._row, self._stored_mapping_specification
             )
 
     def undo(self):
         """Deletes the created mapping."""
-        self._stored_mapping_specification = self._import_mappings.delete_mapping(
+        self._stored_mapping_specification = self._mapping_specification.delete_mapping(
             self._source_table_name, self._mapping_name
         )
 
@@ -290,31 +290,31 @@ class CreateMapping(QUndoCommand):
 class DeleteMapping(QUndoCommand):
     """Command to delete a mapping."""
 
-    def __init__(self, source_table_name, import_mappings, mapping_name, row):
+    def __init__(self, source_table_name, mapping_specification, mapping_name, row):
         """
         Args:
             source_table_name (src): source table name
-            import_mappings (ImportMappings): mappings manager
+            mapping_specification (ImportMappingSpecification): mappings manager
             mapping_name (str): name of the mapping to delete
             row (int): mapping's row in the mapping list
         """
         text = "delete mapping"
         super().__init__(text)
         self._source_table_name = source_table_name
-        self._import_mappings = import_mappings
+        self._mapping_specification = mapping_specification
         self._mapping_name = mapping_name
         self._row = row
         self._stored_mapping_specification = None
 
     def redo(self):
         """Deletes the mapping."""
-        self._stored_mapping_specification = self._import_mappings.delete_mapping(
+        self._stored_mapping_specification = self._mapping_specification.delete_mapping(
             self._source_table_name, self._mapping_name
         )
 
     def undo(self):
         """Restores the deleted mapping."""
-        self._import_mappings.insert_mapping_specification(
+        self._mapping_specification.insert_mapping_specification(
             self._source_table_name, self._mapping_name, self._row, self._stored_mapping_specification
         )
 

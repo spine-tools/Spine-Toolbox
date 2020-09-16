@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-ImportMappings widget.
+ImportMappingSpecification widget.
 
 :author: P. Vennström (VTT)
 :date:   1.6.2019
@@ -23,7 +23,7 @@ from ..commands import CreateMapping, DeleteMapping
 MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
 
-class ImportMappings(QObject):
+class ImportMappingSpecification(QObject):
     """
     Provides methods for managing Mappings (add, remove, edit, visualize, and so on).
     """

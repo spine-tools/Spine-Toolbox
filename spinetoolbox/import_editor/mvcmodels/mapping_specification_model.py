@@ -452,22 +452,22 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         self.about_to_undo.emit(self._table_name, self._mapping_name)
         if value in ("None", "", None):
-            value = NoneMapping()
+            mapping = NoneMapping()
         elif value == "Constant":
-            value = ConstantMapping()
+            mapping = ConstantMapping()
         elif value == "Column":
-            value = ColumnMapping()
+            mapping = ColumnMapping()
         elif value == "Column Header":
-            value = ColumnHeaderMapping()
+            mapping = ColumnHeaderMapping()
         elif value == "Headers":
-            value = RowMapping(reference=-1)
+            mapping = RowMapping(reference=-1)
         elif value == "Row":
-            value = RowMapping()
+            mapping = RowMapping()
         elif value == "Table Name":
-            value = TableNameMapping(self._table_name)
+            mapping = TableNameMapping(self._table_name)
         else:
             return False
-        return self._set_component_mapping_from_name(name, value)
+        return self._set_component_mapping_from_name(name, mapping)
 
     def set_value(self, name, value):
         """
