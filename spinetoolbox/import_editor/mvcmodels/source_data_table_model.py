@@ -178,6 +178,7 @@ class SourceDataTableModel(MinimalTableModel):
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
+        self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount() - 1)
 
     def data_error(self, index, role=Qt.DisplayRole, orientation=Qt.Horizontal):
         if role == Qt.DisplayRole:
@@ -260,12 +261,7 @@ class SourceDataTableModel(MinimalTableModel):
             # column header can't be in data
             return False
         if isinstance(mapping, ColumnMapping):
-            ref = mapping.reference
-            if isinstance(ref, str):
-                # find header reference
-                if ref in self.header:
-                    ref = self.header.index(ref)
-            if index.column() == ref:
+            if index.column() == self._reference_from_header(mapping.reference):
                 if self._mapping_specification.mapping.is_pivoted():
                     # only rows below pivoted rows
                     last_row = max(
@@ -304,3 +300,22 @@ class SourceDataTableModel(MinimalTableModel):
             int_non_piv_cols.append(pc)
 
         return int_non_piv_cols
+
+    def _reference_from_header(self, ref):
+        if isinstance(ref, str) and ref in self.header:
+            return self.header.index(ref)
+        return ref
+
+    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+        if orientation != Qt.Horizontal or role != Qt.BackgroundRole:
+            return super().headerData(section, orientation, role)
+        for k, component_mapping in enumerate(self._mapping_specification._component_mappings):
+            if self.section_in_mapping(component_mapping, section):
+                return self._mapping_specification._colors[k]
+
+    def section_in_mapping(self, mapping, section):
+        if isinstance(mapping, ColumnHeaderMapping):
+            return section == self._reference_from_header(mapping.reference)
+        if isinstance(mapping, RowMapping):
+            return mapping.reference == -1
+        return False
