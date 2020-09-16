@@ -25,7 +25,7 @@ from ...helpers import ensure_window_is_on_screen
 from ...spine_io.connection_manager import ConnectionManager
 from .import_editor import ImportEditor
 from .import_mapping_options import ImportMappingOptions
-from .import_mapping_specification import ImportMappingSpecification
+from .import_mappings import ImportMappings
 
 
 class ImportEditorWindow(QMainWindow):
@@ -58,24 +58,24 @@ class ImportEditorWindow(QMainWindow):
         self._ui = Ui_MainWindow()
         self._ui.setupUi(self)
         self._insert_undo_redo_actions()
-        self._mapping_specification = ImportMappingSpecification(self._ui, self._undo_stack)
+        self._mappings_list_manager = ImportMappings(self._ui, self._undo_stack)
         self._editor = ImportEditor(
             self._ui, self._ui_error, self._undo_stack, self._connection_manager, mapping_settings
         )
         self._ui.source_data_table.set_undo_stack(self._undo_stack, self._editor.select_table)
-        self._mapping_specification.mapping_selection_changed.connect(self._editor.set_model)
-        self._mapping_specification.mapping_selection_changed.connect(self._editor.set_mapping)
-        self._mapping_specification.mapping_data_changed.connect(self._editor.set_mapping)
+        self._mappings_list_manager.mapping_selection_changed.connect(self._editor.set_model)
+        self._mappings_list_manager.mapping_selection_changed.connect(self._editor.set_mapping)
+        self._mappings_list_manager.mapping_data_changed.connect(self._editor.set_mapping)
         self._mapping_options = ImportMappingOptions(self._ui, self._undo_stack)
-        self._editor.source_table_selected.connect(self._mapping_specification.set_mappings_model)
+        self._editor.source_table_selected.connect(self._mappings_list_manager.set_mappings_model)
         self._editor.source_table_selected.connect(self._ui.source_data_table.horizontalHeader().set_source_table)
         self._editor.source_table_selected.connect(self._ui.source_data_table.verticalHeader().set_source_table)
-        self._mapping_specification.mapping_selection_changed.connect(
+        self._mappings_list_manager.mapping_selection_changed.connect(
             self._mapping_options.set_mapping_specification_model
         )
-        self._mapping_specification.about_to_undo.connect(self._editor.select_table)
+        self._mappings_list_manager.about_to_undo.connect(self._editor.select_table)
         self._editor.preview_data_updated.connect(self._mapping_options.set_num_available_columns)
-        self._mapping_options.about_to_undo.connect(self._mapping_specification.focus_on_changing_specification)
+        self._mapping_options.about_to_undo.connect(self._mappings_list_manager.focus_on_changing_specification)
 
         self._size = None
         self.takeCentralWidget()
