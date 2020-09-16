@@ -328,10 +328,10 @@ class MappingSpecificationModel(QAbstractTableModel):
             if column == 2:
                 return self.get_map_value_display(m, name)
             raise RuntimeError("Column out of bounds.")
-        if role == Qt.BackgroundColorRole and column == 0:
+        if role == Qt.BackgroundRole and column == 0:
             return self.data_color(self._display_names[index.row()])
         if column == 2:
-            if role == Qt.BackgroundColorRole:
+            if role == Qt.BackgroundRole:
                 if self._mapping_issues(index.row()):
                     return ERROR_COLOR
                 return None
@@ -524,7 +524,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         self._component_mappings[row] = mapping
         top_left = self.index(row, 1)
         bottom_right = self.index(row, 2)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundColorRole, Qt.DisplayRole, Qt.ToolTipRole])
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.ToolTipRole])
         # FIXME: Try and see if we can do better here below
         if name == "Parameter values":
             self._recommend_parameter_value_mapping_reference_type_change(mapping)

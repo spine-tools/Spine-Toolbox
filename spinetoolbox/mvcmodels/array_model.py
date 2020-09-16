@@ -51,9 +51,7 @@ class ArrayModel(QAbstractTableModel):
             self._set_data(index, value)
         top_left = self.index(top_row, 0)
         bottom_right = self.index(bottom_row, 0)
-        self.dataChanged.emit(
-            top_left, bottom_right, [Qt.BackgroundColorRole, Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole]
-        )
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole])
 
     def columnCount(self, parent=QModelIndex()):
         """Returns 1."""
@@ -80,7 +78,7 @@ class ArrayModel(QAbstractTableModel):
             if isinstance(element, _ErrorCell):
                 return element.tooltip
             return str(element)
-        if role == Qt.BackgroundColorRole:
+        if role == Qt.BackgroundRole:
             element = self._data[index.row()]
             if isinstance(element, _ErrorCell):
                 return QColor(255, 128, 128)
@@ -120,7 +118,7 @@ class ArrayModel(QAbstractTableModel):
             if len(self._data) == 1:
                 self._data.clear()
                 self.dataChanged.emit(
-                    self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundColorRole]
+                    self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundRole]
                 )
                 return False
         first_row = row if count < len(self._data) else 1
@@ -128,9 +126,7 @@ class ArrayModel(QAbstractTableModel):
         self._data = self._data[:row] + self._data[row + count :]
         self.endRemoveRows()
         if not self._data:
-            self.dataChanged.emit(
-                self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundColorRole]
-            )
+            self.dataChanged.emit(self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundRole])
         return True
 
     def reset(self, value):
@@ -173,7 +169,7 @@ class ArrayModel(QAbstractTableModel):
             return False
         if role == Qt.EditRole:
             self._set_data(index, value)
-            self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundColorRole])
+            self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundRole])
             return True
         return False
 

@@ -177,7 +177,7 @@ class SourceDataTableModel(MinimalTableModel):
     def update_colors(self):
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundColorRole])
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
 
     def data_error(self, index, role=Qt.DisplayRole, orientation=Qt.Horizontal):
         if role == Qt.DisplayRole:
@@ -185,7 +185,7 @@ class SourceDataTableModel(MinimalTableModel):
         if role == Qt.ToolTipRole:
             type_name = self.get_type(index.column(), orientation)
             return f'Could not parse value: "{self._main_data[index.row()][index.column()]}" as a {type_name}'
-        if role == Qt.BackgroundColorRole:
+        if role == Qt.BackgroundRole:
             return ERROR_COLOR
 
     def data(self, index, role=Qt.DisplayRole):
@@ -209,7 +209,7 @@ class SourceDataTableModel(MinimalTableModel):
                 if (index.row(), index.column()) in self._row_type_errors:
                     return self.data_error(index, role, orientation=Qt.Vertical)
 
-        if role == Qt.BackgroundColorRole and self._mapping_specification:
+        if role == Qt.BackgroundRole and self._mapping_specification:
             return self.data_color(index)
         return super().data(index, role)
 
@@ -225,8 +225,7 @@ class SourceDataTableModel(MinimalTableModel):
         """
         mapping = self._mapping_specification.mapping
         if self.index_below_last_pivot_row(mapping, index):
-            ind = self._mapping_specification._display_names.index("Parameter values")
-            return self._mapping_specification._colors[ind]
+            return self._mapping_specification.data_color("Parameter values")
         for k, component_mapping in enumerate(self._mapping_specification._component_mappings):
             if self.index_in_mapping(component_mapping, index):
                 return self._mapping_specification._colors[k]
