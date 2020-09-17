@@ -28,13 +28,13 @@ with open("spinetoolbox/version.py") as fp:
 
 requirements = [
     "pyside2 >=5.14, <5.15",
-    "datapackage >= 1.2.3",
+    "datapackage >= 1.15",
     "jupyter-client < 5.3.2",
     "qtconsole >= 4.3.1",
-    "sqlalchemy >= 1.2.6",
+    "sqlalchemy >= 1.3",
     "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
     "spine_engine >= {}".format(REQUIRED_SPINE_ENGINE_VERSION),
-    "openpyxl >= 2.5.0",
+    "openpyxl > 3.0",
     "numpy >= 1.15.1",
     "matplotlib >= 3.0",
     "scipy >= 1.1.0",
@@ -43,9 +43,7 @@ requirements = [
     "pyodbc >= 4.0.23",
     "psycopg2 >= 2.7.4",
     "cx_Oracle >= 6.3.1",
-    "python-dateutil >= 2.8.0",
     "pandas >= 0.24.0",
-    "jsonschema == 2.6",
     "gdx2py >= 2.0.4",
     "ijson >= 2.6.1",
 ]
