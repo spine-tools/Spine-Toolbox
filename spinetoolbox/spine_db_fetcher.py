@@ -56,7 +56,7 @@ class SpineDBFetcher(QObject):
         self._listener = listener
         self._thread = QThread()
         # NOTE: by moving this to another thread, all the slots defined below are called on that thread too
-        # self.moveToThread(self._thread)
+        self.moveToThread(self._thread)
         self._thread.start()
         self.connect_signals()
 
