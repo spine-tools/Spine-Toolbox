@@ -19,11 +19,16 @@ Contains Gimlet ExecutableItem class.
 import os
 import sys
 import shutil
+import pathlib
+import uuid
 from PySide2.QtCore import Signal, Slot, QObject, QEventLoop
 from spinetoolbox.executable_item_base import ExecutableItemBase
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.project_items.shared import helpers
+from spinetoolbox.helpers import shorten
+from spinetoolbox.config import DEFAULT_WORK_DIR, GIMLET_WORK_DIR_NAME
 from .item_info import ItemInfo
+from .utils import SHELLS
 
 
 class ExecutableItem(ExecutableItemBase, QObject):
@@ -60,15 +65,35 @@ class ExecutableItem(ExecutableItemBase, QObject):
     @classmethod
     def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
         """See base class."""
-        return cls(name, logger)
+        if not item_dict["use_shell"]:
+            shell = ""
+        else:
+            shell_index = item_dict["shell_index"]
+            try:
+                shell = SHELLS[shell_index]
+            except IndexError:
+                logger.msg.emit(f"Error: Unsupported shell_index in project item {name}")
+                return None
+        cmd_list = helpers.split_cmdline_args(item_dict["cmd"])
+        data_dir = os.path.join(project_dir, ".spinetoolbox", "items", shorten(name))
+        if item_dict["work_dir_mode"]:  # Use 'default' work dir. i.e. data_dir/work
+            work_dir = os.path.join(data_dir, GIMLET_WORK_DIR_NAME)
+        else:  # Make unique work dir
+            app_work_dir = app_settings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
+            if not app_work_dir:
+                app_work_dir = DEFAULT_WORK_DIR
+            unique_dir_name = shorten(name) + "__" + uuid.uuid4().hex + "__toolbox"
+            work_dir = os.path.join(app_work_dir, unique_dir_name)
+        selected_files = helpers.deserialize_checked_states(item_dict.get("selections", list()), project_dir)
+        selections = [path for path, boolean in selected_files.items() if boolean]  # List of selected paths
+        return cls(name, logger, shell, cmd_list, work_dir, selections)
 
     def stop_execution(self):
         """Stops executing this Gimlet."""
-        self._logger.msg.emit(f"Stopping {self._name}")
         super().stop_execution()
-        if self._gimlet_process is None:
-            return
-        self._gimlet_process.kill()
+        if self._gimlet_process is not None:
+            self._gimlet_process.stop_execution()
+            self._gimlet_process = None
 
     def _execute_forward(self, resources):
         """See base class.

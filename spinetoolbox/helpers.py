@@ -44,7 +44,7 @@ from PySide2.QtGui import (
     QDesktopServices,
     QPainterPath,
     QPen,
-    QKeySequence
+    QKeySequence,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
@@ -900,6 +900,7 @@ class ChildCyclingKeyPressFilter(QObject):
     """Event filter class for catching next and previous child key presses.
     Used in filtering the Ctrl+Tab and Ctrl+Shift+Tab key presses in the
     Item Properties tab widget."""
+
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress:
             if event.matches(QKeySequence.NextChild) or event.matches(QKeySequence.PreviousChild):

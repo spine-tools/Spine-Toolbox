@@ -15,12 +15,11 @@ Unit tests for ImporterExecutable.
 :authors: A. Soininen (VTT)
 :date:    6.4.2020
 """
-import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import Signal, QCoreApplication, QObject
+from PySide2.QtCore import QCoreApplication, QObject, QEventLoop, QThread
 from spinedb_api import create_new_spine_database, DatabaseMapping
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item_resource import ProjectItemResource
@@ -40,6 +39,80 @@ class TestImporterExecutable(unittest.TestCase):
 
     def test_item_type(self):
         self.assertEqual(ExecutableItem.item_type(), "Importer")
+
+    def test_from_dict(self):
+        item_dict = {
+            "type": "Importer", "description": "", "x": 0, "y": 0,
+            "mappings": [
+               [
+                   {
+                       "type": "path",
+                       "relative": True,
+                       "path": ".spinetoolbox/items/data/units.xlsx"
+                   },
+                   {
+                       "table_mappings": {
+                           "Sheet1": [
+                               {
+                                   "map_type": "ObjectClass",
+                                   "name": {
+                                       "map_type": "column",
+                                       "reference": 0
+                                   },
+                                   "parameters": {
+                                       "map_type": "None"
+                                   },
+                                   "skip_columns": [],
+                                   "read_start_row": 0,
+                                   "objects": {
+                                       "map_type": "column",
+                                       "reference": 1
+                                   }
+                               }
+                           ]
+                       },
+                       "table_options": {},
+                       "table_types": {
+                           "Sheet1": {
+                               "0": "string",
+                               "1": "string"
+                           }
+                       },
+                       "table_row_types": {},
+                       "selected_tables": [
+                           "Sheet1"
+                       ],
+                       "source_type": "ExcelConnector"
+                   }
+               ]
+            ],
+            "cancel_on_error": True,
+            "mapping_selection": [
+                [
+                    {
+                        "type": "path",
+                        "relative": True,
+                        "path": ".spinetoolbox/items/data/units.xlsx"
+                    },
+                    True
+                ]
+            ]
+        }
+        with TemporaryDirectory() as temp_dir:
+            item = ExecutableItem.from_dict(item_dict, "name", temp_dir, _MockSettings(), dict(), mock.MagicMock())
+            self.assertIsInstance(item, ExecutableItem)
+            self.assertEqual("Importer", item.item_type())
+
+    def test_stop_execution(self):
+        mappings = {}
+        executable = ExecutableItem("name", mappings, "", "", True, mock.MagicMock())
+        executable._loop = QEventLoop()
+        executable._worker = QObject()
+        executable._worker_thread = QThread()
+        executable.stop_execution()
+        self.assertIsNone(executable._worker)
+        self.assertIsNone(executable._worker_thread)
+        self.assertIsNone(executable._loop)
 
     def test_execute_backward(self):
         executable = ExecutableItem("name", {}, "", "", True, mock.MagicMock())
@@ -107,29 +180,6 @@ class TestImporterExecutable(unittest.TestCase):
             self.assertEqual(len(class_list), 0)
             database_map.connection.close()
 
-    def test_stop_execution(self):
-        """ImporterWorker is replaced with a custom QThread based worker for this test."""
-        with mock.patch("spinetoolbox.project_items.importer.executable_item.ImporterWorker") as custom_importer_worker:
-            # Replace ImporterWorker
-            custom_importer_worker.side_effect = UnitTestImporterWorker
-            with TemporaryDirectory() as temp_dir:
-                data_file = Path(temp_dir, "data.dat")
-                self._write_simple_data(data_file)
-                mappings = {data_file: "deselected"}
-                database_path = Path(temp_dir).joinpath("database.sqlite")
-                database_url = 'sqlite:///' + str(database_path)
-                create_new_spine_database(database_url)
-                executable = ExecutableItem("name", mappings, temp_dir, "", True, mock.MagicMock())
-                database_resources = [ProjectItemResource(None, "database", database_url)]
-                self.assertTrue(executable.execute(database_resources, ExecutionDirection.BACKWARD))
-                file_resources = [ProjectItemResource(None, "file", data_file.as_uri())]
-                self.assertFalse(executable.execute(file_resources, ExecutionDirection.FORWARD))
-                custom_importer_worker.assert_called_once()
-                executable.stop_execution()
-                self.assertIsNone(executable._worker)
-                self.assertIsNone(executable._worker_thread)
-                self.assertIsNone(executable._loop)
-
     @staticmethod
     def _write_simple_data(file_name):
         with open(file_name, "w") as out_file:
@@ -169,47 +219,10 @@ class TestImporterExecutable(unittest.TestCase):
         }
 
 
-class UnitTestImporterWorker(QObject):
-
-    import_finished = Signal(int)
-
-    def __init__(
-        self,
-        checked_files,
-        all_import_settings,
-        all_source_settings,
-        urls_downstream,
-        logs_dir,
-        cancel_on_error,
-        logger,
-    ):
-        """
-        Args:
-            checked_files (list(str)): List of paths to checked source files
-            all_import_settings (dict): Maps source file to setting for that file
-            all_source_settings (dict): Maps source type to setting for that type
-            urls_downstream (list(str)): List of urls to import data into
-            logs_dir (str): path to the directory where logs should be written
-            cancel_on_error (bool): whether or not to rollback and stop execution if errors
-            logger (LoggerInterface): somewhere to log important messages
-        """
-        super().__init__()
-        self._checked_files = checked_files
-        self._all_import_settings = all_import_settings
-        self._all_source_settings = all_source_settings
-        self._urls_downstream = urls_downstream
-        self._logs_dir = logs_dir
-        self._cancel_on_error = cancel_on_error
-        self._logger = logger
-
-    def do_work(self):
-        """Does the work and emits import_finished or failed when done."""
-        a = 0
-        step = 0.05
-        while a > 3:
-            time.sleep(step)
-            a += step
-        self.import_finished.emit(-1)
+class _MockSettings:
+    @staticmethod
+    def value(key, defaultValue=None):
+        return {"appSettings/gamsPath": ""}.get(key, defaultValue)
 
 
 if __name__ == '__main__':

@@ -68,7 +68,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
             relationships_class (dict)
             relationships (list(list(str))
             db_mngr (SpineDBManager)
-            db_maps (iter): DiffDatabaseMapping instances
+            *db_maps: DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
         self.relationship_class = relationships_class
@@ -139,7 +139,7 @@ class AddItemsDialog(ManageItemsDialog):
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
+            *db_maps: DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
         self.db_maps = db_maps
@@ -176,7 +176,7 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
+            *db_maps: DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Add object classes")
@@ -253,7 +253,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
+            *db_maps: DiffDatabaseMapping instances
             class_name (str): default object_class name
             force_default (bool): if True, defaults are non-editable
         """
@@ -320,7 +320,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
+            *db_maps: DiffDatabaseMapping instances
             object_class_one_name (str): default object_class name
             force_default (bool): if True, defaults are non-editable
         """
@@ -463,7 +463,7 @@ class AddOrManageRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixi
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
+            *db_maps: DiffDatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.model = self.make_model()
@@ -510,7 +510,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            db_maps (iter) DiffDatabaseMapping instances
+            *db_maps: DiffDatabaseMapping instances
             relationship_class_key (tuple(str,str)): relationships class name, object_class name list string
             object_names_by_class_name (dict): mapping object_class names to default object names
             force_default (bool): if True, defaults are non-editable
@@ -642,7 +642,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         Args:
             parent (SpineDBEditor): data store widget
             db_mngr (SpineDBManager): the manager to do the removal
-            db_maps (iter): DiffDatabaseMapping instances
+            *db_maps: DiffDatabaseMapping instances
             relationship_class_key (str, optional): relationships class name, object_class name list string.
         """
         super().__init__(parent, db_mngr, *db_maps)
@@ -803,7 +803,7 @@ class AddOrManageObjectGroupDialog(QDialog):
             parent (SpineDBEditor): data store widget
             object_class_item (ObjectClassItem)
             db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping)
+            *db_maps: database mappings
         """
         super().__init__(parent)
         self.object_class_item = object_class_item
@@ -927,9 +927,9 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
         """
         Args:
             parent (SpineDBEditor): data store widget
-            object_item (ObjectItem)
+            object_class_item (ObjectClassItem)
             db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping)
+            *db_maps: database mappings
         """
         super().__init__(parent, object_class_item, db_mngr, *db_maps)
         self.setWindowTitle("Add object group")
@@ -980,9 +980,9 @@ class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
         """
         Args:
             parent (SpineDBEditor): data store widget
-            object_item (ObjectItem)
+            object_item (entity_tree_item.ObjectItem)
             db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping)
+            *db_maps: database mappings
         """
         self.object_item = object_item
         super().__init__(parent, object_item.parent_item, db_mngr, *db_maps)

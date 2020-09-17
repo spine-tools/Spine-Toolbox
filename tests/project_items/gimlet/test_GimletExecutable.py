@@ -15,6 +15,7 @@ Unit tests for Gimlet ExecutableItem.
 :author: P. Savolainen (VTT)
 :date:   25.5.2020
 """
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -24,6 +25,7 @@ from PySide2.QtCore import QCoreApplication
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_items.gimlet.executable_item import ExecutableItem
 from spinetoolbox.project_item_resource import ProjectItemResource
+from spinetoolbox.execution_managers import QProcessExecutionManager
 
 
 class TestGimletExecutable(unittest.TestCase):
@@ -40,22 +42,84 @@ class TestGimletExecutable(unittest.TestCase):
     def test_item_type(self):
         self.assertEqual(ExecutableItem.item_type(), "Gimlet")
 
+    def test_from_dict(self):
+        selections = [
+            [{"type": "path", "relative": True, "path": ".spinetoolbox/items/input_files/a.txt"}, True],
+            [{"type": "path", "relative": True, "path": ".spinetoolbox/items/input_files/b.txt"}, False],
+        ]
+        item_dict = {
+            "type": "Gimlet",
+            "x": 0,
+            "y": 0,
+            "description": "",
+            "use_shell": True,
+            "shell_index": 0,
+            "cmd": "dir",
+            "selections": selections,
+            "work_dir_mode": True,
+        }
+        mock_settings = _MockSettings()
+        with TemporaryDirectory() as temp_dir:
+            item = ExecutableItem.from_dict(
+                item_dict,
+                name="G",
+                project_dir=temp_dir,
+                app_settings=mock_settings,
+                specifications=dict(),
+                logger=mock.MagicMock(),
+            )
+            self.assertIsInstance(item, ExecutableItem)
+            self.assertEqual("Gimlet", item.item_type())
+            self.assertEqual("cmd.exe", item.shell_name)
+            self.assertTrue(os.path.join(temp_dir, "G", "work"), item._work_dir)
+            self.assertIsInstance(item._selected_files, list)
+            self.assertEqual(item.cmd_list, ["dir"])
+            # Modify item_dict
+            item_dict["use_shell"] = False
+            item_dict["work_dir_mode"] = False
+            item = ExecutableItem.from_dict(
+                item_dict,
+                name="G",
+                project_dir=temp_dir,
+                app_settings=mock_settings,
+                specifications=dict(),
+                logger=mock.MagicMock(),
+            )
+            self.assertIsInstance(item, ExecutableItem)
+            self.assertEqual("Gimlet", item.item_type())
+            self.assertEqual("", item.shell_name)
+            prefix, work_dir_name = os.path.split(item._work_dir)
+            self.assertEqual("some_path", prefix)
+            self.assertEqual("g__", work_dir_name[0:3])  # work dir name must start with 'g__'
+            self.assertEqual("__toolbox", work_dir_name[-9:])  # work dir name must end with '__toolbox'
+            self.assertEqual(
+                [os.path.abspath(os.path.join(temp_dir, ".spinetoolbox/items/input_files/a.txt"))], item._selected_files
+            )
+            # Modify item_dict
+            item_dict["use_shell"] = True
+            item_dict["shell_index"] = 99  # Unsupported shell
+            item = ExecutableItem.from_dict(
+                item_dict,
+                name="G",
+                project_dir=temp_dir,
+                app_settings=mock_settings,
+                specifications=dict(),
+                logger=mock.MagicMock(),
+            )
+            self.assertIsNone(item)
+
     @unittest.skipIf(sys.platform != "win32", "Windows test")
     def test_execute_backward(self):
         executable = ExecutableItem("name", mock.MagicMock(), "cmd.exe", ["cd"], "", selected_files=[])
         self.assertTrue(executable.execute([], ExecutionDirection.BACKWARD))
 
     @unittest.skipIf(sys.platform != "win32", "Windows test")
-    def test_execute_forward1(self):
-        """Test executing command 'cd' in cmd.exe."""
+    def test_execute_forward(self):
         with TemporaryDirectory() as temp_dir:
+            # Test executing command 'cd' in cmd.exe.
             executable = ExecutableItem("name", mock.MagicMock(), "cmd.exe", ["cd"], temp_dir, selected_files=[])
             self.assertTrue(executable.execute([], ExecutionDirection.FORWARD))
-
-    @unittest.skipIf(sys.platform != "win32", "Windows test")
-    def test_execute_forward2(self):
-        """Test that bash shell execution fails on Windows."""
-        with TemporaryDirectory() as temp_dir:
+            # Test that bash shell execution fails on Windows.
             executable = ExecutableItem("name", mock.MagicMock(), "bash", ["ls"], temp_dir, selected_files=[])
             self.assertFalse(executable.execute([], ExecutionDirection.FORWARD))
 
@@ -104,17 +168,24 @@ class TestGimletExecutable(unittest.TestCase):
             expanded = executable._expand_gimlet_tags(["a", "-z", "@@url:DATA STORE 3@@", "--output"], resources)
             self.assertEqual(["a", "-z", db3_url, "--output"], expanded)
 
-        # specification.cmdline_args = ["@@url:ds1@@"]
-        # args = specification.get_cmdline_args([], {"ds1": "sqlite:///Q:\\databases\\base.sqlite"}, {})
-        # self.assertEqual(args, ["sqlite:///Q:\\databases\\base.sqlite"])
-        # specification.cmdline_args = ["--url=@@url:ds1@@"]
-        # args = specification.get_cmdline_args([], {}, {"ds1": "sqlite:///Q:\\databases\\base.sqlite"})
-        # self.assertEqual(args, ["--url=sqlite:///Q:\\databases\\base.sqlite"])
-
+    def test_stop_execution(self):
+        logger = mock.MagicMock()
+        prgm = "cmd.exe"
+        cmd_list = ["dir"]
+        executable = ExecutableItem("name", logger, prgm, cmd_list, "", selected_files=[])
+        executable._gimlet_process = QProcessExecutionManager(logger, prgm, cmd_list)
+        executable.stop_execution()
+        self.assertIsNone(executable._gimlet_process)
 
 class FakeProvider:
     def __init__(self, name):
         self.name = name
+
+
+class _MockSettings:
+    @staticmethod
+    def value(key, defaultValue=None):
+        return {"appSettings/workDir": "some_path"}.get(key, defaultValue)
 
 
 if __name__ == '__main__':
