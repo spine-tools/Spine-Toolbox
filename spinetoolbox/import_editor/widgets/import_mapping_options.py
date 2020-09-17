@@ -25,6 +25,10 @@ from spinedb_api import (
     ScenarioAlternativeMapping,
     ParameterMapMapping,
     ParameterTimeSeriesMapping,
+    FeatureMapping,
+    ToolMapping,
+    ToolFeatureMapping,
+    ToolFeatureMethodMapping,
 )
 from ..commands import (
     SetImportObjectsFlag,
@@ -139,14 +143,18 @@ class ImportMappingOptions(QObject):
             self._ui.import_objects_check_box.hide()
             self._ui.dimension_label.hide()
             self._ui.dimension_spin_box.hide()
-        class_type_index = {
-            ObjectClassMapping: 0,
-            RelationshipClassMapping: 1,
-            ObjectGroupMapping: 2,
-            AlternativeMapping: 3,
-            ScenarioMapping: 4,
-            ScenarioAlternativeMapping: 5,
-        }[self._mapping_specification_model.map_type]
+        class_type_index = [
+            ObjectClassMapping,
+            RelationshipClassMapping,
+            ObjectGroupMapping,
+            AlternativeMapping,
+            ScenarioMapping,
+            ScenarioAlternativeMapping,
+            FeatureMapping,
+            ToolMapping,
+            ToolFeatureMapping,
+            ToolFeatureMethodMapping,
+        ].index(self._mapping_specification_model.map_type)
         self._ui.class_type_combo_box.setCurrentIndex(class_type_index)
         # update parameter mapping
         if self._mapping_specification_model.mapping_has_parameters():

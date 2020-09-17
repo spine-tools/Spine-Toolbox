@@ -80,7 +80,7 @@ class GraphViewMixin:
         self.rotate_widget_action = None
         self.graph_db_action_group = QActionGroup(self)
         self.layout_gens = list()
-        self.ui.graphicsView.connect_data_store_form(self)
+        self.ui.graphicsView.connect_spine_db_editor(self)
         self.setup_widget_actions()
         self.populate_graph_db_action_group()
 

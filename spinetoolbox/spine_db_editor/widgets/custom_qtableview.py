@@ -55,7 +55,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         """
         raise NotImplementedError()
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
 
         Args:
@@ -308,7 +308,7 @@ class PivotTableView(CopyPasteTableView):
     def db_map(self):
         return self.source_model.pivot_db_map
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
         self.create_context_menu()
         h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)

@@ -14,7 +14,6 @@ Contains unit tests for Import editor's SourceDataTableModel.
 import unittest
 from unittest.mock import MagicMock
 from PySide2.QtCore import Qt
-from spinetoolbox.import_editor.mapping_colors import MAPPING_COLORS
 from spinetoolbox.import_editor.mvcmodels.mapping_specification_model import MappingSpecificationModel
 from spinetoolbox.import_editor.mvcmodels.source_data_table_model import SourceDataTableModel
 from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
@@ -109,8 +108,9 @@ class TestSourceDataTableModel(unittest.TestCase):
             "source table", "mapping", dict_to_map({"map_type": "ObjectClass", "name": 0}), undo_stack
         )
         model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
+        entity_class_color = mapping.data_color("Object class names")
+        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundRole), entity_class_color)
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundRole), entity_class_color)
         # row not showing color if the start reading row is specified
         mapping = MappingSpecificationModel(
             "source table",
@@ -119,8 +119,9 @@ class TestSourceDataTableModel(unittest.TestCase):
             undo_stack,
         )
         model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
+        entity_class_color = mapping.data_color("Object class names")
+        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundRole), None)
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundRole), entity_class_color)
         # row not showing color if the row is pivoted
         mapping = MappingSpecificationModel(
             "source table",
@@ -129,8 +130,8 @@ class TestSourceDataTableModel(unittest.TestCase):
             undo_stack,
         )
         model.set_mapping(mapping)
-        self.assertNotEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
+        self.assertNotEqual(model.data(model.index(0, 0), role=Qt.BackgroundRole), entity_class_color)
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundRole), entity_class_color)
 
     def test_mapping_pivoted_colors(self):
         model = SourceDataTableModel()
@@ -144,9 +145,10 @@ class TestSourceDataTableModel(unittest.TestCase):
             undo_stack,
         )
         model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), None)
+        entity_color = mapping.data_color("Object names")
+        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundRole), entity_color)
+        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundRole), entity_color)
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundRole), None)
         # column not showing color if the columns is skipped
         mapping = MappingSpecificationModel(
             "source table",
@@ -157,9 +159,10 @@ class TestSourceDataTableModel(unittest.TestCase):
             undo_stack,
         )
         model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
-        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), None)
+        entity_color = mapping.data_color("Object names")
+        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundRole), None)
+        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundRole), entity_color)
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundRole), None)
 
     def test_mapping_column_and_pivot_colors(self):
         model = SourceDataTableModel()
@@ -174,10 +177,12 @@ class TestSourceDataTableModel(unittest.TestCase):
         )
         model.set_mapping(mapping)
         # no color showing where row and column mapping intersect
-        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundColorRole), None)
-        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity"])
-        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundColorRole), MAPPING_COLORS["entity_class"])
-        self.assertEqual(model.data(model.index(1, 1), role=Qt.BackgroundColorRole), None)
+        entity_class_color = mapping.data_color("Object class names")
+        entity_color = mapping.data_color("Object names")
+        self.assertEqual(model.data(model.index(0, 0), role=Qt.BackgroundRole), None)
+        self.assertEqual(model.data(model.index(0, 1), role=Qt.BackgroundRole), entity_color)
+        self.assertEqual(model.data(model.index(1, 0), role=Qt.BackgroundRole), entity_class_color)
+        self.assertEqual(model.data(model.index(1, 1), role=Qt.BackgroundRole), None)
 
 
 if __name__ == '__main__':

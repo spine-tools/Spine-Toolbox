@@ -84,6 +84,10 @@ class SpineDBManager(QObject):
     parameter_values_added = Signal(object)
     parameter_value_lists_added = Signal(object)
     parameter_tags_added = Signal(object)
+    features_added = Signal(object)
+    tools_added = Signal(object)
+    tool_features_added = Signal(object)
+    tool_feature_methods_added = Signal(object)
     # Removed
     scenarios_removed = Signal(object)
     alternatives_removed = Signal(object)
@@ -96,6 +100,10 @@ class SpineDBManager(QObject):
     parameter_values_removed = Signal(object)
     parameter_value_lists_removed = Signal(object)
     parameter_tags_removed = Signal(object)
+    features_removed = Signal(object)
+    tools_removed = Signal(object)
+    tool_features_removed = Signal(object)
+    tool_feature_methods_removed = Signal(object)
     # Updated
     scenarios_updated = Signal(object)
     alternatives_updated = Signal(object)
@@ -108,6 +116,10 @@ class SpineDBManager(QObject):
     parameter_value_lists_updated = Signal(object)
     parameter_tags_updated = Signal(object)
     parameter_definition_tags_set = Signal(object)
+    features_updated = Signal(object)
+    tools_updated = Signal(object)
+    tool_features_updated = Signal(object)
+    tool_feature_methods_updated = Signal(object)
     # Uncached
     items_removed_from_cache = Signal(object)
     # Internal
@@ -529,6 +541,10 @@ class SpineDBManager(QObject):
             "relationship": (self.relationships_added, self.relationships_updated),
             "entity_group": (self.entity_groups_added,),
             "parameter_value": (self.parameter_values_added, self.parameter_values_updated),
+            "feature": (self.features_added, self.features_updated),
+            "tool": (self.tools_added, self.tools_updated),
+            "tool_feature": (self.tool_features_added, self.tool_features_updated),
+            "tool_feature_method": (self.tool_feature_methods_added, self.tool_feature_methods_updated),
         }
         for item_type, signals in ordered_signals.items():
             for signal in signals:
@@ -553,6 +569,9 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_updated.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
+        self.parameter_definitions_updated.connect(self.cascade_refresh_features_by_paremeter_definition)
+        self.parameter_value_lists_updated.connect(self.cascade_refresh_features_by_paremeter_value_list)
+        self.features_updated.connect(self.cascade_refresh_tool_features_by_feature)
         # refresh
         self._scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self._scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
@@ -1072,6 +1091,53 @@ class SpineDBManager(QObject):
         """
         return self.get_db_items(self._make_query(db_map, "parameter_tag_sq", ids=ids), key=lambda x: x["tag"])
 
+    def get_features(self, db_map, ids=()):
+        """Returns features from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
+        """
+        return self.get_db_items(
+            self._make_query(db_map, "ext_feature_sq", ids=ids),
+            key=lambda x: (x["entity_class_name"], x["parameter_definition_name"]),
+        )
+
+    def get_tools(self, db_map, ids=()):
+        """Get tools from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
+        """
+        return self.get_db_items(self._make_query(db_map, "tool_sq", ids=ids), key=lambda x: x["name"])
+
+    def get_tool_features(self, db_map, ids=()):
+        """Returns tool features from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
+        """
+        return self.get_db_items(self._make_query(db_map, "tool_feature_sq", ids=ids))
+
+    def get_tool_feature_methods(self, db_map, ids=()):
+        """Returns tool feature methods from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            list: dictionary items
+        """
+        return self.get_db_items(self._make_query(db_map, "tool_feature_method_sq", ids=ids))
+
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
         Condenses all in a single command for undo/redo.
@@ -1251,6 +1317,42 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_tag"))
 
+    def add_features(self, db_map_data):
+        """Adds features to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "feature"))
+
+    def add_tools(self, db_map_data):
+        """Adds tools to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool"))
+
+    def add_tool_features(self, db_map_data):
+        """Adds tool features to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool_feature"))
+
+    def add_tool_feature_methods(self, db_map_data):
+        """Adds tool feature methods to db.
+
+        Args:
+            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "tool_feature_method"))
+
     def update_alternatives(self, db_map_data):
         """Updates alternatives in db.
 
@@ -1373,6 +1475,42 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_tag"))
 
+    def update_features(self, db_map_data):
+        """Updates features in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "feature"))
+
+    def update_tools(self, db_map_data):
+        """Updates tools in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool"))
+
+    def update_tool_features(self, db_map_data):
+        """Updates tools features in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature"))
+
+    def update_tool_feature_methods(self, db_map_data):
+        """Updates tools feature methods in db.
+
+        Args:
+            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
+        """
+        for db_map, data in db_map_data.items():
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "tool_feature_method"))
+
     def set_scenario_alternatives(self, db_map_data):
         """Sets scenario alternatives in db.
 
@@ -1476,12 +1614,16 @@ class SpineDBManager(QObject):
             "scenario": self.scenarios_removed,
             "alternative": self.alternatives_removed,
             "parameter_definition_tag": self._parameter_definition_tags_removed,
+            "tool_feature_method": self.tool_feature_methods_removed,
+            "tool_feature": self.tool_features_removed,
+            "feature": self.features_removed,
+            "tool": self.tools_removed,
             "parameter_definition": self.parameter_definitions_removed,
             "parameter_value_list": self.parameter_value_lists_removed,
             "parameter_tag": self.parameter_tags_removed,
             "relationship_class": self.relationship_classes_removed,
             "object_class": self.object_classes_removed,
-        }
+        }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
         typed_db_map_data = {}
         for item_type, signal in ordered_signals.items():
             db_map_ids = {db_map: ids_per_type.get(item_type) for db_map, ids_per_type in db_map_typed_ids.items()}
@@ -1682,6 +1824,54 @@ class SpineDBManager(QObject):
         }
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
+    @Slot(object)
+    def cascade_refresh_features_by_paremeter_definition(self, db_map_data):
+        """Refreshes cached features in cascade when updating parameter definitions.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_features_by_parameter_definition(self.db_map_ids(db_map_data))
+        if not any(db_map_cascading_data.values()):
+            return
+        db_map_cascading_data = {
+            db_map: self.get_features(db_map, ids={x["id"] for x in data})
+            for db_map, data in db_map_cascading_data.items()
+        }
+        self.features_updated.emit(db_map_cascading_data)
+
+    @Slot(object)
+    def cascade_refresh_features_by_paremeter_value_list(self, db_map_data):
+        """Refreshes cached features in cascade when updating parameter value lists.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_features_by_parameter_value_list(self.db_map_ids(db_map_data))
+        if not any(db_map_cascading_data.values()):
+            return
+        db_map_cascading_data = {
+            db_map: self.get_features(db_map, ids={x["id"] for x in data})
+            for db_map, data in db_map_cascading_data.items()
+        }
+        self.features_updated.emit(db_map_cascading_data)
+
+    @Slot(object)
+    def cascade_refresh_tool_features_by_feature(self, db_map_data):
+        """Refreshes cached tool features in cascade when updating features.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_tool_features_by_feature(self.db_map_ids(db_map_data))
+        if not any(db_map_cascading_data.values()):
+            return
+        db_map_cascading_data = {
+            db_map: self.get_tool_features(db_map, ids={x["id"] for x in data})
+            for db_map, data in db_map_cascading_data.items()
+        }
+        self.tool_features_updated.emit(db_map_cascading_data)
+
     def find_cascading_relationship_classes(self, db_map_ids):
         """Finds and returns cascading relationship classes for the given object_class ids."""
         db_map_cascading_data = dict()
@@ -1784,7 +1974,7 @@ class SpineDBManager(QObject):
         return db_map_group_data
 
     def find_cascading_parameter_values_by_alternative(self, db_map_ids):
-        """Finds and returns cascading parameter values for the given parameter alternative ids."""
+        """Finds and returns cascading parameter values for the given alternative ids."""
         db_map_cascading_data = dict()
         for db_map, alt_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
@@ -1792,8 +1982,8 @@ class SpineDBManager(QObject):
             ]
         return db_map_cascading_data
 
-    def find_cascading_alternative_scenarios_by_alternative(self, db_map_ids):
-        """Finds and returns cascading parameter values for the given parameter alternative ids."""
+    def find_cascading_scenario_alternatives_by_alternative(self, db_map_ids):
+        """Finds and returns cascading scenario_alternatives for the given alternative ids."""
         db_map_cascading_data = dict()
         for db_map, alt_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
@@ -1801,11 +1991,38 @@ class SpineDBManager(QObject):
             ]
         return db_map_cascading_data
 
-    def find_cascading_alternative_scenarios_by_scenario(self, db_map_ids):
-        """Finds and returns cascading parameter values for the given parameter alternative ids."""
+    def find_cascading_scenario_alternatives_by_scenario(self, db_map_ids):
+        """Finds and returns cascading scenario_alternatives for the given scenario ids."""
         db_map_cascading_data = dict()
         for db_map, scen_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
                 item for item in self.get_items(db_map, "scenario_alternative") if item["scenario_id"] in scen_ids
+            ]
+        return db_map_cascading_data
+
+    def find_cascading_features_by_parameter_definition(self, db_map_ids):
+        """Finds and returns cascading features for the given parameter definition ids."""
+        db_map_cascading_data = dict()
+        for db_map, ids in db_map_ids.items():
+            db_map_cascading_data[db_map] = [
+                item for item in self.get_items(db_map, "feature") if item["parameter_definition_id"] in ids
+            ]
+        return db_map_cascading_data
+
+    def find_cascading_features_by_parameter_value_list(self, db_map_ids):
+        """Finds and returns cascading features for the given parameter value list ids."""
+        db_map_cascading_data = dict()
+        for db_map, ids in db_map_ids.items():
+            db_map_cascading_data[db_map] = [
+                item for item in self.get_items(db_map, "feature") if item["parameter_value_list_id"] in ids
+            ]
+        return db_map_cascading_data
+
+    def find_cascading_tool_features_by_feature(self, db_map_ids):
+        """Finds and returns cascading tool features for the given feature ids."""
+        db_map_cascading_data = dict()
+        for db_map, ids in db_map_ids.items():
+            db_map_cascading_data[db_map] = [
+                item for item in self.get_items(db_map, "tool_feature") if item["feature_id"] in ids
             ]
         return db_map_cascading_data

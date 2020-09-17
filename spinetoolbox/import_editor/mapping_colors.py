@@ -15,20 +15,7 @@ Contains colors used in Import editor's tables.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-from PySide2.QtCore import Qt
 from PySide2.QtGui import QColor
 
 
-MAPPING_COLORS = {
-    "entity_class": QColor(196, 117, 56),
-    "entity": QColor(223, 194, 125),
-    "group": QColor(120, 150, 220),
-    "parameter_value": QColor(128, 205, 193),
-    "parameter_extra_dimension": QColor(41, 173, 153),
-    "parameter_name": QColor(178, 255, 243),
-    "alternative": QColor(196, 117, 56),
-    "scenario": QColor(223, 194, 125),
-    "active": QColor(128, 205, 193),
-    "before_alternative": QColor(120, 150, 220),
-}
-ERROR_COLOR = QColor(Qt.red)
+ERROR_COLOR = QColor("red")

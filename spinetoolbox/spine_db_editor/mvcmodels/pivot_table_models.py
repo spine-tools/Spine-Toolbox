@@ -394,7 +394,7 @@ class PivotTableModelBase(QAbstractTableModel):
             font = QFont()
             font.setBold(True)
             return font
-        if role == Qt.BackgroundColorRole:
+        if role == Qt.BackgroundRole:
             return self._color_data(index)
         if role == Qt.TextAlignmentRole:
             return self._text_alignment_data(index)

@@ -56,7 +56,7 @@ class CustomLineEditor(QLineEdit):
 
 class ParameterValueLineEditor(CustomLineEditor):
     def set_data(self, data):
-        if not isinstance(data, str):
+        if data is not None and not isinstance(data, str):
             self.setAlignment(Qt.AlignRight)
         super().set_data(data)
 
@@ -132,7 +132,8 @@ class SearchBarEditor(QTableView):
         """
         super().__init__(parent)
         self._tutor = tutor
-        self._base_size = None
+        self._base_size = QSize()
+        self._base_offset = QPoint()
         self._original_text = None
         self._orig_pos = None
         self.first_index = QModelIndex()
@@ -168,12 +169,15 @@ class SearchBarEditor(QTableView):
     def set_base_size(self, size):
         self._base_size = size
 
+    def set_base_offset(self, offset):
+        self._base_offset = offset
+
     def update_geometry(self):
         """Updates geometry.
         """
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        self._orig_pos = self.pos()
+        self._orig_pos = self.pos() + self._base_offset
         if self._tutor:
             self._orig_pos += self._tutor.mapTo(self.parent(), self._tutor.rect().topLeft())
         self.refit()
