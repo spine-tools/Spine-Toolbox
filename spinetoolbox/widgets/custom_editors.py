@@ -56,7 +56,7 @@ class CustomLineEditor(QLineEdit):
 
 class ParameterValueLineEditor(CustomLineEditor):
     def set_data(self, data):
-        if not isinstance(data, str):
+        if data is not None and not isinstance(data, str):
             self.setAlignment(Qt.AlignRight)
         super().set_data(data)
 
