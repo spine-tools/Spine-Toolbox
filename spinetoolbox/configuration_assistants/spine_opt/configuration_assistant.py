@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Widget for assisting the user in configuring SpineModel.jl.
+Widget for assisting the user in configuring SpineOpt.jl.
 
 :author: M. Marin (KTH)
 :date:   9.1.2019
@@ -24,22 +24,22 @@ from spinetoolbox.config import JULIA_EXECUTABLE
 from spinetoolbox.helpers import busy_effect
 
 
-class SpineModelConfigurationAssistant(StateMachineWidget):
+class SpineOptConfigurationAssistant(StateMachineWidget):
 
     _required_julia_version = "1.1.0"
     py_call_program_check_needed = Signal()
-    spine_model_process_failed = Signal()
+    spine_opt_process_failed = Signal()
     py_call_installation_needed = Signal()
     py_call_reconfiguration_needed = Signal()
     py_call_process_failed = Signal()
-    spine_model_ready = Signal()
+    spine_opt_ready = Signal()
 
     def __init__(self, toolbox):
-        super().__init__("SpineModel.jl configuration assistant", toolbox)
+        super().__init__("SpineOpt.jl configuration assistant", toolbox)
         self._toolbox = toolbox
         self.exec_mngr = None
         self._welcome_text = (
-            "<html><p>Welcome! This assistant will help you configure Spine Toolbox for using SpineModel.jl</p></html>"
+            "<html><p>Welcome! This assistant will help you configure Spine Toolbox for using SpineOpt.jl</p></html>"
         )
         self.julia_exe = None
         self.julia_project_path = None
@@ -110,7 +110,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
     def _make_report_bad_julia_version(self):
         return self._make_report_state(
             "report_bad_julia_version",
-            f"<html><p>SpineModel.jl requires Julia version >= {self._required_julia_version}, whereas current version is {self._julia_version}. "
+            f"<html><p>SpineOpt.jl requires Julia version >= {self._required_julia_version}, whereas current version is {self._julia_version}. "
             "Upgrade Julia and try again.</p></html>",
         )
 
@@ -122,27 +122,27 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
             return self._make_report_bad_julia_version()
         return super()._make_welcome()
 
-    def _make_updating_spine_model(self):
+    def _make_updating_spine_opt(self):
         return self._make_processing_state(
-            "updating_spine_model", "<html><p>Updating SpineModel.jl to the latest version...</p></html>"
+            "updating_spine_opt", "<html><p>Updating SpineOpt.jl to the latest version...</p></html>"
         )
 
-    def _make_prompt_to_install_latest_spine_model(self):
+    def _make_prompt_to_install_latest_spine_opt(self):
         return self._make_prompt_state(
-            "prompt_to_install_latest_spine_model",
+            "prompt_to_install_latest_spine_opt",
             "<html><p>Spine Toolbox needs to do the following modifications to the Julia project "
-            f"at <b>{self._julia_active_project}</b>:</p><p>Install the SpineModel.jl package</p>",
+            f"at <b>{self._julia_active_project}</b>:</p><p>Install the SpineOpt.jl package</p>",
         )
 
-    def _make_installing_latest_spine_model(self):
+    def _make_installing_latest_spine_opt(self):
         return self._make_processing_state(
-            "installing_latest_spine_model", "<html><p>Installing latest SpineModel.jl...</p></html>"
+            "installing_latest_spine_opt", "<html><p>Installing latest SpineOpt.jl...</p></html>"
         )
 
-    def _make_report_spine_model_installation_failed(self):
+    def _make_report_spine_opt_installation_failed(self):
         return self._make_report_state(
-            "report_spine_model_installation_failed",
-            "<html><p>SpineModel.jl installation failed. See Process log for error messages.</p></html>",
+            "report_spine_opt_installation_failed",
+            "<html><p>SpineOpt.jl installation failed. See Process log for error messages.</p></html>",
         )
 
     def _make_checking_py_call_program(self):
@@ -166,9 +166,9 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
             "<p>Install the PyCall.jl package.</p>",
         )
 
-    def _make_report_spine_model_ready(self):
+    def _make_report_spine_opt_ready(self):
         return self._make_report_state(
-            "report_spine_model_ready", "<html><p>SpineModel.jl has been successfully configured.</p></html>"
+            "report_spine_opt_ready", "<html><p>SpineOpt.jl has been successfully configured.</p></html>"
         )
 
     def _make_reconfiguring_py_call(self):
@@ -184,35 +184,35 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         )
 
     @Slot()
-    def update_spine_model(self):
+    def update_spine_opt(self):
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
         args.append("using Pkg; Pkg.update(ARGS[1]);")
-        args.append("SpineModel")
+        args.append("SpineOpt")
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
-        self.exec_mngr.execution_finished.connect(self._handle_spine_model_process_finished)
+        self.exec_mngr.execution_finished.connect(self._handle_spine_opt_process_finished)
         self.exec_mngr.start_execution()
 
     @Slot()
-    def install_spine_model(self):
+    def install_spine_opt(self):
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
         args.append("using Pkg; Pkg.add(PackageSpec(url=ARGS[1])); Pkg.add(PackageSpec(url=ARGS[2]));")
         args.append("https://github.com/Spine-project/SpineInterface.jl.git")
-        args.append("https://github.com/Spine-project/Spine-Model.git")
+        args.append("https://github.com/Spine-project/SpineOpt.jl.git")
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
-        self.exec_mngr.execution_finished.connect(self._handle_spine_model_process_finished)
+        self.exec_mngr.execution_finished.connect(self._handle_spine_opt_process_finished)
         self.exec_mngr.start_execution()
 
     @Slot(int)
-    def _handle_spine_model_process_finished(self, ret):
-        self.exec_mngr.execution_finished.disconnect(self._handle_spine_model_process_finished)
+    def _handle_spine_opt_process_finished(self, ret):
+        self.exec_mngr.execution_finished.disconnect(self._handle_spine_opt_process_finished)
         if ret == 0:
             self.py_call_program_check_needed.emit()
         else:
-            self.spine_model_process_failed.emit()
+            self.spine_opt_process_failed.emit()
 
     @Slot()
     def check_py_call_program(self):
@@ -230,7 +230,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
         if ret == 0:
             self._py_call_program = self.exec_mngr.process_output
             if self._py_call_program == sys.executable:
-                self.spine_model_ready.emit()
+                self.spine_opt_ready.emit()
             else:
                 self.py_call_reconfiguration_needed.emit()
         else:
@@ -255,7 +255,7 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
     def _handle_reconfigure_py_call_finished(self, ret):
         self.exec_mngr.execution_finished.disconnect(self._handle_reconfigure_py_call_finished)
         if ret == 0:
-            self.spine_model_ready.emit()
+            self.spine_opt_ready.emit()
         else:
             self.py_call_process_failed.emit()
 
@@ -283,39 +283,39 @@ class SpineModelConfigurationAssistant(StateMachineWidget):
     def set_up_machine(self):
         super().set_up_machine()
         # States
-        updating_spine_model = self._make_updating_spine_model()
-        prompt_to_install_latest_spine_model = self._make_prompt_to_install_latest_spine_model()
-        installing_latest_spine_model = self._make_installing_latest_spine_model()
-        report_spine_model_installation_failed = self._make_report_spine_model_installation_failed()
+        updating_spine_opt = self._make_updating_spine_opt()
+        prompt_to_install_latest_spine_opt = self._make_prompt_to_install_latest_spine_opt()
+        installing_latest_spine_opt = self._make_installing_latest_spine_opt()
+        report_spine_opt_installation_failed = self._make_report_spine_opt_installation_failed()
         checking_py_call_program = self._make_checking_py_call_program()
         prompt_to_reconfigure_py_call = self._make_prompt_to_reconfigure_py_call()
         prompt_to_install_py_call = self._make_prompt_to_install_py_call()
-        report_spine_model_ready = self._make_report_spine_model_ready()
+        report_spine_opt_ready = self._make_report_spine_opt_ready()
         reconfiguring_py_call = self._make_reconfiguring_py_call()
         installing_py_call = self._make_installing_py_call()
         report_py_call_process_failed = self._make_report_py_call_process_failed()
         # Transitions
-        self.welcome.addTransition(self.welcome.finished, updating_spine_model)
-        updating_spine_model.addTransition(self.spine_model_process_failed, prompt_to_install_latest_spine_model)
-        updating_spine_model.addTransition(self.py_call_program_check_needed, checking_py_call_program)
-        prompt_to_install_latest_spine_model.addTransition(self.button_right.clicked, installing_latest_spine_model)
-        installing_latest_spine_model.addTransition(
-            self.spine_model_process_failed, report_spine_model_installation_failed
+        self.welcome.addTransition(self.welcome.finished, updating_spine_opt)
+        updating_spine_opt.addTransition(self.spine_opt_process_failed, prompt_to_install_latest_spine_opt)
+        updating_spine_opt.addTransition(self.py_call_program_check_needed, checking_py_call_program)
+        prompt_to_install_latest_spine_opt.addTransition(self.button_right.clicked, installing_latest_spine_opt)
+        installing_latest_spine_opt.addTransition(
+            self.spine_opt_process_failed, report_spine_opt_installation_failed
         )
-        installing_latest_spine_model.addTransition(self.py_call_program_check_needed, checking_py_call_program)
+        installing_latest_spine_opt.addTransition(self.py_call_program_check_needed, checking_py_call_program)
         checking_py_call_program.addTransition(self.py_call_reconfiguration_needed, prompt_to_reconfigure_py_call)
         checking_py_call_program.addTransition(self.py_call_installation_needed, prompt_to_install_py_call)
         checking_py_call_program.addTransition(self.py_call_process_failed, report_py_call_process_failed)
-        checking_py_call_program.addTransition(self.spine_model_ready, report_spine_model_ready)
+        checking_py_call_program.addTransition(self.spine_opt_ready, report_spine_opt_ready)
         prompt_to_reconfigure_py_call.addTransition(self.button_right.clicked, reconfiguring_py_call)
         prompt_to_install_py_call.addTransition(self.button_right.clicked, installing_py_call)
         reconfiguring_py_call.addTransition(self.py_call_process_failed, report_py_call_process_failed)
-        reconfiguring_py_call.addTransition(self.spine_model_ready, report_spine_model_ready)
+        reconfiguring_py_call.addTransition(self.spine_opt_ready, report_spine_opt_ready)
         installing_py_call.addTransition(self.py_call_process_failed, report_py_call_process_failed)
         installing_py_call.addTransition(self.py_call_program_check_needed, checking_py_call_program)
         # Entered
-        updating_spine_model.entered.connect(self.update_spine_model)
+        updating_spine_opt.entered.connect(self.update_spine_opt)
         checking_py_call_program.entered.connect(self.check_py_call_program)
-        installing_latest_spine_model.entered.connect(self.install_spine_model)
+        installing_latest_spine_opt.entered.connect(self.install_spine_opt)
         reconfiguring_py_call.entered.connect(self.reconfigure_py_call)
         installing_py_call.entered.connect(self.install_py_call)

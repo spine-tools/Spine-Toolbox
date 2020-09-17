@@ -84,7 +84,7 @@ from .helpers import (
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, UpdateSpecificationCommand
-from .configuration_assistants import spine_model
+from .configuration_assistants import spine_opt
 
 
 class ToolboxUI(QMainWindow):
@@ -253,7 +253,7 @@ class ToolboxUI(QMainWindow):
     def parse_assistant_modules(self):
         """Makes actions to run assistants from assistant modules."""
         menu = self.ui.menuTool_configuration_assistants
-        for module in (spine_model,):  # NOTE: add others as needed
+        for module in (spine_opt,):  # NOTE: add others as needed
             action = menu.addAction(module.assistant_name)
             action.triggered.connect(
                 lambda checked=False, module=module, action=action: self.show_assistant(module, action)
