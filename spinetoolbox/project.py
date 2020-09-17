@@ -18,7 +18,7 @@ Spine Toolbox project class.
 
 import os
 import json
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Slot, Signal, QObject
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from .metaobject import MetaObject
@@ -35,6 +35,74 @@ from .project_commands import (
     RemoveProjectItemCommand,
     RemoveAllProjectItemsCommand,
 )
+
+
+class NodeExecStartedSubscriber(QObject):
+    """
+     A subscriber class for the exec_started event which is a named event in the EventPublisher class of spine_engine.py
+    """
+    # Signal moved from SpineEngine
+    dag_node_execution_started = Signal(str, "QVariant")
+    """Emitted just before a named DAG node execution starts."""
+
+    def __init__(self):
+        super().__init__()
+
+    def update(self, node_data):
+        """
+        emits dag_node_execution_started when the publisher dispatch method is called for the exec_started event
+        Args:
+             node_data (dict()): node_data passed from spine engine
+             contains item_name (name of the solid which has started execution)
+             and direction (current direction of the pipeline being executed)
+        """
+        self.dag_node_execution_started.emit(node_data['item_name'], node_data['direction'])
+
+
+class NodeExecFinishedSubscriber(QObject):
+    """
+     A subscriber class for the exec_finished event which is a named event in the EventPublisher class of spine_engine.py
+    """
+    # Signal moved from SpineEngine
+    dag_node_execution_finished = Signal(str, "QVariant", "QVariant")
+    """Emitted after a named DAG node has finished execution."""
+
+    def __init__(self):
+        super().__init__()
+
+    def update(self, node_data):
+        """
+        emits dag_node_execution_finished when the publisher dispatch method is called for the exec_finished event
+        Args:
+             node_data (dict()): node_data passed from spine engine
+                contains:
+                   item_name (name of the solid which has started execution),
+                   direction (current direction of the pipeline being executed),
+                   state (the state in which the node finished)
+        """
+        self.dag_node_execution_finished.emit(node_data['item_name'], node_data['direction'], node_data['state'])
+
+
+class LoggingSubscriber(QObject):
+    """
+     A subscriber class for the log_event event which is a named event in the EventPublisher class of spine_engine.py
+     A simple class to test logging a message originating from SpineEngine to a toolbox widget.
+    """
+    def __init__(self, logger):
+        """
+        Args:
+            logger (LoggerInterface): logger instance passed from SpineToolboxProject.__init__()
+        """
+        super().__init__()
+        self._logger = logger
+
+    def update(self, log_msg):
+        """
+        emits a log message when the publisher dispatch method is called for the log_event event
+        Args:
+             log_msg (str): a message originating from SpineEngine
+        """
+        self._logger.msg.emit("This is a log message from spine engine: {}".format(log_msg))
 
 
 class SpineToolboxProject(MetaObject):
@@ -89,6 +157,9 @@ class SpineToolboxProject(MetaObject):
         self.items_dir = None  # Full path to items directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
         self._toolbox.undo_stack.clear()
+        self.start_subscriber = NodeExecStartedSubscriber()
+        self.finish_subscriber = NodeExecFinishedSubscriber()
+        self.log_subscriber = LoggingSubscriber(self._logger)
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
 
@@ -467,10 +538,12 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
-        self.engine.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
-        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
-        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
-        self.engine.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
+        # register subscribers to relevant events
+        self.engine.publisher.register('exec_started', self.start_subscriber)
+        self.engine.publisher.register('exec_finished', self.finish_subscriber)
+        self.engine.publisher.register('log_event', self.log_subscriber)
+        # connect exec_started and exec_finished signals
+        self.connect_subscriber_signals()
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
@@ -480,10 +553,24 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
-        self.engine.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._run_leave_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
+        # disconnect exec_started and exec_finished signals
+        self.disconnect_subscriber_signals()
+        # unregister subscribers
+        self.engine.publisher.unregister('exec_started', self.start_subscriber)
+        self.engine.publisher.unregister('exec_finished', self.finish_subscriber)
+        self.engine.publisher.unregister('log_event', self.log_subscriber)
+
+    def connect_subscriber_signals(self):
+        self.start_subscriber.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
+
+    def disconnect_subscriber_signals(self):
+        self.start_subscriber.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._run_leave_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
