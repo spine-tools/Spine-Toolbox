@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 import locale
 from PySide2.QtGui import QFontDatabase
