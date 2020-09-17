@@ -10,8 +10,12 @@
 ######################################################################################################################
 
 """
-Init file for tests.configuration_assistants.spine_model package. Intentionally empty.
+SpineOpt.jl config assistant.
 
 :author: M. Marin (KTH)
-:date:   18.2.2020
+:date:   17.2.2020
 """
+
+from .configuration_assistant import SpineOptConfigurationAssistant as make_assistant
+
+assistant_name = "SpineOpt.jl"
