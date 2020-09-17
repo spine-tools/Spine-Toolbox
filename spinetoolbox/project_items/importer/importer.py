@@ -470,7 +470,6 @@ class Importer(ProjectItem):
         Returns:
             dict: Version 2 Exporter dictionary
         """
-        print("Upgrading Importer")
         try:
             mapping_selection = item_dict["mapping_selection"]
         except KeyError:
