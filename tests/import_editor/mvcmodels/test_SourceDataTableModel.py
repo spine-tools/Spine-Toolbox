@@ -17,7 +17,7 @@ from PySide2.QtCore import Qt
 from spinetoolbox.import_editor.mvcmodels.mapping_specification_model import MappingSpecificationModel
 from spinetoolbox.import_editor.mvcmodels.source_data_table_model import SourceDataTableModel
 from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
-from spinedb_api import dict_to_map
+from spinedb_api import item_mapping_from_dict
 
 
 class TestSourceDataTableModel(unittest.TestCase):
@@ -64,7 +64,7 @@ class TestSourceDataTableModel(unittest.TestCase):
         mapping = MappingSpecificationModel(
             "source table",
             "mapping",
-            dict_to_map({"map_type": "ObjectClass", "name": {"map_type": "row", "value_reference": 0}}),
+            item_mapping_from_dict({"map_type": "ObjectClass", "name": {"map_type": "row", "value_reference": 0}}),
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -72,7 +72,10 @@ class TestSourceDataTableModel(unittest.TestCase):
 
         # or if we add a mapping where there reading starts from a row bellow the error, the error should not be shown.
         mapping = MappingSpecificationModel(
-            "source table", "mapping", dict_to_map({"map_type": "ObjectClass", "read_start_row": 1}), undo_stack
+            "source table",
+            "mapping",
+            item_mapping_from_dict({"map_type": "ObjectClass", "read_start_row": 1}),
+            undo_stack,
         )
         model.set_mapping(mapping)
         self.assertEqual(model.data(model.index(*error_index)), "Not a valid number")
@@ -93,7 +96,7 @@ class TestSourceDataTableModel(unittest.TestCase):
         mapping = MappingSpecificationModel(
             "source table",
             "mapping",
-            dict_to_map({"map_type": "ObjectClass", "name": {"map_type": "row", "value_reference": 1}}),
+            item_mapping_from_dict({"map_type": "ObjectClass", "name": {"map_type": "row", "value_reference": 1}}),
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -105,7 +108,7 @@ class TestSourceDataTableModel(unittest.TestCase):
         # column mapping
         undo_stack = MagicMock()
         mapping = MappingSpecificationModel(
-            "source table", "mapping", dict_to_map({"map_type": "ObjectClass", "name": 0}), undo_stack
+            "source table", "mapping", item_mapping_from_dict({"map_type": "ObjectClass", "name": 0}), undo_stack
         )
         model.set_mapping(mapping)
         entity_class_color = mapping.data_color("Object class names")
@@ -115,7 +118,7 @@ class TestSourceDataTableModel(unittest.TestCase):
         mapping = MappingSpecificationModel(
             "source table",
             "mapping",
-            dict_to_map({"map_type": "ObjectClass", "name": 0, "read_start_row": 1}),
+            item_mapping_from_dict({"map_type": "ObjectClass", "name": 0, "read_start_row": 1}),
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -126,7 +129,9 @@ class TestSourceDataTableModel(unittest.TestCase):
         mapping = MappingSpecificationModel(
             "source table",
             "mapping",
-            dict_to_map({"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}),
+            item_mapping_from_dict(
+                {"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}
+            ),
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -141,7 +146,7 @@ class TestSourceDataTableModel(unittest.TestCase):
         mapping = MappingSpecificationModel(
             "source table",
             "mapping",
-            dict_to_map({"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}}),
+            item_mapping_from_dict({"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}}),
             undo_stack,
         )
         model.set_mapping(mapping)
@@ -153,7 +158,7 @@ class TestSourceDataTableModel(unittest.TestCase):
         mapping = MappingSpecificationModel(
             "source table",
             "mapping",
-            dict_to_map(
+            item_mapping_from_dict(
                 {"map_type": "ObjectClass", "object": {"map_type": "row", "value_reference": 0}, "skip_columns": [0]}
             ),
             undo_stack,
@@ -172,7 +177,9 @@ class TestSourceDataTableModel(unittest.TestCase):
         mapping = MappingSpecificationModel(
             "source table",
             "mapping",
-            dict_to_map({"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}),
+            item_mapping_from_dict(
+                {"map_type": "ObjectClass", "name": 0, "object": {"map_type": "row", "value_reference": 0}}
+            ),
             undo_stack,
         )
         model.set_mapping(mapping)

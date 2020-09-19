@@ -272,9 +272,11 @@ class ImportMappingOptions(QObject):
         Args:
             type_name (str): new parameter type's name
         """
-        if self._executing_command or self._block_signals:
+        if self._executing_command:
             return
-        if self._mapping_specification_model and not self._block_signals:
+        if self._block_signals:
+            return
+        if self._mapping_specification_model:
             source_table_name = self._mapping_specification_model.source_table_name
             specification_name = self._mapping_specification_model.mapping_name
             previous_mapping = self._mapping_specification_model.mapping.parameters

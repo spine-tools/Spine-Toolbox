@@ -329,7 +329,7 @@
      <item row="0" column="0">
       <widget class="QLabel" name="class_type_label">
        <property name="text">
-        <string>Class type:</string>
+        <string>Item type:</string>
        </property>
       </widget>
      </item>
@@ -337,12 +337,12 @@
       <widget class="QComboBox" name="class_type_combo_box">
        <item>
         <property name="text">
-         <string>Object</string>
+         <string>Object class</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Relationship</string>
+         <string>Relationship class</string>
         </property>
        </item>
        <item>

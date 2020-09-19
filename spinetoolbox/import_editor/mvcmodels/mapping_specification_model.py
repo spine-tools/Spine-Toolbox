@@ -22,7 +22,7 @@ from spinedb_api import (
     ColumnHeaderMapping,
     ColumnMapping,
     ConstantMapping,
-    dict_to_map,
+    item_mapping_from_dict,
     FeatureMapping,
     NoneMapping,
     ObjectClassMapping,
@@ -219,8 +219,8 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         self.beginResetModel()
         new_type = {
-            "Object": ObjectClassMapping,
-            "Relationship": RelationshipClassMapping,
+            "Object class": ObjectClassMapping,
+            "Relationship class": RelationshipClassMapping,
             "Object group": ObjectGroupMapping,
             "Alternative": AlternativeMapping,
             "Scenario": ScenarioMapping,
@@ -660,7 +660,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             MappingSpecificationModel: mapping specification
         """
         mapping_name = specification_dict.pop("mapping_name", "")
-        mapping = dict_to_map(specification_dict)
+        mapping = item_mapping_from_dict(specification_dict)
         return MappingSpecificationModel(table_name, mapping_name, mapping, undo_stack)
 
 

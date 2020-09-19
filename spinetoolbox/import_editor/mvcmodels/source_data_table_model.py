@@ -18,7 +18,7 @@ from PySide2.QtCore import Qt, Signal, Slot
 from spinedb_api import (
     EntityClassMapping,
     ParameterValueMapping,
-    MappingBase,
+    SingleMappingBase,
     ColumnHeaderMapping,
     ColumnMapping,
     RowMapping,
@@ -249,13 +249,13 @@ class SourceDataTableModel(MinimalTableModel):
         Checks if index is in mapping
 
         Args:
-            mapping (MappingBase): mapping
+            mapping (SingleMappingBase): mapping
             index (QModelIndex): index
 
         Returns:
             bool: True if mapping is in index
         """
-        if not isinstance(mapping, MappingBase):
+        if not isinstance(mapping, SingleMappingBase):
             return False
         if isinstance(mapping, ColumnHeaderMapping):
             # column header can't be in data
