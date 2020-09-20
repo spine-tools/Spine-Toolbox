@@ -30,6 +30,7 @@ from spinedb_api import (
     ParameterArrayMapping,
     ParameterDefinitionMapping,
     ParameterMapMapping,
+    ParameterMappingBase,
     ParameterTimePatternMapping,
     ParameterTimeSeriesMapping,
     ParameterValueMapping,
@@ -93,7 +94,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             undo_stack (QUndoStack): undo stack
         """
         super().__init__()
-        self._display_names = []
+        self._component_names = []
         self._component_mappings = []
         self._colors = []
         self._item_mapping = None
@@ -274,10 +275,10 @@ class MappingSpecificationModel(QAbstractTableModel):
         self.endResetModel()
 
     def update_display_table(self):
-        self._display_names = self._item_mapping.display_names()
+        self._component_names = self._item_mapping.component_names()
         self._component_mappings = self._item_mapping.component_mappings()
-        if self._item_mapping.has_parameters():
-            self._display_names += self._item_mapping.parameters.display_names()
+        if self._item_mapping.has_parameters() and isinstance(self._item_mapping.parameters, ParameterMappingBase):
+            self._component_names += self._item_mapping.parameters.component_names()
             self._component_mappings += self._item_mapping.parameters.component_mappings()
         self._colors = self._make_colors()
 
@@ -319,7 +320,7 @@ class MappingSpecificationModel(QAbstractTableModel):
     def data(self, index, role=Qt.DisplayRole):
         column = index.column()
         if role in (Qt.DisplayRole, Qt.EditRole):
-            name = self._display_names[index.row()]
+            name = self._component_names[index.row()]
             if column == 0:
                 return name
             m = self._component_mappings[index.row()]
@@ -329,7 +330,7 @@ class MappingSpecificationModel(QAbstractTableModel):
                 return self.get_map_value_display(m, name)
             raise RuntimeError("Column out of bounds.")
         if role == Qt.BackgroundRole and column == 0:
-            return self.data_color(self._display_names[index.row()])
+            return self.data_color(self._component_names[index.row()])
         if column == 2:
             if role == Qt.BackgroundRole:
                 if self._mapping_issues(index.row()):
@@ -342,7 +343,7 @@ class MappingSpecificationModel(QAbstractTableModel):
                 return None
 
     def data_color(self, display_name):
-        return dict(zip(self._display_names, self._colors)).get(display_name)
+        return dict(zip(self._component_names, self._colors)).get(display_name)
 
     def _mapping_issues(self, row):
         """Returns a message string if given row contains issues, or an empty string if everything is OK."""
@@ -357,7 +358,7 @@ class MappingSpecificationModel(QAbstractTableModel):
     def rowCount(self, index=None):
         if not self._item_mapping:
             return 0
-        return len(self._display_names)
+        return len(self._component_names)
 
     def columnCount(self, index=None):
         if not self._item_mapping:
@@ -379,7 +380,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         if self._item_mapping.is_pivoted():
             # special case when we have pivoted data, the values should be
             # columns under pivoted indexes
-            if self._display_names[index.row()] == "Parameter values":
+            if self._component_names[index.row()] == "Parameter values":
                 return non_editable
 
         if mapping is None or isinstance(mapping, NoneMapping):
@@ -402,7 +403,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         if column not in (1, 2):
             return False
         row = index.row()
-        name = self._display_names[row]
+        name = self._component_names[row]
         component_mapping = self._component_mappings[row]
         previous_reference = component_mapping.reference
         if isinstance(previous_reference, int):
@@ -427,7 +428,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             type_name (str): name of the new type
             reference (str or int): component mapping reference
         """
-        row = self._display_names.index(component_name)
+        row = self._component_names.index(component_name)
         component_mapping = self._component_mappings[row]
         previous_reference = component_mapping.reference
         previous_type = _MAP_TYPE_DISPLAY_NAME[type(component_mapping)]
@@ -504,21 +505,21 @@ class MappingSpecificationModel(QAbstractTableModel):
     def _get_component_mapping_from_name(self, name):
         if not self._item_mapping:
             return None
-        display_names = self._item_mapping.display_names()
+        component_names = self._item_mapping.component_names()
         component_mappings = self._item_mapping.component_mappings()
-        if self._item_mapping.has_parameters():
-            display_names += self._item_mapping.parameters.display_names()
+        if self._item_mapping.has_parameters() and isinstance(self._item_mapping.parameters, ParameterMappingBase):
+            component_names += self._item_mapping.parameters.component_names()
             component_mappings += self._item_mapping.parameters.component_mappings()
-        name_to_component = dict(zip(display_names, component_mappings))
+        name_to_component = dict(zip(component_names, component_mappings))
         return name_to_component.get(name)
 
     def _set_component_mapping_from_name(self, name, mapping):
         if not self._item_mapping:
             return False
-        if not self._item_mapping.set_component_by_display_name(name, mapping):
+        if not self._item_mapping.set_component_by_name(name, mapping):
             if not self._item_mapping.has_parameters():
                 return False
-            if not self._item_mapping.parameters.set_component_by_display_name(name, mapping):
+            if not self._item_mapping.parameters.set_component_by_name(name, mapping):
                 return False
         row = self._row_for_component_name(name)
         self._component_mappings[row] = mapping
@@ -543,7 +544,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         return True
 
     def _row_for_component_name(self, name):
-        return self._display_names.index(name)
+        return self._component_names.index(name)
 
     def _recommend_string_type(self, mapping):
         self._recommend_mapping_reference_type_change(mapping, StringConvertSpec())
@@ -594,7 +595,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             return
         self._item_mapping.parameters.set_number_of_extra_dimensions(dimensions)
         first_dimension_row = 0
-        for name in self._display_names:
+        for name in self._component_names:
             if name.startswith("Parameter index"):
                 break
             first_dimension_row += 1
@@ -603,14 +604,14 @@ class MappingSpecificationModel(QAbstractTableModel):
             last = first_dimension_row + dimensions - 1
             self.beginInsertRows(QModelIndex(), first, last)
             for index in range(previous_dimensions, dimensions):
-                self._display_names.append(f"Parameter index {index + 1}")
+                self._component_names.append(f"Parameter index {index + 1}")
             self._component_mappings += self._item_mapping.parameters.extra_dimensions[previous_dimensions:]
             self.endInsertRows()
         else:
             first = first_dimension_row + dimensions
             last = first_dimension_row + previous_dimensions - 1
             self.beginRemoveRows(QModelIndex(), first, last)
-            self._display_names = self._display_names[:first]
+            self._component_names = self._component_names[:first]
             self._component_mappings = self._component_mappings[:first]
             self.endRemoveRows()
 

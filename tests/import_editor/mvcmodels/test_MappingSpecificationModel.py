@@ -83,8 +83,10 @@ class TestMappingSpecificationModel(unittest.TestCase):
             self.assertEqual(index.data(), "None")
             index = model.index(row, 2)
             self.assertEqual(index.data(), "")
-            self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
-            self.assertTrue(index.data(Qt.ToolTipRole))
+            if row != 4:
+                # NOTE: "Alternative names" is optional, so no issues
+                self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
+                self.assertTrue(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_valid_object_class_with_pivoted_parameters(self):
         array_parameter_mapping_dict = {
@@ -343,8 +345,10 @@ class TestMappingSpecificationModel(unittest.TestCase):
             self.assertEqual(index.data(), "None")
             index = model.index(row, 2)
             self.assertEqual(index.data(), "")
-            self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
-            self.assertTrue(index.data(Qt.ToolTipRole))
+            if row != 5:
+                # NOTE: "Alternative names" is optional, so no issues
+                self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
+                self.assertTrue(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_multidimensional_relationship_class_with_parameters(self):
         indexed_parameter_mapping_dict = {
