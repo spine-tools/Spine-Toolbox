@@ -34,7 +34,7 @@ class TestArrayModel(unittest.TestCase):
 
     def test_data_for_first_row_returns_none_with_empty_array(self):
         model = ArrayModel()
-        roles = [Qt.DisplayRole, Qt.EditRole, Qt.ToolTip, Qt.BackgroundColorRole]
+        roles = [Qt.DisplayRole, Qt.EditRole, Qt.ToolTip, Qt.BackgroundRole]
         index = model.index(0, 0)
         self.assertTrue(index.isValid())
         for role in roles:

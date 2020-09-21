@@ -15,20 +15,22 @@ Contains the mapping specification model.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, Signal, Slot
+from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, Signal
+from PySide2.QtGui import QColor
 from spinedb_api import (
     AlternativeMapping,
     ColumnHeaderMapping,
     ColumnMapping,
     ConstantMapping,
-    dict_to_map,
-    EntityClassMapping,
+    item_mapping_from_dict,
+    FeatureMapping,
     NoneMapping,
     ObjectClassMapping,
     ObjectGroupMapping,
     ParameterArrayMapping,
     ParameterDefinitionMapping,
     ParameterMapMapping,
+    ParameterMappingBase,
     ParameterTimePatternMapping,
     ParameterTimeSeriesMapping,
     ParameterValueMapping,
@@ -37,10 +39,13 @@ from spinedb_api import (
     ScenarioMapping,
     ScenarioAlternativeMapping,
     TableNameMapping,
+    ToolMapping,
+    ToolFeatureMapping,
+    ToolFeatureMethodMapping,
 )
 from spinetoolbox.spine_io.type_conversion import DateTimeConvertSpec, FloatConvertSpec, StringConvertSpec
 from ..commands import SetComponentMappingReference, SetComponentMappingType
-from ..mapping_colors import ERROR_COLOR, MAPPING_COLORS
+from ..mapping_colors import ERROR_COLOR
 
 _MAP_TYPE_DISPLAY_NAME = {
     NoneMapping: "None",
@@ -89,8 +94,9 @@ class MappingSpecificationModel(QAbstractTableModel):
             undo_stack (QUndoStack): undo stack
         """
         super().__init__()
-        self._display_names = []
+        self._component_names = []
         self._component_mappings = []
+        self._colors = []
         self._item_mapping = None
         if mapping is not None:
             self.set_mapping(mapping)
@@ -177,6 +183,10 @@ class MappingSpecificationModel(QAbstractTableModel):
             AlternativeMapping,
             ScenarioMapping,
             ScenarioAlternativeMapping,
+            FeatureMapping,
+            ToolMapping,
+            ToolFeatureMapping,
+            ToolFeatureMethodMapping,
         )
         if not isinstance(mapping, classes):
             class_names = [c.__name__ for c in classes]
@@ -210,12 +220,16 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         self.beginResetModel()
         new_type = {
-            "Object": ObjectClassMapping,
-            "Relationship": RelationshipClassMapping,
+            "Object class": ObjectClassMapping,
+            "Relationship class": RelationshipClassMapping,
             "Object group": ObjectGroupMapping,
             "Alternative": AlternativeMapping,
             "Scenario": ScenarioMapping,
             "Scenario alternative": ScenarioAlternativeMapping,
+            "Feature": FeatureMapping,
+            "Tool": ToolMapping,
+            "Tool feature": ToolFeatureMapping,
+            "Tool feature method": ToolFeatureMethodMapping,
         }[new_type]
         if self._item_mapping is None:
             self._item_mapping = new_type()
@@ -261,63 +275,22 @@ class MappingSpecificationModel(QAbstractTableModel):
         self.endResetModel()
 
     def update_display_table(self):
-        self._display_names = []
-        self._component_mappings = []
-        if not isinstance(self._item_mapping, ScenarioAlternativeMapping):
-            self._component_mappings.append(self._item_mapping.name)
-        if isinstance(self._item_mapping, RelationshipClassMapping):
-            self._display_names.append("Relationship class names")
-            if self._item_mapping.object_classes:
-                self._display_names.extend(
-                    [f"Object class names {i+1}" for i, oc in enumerate(self._item_mapping.object_classes)]
-                )
-                self._component_mappings.extend(list(self._item_mapping.object_classes))
-            if self._item_mapping.objects:
-                self._display_names.extend([f"Object names {i+1}" for i, oc in enumerate(self._item_mapping.objects)])
-                self._component_mappings.extend(list(self._item_mapping.objects))
-        elif isinstance(self._item_mapping, ObjectClassMapping):
-            self._display_names.append("Object class names")
-            self._display_names.append("Object names")
-            self._component_mappings.append(self._item_mapping.objects)
-        elif isinstance(self._item_mapping, ObjectGroupMapping):
-            self._display_names.append("Object class names")
-            self._display_names.append("Group names")
-            self._component_mappings.append(self._item_mapping.groups)
-            self._display_names.append("Member names")
-            self._component_mappings.append(self._item_mapping.members)
-        elif isinstance(self._item_mapping, AlternativeMapping):
-            self._display_names.append("Alternative names")
-        elif isinstance(self._item_mapping, ScenarioMapping):
-            self._display_names.append("Scenario names")
-            self._display_names.append("Scenario active flags")
-            self._component_mappings.append(self._item_mapping.active)
-        elif isinstance(self._item_mapping, ScenarioAlternativeMapping):
-            self._display_names.append("Scenario names")
-            self._display_names.append("Alternative names")
-            self._display_names.append("Before Alternative names")
-            self._component_mappings.append(self._item_mapping.scenario_name)
-            self._component_mappings.append(self._item_mapping.alternative_name)
-            self._component_mappings.append(self._item_mapping.before_alternative_name)
-        if not self._item_mapping.has_parameters():
-            return
-        if isinstance(self._item_mapping.parameters, ParameterDefinitionMapping):
-            self._display_names.append("Parameter names")
-            self._component_mappings.append(self._item_mapping.parameters.name)
-        if isinstance(self._item_mapping.parameters, ParameterValueMapping):
-            self._display_names.append("Parameter values")
-            self._display_names.append("Alternative names")
-            self._component_mappings.append(self._item_mapping.parameters.value)
-            self._component_mappings.append(self._item_mapping.parameters.alternative_name)
-        if isinstance(self._item_mapping.parameters, ParameterMapMapping):
-            for i, dimension in enumerate(self._item_mapping.parameters.extra_dimensions):
-                self._display_names.append(f"Parameter index {i + 1}")
-                self._component_mappings.append(dimension)
-        if isinstance(self._item_mapping.parameters, ParameterTimeSeriesMapping):
-            self._display_names.append("Parameter time index")
-            self._component_mappings.append(self._item_mapping.parameters.extra_dimensions[0])
-        if isinstance(self._item_mapping.parameters, ParameterTimePatternMapping):
-            self._display_names.append("Parameter time pattern index")
-            self._component_mappings.append(self._item_mapping.parameters.extra_dimensions[0])
+        self._component_names = self._item_mapping.component_names()
+        self._component_mappings = self._item_mapping.component_mappings()
+        if self._item_mapping.has_parameters() and isinstance(self._item_mapping.parameters, ParameterMappingBase):
+            self._component_names += self._item_mapping.parameters.component_names()
+            self._component_mappings += self._item_mapping.parameters.component_mappings()
+        self._colors = self._make_colors()
+
+    def _make_colors(self):
+        component_count = len(self._component_mappings)
+        return [self._color_from_index(i, component_count).lighter() for i in range(component_count)]
+
+    @staticmethod
+    def _color_from_index(i, count):
+        golden_ratio = 0.618033988749895
+        h = golden_ratio * (360 / count) * i
+        return QColor.fromHsv(h, 255, 255, 255)
 
     def get_map_type_display(self, mapping, name):
         if name == "Parameter values" and self._item_mapping.is_pivoted():
@@ -347,7 +320,7 @@ class MappingSpecificationModel(QAbstractTableModel):
     def data(self, index, role=Qt.DisplayRole):
         column = index.column()
         if role in (Qt.DisplayRole, Qt.EditRole):
-            name = self._display_names[index.row()]
+            name = self._component_names[index.row()]
             if column == 0:
                 return name
             m = self._component_mappings[index.row()]
@@ -356,10 +329,10 @@ class MappingSpecificationModel(QAbstractTableModel):
             if column == 2:
                 return self.get_map_value_display(m, name)
             raise RuntimeError("Column out of bounds.")
-        if role == Qt.BackgroundColorRole and column == 0:
-            return self.data_color(self._display_names[index.row()])
+        if role == Qt.BackgroundRole and column == 0:
+            return self.data_color(self._component_names[index.row()])
         if column == 2:
-            if role == Qt.BackgroundColorRole:
+            if role == Qt.BackgroundRole:
                 if self._mapping_issues(index.row()):
                     return ERROR_COLOR
                 return None
@@ -369,86 +342,23 @@ class MappingSpecificationModel(QAbstractTableModel):
                     return issue
                 return None
 
-    @staticmethod
-    def data_color(display_name):
-        if display_name == "Relationship class names":
-            return MAPPING_COLORS["entity_class"]
-        if "Object class" in display_name:
-            return MAPPING_COLORS["entity_class"]
-        if "Object names" in display_name:
-            return MAPPING_COLORS["entity"]
-        if display_name == "Member names":
-            return MAPPING_COLORS["entity"]
-        if display_name == "Group names":
-            return MAPPING_COLORS["group"]
-        if display_name == "Alternative names":
-            return MAPPING_COLORS["alternative"]
-        if display_name == "Scenario names":
-            return MAPPING_COLORS["scenario"]
-        if display_name == "Before Alternative names":
-            return MAPPING_COLORS["before_alternative"]
-        if display_name == "Scenario active flags":
-            return MAPPING_COLORS["active"]
-        if display_name == "Parameter names":
-            return MAPPING_COLORS["parameter_name"]
-        if display_name in ("Parameter time index", "Parameter time pattern index") or display_name.startswith(
-            "Parameter index"
-        ):
-            return MAPPING_COLORS["parameter_extra_dimension"]
-        if display_name == "Parameter values":
-            return MAPPING_COLORS["parameter_value"]
+    def data_color(self, display_name):
+        return dict(zip(self._component_names, self._colors)).get(display_name)
 
     def _mapping_issues(self, row):
         """Returns a message string if given row contains issues, or an empty string if everything is OK."""
-        parameter_name_row = None
-        if isinstance(self._item_mapping, EntityClassMapping):
-            if row == 0:
-                return self._item_mapping.class_names_issues()
-        if isinstance(self._item_mapping, ObjectClassMapping):
-            if row == 1:
-                return self._item_mapping.object_names_issues()
-            parameter_name_row = 2
-        elif isinstance(self._item_mapping, RelationshipClassMapping):
-            dimensions = len(self._item_mapping.object_classes)
-            parameter_name_row = 2 * dimensions + 1
-            if 1 <= row < parameter_name_row:
-                display_name = self._display_names[row]
-                mapping_name, _, mapping_number = display_name.rpartition(" ")
-                index = int(mapping_number) - 1
-                if mapping_name == "Object class names":
-                    return self._item_mapping.object_class_names_issues(index)
-                return self._item_mapping.object_names_issues(index)
-        elif isinstance(self._item_mapping, ObjectGroupMapping):
-            if row == 1:
-                return self._item_mapping.group_names_issues()
-            if row == 2:
-                return self._item_mapping.member_names_issues()
-            parameter_name_row = 3
-        elif isinstance(self._item_mapping, AlternativeMapping):
-            if row == 1:
-                return self._item_mapping.alternative_names_issues()
-        elif isinstance(self._item_mapping, ScenarioMapping):
-            if row == 1:
-                return self._item_mapping.scenario_names_issues()
-        elif isinstance(self._item_mapping, ScenarioAlternativeMapping):
-            if row == 1:
-                return self._item_mapping.scenario_names_issues()
-        if parameter_name_row is None:
+        issues = self._item_mapping.component_issues(row)
+        if issues:
+            return issues
+        parameter_row = row - len(self._item_mapping.component_mappings())
+        if parameter_row < 0:
             return ""
-        if row == parameter_name_row:
-            return self._item_mapping.parameters.names_issues()
-        if parameter_name_row + 1 <= row <= parameter_name_row + 2:
-            # NOTE: parameter_name_row + 2 is the alternative name, which jut "follows"
-            return self._item_mapping.parameters.values_issues(self._item_mapping.is_pivoted())
-        if row >= parameter_name_row + 3:
-            index = row - (parameter_name_row + 3)
-            return self._item_mapping.parameters.indexes_issues(index)
-        return ""
+        return self._item_mapping.parameters.component_issues(parameter_row)
 
     def rowCount(self, index=None):
         if not self._item_mapping:
             return 0
-        return len(self._display_names)
+        return len(self._component_names)
 
     def columnCount(self, index=None):
         if not self._item_mapping:
@@ -470,7 +380,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         if self._item_mapping.is_pivoted():
             # special case when we have pivoted data, the values should be
             # columns under pivoted indexes
-            if self._display_names[index.row()] == "Parameter values":
+            if self._component_names[index.row()] == "Parameter values":
                 return non_editable
 
         if mapping is None or isinstance(mapping, NoneMapping):
@@ -493,7 +403,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         if column not in (1, 2):
             return False
         row = index.row()
-        name = self._display_names[row]
+        name = self._component_names[row]
         component_mapping = self._component_mappings[row]
         previous_reference = component_mapping.reference
         if isinstance(previous_reference, int):
@@ -518,7 +428,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             type_name (str): name of the new type
             reference (str or int): component mapping reference
         """
-        row = self._display_names.index(component_name)
+        row = self._component_names.index(component_name)
         component_mapping = self._component_mappings[row]
         previous_reference = component_mapping.reference
         previous_type = _MAP_TYPE_DISPLAY_NAME[type(component_mapping)]
@@ -543,22 +453,22 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         self.about_to_undo.emit(self._table_name, self._mapping_name)
         if value in ("None", "", None):
-            value = NoneMapping()
+            mapping = NoneMapping()
         elif value == "Constant":
-            value = ConstantMapping()
+            mapping = ConstantMapping()
         elif value == "Column":
-            value = ColumnMapping()
+            mapping = ColumnMapping()
         elif value == "Column Header":
-            value = ColumnHeaderMapping()
+            mapping = ColumnHeaderMapping()
         elif value == "Headers":
-            value = RowMapping(reference=-1)
+            mapping = RowMapping(reference=-1)
         elif value == "Row":
-            value = RowMapping()
+            mapping = RowMapping()
         elif value == "Table Name":
-            value = TableNameMapping(self._table_name)
+            mapping = TableNameMapping(self._table_name)
         else:
             return False
-        return self._set_component_mapping_from_name(name, value)
+        return self._set_component_mapping_from_name(name, mapping)
 
     def set_value(self, name, value):
         """
@@ -595,91 +505,31 @@ class MappingSpecificationModel(QAbstractTableModel):
     def _get_component_mapping_from_name(self, name):
         if not self._item_mapping:
             return None
-        if name in ("Relationship class names", "Object class names"):
-            return self._item_mapping.name
-        if name == "Scenario names":
-            if isinstance(self._item_mapping, ScenarioAlternativeMapping):
-                return self._item_mapping.scenario_name
-            return self._item_mapping.name
-        if name == "Alternative names":
-            if isinstance(self._item_mapping, ScenarioAlternativeMapping):
-                return self._item_mapping.alternative_name
-            if isinstance(self._item_mapping, AlternativeMapping):
-                return self._item_mapping.name
-            return self._item_mapping.parameters.alternative_name
-        if name == "Before Alternative names":
-            return self._item_mapping.before_alternative_name
-        if name == "Scenario active flags":
-            return self._item_mapping.active
-        if name == "Group names":
-            return self._item_mapping.groups
-        if name == "Member names":
-            return self._item_mapping.members
-        if name == "Object names":
-            return self._item_mapping.objects
-        if name.startswith("Object class"):
-            # Not to be confused with name == 'Object class names'.
-            return self._item_mapping.object_classes[_name_index(name)]
-        if name.startswith("Object"):
-            # Not to be confused with name == 'Object class names' or name == 'Object class X'.
-            return self._item_mapping.objects[_name_index(name)]
-        if name == "Parameter names":
-            return self._item_mapping.parameters.name
-        if name == "Parameter values":
-            return self._item_mapping.parameters.value
-        if name in ("Parameter time index", "Parameter time pattern index"):
-            return self._item_mapping.parameters.extra_dimensions[0]
-        if name.startswith("Parameter index"):
-            return self._item_mapping.parameters.extra_dimensions[_name_index(name)]
-        return None
+        component_names = self._item_mapping.component_names()
+        component_mappings = self._item_mapping.component_mappings()
+        if self._item_mapping.has_parameters() and isinstance(self._item_mapping.parameters, ParameterMappingBase):
+            component_names += self._item_mapping.parameters.component_names()
+            component_mappings += self._item_mapping.parameters.component_mappings()
+        name_to_component = dict(zip(component_names, component_mappings))
+        return name_to_component.get(name)
 
     def _set_component_mapping_from_name(self, name, mapping):
-        if name in ("Relationship class names", "Object class names"):
-            self._item_mapping.name = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Scenario names":
-            if isinstance(self._item_mapping, ScenarioAlternativeMapping):
-                self._item_mapping.scenario_name = mapping
-            else:
-                self._item_mapping.name = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Alternative names":
-            if isinstance(self._item_mapping, ScenarioAlternativeMapping):
-                self._item_mapping.alternative_name = mapping
-            elif isinstance(self._item_mapping, AlternativeMapping):
-                self._item_mapping.name = mapping
-            else:
-                self._item_mapping.parameters.alternative_name = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Before Alternative names":
-            self._item_mapping.before_alternative_name = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Scenario active flags":
-            self._item_mapping.active = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Object names":
-            self._item_mapping.objects = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Group names":
-            self._item_mapping.groups = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Member names":
-            self._item_mapping.members = mapping
-            self._recommend_string_type(mapping)
-        elif "Object class " in name:
-            self._item_mapping.object_classes[_name_index(name)] = mapping
-            self._recommend_string_type(mapping)
-        elif "Object " in name:
-            self._item_mapping.objects[_name_index(name)] = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Parameter names":
-            self._item_mapping.parameters.name = mapping
-            self._recommend_string_type(mapping)
-        elif name == "Parameter values":
-            self._item_mapping.parameters.value = mapping
+        if not self._item_mapping:
+            return False
+        if not self._item_mapping.set_component_by_name(name, mapping):
+            if not self._item_mapping.has_parameters():
+                return False
+            if not self._item_mapping.parameters.set_component_by_name(name, mapping):
+                return False
+        row = self._row_for_component_name(name)
+        self._component_mappings[row] = mapping
+        top_left = self.index(row, 1)
+        bottom_right = self.index(row, 2)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.ToolTipRole])
+        # FIXME: Try and see if we can do better here below
+        if name == "Parameter values":
             self._recommend_parameter_value_mapping_reference_type_change(mapping)
         elif name in ("Parameter time index", "Parameter time pattern index"):
-            self._item_mapping.parameters.extra_dimensions = [mapping]
             if name == "Parameter time index":
                 self._recommend_datetime_type(mapping)
             if (
@@ -689,20 +539,12 @@ class MappingSpecificationModel(QAbstractTableModel):
             ):
                 non_pivoted_columns = self._item_mapping.non_pivoted_columns()
                 self.multi_column_type_recommendation_changed.emit(non_pivoted_columns, FloatConvertSpec())
-        elif name.startswith("Parameter index"):
-            self._item_mapping.parameters.extra_dimensions[_name_index(name)] = mapping
-            self._recommend_string_type(mapping)
         else:
-            return False
-        row = self._row_for_component_name(name)
-        self._component_mappings[row] = mapping
-        top_left = self.index(row, 1)
-        bottom_right = self.index(row, 2)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundColorRole, Qt.DisplayRole, Qt.ToolTipRole])
+            self._recommend_string_type(mapping)
         return True
 
     def _row_for_component_name(self, name):
-        return self._display_names.index(name)
+        return self._component_names.index(name)
 
     def _recommend_string_type(self, mapping):
         self._recommend_mapping_reference_type_change(mapping, StringConvertSpec())
@@ -753,7 +595,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             return
         self._item_mapping.parameters.set_number_of_extra_dimensions(dimensions)
         first_dimension_row = 0
-        for name in self._display_names:
+        for name in self._component_names:
             if name.startswith("Parameter index"):
                 break
             first_dimension_row += 1
@@ -762,14 +604,14 @@ class MappingSpecificationModel(QAbstractTableModel):
             last = first_dimension_row + dimensions - 1
             self.beginInsertRows(QModelIndex(), first, last)
             for index in range(previous_dimensions, dimensions):
-                self._display_names.append(f"Parameter index {index + 1}")
+                self._component_names.append(f"Parameter index {index + 1}")
             self._component_mappings += self._item_mapping.parameters.extra_dimensions[previous_dimensions:]
             self.endInsertRows()
         else:
             first = first_dimension_row + dimensions
             last = first_dimension_row + previous_dimensions - 1
             self.beginRemoveRows(QModelIndex(), first, last)
-            self._display_names = self._display_names[:first]
+            self._component_names = self._component_names[:first]
             self._component_mappings = self._component_mappings[:first]
             self.endRemoveRows()
 
@@ -819,7 +661,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             MappingSpecificationModel: mapping specification
         """
         mapping_name = specification_dict.pop("mapping_name", "")
-        mapping = dict_to_map(specification_dict)
+        mapping = item_mapping_from_dict(specification_dict)
         return MappingSpecificationModel(table_name, mapping_name, mapping, undo_stack)
 
 

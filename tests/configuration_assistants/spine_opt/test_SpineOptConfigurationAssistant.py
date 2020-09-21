@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for SpineModelConfigurationAssistant class.
+Unit tests for SpineOptConfigurationAssistant class.
 
 :author: M. Marin (KTH)
 :date:   3.9.2019
@@ -21,12 +21,12 @@ from unittest.mock import patch, Mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.configuration_assistants.spine_model.configuration_assistant import SpineModelConfigurationAssistant
+from spinetoolbox.configuration_assistants.spine_opt.configuration_assistant import SpineOptConfigurationAssistant
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from tests.mock_helpers import create_toolboxui_with_project
 
 
-class TestSpineModelConfigurationAssistant(unittest.TestCase):
+class TestSpineOptConfigurationAssistant(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
@@ -44,7 +44,7 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test."""
         toolbox = create_toolboxui_with_project()
-        self.widget = SpineModelConfigurationAssistant(toolbox)
+        self.widget = SpineOptConfigurationAssistant(toolbox)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -58,9 +58,9 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
         self.widget.machine.start()
         QApplication.processEvents()
 
-    def goto_updating_spine_model(self):
+    def goto_updating_spine_opt(self):
         with patch(
-            "spinetoolbox.configuration_assistants.spine_model.configuration_assistant.QProcessExecutionManager"
+            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.QProcessExecutionManager"
         ) as mock_QProcessExecutionManager:
             exec_mngr = Mock()
             mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
@@ -70,25 +70,25 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
             self.widget.button_right.click()
 
     def goto_checking_py_call_program1(self):
-        self.goto_updating_spine_model()
+        self.goto_updating_spine_opt()
         with patch.object(QProcessExecutionManager, "start_execution"):
             self.widget.exec_mngr.execution_finished.emit(0)
 
-    def goto_prompt_to_install_latest_spine_model(self):
-        self.goto_updating_spine_model()
+    def goto_prompt_to_install_latest_spine_opt(self):
+        self.goto_updating_spine_opt()
         self.widget.exec_mngr.execution_finished.emit(-1)
 
-    def goto_installing_latest_spine_model(self):
-        self.goto_prompt_to_install_latest_spine_model()
+    def goto_installing_latest_spine_opt(self):
+        self.goto_prompt_to_install_latest_spine_opt()
         with patch.object(QProcessExecutionManager, "start_execution"):
             self.widget.button_right.click()
 
-    def goto_report_spine_model_installation_failed(self):
-        self.goto_installing_latest_spine_model()
+    def goto_report_spine_opt_installation_failed(self):
+        self.goto_installing_latest_spine_opt()
         self.widget.exec_mngr.execution_finished.emit(-1)
 
     def goto_checking_py_call_program2(self):
-        self.goto_installing_latest_spine_model()
+        self.goto_installing_latest_spine_opt()
         with patch.object(QProcessExecutionManager, "start_execution"):
             self.widget.exec_mngr.execution_finished.emit(0)
 
@@ -113,7 +113,7 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
 
     def test_report_julia_not_found(self):
         with patch(
-            "spinetoolbox.configuration_assistants.spine_model.configuration_assistant.QProcessExecutionManager"
+            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.QProcessExecutionManager"
         ) as mock_QProcessExecutionManager:
             exec_mngr = Mock()
             mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
@@ -123,7 +123,7 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
 
     def test_report_bad_julia_version(self):
         with patch(
-            "spinetoolbox.configuration_assistants.spine_model.configuration_assistant.QProcessExecutionManager"
+            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.QProcessExecutionManager"
         ) as mock_QProcessExecutionManager:
             exec_mngr = Mock()
             mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
@@ -131,17 +131,17 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
             self.goto_welcome()
         self.assertEqual(self.widget.current_state, "report_bad_julia_version")
 
-    def test_updating_spine_model(self):
-        self.goto_updating_spine_model()
-        self.assertEqual(self.widget.current_state, "updating_spine_model")
+    def test_updating_spine_opt(self):
+        self.goto_updating_spine_opt()
+        self.assertEqual(self.widget.current_state, "updating_spine_opt")
 
-    def test_prompt_to_install_latest_spine_model(self):
-        self.goto_prompt_to_install_latest_spine_model()
-        self.assertEqual(self.widget.current_state, "prompt_to_install_latest_spine_model")
+    def test_prompt_to_install_latest_spine_opt(self):
+        self.goto_prompt_to_install_latest_spine_opt()
+        self.assertEqual(self.widget.current_state, "prompt_to_install_latest_spine_opt")
 
-    def test_installing_latest_spine_model(self):
-        self.goto_installing_latest_spine_model()
-        self.assertEqual(self.widget.current_state, "installing_latest_spine_model")
+    def test_installing_latest_spine_opt(self):
+        self.goto_installing_latest_spine_opt()
+        self.assertEqual(self.widget.current_state, "installing_latest_spine_opt")
 
     def test_checking_py_call_program1(self):
         self.goto_checking_py_call_program1()
@@ -159,9 +159,9 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
         self.goto_prompt_to_install_py_call()
         self.assertEqual(self.widget.current_state, "prompt_to_install_py_call")
 
-    def test_report_spine_model_installation_failed(self):
-        self.goto_report_spine_model_installation_failed()
-        self.assertEqual(self.widget.current_state, "report_spine_model_installation_failed")
+    def test_report_spine_opt_installation_failed(self):
+        self.goto_report_spine_opt_installation_failed()
+        self.assertEqual(self.widget.current_state, "report_spine_opt_installation_failed")
 
     def test_reconfiguring_py_call(self):
         self.goto_reconfiguring_py_call()
@@ -171,16 +171,16 @@ class TestSpineModelConfigurationAssistant(unittest.TestCase):
         self.goto_installing_py_call()
         self.assertEqual(self.widget.current_state, "installing_py_call")
 
-    def test_report_spine_model_ready1(self):
+    def test_report_spine_opt_ready1(self):
         self.goto_checking_py_call_program1()
         self.widget.exec_mngr.process_output = sys.executable
         self.widget.exec_mngr.execution_finished.emit(0)
-        self.assertEqual(self.widget.current_state, "report_spine_model_ready")
+        self.assertEqual(self.widget.current_state, "report_spine_opt_ready")
 
-    def test_report_spine_model_ready2(self):
+    def test_report_spine_opt_ready2(self):
         self.goto_reconfiguring_py_call()
         self.widget.exec_mngr.execution_finished.emit(0)
-        self.assertEqual(self.widget.current_state, "report_spine_model_ready")
+        self.assertEqual(self.widget.current_state, "report_spine_opt_ready")
 
     def test_report_py_call_process_failed1(self):
         self.goto_reconfiguring_py_call()

@@ -97,6 +97,10 @@ class SourceConnection:
             "alternatives": [],
             "scenarios": [],
             "scenario_alternatives": [],
+            "features": [],
+            "tools": [],
+            "tool_features": [],
+            "tool_feature_methods": [],
         }
         errors = []
         for table, mapping in tables_mappings.items():

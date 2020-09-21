@@ -20,7 +20,7 @@ from PySide2.QtCore import QObject, QItemSelectionModel, Signal, Slot
 from ...widgets.custom_delegates import ComboBoxDelegate
 from ..commands import CreateMapping, DeleteMapping
 
-MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
+SOURCE_TYPES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
 
 class ImportMappings(QObject):
@@ -47,7 +47,8 @@ class ImportMappings(QObject):
         self._mappings_model = None
         self._undo_stack = undo_stack
         # initialize interface
-        self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(MAPPING_CHOICES))
+        self._src_type_delegate = ComboBoxDelegate(SOURCE_TYPES)
+        self._ui.table_view_mappings.setItemDelegateForColumn(1, self._src_type_delegate)
 
         # connect signals
         self._ui.new_button.clicked.connect(self.new_mapping)

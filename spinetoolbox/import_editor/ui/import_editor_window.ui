@@ -35,7 +35,7 @@
      <x>0</x>
      <y>0</y>
      <width>1197</width>
-     <height>22</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="file_menu">
@@ -329,7 +329,7 @@
      <item row="0" column="0">
       <widget class="QLabel" name="class_type_label">
        <property name="text">
-        <string>Class type:</string>
+        <string>Item type:</string>
        </property>
       </widget>
      </item>
@@ -337,12 +337,12 @@
       <widget class="QComboBox" name="class_type_combo_box">
        <item>
         <property name="text">
-         <string>Object</string>
+         <string>Object class</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Relationship</string>
+         <string>Relationship class</string>
         </property>
        </item>
        <item>
@@ -363,6 +363,26 @@
        <item>
         <property name="text">
          <string>Scenario alternative</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Feature</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tool</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tool feature</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Tool feature method</string>
         </property>
        </item>
       </widget>

@@ -43,7 +43,7 @@ class ParameterViewMixin:
         self.filter_parameter_ids = {}
         self.parameter_tag_model = ParameterTagModel(self, self.db_mngr, *self.db_maps)
         self.ui.treeView_parameter_tag.setModel(self.parameter_tag_model)
-        self.ui.treeView_parameter_tag.connect_data_store_form(self)
+        self.ui.treeView_parameter_tag.connect_spine_db_editor(self)
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *self.db_maps)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(
             self, self.db_mngr, *self.db_maps
@@ -73,7 +73,7 @@ class ParameterViewMixin:
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
-            view.connect_data_store_form(self)
+            view.connect_spine_db_editor(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -318,7 +318,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_fetched(self, db_map_data):
         super().receive_parameter_tags_fetched(db_map_data)
-        self.parameter_tag_model.receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_model.add_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_fetched(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
@@ -332,7 +332,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_added(self, db_map_data):
         super().receive_parameter_tags_added(db_map_data)
-        self.parameter_tag_model.receive_parameter_tags_added(db_map_data)
+        self.parameter_tag_model.add_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
@@ -346,7 +346,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_updated(self, db_map_data):
         super().receive_parameter_tags_updated(db_map_data)
-        self.parameter_tag_model.receive_parameter_tags_updated(db_map_data)
+        self.parameter_tag_model.update_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
         super().receive_parameter_definitions_updated(db_map_data)
@@ -375,7 +375,7 @@ class ParameterViewMixin:
 
     def receive_parameter_tags_removed(self, db_map_data):
         super().receive_parameter_tags_removed(db_map_data)
-        self.parameter_tag_model.receive_parameter_tags_removed(db_map_data)
+        self.parameter_tag_model.remove_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
         super().receive_parameter_definitions_removed(db_map_data)

@@ -72,10 +72,10 @@ class Ui_PackagesForm(object):
         self.verticalLayout_6 = QVBoxLayout(self.groupBox_general)
         self.verticalLayout_6.setSpacing(6)
         self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.textBrowser_spine_model = QTextBrowser(self.groupBox_general)
-        self.textBrowser_spine_model.setObjectName(u"textBrowser_spine_model")
+        self.textBrowser_spine_opt = QTextBrowser(self.groupBox_general)
+        self.textBrowser_spine_opt.setObjectName(u"textBrowser_spine_opt")
 
-        self.verticalLayout_6.addWidget(self.textBrowser_spine_model)
+        self.verticalLayout_6.addWidget(self.textBrowser_spine_opt)
 
 
         self.verticalLayout_2.addWidget(self.groupBox_general)
@@ -95,6 +95,6 @@ class Ui_PackagesForm(object):
 
     def retranslateUi(self, PackagesForm):
         PackagesForm.setWindowTitle(QCoreApplication.translate("PackagesForm", u"Tool configuration assistant", None))
-        self.groupBox_general.setTitle(QCoreApplication.translate("PackagesForm", u"SpineModel.jl", None))
+        self.groupBox_general.setTitle(QCoreApplication.translate("PackagesForm", u"SpineOpt.jl", None))
     # retranslateUi
 

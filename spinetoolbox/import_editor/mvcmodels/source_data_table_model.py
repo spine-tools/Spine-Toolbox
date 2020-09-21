@@ -17,16 +17,8 @@ Contains the source data table model.
 from PySide2.QtCore import Qt, Signal, Slot
 from spinedb_api import (
     EntityClassMapping,
-    ObjectClassMapping,
-    RelationshipClassMapping,
-    ObjectGroupMapping,
-    AlternativeMapping,
-    ScenarioMapping,
-    ScenarioAlternativeMapping,
-    ParameterDefinitionMapping,
     ParameterValueMapping,
-    ParameterArrayMapping,
-    MappingBase,
+    SingleMappingBase,
     ColumnHeaderMapping,
     ColumnMapping,
     RowMapping,
@@ -36,7 +28,7 @@ from spinedb_api import (
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_io.type_conversion import ConvertSpec
 from .mapping_specification_model import MappingSpecificationModel
-from ..mapping_colors import ERROR_COLOR, MAPPING_COLORS
+from ..mapping_colors import ERROR_COLOR
 
 
 class SourceDataTableModel(MinimalTableModel):
@@ -185,7 +177,8 @@ class SourceDataTableModel(MinimalTableModel):
     def update_colors(self):
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundColorRole])
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
+        self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount() - 1)
 
     def data_error(self, index, role=Qt.DisplayRole, orientation=Qt.Horizontal):
         if role == Qt.DisplayRole:
@@ -193,7 +186,7 @@ class SourceDataTableModel(MinimalTableModel):
         if role == Qt.ToolTipRole:
             type_name = self.get_type(index.column(), orientation)
             return f'Could not parse value: "{self._main_data[index.row()][index.column()]}" as a {type_name}'
-        if role == Qt.BackgroundColorRole:
+        if role == Qt.BackgroundRole:
             return ERROR_COLOR
 
     def data(self, index, role=Qt.DisplayRole):
@@ -217,7 +210,7 @@ class SourceDataTableModel(MinimalTableModel):
                 if (index.row(), index.column()) in self._row_type_errors:
                     return self.data_error(index, role, orientation=Qt.Vertical)
 
-        if role == Qt.BackgroundColorRole and self._mapping_specification:
+        if role == Qt.BackgroundRole and self._mapping_specification:
             return self.data_color(index)
         return super().data(index, role)
 
@@ -232,93 +225,43 @@ class SourceDataTableModel(MinimalTableModel):
             QColor: color of index
         """
         mapping = self._mapping_specification.mapping
-        if isinstance(mapping, EntityClassMapping):
-            if isinstance(mapping.parameters, ParameterValueMapping):
-                # parameter values color
-                if mapping.is_pivoted():
-                    last_row = max(mapping.last_pivot_row(), mapping.read_start_row - 1)
-                    if (
-                        last_row is not None
-                        and index.row() > last_row
-                        and index.column() not in self.mapping_column_ref_int_list()
-                    ):
-                        return MAPPING_COLORS["parameter_value"]
-                elif self.index_in_mapping(mapping.parameters.value, index):
-                    return MAPPING_COLORS["parameter_value"]
-                elif self.index_in_mapping(mapping.parameters.alternative_name, index):
-                    return MAPPING_COLORS["alternative"]
-            if isinstance(mapping.parameters, ParameterArrayMapping) and mapping.parameters.extra_dimensions:
-                # parameter extra dimensions color
-                for ed in mapping.parameters.extra_dimensions:
-                    if self.index_in_mapping(ed, index):
-                        return MAPPING_COLORS["parameter_extra_dimension"]
-            if isinstance(mapping.parameters, ParameterDefinitionMapping) and self.index_in_mapping(
-                mapping.parameters.name, index
-            ):
-                # parameter name colors
-                return MAPPING_COLORS["parameter_name"]
-        if not isinstance(
-            mapping, (AlternativeMapping, ScenarioMapping, ScenarioAlternativeMapping)
-        ) and self.index_in_mapping(mapping.name, index):
-            return MAPPING_COLORS["entity_class"]
-        classes = []
-        objects = []
-        if isinstance(mapping, ObjectClassMapping):
-            objects = [mapping.objects]
-        elif isinstance(mapping, ObjectGroupMapping):
-            if self.index_in_mapping(mapping.groups, index):
-                return MAPPING_COLORS["group"]
-            objects = [mapping.members]
-        elif isinstance(mapping, RelationshipClassMapping):
-            objects = mapping.objects
-            classes = mapping.object_classes
-        elif isinstance(mapping, AlternativeMapping):
-            if self.index_in_mapping(mapping.name, index):
-                return MAPPING_COLORS["alternative"]
-        elif isinstance(mapping, ScenarioMapping):
-            if self.index_in_mapping(mapping.name, index):
-                return MAPPING_COLORS["scenario"]
-            if self.index_in_mapping(mapping.active, index):
-                return MAPPING_COLORS["active"]
-        elif isinstance(mapping, ScenarioAlternativeMapping):
-            if self.index_in_mapping(mapping.scenario_name, index):
-                return MAPPING_COLORS["scenario"]
-            if self.index_in_mapping(mapping.alternative_name, index):
-                return MAPPING_COLORS["alternative"]
-            if self.index_in_mapping(mapping.before_alternative_name, index):
-                return MAPPING_COLORS["before_alternative"]
-        for o in objects:
-            # object colors
-            if self.index_in_mapping(o, index):
-                return MAPPING_COLORS["entity"]
-        for c in classes:
-            # object colors
-            if self.index_in_mapping(c, index):
-                return MAPPING_COLORS["entity_class"]
+        if self.index_below_last_pivot_row(mapping, index):
+            return self._mapping_specification.data_color("Parameter values")
+        for k, component_mapping in enumerate(self._mapping_specification._component_mappings):
+            if self.index_in_mapping(component_mapping, index):
+                return self._mapping_specification._colors[k]
+        return None
+
+    def index_below_last_pivot_row(self, mapping, index):
+        if not isinstance(mapping, EntityClassMapping):
+            return False
+        if not isinstance(mapping.parameters, ParameterValueMapping):
+            return False
+        if not mapping.is_pivoted():
+            return False
+        last_row = max(mapping.last_pivot_row(), mapping.read_start_row - 1)
+        return (
+            last_row is not None and index.row() > last_row and index.column() not in self.mapping_column_ref_int_list()
+        )
 
     def index_in_mapping(self, mapping, index):
         """
         Checks if index is in mapping
 
         Args:
-            mapping (MappingBase): mapping
+            mapping (SingleMappingBase): mapping
             index (QModelIndex): index
 
         Returns:
             bool: True if mapping is in index
         """
-        if not isinstance(mapping, MappingBase):
+        if not isinstance(mapping, SingleMappingBase):
             return False
         if isinstance(mapping, ColumnHeaderMapping):
             # column header can't be in data
             return False
         if isinstance(mapping, ColumnMapping):
-            ref = mapping.reference
-            if isinstance(ref, str):
-                # find header reference
-                if ref in self.header:
-                    ref = self.header.index(ref)
-            if index.column() == ref:
+            if index.column() == self._reference_from_header(mapping.reference):
                 if self._mapping_specification.mapping.is_pivoted():
                     # only rows below pivoted rows
                     last_row = max(
@@ -357,3 +300,22 @@ class SourceDataTableModel(MinimalTableModel):
             int_non_piv_cols.append(pc)
 
         return int_non_piv_cols
+
+    def _reference_from_header(self, ref):
+        if isinstance(ref, str) and ref in self.header:
+            return self.header.index(ref)
+        return ref
+
+    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+        if orientation != Qt.Horizontal or role != Qt.BackgroundRole:
+            return super().headerData(section, orientation, role)
+        for k, component_mapping in enumerate(self._mapping_specification._component_mappings):
+            if self.section_in_mapping(component_mapping, section):
+                return self._mapping_specification._colors[k]
+
+    def section_in_mapping(self, mapping, section):
+        if isinstance(mapping, ColumnHeaderMapping):
+            return section == self._reference_from_header(mapping.reference)
+        if isinstance(mapping, RowMapping):
+            return mapping.reference == -1
+        return False

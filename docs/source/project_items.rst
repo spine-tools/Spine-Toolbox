@@ -1,9 +1,9 @@
 .. Project items documentation
    Created 19.8.2019
 
-.. |data_connection| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-alt.svg
+.. |combiner| image:: ../../spinetoolbox/ui/resources/project_item_icons/blender.svg
    :width: 16
-.. |importer| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-import.svg
+.. |data_connection| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-alt.svg
    :width: 16
 .. |data_store| image:: ../../spinetoolbox/ui/resources/project_item_icons/database.svg
    :width: 16
@@ -13,11 +13,15 @@
    :width: 16
 .. |exporter| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-export.svg
    :width: 16
+.. |folder-open| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
+   :width: 16
+.. |gimlet| image:: ../../spinetoolbox/ui/resources/project_item_icons/screwdriver.svg
+   :width: 16
+.. |importer| image:: ../../spinetoolbox/ui/resources/project_item_icons/database-import.svg
+   :width: 16
 .. |tool| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
    :width: 16
 .. |view| image:: ../../spinetoolbox/ui/resources/project_item_icons/binoculars.svg
-   :width: 16
-.. |folder-open| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
    :width: 16
 
 .. _Project Items:
@@ -32,8 +36,8 @@ Project Items
 Project items in the *Design view* and the connections between them make up the graph (Directed Acyclic
 Graph, DAG) that is executed when the |execute| or |execute-selected| buttons are pressed.
 
-See :ref:`Executing Projects` for more information on how a DAG is processed by Spine Toolbox. You can
-also find information on how resources are passed between project items at execution time there.
+See :ref:`Executing Projects` for more information on how a DAG is processed by Spine Toolbox.
+Those interested in looking under the hood can check the :ref:`Project item development` section.
 
 Project Item Properties
 -----------------------
@@ -73,12 +77,25 @@ Tool is the heart of a DAG. It is usually the actual model to be executed in Spi
 but can be an arbitrary script or executable as well.
 A tool is specified by its :ref:`specification <Tool specification editor>`.
 
+Gimlet |gimlet|
+===============
+
+While being able to run most scripts and copyable executables, Tool cannot handle system commands
+or executables meant to run from system's *path*. This is a job for Gimlet.
+A Gimlet can execute an arbitrary system command with given command line arguments,
+input files and work directory.
+
 View |view|
 ===========
 
 A View item is meant for inspecting data from multiple sources using the
 :ref:`Spine db editor <Spine db editor>`.
 Note that the data is opened in read-only mode so modifications are not possible from the View item.
+
+Combiner |combiner|
+===================
+
+A Combiner item can be used to combine two or more databases into one.
 
 Importer |importer|
 ===================

@@ -42,7 +42,6 @@ from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .db_session_history_dialog import DBSessionHistoryDialog
 from ...widgets.notification import NotificationStack
-from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ...helpers import (
     busy_effect,
     ensure_window_is_on_screen,
@@ -98,9 +97,6 @@ class SpineDBEditorBase(QMainWindow):
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.notification_stack = NotificationStack(self)
-        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
-        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
-        self.ui.treeView_parameter_value_list.connect_data_store_form(self)
         self.silenced = False
         fm = QFontMetrics(QFont("", 0))
         self.default_row_height = 1.2 * fm.lineSpacing()
@@ -673,9 +669,21 @@ class SpineDBEditorBase(QMainWindow):
         pass
 
     def receive_parameter_value_lists_fetched(self, db_map_data):
-        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
+        self.parameter_value_list_model.add_parameter_value_lists(db_map_data)
 
     def receive_parameter_tags_fetched(self, db_map_data):
+        pass
+
+    def receive_features_fetched(self, db_map_data):
+        pass
+
+    def receive_tools_fetched(self, db_map_data):
+        pass
+
+    def receive_tool_features_fetched(self, db_map_data):
+        pass
+
+    def receive_tool_feature_methods_fetched(self, db_map_data):
         pass
 
     def receive_scenarios_added(self, db_map_data):
@@ -707,10 +715,21 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_added(self, db_map_data):
         self.notify_items_changed("added", "parameter_value_list", db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
 
     def receive_parameter_tags_added(self, db_map_data):
         self.notify_items_changed("added", "parameter_tag", db_map_data)
+
+    def receive_features_added(self, db_map_data):
+        self.notify_items_changed("added", "feature", db_map_data)
+
+    def receive_tools_added(self, db_map_data):
+        self.notify_items_changed("added", "tool", db_map_data)
+
+    def receive_tool_features_added(self, db_map_data):
+        self.notify_items_changed("added", "tool_feature", db_map_data)
+
+    def receive_tool_feature_methods_added(self, db_map_data):
+        self.notify_items_changed("added", "tool_feature_method", db_map_data)
 
     def receive_scenarios_updated(self, db_map_data):
         self.notify_items_changed("updated", "scenario", db_map_data)
@@ -738,10 +757,21 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter_value_list", db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
 
     def receive_parameter_tags_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter_tag", db_map_data)
+
+    def receive_features_updated(self, db_map_data):
+        self.notify_items_changed("updated", "feature", db_map_data)
+
+    def receive_tools_updated(self, db_map_data):
+        self.notify_items_changed("updated", "tool", db_map_data)
+
+    def receive_tool_features_updated(self, db_map_data):
+        self.notify_items_changed("updated", "tool_feature", db_map_data)
+
+    def receive_tool_feature_methods_updated(self, db_map_data):
+        self.notify_items_changed("updated", "tool_feature_method", db_map_data)
 
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter_definition tag", db_map_data)
@@ -775,10 +805,21 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter_value_list", db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
 
     def receive_parameter_tags_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter_tag", db_map_data)
+
+    def receive_features_removed(self, db_map_data):
+        self.notify_items_changed("removed", "feature", db_map_data)
+
+    def receive_tools_removed(self, db_map_data):
+        self.notify_items_changed("removed", "tool", db_map_data)
+
+    def receive_tool_features_removed(self, db_map_data):
+        self.notify_items_changed("removed", "tool_feature", db_map_data)
+
+    def receive_tool_feature_methods_removed(self, db_map_data):
+        self.notify_items_changed("removed", "tool_feature_method", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -899,13 +940,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_tool_feature_tree, Qt.Horizontal
         )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical
+            self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
         )
-        self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_tag, Qt.Vertical
+        )
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -926,12 +970,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
         docks = [
-            self.ui.dockWidget_alternative_scenario_tree,
+            self.ui.dockWidget_tool_feature_tree,
             self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_alternative_scenario_tree,
             self.ui.dockWidget_parameter_tag,
         ]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.4 * height, 0.4 * height, 0.2 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.3 * height, 0.1 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot(bool)

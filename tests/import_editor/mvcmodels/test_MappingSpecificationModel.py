@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 from PySide2.QtCore import Qt
 from spinetoolbox.import_editor.mapping_colors import ERROR_COLOR
 from spinetoolbox.import_editor.mvcmodels.mapping_specification_model import MappingSpecificationModel
-from spinedb_api import dict_to_map
+from spinedb_api import item_mapping_from_dict
 
 
 class TestMappingSpecificationModel(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
         model = MappingSpecificationModel(
             "source table",
             "mapping",
-            dict_to_map({"map_type": "ObjectClass", "name": None, "object": None}),
+            item_mapping_from_dict({"map_type": "ObjectClass", "name": None, "object": None}),
             undo_stack,
         )
         self.assertEqual(model.rowCount(), 2)
@@ -41,11 +41,11 @@ class TestMappingSpecificationModel(unittest.TestCase):
         self.assertEqual(index.data(), "None")
         index = model.index(0, 2)
         self.assertEqual(index.data(), "")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), ERROR_COLOR)
+        self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
         self.assertTrue(index.data(Qt.ToolTipRole))
         index = model.index(1, 2)
         self.assertEqual(index.data(), "")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_invalid_object_class_with_parameters(self):
@@ -63,7 +63,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "parameters": indexed_parameter_mapping_dict,
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel("source table", "mapping 1", dict_to_map(mapping_dict), undo_stack)
+        model = MappingSpecificationModel("source table", "mapping 1", item_mapping_from_dict(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 6)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -83,8 +83,10 @@ class TestMappingSpecificationModel(unittest.TestCase):
             self.assertEqual(index.data(), "None")
             index = model.index(row, 2)
             self.assertEqual(index.data(), "")
-            self.assertEqual(index.data(Qt.BackgroundColorRole), ERROR_COLOR)
-            self.assertTrue(index.data(Qt.ToolTipRole))
+            if row != 4:
+                # NOTE: "Alternative names" is optional, so no issues
+                self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
+                self.assertTrue(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_valid_object_class_with_pivoted_parameters(self):
         array_parameter_mapping_dict = {
@@ -95,7 +97,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
         }
         mapping_dict = {"map_type": "ObjectClass", "name": 0, "objects": 1, "parameters": array_parameter_mapping_dict}
         undo_stack = MagicMock()
-        model = MappingSpecificationModel("source table", "mapping", dict_to_map(mapping_dict), undo_stack)
+        model = MappingSpecificationModel("source table", "mapping", item_mapping_from_dict(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 5)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -116,19 +118,19 @@ class TestMappingSpecificationModel(unittest.TestCase):
         self.assertEqual(index.data(), "Pivoted")
         index = model.index(0, 2)
         self.assertEqual(index.data(), 0 + 1)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(1, 2)
         self.assertEqual(index.data(), 1 + 1)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(2, 2)
         self.assertEqual(index.data(), 2 + 1)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(3, 2)
         self.assertEqual(index.data(), "Pivoted values")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_valid_object_class_with_parameters(self):
@@ -146,7 +148,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "objects": {"reference": "object_name", "map_type": "constant"},
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel("source table", "mapping 1", dict_to_map(mapping_dict), undo_stack)
+        model = MappingSpecificationModel("source table", "mapping 1", item_mapping_from_dict(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 6)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -175,23 +177,23 @@ class TestMappingSpecificationModel(unittest.TestCase):
         self.assertEqual(index.data(), "Column")
         index = model.index(0, 2)
         self.assertEqual(index.data(), "class_name")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(1, 2)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         self.assertEqual(index.data(), "object_name")
         index = model.index(2, 2)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         self.assertEqual(index.data(), 99 + 1)
         index = model.index(3, 2)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         self.assertEqual(index.data(), 23 + 1)
         index = model.index(5, 2)
         self.assertEqual(index.data(), "fifth column")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
 
     def test_data_when_valid_object_class_with_nested_map(self):
@@ -212,7 +214,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "objects": {"reference": "object_name", "map_type": "constant"},
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel("source table", "mapping", dict_to_map(mapping_dict), undo_stack)
+        model = MappingSpecificationModel("source table", "mapping", item_mapping_from_dict(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 7)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -245,27 +247,27 @@ class TestMappingSpecificationModel(unittest.TestCase):
         self.assertEqual(index.data(), "Column")
         index = model.index(0, 2)
         self.assertEqual(index.data(), "class_name")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(1, 2)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         self.assertEqual(index.data(), "object_name")
         index = model.index(2, 2)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         self.assertEqual(index.data(), 99 + 1)
         index = model.index(3, 2)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         self.assertEqual(index.data(), 23 + 1)
         index = model.index(5, 2)
         self.assertEqual(index.data(), "fifth column")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(6, 2)
         self.assertEqual(index.data(), "sixth column")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_relationship_class_without_objects_or_parameters(self):
@@ -273,7 +275,9 @@ class TestMappingSpecificationModel(unittest.TestCase):
         model = MappingSpecificationModel(
             "source table name",
             "mapping",
-            dict_to_map({"map_type": "RelationshipClass", "name": None, "object_classes": None, "object": None}),
+            item_mapping_from_dict(
+                {"map_type": "RelationshipClass", "name": None, "object_classes": None, "object": None}
+            ),
             undo_stack,
         )
         self.assertEqual(model.rowCount(), 3)
@@ -292,15 +296,15 @@ class TestMappingSpecificationModel(unittest.TestCase):
         self.assertEqual(index.data(), "None")
         index = model.index(0, 2)
         self.assertEqual(index.data(), "")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), ERROR_COLOR)
+        self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
         self.assertTrue(index.data(Qt.ToolTipRole))
         index = model.index(1, 2)
         self.assertEqual(index.data(), "")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), ERROR_COLOR)
+        self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
         self.assertTrue(index.data(Qt.ToolTipRole))
         index = model.index(2, 2)
         self.assertEqual(index.data(), "")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_invalid_relationship_class_with_parameters(self):
@@ -319,7 +323,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "parameters": indexed_parameter_mapping_dict,
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel("source table", "mapping 1", dict_to_map(mapping_dict), undo_stack)
+        model = MappingSpecificationModel("source table", "mapping 1", item_mapping_from_dict(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 7)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -341,8 +345,10 @@ class TestMappingSpecificationModel(unittest.TestCase):
             self.assertEqual(index.data(), "None")
             index = model.index(row, 2)
             self.assertEqual(index.data(), "")
-            self.assertEqual(index.data(Qt.BackgroundColorRole), ERROR_COLOR)
-            self.assertTrue(index.data(Qt.ToolTipRole))
+            if row != 5:
+                # NOTE: "Alternative names" is optional, so no issues
+                self.assertEqual(index.data(Qt.BackgroundRole), ERROR_COLOR)
+                self.assertTrue(index.data(Qt.ToolTipRole))
 
     def test_data_when_mapping_multidimensional_relationship_class_with_parameters(self):
         indexed_parameter_mapping_dict = {
@@ -363,7 +369,7 @@ class TestMappingSpecificationModel(unittest.TestCase):
             "parameters": indexed_parameter_mapping_dict,
         }
         undo_stack = MagicMock()
-        model = MappingSpecificationModel("source_table", "mapping 1", dict_to_map(mapping_dict), undo_stack)
+        model = MappingSpecificationModel("source_table", "mapping 1", item_mapping_from_dict(mapping_dict), undo_stack)
         self.assertEqual(model.rowCount(), 9)
         self.assertEqual(model.columnCount(), 3)
         index = model.index(0, 0)
@@ -404,35 +410,35 @@ class TestMappingSpecificationModel(unittest.TestCase):
         self.assertEqual(index.data(), "Column")
         index = model.index(0, 2)
         self.assertEqual(index.data(), "relationship_class name")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(1, 2)
         self.assertEqual(index.data(), "column header")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(2, 2)
         self.assertEqual(index.data(), "second class")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(3, 2)
         self.assertEqual(index.data(), 21 + 1)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(4, 2)
         self.assertEqual(index.data(), 22 + 1)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(5, 2)
         self.assertEqual(index.data(), 99 + 1)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(6, 2)
         self.assertEqual(index.data(), 23 + 1)
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
         index = model.index(8, 2)
         self.assertEqual(index.data(), "fifth column")
-        self.assertEqual(index.data(Qt.BackgroundColorRole), None)
+        self.assertEqual(index.data(Qt.BackgroundRole), None)
         self.assertFalse(index.data(Qt.ToolTipRole))
 
 
