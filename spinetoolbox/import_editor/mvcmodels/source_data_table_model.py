@@ -51,6 +51,7 @@ class SourceDataTableModel(MinimalTableModel):
         self._row_types = {}
         self._column_type_errors = {}
         self._row_type_errors = {}
+        self._converted_data = {}
 
     def mapping_specification(self):
         return self._mapping_specification
@@ -60,6 +61,7 @@ class SourceDataTableModel(MinimalTableModel):
         self._row_type_errors = {}
         self._column_types = {}
         self._row_types = {}
+        self._converted_data = {}
         super().clear()
 
     def reset_model(self, main_data=None):
@@ -67,6 +69,7 @@ class SourceDataTableModel(MinimalTableModel):
         self._row_type_errors = {}
         self._column_types = {}
         self._row_types = {}
+        self._converted_data = {}
         super().reset_model(main_data)
 
     def set_mapping(self, mapping):
@@ -101,26 +104,28 @@ class SourceDataTableModel(MinimalTableModel):
         if orientation == Qt.Horizontal:
             for row in range(self.rowCount()):
                 self._column_type_errors.pop((row, section), None)
-                data = self.index(row, section).data()
+                data = self.index(row, section).data(Qt.EditRole)
                 if isinstance(data, str) and not data:
                     data = None
                 if data is not None:
                     try:
-                        converter(data)
+                        self._converted_data[row, section] = converter(data)
                     except (ValueError, ParameterValueFormatError) as e:
+                        self._converted_data.pop((row, section), None)
                         self._column_type_errors[row, section] = e
             top_left = self.index(0, section)
             bottom_right = self.index(self.rowCount() - 1, section)
         if orientation == Qt.Vertical:
             for column in range(self.columnCount()):
                 self._row_type_errors.pop((section, column), None)
-                data = self.index(section, column).data()
+                data = self.index(section, column).data(Qt.EditRole)
                 if isinstance(data, str) and not data:
                     data = None
                 if data is not None:
                     try:
-                        converter(data)
+                        self._converted_data[section, column] = converter(data)
                     except (ValueError, ParameterValueFormatError) as e:
+                        self._converted_data.pop((section, column), None)
                         self._row_type_errors[section, column] = e
             top_left = self.index(section, 0)
             bottom_right = self.index(section, self.columnCount() - 1)
@@ -184,12 +189,11 @@ class SourceDataTableModel(MinimalTableModel):
         self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
         self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount() - 1)
 
-    def data_error(self, index, role=Qt.DisplayRole, orientation=Qt.Horizontal):
-        if role == Qt.DisplayRole:
-            return "Error"
+    def data_error(self, error, index, role=Qt.DisplayRole, orientation=Qt.Horizontal):
         if role == Qt.ToolTipRole:
-            type_name = self.get_type(index.column(), orientation)
-            return f'Could not parse value: "{self._main_data[index.row()][index.column()]}" as a {type_name}'
+            type_display_name = self.get_type(index.column(), orientation).DISPLAY_NAME
+            value = self._main_data[index.row()][index.column()]
+            return f'<p>Could not parse value: "{value}" as a {type_display_name}: {error}</p>'
         if role == Qt.BackgroundRole:
             return ERROR_COLOR
 
@@ -200,22 +204,30 @@ class SourceDataTableModel(MinimalTableModel):
         else:
             last_pivoted_row = -1
             read_from_row = 0
+        if role in (Qt.ToolTipRole, Qt.BackgroundRole):
+            if index.row() > max(last_pivoted_row, read_from_row - 1):
+                error = self._column_type_errors.get((index.row(), index.column()))
+                if error is not None:
+                    return self.data_error(error, index, role, orientation=Qt.Horizontal)
 
-        if index.row() > max(last_pivoted_row, read_from_row - 1):
-            if (index.row(), index.column()) in self._column_type_errors:
-                return self.data_error(index, role)
-
-        if index.row() <= last_pivoted_row:
-            if (
-                index.column()
-                not in mapping_non_pivoted_columns(self._mapping_specification.mapping, self.columnCount(), self.header)
-                and index.column() not in self._mapping_specification.skip_columns
-            ):
-                if (index.row(), index.column()) in self._row_type_errors:
-                    return self.data_error(index, role, orientation=Qt.Vertical)
+            if index.row() <= last_pivoted_row:
+                if (
+                    index.column()
+                    not in mapping_non_pivoted_columns(
+                        self._mapping_specification.mapping, self.columnCount(), self.header
+                    )
+                    and index.column() not in self._mapping_specification.skip_columns
+                ):
+                    error = self._row_type_errors.get((index.row(), index.column()))
+                    if error is not None:
+                        return self.data_error(error, index, role, orientation=Qt.Vertical)
 
         if role == Qt.BackgroundRole and self._mapping_specification:
             return self.data_color(index)
+        if role == Qt.DisplayRole:
+            converted_data = self._converted_data.get((index.row(), index.column()))
+            if converted_data is not None:
+                return str(converted_data)
         return super().data(index, role)
 
     def data_color(self, index):
