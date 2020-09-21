@@ -15,6 +15,7 @@ Contains the mapping specification model.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
+from distutils.util import strtobool
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, Signal
 from PySide2.QtGui import QColor
 from spinedb_api import (
@@ -57,18 +58,15 @@ _MAP_TYPE_DISPLAY_NAME = {
 }
 
 
-_DISPLAY_TYPE_TO_TYPE = {
-    "Single value": ParameterValueMapping,
-    "Array": ParameterArrayMapping,
-    "Map": ParameterMapMapping,
-    "Time series": ParameterTimeSeriesMapping,
-    "Time pattern": ParameterTimePatternMapping,
-    "Definition": ParameterDefinitionMapping,
-    "None": NoneMapping,
+_PARAMETER_TYPE_DISPLAY_NAME = {
+    ParameterValueMapping: "Single value",
+    ParameterArrayMapping: "Array",
+    ParameterMapMapping: "Map",
+    ParameterTimeSeriesMapping: "Time series",
+    ParameterTimePatternMapping: "Time pattern",
+    ParameterDefinitionMapping: "Definition",
+    NoneMapping: "None",
 }
-
-
-_TYPE_TO_DISPLAY_TYPE = {value: key for key, value in _DISPLAY_TYPE_TO_TYPE.items()}
 
 
 class MappingSpecificationModel(QAbstractTableModel):
@@ -153,7 +151,7 @@ class MappingSpecificationModel(QAbstractTableModel):
 
     @property
     def parameter_type(self):
-        return _TYPE_TO_DISPLAY_TYPE[type(self._item_mapping.parameters)]
+        return _PARAMETER_TYPE_DISPLAY_NAME[type(self._item_mapping.parameters)]
 
     @property
     def is_pivoted(self):
@@ -294,32 +292,37 @@ class MappingSpecificationModel(QAbstractTableModel):
 
     def get_map_type_display(self, mapping, name):
         if name == "Parameter values" and self._item_mapping.is_pivoted():
-            mapping_type = "Pivoted"
-        elif isinstance(mapping, RowMapping):
+            return "Pivoted"
+        if isinstance(mapping, RowMapping):
             if mapping.reference == -1:
-                mapping_type = "Headers"
-            else:
-                mapping_type = "Row"
-        else:
-            mapping_type = _MAP_TYPE_DISPLAY_NAME[type(mapping)]
-        return mapping_type
+                return "Headers"
+            return "Row"
+        return _MAP_TYPE_DISPLAY_NAME[type(mapping)]
 
     def get_map_value_display(self, mapping, name):
         if name == "Parameter values" and self._item_mapping.is_pivoted():
-            mapping_value = "Pivoted values"
-        elif isinstance(mapping, NoneMapping):
-            mapping_value = ""
-        elif isinstance(mapping, RowMapping) and mapping.reference == -1:
-            mapping_value = "Headers"
-        else:
-            mapping_value = mapping.reference
-            if isinstance(mapping_value, int):
-                mapping_value += 1
-        return mapping_value
+            return "Pivoted values"
+        if isinstance(mapping, NoneMapping):
+            return ""
+        if isinstance(mapping, RowMapping) and mapping.reference == -1:
+            return "Headers"
+        mapping_ref = mapping.reference
+        if (
+            name in ("Scenario active flags", "Tool feature required flags")
+            and isinstance(mapping, ConstantMapping)
+            and mapping.is_valid()
+        ):
+            try:
+                return bool(strtobool(mapping_ref))
+            except ValueError:
+                return mapping_ref
+        if isinstance(mapping_ref, int):
+            mapping_ref += 1
+        return mapping_ref
 
     def data(self, index, role=Qt.DisplayRole):
         column = index.column()
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.DisplayRole,):
             name = self._component_names[index.row()]
             if column == 0:
                 return name
@@ -483,23 +486,14 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         self.about_to_undo.emit(self._table_name, self._mapping_name)
         mapping = self._get_component_mapping_from_name(name)
-        if isinstance(value, str) and value.isdigit():
-            value = int(value)
-        if isinstance(value, int):
-            value -= 1
         if isinstance(mapping, NoneMapping):
-            # create new mapping
-            if isinstance(value, int):
-                mapping = ColumnMapping(reference=value)
-            elif value:
-                mapping = ConstantMapping(reference=value)
-            else:
-                return False
-        else:
-            try:
-                mapping.reference = value
-            except TypeError:
-                return False
+            mapping = ConstantMapping()
+        try:
+            mapping.reference = value
+        except TypeError:
+            return False
+        if isinstance(mapping.reference, int):
+            mapping.reference = mapping.reference - 1
         return self._set_component_mapping_from_name(name, mapping)
 
     def _get_component_mapping_from_name(self, name):
@@ -526,7 +520,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         top_left = self.index(row, 1)
         bottom_right = self.index(row, 2)
         self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.ToolTipRole])
-        # FIXME: Try and see if we can do better here below
+        # Recommend data types
         if name == "Parameter values":
             self._recommend_parameter_value_mapping_reference_type_change(mapping)
         elif name in ("Parameter time index", "Parameter time pattern index"):

@@ -17,6 +17,7 @@ Type conversion functions.
 """
 
 import re
+from distutils.util import strtobool
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QSpinBox, QDateTimeEdit, QLineEdit, QFormLayout
 from PySide2.QtCore import Qt
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
@@ -129,9 +130,7 @@ class BooleanConvertSpec(ConvertSpec):
         constructor = self.RETURN_TYPE
 
         def convert(value):
-            if isinstance(value, str) and value.lower() in ("false", "0"):
-                return False
-            return constructor(value)
+            return constructor(strtobool(str(value)))
 
         return convert
 
