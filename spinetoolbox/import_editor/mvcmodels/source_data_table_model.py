@@ -97,30 +97,34 @@ class SourceDataTableModel(MinimalTableModel):
         type_class = self.get_type(section, orientation)
         if type_class is None:
             return
-        if orientation == Qt.Horizontal:
-            other_orientation_count = self.rowCount()
-            correct_index_order = lambda x: (x[1], x[0])
-            error_dict = self._column_type_errors
-        else:
-            other_orientation_count = self.columnCount()
-            correct_index_order = lambda x: (x[0], x[1])
-            error_dict = self._row_type_errors
         converter = type_class.convert_function()
-        for other_index in range(other_orientation_count):
-            index_tuple = correct_index_order((section, other_index))
-            index = self.index(*index_tuple)
-            error_dict.pop(index_tuple, None)
-            data = self.data(index)
-            try:
+        if orientation == Qt.Horizontal:
+            for row in range(self.rowCount()):
+                self._column_type_errors.pop((row, section), None)
+                data = self.index(row, section).data()
                 if isinstance(data, str) and not data:
                     data = None
                 if data is not None:
-                    converter(data)
-            except (ValueError, ParameterValueFormatError) as e:
-                error_dict[index_tuple] = e
-        data_changed_start = correct_index_order((section, 0))
-        data_changed_end = correct_index_order((section, other_orientation_count))
-        self.dataChanged.emit(self.index(*data_changed_start), self.index(*data_changed_end))
+                    try:
+                        converter(data)
+                    except (ValueError, ParameterValueFormatError) as e:
+                        self._column_type_errors[row, section] = e
+            top_left = self.index(0, section)
+            bottom_right = self.index(self.rowCount() - 1, section)
+        if orientation == Qt.Vertical:
+            for column in range(self.columnCount()):
+                self._row_type_errors.pop((section, column), None)
+                data = self.index(section, column).data()
+                if isinstance(data, str) and not data:
+                    data = None
+                if data is not None:
+                    try:
+                        converter(data)
+                    except (ValueError, ParameterValueFormatError) as e:
+                        self._row_type_errors[section, column] = e
+            top_left = self.index(section, 0)
+            bottom_right = self.index(section, self.columnCount() - 1)
+        self.dataChanged.emit(top_left, bottom_right)
 
     def get_type(self, section, orientation=Qt.Horizontal):
         if orientation == Qt.Horizontal:
