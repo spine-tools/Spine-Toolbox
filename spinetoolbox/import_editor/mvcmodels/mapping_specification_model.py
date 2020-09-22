@@ -19,30 +19,31 @@ from distutils.util import strtobool
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, Signal
 from PySide2.QtGui import QColor
 from spinedb_api import (
-    AlternativeMapping,
-    ColumnHeaderMapping,
-    ColumnMapping,
-    ConstantMapping,
-    item_mapping_from_dict,
-    FeatureMapping,
     NoneMapping,
+    ConstantMapping,
+    ColumnMapping,
+    ColumnHeaderMapping,
+    TableNameMapping,
+    RowMapping,
     ObjectClassMapping,
     ObjectGroupMapping,
-    ParameterArrayMapping,
-    ParameterDefinitionMapping,
-    ParameterMapMapping,
-    ParameterMappingBase,
-    ParameterTimePatternMapping,
-    ParameterTimeSeriesMapping,
-    ParameterValueMapping,
     RelationshipClassMapping,
-    RowMapping,
+    AlternativeMapping,
     ScenarioMapping,
     ScenarioAlternativeMapping,
-    TableNameMapping,
+    FeatureMapping,
     ToolMapping,
     ToolFeatureMapping,
     ToolFeatureMethodMapping,
+    item_mapping_from_dict,
+    ParameterMappingBase,
+    ParameterValueMapping,
+    ParameterDefinitionMapping,
+    SingleValueMapping,
+    ArrayValueMapping,
+    MapValueMapping,
+    TimePatternValueMapping,
+    TimeSeriesValueMapping,
 )
 from spinetoolbox.spine_io.type_conversion import DateTimeConvertSpec, FloatConvertSpec, StringConvertSpec
 from ..commands import SetComponentMappingReference, SetComponentMappingType
@@ -57,15 +58,19 @@ _MAP_TYPE_DISPLAY_NAME = {
     TableNameMapping: "Table Name",
 }
 
-
 _PARAMETER_TYPE_DISPLAY_NAME = {
-    ParameterValueMapping: "Single value",
-    ParameterArrayMapping: "Array",
-    ParameterMapMapping: "Map",
-    ParameterTimeSeriesMapping: "Time series",
-    ParameterTimePatternMapping: "Time pattern",
+    ParameterValueMapping: "Value",
     ParameterDefinitionMapping: "Definition",
     NoneMapping: "None",
+}
+
+
+_VALUE_TYPE_DISPLAY_NAME = {
+    SingleValueMapping: "Single value",
+    ArrayValueMapping: "Array",
+    MapValueMapping: "Map",
+    TimeSeriesValueMapping: "Time series",
+    TimePatternValueMapping: "Time pattern",
 }
 
 
@@ -154,6 +159,29 @@ class MappingSpecificationModel(QAbstractTableModel):
         return _PARAMETER_TYPE_DISPLAY_NAME[type(self._item_mapping.parameters)]
 
     @property
+    def value_name(self):
+        """Either "value", "default_value", or "". Used to retrieve the 'value_mapping' from the parameter mapping."""
+        if not self._item_mapping or not self._item_mapping.has_parameters():
+            return None
+        if isinstance(self._item_mapping.parameters, ParameterValueMapping):
+            return "value"
+        if isinstance(self._item_mapping.parameters, ParameterDefinitionMapping):
+            return "default_value"
+        return None
+
+    @property
+    def value_type(self):
+        if not self.value_name:
+            return None
+        return _VALUE_TYPE_DISPLAY_NAME[type(getattr(self._item_mapping.parameters, self.value_name))]
+
+    @property
+    def value_mapping(self):
+        if not self.value_name:
+            return None
+        return getattr(self._item_mapping.parameters, self.value_name)
+
+    @property
     def is_pivoted(self):
         if self._item_mapping:
             return self._item_mapping.is_pivoted()
@@ -240,23 +268,40 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         Change parameter type
         """
-
+        value_mapping = self.value_mapping
         self.beginResetModel()
         if new_type == "None":
             self._item_mapping.parameters = None
-        elif new_type == "Single value":
+        elif new_type == "Value":
             self._item_mapping.parameters = ParameterValueMapping()
-        elif new_type == "Array":
-            self._item_mapping.parameters = ParameterArrayMapping()
         elif new_type == "Definition":
             self._item_mapping.parameters = ParameterDefinitionMapping()
-        elif new_type == "Map":
-            self._item_mapping.parameters = ParameterMapMapping()
-        elif new_type == "Time series":
-            self._item_mapping.parameters = ParameterTimeSeriesMapping()
-        elif new_type == "Time pattern":
-            self._item_mapping.parameters = ParameterTimePatternMapping()
+        if self.value_mapping:
+            setattr(self._item_mapping.parameters, self.value_name, value_mapping)
+        self.update_display_table()
+        self.endResetModel()
 
+    def change_value_type(self, new_type):
+        """
+        Change value type
+        """
+
+        if not self.value_name:
+            return
+        if new_type == "None":
+            value_mapping = None
+        elif new_type == "Single value":
+            value_mapping = SingleValueMapping()
+        elif new_type == "Array":
+            value_mapping = ArrayValueMapping()
+        elif new_type == "Map":
+            value_mapping = MapValueMapping()
+        elif new_type == "Time series":
+            value_mapping = TimeSeriesValueMapping()
+        elif new_type == "Time pattern":
+            value_mapping = TimePatternValueMapping()
+        self.beginResetModel()
+        setattr(self._item_mapping.parameters, self.value_name, value_mapping)
         self.update_display_table()
         self.endResetModel()
 
@@ -577,17 +622,21 @@ class MappingSpecificationModel(QAbstractTableModel):
 
     def set_time_series_repeat(self, repeat):
         """Toggles the repeat flag in the parameter's options."""
-        if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterTimeSeriesMapping):
+        if self._item_mapping is None:
             return
-        self._item_mapping.parameters.options.repeat = repeat
+        if not isinstance(self.value_mapping, TimeSeriesValueMapping):
+            return
+        self.value_mapping.options.repeat = repeat
 
     def set_map_dimensions(self, dimensions):
-        if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterMapMapping):
+        if self._item_mapping is None:
             return
-        previous_dimensions = len(self._item_mapping.parameters.extra_dimensions)
+        if not isinstance(self.value_mapping, MapValueMapping):
+            return
+        previous_dimensions = len(self.value_mapping.extra_dimensions)
         if dimensions == previous_dimensions:
             return
-        self._item_mapping.parameters.set_number_of_extra_dimensions(dimensions)
+        self.value_mapping.set_number_of_extra_dimensions(dimensions)
         first_dimension_row = 0
         for name in self._component_names:
             if name.startswith("Parameter index"):
@@ -597,17 +646,13 @@ class MappingSpecificationModel(QAbstractTableModel):
             first = first_dimension_row + previous_dimensions
             last = first_dimension_row + dimensions - 1
             self.beginInsertRows(QModelIndex(), first, last)
-            for index in range(previous_dimensions, dimensions):
-                self._component_names.append(f"Parameter index {index + 1}")
-            self._component_mappings += self._item_mapping.parameters.extra_dimensions[previous_dimensions:]
             self.endInsertRows()
         else:
             first = first_dimension_row + dimensions
             last = first_dimension_row + previous_dimensions - 1
             self.beginRemoveRows(QModelIndex(), first, last)
-            self._component_names = self._component_names[:first]
-            self._component_mappings = self._component_mappings[:first]
             self.endRemoveRows()
+        self.update_display_table()
 
     def set_map_compress_flag(self, compress):
         """
@@ -616,9 +661,9 @@ class MappingSpecificationModel(QAbstractTableModel):
         Args:
             compress (bool): flag value
         """
-        if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterMapMapping):
+        if self._item_mapping is None or not isinstance(self.value_mapping, MapValueMapping):
             return
-        self._item_mapping.parameters.compress = compress
+        self.value_mapping.compress = compress
 
     def mapping_has_parameters(self):
         """Returns True if the item mapping has parameters."""
@@ -657,17 +702,3 @@ class MappingSpecificationModel(QAbstractTableModel):
         mapping_name = specification_dict.pop("mapping_name", "")
         mapping = item_mapping_from_dict(specification_dict)
         return MappingSpecificationModel(table_name, mapping_name, mapping, undo_stack)
-
-
-def _name_index(name):
-    """
-    Parses an index from a string which ends with that number.
-
-    Args:
-        name (str): a string that ends with a number
-
-    Returns:
-        int: the number at the end of the given string minus one
-    """
-    _, number = name.rsplit(" ", 1)
-    return int(number) - 1
