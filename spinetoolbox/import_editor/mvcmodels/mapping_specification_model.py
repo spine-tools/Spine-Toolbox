@@ -669,12 +669,6 @@ class MappingSpecificationModel(QAbstractTableModel):
         """Returns True if the item mapping has parameters."""
         return self._item_mapping.has_parameters()
 
-    def model_parameters(self):
-        """Returns the mapping's parameters."""
-        if self._item_mapping is None or not self._item_mapping.has_parameters():
-            return None
-        return self._item_mapping.parameters
-
     def to_dict(self):
         """
         Serializes the mapping specification into a dict.

@@ -35,18 +35,20 @@ class MappingListModel(QAbstractListModel):
         """
         super().__init__()
         self._mapping_specifications = []
-        self._names = []
-        self._counter = 1
         self._table_name = table_name
         self._undo_stack = undo_stack
-        for m in mapping_specifications:
-            name = m.mapping_name
-            if not name:
-                name = "Mapping " + str(self._counter)
-            m.mapping_name = name
-            self._names.append(name)
-            self._mapping_specifications.append(m)
-            self._counter += 1
+        self._mapping_specifications = mapping_specifications.copy()
+        self._names = [m.mapping_name for m in self._mapping_specifications]
+        for k, m in enumerate(self._mapping_specifications):
+            if not m.mapping_name:
+                self._names[k] = m.mapping_name = self._make_new_mapping_name(counter=k)
+
+    def _make_new_mapping_name(self, counter=1):
+        while True:
+            name = "Mapping " + str(counter)
+            if name not in self._names:
+                return name
+            counter += 1
 
     def flags(self, index):
         """Returns flags for given index."""
@@ -87,7 +89,7 @@ class MappingListModel(QAbstractListModel):
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return None
-        if self._mapping_specifications and role == Qt.DisplayRole and index.row() < self.rowCount():
+        if self._mapping_specifications and role in (Qt.DisplayRole, Qt.EditRole) and index.row() < self.rowCount():
             return self._names[index.row()]
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -95,6 +97,8 @@ class MappingListModel(QAbstractListModel):
         if not value or role != Qt.EditRole or not index.isValid():
             return False
         row = index.row()
+        if value in self._names[:row] + self._names[row:]:
+            return False
         previous_name = self._names[row]
         self._undo_stack.push(RenameMapping(row, self, value, previous_name))
         return True
@@ -115,11 +119,10 @@ class MappingListModel(QAbstractListModel):
     def add_mapping(self):
         self.beginInsertRows(QModelIndex(), self.rowCount(), self.rowCount())
         m = ObjectClassMapping()
-        name = "Mapping " + str(self._counter)
+        name = self._make_new_mapping_name()
         specification = MappingSpecificationModel(self._table_name, name, m, self._undo_stack)
         self._mapping_specifications.append(specification)
         self._names.append(name)
-        self._counter += 1
         self.endInsertRows()
         return name
 
@@ -163,11 +166,9 @@ class MappingListModel(QAbstractListModel):
         self.beginResetModel()
         self._mapping_specifications.clear()
         self._names.clear()
-        self._counter = 1
         self._table_name = table_name
         for mapping_name, mapping in item_mappings.items():
             self._names.append(mapping_name)
             specification = MappingSpecificationModel(self._table_name, mapping_name, mapping, self._undo_stack)
             self._mapping_specifications.append(specification)
-            self._counter += 1
         self.endResetModel()
