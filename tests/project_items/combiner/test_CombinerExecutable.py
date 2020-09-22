@@ -19,7 +19,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import QCoreApplication
+from PySide2.QtCore import QCoreApplication, QEventLoop, QObject, QThread
 from spinedb_api import create_new_spine_database, DatabaseMapping, DiffDatabaseMapping, import_functions
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item_resource import ProjectItemResource
@@ -39,6 +39,23 @@ class TestCombinerExecutable(unittest.TestCase):
 
     def test_item_type(self):
         self.assertEqual(ExecutableItem.item_type(), "Combiner")
+
+    def test_from_dict(self):
+        logger = mock.MagicMock()
+        item_dict = {"type": "Combiner", "description": "", "x": 0, "y": 0, "cancel_on_error": True}
+        item = ExecutableItem.from_dict(item_dict, "Combiner 1", "some_dir/", None, dict(), logger)
+        self.assertIsInstance(item, ExecutableItem)
+        self.assertEqual("Combiner", item.item_type())
+
+    def test_stop_execution(self):
+        executable = ExecutableItem("name", "", True, mock.MagicMock())
+        executable._loop = QEventLoop()
+        executable._worker = QObject()
+        executable._worker_thread = QThread()
+        executable.stop_execution()
+        self.assertIsNone(executable._worker)
+        self.assertIsNone(executable._worker_thread)
+        self.assertIsNone(executable._loop)
 
     def test_execute_backward(self):
         # name, logs_dir, cancel_on_error, logger

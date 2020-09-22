@@ -18,7 +18,6 @@ Parameter indexing settings window for .gdx export.
 from contextlib import contextmanager
 from PySide2.QtCore import QItemSelectionModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QWidget
-from spinedb_api import DatabaseMapping
 from .parameter_index_settings import IndexSettingsState, ParameterIndexSettings
 from ..mvcmodels.indexing_domain_list_model import IndexingDomainListModel
 from ..db_utils import scenario_filtered_database_map
@@ -71,10 +70,10 @@ class ParameterIndexSettingsWindow(QWidget):
         self._ui.extract_from_combo_box.addItems(sorted(indexing_settings.keys()))
         self._ui.extract_from_combo_box.currentTextChanged.connect(self._set_extraction_domain)
         self._settings_widgets = dict()
-        available_domains = {name: set_settings.records(name) for name in set_settings.domain_names}
+        self._available_domains = {name: set_settings.records(name) for name in set_settings.domain_names}
         for parameter_name, indexing_setting in indexing_settings.items():
             settings_widget = ParameterIndexSettings(
-                parameter_name, indexing_setting, available_domains, self._ui.settings_area_contents
+                parameter_name, indexing_setting, self._available_domains, self._ui.settings_area_contents
             )
             self._ui.settings_area_layout.insertWidget(0, settings_widget)
             self._settings_widgets[parameter_name] = settings_widget
@@ -205,6 +204,7 @@ class ParameterIndexSettingsWindow(QWidget):
             old_name (str): domain's previous name
             new_name (str): domain's current name
         """
+        self._available_domains[new_name] = self._available_domains.pop(old_name)
         for widget in self._settings_widgets.values():
             widget.update_domain_name(old_name, new_name)
 
@@ -221,8 +221,10 @@ class ParameterIndexSettingsWindow(QWidget):
             return
         item = self._additional_domains_model.item_at(list_index.row())
         item.expression = expression
+        records = item.records(self._database_mapping)
+        self._available_domains[item.name] = records
         for widget in self._settings_widgets.values():
-            widget.update_records(item.name, item.records(self._database_mapping))
+            widget.update_records(item.name)
 
     @Slot(int)
     def _update_length(self, length):
@@ -237,8 +239,10 @@ class ParameterIndexSettingsWindow(QWidget):
             return
         item = self._additional_domains_model.item_at(list_index.row())
         item.length = length
+        records = item.records(self._database_mapping)
+        self._available_domains[item.name] = records
         for widget in self._settings_widgets.values():
-            widget.update_records(item.name, item.records(self._database_mapping))
+            widget.update_records(item.name)
 
     @Slot(bool)
     def _use_expression(self, _):
@@ -250,8 +254,10 @@ class ParameterIndexSettingsWindow(QWidget):
         item.expression = self._ui.expression_edit.text()
         item.length = self._ui.length_spin_box.value()
         item.extract_from = None
+        records = item.records(self._database_mapping)
+        self._available_domains[item.name] = records
         for widget in self._settings_widgets.values():
-            widget.update_records(item.name, item.records(self._database_mapping))
+            widget.update_records(item.name)
 
     @Slot(bool)
     def _use_extraction(self, _):
@@ -273,8 +279,10 @@ class ParameterIndexSettingsWindow(QWidget):
         item = self._additional_domains_model.item_at(list_index.row())
         item.expression = None
         item.extract_from = domain_name
+        records = item.records(self._database_mapping)
+        self._available_domains[item.name] = records
         for widget in self._settings_widgets.values():
-            widget.update_records(item.name, item.records(self._database_mapping))
+            widget.update_records(item.name)
 
     def closeEvent(self, event):
         """Handles the close event."""

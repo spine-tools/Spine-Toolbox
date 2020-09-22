@@ -204,7 +204,7 @@ class Parameter:
 
     def __eq__(self, other):
         """
-        Compares two :class:`Parameter`s for equality.
+        Compares two :class:`Parameter` objects for equality.
 
         Args:
             other (Parameter): a parameter
@@ -552,7 +552,7 @@ class LiteralRecords(Records):
         self._records = new_order
 
     def is_shufflable(self):
-        """Retuns True; :class:`LiteralRecords` is shufflable."""
+        """Returns True; :class:`LiteralRecords` is shufflable."""
         return True
 
     @staticmethod
@@ -1807,7 +1807,7 @@ def _create_additional_domains(set_settings):
         set_settings (SetSettings): settings
 
     Returns:
-        list: a list of additional :class:`Set`s
+        list: a list of additional :class:`Set` objects
     """
     domains = list()
     for name in set_settings.domain_names:
@@ -2050,7 +2050,7 @@ class SetSettings:
     @global_parameters_domain_name.setter
     def global_parameters_domain_name(self, name):
         """
-        Sets the global_parameters_domain_name and declares that domain FORCED_NON_EXPORTABLE.
+        Sets the global_parameters_domain_name and declares that domain NON_EXPORTABLE.
 
         Args:
             name (str): new global parameters domain name
@@ -2058,7 +2058,7 @@ class SetSettings:
         if self._global_parameters_domain_name:
             self._metadatas[self._global_parameters_domain_name].exportable = ExportFlag.EXPORTABLE
         if name:
-            self._metadatas[name].exportable = ExportFlag.FORCED_NON_EXPORTABLE
+            self._metadatas[name].exportable = ExportFlag.NON_EXPORTABLE
         self._global_parameters_domain_name = name
 
     def is_exportable(self, set_name):
@@ -2246,25 +2246,25 @@ class SetSettings:
         return settings
 
 
+@enum.unique
 class ExportFlag(enum.Enum):
     """Options for exporting Set objects."""
 
-    EXPORTABLE = enum.auto()
+    EXPORTABLE = 1
     """User has declared that the set should be exported."""
-    NON_EXPORTABLE = enum.auto()
+    NON_EXPORTABLE = 2
     """User has declared that the set should not be exported."""
-    FORCED_NON_EXPORTABLE = enum.auto()
-    """Set must never be exported."""
 
 
+@enum.unique
 class Origin(enum.Enum):
     """Domain or set origin."""
 
-    DATABASE = enum.auto()
+    DATABASE = 1
     """Set exists in the database."""
-    INDEXING = enum.auto()
+    INDEXING = 2
     """Set has been generated for indexed parameter indexing."""
-    MERGING = enum.auto()
+    MERGING = 3
     """Set has been generated for parameter merging."""
 
 
@@ -2306,10 +2306,6 @@ class SetMetadata:
         """Returns True if Set should be exported."""
         return self.exportable == ExportFlag.EXPORTABLE
 
-    def is_forced(self):
-        """Returns True if user's export choices should be overridden."""
-        return self.exportable == ExportFlag.FORCED_NON_EXPORTABLE
-
     def to_dict(self):
         """Serializes metadata to a dictionary."""
         metadata_dict = dict()
@@ -2323,7 +2319,10 @@ class SetMetadata:
     def from_dict(metadata_dict):
         """Deserializes metadata from a dictionary."""
         metadata = SetMetadata()
-        metadata.exportable = ExportFlag(metadata_dict["exportable"])
+        exportable = metadata_dict["exportable"]
+        metadata.exportable = (
+            ExportFlag.EXPORTABLE if exportable == ExportFlag.EXPORTABLE.value else ExportFlag.NON_EXPORTABLE
+        )
         metadata.origin = Origin(metadata_dict["origin"])
         metadata.description = metadata_dict.get("description")
         return metadata

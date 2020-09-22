@@ -1,10 +1,17 @@
 {
     "name": "Julia test",
-    "description": "Loads DataFrames and reads a table.",
     "tooltype": "julia",
-    "includes": ["test.jl", "input/"],
-    "cmdline_args": "",
-    "inputfiles": ["input/branch.csv"],
+    "includes": [
+        "test.jl",
+        "input/"
+    ],
+    "description": "Loads DataFrames and reads a table.",
+    "inputfiles": [
+        "input/branch.csv"
+    ],
     "inputfiles_opt": [],
-    "outputfiles": []
+    "outputfiles": [],
+    "cmdline_args": [],
+    "execute_in_work": true,
+    "includes_main_path": "."
 }

@@ -6,6 +6,7 @@
 .spyderproject
 build/
 dist/
+docs/source/autoapi/
 pip-wheel-metadata/
 __pycache__/
 tool_specifications/Swedish_hydro/

@@ -15,16 +15,20 @@ Unit tests for ToolExecutable item.
 :author: A. Soininen (VTT)
 :date:   2.4.2020
 """
-import pathlib
+import os
 import sys
+import pathlib
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide2.QtCore import QCoreApplication
 from spine_engine import ExecutionDirection
 from spinetoolbox.project_item_resource import ProjectItemResource
-from spinetoolbox.project_items.tool.executable_item import ExecutableItem
+from spinetoolbox.project_items.tool.executable_item import ExecutableItem, _count_files_and_dirs
 from spinetoolbox.project_items.tool.tool_specifications import ToolSpecification, PythonTool
+from spinetoolbox.config import DEFAULT_WORK_DIR
+from spinetoolbox.project_items.tool.utils import _LatestOutputFile
+from spinetoolbox.execution_managers import ConsoleExecutionManager
 
 
 class TestToolExecutable(unittest.TestCase):
@@ -40,6 +44,65 @@ class TestToolExecutable(unittest.TestCase):
 
     def test_item_type(self):
         self.assertEqual(ExecutableItem.item_type(), "Tool")
+
+    def test_from_dict(self):
+        """Tests that from_dict creates an ExecutableItem."""
+        mock_settings = _MockSettings()
+        item_dict = {"type": "Tool", "description": "", "x": 0, "y": 0,
+                     "specification": "Python Tool", "execute_in_work": True, "cmd_line_args": ["a", "b"]}
+        with TemporaryDirectory() as temp_dir:
+            script_dir = pathlib.Path(temp_dir, "scripts")
+            script_dir.mkdir()
+            script_file_name = self._write_output_script(script_dir)
+            script_files = [script_file_name]
+            python_tool_spec = PythonTool(
+                name="Python Tool",
+                tooltype="Python",
+                path=str(script_dir),
+                includes=script_files,
+                settings=mock_settings,
+                embedded_python_console=None,
+                logger=mock.MagicMock(),
+                execute_in_work=True
+            )
+            specs_in_project = {"Tool": {"Python Tool": python_tool_spec}}
+            with TemporaryDirectory() as temp_project_dir:
+                item = ExecutableItem.from_dict(item_dict, name="T", project_dir=temp_project_dir,
+                                                app_settings=mock_settings, specifications=specs_in_project,
+                                                logger=mock.MagicMock())
+                self.assertIsInstance(item, ExecutableItem)
+                self.assertEqual("Tool", item.item_type())
+                self.assertTrue(item._tool_specification.name, "Python Tool")
+                self.assertEqual("some_work_dir", item._work_dir)
+                self.assertEqual(["a", "b"], item._cmd_line_args)
+                # Test that DEFAULT_WORK_DIR is used if "appSettings/workDir" key is missing from qsettings
+                item = ExecutableItem.from_dict(item_dict, name="T", project_dir=temp_project_dir,
+                                                app_settings=_EmptyMockSettings(), specifications=specs_in_project,
+                                                logger=mock.MagicMock())
+                self.assertIsInstance(item, ExecutableItem)
+                self.assertEqual("Tool", item.item_type())
+                self.assertEqual(DEFAULT_WORK_DIR, item._work_dir)
+                self.assertEqual(["a", "b"], item._cmd_line_args)
+                # This time the project dict does not have any specifications
+                item = ExecutableItem.from_dict(item_dict, name="T", project_dir=temp_project_dir,
+                                                app_settings=mock_settings, specifications=dict(),
+                                                logger=mock.MagicMock())
+                self.assertIsNone(item)
+                # Modify item_dict
+                item_dict["execute_in_work"] = False
+                item = ExecutableItem.from_dict(item_dict, name="T", project_dir=temp_project_dir,
+                                                app_settings=mock_settings, specifications=specs_in_project,
+                                                logger=mock.MagicMock())
+                self.assertIsInstance(item, ExecutableItem)
+                self.assertEqual("Tool", item.item_type())
+                self.assertEqual(["a", "b"], item._cmd_line_args)
+                self.assertIsNone(item._work_dir)
+                # Modify item_dict
+                item_dict["specification"] = ""
+                item = ExecutableItem.from_dict(item_dict, name="T", project_dir=temp_project_dir,
+                                                app_settings=mock_settings, specifications=specs_in_project,
+                                                logger=mock.MagicMock())
+                self.assertIsNone(item)
 
     def test_execute_forward_without_specification_fails(self):
         logger = mock.MagicMock()
@@ -161,6 +224,63 @@ class TestToolExecutable(unittest.TestCase):
                 file_paths, {"subdir/*.txt": [str(optional_file1)], "subdir/data.dat": [str(optional_file2)]}
             )
 
+    def test_output_resources_forward(self):
+        with TemporaryDirectory() as temp_dir:
+            logger = mock.MagicMock()
+            tool_specification = PythonTool(
+                name="Python Tool",
+                tooltype="Python",
+                path=temp_dir,
+                includes=["script.py"],
+                settings=None,
+                embedded_python_console=None,
+                logger=mock.MagicMock(),
+                outputfiles=["results.gdx", "report.txt"]
+            )
+            output_dir = "tool/output_dir/"  # Latest output dir
+            executable = ExecutableItem("name", temp_dir, output_dir, tool_specification, [], logger)
+            with mock.patch(
+                    "spinetoolbox.project_items.tool.executable_item.find_last_output_files") \
+                    as mock_find_last_output_files:
+                mock_find_last_output_files.return_value = {
+                    "results.gdx": [_LatestOutputFile("label", os.path.join(temp_dir, "output_dir/results.gdx"))],
+                    "report.txt": [_LatestOutputFile("label2", os.path.join(temp_dir, "output_dir/report.txt"))]
+                }
+                resources = executable._output_resources_forward()
+                mock_find_last_output_files.assert_called_once()
+                self.assertIsInstance(resources, list)
+                self.assertEqual(2, len(resources))
+                self.assertIsInstance(resources[0], ProjectItemResource)
+                self.assertIsInstance(resources[1], ProjectItemResource)
+                self.assertEqual("transient_file", resources[0].type_)
+                self.assertEqual("transient_file", resources[1].type_)
+
+    def test_stop_execution(self):
+        with TemporaryDirectory() as temp_dir:
+            logger = mock.MagicMock()
+            tool_specification = PythonTool(
+                name="Python Tool",
+                tooltype="Python",
+                path=temp_dir,
+                includes=["script.py"],
+                settings=None,
+                embedded_python_console=None,
+                logger=mock.MagicMock(),
+                outputfiles=["results.gdx", "report.txt"]
+            )
+            executable = ExecutableItem("name", temp_dir, "", tool_specification, [], logger)
+            executable._tool_instance = executable._tool_specification.create_tool_instance(temp_dir)
+            executable._tool_instance.exec_mngr = ConsoleExecutionManager(mock.MagicMock(), [], logger)
+            executable.stop_execution()
+            self.assertIsNone(executable._tool_instance)
+
+    def test_count_files_and_dirs(self):
+        """Tests protected function in tool/executable_item.py."""
+        paths = ["data/a.txt", "data/output", "data/input_dir/", "inc/b.txt", "directory/"]  # 3 files, 2 dirs
+        n_dir, n_files = _count_files_and_dirs(paths)
+        self.assertEqual(2, n_dir)
+        self.assertEqual(3, n_files)
+
     @staticmethod
     def _write_output_script(script_dir):
         file_path = pathlib.Path(script_dir, "script.py")
@@ -176,12 +296,19 @@ class TestToolExecutable(unittest.TestCase):
         return "script.py"
 
 
+class _EmptyMockSettings:
+    @staticmethod
+    def value(key, defaultValue=None):
+        return {None: None}.get(key, defaultValue)
+
+
 class _MockSettings:
     @staticmethod
     def value(key, defaultValue=None):
         return {
             "appSettings/pythonPath": sys.executable,
             "appSettings/useEmbeddedPython": "0",  # Don't use embedded Python
+            "appSettings/workDir": "some_work_dir",
         }.get(key, defaultValue)
 
 

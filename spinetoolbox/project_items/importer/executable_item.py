@@ -64,6 +64,7 @@ class ExecutableItem(ExecutableItemBase, QObject):
         if self._loop:
             if self._loop.isRunning():
                 self._loop.exit(-1)
+            self._loop = None
         if self._worker:
             self._worker.deleteLater()
             self._worker = None

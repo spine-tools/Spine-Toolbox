@@ -527,7 +527,9 @@ class ToolSpecificationWidget(QWidget):
         Returns:
             ToolSpecification
         """
-        self.definition["includes_main_path"] = os.path.relpath(self.program_path, os.path.dirname(def_path))
+        self.definition["includes_main_path"] = os.path.relpath(self.program_path, os.path.dirname(def_path)).replace(
+            os.sep, "/"
+        )
         tool = self._toolbox.load_specification(self.definition, def_path)
         if not tool:
             self.statusbar.showMessage("Adding Tool specification failed", 3000)
@@ -538,7 +540,7 @@ class ToolSpecificationWidget(QWidget):
         If the name is the same as an existing tool specification, it is updated and
         auto-saved to the definition file. (User is editing an existing
         tool specification.) If the name is not in the tool specification model, creates
-        a new tool specification and offer to save the definition file. (User is
+        a new tool specification and offers to save the definition file. (User is
         creating a new tool specification from scratch or spawning from an existing one).
         """
         # Check if a tool specification with this name already exists
