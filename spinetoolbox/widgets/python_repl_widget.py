@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs, get_kernel_spec, NoSuchKernel
-from ..helpers import busy_effect
+from ..helpers import busy_effect, python_interpreter
 from ..config import PYTHON_EXECUTABLE
 from ..execution_managers import QProcessExecutionManager
 from .spine_console_widget import SpineConsoleWidget
@@ -77,19 +77,12 @@ class PythonReplWidget(SpineConsoleWidget):
         cannot be determined."""
         if not self.may_need_restart:
             return self.kernel_name, self.kernel_display_name
-        python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
-        if python_path:
-            self.python_cmd = python_path
-        else:
-            self.python_cmd = PYTHON_EXECUTABLE
-        program = str(self.python_cmd)
-        args = list()
-        args.append("-V")
-        proc_exec_mngr = QProcessExecutionManager(self._toolbox, program, args, silent=True)
+        self.python_cmd = python_interpreter(self._toolbox.qsettings())
+        proc_exec_mngr = QProcessExecutionManager(self._toolbox, self.python_cmd, ["-V"], silent=True)
         proc_exec_mngr.start_execution()
         if not proc_exec_mngr.wait_for_process_finished(msecs=5000):
             self._toolbox.msg_error.emit(
-                "Couldn't determine Python version. Please check " "the <b>Python interpreter</b> option in Settings."
+                "Couldn't determine Python version. Please check the <b>Python interpreter</b> option in Settings."
             )
             return None
         python_version_str = proc_exec_mngr.process_output

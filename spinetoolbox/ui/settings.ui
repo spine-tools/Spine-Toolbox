@@ -206,7 +206,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -669,8 +669,8 @@
                <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="acceptRichText">
                <bool>false</bool>
@@ -755,7 +755,7 @@ p, li { white-space: pre-wrap; }
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS executable with file browser (eg. gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS executable using a file browser (eg. gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="icon">
                <iconset resource="resources/resources_icons.qrc">
@@ -784,7 +784,7 @@ p, li { white-space: pre-wrap; }
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia project with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia project using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string>...</string>
@@ -832,7 +832,7 @@ p, li { white-space: pre-wrap; }
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia executable with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia executable using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="icon">
                <iconset resource="resources/resources_icons.qrc">
@@ -929,10 +929,10 @@ p, li { white-space: pre-wrap; }
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter. Leave blank to use Python defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Using Python interpreter in system path</string>
+               <string>Using current Python interpreter</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
@@ -958,7 +958,7 @@ p, li { white-space: pre-wrap; }
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="icon">
                <iconset resource="resources/resources_icons.qrc">
@@ -1201,7 +1201,9 @@ p, li { white-space: pre-wrap; }
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
   <tabstop>checkBox_use_smooth_zoom</tabstop>
+  <tabstop>checkBox_use_curved_links</tabstop>
   <tabstop>radioButton_bg_grid</tabstop>
+  <tabstop>radioButton_bg_tree</tabstop>
   <tabstop>radioButton_bg_solid</tabstop>
   <tabstop>toolButton_bg_color</tabstop>
   <tabstop>horizontalSlider_data_flow_animation_duration</tabstop>
@@ -1219,6 +1221,10 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_use_embedded_python</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
   <tabstop>checkBox_object_tree_sticky_selection</tabstop>
+  <tabstop>checkBox_relationship_items_follow</tabstop>
+  <tabstop>checkBox_smooth_entity_graph_zoom</tabstop>
+  <tabstop>checkBox_smooth_entity_graph_rotation</tabstop>
+  <tabstop>checkBox_show_cascading_relationships</tabstop>
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
  </tabstops>
