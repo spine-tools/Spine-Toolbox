@@ -112,7 +112,7 @@ class ImportMappingOptions(QObject):
 
     def update_ui(self):
         """
-        updates ui to RelationshipClassMapping, ObjectClassMapping or ObjectGroupMapping model
+        Updates ui according to the current mapping type.
         """
         if not self._mapping_specification_model:
             self._ui.dockWidget_mapping_options.hide()
@@ -120,32 +120,6 @@ class ImportMappingOptions(QObject):
 
         self._ui.dockWidget_mapping_options.show()
         self._block_signals = True
-        if self._mapping_specification_model.map_type == RelationshipClassMapping:
-            self._ui.import_objects_check_box.show()
-            self._ui.dimension_label.show()
-            self._ui.dimension_spin_box.show()
-            self._ui.dimension_spin_box.setValue(len(self._mapping_specification_model.mapping.objects))
-            if self._mapping_specification_model.mapping.import_objects:
-                self._ui.import_objects_check_box.setCheckState(Qt.Checked)
-            else:
-                self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
-        elif self._mapping_specification_model.map_type == ObjectGroupMapping:
-            self._ui.import_objects_check_box.show()
-            self._ui.dimension_label.hide()
-            self._ui.dimension_spin_box.hide()
-            if self._mapping_specification_model.mapping.import_objects:
-                self._ui.import_objects_check_box.setCheckState(Qt.Checked)
-            else:
-                self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
-        elif self._mapping_specification_model.map_type in (
-            ObjectClassMapping,
-            AlternativeMapping,
-            ScenarioMapping,
-            ScenarioAlternativeMapping,
-        ):
-            self._ui.import_objects_check_box.hide()
-            self._ui.dimension_label.hide()
-            self._ui.dimension_spin_box.hide()
         class_type_index = [
             ObjectClassMapping,
             RelationshipClassMapping,
@@ -160,21 +134,33 @@ class ImportMappingOptions(QObject):
             ToolFeatureMethodMapping,
         ].index(self._mapping_specification_model.map_type)
         self._ui.class_type_combo_box.setCurrentIndex(class_type_index)
-        # update parameter mapping
+
+        # update item mapping settings
+        if self._mapping_specification_model.map_type in (RelationshipClassMapping, ObjectGroupMapping):
+            self._ui.import_objects_check_box.show()
+            check_state = Qt.Checked if self._mapping_specification_model.mapping.import_objects else Qt.Unchecked
+            self._ui.import_objects_check_box.setCheckState(check_state)
+        else:
+            self._ui.import_objects_check_box.hide()
+        if self._mapping_specification_model.map_type == RelationshipClassMapping:
+            self._ui.dimension_label.show()
+            self._ui.dimension_spin_box.show()
+            self._ui.dimension_spin_box.setValue(len(self._mapping_specification_model.mapping.objects))
+        else:
+            self._ui.dimension_label.hide()
+            self._ui.dimension_spin_box.hide()
+
+        # update parameter mapping settings
         if self._mapping_specification_model.mapping_has_parameters():
             self._ui.parameter_type_combo_box.setEnabled(True)
             self._ui.parameter_type_combo_box.setCurrentText(self._mapping_specification_model.parameter_type)
-            if self._mapping_specification_model.parameter_type != "None":
-                if self._mapping_specification_model.parameter_type == "Definition":
-                    self._ui.value_type_label.setText("Default value type:")
-                elif self._mapping_specification_model.parameter_type == "Value":
-                    self._ui.value_type_label.setText("Value type:")
-                self._ui.value_type_combo_box.setEnabled(True)
-                self._ui.value_type_combo_box.setCurrentText(self._mapping_specification_model.value_type)
-            else:
-                self._ui.value_type_combo_box.setEnabled(False)
         else:
             self._ui.parameter_type_combo_box.setEnabled(False)
+        if self._mapping_specification_model.mapping_has_values():
+            self._ui.value_type_combo_box.setEnabled(True)
+            self._ui.value_type_combo_box.setCurrentText(self._mapping_specification_model.value_type)
+            self._ui.value_type_label.setText(self._mapping_specification_model.value_type_label_text)
+        else:
             self._ui.value_type_combo_box.setEnabled(False)
 
         self._ui.ignore_columns_button.setVisible(self._mapping_specification_model.is_pivoted)
@@ -313,10 +299,8 @@ class ImportMappingOptions(QObject):
         if self._mapping_specification_model:
             source_table_name = self._mapping_specification_model.source_table_name
             specification_name = self._mapping_specification_model.mapping_name
-            previous_mapping = self._mapping_specification_model.mapping.parameters
-            self._undo_stack.push(
-                SetValueType(source_table_name, specification_name, self, type_name, previous_mapping)
-            )
+            old_type_name = self._mapping_specification_model.value_type
+            self._undo_stack.push(SetValueType(source_table_name, specification_name, self, type_name, old_type_name))
 
     def set_parameter_type(self, source_table_name, mapping_specification_name, type_name):
         """

@@ -47,6 +47,7 @@ class ImportMappings(QObject):
         self._mappings_model = None
         self._undo_stack = undo_stack
         # initialize interface
+        # NOTE: We make the delegate an attribute so it's never accidentally gc'ed
         self._src_type_delegate = ComboBoxDelegate(SOURCE_TYPES)
         self._ui.table_view_mappings.setItemDelegateForColumn(1, self._src_type_delegate)
 

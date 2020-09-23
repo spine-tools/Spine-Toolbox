@@ -418,14 +418,14 @@ class SetParameterType(QUndoCommand):
 class SetValueType(QUndoCommand):
     """Command to change the value type of an item mapping."""
 
-    def __init__(self, source_table_name, mapping_specification_name, options_widget, new_type, previous_parameter):
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, new_type, old_type):
         """
         Args:
             source_table_name (str): name of the source table
             mapping_specification_name (str): name of the mapping specification
             options_widget (ImportMappingOptions): options widget
             new_type (str): name of the new value type
-            previous_parameter (ParameterMappingBase): previous parameter mapping
+            old_type (str): name of the old value type
         """
         text = "value type change"
         super().__init__(text)
@@ -433,7 +433,7 @@ class SetValueType(QUndoCommand):
         self._mapping_specification_name = mapping_specification_name
         self._options_widget = options_widget
         self._new_type = new_type
-        self._previous_parameter = previous_parameter.to_dict()
+        self._old_type = old_type
 
     def redo(self):
         """Changes a parameter's value type."""
@@ -441,8 +441,7 @@ class SetValueType(QUndoCommand):
 
     def undo(self):
         """Restores a parameter to its previous value type"""
-        mapping = parameter_mapping_from_dict(self._previous_parameter)
-        self._options_widget.set_parameter_mapping(self._source_table_name, self._mapping_specification_name, mapping)
+        self._options_widget.set_value_type(self._source_table_name, self._mapping_specification_name, self._old_type)
 
 
 class SetReadStartRow(QUndoCommand):

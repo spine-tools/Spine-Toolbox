@@ -157,30 +157,61 @@ class MappingSpecificationModel(QAbstractTableModel):
 
     @property
     def parameter_type(self):
+        if not self._item_mapping:
+            return None
+        if not self._item_mapping.has_parameters():
+            return None
         return _PARAMETER_TYPE_DISPLAY_NAME[type(self._item_mapping.parameters)]
 
-    @property
-    def value_name(self):
-        """Either "value", "default_value", or "". Used to retrieve the 'value_mapping' from the parameter mapping."""
-        if not self._item_mapping or not self._item_mapping.has_parameters():
+    def _value_mapping_attribute_name(self):
+        if not self._item_mapping:
             return None
-        if isinstance(self._item_mapping.parameters, ParameterValueMapping):
+        if self._item_mapping.has_parameters():
+            if isinstance(self._item_mapping.parameters, ParameterValueMapping):
+                return "value"
+            if isinstance(self._item_mapping.parameters, ParameterDefinitionMapping):
+                return "default_value"
+        if isinstance(self._item_mapping, ParameterValueListMapping):
             return "value"
-        if isinstance(self._item_mapping.parameters, ParameterDefinitionMapping):
-            return "default_value"
         return None
 
     @property
-    def value_type(self):
-        if not self.value_name:
-            return None
-        return _VALUE_TYPE_DISPLAY_NAME[type(getattr(self._item_mapping.parameters, self.value_name))]
+    def value_type_label_text(self):
+        return {"value": "Value type:", "default_value": "Default value type:"}.get(
+            self._value_mapping_attribute_name()
+        )
 
     @property
     def value_mapping(self):
-        if not self.value_name:
+        value_mapping_attribute_name = self._value_mapping_attribute_name()
+        if not value_mapping_attribute_name:
             return None
-        return getattr(self._item_mapping.parameters, self.value_name)
+        if self._item_mapping.has_parameters():
+            return getattr(self._item_mapping.parameters, value_mapping_attribute_name)
+        return getattr(self._item_mapping, value_mapping_attribute_name)
+
+    @value_mapping.setter
+    def value_mapping(self, value_mapping):
+        value_mapping_attribute_name = self._value_mapping_attribute_name()
+        if not value_mapping_attribute_name:
+            return
+        if self._item_mapping.has_parameters():
+            return setattr(self._item_mapping.parameters, value_mapping_attribute_name, value_mapping)
+        return setattr(self._item_mapping, value_mapping_attribute_name, value_mapping)
+
+    @property
+    def value_type(self):
+        if not self.value_mapping:
+            return None
+        return _VALUE_TYPE_DISPLAY_NAME[type(self.value_mapping)]
+
+    def mapping_has_parameters(self):
+        """Returns True if the item mapping has parameters."""
+        return self._item_mapping.has_parameters()
+
+    def mapping_has_values(self):
+        """Returns True if the parameter mapping has values."""
+        return self.value_mapping is not None
 
     @property
     def is_pivoted(self):
@@ -271,7 +302,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         Change parameter type
         """
-        value_mapping = self.value_mapping
+        previous_value_mapping = self.value_mapping
         self.beginResetModel()
         if new_type == "None":
             self._item_mapping.parameters = None
@@ -279,8 +310,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             self._item_mapping.parameters = ParameterValueMapping()
         elif new_type == "Definition":
             self._item_mapping.parameters = ParameterDefinitionMapping()
-        if self.value_mapping:
-            setattr(self._item_mapping.parameters, self.value_name, value_mapping)
+        self.value_mapping = previous_value_mapping
         self.update_display_table()
         self.endResetModel()
 
@@ -289,22 +319,21 @@ class MappingSpecificationModel(QAbstractTableModel):
         Change value type
         """
 
-        if not self.value_name:
+        if not self.mapping_has_values():
             return
-        if new_type == "None":
-            value_mapping = None
-        elif new_type == "Single value":
-            value_mapping = SingleValueMapping()
-        elif new_type == "Array":
-            value_mapping = ArrayValueMapping()
-        elif new_type == "Map":
-            value_mapping = MapValueMapping()
-        elif new_type == "Time series":
-            value_mapping = TimeSeriesValueMapping()
-        elif new_type == "Time pattern":
-            value_mapping = TimePatternValueMapping()
         self.beginResetModel()
-        setattr(self._item_mapping.parameters, self.value_name, value_mapping)
+        if new_type == "None":
+            self.value_mapping = None
+        elif new_type == "Single value":
+            self.value_mapping = SingleValueMapping()
+        elif new_type == "Array":
+            self.value_mapping = ArrayValueMapping()
+        elif new_type == "Map":
+            self.value_mapping = MapValueMapping()
+        elif new_type == "Time series":
+            self.value_mapping = TimeSeriesValueMapping()
+        elif new_type == "Time pattern":
+            self.value_mapping = TimePatternValueMapping()
         self.update_display_table()
         self.endResetModel()
 
@@ -662,10 +691,6 @@ class MappingSpecificationModel(QAbstractTableModel):
         if self._item_mapping is None or not isinstance(self.value_mapping, MapValueMapping):
             return
         self.value_mapping.compress = compress
-
-    def mapping_has_parameters(self):
-        """Returns True if the item mapping has parameters."""
-        return self._item_mapping.has_parameters()
 
     def to_dict(self):
         """
