@@ -194,6 +194,7 @@ class Ui_MainWindow(object):
         self.class_type_combo_box.addItem("")
         self.class_type_combo_box.addItem("")
         self.class_type_combo_box.addItem("")
+        self.class_type_combo_box.addItem("")
         self.class_type_combo_box.setObjectName(u"class_type_combo_box")
 
         self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.class_type_combo_box)
@@ -355,10 +356,11 @@ class Ui_MainWindow(object):
         self.class_type_combo_box.setItemText(3, QCoreApplication.translate("MainWindow", u"Alternative", None))
         self.class_type_combo_box.setItemText(4, QCoreApplication.translate("MainWindow", u"Scenario", None))
         self.class_type_combo_box.setItemText(5, QCoreApplication.translate("MainWindow", u"Scenario alternative", None))
-        self.class_type_combo_box.setItemText(6, QCoreApplication.translate("MainWindow", u"Feature", None))
-        self.class_type_combo_box.setItemText(7, QCoreApplication.translate("MainWindow", u"Tool", None))
-        self.class_type_combo_box.setItemText(8, QCoreApplication.translate("MainWindow", u"Tool feature", None))
-        self.class_type_combo_box.setItemText(9, QCoreApplication.translate("MainWindow", u"Tool feature method", None))
+        self.class_type_combo_box.setItemText(6, QCoreApplication.translate("MainWindow", u"Parameter value list", None))
+        self.class_type_combo_box.setItemText(7, QCoreApplication.translate("MainWindow", u"Feature", None))
+        self.class_type_combo_box.setItemText(8, QCoreApplication.translate("MainWindow", u"Tool", None))
+        self.class_type_combo_box.setItemText(9, QCoreApplication.translate("MainWindow", u"Tool feature", None))
+        self.class_type_combo_box.setItemText(10, QCoreApplication.translate("MainWindow", u"Tool feature method", None))
 
         self.value_type_label.setText(QCoreApplication.translate("MainWindow", u"Default value type::", None))
         self.value_type_combo_box.setItemText(0, QCoreApplication.translate("MainWindow", u"Single value", None))

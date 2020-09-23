@@ -91,6 +91,7 @@ class SourceDataTableModel(MinimalTableModel):
             self._mapping_specification.multi_column_type_recommendation_changed.disconnect(self.set_all_column_types)
         self._mapping_specification = mapping
         self._mapping_specification.dataChanged.connect(self._mapping_data_changed)
+        self._mapping_specification.modelReset.connect(self._mapping_data_changed)
         self._mapping_specification.mapping_read_start_row_changed.connect(self._mapping_data_changed)
         self._mapping_specification.row_or_column_type_recommendation_changed.connect(self.set_type)
         self._mapping_specification.multi_column_type_recommendation_changed.connect(self.set_all_column_types)

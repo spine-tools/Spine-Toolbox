@@ -367,6 +367,11 @@
        </item>
        <item>
         <property name="text">
+         <string>Parameter value list</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Feature</string>
         </property>
        </item>

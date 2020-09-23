@@ -23,12 +23,13 @@ from spinedb_api import (
     AlternativeMapping,
     ScenarioMapping,
     ScenarioAlternativeMapping,
-    MapValueMapping,
-    TimeSeriesValueMapping,
+    ParameterValueListMapping,
     FeatureMapping,
     ToolMapping,
     ToolFeatureMapping,
     ToolFeatureMethodMapping,
+    MapValueMapping,
+    TimeSeriesValueMapping,
 )
 from ..commands import (
     SetImportObjectsFlag,
@@ -152,6 +153,7 @@ class ImportMappingOptions(QObject):
             AlternativeMapping,
             ScenarioMapping,
             ScenarioAlternativeMapping,
+            ParameterValueListMapping,
             FeatureMapping,
             ToolMapping,
             ToolFeatureMapping,

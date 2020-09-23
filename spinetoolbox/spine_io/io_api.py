@@ -93,6 +93,7 @@ class SourceConnection:
             "relationships": [],
             "relationship_parameters": [],
             "relationship_parameter_values": [],
+            "parameter_value_lists": [],
             "object_groups": [],
             "alternatives": [],
             "scenarios": [],

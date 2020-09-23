@@ -172,8 +172,7 @@ class ImporterWorker(QObject):
                         self._logger.msg_error.emit("Rolling back changes.")
                         db_map.rollback_session()
                     break
-                else:
-                    self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
+                self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
             if import_num:
                 db_map.commit_session("Import data by Spine Toolbox Importer")
                 self._logger.msg_success.emit(f"Inserted {import_num} data with {len(import_errors)} errors into {url}")

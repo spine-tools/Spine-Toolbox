@@ -31,12 +31,13 @@ from spinedb_api import (
     AlternativeMapping,
     ScenarioMapping,
     ScenarioAlternativeMapping,
+    ParameterValueListMapping,
     FeatureMapping,
     ToolMapping,
     ToolFeatureMapping,
     ToolFeatureMethodMapping,
     item_mapping_from_dict,
-    ParameterMappingBase,
+    NoParameterMapping,
     ParameterValueMapping,
     ParameterDefinitionMapping,
     SingleValueMapping,
@@ -61,7 +62,7 @@ _MAP_TYPE_DISPLAY_NAME = {
 _PARAMETER_TYPE_DISPLAY_NAME = {
     ParameterValueMapping: "Value",
     ParameterDefinitionMapping: "Definition",
-    NoneMapping: "None",
+    NoParameterMapping: "None",
 }
 
 
@@ -209,6 +210,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             AlternativeMapping,
             ScenarioMapping,
             ScenarioAlternativeMapping,
+            ParameterValueListMapping,
             FeatureMapping,
             ToolMapping,
             ToolFeatureMapping,
@@ -252,6 +254,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             "Alternative": AlternativeMapping,
             "Scenario": ScenarioMapping,
             "Scenario alternative": ScenarioAlternativeMapping,
+            "Parameter value list": ParameterValueListMapping,
             "Feature": FeatureMapping,
             "Tool": ToolMapping,
             "Tool feature": ToolFeatureMapping,
@@ -320,9 +323,6 @@ class MappingSpecificationModel(QAbstractTableModel):
     def update_display_table(self):
         self._component_names = self._item_mapping.component_names()
         self._component_mappings = self._item_mapping.component_mappings()
-        if self._item_mapping.has_parameters() and isinstance(self._item_mapping.parameters, ParameterMappingBase):
-            self._component_names += self._item_mapping.parameters.component_names()
-            self._component_mappings += self._item_mapping.parameters.component_mappings()
         self._colors = self._make_colors()
 
     def _make_colors(self):
@@ -546,9 +546,6 @@ class MappingSpecificationModel(QAbstractTableModel):
             return None
         component_names = self._item_mapping.component_names()
         component_mappings = self._item_mapping.component_mappings()
-        if self._item_mapping.has_parameters() and isinstance(self._item_mapping.parameters, ParameterMappingBase):
-            component_names += self._item_mapping.parameters.component_names()
-            component_mappings += self._item_mapping.parameters.component_mappings()
         name_to_component = dict(zip(component_names, component_mappings))
         return name_to_component.get(name)
 
@@ -556,10 +553,7 @@ class MappingSpecificationModel(QAbstractTableModel):
         if not self._item_mapping:
             return False
         if not self._item_mapping.set_component_by_name(name, mapping):
-            if not self._item_mapping.has_parameters():
-                return False
-            if not self._item_mapping.parameters.set_component_by_name(name, mapping):
-                return False
+            return False
         row = self._row_for_component_name(name)
         self._component_mappings[row] = mapping
         top_left = self.index(row, 1)
@@ -568,19 +562,23 @@ class MappingSpecificationModel(QAbstractTableModel):
         # Recommend data types
         if name == "Parameter values":
             self._recommend_parameter_value_mapping_reference_type_change(mapping)
-        elif name in ("Parameter time index", "Parameter time pattern index"):
-            if name == "Parameter time index":
-                self._recommend_datetime_type(mapping)
-            if (
-                isinstance(mapping, RowMapping)
-                and self._item_mapping.is_pivoted()
-                and isinstance(self._item_mapping.parameters.value, NoneMapping)
-            ):
-                non_pivoted_columns = self._item_mapping.non_pivoted_columns()
-                self.multi_column_type_recommendation_changed.emit(non_pivoted_columns, FloatConvertSpec())
+        elif name == "Parameter time index":
+            self._recommend_datetime_type(mapping)
+            self._recommend_float_type_for_non_pivoted_columns(mapping)
+        elif name == "Parameter time pattern index":
+            self._recommend_float_type_for_non_pivoted_columns(mapping)
         else:
             self._recommend_string_type(mapping)
         return True
+
+    def _recommend_float_type_for_non_pivoted_columns(self, mapping):
+        if (
+            isinstance(mapping, RowMapping)
+            and self._item_mapping.is_pivoted()
+            and isinstance(self._item_mapping.parameters.value, NoneMapping)
+        ):
+            non_pivoted_columns = self._item_mapping.non_pivoted_columns()
+            self.multi_column_type_recommendation_changed.emit(non_pivoted_columns, FloatConvertSpec())
 
     def _row_for_component_name(self, name):
         return self._component_names.index(name)
