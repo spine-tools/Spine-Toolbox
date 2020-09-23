@@ -29,7 +29,7 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import Slot, Qt, QTimer, Signal
 
 
-class SelectDBItemsDialog(QDialog):
+class MassSelectItemsDialog(QDialog):
     """A dialog to query a selection of dbs and items from the user."""
 
     _MARGIN = 3
@@ -78,6 +78,7 @@ class SelectDBItemsDialog(QDialog):
         for k, check_box in enumerate(self.item_check_boxes.values()):
             row = k // self._COLUMN_COUNT
             column = k % self._COLUMN_COUNT
+            check_box.setChecked(True)
             items_layout.addWidget(check_box, row, column)
         top_layout.addWidget(db_maps_group_box)
         top_layout.addWidget(items_group_box)
@@ -99,7 +100,7 @@ class SelectDBItemsDialog(QDialog):
             check_box.setEnabled(enabled)
 
 
-class MassRemoveItemsDialog(SelectDBItemsDialog):
+class MassRemoveItemsDialog(MassSelectItemsDialog):
     """A dialog to query user's preferences for mass removing db items."""
 
     def __init__(self, parent, db_mngr, *db_maps):
@@ -127,7 +128,7 @@ class MassRemoveItemsDialog(SelectDBItemsDialog):
         super().accept()
 
 
-class MassExportItemsDialog(SelectDBItemsDialog):
+class MassExportItemsDialog(MassSelectItemsDialog):
     """A dialog to let users chose items for JSON export."""
 
     data_submitted = Signal(object)
@@ -142,14 +143,6 @@ class MassExportItemsDialog(SelectDBItemsDialog):
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Mass export items")
-        for item_type in (
-            "object_class",
-            "relationship_class",
-            "parameter_definition",
-            "parameter_tag",
-            "parameter_value_list",
-        ):
-            self.item_check_boxes[item_type].setChecked(True)
 
     def accept(self):
         super().accept()

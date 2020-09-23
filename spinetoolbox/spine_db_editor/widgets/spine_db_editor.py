@@ -34,7 +34,7 @@ from spinedb_api import (
     Anyone,
 )
 from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
-from .select_db_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
+from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -519,7 +519,7 @@ class SpineDBEditorBase(QMainWindow):
         """Exports given data into Excel file."""
         # NOTE: We import data into an in-memory Spine db and then export that to excel.
         url = URL("sqlite", database="")
-        db_map = DiffDatabaseMapping(url, _create_engine=create_new_spine_database)
+        db_map = DiffDatabaseMapping(url, create=True)
         import_data(db_map, **data_for_export)
         file_name = os.path.split(file_path)[1]
         try:
