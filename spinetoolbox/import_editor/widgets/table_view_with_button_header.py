@@ -103,14 +103,16 @@ class TableViewWithButtonHeader(QTableView):
     @Slot("QPoint")
     def _show_horizontal_header_menu(self, pos):
         """Opens the context menu of the horizontal header."""
-        screen_pos = self._horizontal_header.mapToGlobal(pos)
-        self._horizontal_menu.exec_(screen_pos)
+        if self._horizontal_header.display_all or self._horizontal_header.sections_with_buttons:
+            screen_pos = self._horizontal_header.mapToGlobal(pos)
+            self._horizontal_menu.exec_(screen_pos)
 
     @Slot("QPoint")
     def _show_vertical_header_menu(self, pos):
         """Opens the context menu of the vertical header."""
-        screen_pos = self._vertical_header.mapToGlobal(pos)
-        self._vertical_menu.exec_(screen_pos)
+        if self._vertical_header.display_all or self._vertical_header.sections_with_buttons:
+            screen_pos = self._vertical_header.mapToGlobal(pos)
+            self._vertical_menu.exec_(screen_pos)
 
     @Slot("QAction")
     def _set_all_column_data_types(self, action):

@@ -15,33 +15,36 @@ Contains the mapping specification model.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
+from distutils.util import strtobool
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, Signal
 from PySide2.QtGui import QColor
 from spinedb_api import (
-    AlternativeMapping,
-    ColumnHeaderMapping,
-    ColumnMapping,
-    ConstantMapping,
-    item_mapping_from_dict,
-    FeatureMapping,
     NoneMapping,
+    ConstantMapping,
+    ColumnMapping,
+    ColumnHeaderMapping,
+    TableNameMapping,
+    RowMapping,
     ObjectClassMapping,
     ObjectGroupMapping,
-    ParameterArrayMapping,
-    ParameterDefinitionMapping,
-    ParameterMapMapping,
-    ParameterMappingBase,
-    ParameterTimePatternMapping,
-    ParameterTimeSeriesMapping,
-    ParameterValueMapping,
     RelationshipClassMapping,
-    RowMapping,
+    AlternativeMapping,
     ScenarioMapping,
     ScenarioAlternativeMapping,
-    TableNameMapping,
+    ParameterValueListMapping,
+    FeatureMapping,
     ToolMapping,
     ToolFeatureMapping,
     ToolFeatureMethodMapping,
+    item_mapping_from_dict,
+    NoParameterMapping,
+    ParameterValueMapping,
+    ParameterDefinitionMapping,
+    SingleValueMapping,
+    ArrayValueMapping,
+    MapValueMapping,
+    TimePatternValueMapping,
+    TimeSeriesValueMapping,
 )
 from spinetoolbox.spine_io.type_conversion import DateTimeConvertSpec, FloatConvertSpec, StringConvertSpec
 from ..commands import SetComponentMappingReference, SetComponentMappingType
@@ -56,19 +59,20 @@ _MAP_TYPE_DISPLAY_NAME = {
     TableNameMapping: "Table Name",
 }
 
-
-_DISPLAY_TYPE_TO_TYPE = {
-    "Single value": ParameterValueMapping,
-    "Array": ParameterArrayMapping,
-    "Map": ParameterMapMapping,
-    "Time series": ParameterTimeSeriesMapping,
-    "Time pattern": ParameterTimePatternMapping,
-    "Definition": ParameterDefinitionMapping,
-    "None": NoneMapping,
+_PARAMETER_TYPE_DISPLAY_NAME = {
+    ParameterValueMapping: "Value",
+    ParameterDefinitionMapping: "Definition",
+    NoParameterMapping: "None",
 }
 
 
-_TYPE_TO_DISPLAY_TYPE = {value: key for key, value in _DISPLAY_TYPE_TO_TYPE.items()}
+_VALUE_TYPE_DISPLAY_NAME = {
+    SingleValueMapping: "Single value",
+    ArrayValueMapping: "Array",
+    MapValueMapping: "Map",
+    TimeSeriesValueMapping: "Time series",
+    TimePatternValueMapping: "Time pattern",
+}
 
 
 class MappingSpecificationModel(QAbstractTableModel):
@@ -153,7 +157,30 @@ class MappingSpecificationModel(QAbstractTableModel):
 
     @property
     def parameter_type(self):
-        return _TYPE_TO_DISPLAY_TYPE[type(self._item_mapping.parameters)]
+        return _PARAMETER_TYPE_DISPLAY_NAME[type(self._item_mapping.parameters)]
+
+    @property
+    def value_name(self):
+        """Either "value", "default_value", or "". Used to retrieve the 'value_mapping' from the parameter mapping."""
+        if not self._item_mapping or not self._item_mapping.has_parameters():
+            return None
+        if isinstance(self._item_mapping.parameters, ParameterValueMapping):
+            return "value"
+        if isinstance(self._item_mapping.parameters, ParameterDefinitionMapping):
+            return "default_value"
+        return None
+
+    @property
+    def value_type(self):
+        if not self.value_name:
+            return None
+        return _VALUE_TYPE_DISPLAY_NAME[type(getattr(self._item_mapping.parameters, self.value_name))]
+
+    @property
+    def value_mapping(self):
+        if not self.value_name:
+            return None
+        return getattr(self._item_mapping.parameters, self.value_name)
 
     @property
     def is_pivoted(self):
@@ -183,6 +210,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             AlternativeMapping,
             ScenarioMapping,
             ScenarioAlternativeMapping,
+            ParameterValueListMapping,
             FeatureMapping,
             ToolMapping,
             ToolFeatureMapping,
@@ -226,6 +254,7 @@ class MappingSpecificationModel(QAbstractTableModel):
             "Alternative": AlternativeMapping,
             "Scenario": ScenarioMapping,
             "Scenario alternative": ScenarioAlternativeMapping,
+            "Parameter value list": ParameterValueListMapping,
             "Feature": FeatureMapping,
             "Tool": ToolMapping,
             "Tool feature": ToolFeatureMapping,
@@ -242,23 +271,40 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         Change parameter type
         """
-
+        value_mapping = self.value_mapping
         self.beginResetModel()
         if new_type == "None":
             self._item_mapping.parameters = None
-        elif new_type == "Single value":
+        elif new_type == "Value":
             self._item_mapping.parameters = ParameterValueMapping()
-        elif new_type == "Array":
-            self._item_mapping.parameters = ParameterArrayMapping()
         elif new_type == "Definition":
             self._item_mapping.parameters = ParameterDefinitionMapping()
-        elif new_type == "Map":
-            self._item_mapping.parameters = ParameterMapMapping()
-        elif new_type == "Time series":
-            self._item_mapping.parameters = ParameterTimeSeriesMapping()
-        elif new_type == "Time pattern":
-            self._item_mapping.parameters = ParameterTimePatternMapping()
+        if self.value_mapping:
+            setattr(self._item_mapping.parameters, self.value_name, value_mapping)
+        self.update_display_table()
+        self.endResetModel()
 
+    def change_value_type(self, new_type):
+        """
+        Change value type
+        """
+
+        if not self.value_name:
+            return
+        if new_type == "None":
+            value_mapping = None
+        elif new_type == "Single value":
+            value_mapping = SingleValueMapping()
+        elif new_type == "Array":
+            value_mapping = ArrayValueMapping()
+        elif new_type == "Map":
+            value_mapping = MapValueMapping()
+        elif new_type == "Time series":
+            value_mapping = TimeSeriesValueMapping()
+        elif new_type == "Time pattern":
+            value_mapping = TimePatternValueMapping()
+        self.beginResetModel()
+        setattr(self._item_mapping.parameters, self.value_name, value_mapping)
         self.update_display_table()
         self.endResetModel()
 
@@ -277,9 +323,6 @@ class MappingSpecificationModel(QAbstractTableModel):
     def update_display_table(self):
         self._component_names = self._item_mapping.component_names()
         self._component_mappings = self._item_mapping.component_mappings()
-        if self._item_mapping.has_parameters() and isinstance(self._item_mapping.parameters, ParameterMappingBase):
-            self._component_names += self._item_mapping.parameters.component_names()
-            self._component_mappings += self._item_mapping.parameters.component_mappings()
         self._colors = self._make_colors()
 
     def _make_colors(self):
@@ -294,32 +337,37 @@ class MappingSpecificationModel(QAbstractTableModel):
 
     def get_map_type_display(self, mapping, name):
         if name == "Parameter values" and self._item_mapping.is_pivoted():
-            mapping_type = "Pivoted"
-        elif isinstance(mapping, RowMapping):
+            return "Pivoted"
+        if isinstance(mapping, RowMapping):
             if mapping.reference == -1:
-                mapping_type = "Headers"
-            else:
-                mapping_type = "Row"
-        else:
-            mapping_type = _MAP_TYPE_DISPLAY_NAME[type(mapping)]
-        return mapping_type
+                return "Headers"
+            return "Row"
+        return _MAP_TYPE_DISPLAY_NAME[type(mapping)]
 
     def get_map_value_display(self, mapping, name):
         if name == "Parameter values" and self._item_mapping.is_pivoted():
-            mapping_value = "Pivoted values"
-        elif isinstance(mapping, NoneMapping):
-            mapping_value = ""
-        elif isinstance(mapping, RowMapping) and mapping.reference == -1:
-            mapping_value = "Headers"
-        else:
-            mapping_value = mapping.reference
-            if isinstance(mapping_value, int):
-                mapping_value += 1
-        return mapping_value
+            return "Pivoted values"
+        if isinstance(mapping, NoneMapping):
+            return ""
+        if isinstance(mapping, RowMapping) and mapping.reference == -1:
+            return "Headers"
+        mapping_ref = mapping.reference
+        if (
+            name in ("Scenario active flags", "Tool feature required flags")
+            and isinstance(mapping, ConstantMapping)
+            and mapping.is_valid()
+        ):
+            try:
+                return bool(strtobool(mapping_ref))
+            except ValueError:
+                return mapping_ref
+        if isinstance(mapping_ref, int):
+            mapping_ref += 1
+        return mapping_ref
 
     def data(self, index, role=Qt.DisplayRole):
         column = index.column()
-        if role in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.DisplayRole,):
             name = self._component_names[index.row()]
             if column == 0:
                 return name
@@ -483,23 +531,14 @@ class MappingSpecificationModel(QAbstractTableModel):
         """
         self.about_to_undo.emit(self._table_name, self._mapping_name)
         mapping = self._get_component_mapping_from_name(name)
-        if isinstance(value, str) and value.isdigit():
-            value = int(value)
-        if isinstance(value, int):
-            value -= 1
         if isinstance(mapping, NoneMapping):
-            # create new mapping
-            if isinstance(value, int):
-                mapping = ColumnMapping(reference=value)
-            elif value:
-                mapping = ConstantMapping(reference=value)
-            else:
-                return False
-        else:
-            try:
-                mapping.reference = value
-            except TypeError:
-                return False
+            mapping = ConstantMapping()
+        try:
+            mapping.reference = value
+        except TypeError:
+            return False
+        if isinstance(mapping.reference, int):
+            mapping.reference = mapping.reference - 1
         return self._set_component_mapping_from_name(name, mapping)
 
     def _get_component_mapping_from_name(self, name):
@@ -507,9 +546,6 @@ class MappingSpecificationModel(QAbstractTableModel):
             return None
         component_names = self._item_mapping.component_names()
         component_mappings = self._item_mapping.component_mappings()
-        if self._item_mapping.has_parameters() and isinstance(self._item_mapping.parameters, ParameterMappingBase):
-            component_names += self._item_mapping.parameters.component_names()
-            component_mappings += self._item_mapping.parameters.component_mappings()
         name_to_component = dict(zip(component_names, component_mappings))
         return name_to_component.get(name)
 
@@ -517,31 +553,32 @@ class MappingSpecificationModel(QAbstractTableModel):
         if not self._item_mapping:
             return False
         if not self._item_mapping.set_component_by_name(name, mapping):
-            if not self._item_mapping.has_parameters():
-                return False
-            if not self._item_mapping.parameters.set_component_by_name(name, mapping):
-                return False
+            return False
         row = self._row_for_component_name(name)
         self._component_mappings[row] = mapping
         top_left = self.index(row, 1)
         bottom_right = self.index(row, 2)
         self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.ToolTipRole])
-        # FIXME: Try and see if we can do better here below
+        # Recommend data types
         if name == "Parameter values":
             self._recommend_parameter_value_mapping_reference_type_change(mapping)
-        elif name in ("Parameter time index", "Parameter time pattern index"):
-            if name == "Parameter time index":
-                self._recommend_datetime_type(mapping)
-            if (
-                isinstance(mapping, RowMapping)
-                and self._item_mapping.is_pivoted()
-                and isinstance(self._item_mapping.parameters.value, NoneMapping)
-            ):
-                non_pivoted_columns = self._item_mapping.non_pivoted_columns()
-                self.multi_column_type_recommendation_changed.emit(non_pivoted_columns, FloatConvertSpec())
+        elif name == "Parameter time index":
+            self._recommend_datetime_type(mapping)
+            self._recommend_float_type_for_non_pivoted_columns(mapping)
+        elif name == "Parameter time pattern index":
+            self._recommend_float_type_for_non_pivoted_columns(mapping)
         else:
             self._recommend_string_type(mapping)
         return True
+
+    def _recommend_float_type_for_non_pivoted_columns(self, mapping):
+        if (
+            isinstance(mapping, RowMapping)
+            and self._item_mapping.is_pivoted()
+            and isinstance(self._item_mapping.parameters.value, NoneMapping)
+        ):
+            non_pivoted_columns = self._item_mapping.non_pivoted_columns()
+            self.multi_column_type_recommendation_changed.emit(non_pivoted_columns, FloatConvertSpec())
 
     def _row_for_component_name(self, name):
         return self._component_names.index(name)
@@ -583,17 +620,21 @@ class MappingSpecificationModel(QAbstractTableModel):
 
     def set_time_series_repeat(self, repeat):
         """Toggles the repeat flag in the parameter's options."""
-        if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterTimeSeriesMapping):
+        if self._item_mapping is None:
             return
-        self._item_mapping.parameters.options.repeat = repeat
+        if not isinstance(self.value_mapping, TimeSeriesValueMapping):
+            return
+        self.value_mapping.options.repeat = repeat
 
     def set_map_dimensions(self, dimensions):
-        if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterMapMapping):
+        if self._item_mapping is None:
             return
-        previous_dimensions = len(self._item_mapping.parameters.extra_dimensions)
+        if not isinstance(self.value_mapping, MapValueMapping):
+            return
+        previous_dimensions = len(self.value_mapping.extra_dimensions)
         if dimensions == previous_dimensions:
             return
-        self._item_mapping.parameters.set_number_of_extra_dimensions(dimensions)
+        self.value_mapping.set_number_of_extra_dimensions(dimensions)
         first_dimension_row = 0
         for name in self._component_names:
             if name.startswith("Parameter index"):
@@ -603,17 +644,13 @@ class MappingSpecificationModel(QAbstractTableModel):
             first = first_dimension_row + previous_dimensions
             last = first_dimension_row + dimensions - 1
             self.beginInsertRows(QModelIndex(), first, last)
-            for index in range(previous_dimensions, dimensions):
-                self._component_names.append(f"Parameter index {index + 1}")
-            self._component_mappings += self._item_mapping.parameters.extra_dimensions[previous_dimensions:]
             self.endInsertRows()
         else:
             first = first_dimension_row + dimensions
             last = first_dimension_row + previous_dimensions - 1
             self.beginRemoveRows(QModelIndex(), first, last)
-            self._component_names = self._component_names[:first]
-            self._component_mappings = self._component_mappings[:first]
             self.endRemoveRows()
+        self.update_display_table()
 
     def set_map_compress_flag(self, compress):
         """
@@ -622,19 +659,13 @@ class MappingSpecificationModel(QAbstractTableModel):
         Args:
             compress (bool): flag value
         """
-        if self._item_mapping is None or not isinstance(self._item_mapping.parameters, ParameterMapMapping):
+        if self._item_mapping is None or not isinstance(self.value_mapping, MapValueMapping):
             return
-        self._item_mapping.parameters.compress = compress
+        self.value_mapping.compress = compress
 
     def mapping_has_parameters(self):
         """Returns True if the item mapping has parameters."""
         return self._item_mapping.has_parameters()
-
-    def model_parameters(self):
-        """Returns the mapping's parameters."""
-        if self._item_mapping is None or not self._item_mapping.has_parameters():
-            return None
-        return self._item_mapping.parameters
 
     def to_dict(self):
         """
@@ -663,17 +694,3 @@ class MappingSpecificationModel(QAbstractTableModel):
         mapping_name = specification_dict.pop("mapping_name", "")
         mapping = item_mapping_from_dict(specification_dict)
         return MappingSpecificationModel(table_name, mapping_name, mapping, undo_stack)
-
-
-def _name_index(name):
-    """
-    Parses an index from a string which ends with that number.
-
-    Args:
-        name (str): a string that ends with a number
-
-    Returns:
-        int: the number at the end of the given string minus one
-    """
-    _, number = name.rsplit(" ", 1)
-    return int(number) - 1

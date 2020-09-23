@@ -57,7 +57,7 @@ class TestSourceDataTableModel(unittest.TestCase):
         self.assertEqual(len(model._column_type_errors), 1)
         self.assertEqual(model._row_type_errors, {})
         self.assertTrue(error_index in model._column_type_errors)
-        self.assertEqual(model.data(model.index(*error_index)), "Error")
+        self.assertEqual(model.data(model.index(*error_index)), "Not a valid number")
 
         # if we add a pivoted mapping for the row with the error, the error should not be
         undo_stack = MagicMock()
@@ -100,7 +100,7 @@ class TestSourceDataTableModel(unittest.TestCase):
             undo_stack,
         )
         model.set_mapping(mapping)
-        self.assertEqual(model.data(model.index(*error_index)), "Error")
+        self.assertEqual(model.data(model.index(*error_index)), "Not a valid number")
 
     def test_mapping_column_colors(self):
         model = SourceDataTableModel()

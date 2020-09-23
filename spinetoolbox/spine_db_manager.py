@@ -354,6 +354,7 @@ class SpineDBManager(QObject):
         """
         fetcher = SpineDBFetcher(self, listener)
         fetcher.finished.connect(self._clean_up_fetcher)
+        fetcher.finished.connect(listener.update_export_enabled)
         self._fetchers.append(fetcher)
         fetcher.fetch(db_maps)
 

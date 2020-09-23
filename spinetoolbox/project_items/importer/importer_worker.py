@@ -117,7 +117,7 @@ class ImporterWorker(QObject):
                 self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
                 continue
             if not errors:
-                self._logger.msg_success.emit(
+                self._logger.msg.emit(
                     f"Successfully read {sum(len(d) for d in data.values())} data from {source}"
                 )
             else:
@@ -172,11 +172,12 @@ class ImporterWorker(QObject):
                         self._logger.msg_error.emit("Rolling back changes.")
                         db_map.rollback_session()
                     break
-                else:
-                    self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
+                self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
             if import_num:
                 db_map.commit_session("Import data by Spine Toolbox Importer")
                 self._logger.msg_success.emit(f"Inserted {import_num} data with {len(import_errors)} errors into {url}")
+            elif import_num == 0:
+                self._logger.msg_warning.emit("No new data imported")
         db_map.connection.close()
         if all_import_errors:
             # Log errors in a time stamped file into the logs directory

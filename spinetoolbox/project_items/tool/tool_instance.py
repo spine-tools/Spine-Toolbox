@@ -21,6 +21,7 @@ import sys
 import shutil
 from PySide2.QtCore import QObject, Signal, Slot
 from spinetoolbox.config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
+from spinetoolbox.helpers import python_interpreter
 from spinetoolbox.execution_managers import ConsoleExecutionManager, QProcessExecutionManager
 
 
@@ -151,8 +152,6 @@ class GAMSToolInstance(ToolInstance):
                     self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
                     self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
-        else:  # Return code 0: success
-            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -218,7 +217,7 @@ class JuliaToolInstance(ToolInstance):
         else:
             self.exec_mngr = QProcessExecutionManager(self._logger, self.program, self.args, **kwargs)
             self.exec_mngr.execution_finished.connect(self.handle_execution_finished)
-            # On Julia the Qprocess workdir must be set to the path where the main script is
+            # On Julia the QProcess workdir must be set to the path where the main script is
             # Otherwise it doesn't find input files in subdirectories
             self.exec_mngr.start_execution(workdir=self.basedir)
 
@@ -236,8 +235,6 @@ class JuliaToolInstance(ToolInstance):
                 self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code: {ret}]")
             except KeyError:
                 self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
-        else:
-            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -262,8 +259,6 @@ class JuliaToolInstance(ToolInstance):
                     self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
                     self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
-        else:  # Return code 0: success
-            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -307,14 +302,9 @@ class PythonToolInstance(ToolInstance):
             self.ipython_command_list.append(cd_work_dir_cmd)
             self.ipython_command_list.append(run_script_cmd)
         else:
-            # Prepare command "python script.py script_arguments"
-            python_path = self._settings.value("appSettings/pythonPath", defaultValue="")
-            if python_path != "":
-                python_cmd = python_path
-            else:
-                python_cmd = PYTHON_EXECUTABLE
+            # Prepare command "python <script.py> <script_arguments>"
             script_path = os.path.join(work_dir, self.tool_specification.main_prgm)
-            self.program = python_cmd
+            self.program = python_interpreter(self._settings)
             self.args.append(script_path)  # First argument for the Python interpreter is path to the tool script
             self.append_cmdline_args(optional_input_files, input_database_urls, output_database_urls, tool_args)
 
@@ -346,8 +336,6 @@ class PythonToolInstance(ToolInstance):
                 self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code: {ret}]")
             except KeyError:
                 self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
-        else:
-            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -372,8 +360,6 @@ class PythonToolInstance(ToolInstance):
                     self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
                     self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
-        else:  # Return code 0: success
-            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)
@@ -415,8 +401,6 @@ class ExecutableToolInstance(ToolInstance):
                     self._logger.msg_error.emit(f"\t<b>{return_msg}</b> [exit code:{ret}]")
                 except KeyError:
                     self._logger.msg_error.emit(f"\tUnknown return code ({ret})")
-        else:  # Return code 0: success
-            self._logger.msg.emit("\tTool specification execution finished")
         self.exec_mngr.deleteLater()
         self.exec_mngr = None
         self.instance_finished.emit(ret)

@@ -47,7 +47,7 @@ from PySide2.QtGui import (
     QKeySequence,
 )
 import spine_engine
-from .config import REQUIRED_SPINE_ENGINE_VERSION
+from .config import REQUIRED_SPINE_ENGINE_VERSION, PYTHON_EXECUTABLE
 
 if os.name == "nt":
     import ctypes
@@ -900,9 +900,29 @@ class ChildCyclingKeyPressFilter(QObject):
     """Event filter class for catching next and previous child key presses.
     Used in filtering the Ctrl+Tab and Ctrl+Shift+Tab key presses in the
     Item Properties tab widget."""
-
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress:
             if event.matches(QKeySequence.NextChild) or event.matches(QKeySequence.PreviousChild):
                 return True
         return QObject.eventFilter(self, obj, event)  # Pass event further
+
+
+def python_interpreter(app_settings):
+    """Returns the full path to Python interpreter depending on
+    user's settings and whether the app is frozen or not.
+
+    Args:
+        app_settings (QSettings): Application preferences
+
+    Returns:
+        str: Path to python executable
+    """
+    python_path = app_settings.value("appSettings/pythonPath", defaultValue="")
+    if python_path != "":
+        path = python_path
+    else:
+        if not getattr(sys, "frozen", False):
+            path = sys.executable  # If not frozen, return the one that is currently used.
+        else:
+            path = PYTHON_EXECUTABLE  # If frozen, return the one in path
+    return path
