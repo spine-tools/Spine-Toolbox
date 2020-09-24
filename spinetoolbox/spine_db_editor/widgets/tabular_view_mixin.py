@@ -104,8 +104,6 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_object.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
-        self.ui.treeView_relationship.selectionModel().currentChanged.connect(self._handle_entity_tree_current_changed)
         self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
@@ -161,8 +159,19 @@ class TabularViewMixin:
         if visible:
             self.ui.dockWidget_pivot_table.show()
 
-    @Slot("QModelIndex", "QModelIndex")
-    def _handle_entity_tree_current_changed(self, current, previous):
+    @Slot(dict)
+    def _handle_object_tree_selection_changed(self, selected_indexes):
+        super()._handle_object_tree_selection_changed(selected_indexes)
+        current = self.ui.treeView_object.currentIndex()
+        self._handle_entity_tree_current_changed(current)
+
+    @Slot(dict)
+    def _handle_relationship_tree_selection_changed(self, selected_indexes):
+        super()._handle_relationship_tree_selection_changed(selected_indexes)
+        current = self.ui.treeView_relationship.currentIndex()
+        self._handle_entity_tree_current_changed(current)
+
+    def _handle_entity_tree_current_changed(self, current):
         if self.ui.dockWidget_pivot_table.isVisible():
             self.reload_pivot_table(current=current)
             self.reload_frozen_table()
