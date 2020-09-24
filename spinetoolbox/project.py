@@ -28,6 +28,7 @@ from .dag_handler import DirectedGraphHandler
 from .project_item import finish_project_item_construction
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
+from .subscribers import NodeExecStartedSubscriber, NodeExecFinishedSubscriber, LoggingSubscriber
 from .project_commands import (
     SetProjectNameCommand,
     SetProjectDescriptionCommand,
@@ -89,6 +90,9 @@ class SpineToolboxProject(MetaObject):
         self.items_dir = None  # Full path to items directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
         self._toolbox.undo_stack.clear()
+        self.start_subscriber = NodeExecStartedSubscriber()
+        self.finish_subscriber = NodeExecFinishedSubscriber()
+        self.log_subscriber = LoggingSubscriber(self._logger)
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
 
@@ -467,10 +471,12 @@ class SpineToolboxProject(MetaObject):
             return
         items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
-        self.engine.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
-        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
-        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
-        self.engine.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
+        # register subscribers to relevant events
+        self.engine.publisher.register('exec_started', self.start_subscriber)
+        self.engine.publisher.register('exec_finished', self.finish_subscriber)
+        self.engine.publisher.register('log_event', self.log_subscriber)
+        # connect exec_started and exec_finished signals
+        self.connect_subscriber_signals()
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
@@ -480,10 +486,24 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
-        self.engine.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._run_leave_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
+        # disconnect exec_started and exec_finished signals
+        self.disconnect_subscriber_signals()
+        # unregister subscribers
+        self.engine.publisher.unregister('exec_started', self.start_subscriber)
+        self.engine.publisher.unregister('exec_finished', self.finish_subscriber)
+        self.engine.publisher.unregister('log_event', self.log_subscriber)
+
+    def connect_subscriber_signals(self):
+        self.start_subscriber.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
+
+    def disconnect_subscriber_signals(self):
+        self.start_subscriber.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._run_leave_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
