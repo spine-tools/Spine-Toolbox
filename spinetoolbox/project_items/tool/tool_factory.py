@@ -59,5 +59,6 @@ class ToolFactory(ProjectItemFactory):
         return ToolSpecificationMenu(parent, index)
 
     @staticmethod
-    def make_specification_widget(toolbox):
-        return ToolSpecificationWidget(toolbox)
+    def make_specification_widget(toolbox, specification=None):
+        """See base class."""
+        return ToolSpecificationWidget(toolbox, specification)

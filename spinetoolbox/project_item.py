@@ -512,7 +512,7 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def make_specification_widget(toolbox):
+    def make_specification_widget(toolbox, specification=None):
         """
         Creates the item's specification widget.
 
@@ -520,6 +520,8 @@ class ProjectItemFactory:
 
         Args:
             toolbox (ToolboxUI): Toolbox main window
+            specification (ProjectItemSpecification, optional): a specification to show in the widget or None for
+                a fresh start
         Returns:
             QWidget: item's specification widget
         """
