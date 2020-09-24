@@ -19,13 +19,7 @@ A tree model for parameter_tags.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
 from .tree_model_base import TreeModelBase
-from .tree_item_utility import (
-    EmptyChildMixin,
-    LastGrayMixin,
-    EditableMixin,
-    NonLazyTreeItem,
-    NonLazyDBItem,
-)
+from .tree_item_utility import EmptyChildMixin, LastGrayMixin, EditableMixin, NonLazyTreeItem, NonLazyDBItem
 from ...helpers import CharIconEngine
 
 

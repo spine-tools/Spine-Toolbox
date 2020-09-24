@@ -117,9 +117,7 @@ class ImporterWorker(QObject):
                 self._logger.msg_warning.emit("Ignoring errors. Set Cancel import on error to bail out instead.")
                 continue
             if not errors:
-                self._logger.msg.emit(
-                    f"Successfully read {sum(len(d) for d in data.values())} data from {source}"
-                )
+                self._logger.msg.emit(f"Successfully read {sum(len(d) for d in data.values())} data from {source}")
             else:
                 self._logger.msg_warning.emit(
                     f"Read {sum(len(d) for d in data.values())} data from {source} with {len(errors)} errors."

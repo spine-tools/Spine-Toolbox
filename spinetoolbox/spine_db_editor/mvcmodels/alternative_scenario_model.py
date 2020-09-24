@@ -18,12 +18,7 @@ import json
 from PySide2.QtCore import QMimeData, Qt
 from .tree_model_base import TreeModelBase
 from .tree_item_utility import NonLazyDBItem
-from .alternative_scenario_item import (
-    AlternativeRootItem,
-    ScenarioRootItem,
-    AlternativeLeafItem,
-    ScenarioLeafItem,
-)
+from .alternative_scenario_item import AlternativeRootItem, ScenarioRootItem, AlternativeLeafItem, ScenarioLeafItem
 
 
 class AlternativeScenarioModel(TreeModelBase):

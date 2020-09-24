@@ -301,9 +301,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         updating_spine_opt.addTransition(self.spine_opt_process_failed, prompt_to_install_latest_spine_opt)
         updating_spine_opt.addTransition(self.py_call_program_check_needed, checking_py_call_program)
         prompt_to_install_latest_spine_opt.addTransition(self.button_right.clicked, installing_latest_spine_opt)
-        installing_latest_spine_opt.addTransition(
-            self.spine_opt_process_failed, report_spine_opt_installation_failed
-        )
+        installing_latest_spine_opt.addTransition(self.spine_opt_process_failed, report_spine_opt_installation_failed)
         installing_latest_spine_opt.addTransition(self.py_call_program_check_needed, checking_py_call_program)
         checking_py_call_program.addTransition(self.py_call_reconfiguration_needed, prompt_to_reconfigure_py_call)
         checking_py_call_program.addTransition(self.py_call_installation_needed, prompt_to_install_py_call)
