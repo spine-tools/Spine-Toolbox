@@ -473,7 +473,7 @@ class TopLeftHeaderItem:
     def __init__(self, model):
         """
         Args:
-            model (PivotTableModel)
+            model (PivotTableModelBase)
         """
         self._model = model
 
@@ -935,7 +935,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             return None
         if data[0][0] is None:
             return None
-        parameter_index = self._header_ids(row, column)[-2]
+        parameter_index = self._header_ids(row, column)[-3]
         return self.db_mngr.get_value_index(self.db_map, "parameter_value", data[0][0], parameter_index, role)
 
     @staticmethod
