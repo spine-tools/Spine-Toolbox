@@ -116,7 +116,7 @@ class DataConnection(ProjectItem):
         repeated_paths = []
         new_paths = []
         for path in paths:
-            if any(os.path.samefile(path, ref) for ref in self.references):
+            if any(os.path.samefile(path, ref) for ref in self.references if os.path.isfile(ref)):
                 repeated_paths.append(path)
             else:
                 new_paths.append(path)
@@ -152,7 +152,8 @@ class DataConnection(ProjectItem):
 
     @Slot(bool)
     def add_references(self, checked=False):
-        """Let user select references to files for this data connection."""
+        """Opens a file browser where user can select the files to be
+        added as references for this Data Connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", self._project.project_dir, "*.*")
         file_paths = answer[0]
@@ -162,9 +163,7 @@ class DataConnection(ProjectItem):
 
     @Slot(bool)
     def remove_references(self, checked=False):
-        """Remove selected references from reference list.
-        Do not remove anything if there are no references selected.
-        """
+        """Pushes a remove references command to undo stack"""
         indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self._logger.msg.emit("Please select references to remove")
@@ -174,7 +173,15 @@ class DataConnection(ProjectItem):
         self._logger.msg.emit("Selected references removed")
 
     def do_remove_references(self, references):
-        self.references = [r for r in self.references if not any(os.path.samefile(r, ref) for ref in references)]
+        """Removes given references from this Data Connection.
+        Removes references to file paths that do not exist.
+
+        Args:
+            references (list): List of selected paths.
+        """
+        # samefile() needs the file path to exist so we need to
+        # check that the references actually exist before looking for duplicates
+        self.references = [r for r in self.references if (r not in references) or (os.path.isfile(r) and not any(os.path.samefile(r, ref) for ref in references if os.path.isfile(ref)))]
         self.populate_reference_list(self.references)
 
     @Slot(bool)
