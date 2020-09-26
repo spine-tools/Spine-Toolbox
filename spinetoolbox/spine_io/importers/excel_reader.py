@@ -259,20 +259,21 @@ def create_mapping_from_sheet(worksheet):
         if not all(isinstance(r, str) for r in obj_classes) or any(r is None or r.isspace() for r in obj_classes):
             return None, None
         if sheet_data.lower() == "parameter":
+            has_parameters = worksheet.cell(row=4, column=rel_dimension + 1).value is not None
             options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
-            mapping = RelationshipClassMapping.from_dict(
-                {
-                    "map_type": "RelationshipClass",
-                    "name": rel_cls_name,
-                    "object_classes": obj_classes,
-                    "objects": list(range(rel_dimension)),
-                    "parameters": {
-                        "map_type": "parameter",
-                        "name": {"map_type": "row", "value_reference": -1},
-                        "parameter_type": "single value",
-                    },
+            map_dict = {
+                "map_type": "RelationshipClass",
+                "name": rel_cls_name,
+                "object_classes": obj_classes,
+                "objects": list(range(rel_dimension)),
+            }
+            if has_parameters:
+                map_dict["parameters"] = {
+                    "map_type": "parameter",
+                    "name": {"map_type": "row", "value_reference": -1},
+                    "parameter_type": "single value",
                 }
-            )
+            mapping = RelationshipClassMapping.from_dict(map_dict)
         elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = RelationshipClassMapping.from_dict(
@@ -313,19 +314,22 @@ def create_mapping_from_sheet(worksheet):
         if not obj_cls_name:
             return None, None
         if sheet_data.lower() == "parameter":
+            has_parameters = worksheet["B4"].value is not None
             options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
-            mapping = ObjectClassMapping.from_dict(
-                {
-                    "map_type": "ObjectClass",
-                    "name": obj_cls_name,
-                    "objects": 0,
-                    "parameters": {
+            map_dict = {
+                "map_type": "ObjectClass",
+                "name": obj_cls_name,
+                "objects": 0,
+            }
+            if has_parameters:
+                map_dict["parameters"] = (
+                    {
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": -1},
                         "parameter_type": "single value",
                     },
-                }
-            )
+                )
+            mapping = ObjectClassMapping.from_dict(map_dict)
         elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = ObjectClassMapping.from_dict(
