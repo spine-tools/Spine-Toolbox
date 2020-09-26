@@ -1154,10 +1154,10 @@ class SpineDBManager(QObject):
             import_command.setText(command_text)
             child_cmds = []
             # NOTE: we push the import command before adding the children,
-            # because we *need* to call redo() on the children one by one
+            # because we *need* to call redo() on the children one by one so the data gets in gradually
             self.undo_stack[db_map].push(import_command)
             for item_type, (to_add, to_update, import_error_log) in get_data_for_import(db_map, **data):
-                error_log[db_map] = [str(x) for x in import_error_log]
+                error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_add:
                     add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
                     add_cmd.redo()

@@ -322,13 +322,11 @@ def create_mapping_from_sheet(worksheet):
                 "objects": 0,
             }
             if has_parameters:
-                map_dict["parameters"] = (
-                    {
-                        "map_type": "parameter",
-                        "name": {"map_type": "row", "value_reference": -1},
-                        "parameter_type": "single value",
-                    },
-                )
+                map_dict["parameters"] = {
+                    "map_type": "parameter",
+                    "name": {"map_type": "row", "value_reference": -1},
+                    "parameter_type": "single value",
+                }
             mapping = ObjectClassMapping.from_dict(map_dict)
         elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})

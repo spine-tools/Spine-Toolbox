@@ -30,7 +30,7 @@ from spinedb_api import (
     to_database,
 )
 from spinetoolbox.spine_io.exporters.excel import export_spine_database_to_xlsx
-from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 
 _TEMP_EXCEL_FILENAME = 'excel.xlsx'
 _TEMP_SQLITE_FILENAME = 'first.sqlite'
@@ -277,30 +277,16 @@ class TestExcelIntegration(unittest.TestCase):
         self.assertEqual(parv, parv_org, msg='Difference in parameter values')
 
     def _import_xlsx_to_database(self, excel_file_name, db_map):
-        connector = ExcelConnector(None)
-        connector.connect_to_source(excel_file_name)
-        sheets = connector.get_tables()
-        table_mappings = {
-            sheet_name: settings["mapping"]
-            for sheet_name, settings in sheets.items()
-            if settings["mapping"] is not None
-        }
-        table_options = {
-            sheet_name: settings["options"]
-            for sheet_name, settings in sheets.items()
-            if settings["options"] is not None
-        }
+        data, _errors = get_mapped_data_from_xlsx(excel_file_name)
         # table_mappings (Excel file) contains a sheet json_relationship_class which
         # adds a duplicate 'relationship_class' to data. A duplicate is considered
         # an error by spinedb_api import_data() function. Is this intentional?
-        data, _errors = connector.get_mapped_data(table_mappings, table_options, {}, {})
         # TODO: Check if db_map is supposed to have two relationship classes called relationship_class or not?
         import_num, import_errors = import_data(db_map, **data)
         self.assertEqual(import_errors, [])
         db_map.commit_session('Excel import')
         return import_num
 
-    @unittest.skip("This test is obsolete, needs refactoring")
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""
         with TemporaryDirectory() as directory:
@@ -320,7 +306,6 @@ class TestExcelIntegration(unittest.TestCase):
                 db_map.connection.close()
                 empty_db_map.connection.close()
 
-    @unittest.skip("This test is obsolete, needs refactoring")
     def test_import_to_existing_data(self):
         """Integration test importing data to a database with existing items"""
         with TemporaryDirectory() as directory:
