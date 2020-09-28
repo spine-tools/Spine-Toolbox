@@ -34,7 +34,7 @@ from .mock_helpers import (
     add_importer,
     add_exporter,
 )
-from spinetoolbox.executable_item_base import ExecutableItemBase
+from spine_items.executable_item_base import ExecutableItemBase
 
 
 # noinspection PyUnusedLocal
@@ -221,14 +221,14 @@ class TestSpineToolboxProject(unittest.TestCase):
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
         item = {"DS": {"type": "Data Store", "description": "", "url": dict(), "x": 0, "y": 0}}
-        with mock.patch("spinetoolbox.project_item.create_dir"):
+        with mock.patch("spine_items.project_item.create_dir"):
             self.toolbox.project().add_project_items(item)
         return "DS"
 
     def add_dc(self):
         """Helper method to add Data Connection. Returns created items name."""
         item = {"DC": {"type": "Data Connection", "description": "", "references": list(), "x": 0, "y": 0}}
-        with mock.patch("spinetoolbox.project_item.create_dir"):
+        with mock.patch("spine_items.project_item.create_dir"):
             self.toolbox.project().add_project_items(item)
         return "DC"
 
@@ -237,14 +237,14 @@ class TestSpineToolboxProject(unittest.TestCase):
         item = {
             "tool": {"type": "Tool", "description": "", "specification": "", "execute_in_work": False, "x": 0, "y": 0}
         }
-        with mock.patch("spinetoolbox.project_item.create_dir"):
+        with mock.patch("spine_items.project_item.create_dir"):
             self.toolbox.project().add_project_items(item)
         return "tool"
 
     def add_view(self):
         """Helper method to add View. Returns created items name."""
         item = {"view": {"type": "View", "description": "", "x": 0, "y": 0}}
-        with mock.patch("spinetoolbox.project_item.create_dir"):
+        with mock.patch("spine_items.project_item.create_dir"):
             self.toolbox.project().add_project_items(item)
         return "view"
 
