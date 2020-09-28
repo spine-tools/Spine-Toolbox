@@ -39,18 +39,12 @@ requirements = [
     "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
     "spine_engine >= {}".format(REQUIRED_SPINE_ENGINE_VERSION),
     "spine_items >= {}".format(REQUIRED_SPINE_ITEMS_VERSION),
-    "openpyxl > 3.0",
     "numpy >= 1.15.1",
     "matplotlib >= 3.0",
     "scipy >= 1.1.0",
     "networkx > 2.2",
-    "pymysql >= 0.9.2",
-    "pyodbc >= 4.0.23",
-    "psycopg2 >= 2.7.4",
     "cx_Oracle >= 6.3.1",
     "pandas >= 0.24.0",
-    "gdx2py >= 2.0.4",
-    "ijson >= 2.6.1",
 ]
 
 setup(
