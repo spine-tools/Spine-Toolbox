@@ -150,6 +150,8 @@ class JuliaREPLWidget(SpineConsoleWidget):
             self.execution_failed.emit(-1)
             return
         julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if julia_project_path == "":
+            julia_project_path = "@."
         if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             self._toolbox.msg.emit("*** Using previously started Julia Console ***")
             self.ready_to_execute.emit()
@@ -197,6 +199,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         self._toolbox.msg.emit("\tChecking whether IJulia is installed or not...")
         program = "{0}".format(self.julia_exe)
         args = list()
+        args.append(f"--project={self.julia_project_path}")
         args.append("-e")
         args.append("try using Pkg catch; end; try using IJulia; println(ARGS[1]) catch; println(ARGS[2]) end")
         args.append("True")
