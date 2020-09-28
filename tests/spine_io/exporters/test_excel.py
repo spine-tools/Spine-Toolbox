@@ -17,7 +17,7 @@ Unit tests for the Excel export module.
 """
 
 import unittest
-from spinetoolbox.spine_io.exporters.excel import _unstack_list_of_tuples
+from spine_items.spine_io.exporters.excel import _unstack_list_of_tuples
 
 
 class TestExcelExport(unittest.TestCase):

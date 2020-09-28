@@ -20,8 +20,8 @@ import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from gdx2py import GdxFile
-from spinetoolbox.spine_io.gdx_utils import find_gams_directory
-from spinetoolbox.spine_io.importers.gdx_connector import GdxConnector, GAMSParameter, GAMSScalar, GAMSSet
+from spine_items.spine_io.gdx_utils import find_gams_directory
+from spine_items.spine_io.importers.gdx_connector import GdxConnector, GAMSParameter, GAMSScalar, GAMSSet
 
 
 @unittest.skipIf(find_gams_directory() is None, "No working GAMS installation found.")

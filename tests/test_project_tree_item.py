@@ -29,7 +29,7 @@ from spinetoolbox.project_tree_item import (
     LeafProjectTreeItem,
     RootProjectTreeItem,
 )
-from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from spine_items.widgets.add_project_item_widget import AddProjectItemWidget
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 

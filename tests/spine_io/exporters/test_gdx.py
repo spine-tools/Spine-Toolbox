@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for spinetoolbox.spine_io.exporters.gdx module.
+Unit tests for spine_items.spine_io.exporters.gdx module.
 
 :author: A. Soininen (VTT)
 :date:   18.9.2019
@@ -30,8 +30,8 @@ from spinedb_api import (
     TimePattern,
     TimeSeriesFixedResolution,
 )
-from spinetoolbox.spine_io import gdx_utils
-from spinetoolbox.spine_io.exporters import gdx
+from spine_items.spine_io import gdx_utils
+from spine_items.spine_io.exporters import gdx
 
 
 class TestGdx(unittest.TestCase):
