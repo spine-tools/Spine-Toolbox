@@ -30,7 +30,7 @@ version = {}
 with open("spinetoolbox/version.py") as fp:
     exec(fp.read(), version)
 
-requirements = [
+install_requires = [
     "pyside2 >=5.14, <5.15",
     "datapackage >= 1.15",
     "jupyter-client < 5.3.2",
@@ -38,7 +38,7 @@ requirements = [
     "sqlalchemy >= 1.3",
     "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
     "spine_engine >= {}".format(REQUIRED_SPINE_ENGINE_VERSION),
-    "spine_items >= {}".format(REQUIRED_SPINE_ITEMS_VERSION),
+    "spine_items[UI] >= {}".format(REQUIRED_SPINE_ITEMS_VERSION),
     "numpy >= 1.15.1",
     "matplotlib >= 3.0",
     "scipy >= 1.1.0",
@@ -63,6 +63,6 @@ setup(
     keywords="",
     classifiers=[],
     python_requires='>=3.6, <3.8',
-    install_requires=requirements,
+    install_requires=install_requires,
     test_suite="tests",
 )
