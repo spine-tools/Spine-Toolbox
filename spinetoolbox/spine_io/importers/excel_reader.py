@@ -248,7 +248,7 @@ def create_mapping_from_sheet(worksheet):
             return None, None
         if not isinstance(rel_dimension, int):
             return None, None
-        if not rel_dimension >= 1:
+        if rel_dimension < 1:
             return None, None
         if sheet_data.lower() == "parameter":
             obj_classes = next(islice(worksheet.iter_rows(), 3, 4))
@@ -280,6 +280,7 @@ def create_mapping_from_sheet(worksheet):
                 {
                     "map_type": "RelationshipClass",
                     "name": rel_cls_name,
+                    "skip_columns": [0],
                     "object_classes": obj_classes,
                     "objects": [{"map_type": "row", "value_reference": i} for i in range(rel_dimension)],
                     "parameters": {
@@ -335,6 +336,7 @@ def create_mapping_from_sheet(worksheet):
                     "map_type": "ObjectClass",
                     "name": obj_cls_name,
                     "objects": {"map_type": "row", "value_reference": 0},
+                    "skip_columns": [0],
                     "parameters": {
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": 1},

@@ -118,7 +118,7 @@ def _get_relationships_and_parameters(db):
 
     rel_class_par = [[r.relationship_class_name, None, r.parameter_name, None] for r in rel_par]
 
-    rel_class_with_par = [r.relationship_class_name for r in rel_par]
+    rel_class_with_par = set(r.relationship_class_name for r in rel_par)
     rel_class_without_par = [[r.name, None, None, None] for r in rel_class if r.name not in rel_class_with_par]
 
     rel_data = out_data + rel_without_par + rel_class_par + rel_class_without_par
@@ -140,7 +140,7 @@ def _get_relationships_and_parameters(db):
             rel_timepattern.append(d)
             rel_par.append(d[:-1] + [None])
         else:
-            warnings.warn(f"Skipping export of unsuported parameter type: {type(d[3])}")
+            warnings.warn(f"Skipping export of unsupported parameter type: {type(d[3]).__name__}")
 
     return rel_par, rel_json, rel_class, rel_ts, rel_timepattern
 
