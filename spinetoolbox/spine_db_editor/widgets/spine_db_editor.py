@@ -42,13 +42,16 @@ from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .db_session_history_dialog import DBSessionHistoryDialog
 from ...widgets.notification import NotificationStack
+from spine_items.helpers import (
+    busy_effect,
+    open_url,
+)
 from ...helpers import (
     busy_effect,
     ensure_window_is_on_screen,
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
     format_string_list,
-    open_url,
     focused_widget_has_callable,
     call_on_focused_widget,
 )

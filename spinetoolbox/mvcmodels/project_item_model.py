@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PySide2.QtWidgets import QMessageBox
 from PySide2.QtGui import QIcon, QFont
 from ..config import INVALID_CHARS
-from ..metaobject import shorten
+from spine_items.metaobject import shorten
 
 
 class ProjectItemModel(QAbstractItemModel):

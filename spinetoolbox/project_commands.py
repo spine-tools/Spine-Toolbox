@@ -16,16 +16,7 @@ QUndoCommand subclasses for modifying the project.
 :date:   12.2.2020
 """
 
-from PySide2.QtWidgets import QUndoCommand
-
-
-class SpineToolboxCommand(QUndoCommand):
-    @staticmethod
-    def is_critical():
-        """Returns True if this command needs to be undone before
-        closing the project without saving changes.
-        """
-        return False
+from spine_items.commands import SpineToolboxCommand
 
 
 class SetProjectNameCommand(SpineToolboxCommand):
@@ -266,26 +257,6 @@ class MoveIconCommand(SpineToolboxCommand):
             item.setPos(previous_pos)
         self.graphics_item.update_links_geometry()
         self.graphics_item.notify_item_move()
-
-
-class SetItemSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, item, specification):
-        """Command to set the specification for a Tool.
-
-        Args:
-            item (ProjectItem): the Item
-            specification (ProjectItemSpecification): the new spec
-        """
-        super().__init__()
-        self.item = item
-        self.redo_specification = specification
-        self.setText(f"set specification of {item.name}")
-
-    def redo(self):
-        self.item.do_set_specification(self.redo_specification)
-
-    def undo(self):
-        self.item.undo_set_specification()
 
 
 class AddSpecificationCommand(SpineToolboxCommand):

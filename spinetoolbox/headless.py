@@ -23,7 +23,7 @@ import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 from spine_engine import SpineEngine, SpineEngineState
 from .dag_handler import DirectedGraphHandler
-from .helpers import deserialize_path
+from spine_items.helpers import deserialize_path
 from .load_project_items import load_executable_items, load_item_specification_factories
 
 

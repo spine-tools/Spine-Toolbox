@@ -57,6 +57,7 @@ from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
+from .widgets.spine_datapackage_widget import SpineDatapackageWidget
 from .project import SpineToolboxProject
 from .config import (
     STATUSBAR_SS,
@@ -66,20 +67,22 @@ from .config import (
     _program_root,
     LATEST_PROJECT_VERSION,
     DEFAULT_WORK_DIR,
-    PROJECT_FILENAME
+    PROJECT_FILENAME,
+)
+from spine_items.helpers import (
+    busy_effect,
+    create_dir,
+    serialize_path,
+    deserialize_path,
+    open_url,
 )
 from .helpers import (
     ensure_window_is_on_screen,
     get_datetime,
-    busy_effect,
     set_taskbar_icon,
     supported_img_formats,
-    create_dir,
     recursive_overwrite,
-    serialize_path,
-    deserialize_path,
-    open_url,
-    ChildCyclingKeyPressFilter
+    ChildCyclingKeyPressFilter,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
@@ -1829,3 +1832,21 @@ class ToolboxUI(QMainWindow):
             QWidget: item's properties tab widget
         """
         return self._item_properties_uis[item_type].ui
+
+    @staticmethod
+    @busy_effect
+    def show_spine_datapackage_form(dc):
+        """Show spine_datapackage_form widget."""
+        if dc.spine_datapackage_form:
+            if dc.spine_datapackage_form.windowState() & Qt.WindowMinimized:
+                # Remove minimized status and restore window with the previous state (maximized/normal state)
+                dc.spine_datapackage_form.setWindowState(
+                    dc.spine_datapackage_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+                )
+                dc.spine_datapackage_form.activateWindow()
+            else:
+                dc.spine_datapackage_form.raise_()
+            return
+        dc.spine_datapackage_form = SpineDatapackageWidget(dc)
+        dc.spine_datapackage_form.destroyed.connect(dc.datapackage_form_destroyed)
+        dc.spine_datapackage_form.show()

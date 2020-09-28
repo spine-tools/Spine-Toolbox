@@ -29,7 +29,7 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Slot, QVariantAnimation, QPointF, Qt
 from sqlalchemy.engine.url import URL
-from ...helpers import open_url
+from spine_items.helpers import open_url
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, DataToValueFilterCheckboxListModel
 from ...widgets.custom_qwidgets import FilterWidgetBase
 

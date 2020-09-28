@@ -21,11 +21,12 @@ import json
 from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
-from .metaobject import MetaObject
-from .helpers import create_dir, inverted, erase_dir
+from spine_items.helpers import create_dir
+from spine_items.metaobject import MetaObject
+from .helpers import inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
-from .project_item import finish_project_item_construction
+from spine_items.project_item import finish_project_item_construction
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
 from .subscribers import NodeExecStartedSubscriber, NodeExecFinishedSubscriber, LoggingSubscriber
@@ -502,7 +503,9 @@ class SpineToolboxProject(MetaObject):
     def disconnect_subscriber_signals(self):
         self.start_subscriber.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
         self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
-        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._run_leave_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(
+            self._toolbox.ui.graphicsView._run_leave_animation
+        )
         self.finish_subscriber.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
 
     def execute_selected(self):

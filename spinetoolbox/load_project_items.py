@@ -15,9 +15,13 @@ Functions to load project item modules.
 :author: A. Soininen (VTT)
 :date:   29.4.2020
 """
+import pathlib
 import importlib
 import importlib.util
-import pathlib
+import spine_items
+
+
+_ITEMS_ROOT = pathlib.Path(spine_items.__file__).parent
 
 
 def load_project_items(toolbox):
@@ -33,10 +37,9 @@ def load_project_items(toolbox):
     """
     categories = dict()
     factories = dict()
-    item_root = pathlib.Path(__file__).parent / "project_items"
-    for child in item_root.iterdir():
+    for child in _ITEMS_ROOT.iterdir():
         if child.is_dir() and child.joinpath("__init__.py").exists():
-            spec = importlib.util.find_spec(f"spinetoolbox.project_items.{child.stem}")
+            spec = importlib.util.find_spec(f"spine_items.{child.stem}")
             m = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(m)
             if hasattr(m, "ItemInfo") and hasattr(m, "ItemFactory"):
@@ -56,10 +59,9 @@ def load_item_specification_factories():
         dict: a map from item type to specification factory
     """
     factories = dict()
-    item_root = pathlib.Path(__file__).parent / "project_items"
-    for child in item_root.iterdir():
+    for child in _ITEMS_ROOT.iterdir():
         if child.is_dir() and child.joinpath("specification_factory.py").exists():
-            spec = importlib.util.find_spec(f"spinetoolbox.project_items.{child.stem}.specification_factory")
+            spec = importlib.util.find_spec(f"spine_items.{child.stem}.specification_factory")
             m = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(m)
             if hasattr(m, "SpecificationFactory"):
@@ -76,10 +78,9 @@ def load_executable_items():
         dict: a map from item type to the executable item class
     """
     classes = dict()
-    item_root = pathlib.Path(__file__).parent / "project_items"
-    for child in item_root.iterdir():
+    for child in _ITEMS_ROOT.iterdir():
         if child.is_dir() and child.joinpath("executable_item.py").exists():
-            spec = importlib.util.find_spec(f"spinetoolbox.project_items.{child.stem}.executable_item")
+            spec = importlib.util.find_spec(f"spine_items.{child.stem}.executable_item")
             m = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(m)
             if hasattr(m, "ExecutableItem"):
