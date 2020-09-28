@@ -21,12 +21,10 @@ import json
 from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
-from spine_items.helpers import create_dir
-from spine_items.metaobject import MetaObject
-from .helpers import inverted, erase_dir
+from .metaobject import MetaObject
+from .helpers import inverted, erase_dir, create_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
-from spine_items.project_item import finish_project_item_construction
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
 from .subscribers import NodeExecStartedSubscriber, NodeExecFinishedSubscriber, LoggingSubscriber
@@ -658,3 +656,25 @@ class SpineToolboxProject(MetaObject):
             if items_successors is not None:
                 return [self._project_item_model.get_item(successor).project_item for successor in items_successors]
         return []
+
+
+def finish_project_item_construction(project_item, toolbox):
+    """
+    Activates the given project item so it works with the given toolbox.
+    This is mainly intended to facilitate adding items back with redo.
+
+    Args:
+        project_item (ProjectItem)
+        toolbox (ToolboxUI)
+    """
+    icon = project_item.get_icon()
+    if icon is not None:
+        icon.activate()
+    else:
+        icon = toolbox.item_factories[project_item.item_type()].make_icon(
+            toolbox, project_item.x, project_item.y, project_item
+        )
+        project_item.set_icon(icon)
+    project_item.set_properties_ui(toolbox.project_item_properties_ui(project_item.item_type()))
+    project_item.create_data_dir()
+    project_item.set_up()

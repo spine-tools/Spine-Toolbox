@@ -69,13 +69,6 @@ from .config import (
     DEFAULT_WORK_DIR,
     PROJECT_FILENAME,
 )
-from spine_items.helpers import (
-    busy_effect,
-    create_dir,
-    serialize_path,
-    deserialize_path,
-    open_url,
-)
 from .helpers import (
     ensure_window_is_on_screen,
     get_datetime,
@@ -83,6 +76,11 @@ from .helpers import (
     supported_img_formats,
     recursive_overwrite,
     ChildCyclingKeyPressFilter,
+    busy_effect,
+    create_dir,
+    serialize_path,
+    deserialize_path,
+    open_url,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem

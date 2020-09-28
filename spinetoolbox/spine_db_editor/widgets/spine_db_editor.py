@@ -42,10 +42,6 @@ from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .db_session_history_dialog import DBSessionHistoryDialog
 from ...widgets.notification import NotificationStack
-from spine_items.helpers import (
-    busy_effect,
-    open_url,
-)
 from ...helpers import (
     busy_effect,
     ensure_window_is_on_screen,
@@ -54,6 +50,8 @@ from ...helpers import (
     format_string_list,
     focused_widget_has_callable,
     call_on_focused_widget,
+    busy_effect,
+    open_url,
 )
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
