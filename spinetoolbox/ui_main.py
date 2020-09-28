@@ -35,8 +35,9 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
 )
+from spine_items.graphics_items import ProjectItemIcon
+from .import_editor.widgets.import_editor_window import ImportEditorWindow
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
-from .graphics_items import ProjectItemIcon
 from .load_project_items import load_item_specification_factories, load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import (
@@ -76,11 +77,13 @@ from .helpers import (
     supported_img_formats,
     recursive_overwrite,
     ChildCyclingKeyPressFilter,
+    open_url,
+)
+from spine_items.helpers import (
     busy_effect,
     create_dir,
     serialize_path,
     deserialize_path,
-    open_url,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
@@ -1832,19 +1835,8 @@ class ToolboxUI(QMainWindow):
         return self._item_properties_uis[item_type].ui
 
     @staticmethod
-    @busy_effect
-    def show_spine_datapackage_form(dc):
-        """Show spine_datapackage_form widget."""
-        if dc.spine_datapackage_form:
-            if dc.spine_datapackage_form.windowState() & Qt.WindowMinimized:
-                # Remove minimized status and restore window with the previous state (maximized/normal state)
-                dc.spine_datapackage_form.setWindowState(
-                    dc.spine_datapackage_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-                )
-                dc.spine_datapackage_form.activateWindow()
-            else:
-                dc.spine_datapackage_form.raise_()
-            return
-        dc.spine_datapackage_form = SpineDatapackageWidget(dc)
-        dc.spine_datapackage_form.destroyed.connect(dc.datapackage_form_destroyed)
-        dc.spine_datapackage_form.show()
+    def create_spine_datapackage_form(dc):
+        return SpineDatapackageWidget(dc)
+
+    def create_import_editor_window(self, importer, file_path, connector, connector_settings, settings):
+        return ImportEditorWindow(importer, file_path, connector, connector_settings, settings, self)

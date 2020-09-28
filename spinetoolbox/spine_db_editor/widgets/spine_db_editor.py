@@ -55,8 +55,8 @@ from ...helpers import (
 )
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
-from ...spine_io.exporters.excel import export_spine_database_to_xlsx
-from ...spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from spine_items.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spine_items.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...spine_db_parcel import SpineDBParcel
 
 

@@ -46,7 +46,7 @@ from spinedb_api import (
     TimePatternValueMapping,
     TimeSeriesValueMapping,
 )
-from spinetoolbox.spine_io.type_conversion import DateTimeConvertSpec, FloatConvertSpec, StringConvertSpec
+from spine_items.spine_io.type_conversion import DateTimeConvertSpec, FloatConvertSpec, StringConvertSpec
 from ..commands import SetComponentMappingReference, SetComponentMappingType
 from ..mapping_colors import ERROR_COLOR
 

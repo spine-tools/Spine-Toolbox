@@ -16,14 +16,12 @@ Unit tests for SpineToolboxProject class.
 :date:   14.11.2018
 """
 
-import os
 import unittest
 from unittest import mock
 import logging
 import sys
 from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
-from spine_engine import SpineEngineState
 from .mock_helpers import (
     clean_up_toolboxui_with_project,
     create_toolboxui_with_project,
