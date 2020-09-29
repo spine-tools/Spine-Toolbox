@@ -1,6 +1,6 @@
 git+https://github.com/Spine-project/Spine-Database-API.git#egg=spinedb_api
 git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
-git+https://gitlab.vtt.fi/spine/items.git#egg=spine_items
+git+https://github.com/Spine-project/spine-items.git#egg=spine_items
 # cchardet used to be a dependency of datapackage and version 2.1.6 requires users to install Visual C++
 # NOTE: Commented on purpose. datapackage 1.15.0 does not require cchardet anymore. If we ever decide to
 # use cchardet in addition to chardet, we should remember this constraint.
