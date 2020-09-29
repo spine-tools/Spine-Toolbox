@@ -124,7 +124,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
 
     def _make_updating_spine_opt(self):
         return self._make_processing_state(
-            "updating_spine_opt", "<html><p>Updating SpineOpt.jl to the latest version...</p></html>"
+            "updating_spine_opt", "<html><p>Updating SpineOpt.jl to version 0.4.0...</p></html>"
         )
 
     def _make_prompt_to_install_latest_spine_opt(self):
@@ -136,7 +136,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
 
     def _make_installing_latest_spine_opt(self):
         return self._make_processing_state(
-            "installing_latest_spine_opt", "<html><p>Installing latest SpineOpt.jl...</p></html>"
+            "installing_latest_spine_opt", "<html><p>Installing SpineOpt.jl 0.4.0...</p></html>"
         )
 
     def _make_report_spine_opt_installation_failed(self):
@@ -188,8 +188,13 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("using Pkg; Pkg.update(ARGS[1]);")
+        # args.append("using Pkg; Pkg.update(ARGS[1]);")
+        # args.append("SpineOpt")
+        args.append("using Pkg; Pkg.Registry.add(RegistrySpec(url=ARGS[1])); "
+                    "Pkg.add(Pkg.PackageSpec(;name=ARGS[2], version=ARGS[3]));")
+        args.append("https://github.com/Spine-project/SpineJuliaRegistry.git")
         args.append("SpineOpt")
+        args.append("0.4.0")
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_spine_opt_process_finished)
         self.exec_mngr.start_execution()
@@ -199,9 +204,11 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("using Pkg; Pkg.Registry.add(RegistrySpec(url=ARGS[1])); Pkg.add(ARGS[2]);")
+        args.append("using Pkg; Pkg.Registry.add(RegistrySpec(url=ARGS[1])); "
+                    "Pkg.add(Pkg.PackageSpec(;name=ARGS[2], version=ARGS[3]));")
         args.append("https://github.com/Spine-project/SpineJuliaRegistry.git")
         args.append("SpineOpt")
+        args.append("0.4.0")
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_spine_opt_process_finished)
         self.exec_mngr.start_execution()
