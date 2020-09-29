@@ -45,8 +45,9 @@ from PySide2.QtGui import (
     QKeySequence,
 )
 import spine_engine
+import spine_items
 from spine_items.helpers import busy_effect
-from .config import REQUIRED_SPINE_ENGINE_VERSION
+from .config import REQUIRED_SPINE_ENGINE_VERSION, REQUIRED_SPINE_ITEMS_VERSION
 
 if os.name == "nt":
     import ctypes
@@ -131,6 +132,37 @@ def spine_engine_version_check():
 
         """.format(
             REQUIRED_SPINE_ENGINE_VERSION, current_version, script
+        )
+    )
+    return False
+
+
+def spine_items_version_check():
+    """Check if spine items package is the correct version and explain how to upgrade if it is not."""
+    try:
+        current_version = spine_items.__version__
+        current_split = [int(x) for x in current_version.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINE_ITEMS_VERSION.split(".")]
+        if current_split >= required_split:
+            return True
+    except AttributeError:
+        current_version = "not reported"
+    script = "upgrade_spine_items.bat" if sys.platform == "win32" else "upgrade_spine_items.py"
+    print(
+        """SPINE ITEMS OUTDATED.
+
+        Spine Toolbox failed to start because spine_items is outdated.
+        (Required version is {0}, whereas current is {1})
+        Please upgrade spine_items to v{0} and start Spine Toolbox again.
+
+        To upgrade, run script '{2}' in the '/bin' folder.
+
+        Or upgrade it manually by running,
+
+            pip install --upgrade git+https://github.com/Spine-project/spine-items.git#egg=spine_items
+
+        """.format(
+            REQUIRED_SPINE_ITEMS_VERSION, current_version, script
         )
     )
     return False
