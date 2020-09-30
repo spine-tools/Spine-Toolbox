@@ -93,7 +93,7 @@ def clean_up_toolboxui_with_project(toolbox):
     project_dir = toolbox.project().project_dir
     if os.path.exists(project_dir):
         shutil.rmtree(project_dir)
-    work_dir = toolbox.work_dir
+    work_dir = toolbox._qsettings.value("appSettings/workDir")
     if os.path.exists(work_dir):
         shutil.rmtree(work_dir)
     toolbox.deleteLater()
