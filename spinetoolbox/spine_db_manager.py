@@ -210,7 +210,7 @@ class SpineDBManager(QObject):
                 db_map.connection.close()
         self._db_specific_loggers.clear()
 
-    def show_data_store_form(self, db_url_codenames, logger, create=False):
+    def show_spine_db_editor(self, db_url_codenames, logger, create=False):
         """Creates a new SpineDBEditor and shows it.
 
         Args:

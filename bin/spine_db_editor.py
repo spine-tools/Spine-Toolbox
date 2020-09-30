@@ -51,7 +51,7 @@ def main(argv):
     settings = QSettings("SpineProject", "Spine Toolbox")
     logger = SimpleLogger()
     db_mngr = SpineDBManager(settings, logger, None)
-    if not db_mngr.show_data_store_form({url: None}, logger, create=True):
+    if not db_mngr.show_spine_db_editor({url: None}, logger, create=True):
         return 3
     return_code = app.exec_()
     return return_code

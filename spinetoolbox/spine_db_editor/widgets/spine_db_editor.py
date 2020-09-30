@@ -443,7 +443,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def _open_sqlite_url(self, url, codename):
         """Opens sqlite url."""
-        self.db_mngr.show_data_store_form({url: codename}, None)
+        self.db_mngr.show_spine_db_editor({url: codename}, None)
 
     def _add_sqlite_url_to_project(self, url):
         """Adds sqlite url to project."""

@@ -45,7 +45,7 @@ class TestSpineDBEditorBase(unittest.TestCase):
                 return mock_db_map
 
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
-            self.db_mngr.show_data_store_form({"mock_url": "mock_db"}, None)
+            self.db_mngr.show_spine_db_editor({"mock_url": "mock_db"}, None)
             db_map = self.db_mngr._db_maps["mock_url"]
             self.form = SpineDBEditorBase(self.db_mngr, db_map)
 
