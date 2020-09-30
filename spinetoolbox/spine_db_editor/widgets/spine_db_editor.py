@@ -33,6 +33,8 @@ from spinedb_api import (
     SpineDBVersionError,
     Anyone,
 )
+from spine_items.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spine_items.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
@@ -43,7 +45,6 @@ from .tabular_view_mixin import TabularViewMixin
 from .db_session_history_dialog import DBSessionHistoryDialog
 from ...widgets.notification import NotificationStack
 from ...helpers import (
-    busy_effect,
     ensure_window_is_on_screen,
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
@@ -55,8 +56,6 @@ from ...helpers import (
 )
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
-from spine_items.spine_io.exporters.excel import export_spine_database_to_xlsx
-from spine_items.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...spine_db_parcel import SpineDBParcel
 
 

@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 ### Changed
+- There is a new requirement, [`spine_items`](https://github.com/Spine-project/spine-items).
+  To install it, just follow the instructions in README.
+
 ### Deprecated
 ### Removed
 ### Fixed
