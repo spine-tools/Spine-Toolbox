@@ -469,11 +469,7 @@ class SpineToolboxProject(MetaObject):
                 "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
             )
             return
-        try:
-            items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
-        except ValueError as err:
-            self._logger.msg_error.emit(f"Error while creating executable items: {err}")
-            return
+        items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
         # register subscribers to relevant events
         self.engine.publisher.register('exec_started', self.start_subscriber)
