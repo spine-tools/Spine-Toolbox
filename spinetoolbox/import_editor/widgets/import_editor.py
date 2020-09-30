@@ -331,6 +331,8 @@ class ImportEditor(QObject):
     @Slot()
     def _update_display_row_types(self):
         mapping_specification = self._preview_table_model.mapping_specification()
+        if mapping_specification is None:
+            return
         if mapping_specification.last_pivot_row == -1:
             pivoted_rows = []
         else:

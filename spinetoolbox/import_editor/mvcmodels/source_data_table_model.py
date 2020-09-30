@@ -78,23 +78,18 @@ class SourceDataTableModel(MinimalTableModel):
         Args:
             mapping (MappingSpecificationModel): mapping model
         """
-        if not mapping:
-            return
-        if not isinstance(mapping, MappingSpecificationModel):
-            raise TypeError(
-                f"mapping must be instance of 'MappingSpecificationModel', instead got: '{type(mapping).__name__}'"
-            )
         if self._mapping_specification is not None:
             self._mapping_specification.dataChanged.disconnect(self._mapping_data_changed)
             self._mapping_specification.mapping_read_start_row_changed.disconnect(self._mapping_data_changed)
             self._mapping_specification.row_or_column_type_recommendation_changed.disconnect(self.set_type)
             self._mapping_specification.multi_column_type_recommendation_changed.disconnect(self.set_all_column_types)
         self._mapping_specification = mapping
-        self._mapping_specification.dataChanged.connect(self._mapping_data_changed)
-        self._mapping_specification.modelReset.connect(self._mapping_data_changed)
-        self._mapping_specification.mapping_read_start_row_changed.connect(self._mapping_data_changed)
-        self._mapping_specification.row_or_column_type_recommendation_changed.connect(self.set_type)
-        self._mapping_specification.multi_column_type_recommendation_changed.connect(self.set_all_column_types)
+        if self._mapping_specification is not None:
+            self._mapping_specification.dataChanged.connect(self._mapping_data_changed)
+            self._mapping_specification.modelReset.connect(self._mapping_data_changed)
+            self._mapping_specification.mapping_read_start_row_changed.connect(self._mapping_data_changed)
+            self._mapping_specification.row_or_column_type_recommendation_changed.connect(self.set_type)
+            self._mapping_specification.multi_column_type_recommendation_changed.connect(self.set_all_column_types)
         self._mapping_data_changed()
 
     def validate(self, section, orientation=Qt.Horizontal):
@@ -325,6 +320,8 @@ class SourceDataTableModel(MinimalTableModel):
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         if orientation != Qt.Horizontal or role != Qt.BackgroundRole:
+            return super().headerData(section, orientation, role)
+        if self._mapping_specification is None:
             return super().headerData(section, orientation, role)
         for k, component_mapping in enumerate(self._mapping_specification._component_mappings):
             if self.section_in_mapping(component_mapping, section):

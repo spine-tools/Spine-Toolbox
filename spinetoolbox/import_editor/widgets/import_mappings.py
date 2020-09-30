@@ -78,6 +78,7 @@ class ImportMappings(QObject):
             self._select_row(0)
         else:
             self._ui.list_view.clearSelection()
+            self.mapping_selection_changed.emit(None)
 
     @Slot(str, str)
     def focus_on_changing_specification(self, source_table_name, mapping_name):
