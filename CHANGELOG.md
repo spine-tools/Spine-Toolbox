@@ -7,8 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 ### Changed
-- There is a new requirement, [`spine_items`](https://github.com/Spine-project/spine-items).
-  To install it, just follow the instructions in README.
+- Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
+  Project Items are now in a separate package called spine_items, which is now a requirement for Spine Toolbox. 
+  To install spine_items, just follow the instructions in README.md.
 
 ### Deprecated
 ### Removed
