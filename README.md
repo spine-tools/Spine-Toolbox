@@ -115,9 +115,9 @@ The developer requirements can be updated similarly by running
 
     pip install --upgrade -r dev-requirements.txt
 
-The requirements include two packages (`spinedb_api` and `spine_engine`) developed by 
-the Spine project consortium. Since they are developed very actively at the moment, you 
-may need to upgrade these regularly.
+The requirements include three packages (`spinedb_api`, `spine_engine`, and `spine_items`) 
+developed by the Spine project consortium. Since they are developed very actively at the moment, 
+you may need to upgrade these regularly.
 
 #### Upgrading [spinedb_api](https://github.com/Spine-project/Spine-Database-API)
 
@@ -141,16 +141,29 @@ Package `spine_engine` is required for running Spine Toolbox. The application
 may request you to upgrade this package. You can either do this manually or by 
 running an upgrade script, which has been added for convenience.
 
-To upgrade with a script, run `upgrade_spine_engine.bat` on Windows or `upgrade_spinedb_api.py` 
+To upgrade with a script, run `upgrade_spine_engine.bat` on Windows or `upgrade_spine_engine.py` 
 on Linux and Mac OS X. The scripts are located in the `bin` directory.
 
 To upgrade `spine_engine` manually, run
 
     pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
 
-**Note:** You don't need to clone or download the `spinedb_api` nor the 
-`spine_engine` source codes. *pip* takes care of installing the latest 
-version from GitHub to your system automatically.
+#### Upgrading [spine_items](https://github.com/Spine-project/spine-items)
+
+Package `spine_items` is required for running Spine Toolbox. The application 
+may request you to upgrade this package. You can either do this manually or by 
+running an upgrade script, which has been added for convenience.
+
+To upgrade with a script, run `upgrade_spine_items.bat` on Windows or `upgrade_spine_items.py` 
+on Linux and Mac OS X. The scripts are located in the `bin` directory.
+
+To upgrade `spine_items` manually, run
+
+    pip install --upgrade git+https://github.com/Spine-project/spine-items.git#egg=spine_items
+
+**Note:** You don't need to clone or download none of the `spinedb_api`,  
+`spine_engine`, or `spine_items` source codes (unless you want to develop them). 
+*pip* takes care of installing the latest version from GitHub to your system automatically.
 
 
 ## Building the User Guide

@@ -18,10 +18,10 @@ Unit tests for the :module:`spinetoolbox.load_project_items` module.
 import unittest
 from unittest.mock import MagicMock
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executable_item_base import ExecutableItemBase
+from spine_items.executable_item_base import ExecutableItemBase
 from spinetoolbox.load_project_items import load_executable_items, load_item_specification_factories, load_project_items
-from spinetoolbox.project_item import ProjectItemFactory
-from spinetoolbox.project_item_specification_factory import ProjectItemSpecificationFactory
+from spine_items.project_item import ProjectItemFactory
+from spine_items.project_item_specification_factory import ProjectItemSpecificationFactory
 
 
 class TestLoadProjectItems(unittest.TestCase):

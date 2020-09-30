@@ -12,7 +12,6 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
-    <file>project_item_icons/screwdriver.svg</file>
     <file>book.svg</file>
     <file>slash.svg</file>
     <file>home.svg</file>
@@ -21,30 +20,15 @@
     <file>eye.svg</file>
     <file>sliders-h.svg</file>
     <file>tools.svg</file>
-    <file>wrench.svg</file>
     <file>project-diagram.svg</file>
     <file>wrench_minus.svg</file>
     <file>wrench_plus.svg</file>
-    <file>datapkg.png</file>
     <file>file.svg</file>
     <file>file-download.svg</file>
-    <file>file-link.svg</file>
-    <file>folder.svg</file>
-    <file>folder-link.svg</file>
-    <file>minus.svg</file>
-    <file>plus.svg</file>
     <file>qt_extended_48x48.png</file>
-    <file>project_item_icons/stop-circle-regular.svg</file>
-    <file>project_item_icons/play-circle-regular.svg</file>
-    <file>project_item_icons/play-circle-solid.svg</file>
-    <file>project_item_icons/blender.svg</file>
-    <file>project_item_icons/binoculars.svg</file>
-    <file>project_item_icons/database.svg</file>
-    <file>project_item_icons/database-export.svg</file>
-    <file>project_item_icons/database-import.svg</file>
-    <file>project_item_icons/file-alt.svg</file>
-    <file>project_item_icons/hammer.svg</file>
-    <file>project_item_icons/exclamation-circle.svg</file>
+    <file>menu_icons/stop-circle-regular.svg</file>
+    <file>menu_icons/play-circle-regular.svg</file>
+    <file>menu_icons/play-circle-solid.svg</file>
     <file>menu_icons/info-circle.svg</file>
     <file>menu_icons/save_regular.svg</file>
     <file>menu_icons/save_solid.svg</file>
@@ -67,7 +51,8 @@
     <file>menu_icons/ellipsis-h.svg</file>
     <file>menu_icons/file-export.svg</file>
     <file>menu_icons/file-import.svg</file>
-    <file>menu_icons/folder-open-regular.svg</file>
+    <file>menu_icons/database-import.svg</file>
+    <file>menu_icons/database-export.svg</file>
     <file>menu_icons/folder-open-solid.svg</file>
     <file>menu_icons/paste.svg</file>
     <file>menu_icons/sync.svg</file>
@@ -79,6 +64,5 @@
     <file>menu_icons/table.svg</file>
     <file>menu_icons/history.svg</file>
     <file>menu_icons/level-up-alt.svg</file>
-    <file>double-at.svg</file>
   </qresource>
 </RCC>

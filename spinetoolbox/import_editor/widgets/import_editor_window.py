@@ -22,7 +22,7 @@ from PySide2.QtGui import QGuiApplication, QKeySequence
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QFileDialog, QDialogButtonBox, QDockWidget, QUndoStack
 from ..commands import RestoreMappingsFromDict
 from ...helpers import ensure_window_is_on_screen
-from ...spine_io.connection_manager import ConnectionManager
+from spine_items.spine_io.connection_manager import ConnectionManager
 from .import_editor import ImportEditor
 from .import_mapping_options import ImportMappingOptions
 from .import_mappings import ImportMappings

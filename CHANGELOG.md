@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 ### Changed
+- Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
+  Project Items are now in a separate package called spine_items, which is now a requirement for Spine Toolbox. 
+  To install spine_items, just follow the instructions in README.md.
+
 ### Deprecated
 ### Removed
 ### Fixed

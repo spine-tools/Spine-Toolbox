@@ -19,8 +19,9 @@ Project Tree items.
 import logging
 from PySide2.QtCore import Qt, QUrl
 from PySide2.QtWidgets import QInputDialog
-from .metaobject import MetaObject
-from .widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
+from spine_items.metaobject import MetaObject
+from spine_items.widgets.custom_menus import ProjectItemContextMenu
+from .widgets.custom_menus import CategoryProjectItemContextMenu
 from .project_commands import RenameProjectItemCommand
 
 

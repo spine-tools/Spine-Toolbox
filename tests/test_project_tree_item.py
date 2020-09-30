@@ -20,16 +20,16 @@ import unittest
 from networkx import DiGraph
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.project_items.view.view import View
-from spinetoolbox.project_items.view.view_icon import ViewIcon
-from spinetoolbox.project_items.view.widgets.view_properties_widget import ViewPropertiesWidget
+from spine_items.view.view import View
+from spine_items.view.view_icon import ViewIcon
+from spine_items.view.widgets.view_properties_widget import ViewPropertiesWidget
 from spinetoolbox.project_tree_item import (
     BaseProjectTreeItem,
     CategoryProjectTreeItem,
     LeafProjectTreeItem,
     RootProjectTreeItem,
 )
-from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from spine_items.widgets.add_project_item_widget import AddProjectItemWidget
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 

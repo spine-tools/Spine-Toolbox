@@ -20,7 +20,8 @@ import math
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
-from ..graphics_items import ProjectItemIcon, LinkDrawer
+from spine_items.graphics_items import ProjectItemIcon
+from ..graphics_items import LinkDrawer
 from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
 
 

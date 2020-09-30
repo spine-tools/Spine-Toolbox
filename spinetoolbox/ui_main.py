@@ -35,8 +35,9 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
 )
+from spine_items.graphics_items import ProjectItemIcon
+from .import_editor.widgets.import_editor_window import ImportEditorWindow
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
-from .graphics_items import ProjectItemIcon
 from .load_project_items import load_item_specification_factories, load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import (
@@ -57,6 +58,7 @@ from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
+from .widgets.spine_datapackage_widget import SpineDatapackageWidget
 from .project import SpineToolboxProject
 from .config import (
     STATUSBAR_SS,
@@ -66,20 +68,22 @@ from .config import (
     _program_root,
     LATEST_PROJECT_VERSION,
     DEFAULT_WORK_DIR,
-    PROJECT_FILENAME
+    PROJECT_FILENAME,
 )
 from .helpers import (
     ensure_window_is_on_screen,
     get_datetime,
-    busy_effect,
     set_taskbar_icon,
     supported_img_formats,
-    create_dir,
     recursive_overwrite,
+    ChildCyclingKeyPressFilter,
+    open_url,
+)
+from spine_items.helpers import (
+    busy_effect,
+    create_dir,
     serialize_path,
     deserialize_path,
-    open_url,
-    ChildCyclingKeyPressFilter
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
@@ -139,7 +143,6 @@ class ToolboxUI(QMainWindow):
         self.filtered_spec_factory_models = {}
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
-        self.work_dir = None
         # Widget and form references
         self.settings_form = None
         self.specification_context_menu = None
@@ -278,21 +281,19 @@ class ToolboxUI(QMainWindow):
             new_work_dir (str, optional): If given, changes the work directory to given
                 and creates the directory if it does not exist.
         """
+        verbose = new_work_dir is not None
         if not new_work_dir:
-            self.work_dir = self._qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
-            if not self.work_dir:
-                # It is possible we still don't have a directory set
-                self.work_dir = DEFAULT_WORK_DIR
-        else:
-            self.work_dir = new_work_dir
-            self.msg.emit("Work directory is now <b>{0}</b>".format(self.work_dir))
+            new_work_dir = self._qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
+            if not new_work_dir:
+                # It is possible "appSettings/workDir" is an empty string???
+                new_work_dir = DEFAULT_WORK_DIR
         try:
-            create_dir(self.work_dir)
+            create_dir(new_work_dir)
+            self._qsettings.setValue("appSettings/workDir", new_work_dir)
+            if verbose:
+                self._toolbox.msg.emit(f"Work directory is now <b>{new_work_dir}</b>")
         except OSError:
-            self.msg_error.emit(
-                "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
-            )
-            self.work_dir = None
+            self.msg_error.emit(f"[OSError] Creating work directory {new_work_dir} failed. Check permissions.")
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -1829,3 +1830,10 @@ class ToolboxUI(QMainWindow):
             QWidget: item's properties tab widget
         """
         return self._item_properties_uis[item_type].ui
+
+    @staticmethod
+    def create_spine_datapackage_form(dc):
+        return SpineDatapackageWidget(dc)
+
+    def create_import_editor_window(self, importer, file_path, connector, connector_settings, settings):
+        return ImportEditorWindow(importer, file_path, connector, connector_settings, settings, self)

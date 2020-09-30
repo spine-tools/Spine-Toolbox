@@ -30,7 +30,7 @@ if not spinedb_api_version_check():
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
 from . import resources_icons_rc  # pylint: disable=unused-import
 from .ui_main import ToolboxUI
-from .helpers import pyside2_version_check, spine_engine_version_check
+from .helpers import pyside2_version_check, spine_engine_version_check, spine_items_version_check
 from .version import __version__
 from .headless import headless_main
 
@@ -46,6 +46,8 @@ def main():
     if not pyside2_version_check():
         return 1
     if not spine_engine_version_check():
+        return 1
+    if not spine_items_version_check():
         return 1
     parser = _make_argument_parser()
     args = parser.parse_args()
