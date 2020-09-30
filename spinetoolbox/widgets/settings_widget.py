@@ -511,10 +511,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/pythonPath", python_path)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
-        self._qsettings.setValue("appSettings/workDir", work_dir)
+        self.set_work_directory(work_dir)
         # Check if something in the app needs to be updated
         self._toolbox.show_datetime = self._toolbox.update_datetime()
-        self.check_if_work_dir_changed(work_dir)
         self.check_if_python_env_changed(python_path)
         # Project
         self.update_project_settings()
@@ -532,23 +531,22 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             # Set new project description
             self._project.call_set_description(self.ui.textEdit_project_description.toPlainText())
 
+    def set_work_directory(self, new_work_dir):
+        """Sets new work directory.
+
+        Args:
+            new_work_dir (str): Possibly a new work directory
+        """
+        if not new_work_dir:  # Happens when clearing the work dir line edit
+            new_work_dir = DEFAULT_WORK_DIR
+        if self.orig_work_dir != new_work_dir:
+            self._toolbox.set_work_directory(new_work_dir)
+
     def check_if_python_env_changed(self, new_path):
         """Checks if Python environment was changed.
         This indicates that the Python Console may need a restart."""
         if self.orig_python_env != new_path:
             self._toolbox.python_repl.may_need_restart = True
-
-    def check_if_work_dir_changed(self, new_work_dir):
-        """Checks if work directory was changed.
-
-        Args:
-            new_work_dir (str): Possibly a new work directory
-        """
-        if self.orig_work_dir != new_work_dir:
-            if not new_work_dir:  # Happens when clearing the work dir line edit
-                # This is here because I don't want to see this message every time app is started
-                self._toolbox.msg.emit("Work directory is now <b>{0}</b>".format(DEFAULT_WORK_DIR))
-            self._toolbox.set_work_directory(new_work_dir)
 
     def file_is_valid(self, file_path, msgbox_title):
         """Checks that given path is not a directory and it's a file that actually exists.

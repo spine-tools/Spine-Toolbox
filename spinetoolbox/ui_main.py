@@ -143,7 +143,6 @@ class ToolboxUI(QMainWindow):
         self.filtered_spec_factory_models = {}
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
-        self.work_dir = None
         # Widget and form references
         self.settings_form = None
         self.specification_context_menu = None
@@ -282,21 +281,19 @@ class ToolboxUI(QMainWindow):
             new_work_dir (str, optional): If given, changes the work directory to given
                 and creates the directory if it does not exist.
         """
+        verbose = new_work_dir is not None
         if not new_work_dir:
-            self.work_dir = self._qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
-            if not self.work_dir:
-                # It is possible we still don't have a directory set
-                self.work_dir = DEFAULT_WORK_DIR
-        else:
-            self.work_dir = new_work_dir
-            self.msg.emit("Work directory is now <b>{0}</b>".format(self.work_dir))
+            new_work_dir = self._qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
+            if not new_work_dir:
+                # It is possible "appSettings/workDir" is an empty string???
+                new_work_dir = DEFAULT_WORK_DIR
         try:
-            create_dir(self.work_dir)
+            create_dir(new_work_dir)
+            self._qsettings.setValue("appSettings/workDir", new_work_dir)
+            if verbose:
+                self._toolbox.msg.emit(f"Work directory is now <b>{new_work_dir}</b>")
         except OSError:
-            self.msg_error.emit(
-                "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
-            )
-            self.work_dir = None
+            self.msg_error.emit(f"[OSError] Creating work directory {new_work_dir} failed. Check permissions.")
 
     def project(self):
         """Returns current project or None if no project open."""
