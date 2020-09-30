@@ -99,7 +99,7 @@ Guide
 Installing requirements
 =======================
 
-Make sure that Spine Toolbox and julia 1.0 (or greater) are properly installed
+Make sure that Spine Toolbox and julia 1.2 (or greater) are properly installed
 as described at the following links:
 
 - `Running Spine Toolbox <https://github.com/Spine-project/Spine-Toolbox#running-spine-toolbox>`_
@@ -108,33 +108,75 @@ as described at the following links:
 Setting up project
 ==================
 
-#. Launch Spine Toolbox and from the main menu, select **File -> New...** to create a new project.
-   Type "Case Study A5" as the project name and click **Ok**.
+Each Spine Toolbox project resides in its own directory. In this directory the user 
+can collect all data, programming scripts and other material needed for the project. 
+The Toolbox application also creates its own special subdirectory ".spinetoolbox", 
+for project settings etc.
 
-#. Drag the Data Store icon (|ds_icon|)
-   from the toolbar and drop it into the *Design View*.
-   This will open the *Add Data Store* dialog.
+#. Launch Spine Toolbox and from the main menu, select **File -> New project...** 
+   to create a new project. Browse to a location where you want to create the project
+   and create a new folder for it, e.g. "Case Study A5".
+
+#. Drag the Data Store icon (|ds_icon|) from the toolbar and drop it into the 
+   *Design View*. This will open the *Add Data Store* dialog. 
    Type "input" as the Data Store name and click **Ok**.
 
 #. Repeat the above operation to create a Data Store called "output".
 
-#. Drag the Tool icon (|tool_icon|)
-   from the toolbar and drop it into the *Design View*.
-   This will open the *Add Tool* dialog.
-   Type "SpineOpt" as the Tool name and click **Ok**.
+#. Drag the Tool icon (|tool_icon|) from the toolbar and drop it into the 
+   *Design View*. This will open the *Add Tool* dialog. Type "SpineOpt" as 
+   the Tool name and click **Ok**.
 
    .. note:: Each item in the *Design view* is equipped with three *connectors*
       (the small squares at the item boundaries).
 
-#. Click on one of "input" connectors and then on one of "SpineOpt" connectors. This will create
-   a *connection* from the former to the latter.
+#. Click on one of "input" connectors and then on one of "SpineOpt" connectors. 
+   This will create a *connection* from the former to the latter.
 
-#. Repeat the procedure to create a *connection* from "SpineOpt" to "output". It should look something
-   like this:
+#. Repeat the procedure to create a *connection* from "SpineOpt" to "output". 
+   It should look something like this:
 
-   .. todo:: Add image
+   .. image:: img/case_study_a5_item_connections.png
+      :align: center
 
 #. From the main menu, select **File -> Save project**.
+
+
+Setting up SpineOpt
+===================
+
+Get the *SpineOpt* Julia package from our `GitHub repository <https://github.com/Spine-project/SpineOpt.jl>`_.
+You can either clone the source code with Git or download it as a zip package.
+Put the source files in directory "SpineOpt.jl" under your project directory.
+
+   .. note:: Spine Toolbox version 0.5 supports SpineOpt up to 
+             `version 0.4.4 <https://github.com/Spine-project/SpineOpt.jl/tree/v0.4.4>`_. 
+
+
+Configuring Julia
+~~~~~~~~~~~~~~~~~
+
+#. Go to Spine Toolbox main window and select **File -> Settings...**. This will 
+   open the *Settings* dialog.
+
+#. Go to the *Tools* page and enter the path to your julia executable path or 
+   leave blank to use the executable in your PATH.
+
+#. Create a new sub directory ".julia" under your project directroy and select 
+   that as the Julia project to use (the second line edit under Julia section).
+
+#. Click **Ok**.
+
+#. From the application main menu, select **File -> Tool configuration assistant**. 
+   This will install the `SpineOpt package <https://github.com/Spine-project/SpineOpt.jl>`_
+   to the julia project specified above. Follow the instructions until completion.
+
+
+Creating a Tool specification for Spine Model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TODO
+
 
 Entering input data
 ===================
@@ -142,13 +184,14 @@ Entering input data
 Creating input database
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to create a new Spine database for SpineOpt.jl in the 'input' Data Store:
+#. Follow the steps below to create a new Spine database for SpineOpt in the 
+   'input' Data Store:
 
    #. Select the 'input' Data Store item in the *Design View*.
-   #. Go to *Data Store Properties*, check the box that reads **For SpineOpt** and press **New Spine db**.
+   #. Go to *Data Store Properties* and hit **New Spine db**.
 
-#. Still in *Data Store Properties*, click **Open editor**. This will open the newly created database
-   in the *Spine database editor*, looking similar to this:
+#. Still in *Data Store Properties*, click **Open editor**. This will open 
+   the newly created database in the *Spine database editor*, looking similar to this:
 
    .. image:: img/case_study_a5_treeview_empty.png
       :align: center
@@ -431,28 +474,3 @@ Specifying relationship parameter values
 
 TODO
 
-Running SpineOpt.jl
-===================
-
-Configuring Julia
-~~~~~~~~~~~~~~~~~
-
-#. Go to Spine Toolbox mainwindow and from the main menu, select **File -> Settings**. This will open the
-   *Settings* dialog.
-
-#. Go to the *Julia* group box and enter the path to your julia executable in the first line edit.
-
-#. (Optional) Enter the path of a julia project that you want to use with Spine Toolbox in the second line edit.
-   Leave blank to use julia's home project.
-
-#. Click **Ok**.
-
-#. From the application main menu, select **File -> Tool configuration assistant.** This will install the
-   `SpineOpt.jl package <https://github.com/Spine-project/SpineOpt.jl>`_
-   to the julia project specified above. Follow the instructions until completion.
-
-
-Creating a Tool specification for SpineOpt.jl
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-TODO
