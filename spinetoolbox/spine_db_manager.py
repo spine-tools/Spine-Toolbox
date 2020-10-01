@@ -164,7 +164,7 @@ class SpineDBManager(QObject):
         return set(self._db_editors.values())
 
     def create_new_spine_database(self, url):
-        if url in self._db_maps:
+        if url in set(url for db_editor in self.db_editors for url in db_editor.db_urls):
             message = (
                 f"The db at <b>{url}</b> is open in a Spine db editor. "
                 "Please close all Spine db editors using this url and try again."
