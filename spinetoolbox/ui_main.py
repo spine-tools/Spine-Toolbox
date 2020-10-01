@@ -1831,10 +1831,8 @@ class ToolboxUI(QMainWindow):
         """
         return self._item_properties_uis[item_type].ui
 
-    def make_project_item_icon(self, project_item):
-        return self.item_factories[project_item.item_type()].make_icon(
-            self, project_item.x, project_item.y, project_item
-        )
+    def project_item_icon(self, item_type):
+        return self.item_factories[item_type].make_icon(self)
 
     @staticmethod
     def create_spine_datapackage_form(dc):

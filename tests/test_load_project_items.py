@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 from PySide2.QtWidgets import QApplication
 from spine_items.executable_item_base import ExecutableItemBase
 from spinetoolbox.load_project_items import load_executable_items, load_item_specification_factories, load_project_items
-from spine_items.project_item import ProjectItemFactory
+from spine_items.project_item_factory import ProjectItemFactory
 from spine_items.project_item_specification_factory import ProjectItemSpecificationFactory
 
 

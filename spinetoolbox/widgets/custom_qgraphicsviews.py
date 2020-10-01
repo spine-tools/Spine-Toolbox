@@ -356,8 +356,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
         self.scene().addItem(link)
-        src_name = link.src_icon._project_item.name
-        dst_name = link.dst_icon._project_item.name
+        src_name = link.src_icon.name()
+        dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
         return replaced_link
 

@@ -23,7 +23,6 @@ from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from spine_items.metaobject import MetaObject
 from spine_items.helpers import create_dir
-from spine_items.project_item import finish_project_item_construction
 from .helpers import inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
@@ -286,7 +285,7 @@ class SpineToolboxProject(MetaObject):
         for project_tree_item in project_tree_items:
             project_item = project_tree_item.project_item
             self._project_item_model.insert_item(project_tree_item, category_ind)
-            finish_project_item_construction(project_item, self._toolbox)
+            self._finish_project_item_construction(project_item)
             # Append new node to networkx graph
             self.add_to_dag(project_item.name)
             if verbosity:
@@ -658,3 +657,22 @@ class SpineToolboxProject(MetaObject):
             if items_successors is not None:
                 return [self._project_item_model.get_item(successor).project_item for successor in items_successors]
         return []
+
+    def _finish_project_item_construction(self, project_item):
+        """
+        Activates the given project item so it works with the given toolbox.
+        This is mainly intended to facilitate adding items back with redo.
+
+        Args:
+            project_item (ProjectItem)
+        """
+        icon = project_item.get_icon()
+        if icon is not None:
+            icon.activate()
+        else:
+            icon = self._toolbox.project_item_icon(project_item.item_type())
+            project_item.set_icon(icon)
+        properties_ui = self._toolbox.project_item_properties_ui(project_item.item_type())
+        project_item.set_properties_ui(properties_ui)
+        project_item.create_data_dir()
+        project_item.set_up()
