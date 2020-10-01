@@ -163,6 +163,12 @@ class SpineDBManager(QObject):
     def db_editors(self):
         return set(self._db_editors.values())
 
+    def open_db_maps(self, url):
+        for db_editor in self.db_editors:
+            for db_url, db_map in zip(db_editor.db_urls, db_editor.db_maps):
+                if url == db_url:
+                    yield db_map
+
     def create_new_spine_database(self, url):
         if url in set(url for db_editor in self.db_editors for url in db_editor.db_urls):
             message = (
