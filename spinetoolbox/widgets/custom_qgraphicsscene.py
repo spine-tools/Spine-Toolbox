@@ -200,8 +200,9 @@ class DesignGraphicsScene(CustomGraphicsScene):
         x = pos.x()
         y = pos.y()
         factory = self._toolbox.item_factories[item_type]
-        self.item_shadow = factory.make_icon(self._toolbox, x, y, None)
-        self._toolbox.show_add_project_item_form(item_type, pos.x(), pos.y(), spec=spec)
+        self.item_shadow = factory.make_icon(self._toolbox)
+        self.item_shadow.update("", x, y)
+        self._toolbox.show_add_project_item_form(item_type, x, y, spec=spec)
 
     def event(self, event):
         """Accepts GraphicsSceneHelp events without doing anything, to not interfere with our usage of
