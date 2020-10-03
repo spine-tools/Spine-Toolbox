@@ -23,10 +23,11 @@ import logging
 import os
 import sys
 from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
+from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel, QPointF, QMimeData
 from PySide2.QtTest import QTest
-from spinetoolbox.project import SpineToolboxProject
+from PySide2.QtGui import QDropEvent
 from spine_items.graphics_items import ProjectItemIcon
+from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.graphics_items import Link
 from spinetoolbox.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
@@ -512,6 +513,43 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(2, len(gv.scene().selectedItems()))
         # Active project item should be None
         self.assertIsNone(self.toolbox.active_project_item)
+
+    def test_drop_invalid_drag_on_design_view(self):
+        mime_data = QMimeData()
+        gv = self.toolbox.ui.graphicsView
+        pos = QPoint(0, 0)
+        event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
+        with mock.patch(
+            'PySide2.QtWidgets.QGraphicsSceneDragDropEvent.source'
+        ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
+            self.toolbox, "show_add_project_item_form"
+        ) as mock_show_add_project_item_form:
+            mock_drop_event_source.return_value = "Invalid source"
+            gv.dropEvent(event)
+            mock_show_add_project_item_form.assert_not_called()
+        item_shadow = gv.scene().item_shadow
+        self.assertIsNone(item_shadow)
+
+    def test_drop_project_item_on_design_view(self):
+        mime_data = QMimeData()
+        item_type = next(iter(self.toolbox.item_factories))
+        mime_data.setText(f"{item_type},spec")
+        gv = self.toolbox.ui.graphicsView
+        scene_pos = QPointF(44, 20)
+        pos = gv.mapFromScene(scene_pos)
+        event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
+        with mock.patch(
+            'PySide2.QtWidgets.QGraphicsSceneDragDropEvent.source'
+        ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
+            self.toolbox, "show_add_project_item_form"
+        ) as mock_show_add_project_item_form:
+            mock_drop_event_source.return_value = self.toolbox.main_toolbar.project_item_list_view
+            gv.dropEvent(event)
+            mock_show_add_project_item_form.assert_called_once()
+            mock_show_add_project_item_form.assert_called_with(item_type, scene_pos.x(), scene_pos.y(), spec="spec")
+        item_shadow = gv.scene().item_shadow
+        self.assertTrue(item_shadow.isVisible())
+        self.assertEqual(item_shadow.pos(), scene_pos)
 
     def test_remove_item(self):
         """Test removing a single project item."""
