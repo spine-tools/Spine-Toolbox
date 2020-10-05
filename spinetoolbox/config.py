@@ -67,6 +67,11 @@ JULIA_EXECUTABLE = _executable("julia")
 # Python
 PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
 
+# Tool output directory name
+TOOL_OUTPUT_DIR = "output"
+
+# Gimlet default work directory name
+GIMLET_WORK_DIR_NAME = "work"
 
 # Julia REPL constants
 JL_REPL_TIME_TO_DEAD = 5.0

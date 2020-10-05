@@ -22,7 +22,7 @@ import os
 import json
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
-from spine_items.helpers import create_dir, serialize_path
+from spinetoolbox.helpers import create_dir, serialize_path
 from .helpers import recursive_overwrite
 
 

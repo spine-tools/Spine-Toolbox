@@ -23,8 +23,8 @@ from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
 from spinetoolbox.helpers import CharIconEngine
 from ..commands import SetColumnOrRowType
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
-from spine_items.spine_io.io_api import TYPE_STRING_TO_CLASS
-from spine_items.spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
+from spinetoolbox.spine_io.io_api import TYPE_STRING_TO_CLASS
+from spinetoolbox.spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
 
 _ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
 _ALLOWED_TYPES.append("integer sequence datetime")

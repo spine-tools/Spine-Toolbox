@@ -35,7 +35,7 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
 )
-from spine_items.graphics_items import ProjectItemIcon
+from spinetoolbox.graphics_items import ProjectItemIcon
 from .import_editor.widgets.import_editor_window import ImportEditorWindow
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items
@@ -79,7 +79,7 @@ from .helpers import (
     ChildCyclingKeyPressFilter,
     open_url,
 )
-from spine_items.helpers import (
+from spinetoolbox.helpers import (
     busy_effect,
     create_dir,
     serialize_path,

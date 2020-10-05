@@ -26,7 +26,7 @@ from ..mvcmodels.mapping_list_model import MappingListModel
 from ..mvcmodels.mapping_specification_model import MappingSpecificationModel
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ..mvcmodels.source_table_list_model import SourceTableItem, SourceTableListModel
-from spine_items.spine_io.type_conversion import value_to_convert_spec
+from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 from ...widgets.custom_menus import CustomContextMenu
 
 
