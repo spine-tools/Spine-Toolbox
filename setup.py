@@ -20,7 +20,6 @@ from setuptools import setup, find_packages
 from spinetoolbox.config import (
     REQUIRED_SPINEDB_API_VERSION,
     REQUIRED_SPINE_ENGINE_VERSION,
-    REQUIRED_SPINE_ITEMS_VERSION,
 )
 
 with open("README.md", encoding="utf8") as readme_file:
@@ -38,7 +37,6 @@ install_requires = [
     "sqlalchemy >= 1.3",
     "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
     "spine_engine >= {}".format(REQUIRED_SPINE_ENGINE_VERSION),
-    "spine_items[UI] >= {}".format(REQUIRED_SPINE_ITEMS_VERSION),
     "numpy >= 1.15.1",
     "matplotlib >= 3.0",
     "scipy >= 1.1.0",
