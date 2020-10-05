@@ -38,7 +38,7 @@ from PySide2.QtWidgets import (
 from spinetoolbox.graphics_items import ProjectItemIcon
 from .import_editor.widgets.import_editor_window import ImportEditorWindow
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
-from .load_project_items import load_item_specification_factories, load_project_items
+from .load_project_items import load_item_specification_factories, load_project_items, upgrade_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import (
     ProjectItemFactoryModel,
@@ -240,6 +240,7 @@ class ToolboxUI(QMainWindow):
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
+        upgrade_project_items()
         self._item_categories, self.item_factories = load_project_items(self)
         self._item_specification_factories = load_item_specification_factories()
         for item_type, factory in self.item_factories.items():
