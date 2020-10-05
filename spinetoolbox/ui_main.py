@@ -78,8 +78,6 @@ from .helpers import (
     recursive_overwrite,
     ChildCyclingKeyPressFilter,
     open_url,
-)
-from spinetoolbox.helpers import (
     busy_effect,
     create_dir,
     serialize_path,
