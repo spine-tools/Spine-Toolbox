@@ -16,6 +16,7 @@ Contains ToolboxUI class.
 :date:   14.12.2017
 """
 
+import sys
 import os
 import locale
 import logging
@@ -240,7 +241,14 @@ class ToolboxUI(QMainWindow):
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
-        upgrade_project_items()
+        if not upgrade_project_items():
+            script = "upgrade_spine_items.bat" if sys.platform == "win32" else "upgrade_spine_items.py"
+            msg = (
+                "Error: The automatic process to install project item modules has failed. "
+                f"To install manually, please run script '{script}' in the '/bin' folder and restart Spine Toolbox."
+            )
+            self.msg_error.emit(msg)
+            return
         self._item_categories, self.item_factories = load_project_items(self)
         self._item_specification_factories = load_item_specification_factories()
         for item_type, factory in self.item_factories.items():

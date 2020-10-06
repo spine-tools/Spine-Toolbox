@@ -49,7 +49,6 @@ UPGRADING PROJECT ITEMS...
 (Depending on your internet connection, this may take a few moments.)
             """
         )
-        # TODO: How do we timeout the process?
         subprocess.check_call(
             [
                 sys.executable,
@@ -58,8 +57,15 @@ UPGRADING PROJECT ITEMS...
                 "install",
                 "--upgrade",
                 "git+https://github.com/Spine-project/spine-items.git@master",
-            ]
+            ],
+            timeout=30,
         )
+    try:
+        import spine_items
+    except ModuleNotFoundError:
+        # Failed to install module
+        return False
+    return True
 
 
 def load_project_items(toolbox):
