@@ -172,7 +172,9 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIsNone(self.toolbox.project())
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "spinetoolbox.project.create_dir"
-        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
+        ) as mock_create_dir, mock.patch(
+            "spinetoolbox.project_item.project_item.create_dir"
+        ) as mock_create_dir, mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
         ) as mock_upd_rec_projs:
             self.toolbox.open_project(project_dir)
@@ -743,7 +745,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
             self.toolbox.ui.actionCopy.triggered.emit()
             self.toolbox.ui.actionPaste.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
@@ -756,7 +758,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
             self.toolbox.ui.actionDuplicate.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")

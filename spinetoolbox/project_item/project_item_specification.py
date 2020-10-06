@@ -15,7 +15,7 @@ Contains project item specification class.
 :authors: M. Marin (KTH)
 :date:    7.5.2020
 """
-from .metaobject import MetaObject
+from spinetoolbox.metaobject import MetaObject
 
 
 class ProjectItemSpecification(MetaObject):

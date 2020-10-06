@@ -119,7 +119,7 @@ def add_ds(project, name, x=0, y=0):
     """Helper function to create a Data Store to given project with given name and coordinates."""
     item = {name: {"type": "Data Store", "description": "", "url": dict(), "x": x, "y": y}}
     # This mocks create_dir in both project_item.py and in data_store.py
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
         project.add_project_items(item)
     return
 
@@ -127,7 +127,7 @@ def add_ds(project, name, x=0, y=0):
 def add_dc(project, name, x=0, y=0):
     """Helper function to create a Data Connection to given project with given name and coordinates."""
     item = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
         project.add_project_items(item)
     return
 
@@ -137,7 +137,7 @@ def add_tool(project, name, tool_spec="", x=0, y=0):
     item = {
         name: {"type": "Tool", "description": "", "specification": tool_spec, "execute_in_work": False, "x": x, "y": y}
     }
-    with mock.patch("spinetoolbox.project_item.create_dir"):
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
     return
 
@@ -145,7 +145,7 @@ def add_tool(project, name, tool_spec="", x=0, y=0):
 def add_view(project, name, x=0, y=0):
     """Helper function to add a View to given project."""
     item = {name: {"type": "View", "description": "", "x": x, "y": y}}
-    with mock.patch("spinetoolbox.project_item.create_dir"):
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
     return
 
@@ -154,7 +154,7 @@ def add_importer(project, name, x=0, y=0):
     """Helper function to add an Importer View to given project."""
     item = {name: {"type": "Importer", "description": "", "mappings": None, "x": x, "y": y}}
     # This mocks create_dir in both project_item.py and in importer.py
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir, mock.patch(
         "spine_items.importer.importer.create_dir"
     ) as mock_create_dir2:
         project.add_project_items(item)
@@ -164,7 +164,7 @@ def add_importer(project, name, x=0, y=0):
 def add_exporter(project, name, x=0, y=0):
     """Helper function to add an exporter to given project."""
     item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "settings_packs": None}}
-    with mock.patch("spinetoolbox.project_item.create_dir"):
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
     return
 

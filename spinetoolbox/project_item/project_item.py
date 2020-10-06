@@ -19,9 +19,9 @@ import os
 import logging
 from PySide2.QtCore import Signal
 from spinetoolbox.helpers import create_dir, rename_dir, open_url
-from .metaobject import MetaObject
-from .project_commands import SetItemSpecificationCommand
-from .helpers import shorten
+from spinetoolbox.metaobject import MetaObject
+from spinetoolbox.project_commands import SetItemSpecificationCommand
+from spinetoolbox.helpers import shorten
 
 
 class ProjectItem(MetaObject):
