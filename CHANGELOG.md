@@ -8,7 +8,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
-  Project Items are now in a separate package called spine_items, which is now upgraded at Spine Toolbox's startup. 
+  Project Items are now in a separate package called spine_items, which is upgraded at Spine Toolbox's startup. 
+- IPython kernel specifications are created for the current Python interpreter,
+  and not globally for the user.
 
 ### Deprecated
 ### Removed
