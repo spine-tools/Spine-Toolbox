@@ -18,9 +18,9 @@ Unit tests for AddProjectItemWidget.
 
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtWidgets import QApplication, QWidget
+from PySide2.QtWidgets import QApplication
 from PySide2.QtGui import QStandardItemModel
-from spine_items.widgets.add_project_item_widget import AddProjectItemWidget
+from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..mock_helpers import MockQWidget
 
 
