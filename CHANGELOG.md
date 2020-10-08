@@ -53,6 +53,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Default Python interpreter is now sys.executable i.e. the one that was used in launching the app.
   Previously the default was the Python in user's PATH. This affects the Python used by Python Tool 
   specifications and the PyCall used by SpineOpt.jl configuration assistant.
+- IPython kernel specifications are created for the current Python interpreter,
+  and not globally for the user.
 
 ## [0.4.0-final.0] - 2020-04-03
 
