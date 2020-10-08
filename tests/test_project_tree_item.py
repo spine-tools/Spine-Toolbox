@@ -20,16 +20,13 @@ import unittest
 from networkx import DiGraph
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
-from spine_items.view.view import View
-from spine_items.view.view_icon import ViewIcon
-from spine_items.view.widgets.view_properties_widget import ViewPropertiesWidget
+from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_tree_item import (
     BaseProjectTreeItem,
     CategoryProjectTreeItem,
     LeafProjectTreeItem,
     RootProjectTreeItem,
 )
-from spine_items.widgets.add_project_item_widget import AddProjectItemWidget
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -130,7 +127,7 @@ class TestLeafProjectTreeItem(unittest.TestCase):
     def _leaf_item(toolbox=None):
         if toolbox is None:
             toolbox = create_toolboxui_with_project()
-        project_item = View("View", "A View item", 0.0, 0.0, toolbox.project(), toolbox)
+        project_item = ProjectItem("PI", "A Project item", 0.0, 0.0, toolbox.project(), toolbox)
         item = LeafProjectTreeItem(project_item, toolbox)
         return toolbox, item
 
