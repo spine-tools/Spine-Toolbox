@@ -63,6 +63,26 @@ class CustomContextMenu(QMenu):
         return self.option
 
 
+class ProjectItemContextMenu(CustomContextMenu):
+    """Context menu for project items in the Project tree widget and in the Design View."""
+
+    def __init__(self, parent, position):
+        """
+        Args:
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+        """
+        super().__init__(parent, position)
+        self.add_action("Copy")
+        self.add_action("Paste")
+        self.add_action("Duplicate")
+        self.addSeparator()
+        self.add_action("Open directory...")
+        self.addSeparator()
+        self.add_action("Rename")
+        self.add_action("Remove item")
+
+
 class CategoryProjectItemContextMenu(CustomContextMenu):
     """Context menu for category project items in the QTreeView."""
 
@@ -168,6 +188,24 @@ class AddSpecificationPopupMenu(CustomPopupMenu):
                     item_type, specification=None
                 ),
             )
+
+
+class ItemSpecificationMenu(CustomPopupMenu):
+    """Context menu class for item specifications."""
+
+    def __init__(self, parent, index):
+        """
+        Args:
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+            index (QModelIndex): the index
+        """
+        super().__init__(parent)
+        self.index = index
+        self.add_action("Edit specification", lambda: parent.edit_specification(index))
+        self.add_action("Remove specification", lambda: parent.remove_specification(index.row()))
+        self.add_action("Open specification file...", lambda: parent.open_specification_file(index))
+        self.addSeparator()
 
 
 class RecentProjectsPopupMenu(CustomPopupMenu):

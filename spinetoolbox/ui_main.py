@@ -35,10 +35,10 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
 )
-from spine_items.graphics_items import ProjectItemIcon
+from spinetoolbox.graphics_items import ProjectItemIcon
 from .import_editor.widgets.import_editor_window import ImportEditorWindow
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
-from .load_project_items import load_item_specification_factories, load_project_items
+from .load_project_items import load_item_specification_factories, load_project_items, upgrade_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import (
     ProjectItemFactoryModel,
@@ -78,8 +78,6 @@ from .helpers import (
     recursive_overwrite,
     ChildCyclingKeyPressFilter,
     open_url,
-)
-from spine_items.helpers import (
     busy_effect,
     create_dir,
     serialize_path,
@@ -242,6 +240,15 @@ class ToolboxUI(QMainWindow):
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
+        if not upgrade_project_items():
+            msg = (
+                "<b>The automatic process to install project item modules has failed.</b> "
+                "Please check your internet connection and restart Spine Toolbox."
+                "<p>You can also try to install these modules manually, by running</p>"
+                "<p>pip install --upgrade git+https://github.com/Spine-project/spine-items.git</p>"
+            )
+            self.msg_error.emit(msg)
+            return
         self._item_categories, self.item_factories = load_project_items(self)
         self._item_specification_factories = load_item_specification_factories()
         for item_type, factory in self.item_factories.items():

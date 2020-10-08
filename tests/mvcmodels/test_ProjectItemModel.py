@@ -17,12 +17,12 @@ Unit tests for ProjectItemModel class.
 """
 
 import unittest
-from unittest.mock import MagicMock, NonCallableMagicMock, patch
+from unittest.mock import NonCallableMagicMock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.project_item_model import ProjectItemModel
 from spinetoolbox.project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
-from spine_items.project_item import ProjectItem
+from spinetoolbox.project_item.project_item import ProjectItem
 from ..mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 

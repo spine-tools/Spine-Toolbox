@@ -20,9 +20,9 @@ import sys
 import os
 
 
-REQUIRED_SPINE_ENGINE_VERSION = "0.6.1"
+REQUIRED_SPINE_ENGINE_VERSION = "0.6.2"
 REQUIRED_SPINEDB_API_VERSION = "0.8.5"
-REQUIRED_SPINE_ITEMS_VERSION = "0.1.5"
+REQUIRED_SPINE_ITEMS_VERSION = "0.1.6"
 LATEST_PROJECT_VERSION = 2
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
@@ -67,6 +67,11 @@ JULIA_EXECUTABLE = _executable("julia")
 # Python
 PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
 
+# Tool output directory name
+TOOL_OUTPUT_DIR = "output"
+
+# Gimlet default work directory name
+GIMLET_WORK_DIR_NAME = "work"
 
 # Julia REPL constants
 JL_REPL_TIME_TO_DEAD = 5.0

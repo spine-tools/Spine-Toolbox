@@ -21,8 +21,8 @@ import json
 from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
-from spine_items.metaobject import MetaObject
-from spine_items.helpers import create_dir
+from spinetoolbox.metaobject import MetaObject
+from spinetoolbox.helpers import create_dir
 from .helpers import inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
