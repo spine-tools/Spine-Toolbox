@@ -43,6 +43,12 @@ install_requires = [
     "networkx > 2.2",
     "cx_Oracle >= 6.3.1",
     "pandas >= 0.24.0",
+    "openpyxl > 3.0",
+    "pymysql >= 0.9.2",
+    "pyodbc >= 4.0.23",
+    "psycopg2 >= 2.7.4",
+    "gdx2py >= 2.0.4",
+    "ijson >= 2.6.1",
 ]
 
 setup(
