@@ -236,15 +236,14 @@ class PythonReplWidget(SpineConsoleWidget):
 
     def start_kernelspec_install_process(self):
         """Install kernel specifications for the selected Python environment."""
-        # python -m ipykernel install --user --name python-3.4 --display-name Python3.4
-        # Creates kernelspecs to
-        # C:\Users\ttepsa\AppData\Roaming\jupyter\kernels\python-3.4
+        # python -m ipykernel install --sys-prefix --name python-X.Y --display-name PythonX.Y
+        # Creates kernelspecs to {sys.prefix}/share/jupyter/kernels/
         program = "{0}".format(self.python_cmd)  # selected python environment
         args = list()
         args.append("-m")
         args.append("ipykernel")
         args.append("install")
-        args.append("--user")
+        args.append("--sys-prefix")
         args.append("--name")
         args.append(self.kernel_name)
         args.append("--display-name")
