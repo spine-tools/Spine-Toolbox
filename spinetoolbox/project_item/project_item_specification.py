@@ -42,4 +42,15 @@ class ProjectItemSpecification(MetaObject):
 
     def __eq__(self, other):
         """Overrides the default implementation"""
-        return isinstance(other, type(self)) and self.name == other.name
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.name == other.name
+
+    def save(self):
+        """
+        Writes the specification to the path given by ``self.definition_file_path``
+
+        Returns:
+            bool: True if the operation was successful, False otherwise
+        """
+        raise NotImplementedError()

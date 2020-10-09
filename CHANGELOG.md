@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   Project Items are now in a separate package called spine_items, which is upgraded at Spine Toolbox's startup. 
 - IPython kernel specifications are created for the current Python interpreter,
   and not globally for the user.
+- New project item Data Transformer can be used to configure Spine database filters for successor items.
+  Currently it support renaming entity classes.
 
 ### Deprecated
 ### Removed
