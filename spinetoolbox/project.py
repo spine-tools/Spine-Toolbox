@@ -592,16 +592,6 @@ class SpineToolboxProject(MetaObject):
     def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""
         node_successors = self.dag_handler.node_successors(dag)
-        reduced_node_successors = dict(node_successors)
-        reversed_ranking = []
-        while reduced_node_successors:
-            same_ranks = [node for node, successors in reduced_node_successors.items() if not successors]
-            for ranked_node in same_ranks:
-                del reduced_node_successors[ranked_node]
-                for node, successors in reduced_node_successors.items():
-                    reduced_node_successors[node] = [s for s in successors if s != ranked_node]
-            reversed_ranking.append(same_ranks)
-        ranks = {node: rank for rank, nodes in enumerate(reversed(reversed_ranking)) for node in nodes}
         if not node_successors:
             # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
@@ -612,6 +602,7 @@ class SpineToolboxProject(MetaObject):
             return
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
+        ranks = _ranks(node_successors)
         for item_name in node_successors:
             item = self._project_item_model.get_item(item_name).project_item
             resources = []
@@ -676,3 +667,29 @@ class SpineToolboxProject(MetaObject):
         project_item.set_properties_ui(properties_ui)
         project_item.create_data_dir()
         project_item.set_up()
+
+
+def _ranks(node_successors):
+    """
+    Calculates node ranks.
+
+    Args:
+        node_successors (dict): a mapping from successor name to a list of predecessor names
+
+    Returns:
+        dict: a mapping from node name to rank
+    """
+    node_predecessors = dict()
+    for predecessor, successors in node_successors.items():
+        node_predecessors.setdefault(predecessor, list())
+        for successor in successors:
+            node_predecessors.setdefault(successor, list()).append(predecessor)
+    ranking = []
+    while node_predecessors:
+        same_ranks = [node for node, predecessor in node_predecessors.items() if not predecessor]
+        for ranked_node in same_ranks:
+            del node_predecessors[ranked_node]
+            for node, successors in node_predecessors.items():
+                node_predecessors[node] = [s for s in successors if s != ranked_node]
+        ranking.append(same_ranks)
+    return {node: rank for rank, nodes in enumerate(ranking) for node in nodes}

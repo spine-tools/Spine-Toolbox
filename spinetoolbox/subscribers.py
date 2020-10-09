@@ -24,6 +24,7 @@ class NodeExecStartedSubscriber(QObject):
     """
      A subscriber class for the exec_started event which is a named event in the EventPublisher class of spine_engine.py
     """
+
     # Signal moved from SpineEngine
     dag_node_execution_started = Signal(str, "QVariant")
     """Emitted just before a named DAG node execution starts."""
@@ -46,6 +47,7 @@ class NodeExecFinishedSubscriber(QObject):
     """
      A subscriber class for the exec_finished event which is a named event in the EventPublisher class of spine_engine.py
     """
+
     # Signal moved from SpineEngine
     dag_node_execution_finished = Signal(str, "QVariant", "QVariant")
     """Emitted after a named DAG node has finished execution."""
