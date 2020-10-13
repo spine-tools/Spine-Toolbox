@@ -19,15 +19,7 @@ Contains JSONConnector class.
 import sys
 import os
 import ijson
-from PySide2.QtWidgets import QFileDialog
 from ..io_api import SourceConnection
-
-
-def select_json_file(parent=None):
-    """
-    Launches QFileDialog with .json filter
-    """
-    return QFileDialog.getOpenFileName(parent, "", "*.json")
 
 
 class JSONConnector(SourceConnection):
@@ -39,8 +31,8 @@ class JSONConnector(SourceConnection):
     # dict with option specification for source.
     OPTIONS = {"max_depth": {"type": int, "label": "Maximum depth", "default": 8}}
 
-    # Modal widget that that returns source object and action (OK, CANCEL)
-    SELECT_SOURCE_UI = select_json_file
+    # File extensions for modal widget that that returns source object and action (OK, CANCEL)
+    FILE_EXTENSIONS = "*.json"
 
     def __init__(self, settings):
         super().__init__(settings)

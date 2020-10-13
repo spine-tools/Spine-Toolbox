@@ -19,16 +19,8 @@ Contains CSVConnector class and a help function.
 
 import csv
 from itertools import islice
-from PySide2.QtWidgets import QFileDialog
 import chardet
 from ..io_api import SourceConnection
-
-
-def select_csv_file(parent=None):
-    """
-    Launches QFileDialog with no filter
-    """
-    return QFileDialog.getOpenFileName(parent, "", "*.*")
 
 
 class CSVConnector(SourceConnection):
@@ -50,7 +42,7 @@ class CSVConnector(SourceConnection):
     }
     """dict with option specification for source."""
 
-    SELECT_SOURCE_UI = select_csv_file
+    FILE_EXTENSIONS = "*.*"
     """Modal widget that returns source object and action (OK, CANCEL)"""
 
     def __init__(self, settings):

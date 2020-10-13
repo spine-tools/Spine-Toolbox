@@ -32,8 +32,8 @@ class SourceConnection:
     # dict with option specification for source.
     OPTIONS = {}
 
-    # Modal widget that that returns action (OK, CANCEL) and source object
-    SELECT_SOURCE_UI = NotImplemented
+    # File extensions for modal widget that that returns action (OK, CANCEL) and source object
+    FILE_EXTENSIONS = NotImplemented
 
     def __init__(self, settings):
         """

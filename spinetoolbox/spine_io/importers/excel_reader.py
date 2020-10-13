@@ -18,7 +18,6 @@ Contains ExcelConnector class and a help function.
 
 from itertools import islice, takewhile
 import io
-from PySide2.QtWidgets import QFileDialog
 from openpyxl import load_workbook
 from spinedb_api import (
     RelationshipClassMapping,
@@ -31,13 +30,6 @@ from spinedb_api import (
     ParameterValueFormatError,
 )
 from ..io_api import SourceConnection
-
-
-def select_excel_file(parent=None):
-    """
-    Launches QFileDialog with .xlsx and friends filter
-    """
-    return QFileDialog.getOpenFileName(parent, "", "*.xlsx;*.xlsm;*.xltx;*.xltm")
 
 
 class ExcelConnector(SourceConnection):
@@ -55,8 +47,7 @@ class ExcelConnector(SourceConnection):
         "read_until_row": {"type": bool, "label": "Read until empty row on first column", "default": False},
     }
 
-    # Modal widget that that returns source object and action (OK, CANCEL)
-    SELECT_SOURCE_UI = select_excel_file
+    FILE_EXTENSIONS = "*.xlsx;*.xlsm;*.xltx;*.xltm"
 
     def __init__(self, settings):
         super().__init__(settings)

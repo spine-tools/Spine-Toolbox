@@ -26,15 +26,12 @@ class ProjectItemSpecificationFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def make_specification(
-        definition, definition_path, app_settings, logger, embedded_julia_console, embedded_python_console
-    ):
+    def make_specification(definition, app_settings, logger, embedded_julia_console=None, embedded_python_console=None):
         """
         Makes a project item specification.
 
         Args:
             definition (dict): specification's definition dictionary
-            definition_path (str): path to the definition file
             app_settings (QSettings): Toolbox settings
             logger (LoggerInterface): a logger
             embedded_julia_console (JuliaREPLWidget, optional): a console widget for specifications that need one
