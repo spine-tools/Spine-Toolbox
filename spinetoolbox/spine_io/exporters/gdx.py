@@ -658,13 +658,15 @@ class GeneratedRecords(Records):
 class ExtractedRecords(Records):
     """Records that are extracted from an indexed parameter."""
 
-    def __init__(self, parameter_name, indexes):
+    def __init__(self, parameter_name, domain_names, indexes):
         """
         Args:
             parameter_name (str): name of the parameter from which the records were extracted
+            domain_names (tuple): parameter's indexing domains
             indexes (list of tuple): records
         """
         self._parameter_name = parameter_name
+        self._domain_names = domain_names
         self._records = indexes
 
     def __eq__(self, other):
@@ -675,11 +677,15 @@ class ExtractedRecords(Records):
             other (ExtractedRecords): records to compare to
 
         Returns:
-            bool: True if the records and paramter name are equal, False otherwise
+            bool: True if the records and parameter name are equal, False otherwise
         """
         if not isinstance(other, ExtractedRecords):
             return False
-        return self._records == other._records and self._parameter_name == other._parameter_name
+        return (
+            self._records == other._records
+            and self._parameter_name == other._parameter_name
+            and self._domain_names == other._domain_names
+        )
 
     def __len__(self):
         """See base class."""
@@ -689,6 +695,11 @@ class ExtractedRecords(Records):
     def parameter_name(self):
         """name of the parameter from which the records were extracted"""
         return self._parameter_name
+
+    @property
+    def domain_names(self):
+        """parameter's indexing domains"""
+        return self._domain_names
 
     @property
     def records(self):
@@ -704,41 +715,6 @@ class ExtractedRecords(Records):
         return False
 
     @staticmethod
-    def extract(parameter_name, db_map):
-        """
-        Gets the record keys from a given indexed parameter.
-
-        Args:
-            parameter_name (str): parameter's name
-            db_map (DatabaseMappingBase): a database map
-
-        Returns:
-            ExtractedRecords: extracted records
-        """
-        parameter_definitions = (
-            db_map.query(db_map.parameter_definition_sq)
-            .filter(db_map.parameter_definition_sq.c.name == parameter_name)
-            .all()
-        )
-        if not parameter_definitions:
-            raise GdxExportException(f"No definition found for parameter '{parameter_name}' in the database.")
-        definition = parameter_definitions[0]
-        parameters = (
-            db_map.query(db_map.parameter_value_sq)
-            .filter(db_map.parameter_value_sq.c.parameter_definition_id == definition.id)
-            .all()
-        )
-        if not parameters:
-            raise GdxExportException(f"No parameters found under '{parameter_name}' in the database.")
-        value = from_database(parameters[0].value)
-        if not isinstance(value, IndexedValue):
-            raise GdxExportException(
-                f"Cannot extract record keys from a non-indexed value for parameter '{parameter_name}'"
-            )
-        keys = [(str(index),) for index in value.indexes]
-        return ExtractedRecords(parameter_name, keys)
-
-    @staticmethod
     def update(old, new):
         """
         Takes the parameter name from old and the records from new.
@@ -750,17 +726,25 @@ class ExtractedRecords(Records):
         Returns:
             ExtractedRecords: merged records
         """
-        return ExtractedRecords(old.parameter_name, new.records)
+        return ExtractedRecords(old.parameter_name, new.domain_names, new.records)
 
     def to_dict(self):
         """See base class."""
-        return {"indexing_type": "extracted", "parameter_name": self._parameter_name, "indexes": self._records}
+        return {
+            "indexing_type": "extracted",
+            "parameter_name": self._parameter_name,
+            "domain_names": self._domain_names,
+            "indexes": self._records,
+        }
 
     @staticmethod
     def from_dict(record_dict):
         """See base class."""
         indexes = [tuple(i) for i in record_dict["indexes"]]
-        return ExtractedRecords(record_dict["parameter_name"], indexes)
+        domain_names = record_dict.get("domain_names")
+        if domain_names is not None:
+            domain_names = tuple(domain_names)
+        return ExtractedRecords(record_dict["parameter_name"], domain_names, indexes)
 
 
 def _update_records(old, new):
@@ -865,26 +849,34 @@ def expand_indexed_parameter_values(parameters, indexing_settings, sets):
         parameters (dict): a map from parameter names to a dict of domain names and :class:`Parameters`
         indexing_settings (dict): mapping from parameter name to :class:`IndexingSetting`
         sets (dict): mapping from domain name to :class:`Set`
+
+    Returns:
+        dict: parameters that have had their indexes expanded and can thus be removed
     """
+    erasable = dict()
     for parameter_name, by_dimensions in parameters.items():
         try:
-            indexing_setting = indexing_settings[parameter_name]
+            indexing_settings_by_dimension = indexing_settings[parameter_name]
         except KeyError:
             continue
-        non_expanded_domain_names = indexing_setting.parameter.domain_names
-        parameter = by_dimensions.get(non_expanded_domain_names)
-        if parameter is None:
-            continue
-        try:
-            parameter.expand_indexes(indexing_setting, sets)
-        except GdxExportException as error:
-            raise GdxExportException(f"Problem with parameter '{parameter_name}': {error}")
-        existing = by_dimensions.get(parameter.domain_names)
-        if existing is None:
-            by_dimensions[parameter.domain_names] = parameter
-        else:
-            existing.slurp(parameter)
-        del by_dimensions[non_expanded_domain_names]
+        newly_expanded = dict()
+        for domain_names, parameter in by_dimensions.items():
+            try:
+                indexing_setting = indexing_settings_by_dimension[domain_names]
+            except KeyError:
+                continue
+            try:
+                parameter.expand_indexes(indexing_setting, sets)
+            except GdxExportException as error:
+                raise GdxExportException(f"Problem with parameter '{parameter_name}': {error}")
+            existing = by_dimensions.get(parameter.domain_names)
+            if existing is None:
+                newly_expanded[parameter.domain_names] = parameter
+            else:
+                existing.slurp(parameter)
+            erasable.setdefault(parameter_name, list()).append(domain_names)
+        by_dimensions.update(newly_expanded)
+    return erasable
 
 
 class MergingSetting:
@@ -1034,7 +1026,7 @@ def merge_parameters(parameters, merging_settings):
                     parameter = parameters[name][setting.previous_domain_names]
                 except KeyError:
                     continue
-                erasable[name] = setting.previous_domain_names
+                erasable.setdefault(name, list()).append(setting.previous_domain_names)
                 if len(merged_domain_names) < len(parameter.domain_names) + 1:
                     raise GdxExportException(
                         f"Merged parameter '{merged_name}' contains indexed values and therefore cannot be merged."
@@ -1148,7 +1140,7 @@ def domain_parameters_to_gams_scalars(gdx_file, parameters, domain_name):
                 gdx_file[parameter_name] = gams_scalar
             except NotImplementedError as error:
                 raise GdxExportException(f"Failed to write to .gdx: {error}")
-            erasable[parameter_name] = scalar_domain
+            erasable.setdefault(parameter_name, list()).append(scalar_domain)
     return erasable
 
 
@@ -1433,7 +1425,8 @@ def erase_parameters(parameters, erasable):
     empty = list()
     for name, dimensions in erasable.items():
         by_dimensions = parameters[name]
-        del by_dimensions[dimensions]
+        for domain_names in dimensions:
+            del by_dimensions[domain_names]
         if not by_dimensions:
             empty.append(name)
     for name in empty:
@@ -1490,33 +1483,19 @@ class IndexingSetting:
     Settings for indexed value expansion for a single Parameter.
 
     Attributes:
-        parameter (Parameter): a parameter containing indexed values
         indexing_domain_name (str): indexing domain's name
         picking (FixedPicking or GeneratePicking): index picking
         index_position (int): where to insert the new index when expanding a parameter
-        set_name (str): name of the domain or set to which this parameter belongs
     """
 
-    def __init__(self, indexed_parameter, set_name):
+    def __init__(self, index_position):
         """
         Args:
-            indexed_parameter (Parameter): a parameter containing indexed values
-            set_name (str): name of the original entity_class to which this parameter belongs
+            index_position (int): where to insert the new index when expanding a parameter
         """
-        self.parameter = indexed_parameter
         self.indexing_domain_name = None
+        self.index_position = index_position
         self.picking = None
-        self.index_position = len(indexed_parameter.domain_names)
-        self.set_name = set_name
-
-    def append_parameter(self, parameter):
-        """
-        Adds indexes and values from another parameter.
-
-        Args:
-            parameter (Parameter): parameter to slurp
-        """
-        self.parameter.slurp(parameter)
 
     def to_dict(self):
         """
@@ -1532,21 +1511,19 @@ class IndexingSetting:
         }
 
     @staticmethod
-    def from_dict(setting_dict, parameter, set_name):
+    def from_dict(setting_dict):
         """
         Restores serialized setting from dict.
 
         Args:
             setting_dict (dict): serialized settings
-            parameter (Parameter): indexed parameter
-            set_name (str): name of the set containing the parameter
 
         Returns:
             IndexingSetting: restored setting
         """
-        setting = IndexingSetting(parameter, set_name)
+        index_position = setting_dict["index_position"]
+        setting = IndexingSetting(index_position)
         setting.indexing_domain_name = setting_dict["indexing_domain"]
-        setting.index_position = setting_dict["index_position"]
         picking_dict = setting_dict.get("picking")
         setting.picking = _picking_from_dict(picking_dict) if picking_dict is not None else None
         return setting
@@ -1561,23 +1538,28 @@ def make_indexing_settings(db_map, none_fallback, logger):
         none_fallback (NoneFallback): how to handle None values
         logger (LoggerInterface, optional): a logger
     Returns:
-        dict: a mapping from parameter name to IndexingSetting
+        dict: a mapping from parameter name to a dict of parameter dimensions and :class:`IndexingSetting`
     """
-    settings = _object_indexing_settings(db_map, none_fallback, logger)
-    settings.update(_relationship_indexing_settings(db_map, none_fallback, logger))
+    settings = _aggregate_object_indexed_parameters(db_map, _add_to_indexing_settings, none_fallback, logger)
+    relationship_settings = _aggregate_relationship_indexed_parameters(
+        db_map, _add_to_indexing_settings, none_fallback, logger
+    )
+    for parameter_name, by_dimensions in relationship_settings.items():
+        settings.setdefault(parameter_name, dict()).update(by_dimensions)
     return settings
 
 
-def _object_indexing_settings(db_map, none_fallback, logger):
+def _aggregate_object_indexed_parameters(db_map, aggregator, none_fallback, logger):
     """
-    Constructs skeleton indexing settings from object parameters.
+    Aggregates indexed parameters from object classes to a dict using an aggregator function.
 
     Args:
         db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
+        aggregator (Callable): an aggregator function
         none_fallback: how to handle Nones
         logger (LoggingInterface, optional): a logger
     Returns:
-        dict: a mapping from parameter name to IndexingSetting
+        dict: an aggregate
     """
     settings = dict()
     classes_with_unsupported_value_types = set() if logger is not None else None
@@ -1588,7 +1570,7 @@ def _object_indexing_settings(db_map, none_fallback, logger):
             object_class_name = parameter_row.object_class_name
             dimensions = (object_class_name,)
             index_keys = (parameter_row.object_name,)
-            _add_to_indexing_settings(
+            aggregator(
                 settings,
                 parameter_row.parameter_name,
                 object_class_name,
@@ -1611,7 +1593,7 @@ def _object_indexing_settings(db_map, none_fallback, logger):
             object_class_name = parameter_row.object_class_name
             dimensions = (object_class_name,)
             index_keys = (parameter_row.object_name,)
-            _add_to_indexing_settings(
+            aggregator(
                 settings, name, object_class_name, dimensions, value, index_keys, classes_with_unsupported_value_types
             )
             break
@@ -1623,18 +1605,19 @@ def _object_indexing_settings(db_map, none_fallback, logger):
     return settings
 
 
-def _relationship_indexing_settings(db_map, none_fallback, logger):
+def _aggregate_relationship_indexed_parameters(db_map, aggregator, none_fallback, logger):
     """
-    Constructs skeleton indexing settings from relationship parameters.
+    Aggregates indexed parameters from relationship classes to a dict using an aggregator function.
 
     Args:
         db_map (spinedb_api.DatabaseMapping or spinedb_api.DiffDatabaseMapping): a database mapping
+        aggregator (Callable): an aggregator function
         none_fallback (NoneFallback): how to handle Nones
         logger (LoggingInterface, optional): a logger
     Returns:
-        dict: a mapping from parameter name to IndexingSetting
+        dict: an aggregate
     """
-    settings = dict()
+    aggregate = dict()
     classes_with_unsupported_value_types = set() if logger is not None else None
     parameter_names_to_skip_on_second_pass = set()
     for parameter_row in db_map.relationship_parameter_value_list():
@@ -1642,8 +1625,8 @@ def _relationship_indexing_settings(db_map, none_fallback, logger):
         if isinstance(value, IndexedValue):
             dimensions = tuple(parameter_row.object_class_name_list.split(","))
             index_keys = tuple(parameter_row.object_name_list.split(","))
-            _add_to_indexing_settings(
-                settings,
+            aggregator(
+                aggregate,
                 parameter_row.parameter_name,
                 parameter_row.relationship_class_name,
                 dimensions,
@@ -1664,8 +1647,8 @@ def _relationship_indexing_settings(db_map, none_fallback, logger):
                 break
             dimensions = tuple(parameter_row.object_class_name_list.split(","))
             index_keys = tuple(parameter_row.object_name_list.split(","))
-            _add_to_indexing_settings(
-                settings,
+            aggregator(
+                aggregate,
                 name,
                 parameter_row.relationship_class_name,
                 dimensions,
@@ -1679,7 +1662,7 @@ def _relationship_indexing_settings(db_map, none_fallback, logger):
         logger.msg_warning.emit(
             f"The following relationship classes have parameter values of unsupported types: {class_list}"
         )
-    return settings
+    return aggregate
 
 
 def _add_to_indexing_settings(
@@ -1710,14 +1693,49 @@ def _add_to_indexing_settings(
             classes_with_unsupported_value_types.add(entity_class_name)
             return
         raise
-    setting = settings.get(parameter_name, None)
-    if setting is not None:
-        setting.append_parameter(parameter)
+    by_dimension = settings.setdefault(parameter_name, dict())
+    setting = by_dimension.get(parameter.domain_names)
+    if setting is None:
+        by_dimension[parameter.domain_names] = IndexingSetting(len(parameter.domain_names))
+
+
+def _add_to_indexed_parameter(
+    parameters,
+    parameter_name,
+    entity_class_name,
+    dimensions,
+    parsed_value,
+    index_keys,
+    classes_with_unsupported_value_types,
+):
+    """
+    Adds parameters to parameters dict.
+
+    Parameters:
+        parameters (dict): parameter dict where to add the parameter
+        parameter_name (str): parameter's name
+        entity_class_name (str): name of the object or relationship_class the parameter belongs to
+        dimensions (tuple of str): a list of parameter's domain names
+        parsed_value (IndexedValue): parsed parameter_value
+        index_keys (tuple): parameter's keys
+        classes_with_unsupported_value_types (set, optional): entity_class names with unsupported value types
+    """
+    try:
+        parameter = Parameter(dimensions, [index_keys], [parsed_value])
+    except GdxUnsupportedValueTypeException:
+        if classes_with_unsupported_value_types is not None:
+            classes_with_unsupported_value_types.add(entity_class_name)
+            return
+        raise
+    by_dimension = parameters.setdefault(parameter_name, dict())
+    existing = by_dimension.get(parameter.domain_names)
+    if existing is None:
+        by_dimension[parameter.domain_names] = parameter
     else:
-        settings[parameter_name] = IndexingSetting(parameter, entity_class_name)
+        existing.slurp(parameter)
 
 
-def update_indexing_settings(old_indexing_settings, new_indexing_settings, set_settings):
+def update_indexing_settings(old_indexing_settings, new_indexing_settings):
     """
     Returns new indexing settings merged from old and new ones.
 
@@ -1729,26 +1747,22 @@ def update_indexing_settings(old_indexing_settings, new_indexing_settings, set_s
     Args:
         old_indexing_settings (dict): settings to be updated
         new_indexing_settings (dict): settings used for updating
-        set_settings (SetSettings): new set settings
     Returns:
         dict: merged old and new indexing settings
     """
     updated = dict()
-    for parameter_name, setting in new_indexing_settings.items():
-        old_setting = old_indexing_settings.get(parameter_name, None)
-        if old_setting is None:
-            updated[parameter_name] = setting
+    for parameter_name, new_by_dimensions in new_indexing_settings.items():
+        old_by_dimension = old_indexing_settings.get(parameter_name)
+        if old_by_dimension is None:
+            updated[parameter_name] = new_by_dimensions
             continue
-        if setting.parameter != old_setting.parameter:
-            updated[parameter_name] = setting
-            if old_setting.indexing_domain_name is not None:
-                old_records = set_settings.records(old_setting.indexing_domain_name).records
-                if len(old_records) >= len(next(iter(setting.parameter.values))):
-                    setting.indexing_domain_name = old_setting.indexing_domain_name
-                else:
-                    setting.indexing_domain_name = None
-            continue
-        updated[parameter_name] = old_setting
+        updated_by_dimensions = updated.setdefault(parameter_name, dict())
+        for domain_names, setting in new_by_dimensions.items():
+            old_setting = old_by_dimension.get(domain_names)
+            if old_setting is None:
+                updated_by_dimensions[domain_names] = setting
+            else:
+                updated_by_dimensions[domain_names] = old_setting
     return updated
 
 
@@ -1757,11 +1771,20 @@ def indexing_settings_to_dict(settings):
     Stores indexing settings to a JSON compatible dictionary.
 
     Args:
-        settings (dict): a mapping from parameter name to IndexingSetting.
+        settings (dict): a mapping from parameter name to a dict of domain names and :class:`IndexingSetting`.
     Returns:
         dict: a JSON serializable dictionary
     """
-    return {parameter_name: setting.to_dict() for parameter_name, setting in settings.items()}
+    settings_dict = dict()
+    for parameter_name, by_dimensions in settings.items():
+        if not by_dimensions:
+            continue
+        setting_list = settings_dict.setdefault(parameter_name, list())
+        for domain_names, setting in by_dimensions.items():
+            setting_dict = setting.to_dict()
+            setting_dict["domain_names"] = domain_names
+            setting_list.append(setting_dict)
+    return settings_dict
 
 
 def indexing_settings_from_dict(settings_dict, db_map, none_fallback, logger):
@@ -1777,11 +1800,21 @@ def indexing_settings_from_dict(settings_dict, db_map, none_fallback, logger):
         dict: a dictionary mapping parameter name to IndexingSetting.
     """
     settings = dict()
-    for parameter_name, setting_dict in settings_dict.items():
-        parameter, entity_class_name = _find_indexed_parameter(parameter_name, db_map, none_fallback, logger)
-        if parameter is None:
-            continue
-        settings[parameter_name] = IndexingSetting.from_dict(setting_dict, parameter, entity_class_name)
+    if not settings_dict:
+        return settings
+    for parameter_name, setting_list in settings_dict.items():
+        by_dimensions = settings.setdefault(parameter_name, dict())
+        if not isinstance(setting_list, list):
+            # For 0.5 compatibility.
+            setting_dict = setting_list
+            parameter, entity_class_name = _find_indexed_parameter(parameter_name, db_map, none_fallback, logger)
+            if parameter is None:
+                continue
+            setting_dict["domain_names"] = parameter.domain_names
+            setting_list = [setting_dict]
+        for setting_dict in setting_list:
+            domain_names = tuple(setting_dict["domain_names"])
+            by_dimensions[domain_names] = IndexingSetting.from_dict(setting_dict)
     return settings
 
 
@@ -1862,6 +1895,26 @@ def _find_indexed_parameter(parameter_name, db_map, none_fallback, logger=None):
                 f"The following relationship classes contain parameter values of unsupported types: {class_list}"
             )
     return parameter, class_name
+
+
+def indexed_parameters(db_map, none_fallback, logger):
+    """
+    Loads indexed parameters from the database.
+
+    Args:
+        db_map (spinedb_api.DatabaseMappingBase): a database mapping
+        none_fallback (NoneFallback): how to handle None values
+        logger (LoggerInterface, optional): a logger
+    Returns:
+        dict: a mapping from parameter name to a dict of parameter dimensions and :class:`Parameter`
+    """
+    settings = _aggregate_object_indexed_parameters(db_map, _add_to_indexed_parameter, none_fallback, logger)
+    relationship_settings = _aggregate_relationship_indexed_parameters(
+        db_map, _add_to_indexed_parameter, none_fallback, logger
+    )
+    for parameter_name, by_dimensions in relationship_settings.items():
+        settings.setdefault(parameter_name, dict()).update(by_dimensions)
+    return settings
 
 
 def _create_additional_domains(set_settings):
@@ -1990,7 +2043,8 @@ def to_gdx_file(
     sort_records_inplace(sets, set_settings)
     set_parameters = relationship_parameters(database_map, set_settings, none_fallback, logger)
     parameters = _combine_parameters(domain_parameters, set_parameters)
-    expand_indexed_parameter_values(parameters, indexing_settings, domains_with_names)
+    erasable = expand_indexed_parameter_values(parameters, indexing_settings, domains_with_names)
+    erase_parameters(parameters, erasable)
     erasable = merge_parameters(parameters, merging_settings)
     erase_parameters(parameters, erasable)
     with GdxFile(file_name, mode="w", gams_dir=gams_system_directory) as output_file:
