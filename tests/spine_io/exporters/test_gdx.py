@@ -113,7 +113,7 @@ class TestGdx(unittest.TestCase):
         parameter = gdx.Parameter(
             ("domain1", "domain2"), [("index1", "index2"), ("index1", "index3")], [time_series1, time_series2]
         )
-        setting = gdx.IndexingSetting(parameter, "unknown_set")
+        setting = gdx.IndexingSetting(3)
         setting.indexing_domain_name = "stamp domain"
         setting.index_position = 1
         setting.picking = gdx.FixedPicking([True, True])
@@ -521,21 +521,10 @@ class TestGdx(unittest.TestCase):
                 )
 
     def test_IndexingSetting_construction(self):
-        time_series = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
-        setting = gdx.IndexingSetting(gdx.Parameter(("domain",), [("keyA",)], [time_series]), "domain1")
+        setting = gdx.IndexingSetting(3)
         self.assertIsNone(setting.indexing_domain_name)
         self.assertIsNone(setting.picking)
-        self.assertEqual(setting.index_position, 1)
-        self.assertEqual(setting.set_name, "domain1")
-
-    def test_IndexingSetting_append_parameter(self):
-        time_series1 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [4.2, 5.3], False, False)
-        setting = gdx.IndexingSetting(gdx.Parameter(("domain",), [("keyA",)], [time_series1]), "domain")
-        time_series2 = TimeSeriesFixedResolution("2019-12-05T01:01:00", "1h", [-4.2, -5.3], False, False)
-        setting.append_parameter(gdx.Parameter(("domain",), [("keyB",)], [time_series2]))
-        self.assertEqual(setting.parameter.domain_names, ("domain",))
-        self.assertEqual(list(setting.parameter.indexes), [("keyA",), ("keyB",)])
-        self.assertEqual(list(setting.parameter.values), [time_series1, time_series2])
+        self.assertEqual(setting.index_position, 3)
 
     def test_LiteralRecords_construction(self):
         records = gdx.LiteralRecords([("A",), ("B",)])
@@ -575,40 +564,26 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(records, deserialized)
 
     def test_ExtractedRecords_construction(self):
-        records = gdx.ExtractedRecords("parameter", [("A",), ("B",)])
+        records = gdx.ExtractedRecords("parameter", ("domain",), [("A",), ("B",)])
         self.assertEqual(len(records), 2)
         self.assertEqual(records.records, [("A",), ("B",)])
         self.assertEqual(records.parameter_name, "parameter")
-
-    def test_ExtractedRecords_extract(self):
-        with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(
-                tmp_dir_name, "test_to_gdx_file_sorts_domains_and_sets_and_records_correctly.sqlite"
-            )
-            dbmanip.import_object_classes(database_map, [("object_class")])
-            dbmanip.import_object_parameters(database_map, [("object_class", "parameter")])
-            dbmanip.import_objects(database_map, [("object_class", "object")])
-            value = Map(["a", "b", "c"], [5.0, 5.0, 5.0])
-            dbmanip.import_object_parameter_values(database_map, [("object_class", "object", "parameter", value)])
-            database_map.commit_session("Add data.")
-            records = gdx.ExtractedRecords.extract("parameter", database_map)
-            self.assertEqual(records.parameter_name, "parameter")
-            self.assertEqual(records.records, [("a",), ("b",), ("c",)])
-            database_map.connection.close()
+        self.assertEqual(records.domain_names, ("domain",))
 
     def test_ExtractedRecords_is_shufflable(self):
-        records = gdx.ExtractedRecords("", [])
+        records = gdx.ExtractedRecords("", tuple(), [])
         self.assertFalse(records.is_shufflable())
 
     def test_ExtractedRecords_update(self):
-        records = gdx.ExtractedRecords("parameter", [("A",)])
-        new_records = gdx.ExtractedRecords("gyrometer", [("B",)])
+        records = gdx.ExtractedRecords("parameter", ("domain1",), [("A",)])
+        new_records = gdx.ExtractedRecords("gyrometer", ("domain2",), [("B",)])
         updated = gdx.ExtractedRecords.update(records, new_records)
         self.assertEqual(updated.records, [("B",)])
         self.assertEqual(updated.parameter_name, "parameter")
+        self.assertEqual(updated.domain_names, ("domain2",))
 
     def test_ExtractedRecords_serialization(self):
-        records = gdx.ExtractedRecords("parameter", [("A",), ("B",)])
+        records = gdx.ExtractedRecords("parameter", ("domain",), [("A",), ("B",)])
         records_dict = records.to_dict()
         deserialized = gdx.ExtractedRecords.from_dict(records_dict)
         self.assertEqual(records, deserialized)
@@ -857,22 +832,16 @@ class TestGdx(unittest.TestCase):
                 domain_names, set_names, sorted_records, domain_tiers=domain_tiers, set_tiers=set_tiers
             )
             settings.metadata("external_indexes").origin = gdx.Origin.INDEXING
-            externally_indexed_parameter, set_name = gdx._find_indexed_parameter(
-                "externally_indexed", database_map, gdx.NoneFallback.USE_IT
-            )
-            externally_indexed_setting = gdx.IndexingSetting(externally_indexed_parameter, set_name)
+            externally_indexed_setting = gdx.IndexingSetting(2)
             externally_indexed_setting.indexing_domain_name = "external_indexes"
             externally_indexed_setting.picking = gdx.FixedPicking([True, True, True])
-            internally_indexed_parameter, set_name = gdx._find_indexed_parameter(
-                "internally_indexed", database_map, gdx.NoneFallback.USE_IT
-            )
-            internally_indexed_setting = gdx.IndexingSetting(internally_indexed_parameter, set_name)
+            internally_indexed_setting = gdx.IndexingSetting(2)
             internally_indexed_setting.indexing_domain_name = "internal_indexes"
             internally_indexed_setting.picking = gdx.GeneratedPicking("True")
             internally_indexed_setting.index_position = 1
             indexing_settings = {
-                "externally_indexed": externally_indexed_setting,
-                "internally_indexed": internally_indexed_setting,
+                "externally_indexed": {("domain1", "domain2"): externally_indexed_setting},
+                "internally_indexed": {("domain1", "domain2"): internally_indexed_setting,}
             }
             path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_expands_indexed_parameters.gdx")
             gdx.to_gdx_file(
@@ -1359,21 +1328,22 @@ class TestGdx(unittest.TestCase):
         domain.records.append(record)
         time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
         parameters = {"time series": {("domain name",): gdx.Parameter(("domain name",), [("element",)], [time_series])}}
-        setting = gdx.IndexingSetting(parameters["time series"][("domain name",)], "domain name")
+        setting = gdx.IndexingSetting(2)
         setting.indexing_domain_name = "indexes"
         setting.picking = gdx.FixedPicking([True, True])
-        settings = {"time series": setting}
+        settings = {"time series": {("domain name",): setting}}
         domain = gdx.Set("domain name")
         domain.records = [gdx.Record(("element",))]
         indexes_domain = gdx.Set("indexes")
         indexes_domain.records = [gdx.Record(("stamp1",)), gdx.Record(("stamp2",))]
         domains = {"domain name": domain, "indexes": indexes_domain}
-        gdx.expand_indexed_parameter_values(parameters, settings, domains)
+        erasable = gdx.expand_indexed_parameter_values(parameters, settings, domains)
         self.assertEqual(len(parameters), 1)
         parameter = parameters["time series"][("domain name", "indexes")]
         self.assertEqual(parameter.domain_names, ("domain name", "indexes"))
         self.assertEqual(list(parameter.indexes), [("element", "stamp1"), ("element", "stamp2")])
         self.assertEqual(list(parameter.values), [3.3, 4.4])
+        self.assertEqual(erasable, {"time series": [("domain name",)]})
 
     def test_expand_indexed_parameter_values_keeps_non_indexed_parameter_intact(self):
         domain = gdx.Set("domain name")
@@ -1386,10 +1356,10 @@ class TestGdx(unittest.TestCase):
             "scalar": {("domain name",): scalar_parameter},
             "time series": {("domain name",): indexed_parameter},
         }
-        setting = gdx.IndexingSetting(parameters["time series"][("domain name",)], "domain name")
+        setting = gdx.IndexingSetting(2)
         setting.indexing_domain_name = "indexes"
         setting.picking = gdx.GeneratedPicking("True")
-        settings = {"time series": setting}
+        settings = {"time series": {("domain name",): setting}}
         stamps = gdx.Set("indexes")
         stamps.records = [gdx.Record(("stamp1",)), gdx.Record(("stamp2",))]
         domains = {"domain name": domain, "indexes": stamps}
@@ -1412,10 +1382,10 @@ class TestGdx(unittest.TestCase):
                 original_set.domain_names: gdx.Parameter(original_set.domain_names, [record.keys], [time_series])
             }
         }
-        setting = gdx.IndexingSetting(parameters["time series"][original_set.domain_names], "set name")
+        setting = gdx.IndexingSetting(3)
         setting.indexing_domain_name = "indexes"
         setting.picking = gdx.GeneratedPicking("True")
-        settings = {"time series": setting}
+        settings = {"time series": {("domain1", "domain2"): setting}}
         stamps = gdx.Set("indexes")
         stamps.records = [gdx.Record(("stamp1",)), gdx.Record(("stamp2",))]
         sets = {"set name": original_set, "indexes": stamps}
@@ -1450,20 +1420,12 @@ class TestGdx(unittest.TestCase):
             indexing_settings = gdx.make_indexing_settings(database_map, gdx.NoneFallback.USE_IT, logger=None)
             database_map.connection.close()
         self.assertEqual(len(indexing_settings), 2)
-        self.assertEqual(
-            list(indexing_settings["parameter"].parameter.values)[0],
-            from_database('{"type": "time_series", "data": [1, 2, 3]}'),
-        )
-        self.assertIsNone(indexing_settings["parameter"].indexing_domain_name)
-        self.assertIsNone(indexing_settings["parameter"].picking)
-        self.assertEqual(indexing_settings["parameter"].index_position, 1)
-        self.assertEqual(
-            list(indexing_settings["relationship_parameter"].parameter.values)[0],
-            from_database('{"type": "time_series", "data": [3, 2, 1]}'),
-        )
-        self.assertIsNone(indexing_settings["relationship_parameter"].indexing_domain_name)
-        self.assertIsNone(indexing_settings["relationship_parameter"].picking)
-        self.assertEqual(indexing_settings["relationship_parameter"].index_position, 1)
+        self.assertIsNone(indexing_settings["parameter"][("domain",)].indexing_domain_name)
+        self.assertIsNone(indexing_settings["parameter"][("domain",)].picking)
+        self.assertEqual(indexing_settings["parameter"][("domain",)].index_position, 1)
+        self.assertIsNone(indexing_settings["relationship_parameter"][("domain",)].indexing_domain_name)
+        self.assertIsNone(indexing_settings["relationship_parameter"][("domain",)].picking)
+        self.assertEqual(indexing_settings["relationship_parameter"][("domain",)].index_position, 1)
 
     def test_make_indexing_settings_uses_default_values_when_actual_value_is_none(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -1489,29 +1451,20 @@ class TestGdx(unittest.TestCase):
             )
             database_map.connection.close()
         self.assertEqual(len(indexing_settings), 2)
-        self.assertEqual(
-            list(indexing_settings["parameter"].parameter.values)[0],
-            from_database('{"type": "time_series", "data": [1, 2, 3]}'),
-        )
-        self.assertIsNone(indexing_settings["parameter"].indexing_domain_name)
-        self.assertIsNone(indexing_settings["parameter"].picking)
-        self.assertEqual(indexing_settings["parameter"].index_position, 1)
-        self.assertEqual(
-            list(indexing_settings["relationship_parameter"].parameter.values)[0],
-            from_database('{"type": "time_series", "data": [3, 2, 1]}'),
-        )
-        self.assertIsNone(indexing_settings["relationship_parameter"].indexing_domain_name)
-        self.assertIsNone(indexing_settings["relationship_parameter"].picking)
-        self.assertEqual(indexing_settings["relationship_parameter"].index_position, 1)
+        self.assertIsNone(indexing_settings["parameter"][("domain",)].indexing_domain_name)
+        self.assertIsNone(indexing_settings["parameter"][("domain",)].picking)
+        self.assertEqual(indexing_settings["parameter"][("domain",)].index_position, 1)
+        self.assertIsNone(indexing_settings["relationship_parameter"][("domain",)].indexing_domain_name)
+        self.assertIsNone(indexing_settings["relationship_parameter"][("domain",)].picking)
+        self.assertEqual(indexing_settings["relationship_parameter"][("domain",)].index_position, 1)
 
     def test_indexing_settings_from_dict(self):
         with TemporaryDirectory() as tmp_dir_name:
             time_pattern = TimePattern(["Mo", "Tu"], [42.0, -4.2])
-            parameter = gdx.Parameter(("domain1",), [("Espoo",)], [time_pattern])
-            original = {"parameter": gdx.IndexingSetting(parameter, "domain1")}
-            original["parameter"].indexing_domain_name = "indexing name"
-            original["parameter"].picking = gdx.FixedPicking([False, True])
-            original["parameter"].index_position = 1
+            original = {"parameter": {("domain1",): gdx.IndexingSetting(2)}}
+            original["parameter"][("domain1",)].indexing_domain_name = "indexing name"
+            original["parameter"][("domain1",)].picking = gdx.FixedPicking([False, True])
+            original["parameter"][("domain1",)].index_position = 1
             settings_dict = gdx.indexing_settings_to_dict(original)
             database_map = self._make_database_map(tmp_dir_name, "test_indexing_settings_from_dict.sqlite")
             dbmanip.import_object_classes(database_map, ["domain1"])
@@ -1526,83 +1479,28 @@ class TestGdx(unittest.TestCase):
             )
             database_map.connection.close()
         self.assertTrue(len(restored), 1)
-        self.assertTrue("parameter" in restored)
-        self.assertTrue(restored["parameter"].parameter.values, [time_pattern])
-        self.assertTrue(restored["parameter"].indexing_domain_name, "indexing name")
-        self.assertTrue(restored["parameter"].picking, gdx.FixedPicking([False, True]))
-        self.assertTrue(restored["parameter"].index_position, 1)
-        self.assertTrue(restored["parameter"].set_name, "domain1")
+        self.assertIn("parameter", restored)
+        self.assertTrue(len(restored["parameter"]), 1)
+        self.assertIn(("domain1",), restored["parameter"])
+        setting = restored["parameter"][("domain1",)]
+        self.assertTrue(setting.indexing_domain_name, "indexing name")
+        self.assertTrue(setting.picking, gdx.FixedPicking([False, True]))
+        self.assertTrue(setting.index_position, 1)
 
     def test_update_indexing_settings_with_new_setting_overriding_old_one(self):
-        time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
-        old_parameter = gdx.Parameter(("old_domain",), [("r1",)], [time_series])
-        old_settings = {"old_parameter_name": gdx.IndexingSetting(old_parameter, "old_domain")}
-        new_parameter = gdx.Parameter(("new_domain",), [("r1",)], [time_series])
-        new_indexing_setting = gdx.IndexingSetting(new_parameter, "new_domain")
-        new_settings = {"new_parameter_name": new_indexing_setting}
-        settings = gdx.SetSettings({"new_domain"}, set(), {"new_domain": gdx.LiteralRecords([("r1",)])})
-        updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
-        self.assertEqual(len(updated), 1)
-        self.assertTrue("new_parameter_name" in updated)
-        self.assertEqual(updated["new_parameter_name"], new_indexing_setting)
-
-    def test_update_indexing_settings_with_old_setting_overriding_new_one_when_additional_domains_present(self):
-        time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
-        old_parameter = gdx.Parameter(("domain",), [("r1",)], [time_series])
-        indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
-        indexing_setting.indexing_domain_name = "indexing_domain"
-        indexing_setting.picking = gdx.GeneratedPicking("True")
-        indexing_setting.index_position = 0
-        old_settings = {"parameter_name": indexing_setting}
-        new_parameter = gdx.Parameter(("domain",), [("r1",)], [time_series])
-        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter, "domain")}
-        settings = gdx.SetSettings({"domain"}, set(), {"domain": gdx.LiteralRecords([("r1",)])})
-        updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
-        self.assertEqual(len(updated), 1)
-        self.assertTrue("parameter_name" in updated)
-        self.assertEqual(updated["parameter_name"], indexing_setting)
+        old_settings = {"old_parameter_name": {("old_domain",): gdx.IndexingSetting(1)}}
+        new_indexing_setting = gdx.IndexingSetting(0)
+        new_settings = {"new_parameter_name": {("new_domain",): new_indexing_setting}}
+        updated = gdx.update_indexing_settings(old_settings, new_settings)
+        self.assertEqual(updated, {"new_parameter_name": {("new_domain",): new_indexing_setting}})
 
     def test_update_indexing_settings_with_old_setting_overriding_new_one(self):
-        time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
-        old_parameter = gdx.Parameter(("domain",), [("r1",)], [time_series])
-        indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
+        indexing_setting = gdx.IndexingSetting(0)
         indexing_setting.indexing_domain_name = "indexing_domain"
-        indexing_setting.index_position = 0
-        old_settings = {"parameter_name": indexing_setting}
-        new_parameter = gdx.Parameter(("domain",), [("r1",)], [time_series])
-        new_settings = {"parameter_name": gdx.IndexingSetting(new_parameter, "domain")}
-        settings = gdx.SetSettings(
-            {"domain"},
-            set(),
-            {"domain": gdx.LiteralRecords([("r1",)]), "indexing_domain": gdx.LiteralRecords([("a",), ("b",)])},
-        )
-        updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
-        self.assertEqual(len(updated), 1)
-        self.assertIn("parameter_name", updated)
-        self.assertEqual(updated["parameter_name"], indexing_setting)
-
-    def test_update_indexing_settings_new_settings_overriding_when_parameter_length_has_changed(self):
-        time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4], False, False)
-        old_parameter = gdx.Parameter(("domain",), [("r1",)], [time_series])
-        old_indexing_setting = gdx.IndexingSetting(old_parameter, "domain")
-        old_indexing_setting.indexing_domain_name = "indexing_domain"
-        old_indexing_setting.picking = gdx.FixedPicking([True, True])
-        old_indexing_setting.index_position = 0
-        old_settings = {"parameter_name": old_indexing_setting}
-        new_time_series = TimeSeriesFixedResolution("2019-01-01T12:15", "1D", [3.3, 4.4, 5.5], False, False)
-        new_parameter = gdx.Parameter(("domain",), [("r1",)], [new_time_series])
-        new_indexing_setting = gdx.IndexingSetting(new_parameter, "domain")
-        new_settings = {"parameter_name": new_indexing_setting}
-        settings = gdx.SetSettings(
-            {"domain", "indexing_domain"},
-            set(),
-            {"domain": gdx.LiteralRecords([("r1",)]), "indexing_domain": gdx.LiteralRecords([("A",), ("B",)])},
-        )
-        settings.metadata("indexing_domain").origin = gdx.Origin.INDEXING
-        updated = gdx.update_indexing_settings(old_settings, new_settings, settings)
-        self.assertEqual(len(updated), 1)
-        self.assertTrue("parameter_name" in updated)
-        self.assertEqual(updated["parameter_name"], new_indexing_setting)
+        old_settings = {"parameter_name": {("domain",): indexing_setting}}
+        new_settings = {"parameter_name": {("domain",): gdx.IndexingSetting(1)}}
+        updated = gdx.update_indexing_settings(old_settings, new_settings)
+        self.assertEqual(updated, {"parameter_name": {("domain",): indexing_setting}})
 
     def test_MergingSetting_construction(self):
         setting = gdx.MergingSetting(
@@ -1668,7 +1566,7 @@ class TestGdx(unittest.TestCase):
         )
         settings = {"merged": [setting]}
         for_removal = gdx.merge_parameters(parameters, settings)
-        self.assertEqual(for_removal, {"parameter1": ("domain1", "domain2"), "parameter2": ("domain1", "domain2")})
+        self.assertEqual(for_removal, {"parameter1": [("domain1", "domain2")], "parameter2": [("domain1", "domain2")]})
         gdx.erase_parameters(parameters, for_removal)
         self.assertEqual(len(parameters), 1)
         self.assertIn("merged", parameters)
