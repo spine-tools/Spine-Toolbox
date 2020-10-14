@@ -35,6 +35,7 @@ class TestLoadProjectItems(unittest.TestCase):
         categories, factories = load_project_items(toolbox)
         expected_categories = {
             "Data Connection": "Data Connections",
+            "Data Transformer": "Manipulators",
             "Data Store": "Data Stores",
             "Importer": "Importers",
             "Exporter": "Exporters",
@@ -44,7 +45,7 @@ class TestLoadProjectItems(unittest.TestCase):
             "Gimlet": "Tools",
         }
         self.assertEqual(categories, expected_categories)
-        self.assertEqual(len(factories), 8)
+        self.assertEqual(len(factories), len(expected_categories))
         for item_type in expected_categories:
             self.assertIn(item_type, factories)
         for factory in factories.values():
@@ -52,9 +53,11 @@ class TestLoadProjectItems(unittest.TestCase):
 
     def test_load_item_specification_factories(self):
         factories = load_item_specification_factories()
-        self.assertEqual(len(factories), 1)
+        self.assertEqual(len(factories), 2)
         self.assertIn("Tool", factories)
         self.assertTrue(issubclass(factories["Tool"], ProjectItemSpecificationFactory))
+        self.assertIn("Data Transformer", factories)
+        self.assertTrue(issubclass(factories["Data Transformer"], ProjectItemSpecificationFactory))
 
     def test_item_factories_report_specification_support_correctly(self):
         toolbox = MagicMock()
