@@ -17,7 +17,7 @@ Contains base classes for project items and item factories.
 
 import os
 import logging
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, Slot
 from spinetoolbox.helpers import create_dir, rename_dir, open_url
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.project_commands import SetItemSpecificationCommand
@@ -33,6 +33,8 @@ class ProjectItem(MetaObject):
         y (float): vertical position in the screen
     """
 
+    item_executed = Signal(object, object)
+    """Emitted when the item has been successfully executed."""
     item_changed = Signal()
     """Request DAG update. Emitted when a change affects other items in the DAG."""
 
@@ -56,6 +58,7 @@ class ProjectItem(MetaObject):
         self._sigs = None
         self._active = False
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
+        self.item_executed.connect(self.handle_execution_successful)
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
@@ -196,6 +199,7 @@ class ProjectItem(MetaObject):
         """Creates project item's execution counterpart."""
         raise NotImplementedError()
 
+    @Slot(object, object)
     def handle_execution_successful(self, execution_direction, engine_state):
         """Performs item dependent actions after the execution item has finished successfully."""
 

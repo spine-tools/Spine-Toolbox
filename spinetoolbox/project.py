@@ -18,7 +18,7 @@ Spine Toolbox project class.
 
 import os
 import json
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Slot, Signal, QEventLoop
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from spinetoolbox.metaobject import MetaObject
@@ -36,6 +36,7 @@ from .project_commands import (
     RemoveProjectItemCommand,
     RemoveAllProjectItemsCommand,
 )
+from .spine_engine_worker import SpineEngineWorker
 
 
 class SpineToolboxProject(MetaObject):
@@ -81,6 +82,8 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler = DirectedGraphHandler()
         self.db_mngr = SpineDBManager(settings, logger, self)
         self.engine = None
+        self._engine_loop = None
+        self._engine_worker = None
         self._execution_stopped = True
         self._dag_execution_list = None
         self._dag_execution_permits_list = None
@@ -459,10 +462,14 @@ class SpineToolboxProject(MetaObject):
             execution_permits (dict): Dictionary, where keys are node names in dag and value is a boolean
             dag_identifier (str): Identifier number for printing purposes
         """
+        if self.engine is not None:
+            self._logger.msg_error.emit("Execution already in progress.")
+            return
         if self._settings.value("appSettings/useExperimentalEngine", defaultValue="false") == "false":
             self._execute_dag_normal(dag, execution_permits, dag_identifier)
         else:
             self._execute_dag_experimental(dag, execution_permits, dag_identifier)
+        self.engine = None
 
     def _get_node_successors(self, dag, dag_identifier):
         node_successors = self.dag_handler.node_successors(dag)
@@ -498,6 +505,9 @@ class SpineToolboxProject(MetaObject):
         self.disconnect_subscriber_signals()
 
     def _execute_dag_experimental(self, dag, execution_permits, dag_identifier):
+        if self._engine_worker is not None:
+            self._logger.msg_error.emit("Execution already in progress.")
+            return
         # TODO: We may want to introduce a new group "executionSettings", for more clarity
         self._settings.beginGroup("appSettings")
         settings = {}
@@ -529,30 +539,27 @@ class SpineToolboxProject(MetaObject):
             "project_dir": self.project_dir,
         }
         self.engine = SpineEngine.from_json(json.dumps(d))
-        self.engine.publisher.register('msg', self._logger, self._logger.msg.emit)
-        self.engine.publisher.register('msg_success', self._logger, self._logger.msg_success.emit)
-        self.engine.publisher.register('msg_warning', self._logger, self._logger.msg_warning.emit)
-        self.engine.publisher.register('msg_error', self._logger, self._logger.msg_error.emit)
-        self.engine.publisher.register('msg_proc', self._logger, self._logger.msg_proc.emit)
-        self.engine.publisher.register('msg_proc_error', self._logger, self._logger.msg_proc_error.emit)
-        self.connect_subscriber_signals()
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        # TODO: Run engine on a QProcess
-        self.engine.run()
+        self._engine_loop = QEventLoop()
+        self._engine_worker = SpineEngineWorker(
+            self.engine, self._project_item_model, self._toolbox.ui.graphicsView, self._logger
+        )
+        self._engine_worker.finished.connect(self._engine_loop.quit)
+        self._engine_worker.finished.connect(self._handle_worker_finished)
+        self._engine_worker.start()
+        self._engine_loop.exec_()
         outcome = {
             SpineEngineState.USER_STOPPED: "stopped by the user",
             SpineEngineState.FAILED: "failed",
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
-        self.disconnect_subscriber_signals()
-        self.engine.publisher.unregister('msg', self._logger)
-        self.engine.publisher.unregister('msg_success', self._logger)
-        self.engine.publisher.unregister('msg_warning', self._logger)
-        self.engine.publisher.unregister('msg_error', self._logger)
-        self.engine.publisher.unregister('msg_proc', self._logger)
-        self.engine.publisher.unregister('msg_proc_error', self._logger)
+
+    @Slot()
+    def _handle_worker_finished(self):
+        self._engine_worker.clean_up()
+        self._engine_worker = None
 
     def connect_subscriber_signals(self):
         # register subscribers to relevant events
