@@ -17,5 +17,3 @@ jsonschema == 2.6
 # tableschema 1.19.4 requires pyrsistent < 0.17
 pyrsistent < 0.17
 -e .
-# Spine Items requires the Toolbox, so install that last
-git+https://github.com/Spine-project/spine-items.git#egg=spine_items
