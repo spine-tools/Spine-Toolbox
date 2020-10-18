@@ -40,6 +40,7 @@ class EntityTreeView(CopyTreeView):
         self._add_relationship_classes_action = None
         self._add_relationships_action = None
         self._manage_relationships_action = None
+        self._show_entity_metadata_action = None
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -174,6 +175,17 @@ class EntityTreeView(CopyTreeView):
         relationship_class_key = item.display_id
         self._spine_db_editor.show_manage_relationships_form(relationship_class_key=relationship_class_key)
 
+    def show_entity_metadata(self):
+        """Shows entity's metadata."""
+        db_map_ids = {}
+        for index in set(self._selected_indexes.get("object", {})) | set(
+            self._selected_indexes.get("relationship", {})
+        ):
+            item = self.model().item_from_index(index)
+            for db_map, id_ in item.db_map_ids.items():
+                db_map_ids.setdefault(db_map, list()).append(id_)
+        self._spine_db_editor.show_db_map_entity_metadata(db_map_ids)
+
     def contextMenuEvent(self, event):
         """Shows context menu.
 
@@ -283,6 +295,7 @@ class ObjectTreeView(EntityTreeView):
         self.duplicate_object_action = self._menu.addAction(
             self._spine_db_editor.ui.actionAdd_objects.icon(), "Duplicate object", self.duplicate_object
         )
+        self._show_entity_metadata_action = self._menu.addAction("Show entity metadata", self.show_entity_metadata)
         self._menu.addSeparator()
 
     def connect_signals(self):
@@ -324,7 +337,7 @@ class ObjectTreeView(EntityTreeView):
         self.expand(next_index)
 
     def duplicate_object(self):
-        """Duplicate the object at the current index using the connected Spine db editor."""
+        """Duplicates the object at the current index using the connected Spine db editor."""
         index = self.currentIndex()
         self._spine_db_editor.duplicate_object(index)
 
@@ -344,6 +357,7 @@ class RelationshipTreeView(EntityTreeView):
 
     def _add_middle_actions(self):
         self._add_relationship_actions()
+        self._show_entity_metadata_action = self._menu.addAction("Show entity metadata", self.show_entity_metadata)
 
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)

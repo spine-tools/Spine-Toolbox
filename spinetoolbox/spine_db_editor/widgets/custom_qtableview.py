@@ -235,6 +235,11 @@ class ParameterDefinitionTableView(ParameterTableView):
 
 
 class ParameterValueTableView(ParameterTableView):
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self._show_value_metadata_action = None
+
     @property
     def value_column_header(self):
         return "value"
@@ -245,6 +250,21 @@ class ParameterValueTableView(ParameterTableView):
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+
+    def create_context_menu(self):
+        """Creates a context menu for this view."""
+        super().create_context_menu()
+        self._menu.addSeparator()
+        self._show_value_metadata_action = self._menu.addAction(
+            "Show parameter value metadata", self.show_value_metadata
+        )
+
+    def show_value_metadata(self):
+        db_map_ids = {}
+        for index in self.selectedIndexes():
+            db_map, id_ = self.model().db_map_id(index)
+            db_map_ids.setdefault(db_map, []).append(id_)
+        self._spine_db_editor.show_db_map_parameter_value_metadata(db_map_ids)
 
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
