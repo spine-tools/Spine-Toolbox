@@ -84,25 +84,7 @@ class SourceConnection:
         and value is the mappings for that table.
         emits mapped data when ready.
         """
-        mapped_data = {
-            "object_classes": [],
-            "objects": [],
-            "object_parameters": [],
-            "object_parameter_values": [],
-            "relationship_classes": [],
-            "relationships": [],
-            "relationship_parameters": [],
-            "relationship_parameter_values": [],
-            "parameter_value_lists": [],
-            "object_groups": [],
-            "alternatives": [],
-            "scenarios": [],
-            "scenario_alternatives": [],
-            "features": [],
-            "tools": [],
-            "tool_features": [],
-            "tool_feature_methods": [],
-        }
+        mapped_data = {}
         errors = []
         for table, mapping in tables_mappings.items():
             types = {col: spec.convert_function() for col, spec in table_types.get(table, {}).items()}
@@ -115,7 +97,7 @@ class SourceConnection:
                 errors.append(str(error))
                 continue
             for key, value in data.items():
-                mapped_data[key].extend(value)
+                mapped_data.setdefault(key, []).extend(value)
             errors.extend([(table, f"Could not map row: {row_number}, Error: {err}") for row_number, err in t_errors])
 
         return mapped_data, errors
