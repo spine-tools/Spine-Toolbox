@@ -19,7 +19,7 @@ Contains the SpineDBEditor class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMenu
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMenu, QMessageBox
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from sqlalchemy.engine.url import URL, make_url
@@ -568,6 +568,50 @@ class SpineDBEditorBase(QMainWindow):
         for button in self.ui.dockWidget_exports.findChildren(OpenFileButton):
             self.ui.horizontalLayout_exports.removeWidget(button)
             button.hide()
+
+    @staticmethod
+    def _parse_db_map_metadata(db_map_metadata):
+        s = "<ul>"
+        for db_map_name, element_metadata in db_map_metadata.items():
+            s += f"<li>{db_map_name}<ul>"
+            for element_name, metadata in element_metadata.items():
+                s += f"<li>{element_name}<ul>"
+                for name, value in metadata.items():
+                    s += f"<li>{name}: {value}</li>"
+                s += "</ul>"
+            s += "</ul>"
+        s += "</ul>"
+        return s
+
+    @staticmethod
+    def _metadata_per_entity(db_map, entity_ids):
+        d = {}
+        sq = db_map.ext_entity_metadata_sq
+        for x in db_map.query(sq).filter(db_map.in_(sq.c.entity_id, entity_ids)):
+            d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
+        return d
+
+    def show_db_map_entity_metadata(self, db_map_ids):
+        metadata = {
+            db_map.codename: self._metadata_per_entity(db_map, entity_ids) for db_map, entity_ids in db_map_ids.items()
+        }
+        QMessageBox.information(self, "Entity metadata", self._parse_db_map_metadata(metadata))
+
+    @staticmethod
+    def _metadata_per_parameter_value(db_map, param_val_ids):
+        d = {}
+        sq = db_map.ext_parameter_value_metadata_sq
+        for x in db_map.query(sq).filter(db_map.in_(sq.c.parameter_value_id, param_val_ids)):
+            param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
+            d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
+        return d
+
+    def show_db_map_parameter_value_metadata(self, db_map_ids):
+        metadata = {
+            db_map.codename: self._metadata_per_parameter_value(db_map, param_val_ids)
+            for db_map, param_val_ids in db_map_ids.items()
+        }
+        QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""

@@ -463,6 +463,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         sub_index = self.map_to_sub(index)
         return sub_index.model().db_item(sub_index)
 
+    def db_map_id(self, index):
+        sub_index = self.map_to_sub(index)
+        sub_model = sub_index.model()
+        return sub_model.db_map, sub_model.item_id(sub_index.row())
+
     def index_name(self, index):
         item = self.db_item(index)
         if item is None:
