@@ -159,6 +159,18 @@ class SpineDBManager(QObject):
     def db_maps(self):
         return set(self._db_maps.values())
 
+    def db_map(self, url):
+        """
+        Returns a database mapping for given URL.
+
+        Args:
+            url (str): a database URL
+
+        Returns:
+            DiffDatabaseMapping: a database map or None if not found
+        """
+        return self._db_maps.get(url)
+
     @property
     def db_editors(self):
         return set(self._db_editors.values())
