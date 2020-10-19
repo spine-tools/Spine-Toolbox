@@ -17,16 +17,8 @@ Contains GDXConnector class and a help function.
 """
 
 from gdx2py import GdxFile, GAMSParameter, GAMSScalar, GAMSSet
-from PySide2.QtWidgets import QFileDialog
 from ..io_api import SourceConnection
 from ..gdx_utils import find_gams_directory
-
-
-def select_gdx_file(parent=None):
-    """
-    Launches QFileDialog with .gdx filter
-    """
-    return QFileDialog.getOpenFileName(parent, "", "*.gdx")
 
 
 class GdxConnector(SourceConnection):
@@ -38,8 +30,8 @@ class GdxConnector(SourceConnection):
     OPTIONS = {}
     """dict with option specification for source"""
 
-    SELECT_SOURCE_UI = select_gdx_file
-    """Modal widget that returns source object and action (OK, CANCEL)."""
+    FILE_EXTENSIONS = "*.gdx"
+    """File extensions for modal widget that returns source object and action (OK, CANCEL)."""
 
     def __init__(self, settings):
         """

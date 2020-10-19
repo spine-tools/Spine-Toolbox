@@ -18,52 +18,7 @@ Type conversion functions.
 
 import re
 from distutils.util import strtobool
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QSpinBox, QDateTimeEdit, QLineEdit, QFormLayout
-from PySide2.QtCore import Qt
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
-
-
-class NewIntegerSequenceDateTimeConvertSpecDialog(QDialog):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.setWindowTitle("New integer sequence datetime")
-
-        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-
-        self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-
-        self.datetime = QDateTimeEdit()
-        self.start_integer = QSpinBox()
-        self.duration = QLineEdit("1h")
-        self.duration.textChanged.connect(self._validate)
-
-        self.layout = QVBoxLayout()
-        self.form = QFormLayout()
-        self.form.addRow("Initial datetime", self.datetime)
-        self.form.addRow("Initial integer", self.start_integer)
-        self.form.addRow("Timestep duration", self.duration)
-        self.layout.addLayout(self.form)
-        self.layout.addWidget(self.buttonBox)
-        self.setLayout(self.layout)
-
-        self._validate()
-
-    def _validate(self):
-        try:
-            Duration(self.duration.text())
-        except ParameterValueFormatError:
-            self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
-            return
-        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
-
-    def get_spec(self):
-        start_datetime = DateTime(self.datetime.dateTime().toString(Qt.ISODate))
-        duration = Duration(self.duration.text())
-        start_int = self.start_integer.value()
-        return IntegerSequenceDateTimeConvertSpec(start_datetime, start_int, duration)
 
 
 def value_to_convert_spec(value):

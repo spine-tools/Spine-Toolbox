@@ -20,6 +20,9 @@ import importlib
 import importlib.util
 import subprocess
 import sys
+import pkgutil
+from .project_item.project_item_info import ProjectItemInfo
+from .project_item.project_item_factory import ProjectItemFactory
 from .config import REQUIRED_SPINE_ITEMS_VERSION
 
 
@@ -87,15 +90,35 @@ def load_project_items(toolbox):
     for child in items_root.iterdir():
         if child.is_dir() and child.joinpath("__init__.py").exists():
             spec = importlib.util.find_spec(f"spine_items.{child.stem}")
-            m = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(m)
-            if hasattr(m, "ItemInfo") and hasattr(m, "ItemFactory"):
-                info = m.ItemInfo
-                category = info.item_category()
-                item_type = info.item_type()
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            module_material = _find_module_material(module)
+            if module_material is not None:
+                item_type, category, factory = module_material
                 categories[item_type] = category
-                factories[item_type] = m.ItemFactory
+                factories[item_type] = factory
     return categories, factories
+
+
+def _find_module_material(module):
+    item_type = None
+    category = None
+    factory = None
+    prefix = module.__name__ + "."
+    for _, modname, _ in pkgutil.iter_modules(module.__path__, prefix):
+        submodule = __import__(modname, fromlist="dummy")
+        for name in dir(submodule):
+            attr = getattr(submodule, name)
+            if not isinstance(attr, type):
+                continue
+            if attr is not ProjectItemInfo and issubclass(attr, ProjectItemInfo):
+                item_type = attr.item_type()
+                category = attr.item_category()
+            if attr is not ProjectItemFactory and issubclass(attr, ProjectItemFactory):
+                factory = attr
+            if item_type is not None and factory is not None:
+                return item_type, category, factory
+    return None
 
 
 def load_item_specification_factories():

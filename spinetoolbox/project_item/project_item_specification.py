@@ -15,10 +15,10 @@ Contains project item specification class.
 :authors: M. Marin (KTH)
 :date:    7.5.2020
 """
-from spinetoolbox.metaobject import MetaObject
+from spinetoolbox.helpers_qt_free import shorten
 
 
-class ProjectItemSpecification(MetaObject):
+class ProjectItemSpecification:
     """
     Class to hold a project item specification.
 
@@ -35,7 +35,9 @@ class ProjectItemSpecification(MetaObject):
             item_type (str): Project item type
             item_category (str): Project item category
         """
-        super().__init__(name, description)
+        self.name = name
+        self.short_name = shorten(name)
+        self.description = description
         self.item_type = item_type
         self.item_category = item_category
         self.definition_file_path = ""
@@ -46,11 +48,41 @@ class ProjectItemSpecification(MetaObject):
             return NotImplemented
         return self.name == other.name
 
+    # TODO:Needed?
+    def set_name(self, name):
+        """Set object name and short name.
+        Note: Check conflicts (e.g. name already exists)
+        before calling this method.
+
+        Args:
+            name (str): New (long) name for this object
+        """
+        self.name = name
+        self.short_name = shorten(name)
+
+    # TODO:Needed?
+    def set_description(self, description):
+        """Set object description.
+
+        Args:
+            description (str): Object description
+        """
+        self.description = description
+
     def save(self):
         """
         Writes the specification to the path given by ``self.definition_file_path``
 
         Returns:
             bool: True if the operation was successful, False otherwise
+        """
+        raise NotImplementedError()
+
+    def to_dict(self):
+        """
+        Returns a dict for the specification.
+
+        Returns:
+            dict: specification dict
         """
         raise NotImplementedError()

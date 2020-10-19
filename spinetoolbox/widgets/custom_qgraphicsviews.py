@@ -457,8 +457,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
             return
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
-        if hasattr(icon, "start_animation"):
-            icon.start_animation()
+        if hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_started.emit()
 
     @Slot(str, "QVariant", "QVariant")
     def _stop_animation(self, item_name, direction, _):
@@ -467,8 +467,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
             return
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
-        if hasattr(icon, "stop_animation"):
-            icon.stop_animation()
+        if hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_stopped.emit()
 
     @Slot(str, "QVariant", "QVariant")
     def _run_leave_animation(self, item_name, direction, engine_state):
@@ -495,7 +495,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
         links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
-        animation_group = QParallelAnimationGroup(item)
+        animation_group = QParallelAnimationGroup()
         for link in links:
             animation_group.addAnimation(link.make_execution_animation())
         return animation_group

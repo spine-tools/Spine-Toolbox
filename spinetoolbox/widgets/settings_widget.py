@@ -392,6 +392,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))  # tri-state
         datetime = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
+        use_experimental_engine = self._qsettings.value("appSettings/useExperimentalEngine", defaultValue="false")
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
@@ -418,6 +419,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
         if delete_data == 2:
             self.ui.checkBox_delete_data.setCheckState(Qt.Checked)
+        if use_experimental_engine == "true":
+            self.ui.checkBox_use_experimental_engine.setCheckState(Qt.Checked)
         if smooth_zoom == "true":
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if curved_links == "true":
@@ -472,6 +475,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/dateTime", datetime)
         delete_data = str(int(self.ui.checkBox_delete_data.checkState()))
         self._qsettings.setValue("appSettings/deleteData", delete_data)
+        use_experimental_engine = "true" if int(self.ui.checkBox_use_experimental_engine.checkState()) else "false"
+        self._qsettings.setValue("appSettings/useExperimentalEngine", use_experimental_engine)
         smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"

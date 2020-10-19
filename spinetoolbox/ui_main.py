@@ -747,14 +747,20 @@ class ToolboxUI(QMainWindow):
         except FileNotFoundError:
             self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
             return None
-        return self.load_specification(definition, def_path)
+        item_type = definition.get("item_type", "Tool")
+        if item_type == "Tool":
+            includes_main_path = definition.get("includes_main_path", ".")
+            if not os.path.isabs(includes_main_path):
+                definition["includes_main_path"] = os.path.normpath(
+                    os.path.join(os.path.dirname(def_path), includes_main_path)
+                )
+        return self.load_specification(definition)
 
-    def load_specification(self, definition, def_path):
+    def load_specification(self, definition):
         """Returns a Tool specification from a definition dictionary.
 
         Args:
             definition (dict): Dictionary with the tool definition
-            def_path (str): Path of the specification definition file
 
         Returns:
             ToolSpecification, NoneType
@@ -764,9 +770,7 @@ class ToolboxUI(QMainWindow):
         factory = self._item_specification_factories.get(item_type)
         if factory is None:
             return None
-        return factory.make_specification(
-            definition, def_path, self._qsettings, self, self.julia_repl, self.python_repl
-        )
+        return factory.make_specification(definition, self._qsettings, self, self.julia_repl, self.python_repl)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
