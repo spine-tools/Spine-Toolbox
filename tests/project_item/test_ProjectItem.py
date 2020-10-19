@@ -20,9 +20,9 @@ import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
 from spine_items.data_connection.data_connection_factory import DataConnectionFactory
-from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item.project_item import ProjectItem
 import spine_items.resources_icons_rc  # pylint: disable=unused-import
-from .mock_helpers import mock_finish_project_item_construction, create_mock_project, create_mock_toolbox
+from ..mock_helpers import mock_finish_project_item_construction, create_mock_project, create_mock_toolbox
 
 
 class TestProjectItem(unittest.TestCase):
