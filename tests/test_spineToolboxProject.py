@@ -22,6 +22,7 @@ import logging
 import sys
 from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
+from spinetoolbox.executable_item_base import ExecutableItemBase
 from .mock_helpers import (
     clean_up_toolboxui_with_project,
     create_toolboxui_with_project,
@@ -32,7 +33,11 @@ from .mock_helpers import (
     add_importer,
     add_exporter,
 )
-from spinetoolbox.executable_item_base import ExecutableItemBase
+
+
+def _mock_settings_value_side_effect(key, defaultValue=""):
+    if key == "appSettings/useExperimentalEngine":
+        return "false"
 
 
 # noinspection PyUnusedLocal
@@ -172,13 +177,17 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_execute_project_with_single_item(self):
         view, view_executable = self._make_item(self.add_view)
-        self.toolbox.project().execute_project()
+        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
+            mock_settings_value.side_effect = _mock_settings_value_side_effect
+            self.toolbox.project().execute_project()
         self.assertTrue(view_executable.execute_forward_called)
 
     def test_execute_project_with_two_dags(self):
         item1, item1_executable = self._make_item(self.add_dc)
         item2, item2_executable = self._make_item(self.add_view)
-        self.toolbox.project().execute_project()
+        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
+            mock_settings_value.side_effect = _mock_settings_value_side_effect
+            self.toolbox.project().execute_project()
         self.assertTrue(item1_executable.execute_forward_called)
         self.assertTrue(item2_executable.execute_forward_called)
 
@@ -186,7 +195,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1, item1_executable = self._make_item(self.add_dc)
         item2, item2_executable = self._make_item(self.add_view)
         self.toolbox.project().set_item_selected(item2)
-        self.toolbox.project().execute_selected()
+        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
+            mock_settings_value.side_effect = _mock_settings_value_side_effect
+            self.toolbox.project().execute_selected()
         self.assertFalse(item1_executable.execute_forward_called)
         self.assertTrue(item2_executable.execute_forward_called)
 
@@ -211,7 +222,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.toolbox.project().dag_handler.add_graph_edge(data_store.name, data_connection.name)
         self.toolbox.project().dag_handler.add_graph_edge(data_connection.name, view.name)
         self.toolbox.project().set_item_selected(data_connection)
-        self.toolbox.project().execute_selected()
+        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
+            mock_settings_value.side_effect = _mock_settings_value_side_effect
+            self.toolbox.project().execute_selected()
         self.assertFalse(data_store_executable.execute_forward_called)
         self.assertTrue(data_connection_executable.execute_forward_called)
         self.assertFalse(view_executable.execute_forward_called)
