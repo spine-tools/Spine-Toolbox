@@ -120,6 +120,8 @@ def serialize_url(url, project_dir):
             else path.replace(os.sep, "/"),
             "scheme": parsed.scheme,
         }
+        if parsed.query:
+            serialized["query"] = parsed.query
     else:
         serialized = {"type": "url", "relative": False, "path": url}
     return serialized
@@ -148,7 +150,10 @@ def deserialize_path(serialized, project_dir):
             if serialized["relative"]:
                 path = os.path.join(project_dir, path)
             path = os.path.normpath(path)
-            return serialized["scheme"] + ":///" + path
+            query = serialized.get("query", "")
+            if query:
+                query = "?" + query
+            return serialized["scheme"] + ":///" + path + query
         if path_type == "url":
             return serialized["path"]
     except KeyError as error:

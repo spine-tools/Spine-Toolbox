@@ -4,7 +4,7 @@ git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
 # NOTE: Commented on purpose. datapackage 1.15.0 does not require cchardet anymore. If we ever decide to
 # use cchardet in addition to chardet, we should remember this constraint.
 # cchardet!=2.1.6
-# matplotlib == 3.2.1 is broken; importing e.g. networkx after matplotlib.backends.backend_qt5agg backgtraces
+# matplotlib == 3.2.1 is broken; importing e.g. networkx after matplotlib.backends.backend_qt5agg backtraces
 # also, matplotlib == 3.2.1 requires shiboken2 but does not list it in its dependencies
 # matplotlib 3.3.1 fails to install properly from pip, see
 # https://stackoverflow.com/questions/24251102/from-matplotlib-import-ft2font-importerror-dll-load-failed-the-specified-pro/24251889#24251889

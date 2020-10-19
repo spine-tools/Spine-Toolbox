@@ -1787,15 +1787,12 @@ def indexing_settings_to_dict(settings):
     return settings_dict
 
 
-def indexing_settings_from_dict(settings_dict, db_map, none_fallback, logger):
+def indexing_settings_from_dict(settings_dict):
     """
     Restores indexing settings from a json compatible dictionary.
 
     Args:
         settings_dict (dict): a JSON compatible dictionary representing parameter indexing settings.
-        db_map (DatabaseMapping): database mapping
-        none_fallback (NoneFallback): how to handle None parameter values
-        logger (LoggerInterface, optional): a logger
     Returns:
         dict: a dictionary mapping parameter name to IndexingSetting.
     """
@@ -1807,10 +1804,7 @@ def indexing_settings_from_dict(settings_dict, db_map, none_fallback, logger):
         if not isinstance(setting_list, list):
             # For 0.5 compatibility.
             setting_dict = setting_list
-            parameter, entity_class_name = _find_indexed_parameter(parameter_name, db_map, none_fallback, logger)
-            if parameter is None:
-                continue
-            setting_dict["domain_names"] = parameter.domain_names
+            setting_dict["domain_names"] = [None]
             setting_list = [setting_dict]
         for setting_dict in setting_list:
             domain_names = tuple(setting_dict["domain_names"])

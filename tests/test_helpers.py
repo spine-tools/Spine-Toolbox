@@ -98,12 +98,14 @@ class TestHelpers(unittest.TestCase):
                 serialized, {"type": "file_url", "relative": True, "path": expected_path, "scheme": "sqlite"}
             )
 
-    @unittest.skipIf(platform.startswith("linux"), "problem with the amount of backslashes expected")
     def test_serialize_url_keeps_file_path_not_in_project_dir_absolute(self):
         with TemporaryDirectory() as project_dir:
             with NamedTemporaryFile(mode="r") as temp_file:
                 expected_path = str(Path(temp_file.name).as_posix())
-                url = "sqlite:///" + expected_path
+                if platform == "win32":
+                    url = "sqlite:///" + expected_path
+                else:
+                    url = "sqlite://" + expected_path
                 serialized = serialize_url(url, project_dir)
                 self.assertEqual(
                     serialized, {"type": "file_url", "relative": False, "path": expected_path, "scheme": "sqlite"}
@@ -114,6 +116,23 @@ class TestHelpers(unittest.TestCase):
         url = "http://www.spine-model.org/"
         serialized = serialize_url(url, project_dir)
         self.assertEqual(serialized, {"type": "url", "relative": False, "path": url})
+
+    def test_serialize_relative_url_with_query(self):
+        with NamedTemporaryFile(mode="r") as temp_file:
+            url = "sqlite:///" + str(Path(temp_file.name).as_posix()) + "?filter=kol"
+            project_dir = gettempdir()
+            expected_path = str(Path(temp_file.name).relative_to(project_dir).as_posix())
+            serialized = serialize_url(url, project_dir)
+            self.assertEqual(
+                serialized,
+                {
+                    "type": "file_url",
+                    "relative": True,
+                    "path": expected_path,
+                    "scheme": "sqlite",
+                    "query": "filter=kol",
+                },
+            )
 
     def test_deserialize_path_with_relative_path(self):
         project_dir = gettempdir()
@@ -147,6 +166,19 @@ class TestHelpers(unittest.TestCase):
         serialized = {"type": "url", "path": "http://www.spine-model.org/"}
         deserialized = deserialize_path(serialized, project_dir)
         self.assertEqual(deserialized, "http://www.spine-model.org/")
+
+    def test_deserialize_relative_url_with_query(self):
+        project_dir = gettempdir()
+        serialized = {
+            "type": "file_url",
+            "relative": True,
+            "path": "subdir/database.sqlite",
+            "scheme": "sqlite",
+            "query": "filter=kax",
+        }
+        deserialized = deserialize_path(serialized, project_dir)
+        expected = "sqlite:///" + str(Path(project_dir, "subdir", "database.sqlite")) + "?filter=kax"
+        self.assertEqual(deserialized, expected)
 
 
 if __name__ == '__main__':
