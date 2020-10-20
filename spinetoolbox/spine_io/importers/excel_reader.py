@@ -169,7 +169,7 @@ class ExcelConnector(SourceConnection):
         """
         mapped_data, errors = super().get_mapped_data(tables_mappings, options, table_types, table_row_types, max_rows)
         for key in ("object_parameter_values", "relationship_parameter_values"):
-            for index, value in enumerate(mapped_data[key]):
+            for index, value in enumerate(mapped_data.get(key, [])):
                 val = value[-1]
                 if isinstance(val, str) and val and val[0] == "{":
                     try:
