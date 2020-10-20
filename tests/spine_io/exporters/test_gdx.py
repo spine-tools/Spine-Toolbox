@@ -1459,25 +1459,14 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(indexing_settings["relationship_parameter"][("domain",)].index_position, 1)
 
     def test_indexing_settings_from_dict(self):
-        with TemporaryDirectory() as tmp_dir_name:
-            time_pattern = TimePattern(["Mo", "Tu"], [42.0, -4.2])
-            original = {"parameter": {("domain1",): gdx.IndexingSetting(2)}}
-            original["parameter"][("domain1",)].indexing_domain_name = "indexing name"
-            original["parameter"][("domain1",)].picking = gdx.FixedPicking([False, True])
-            original["parameter"][("domain1",)].index_position = 1
-            settings_dict = gdx.indexing_settings_to_dict(original)
-            database_map = self._make_database_map(tmp_dir_name, "test_indexing_settings_from_dict.sqlite")
-            dbmanip.import_object_classes(database_map, ["domain1"])
-            dbmanip.import_objects(database_map, [("domain1", "record")])
-            dbmanip.import_object_parameters(database_map, [("domain1", "parameter")])
-            dbmanip.import_object_parameter_values(
-                database_map,
-                [("domain1", "record", "parameter", {"type": "time_pattern", "data": {"Mo": 42.0, "Tu": -4.2}})],
-            )
-            restored = gdx.indexing_settings_from_dict(
-                settings_dict, database_map, gdx.NoneFallback.USE_IT, logger=None
-            )
-            database_map.connection.close()
+        original = {"parameter": {("domain1",): gdx.IndexingSetting(2)}}
+        original["parameter"][("domain1",)].indexing_domain_name = "indexing name"
+        original["parameter"][("domain1",)].picking = gdx.FixedPicking([False, True])
+        original["parameter"][("domain1",)].index_position = 1
+        settings_dict = gdx.indexing_settings_to_dict(original)
+        restored = gdx.indexing_settings_from_dict(
+            settings_dict
+        )
         self.assertTrue(len(restored), 1)
         self.assertIn("parameter", restored)
         self.assertTrue(len(restored["parameter"]), 1)
