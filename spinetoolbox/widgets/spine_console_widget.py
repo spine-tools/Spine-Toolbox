@@ -62,10 +62,6 @@ class CustomQtKernelManager(QtKernelManager):
     def _handle_kernel_left_dead(self):
         self.kernel_left_dead.emit()
 
-    def load_connection_info(self, info):
-        super().load_connection_info(info)
-        self.kernel_name = info.get("kernel_name", self.kernel_name)
-
 
 class SpineConsoleWidget(RichJupyterWidget):
     """Base class for all console widgets that can run tool instances."""
@@ -105,7 +101,7 @@ class SpineConsoleWidget(RichJupyterWidget):
             self.kernel_client.stop_channels()
         self.kernel_client = new_kernel_client
 
-    def connect_to_kernel(self, connection_file):
+    def connect_to_kernel(self, kernel_name, connection_file):
         """
         Connects to an existing kernel.
 
@@ -114,7 +110,7 @@ class SpineConsoleWidget(RichJupyterWidget):
         """
         self.kernel_manager = CustomQtKernelManager(connection_file=connection_file)
         self.kernel_manager.load_connection_file()
-        self.kernel_name = self.kernel_manager.kernel_name
+        self.kernel_name = kernel_name
         self.setup_client()
         self.include_other_output = True  # FIXME: We may want to set it back to False somewhere else?
         self.other_output_prefix = ""
