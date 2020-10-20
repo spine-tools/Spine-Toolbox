@@ -41,10 +41,7 @@ class PythonReplWidget(SpineConsoleWidget):
         """Class constructor."""
         super().__init__(toolbox)
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
-        self.kernel_name = None
         self.kernel_display_name = ""
-        self.kernel_manager = None
-        self.kernel_client = None
         self.python_cmd = None  # Contains the path to selected python executable (i.e. pythondir/python.exe on Win.)
         self.install_proc_exec_mngr = None  # QSubProcess instance for installing required packages
         self.may_need_restart = True  # Has the user changed the Python environment in Settings
@@ -387,12 +384,13 @@ class PythonReplWidget(SpineConsoleWidget):
 
     def shutdown_kernel(self, hush=False):
         """Shut down Python kernel."""
-        if not self.kernel_client:
+        if self.kernel_manager is None or not self.kernel_manager.is_alive():
             return
         self.disconnect_signals()
         if not hush:
             self._toolbox.msg.emit("Shutting down Python Console...")
-        self.kernel_client.stop_channels()
+        if self.kernel_client is not None:
+            self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel()
 
     def push_vars(self, var_name, var_value):

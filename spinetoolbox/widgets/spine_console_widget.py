@@ -18,6 +18,53 @@ Class for a custom RichJupyterWidget that can run tool instances.
 
 from PySide2.QtCore import Signal
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
+from qtconsole.manager import QtKernelManager, QtKernelRestarter
+from ..config import JUPYTER_KERNEL_TIME_TO_DEAD, JUPYTER_KERNEL_RESTART_LIMIT
+
+
+class CustomQtKernelManager(QtKernelManager):
+    """A QtKernelManager with a custom restarter, and a means to override the --project argument."""
+
+    kernel_left_dead = Signal()
+
+    project_path = None
+
+    @property
+    def kernel_spec(self):
+        if self._kernel_spec is None and self.kernel_name != "":
+            self._kernel_spec = self.kernel_spec_manager.get_kernel_spec(self.kernel_name)
+            self.override_project_arg()
+        return self._kernel_spec
+
+    def override_project_arg(self):
+        ind = next((k for k, x in enumerate(self._kernel_spec.argv) if x.startswith("--project")), None)
+        if not ind:
+            return
+        if self.project_path is None:
+            return
+        self._kernel_spec.argv[ind] = f"--project={self.project_path}"
+
+    def start_restarter(self):
+        """Starts a restarter with custom time to dead and restart limit."""
+        if self.autorestart and self.has_kernel:
+            if self._restarter is None:
+                self._restarter = QtKernelRestarter(
+                    time_to_dead=JUPYTER_KERNEL_TIME_TO_DEAD,
+                    restart_limit=JUPYTER_KERNEL_RESTART_LIMIT,
+                    kernel_manager=self,
+                    parent=self,
+                    log=self.log,
+                )
+                self._restarter.add_callback(self._handle_kernel_restarted, event='restart')
+                self._restarter.add_callback(self._handle_kernel_left_dead, event='dead')
+            self._restarter.start()
+
+    def _handle_kernel_left_dead(self):
+        self.kernel_left_dead.emit()
+
+    def load_connection_info(self, info):
+        super().load_connection_info(info)
+        self.kernel_name = info.get("kernel_name", self.kernel_name)
 
 
 class SpineConsoleWidget(RichJupyterWidget):
@@ -34,6 +81,9 @@ class SpineConsoleWidget(RichJupyterWidget):
         """
         super().__init__(parent=toolbox)
         self._toolbox = toolbox
+        self.kernel_name = None
+        self.kernel_manager = None
+        self.kernel_client = None
 
     def wake_up(self):
         """Wakes up the console in preparation for execution.
@@ -42,6 +92,32 @@ class SpineConsoleWidget(RichJupyterWidget):
         this function.
         """
         raise NotImplementedError()
+
+    def setup_client(self):
+        if self.kernel_manager is None:
+            return
+        new_kernel_client = self.kernel_manager.client()
+        new_kernel_client.hb_channel.time_to_dead = (
+            JUPYTER_KERNEL_TIME_TO_DEAD  # Not crucial, but nicer to keep the same as mngr
+        )
+        new_kernel_client.start_channels()
+        if self.kernel_client is not None:
+            self.kernel_client.stop_channels()
+        self.kernel_client = new_kernel_client
+
+    def connect_to_kernel(self, connection_file):
+        """
+        Connects to an existing kernel.
+
+        Args:
+            connection_file (str): Path to the connection file of the kernel
+        """
+        self.kernel_manager = CustomQtKernelManager(connection_file=connection_file)
+        self.kernel_manager.load_connection_file()
+        self.kernel_name = self.kernel_manager.kernel_name
+        self.setup_client()
+        self.include_other_output = True  # FIXME: We may want to set it back to False somewhere else?
+        self.other_output_prefix = ""
 
     def interrupt(self):
         """Sends interrupt signal to kernel."""

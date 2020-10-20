@@ -19,55 +19,13 @@ Class for a custom SpineConsoleWidget to use as julia REPL.
 import os
 import logging
 from PySide2.QtWidgets import QMessageBox, QAction, QApplication
-from PySide2.QtCore import Slot, Signal, Qt
-from qtconsole.manager import QtKernelManager, QtKernelRestarter
+from PySide2.QtCore import Slot, Qt
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from ..execution_managers import QProcessExecutionManager
-from ..config import JULIA_EXECUTABLE, JL_REPL_TIME_TO_DEAD, JL_REPL_RESTART_LIMIT
+from ..config import JULIA_EXECUTABLE
 from ..helpers import busy_effect
 from .spine_console_widget import SpineConsoleWidget
 from .custom_qlistview import DragListView
-
-
-class CustomQtKernelManager(QtKernelManager):
-    """A QtKernelManager with a custom restarter, and a means to override the --project argument."""
-
-    kernel_left_dead = Signal()
-
-    project_path = None
-
-    @property
-    def kernel_spec(self):
-        if self._kernel_spec is None and self.kernel_name != "":
-            self._kernel_spec = self.kernel_spec_manager.get_kernel_spec(self.kernel_name)
-            self.override_project_arg()
-        return self._kernel_spec
-
-    def override_project_arg(self):
-        ind = next((k for k, x in enumerate(self._kernel_spec.argv) if x.startswith("--project")), None)
-        if not ind:
-            return
-        if self.project_path is None:
-            return
-        self._kernel_spec.argv[ind] = f"--project={self.project_path}"
-
-    def start_restarter(self):
-        """Starts a restarter with custom time to dead and restart limit."""
-        if self.autorestart and self.has_kernel:
-            if self._restarter is None:
-                self._restarter = QtKernelRestarter(
-                    time_to_dead=JL_REPL_TIME_TO_DEAD,
-                    restart_limit=JL_REPL_RESTART_LIMIT,
-                    kernel_manager=self,
-                    parent=self,
-                    log=self.log,
-                )
-                self._restarter.add_callback(self._handle_kernel_restarted, event='restart')
-                self._restarter.add_callback(self._handle_kernel_left_dead, event='dead')
-            self._restarter.start()
-
-    def _handle_kernel_left_dead(self):
-        self.kernel_left_dead.emit()
 
 
 class JuliaREPLWidget(SpineConsoleWidget):
@@ -83,9 +41,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
         """
         super().__init__(toolbox)
         self.custom_restart = True
-        self.kernel_name = None  # The name of the Julia kernel from settings last checked
-        self.kernel_manager = None
-        self.kernel_client = None
         self.kernel_execution_state = None
         self.ijulia_proc_exec_mngr = None  # IJulia installation/reconfiguration process exec manager
         self.julia_exe = None
@@ -131,7 +86,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=5000):
             self._toolbox.msg_error.emit(
-                "\tCouldn't find out Julia version. Make sure that Julia is correctly installed and try again."
+                "\tCouldn't find Julia version. Make sure that Julia is correctly installed and try again."
             )
             return None
         julia_version = exec_mngr.process_output
@@ -175,8 +130,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
         """
         if kernel_name:
             self.kernel_name = kernel_name
-        self.starting = True
-        self._toolbox.msg.emit("*** Starting Julia Console ***")
         kernel_manager = CustomQtKernelManager(kernel_name=self.kernel_name, project_path=self.julia_project_path)
         try:
             blackhole = open(os.devnull, 'w')
@@ -187,7 +140,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         except FileNotFoundError:
             self._toolbox.msg_error.emit("\tCouldn't find Julia executable specified by Jupyter kernel.")
             self.handle_repl_failed_to_start()
-        except NoSuchKernel:  # TODO: in which case this exactly happens?
+        except NoSuchKernel:
             self._toolbox.msg_error.emit("\t[NoSuchKernel] Couldn't find Julia Jupyter kernel.")
             self.handle_repl_failed_to_start()
 
@@ -249,7 +202,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
         msg.addButton("Cancel", QMessageBox.RejectRole)
         msg.exec_()  # Show message box
         if msg.clickedButton() != allow_button:
-            self.starting = False
             self._control.viewport().setCursor(self.normal_cursor)
             self.execution_failed.emit(-1)
             return
@@ -291,9 +243,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
         julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
         if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             # Restart current kernel
-            self.starting = True
-            self._toolbox.msg.emit("*** Restarting Julia REPL ***")
-            self.kernel_client.stop_channels()
             blackhole = open(os.devnull, 'w')
             self.kernel_manager.restart_kernel(now=True, stdout=blackhole, stderr=blackhole)
             self.setup_client()
@@ -308,15 +257,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
                 self._toolbox.msg_error.emit("\tCouldn't find Jupyter kernel specification for {}".format(kernel_name))
                 self.handle_repl_failed_to_start()
 
-    def setup_client(self):
-        if not self.kernel_manager:
-            return
-        kernel_client = self.kernel_manager.client()
-        kernel_client.hb_channel.time_to_dead = JL_REPL_TIME_TO_DEAD  # Not crucial, but nicer to keep the same as mngr
-        kernel_client.start_channels()
-        self.kernel_client = kernel_client
-
-    @Slot(name="_handle_kernel_restarted")
+    @Slot()
     def _handle_kernel_restarted(self, died=True):
         """Called when the kernel is restarted, i.e., when time to dead has elapsed."""
         super()._handle_kernel_restarted(died=died)
@@ -328,7 +269,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
             "\tFailed to start Julia Jupyter kernel (attempt {0} of {1})".format(restart_count, restart_limit)
         )
 
-    @Slot(name="_handle_kernel_left_dead")
+    @Slot()
     def _handle_kernel_left_dead(self):
         """Called when the kernel is finally declared dead, i.e., the restart limit has been reached."""
         restart_limit = self.kernel_manager._restarter.restart_limit
@@ -336,7 +277,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
             "\tFailed to start Julia Jupyter kernel (attempt {0} of {0})".format(restart_limit)
         )
         self.kernel_manager = None
-        self.kernel_client = None  # TODO: needed?
+        self.kernel_client = None
         self.handle_repl_failed_to_start()
 
     @Slot(int)
@@ -365,7 +306,7 @@ class JuliaREPLWidget(SpineConsoleWidget):
         self.ijulia_proc_exec_mngr.deleteLater()
         self.ijulia_proc_exec_mngr = None
 
-    @Slot("dict", name="_handle_execute_reply")
+    @Slot("dict")
     def _handle_execute_reply(self, msg):
         super()._handle_execute_reply(msg)
         content = msg['content']
@@ -382,16 +323,19 @@ class JuliaREPLWidget(SpineConsoleWidget):
         """
         super()._handle_status(msg)
         self.kernel_execution_state = msg['content'].get('execution_state', '')
-        if self.kernel_execution_state == 'idle':
-            if self.starting:
-                self.starting = False
-                self._toolbox.msg_success.emit(
-                    "\tJulia REPL successfully started using kernel specification {}".format(self.kernel_name)
-                )
-                self._control.viewport().setCursor(self.normal_cursor)
-                self.ready_to_execute.emit()
+        if self.kernel_execution_state == 'starting':
+            self._toolbox.msg.emit("*** Starting Julia Console ***")
+            self.starting = True
+            return
+        if self.kernel_execution_state == 'idle' and self.starting:
+            self.starting = False
+            self._toolbox.msg_success.emit(
+                "\tJulia Console successfully started using Jupyter kernel {}".format(self.kernel_name)
+            )
+            self._control.viewport().setCursor(self.normal_cursor)
+            self.ready_to_execute.emit()
 
-    @Slot("dict", name="_handle_error")
+    @Slot(dict)
     def _handle_error(self, msg):
         """Handle error messages."""
         super()._handle_error(msg)
@@ -404,12 +348,14 @@ class JuliaREPLWidget(SpineConsoleWidget):
             return
         self.start_jupyter_kernel()
 
+    @Slot()
     def shutdown_jupyter_kernel(self):
         """Shut down the jupyter kernel."""
-        if not self.kernel_client:
+        if self.kernel_manager is None or not self.kernel_manager.is_alive():
             return
+        if self.kernel_client is not None:
+            self.kernel_client.stop_channels()
         self._toolbox.msg.emit("Shutting down Julia Console...")
-        self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
 
     def _context_menu_make(self, pos):

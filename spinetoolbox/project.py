@@ -519,6 +519,13 @@ class SpineToolboxProject(MetaObject):
                 continue
             settings[f"appSettings/{key}"] = value
         self._settings.endGroup()
+        # FIXME: These four lines below should be removed once the Kernel editor is in place (See issue #839)
+        # When that happens, both "appSettings/juliaKernel" and "appSettings/pythonKernel" will be readily
+        # available from `self._settings`
+        if self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
+            settings["appSettings/juliaKernel"] = self._toolbox.julia_repl.julia_kernel_name()
+        if self._settings.value("appSettings/useEmbeddedPython", defaultValue="2") == "2":
+            settings["appSettings/pythonKernel"], _ = self._toolbox.python_repl.python_kernel_name()
         node_successors = self._get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
@@ -542,9 +549,7 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self._engine_loop = QEventLoop()
-        self._engine_worker = SpineEngineWorker(
-            self.engine, self._project_item_model, self._toolbox.ui.graphicsView, self._logger
-        )
+        self._engine_worker = SpineEngineWorker(self.engine, self._toolbox)
         self._engine_worker.finished.connect(self._engine_loop.quit)
         self._engine_worker.finished.connect(self._handle_worker_finished)
         self._engine_worker.start()
