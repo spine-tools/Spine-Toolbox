@@ -1335,7 +1335,13 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def show_specification_form(self, item_type, specification=None):
-        """Show specification widget."""
+        """
+        Show specification widget.
+
+        Args:
+            item_type (str): item's type
+            specification (ProjectItemSpecification, optional): item's specification
+        """
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
