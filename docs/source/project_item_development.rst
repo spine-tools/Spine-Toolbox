@@ -8,7 +8,7 @@ how they interact with the Toolbox GUI and how they are executed.
 
 The core of every project item consists of two classes:
 a *static* project item class which is a subclass of :class:`spinetoolbox.project_item.ProjectItem`
-and an *executable*, a subclass of :class:`spinetoolbox.executable_item_base.ExecutableItemBase`.
+and an *executable*, a subclass of :class:`spinetoolbox.project_item.executable_item_base.ExecutableItemBase`.
 The static item is responsible for integrating the item with the Toolbox while
 its executable counterpart exists only during execution.
 
@@ -42,7 +42,7 @@ Toolbox expects certain modules to exist in the package:
   :class:`spinetoolbox.project_item.ProjectItemFactory` and an ``ItemInfo`` class which must be a subclass of
   :class:`spinetoolbox.project_item_info.ProjectItemInfo`
 * ``executable_item.py`` which contains an ``ExecutableItem`` class, a subclass of
-  :class:`spinetoolbox.executable_item_base.ExecutableItemBase`
+  :class:`spinetoolbox.project_item.executable_item_base.ExecutableItemBase`
 * optional for items that support specifications: ``specification_factory.py`` which contains a ``SpecificationFactory``
   class, a subclass of :class:`spinetoolbox.project_item_specification_factory.ProjectItemSpecificationFactory`
 
@@ -65,7 +65,7 @@ Executable item
 Usually, most of project item's code is for setting up the item via Toolbox GUI and for integrating the
 item into the Design View. The code that is run during execution by Spine Engine, the *executble item*,
 is usually contained in a single class which must be a subclass of
-:class:`spinetoolbox.executable_item_base.ExecutableItemBase`.
+:class:`spinetoolbox.project_item.executable_item_base.ExecutableItemBase`.
 
 Executable items live in a separate environment to the rest of the project item. They are constructed
 by the Toolbox only during execution and mainly interact with Spine Engine. As such, the executable items
@@ -229,17 +229,17 @@ Forward execution is when the project items do their actions.
 
 When executing in either direction:
 
-#. :func:`spinetoolbox.executable_item_base.ExecutableItemBase.execute` is invoked with a list of available resources
+#. :func:`spinetoolbox.project_item.executable_item_base.ExecutableItemBase.execute` is invoked with a list of available resources
    and current execution direction.
-#. The resources returned by :func:`spinetoolbox.executable_item_base.ExecutableItemBase.output_resources` are
+#. The resources returned by :func:`spinetoolbox.project_item.executable_item_base.ExecutableItemBase.output_resources` are
    accumulated and passed to the ``execute()`` of the successor item.
 
 The ``execute()`` method further delegates the execution to the overridable
-:func:`spinetoolbox.executable_item_base.ExecutableItemBase._execute_forward` and
-:func:`spinetoolbox.executable_item_base.ExecutableItemBase._execute_backward` methods.
+:func:`spinetoolbox.project_item.executable_item_base.ExecutableItemBase._execute_forward` and
+:func:`spinetoolbox.project_item.executable_item_base.ExecutableItemBase._execute_backward` methods.
 Similarly, ``output_resources()`` calls the
-:func:`spinetoolbox_executable_item_base.ExecutableItemBase._output_resources_forward` and
-:func:`spinetoolbox_executable_item_base.ExecutableItemBase._output_resources_backward` methods.
+:func:`spinetoolbox_project_item.executable_item_base.ExecutableItemBase._output_resources_forward` and
+:func:`spinetoolbox_project_item.executable_item_base.ExecutableItemBase._output_resources_backward` methods.
 
 The executable items need additional properties to function.
 The table below lists the properties for each item.
