@@ -572,55 +572,25 @@ class GraphViewMixin:
 
     @Slot(bool)
     def save_positions(self, checked=False):
-        items_per_class_id = {}
-        for item in self.selected_items:
-            items_per_class_id.setdefault(item.entity_class_id, []).append(item)
-        pos_def_class_ids = {
-            p["entity_class_id"]
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_definition", "parameter_name", self._POS_PARAM_NAME
-            )
+        obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
+        rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]
+        db_map_data = dict()
+        data = db_map_data[self.graph_db_map] = dict()
+        data["object_parameters"] = [(item.entity_class_name, self._POS_PARAM_NAME) for item in obj_items]
+        data["relationship_parameters"] = [(item.entity_class_name, self._POS_PARAM_NAME) for item in rel_items]
+        value = lambda item: {
+            "type": "map",
+            "index_type": "str",
+            "data": [["x", item.pos().x()], ["y", item.pos().y()]],
         }
-        defs_to_add = [
-            {"name": self._POS_PARAM_NAME, "entity_class_id": class_id}
-            for class_id in items_per_class_id.keys() - pos_def_class_ids
+        data["object_parameter_values"] = [
+            (item.entity_class_name, item.entity_name, self._POS_PARAM_NAME, value(item)) for item in obj_items
         ]
-        if defs_to_add:
-            self.db_mngr.add_parameter_definitions({self.graph_db_map: defs_to_add})
-        pos_def_id_lookup = {
-            p["entity_class_id"]: p["id"]
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_definition", "parameter_name", self._POS_PARAM_NAME
-            )
-        }
-        pos_val_id_lookup = {
-            (p["entity_class_id"], p["entity_id"]): p["id"]
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
-            )
-        }
-        vals_to_add = list()
-        vals_to_update = list()
-        for class_id, items in items_per_class_id.items():
-            for item in items:
-                pos_val_id = pos_val_id_lookup.get((class_id, item.entity_id), None)
-                value = {"type": "map", "index_type": "str", "data": [["x", item.pos().x()], ["y", item.pos().y()]]}
-                if pos_val_id is None:
-                    vals_to_add.append(
-                        {
-                            "name": "pos_x",
-                            "entity_class_id": class_id,
-                            "entity_id": item.entity_id,
-                            "parameter_definition_id": pos_def_id_lookup[class_id],
-                            "value": to_database(value),
-                        }
-                    )
-                else:
-                    vals_to_update.append({"id": pos_val_id, "value": to_database(value)})
-        if vals_to_add:
-            self.db_mngr.add_parameter_values({self.graph_db_map: vals_to_add})
-        if vals_to_update:
-            self.db_mngr.update_parameter_values({self.graph_db_map: vals_to_update})
+        data["relationship_parameter_values"] = [
+            (item.entity_class_name, item.object_name_list.split(","), self._POS_PARAM_NAME, value(item))
+            for item in rel_items
+        ]
+        self.db_mngr.import_data(db_map_data)
 
     @Slot(bool)
     def clear_saved_positions(self, checked=False):

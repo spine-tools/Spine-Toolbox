@@ -713,7 +713,7 @@ class SpineDBManager(QObject):
         Returns:
             list
         """
-        return self._cache.get(db_map, {}).get(item_type, {}).values()
+        return list(self._cache.get(db_map, {}).get(item_type, {}).values())
 
     def get_field(self, db_map, item_type, id_, field):
         return self.get_item(db_map, item_type, id_).get(field)
