@@ -151,10 +151,6 @@ class Ui_Form(object):
 
         self.verticalLayout.addWidget(self.label_spinedb_api)
 
-        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.verticalLayout.addItem(self.verticalSpacer_2)
-
         self.label_spine_engine = QLabel(self.widget_9)
         self.label_spine_engine.setObjectName(u"label_spine_engine")
         sizePolicy2.setHeightForWidth(self.label_spine_engine.sizePolicy().hasHeightForWidth())
@@ -164,6 +160,16 @@ class Ui_Form(object):
         self.label_spine_engine.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_engine)
+
+        self.label_spine_items = QLabel(self.widget_9)
+        self.label_spine_items.setObjectName(u"label_spine_items")
+        sizePolicy2.setHeightForWidth(self.label_spine_items.sizePolicy().hasHeightForWidth())
+        self.label_spine_items.setSizePolicy(sizePolicy2)
+        self.label_spine_items.setFont(font2)
+        self.label_spine_items.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.label_spine_items.setAlignment(Qt.AlignCenter)
+
+        self.verticalLayout.addWidget(self.label_spine_items)
 
         self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -452,6 +458,7 @@ class Ui_Form(object):
         self.label_spine_toolbox.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>Spine Toolbox</p></body></html>", None))
         self.label_spinedb_api.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>spinedb_api</p></body></html>", None))
         self.label_spine_engine.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>spine_engine</p></body></html>", None))
+        self.label_spine_items.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>spine_items</p></body></html>", None))
         self.textBrowser.setDocumentTitle("")
         self.textBrowser.setHtml(QCoreApplication.translate("Form", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
