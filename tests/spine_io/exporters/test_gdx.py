@@ -841,7 +841,7 @@ class TestGdx(unittest.TestCase):
             internally_indexed_setting.index_position = 1
             indexing_settings = {
                 "externally_indexed": {("domain1", "domain2"): externally_indexed_setting},
-                "internally_indexed": {("domain1", "domain2"): internally_indexed_setting,}
+                "internally_indexed": {("domain1", "domain2"): internally_indexed_setting},
             }
             path_to_gdx = Path(tmp_dir_name).joinpath("test_to_gdx_file_expands_indexed_parameters.gdx")
             gdx.to_gdx_file(
@@ -1243,6 +1243,13 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(base_settings.records("c").records, [("CC",), ("CCC",)])
         self.assertEqual(base_settings.records("d").records, [("D",)])
 
+    def test_SetSettings_update_raises_on_additional_domain_name_conflict(self):
+        base_settings = gdx.SetSettings(
+            {"a"}, set(), {"a": gdx.LiteralRecords([])}, metadatas={"a": gdx.SetMetadata(origin=gdx.Origin.INDEXING)}
+        )
+        update_settings = gdx.SetSettings(set(), {"a"}, {})
+        self.assertRaises(gdx.GdxExportException, base_settings.update, update_settings)
+
     def test_SetSettings_add_domain(self):
         settings = gdx.SetSettings(
             {"a"},
@@ -1264,6 +1271,18 @@ class TestGdx(unittest.TestCase):
         self.assertFalse(settings.set_names)
         self.assertFalse(settings.set_tiers)
         self.assertEqual(settings.global_parameters_domain_name, "")
+
+    def test_SetSettings_add_domain_raises_when_domain_names_clash(self):
+        settings = gdx.SetSettings(set(), {"existing_set"}, {})
+        domain = gdx.Set("b")
+        domain.records.append(gdx.Record(("B",)))
+        self.assertRaises(
+            gdx.GdxExportException,
+            settings.add_or_replace_domain,
+            "existing_set",
+            gdx.LiteralRecords([]),
+            gdx.SetMetadata(),
+        )
 
     def test_SetSettings_replace_domain(self):
         settings = gdx.SetSettings(
@@ -1464,9 +1483,7 @@ class TestGdx(unittest.TestCase):
         original["parameter"][("domain1",)].picking = gdx.FixedPicking([False, True])
         original["parameter"][("domain1",)].index_position = 1
         settings_dict = gdx.indexing_settings_to_dict(original)
-        restored = gdx.indexing_settings_from_dict(
-            settings_dict
-        )
+        restored = gdx.indexing_settings_from_dict(settings_dict)
         self.assertTrue(len(restored), 1)
         self.assertIn("parameter", restored)
         self.assertTrue(len(restored["parameter"]), 1)

@@ -64,8 +64,11 @@ class TestSubscribers(unittest.TestCase):
         self.assertIsNone(self._finished_name)
         self.assertIsNone(self._finished_direction)
         self.assertIsNone(self._finished_state)
-        node_data = {"item_name": "test_finished", "direction": ExecutionDirection.BACKWARD,
-                     "state": SpineEngineState.COMPLETED}
+        node_data = {
+            "item_name": "test_finished",
+            "direction": ExecutionDirection.BACKWARD,
+            "state": SpineEngineState.COMPLETED,
+        }
         self.exec_finished_subscriber.update(node_data)
         self.assertEqual(self._finished_name, "test_finished")
         self.assertEqual(self._finished_direction, ExecutionDirection.BACKWARD)

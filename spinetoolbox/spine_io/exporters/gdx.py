@@ -2199,6 +2199,8 @@ class SetSettings:
         Returns:
             bool: True if a new domain was added, False if an existing domain was replaced
         """
+        if domain_name in self._set_names:
+            raise GdxExportException(f"A set named '{domain_name}' already exists.")
         existed = domain_name in self._domain_names
         self._domain_names.add(domain_name)
         if domain_name not in self._domain_tiers:
@@ -2214,7 +2216,6 @@ class SetSettings:
         Args:
             domain_name (str): name of the domain to remove
         """
-
         self._domain_names.remove(domain_name)
         del self._domain_tiers[domain_name]
         del self._metadatas[domain_name]
@@ -2263,6 +2264,10 @@ class SetSettings:
         for name in self._domain_names:
             metadata = self._metadatas[name]
             if metadata.is_additional():
+                if name in updating_settings.set_names:
+                    raise GdxExportException(
+                        f"Additional domain '{name}' conflicts with a new set under the same name."
+                    )
                 updated_domain_names.add(name)
                 updated_records[name] = self._records[name]
                 updated_metadatas[name] = metadata
