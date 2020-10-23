@@ -719,3 +719,6 @@ class MappingSpecificationModel(QAbstractTableModel):
         mapping_name = specification_dict.pop("mapping_name", "")
         mapping = item_mapping_from_dict(specification_dict)
         return MappingSpecificationModel(table_name, mapping_name, mapping, undo_stack)
+
+    def duplicate(self, table_name, undo_stack):
+        return self.from_dict(self.to_dict(), table_name, undo_stack)

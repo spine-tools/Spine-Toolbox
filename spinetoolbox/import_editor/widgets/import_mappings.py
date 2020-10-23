@@ -153,10 +153,11 @@ class ImportMappings(QObject):
     def duplicate_mapping(self, source_table_name, row):
         if self._mappings_model is None:
             return
-        specification = self._mappings_model.mapping_specifications[row]
+        spec = self._mappings_model.mapping_specifications[row]
+        dup_spec = spec.duplicate(source_table_name, self._undo_stack)
         prefix = self._mappings_model.mapping_name_at(row) + "--"
         name = self._mappings_model._make_new_mapping_name(prefix)
-        self.insert_mapping_specification(source_table_name, name, row + 1, specification)
+        self.insert_mapping_specification(source_table_name, name, row + 1, dup_spec)
         return name
 
     @Slot()
