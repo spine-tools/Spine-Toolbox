@@ -19,6 +19,27 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 
+class _ResourceProvider:
+    """A picklable class to hold information about a resource's provider.
+
+    In multiprocess pipeline execution with dagster, ProjectItemResource needs to be pickled
+    (because Outputs of solids are saved to disk for some reason), 
+    which is *not possible* if one of the attributes is a ExecutableItemBase instance.
+    Since all we ever use from the ProjectItemResource.provider is the name,
+    this class works as an efficient replacement.
+
+    More attributes can be added as needed (in case we need to know more about a resource's provider)
+    making sure that this class remains picklable.
+    """
+
+    def __init__(self, item):
+        """
+        Args:
+            item (ExecutableItemBase)
+        """
+        self.name = item.name
+
+
 class ProjectItemResource:
     """Class to hold a resource made available by a project item
     and that may be consumed by another project item."""
@@ -43,7 +64,7 @@ class ProjectItemResource:
                 - label (str): a textual label
                 - pattern (str): a file pattern if the file is part of that pattern
         """
-        self.provider = provider
+        self.provider = _ResourceProvider(provider)
         self.type_ = type_
         self.url = url
         self.parsed_url = urlparse(url)
@@ -62,7 +83,7 @@ class ProjectItemResource:
 
     def __repr__(self):
         result = "ProjectItemResource("
-        result += f"provider={self.provider}, "
+        result += f"provider={self.provider.name}, "
         result += f"type_={self.type_}, "
         result += f"url={self.url}, "
         result += f"metadata={self.metadata})"
