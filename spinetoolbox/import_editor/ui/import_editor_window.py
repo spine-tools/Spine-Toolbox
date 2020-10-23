@@ -159,6 +159,11 @@ class Ui_MainWindow(object):
 
         self.button_layout.addWidget(self.remove_button)
 
+        self.duplicate_button = QPushButton(self.dockWidgetContents_4)
+        self.duplicate_button.setObjectName(u"duplicate_button")
+
+        self.button_layout.addWidget(self.duplicate_button)
+
 
         self.verticalLayout_7.addLayout(self.button_layout)
 
@@ -348,6 +353,7 @@ class Ui_MainWindow(object):
         self.dockWidget_mappings.setWindowTitle(QCoreApplication.translate("MainWindow", u"Mappings", None))
         self.new_button.setText(QCoreApplication.translate("MainWindow", u"New", None))
         self.remove_button.setText(QCoreApplication.translate("MainWindow", u"Remove", None))
+        self.duplicate_button.setText(QCoreApplication.translate("MainWindow", u"Duplicate", None))
         self.dockWidget_mapping_options.setWindowTitle(QCoreApplication.translate("MainWindow", u"Mapping options", None))
         self.class_type_label.setText(QCoreApplication.translate("MainWindow", u"Item type:", None))
         self.class_type_combo_box.setItemText(0, QCoreApplication.translate("MainWindow", u"Object class", None))

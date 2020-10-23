@@ -43,9 +43,9 @@ class MappingListModel(QAbstractListModel):
             if not m.mapping_name:
                 self._names[k] = m.mapping_name = self._make_new_mapping_name(counter=k)
 
-    def _make_new_mapping_name(self, counter=1):
+    def _make_new_mapping_name(self, prefix="Mapping ", counter=0):
         while True:
-            name = "Mapping " + str(counter)
+            name = prefix + str(counter)
             if name not in self._names:
                 return name
             counter += 1

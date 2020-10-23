@@ -396,7 +396,7 @@ class MappingSpecificationModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         column = index.column()
-        if role in (Qt.DisplayRole,):
+        if role in (Qt.DisplayRole, Qt.EditRole):
             name = self._component_names[index.row()]
             if column == 0:
                 return name

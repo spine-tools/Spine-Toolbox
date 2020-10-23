@@ -18,7 +18,7 @@ ImportMappings widget.
 
 from PySide2.QtCore import QObject, QItemSelectionModel, Signal, Slot
 from ...widgets.custom_delegates import ComboBoxDelegate
-from ..commands import CreateMapping, DeleteMapping
+from ..commands import CreateMapping, DeleteMapping, DuplicateMapping
 
 SOURCE_TYPES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
@@ -54,6 +54,7 @@ class ImportMappings(QObject):
         # connect signals
         self._ui.new_button.clicked.connect(self.new_mapping)
         self._ui.remove_button.clicked.connect(self.delete_selected_mapping)
+        self._ui.duplicate_button.clicked.connect(self.duplicate_selected_mapping)
         self.mapping_selection_changed.connect(self._ui.table_view_mappings.setModel)
 
     @Slot(str, object)
@@ -136,6 +137,27 @@ class ImportMappings(QObject):
             return
         self._mappings_model.insert_mapping_specification(name, row, mapping_specification)
         self._select_row(row)
+
+    @Slot()
+    def duplicate_selected_mapping(self):
+        """
+        Pushes a CreateMapping command to the undo stack.
+        """
+        selection_model = self._ui.list_view.selectionModel()
+        if self._mappings_model is None or not selection_model.hasSelection():
+            return
+        row = selection_model.currentIndex().row()
+        command = DuplicateMapping(self._source_table, self, row)
+        self._undo_stack.push(command)
+
+    def duplicate_mapping(self, source_table_name, row):
+        if self._mappings_model is None:
+            return
+        specification = self._mappings_model.mapping_specifications[row]
+        prefix = self._mappings_model.mapping_name_at(row) + "--"
+        name = self._mappings_model._make_new_mapping_name(prefix)
+        self.insert_mapping_specification(source_table_name, name, row + 1, specification)
+        return name
 
     @Slot()
     def delete_selected_mapping(self):
