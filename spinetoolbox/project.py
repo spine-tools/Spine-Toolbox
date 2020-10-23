@@ -21,6 +21,7 @@ import json
 from PySide2.QtCore import Slot, Signal, QEventLoop
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
+from spine_engine.spine_engine_experimental import SpineEngineExperimental
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.helpers import create_dir
 from .helpers import inverted, erase_dir
@@ -545,7 +546,7 @@ class SpineToolboxProject(MetaObject):
             "settings": settings,
             "project_dir": self.project_dir,
         }
-        self.engine = SpineEngine.from_json(json.dumps(d))
+        self.engine = SpineEngineExperimental(json.dumps(d))
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self._engine_loop = QEventLoop()

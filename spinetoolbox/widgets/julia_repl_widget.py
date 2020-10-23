@@ -72,7 +72,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
         Returns:
             str, NoneType
         """
-        self._toolbox.msg.emit("\tInitializing Julia...")
         julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
         if julia_path != "":
             self.julia_exe = julia_path
@@ -90,7 +89,6 @@ class JuliaREPLWidget(SpineConsoleWidget):
             )
             return None
         julia_version = exec_mngr.process_output
-        self._toolbox.msg.emit("\tJulia version is {0}".format(julia_version))
         kernel_name = "julia-" + ".".join(julia_version.split(".")[0:2])
         if self.kernel_name is not None and self.kernel_name != kernel_name:
             self._toolbox.msg_warning.emit(

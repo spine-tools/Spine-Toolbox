@@ -89,7 +89,6 @@ class PythonReplWidget(SpineConsoleWidget):
         ver = p_v_list[1]  # version e.g. 3.7.1
         kernel_name = "python-" + ver[:3]
         kernel_display_name = "Python-" + ver
-        self.may_need_restart = False
         return kernel_name, kernel_display_name
 
     @Slot()
@@ -114,6 +113,7 @@ class PythonReplWidget(SpineConsoleWidget):
             self._toolbox.msg.emit("*** Starting Python Console ***")
         self.kernel_name = k_name
         self.kernel_display_name = k_display_name
+        self.may_need_restart = False
         self.check_and_install_requirements()
 
     def check_and_install_requirements(self):
