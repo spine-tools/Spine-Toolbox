@@ -87,12 +87,10 @@ class TreeViewMixin:
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
         self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
+        self._object_classes_fetched.connect(self._expand_object_tree_root_index)
+        self._relationship_classes_fetched.connect(self._expand_relationship_tree_root_index)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
-        self._object_classes_fetched.connect(lambda: self.ui.treeView_object.expand(self.object_tree_model.root_index))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
-        self._relationship_classes_fetched.connect(
-            lambda: self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
-        )
 
     def init_models(self):
         """Initializes models."""
@@ -106,6 +104,16 @@ class TreeViewMixin:
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
+
+    @Slot()
+    def _expand_object_tree_root_index(self):
+        qApp.processEvents()
+        self.ui.treeView_object.expand(self.object_tree_model.root_index)
+
+    @Slot()
+    def _expand_relationship_tree_root_index(self):
+        qApp.processEvents()
+        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
