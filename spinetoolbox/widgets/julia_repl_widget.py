@@ -24,7 +24,7 @@ from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from ..execution_managers import QProcessExecutionManager
 from ..config import JULIA_EXECUTABLE
 from ..helpers import busy_effect
-from .spine_console_widget import SpineConsoleWidget
+from .spine_console_widget import SpineConsoleWidget, CustomQtKernelManager
 from .custom_qlistview import DragListView
 
 
