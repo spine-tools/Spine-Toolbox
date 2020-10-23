@@ -754,7 +754,10 @@ class ToolboxUI(QMainWindow):
                 definition["includes_main_path"] = os.path.normpath(
                     os.path.join(os.path.dirname(def_path), includes_main_path)
                 )
-        return self.load_specification(definition)
+        spec = self.load_specification(definition)
+        if spec is not None:
+            spec.definition_file_path = def_path
+        return spec
 
     def load_specification(self, definition):
         """Returns a Tool specification from a definition dictionary.
