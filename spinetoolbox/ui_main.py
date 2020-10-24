@@ -475,7 +475,7 @@ class ToolboxUI(QMainWindow):
         # Parse project info
         name = project_info["project"]["name"]  # Project name
         desc = project_info["project"]["description"]  # Project description
-        tool_specs = project_info["project"]["specifications"]["Tool"]
+        specs = project_info["project"]["specifications"]
         connections = project_info["project"]["connections"]
         project_items = project_info["items"]
         # Init project item model
@@ -498,7 +498,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setEnabled(True)
         # Init tool spec model
-        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_specs]
+        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in specs]
         self.init_specification_model(deserialized_paths)
         # Populate project model with project items
         if not self._project.load(project_items):

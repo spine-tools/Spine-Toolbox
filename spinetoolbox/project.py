@@ -193,8 +193,7 @@ class SpineToolboxProject(MetaObject):
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        project_dict["specifications"] = dict()
-        project_dict["specifications"]["Tool"] = spec_paths
+        project_dict["specifications"] = spec_paths
         # Compute connections directly from Links on scene
         project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
         items_dict = dict()  # Dictionary for storing project items
