@@ -20,13 +20,13 @@ from copy import deepcopy
 from PySide2.QtCore import QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
 from spinedb_api import ObjectClassMapping
+from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 from .options_widget import OptionsWidget
 from ..commands import PasteMappings, PasteOptions
 from ..mvcmodels.mapping_list_model import MappingListModel
 from ..mvcmodels.mapping_specification_model import MappingSpecificationModel
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ..mvcmodels.source_table_list_model import SourceTableItem, SourceTableListModel
-from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 from ...widgets.custom_menus import CustomContextMenu
 
 
