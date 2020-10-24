@@ -29,7 +29,7 @@ class ImportMappings(QObject):
     """
 
     mapping_selection_changed = Signal(object)
-    """Emitted when a new mapping specification is selected from the Mappings list."""
+    """Emitted with a new MappingSpecificationModel whenever a new mapping is selected from the Mappings list."""
     mapping_data_changed = Signal(object)
     """Emits the new MappingListModel."""
     about_to_undo = Signal(str)
@@ -55,16 +55,30 @@ class ImportMappings(QObject):
         self._ui.new_button.clicked.connect(self.new_mapping)
         self._ui.remove_button.clicked.connect(self.delete_selected_mapping)
         self._ui.duplicate_button.clicked.connect(self.duplicate_selected_mapping)
-        self.mapping_selection_changed.connect(self._ui.table_view_mappings.setModel)
+        self.mapping_selection_changed.connect(self._update_table_view_mappings)
+
+    @Slot(object)
+    def _update_table_view_mappings(self, mapping_spec_model):
+        current_model = self._ui.table_view_mappings.model()
+        if current_model is not None:
+            current_model.modelReset.disconnect(self._resize_table_view_mappings_columns)
+        self._ui.table_view_mappings.setModel(mapping_spec_model)
+        self._resize_table_view_mappings_columns()
+        mapping_spec_model.modelReset.connect(self._resize_table_view_mappings_columns)
+
+    @Slot()
+    def _resize_table_view_mappings_columns(self):
+        self._ui.table_view_mappings.resizeColumnsToContents()
 
     @Slot(str, object)
     def set_mappings_model(self, source_table_name, model):
         """
-        Sets new mappings.
+        Called when the user selects a new source table.
+        Sets a new MappingListModel model.
 
         Args:
-            source_table_name (str): source table's name
-            model (MappingListModel): mapping list model
+            source_table_name (str): newly selected source table's name
+            model (MappingListModel): mapping list model attached to that source table.
         """
         self._source_table = source_table_name
         if self._mappings_model is not None:
@@ -141,7 +155,7 @@ class ImportMappings(QObject):
     @Slot()
     def duplicate_selected_mapping(self):
         """
-        Pushes a CreateMapping command to the undo stack.
+        Pushes a DuplicateMapping command to the undo stack.
         """
         selection_model = self._ui.list_view.selectionModel()
         if self._mappings_model is None or not selection_model.hasSelection():
