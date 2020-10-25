@@ -53,11 +53,13 @@ class TestLoadProjectItems(unittest.TestCase):
 
     def test_load_item_specification_factories(self):
         factories = load_item_specification_factories()
-        self.assertEqual(len(factories), 2)
+        self.assertEqual(len(factories), 3)
         self.assertIn("Tool", factories)
         self.assertTrue(issubclass(factories["Tool"], ProjectItemSpecificationFactory))
         self.assertIn("Data Transformer", factories)
         self.assertTrue(issubclass(factories["Data Transformer"], ProjectItemSpecificationFactory))
+        self.assertIn("Importer", factories)
+        self.assertTrue(issubclass(factories["Importer"], ProjectItemSpecificationFactory))
 
     def test_item_factories_report_specification_support_correctly(self):
         toolbox = MagicMock()

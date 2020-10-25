@@ -87,7 +87,7 @@ class ProjectUpgrader:
                 self._toolbox.msg_success.emit("Project upgraded successfully")
                 v += 1
             # Example on what to do when version 3 comes
-            if v == 2:
+            elif v == 2:
                 project_dict = self.upgrade_v2_to_v3(project_dict, project_dir, self._toolbox.item_factories)
                 v += 1
         return project_dict
