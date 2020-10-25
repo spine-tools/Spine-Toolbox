@@ -122,7 +122,7 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def make_specification_widget(toolbox, specification=None):
+    def show_specification_widget(toolbox, specification=None):
         """
         Creates the item's specification widget.
 
@@ -136,3 +136,7 @@ class ProjectItemFactory:
             QWidget: item's specification widget
         """
         raise NotImplementedError()
+
+    @staticmethod
+    def tear_down():
+        """Tears down the factory. Called by toolbox when closing."""

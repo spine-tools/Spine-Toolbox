@@ -42,13 +42,7 @@ class ProjectItemSpecification:
         self.item_category = item_category
         self.definition_file_path = ""
 
-    def __eq__(self, other):
-        """Overrides the default implementation"""
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        return self.name == other.name
-
-    # TODO:Needed?
+    # TODO: Needed?
     def set_name(self, name):
         """Set object name and short name.
         Note: Check conflicts (e.g. name already exists)

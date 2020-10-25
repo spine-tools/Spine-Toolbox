@@ -23,7 +23,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Import preview</string>
+   <string>Import Editor</string>
   </property>
   <property name="dockNestingEnabled">
    <bool>true</bool>

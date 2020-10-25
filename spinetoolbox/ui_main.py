@@ -942,21 +942,35 @@ class ToolboxUI(QMainWindow):
         if answer[0] == "":  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
-        # Load tool definition
+        # Load specification
         specification = self.load_specification_from_file(def_file)
         if not specification:
             return
-        if self.specification_model.find_specification(specification.name):
-            # Tool specification already added to project
-            self.msg_warning.emit("Specification <b>{0}</b> already in project".format(specification.name))
-            return
-        # Add definition file path into tool specification
+        # Add definition file path into specification
         specification.definition_file_path = def_file
         self.add_specification(specification)
 
     def add_specification(self, specification):
         """Pushes a new AddSpecificationCommand to the undo stack."""
-        self.undo_stack.push(AddSpecificationCommand(self, specification))
+        row = self.specification_model.specification_row(specification.name)
+        if row >= 0:
+            if self.specification_model.specification(row) != specification:
+                button = QMessageBox.question(
+                    self,
+                    "Duplicate specification name",
+                    f"There's already a specification called <b>{specification.name}</b> in the current project.<br>"
+                    "Do you want to replace it?",
+                )
+                if button != QMessageBox.Yes:
+                    return
+            self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
+        else:
+            self.undo_stack.push(AddSpecificationCommand(self, specification))
+
+    def update_specification(self, specification):
+        row = self.specification_model.specification_row(specification.name)
+        if row >= 0:
+            self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
 
     def do_add_specification(self, specification, row=None):
         """Adds a ProjectItemSpecification instance to project.
@@ -966,10 +980,6 @@ class ToolboxUI(QMainWindow):
         """
         self.specification_model.insertRow(specification, row)
         self.msg_success.emit("Specification <b>{0}</b> added to project".format(specification.name))
-
-    def update_specification(self, row, specification):
-        """Pushes a new UpdateSpecificationCommand to the undo stack."""
-        self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
 
     def do_update_specification(self, row, specification):
         """Updates a specification and refreshes all items that use it.
@@ -982,13 +992,25 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Unable to update specification <b>{0}</b>".format(specification.name))
             return
         self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
-        for project_item in self._get_specific_items(specification):
-            project_item.do_set_specification(specification)
-            self.msg.emit(
-                "Specification <b>{0}</b> successfully updated in Item <b>{1}</b>".format(
-                    specification.name, project_item.name
+        for item in self.project_item_model.items():
+            project_item = item.project_item
+            project_item_spec = project_item.specification()
+            if project_item_spec is None or project_item_spec.name != specification.name:
+                continue
+            if specification.item_type == project_item.item_type():
+                self.msg_success.emit(
+                    f"Specification <b>{specification.name}</b> successfully updated "
+                    f"in Item <b>{project_item.name}</b>"
                 )
-            )
+                project_item.do_set_specification(specification)
+            else:
+                self.msg_warning.emit(
+                    f"Specification <b>{specification.name}</b> "
+                    f"of type <b>{specification.item_type}</b> "
+                    f"is no longer valid for Item <b>{project_item.name}</b> "
+                    f"of type <b>{project_item.item_type()}</b>"
+                )
+                project_item.do_set_specification(None)
 
     def undo_update_specification(self, row):
         """Reverts a specification update and refreshes all items that use it.
@@ -1001,13 +1023,14 @@ class ToolboxUI(QMainWindow):
             return
         specification = self.specification_model.specification(row)
         self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
-        for project_item in self._get_specific_items(specification):
-            project_item.undo_set_specification()
-            self.msg.emit(
-                "Specification <b>{0}</b> successfully updated in Item <b>{1}</b>".format(
-                    specification.name, project_item.name
+        for item in self.project_item_model.items():
+            project_item = item.project_item
+            if project_item.undo_specification == specification:
+                project_item.undo_set_specification()
+                self.msg_success.emit(
+                    f"Specification <b>{specification.name}</b> successfully updated "
+                    f"in Item <b>{project_item.name}</b>"
                 )
-            )
 
     def _get_specific_items(self, specification):
         """Yields project items with given specification.
@@ -1337,7 +1360,7 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form.show()
 
     @Slot()
-    def show_specification_form(self, item_type, specification=None):
+    def show_specification_form(self, item_type, specification=None, **kwargs):
         """
         Show specification widget.
 
@@ -1351,8 +1374,7 @@ class ToolboxUI(QMainWindow):
         factory = self.item_factories[item_type]
         if not factory.supports_specifications():
             return
-        form = factory.make_specification_widget(self, specification)
-        form.show()
+        factory.show_specification_widget(self, specification, **kwargs)
 
     @Slot()
     def show_settings(self):
@@ -1459,10 +1481,12 @@ class ToolboxUI(QMainWindow):
         self.link_context_menu.deleteLater()
         self.link_context_menu = None
 
-    def tear_down_items(self):
+    def tear_down_items_and_factories(self):
         """Calls the tear_down method on all project items, so they can clean up their mess if needed."""
         if not self._project:
             return
+        for factory in self.item_factories.values():
+            factory.tear_down()
         for item in self.project_item_model.items():
             if isinstance(item, LeafProjectTreeItem):
                 item.project_item.tear_down()
@@ -1646,7 +1670,7 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
         self.python_repl.shutdown_kernel()
-        self.tear_down_items()
+        self.tear_down_items_and_factories()
         event.accept()
 
     def _serialize_selected_items(self):
@@ -1857,6 +1881,3 @@ class ToolboxUI(QMainWindow):
     @staticmethod
     def create_spine_datapackage_form(dc):
         return SpineDatapackageWidget(dc)
-
-    def create_import_editor_window(self, importer, file_path, connector, connector_settings, settings):
-        return ImportEditorWindow(importer, file_path, connector, connector_settings, settings, self)

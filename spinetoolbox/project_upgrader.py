@@ -139,9 +139,9 @@ class ProjectUpgrader:
                 # Convert serialized paths to absolute in mappings
                 _fix_1d_array_to_array(mappings)
                 # Make item specs from sanitized mappings
-                for k, (label, spec) in enumerate(mappings):
+                for k, (label, mapping) in enumerate(mappings):
                     spec_name = self.make_unique_importer_specification_name(item_name, label, k)
-                    spec = dict(name=spec_name, item_type="Importer", mapping=spec)
+                    spec = dict(name=spec_name, item_type="Importer", mapping=mapping)
                     spec_path = os.path.join(project_dir, spec_name + ".json")
                     # FIXME: Let's try and handle write errors here...
                     with open(spec_path, "w") as fp:
