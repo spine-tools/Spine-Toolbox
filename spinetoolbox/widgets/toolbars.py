@@ -16,9 +16,9 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
-from PySide2.QtGui import QIcon, Qt
+from PySide2.QtGui import QIcon
 from ..config import ICON_TOOLBAR_SS
 from .custom_qlistview import ProjectItemDragListView
 
@@ -34,8 +34,8 @@ class MainToolBar(QToolBar):
         """
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         self._toolbox = parent
-        self.project_item_list_view = ProjectItemDragListView(self)
-        self.project_item_spec_list_view = ProjectItemDragListView(self)
+        self.project_item_list_view = ProjectItemDragListView()
+        self.project_item_spec_list_view = ProjectItemDragListView()
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
 
@@ -46,14 +46,14 @@ class MainToolBar(QToolBar):
 
     def add_project_item_list_view(self):
         self.project_item_list_view.setModel(self._toolbox.project_item_factory_model)
-        self.addWidget(QLabel("Generic items"))
-        self.addWidget(self.project_item_list_view)
+        self.addWidget(QLabel("Items"))
+        self.project_item_list_view.add_to_toolbar(self)
 
     def add_project_item_spec_list_view(self):
         icon_size = 16
         self.addSeparator()
-        self.addWidget(QLabel("Specific items"))
-        self.addWidget(self.project_item_spec_list_view)
+        self.addWidget(QLabel("Specifications"))
+        self.project_item_spec_list_view.add_to_toolbar(self)
         remove_spec = QToolButton(self)
         remove_spec_icon = QIcon(":/icons/wrench_minus.svg").pixmap(icon_size, icon_size)
         remove_spec.setIcon(remove_spec_icon)

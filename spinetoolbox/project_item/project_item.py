@@ -155,10 +155,10 @@ class ProjectItem(MetaObject):
         self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification))
 
     def do_set_specification(self, specification):
-        """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
+        """Sets specification for this item. Removes specification if None given as argument.
 
         Args:
-            specification (ToolSpecification): Tool specification of this Tool. None removes the specification.
+            specification (ProjectItemSpecification): specification of this item. None removes the specification.
         """
         self.undo_specification = self._specification
         self._specification = specification
