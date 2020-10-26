@@ -1051,7 +1051,7 @@ class ToolboxUI(QMainWindow):
             return
         selected = self.main_toolbar.project_item_spec_list_view.selectedIndexes()
         if not selected:
-            self.msg.emit("Select a Specific item to remove")
+            self.msg.emit("Select a specification to remove")
             return
         index = selected[0]
         if not index.isValid():

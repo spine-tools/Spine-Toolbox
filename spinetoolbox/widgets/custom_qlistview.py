@@ -20,6 +20,8 @@ from PySide2.QtWidgets import QListView, QApplication
 from PySide2.QtGui import QDrag
 from PySide2.QtCore import Qt, QMimeData, QSize, Slot
 
+_SCROLL_BUTTON_SS = "background-color: rgba(255, 255, 255, 0); max-width: 12px; max-height: 12px; border: 0px;"
+
 
 class DragListView(QListView):
     """Custom QListView class with dragging support.
@@ -104,21 +106,33 @@ class ProjectItemDragListView(DragListView):
             toolbar (MainToolBar)
         """
         self._toolbar = toolbar
-        self._create_scroll_sub_line_action()
         self._toolbar.addWidget(self)
+        self._create_scroll_sub_line_action()
         self._create_scroll_add_line_action()
         self._toolbar.orientationChanged.connect(self._handle_orientation_changed)
-        self._handle_orientation_changed(self._toolbar.orientation())
+        self._update_orientation_and_size()
+
+    def setModel(self, model):
+        old_model = self.model()
+        if old_model:
+            old_model.modelReset.connect(self._update_orientation_and_size)
+            old_model.rowsInserted.connect(self._update_orientation_and_size)
+            old_model.rowsRemoved.connect(self._update_orientation_and_size)
+        super().setModel(model)
+        self._update_orientation_and_size()
+        model.modelReset.connect(self._update_orientation_and_size)
+        model.rowsInserted.connect(self._update_orientation_and_size)
+        model.rowsRemoved.connect(self._update_orientation_and_size)
 
     def _create_scroll_sub_line_action(self):
         self._scroll_sub_line_action = self._toolbar.addAction("", self._scroll_sub_line)
         button = self._toolbar.widgetForAction(self._scroll_sub_line_action)
-        button.setStyleSheet("background-color: rgba(255, 255, 255, 0); border: 0px")
+        button.setStyleSheet(_SCROLL_BUTTON_SS)
 
     def _create_scroll_add_line_action(self):
         self._scroll_add_line_action = self._toolbar.addAction("", self._scroll_add_line)
         button = self._toolbar.widgetForAction(self._scroll_add_line_action)
-        button.setStyleSheet("background-color: rgba(255, 255, 255, 0); border: 0px")
+        button.setStyleSheet(_SCROLL_BUTTON_SS)
 
     @Slot(bool)
     def _scroll_sub_line(self, _checked=False):
@@ -138,7 +152,13 @@ class ProjectItemDragListView(DragListView):
 
     @Slot("Qt::Orientation")
     def _handle_orientation_changed(self, orientation):
-        self._orientation = orientation
+        self._update_orientation_and_size()
+
+    @Slot()
+    def _update_orientation_and_size(self):
+        if self._toolbar is None:
+            return
+        self._orientation = self._toolbar.orientation()
         scroll_sub_line_button = self._toolbar.widgetForAction(self._scroll_sub_line_action)
         scroll_add_line_button = self._toolbar.widgetForAction(self._scroll_add_line_action)
         max_width = self.sizeHintForColumn(0)
@@ -148,6 +168,8 @@ class ProjectItemDragListView(DragListView):
             self.setFlow(QListView.LeftToRight)
             scroll_sub_line_button.setArrowType(Qt.LeftArrow)
             scroll_add_line_button.setArrowType(Qt.RightArrow)
+            scroll_sub_line_button.setMaximumWidth(16)
+            scroll_add_line_button.setMaximumWidth(16)
             max_width *= row_count
         elif self._orientation == Qt.Vertical:
             self.setFlow(QListView.TopToBottom)
@@ -161,6 +183,8 @@ class ProjectItemDragListView(DragListView):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if self._orientation is None:
+            return
         viewport_size = self.viewport().size()
         if self._orientation == Qt.Horizontal:
             obscured = self._contents_size.width() > viewport_size.width()
