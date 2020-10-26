@@ -284,7 +284,8 @@ class EntityItem(QGraphicsPixmapItem):
             self.scene().clearSelection()
         self.setSelected(True)
         self._spine_db_editor._handle_menu_graph_about_to_show()
-        self._menu.popup(e.screenPos())
+        menu = self._make_menu()
+        menu.popup(e.screenPos())
 
 
 class RelationshipItem(EntityItem):
@@ -301,7 +302,6 @@ class RelationshipItem(EntityItem):
             entity_id (int): object id
         """
         super().__init__(spine_db_editor, x, y, extent, entity_id=entity_id)
-        self._menu = self._make_menu()
         self.setToolTip(self._make_tool_tip())
 
     @property
@@ -373,7 +373,6 @@ class ObjectItem(EntityItem):
         self.update_name(self.entity_name)
         description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
         self.update_description(description)
-        self._menu = self._make_menu()
 
     @property
     def entity_type(self):
