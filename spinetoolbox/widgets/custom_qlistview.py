@@ -108,6 +108,13 @@ class ProjectItemDragListView(DragListView):
         self._toolbar.addWidget(self)
         self._create_scroll_add_line_action()
         self._toolbar.orientationChanged.connect(self._handle_orientation_changed)
+
+    def setModel(self, model):
+        super().setModel(model)
+        self._handle_orientation_changed(self._toolbar.orientation())
+
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
         self._handle_orientation_changed(self._toolbar.orientation())
 
     def _create_scroll_sub_line_action(self):

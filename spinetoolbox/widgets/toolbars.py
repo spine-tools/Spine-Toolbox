@@ -45,9 +45,9 @@ class MainToolBar(QToolBar):
         self.add_execute_buttons()
 
     def add_project_item_list_view(self):
-        self.project_item_list_view.setModel(self._toolbox.project_item_factory_model)
         self.addWidget(QLabel("Items"))
         self.project_item_list_view.add_to_toolbar(self)
+        self.project_item_list_view.setModel(self._toolbox.project_item_factory_model)
 
     def add_project_item_spec_list_view(self):
         icon_size = 16
