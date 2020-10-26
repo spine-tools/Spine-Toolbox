@@ -108,14 +108,19 @@ class ProjectItemDragListView(DragListView):
         self._toolbar.addWidget(self)
         self._create_scroll_add_line_action()
         self._toolbar.orientationChanged.connect(self._handle_orientation_changed)
+        self._update_orientation_and_size()
 
     def setModel(self, model):
+        old_model = self.model()
+        if old_model:
+            old_model.modelReset.connect(self._update_orientation_and_size)
+            old_model.rowsInserted.connect(self._update_orientation_and_size)
+            old_model.rowsRemoved.connect(self._update_orientation_and_size)
         super().setModel(model)
-        self._handle_orientation_changed(self._toolbar.orientation())
-
-    def rowsInserted(self, parent, start, end):
-        super().rowsInserted(parent, start, end)
-        self._handle_orientation_changed(self._toolbar.orientation())
+        self._update_orientation_and_size()
+        model.modelReset.connect(self._update_orientation_and_size)
+        model.rowsInserted.connect(self._update_orientation_and_size)
+        model.rowsRemoved.connect(self._update_orientation_and_size)
 
     def _create_scroll_sub_line_action(self):
         self._scroll_sub_line_action = self._toolbar.addAction("", self._scroll_sub_line)
@@ -145,7 +150,13 @@ class ProjectItemDragListView(DragListView):
 
     @Slot("Qt::Orientation")
     def _handle_orientation_changed(self, orientation):
-        self._orientation = orientation
+        self._update_orientation_and_size()
+
+    @Slot()
+    def _update_orientation_and_size(self):
+        if self._toolbar is None:
+            return
+        self._orientation = self._toolbar.orientation()
         scroll_sub_line_button = self._toolbar.widgetForAction(self._scroll_sub_line_action)
         scroll_add_line_button = self._toolbar.widgetForAction(self._scroll_add_line_action)
         max_width = self.sizeHintForColumn(0)
@@ -168,6 +179,8 @@ class ProjectItemDragListView(DragListView):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if self._orientation is None:
+            return
         viewport_size = self.viewport().size()
         if self._orientation == Qt.Horizontal:
             obscured = self._contents_size.width() > viewport_size.width()
