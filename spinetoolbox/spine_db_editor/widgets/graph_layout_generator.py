@@ -16,6 +16,7 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 
+import math
 import enum
 import numpy as np
 from numpy import atleast_1d as arr
@@ -51,9 +52,9 @@ def make_heat_map(x, y, values):
 class _State(enum.Enum):
     """State of GraphLayoutGenerator."""
 
-    ACTIVE = enum.auto()
+    SLEEPING = enum.auto()
     STOPPED = enum.auto()
-    CANCELLED = enum.auto()
+    RUNNING = enum.auto()
 
 
 class ProgressBarWidget(QWidget):
@@ -66,7 +67,7 @@ class ProgressBarWidget(QWidget):
         layout.addWidget(inner_widget)
         layout.addStretch()
         inner_layout = QVBoxLayout(inner_widget)
-        label = QLabel("Generating layout...")
+        label = QLabel()
         label.setStyleSheet("QLabel{color:white; font-weight: bold; font-size:18px;}")
         label.setAlignment(Qt.AlignHCenter)
         progress_bar = QProgressBar()
@@ -74,16 +75,17 @@ class ProgressBarWidget(QWidget):
         progress_bar.setTextVisible(False)
         button_box = QDialogButtonBox()
         button_box.setCenterButtons(True)
-        button = button_box.addButton("Cancel", QDialogButtonBox.NoRole)
-        button.clicked.connect(layout_generator.cancel)
+        cancel_button = button_box.addButton("Cancel", QDialogButtonBox.NoRole)
+        cancel_button.clicked.connect(layout_generator.stop)
         inner_layout.addStretch()
         inner_layout.addWidget(label)
         inner_layout.addWidget(progress_bar)
         inner_layout.addWidget(button_box)
         inner_layout.addStretch()
         self.setFixedSize(parent.size())
-        layout_generator.done.connect(self.close)
+        layout_generator.stopped.connect(self.close)
         layout_generator.progressed.connect(progress_bar.setValue)
+        layout_generator.msg.connect(label.setText)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -98,7 +100,9 @@ class GraphLayoutGenerator(QObject):
     finished = Signal(object, object)
     started = Signal()
     progressed = Signal(int)
-    done = Signal()
+    stopped = Signal()
+    blocked = Signal(bool)
+    msg = Signal(str)
 
     def __init__(self, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=10, weight_exp=-2):
         super().__init__()
@@ -114,7 +118,7 @@ class GraphLayoutGenerator(QObject):
         self.iterations = max(3, round(iterations * (1 - len(heavy_positions) / self.vertex_count)))
         self.weight_exp = weight_exp
         self.initial_diameter = (self.vertex_count ** (0.5)) * self.spread
-        self._state = _State.ACTIVE
+        self._state = _State.SLEEPING
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.start()
@@ -127,14 +131,22 @@ class GraphLayoutGenerator(QObject):
         widget.show()
 
     def clean_up(self):
+        self.deleteLater()
         self._thread.quit()
-        self.done.emit()
 
-    def stop(self):
+    def is_running(self):
+        return self._state == _State.RUNNING
+
+    @Slot(bool)
+    def stop(self, _checked=False):
         self._state = _State.STOPPED
+        self.clean_up()
+        self.stopped.emit()
 
-    def cancel(self, checked=False):
-        self._state = _State.CANCELLED
+    def emit_finished(self, x, y):
+        if self._state == _State.STOPPED:
+            return
+        self.finished.emit(x, y)
 
     def start(self):
         self.started.emit()
@@ -154,7 +166,20 @@ class GraphLayoutGenerator(QObject):
             dist[src_inds, dst_inds] = dist[dst_inds, src_inds] = self.spread
         except IndexError:
             pass
-        matrix = dijkstra(dist, directed=False)
+        start = 0
+        slices = []
+        iteration = 0
+        self.msg.emit("Computing shortest-path matrix...")
+        while start < self.vertex_count:
+            if self._state == _State.STOPPED:
+                return
+            self.progressed.emit(iteration)
+            stop = min(self.vertex_count, start + math.ceil(self.vertex_count / 10))
+            slice_ = dijkstra(dist, directed=False, indices=range(start, stop))
+            slices.append(slice_)
+            start = stop
+            iteration += 1
+        matrix = np.vstack(slices)
         # Remove infinites and zeros
         matrix[matrix == np.inf] = self.spread * self.vertex_count ** (0.5)
         matrix[matrix == 0] = self.spread * 1e-6
@@ -177,20 +202,15 @@ class GraphLayoutGenerator(QObject):
                 sets.append(s2)
         return sets
 
-    def emit_finished(self, x, y):
-        if self._state == _State.STOPPED:
-            self.clean_up()
-            return
-        self.finished.emit(x, y)
-
     @Slot()
     def get_coordinates(self):
         """Computes and returns x and y coordinates for each vertex in the graph, using VSGD-MS."""
+        self._state = _State.RUNNING
         if self.vertex_count <= 1:
-            layout = np.zeros((self.vertex_count, 2))
             x, y = [0], [0]
             self.emit_finished(x, y)
-            return x, y
+            self.stop()
+            return
         matrix = self.shortest_path_matrix()
         mask = np.ones((self.vertex_count, self.vertex_count)) == 1 - np.tril(
             np.ones((self.vertex_count, self.vertex_count))
@@ -211,15 +231,16 @@ class GraphLayoutGenerator(QObject):
         minstep = 1 / np.max(weights[mask])
         lambda_ = np.log(minstep / maxstep) / (self.iterations - 1)  # exponential decay of allowed adjustment
         sets = self.sets()  # construct sets of bus pairs
+        self.msg.emit("Generating layout...")
         for iteration in range(self.iterations):
+            if self._state == _State.STOPPED:
+                return
             self.progressed.emit(iteration)
             step = maxstep * np.exp(lambda_ * iteration)  # how big adjustments are allowed?
             rand_order = np.random.permutation(
                 self.vertex_count
             )  # we don't want to use the same pair order each iteration
             for s in sets:
-                if self._state in (_State.STOPPED, _State.CANCELLED):
-                    break
                 v1, v2 = rand_order[s[:, 0]], rand_order[s[:, 1]]  # arrays of vertex1 and vertex2
                 # current distance (possibly accounting for system rescaling)
                 dist = ((layout[v1, 0] - layout[v2, 0]) ** 2 + (layout[v1, 1] - layout[v2, 1]) ** 2) ** 0.5
@@ -230,9 +251,6 @@ class GraphLayoutGenerator(QObject):
                 layout[v2, :] += dx2
                 if heavy_ind.any():
                     layout[heavy_ind, :] = heavy_pos
-            else:  # nobreak
-                continue
-            break
         x, y = layout[:, 0], layout[:, 1]
         self.emit_finished(x, y)
-        return x, y
+        self.stop()

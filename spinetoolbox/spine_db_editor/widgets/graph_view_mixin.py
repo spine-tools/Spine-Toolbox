@@ -47,7 +47,6 @@ class GraphViewMixin:
     _ARC_LENGTH_HINT = 1.5 * _VERTEX_EXTENT
 
     graph_selection_changed = Signal(object)
-    graph_build_finished = Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -321,24 +320,23 @@ class GraphViewMixin:
         self.ui.graphicsView.clear_cross_hairs_items()  # Needed
         self._persistent = persistent
         for layout_gen in self.layout_gens:
-            layout_gen.stop()
+            if layout_gen.is_running():
+                layout_gen.stop()
         self._update_graph_data()
         layout_gen = self._make_layout_generator()
         self.layout_gens.append(layout_gen)
         layout_gen.show_progress_widget(self.ui.graphicsView)
-        layout_gen.finished.connect(self._complete_graph)
-        layout_gen.done.connect(lambda layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
+        # NOTE: Connecting like below allows us to connect more than one layout finished to _complete_graph
+        layout_gen.finished.connect(lambda x, y: self._complete_graph(x, y))  # pylint: disable=unnecessary-lambda
+        layout_gen.destroyed.connect(lambda obj=None, layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
         layout_gen.start()
 
-    @Slot(object, object)
     def _complete_graph(self, x, y):
         """
         Args:
             x (list): Horizontal coordinates
             y (list): Vertical coordinates
         """
-        if self.layout_gens:
-            return
         self.hidden_items.clear()
         self.removed_items.clear()
         self.selected_items.clear()
@@ -355,7 +353,6 @@ class GraphViewMixin:
             self.ui.graphicsView.reset_zoom()
         else:
             self.ui.graphicsView.apply_zoom()
-        self.graph_build_finished.emit()
 
     def _get_selected_entity_ids(self):
         """Returns a set of ids corresponding to selected entities in the trees.
