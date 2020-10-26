@@ -40,7 +40,7 @@ class ProjectItemFactoryModel(QStandardItemModel):
         self.appendRow(new_item)
 
     def flags(self, index):
-        return super().flags(index) & ~Qt.ItemIsSelectable
+        return super().flags(index) & ~Qt.ItemIsSelectable & ~Qt.ItemIsEditable
 
     @staticmethod
     def is_index_draggable(index):

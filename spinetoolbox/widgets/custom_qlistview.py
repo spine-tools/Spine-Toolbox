@@ -77,8 +77,14 @@ class DragListView(QListView):
 
 
 class ProjectItemDragListView(DragListView):
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__(None)
+        self._toolbar = None
+        self._orientation = None
+        self._obscured = None
+        self._contents_size = QSize()
+        self._scroll_sub_line_action = None
+        self._scroll_add_line_action = None
         base_size = QSize(24, 24)
         self.setIconSize(base_size)
         font = self.font()
@@ -87,22 +93,84 @@ class ProjectItemDragListView(DragListView):
         self.setStyleSheet("QListView {background: transparent;}")
         self.setResizeMode(DragListView.Adjust)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.set_orientation(self.parent().orientation())
-        self.parent().orientationChanged.connect(self.set_orientation)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-    @Slot("Qt.Orientation")
-    def set_orientation(self, orientation):
-        if orientation == Qt.Horizontal:
+    def add_to_toolbar(self, toolbar):
+        """
+        Adds this view to a toolbar.
+
+        Args:
+            toolbar (MainToolBar)
+        """
+        self._toolbar = toolbar
+        self._create_scroll_sub_line_action()
+        self._toolbar.addWidget(self)
+        self._create_scroll_add_line_action()
+        self._toolbar.orientationChanged.connect(self._handle_orientation_changed)
+        self._handle_orientation_changed(self._toolbar.orientation())
+
+    def _create_scroll_sub_line_action(self):
+        self._scroll_sub_line_action = self._toolbar.addAction("", self._scroll_sub_line)
+        button = self._toolbar.widgetForAction(self._scroll_sub_line_action)
+        button.setStyleSheet("background-color: rgba(255, 255, 255, 0); border: 0px")
+
+    def _create_scroll_add_line_action(self):
+        self._scroll_add_line_action = self._toolbar.addAction("", self._scroll_add_line)
+        button = self._toolbar.widgetForAction(self._scroll_add_line_action)
+        button.setStyleSheet("background-color: rgba(255, 255, 255, 0); border: 0px")
+
+    @Slot(bool)
+    def _scroll_sub_line(self, _checked=False):
+        scrollbar = self._get_scroll_bar()
+        scrollbar.setValue(scrollbar.value() - scrollbar.singleStep())
+
+    @Slot(bool)
+    def _scroll_add_line(self, _checked=False):
+        scrollbar = self._get_scroll_bar()
+        scrollbar.setValue(scrollbar.value() + scrollbar.singleStep())
+
+    def _get_scroll_bar(self):
+        if self._orientation == Qt.Horizontal:
+            return self.horizontalScrollBar()
+        if self._orientation == Qt.Vertical:
+            return self.verticalScrollBar()
+
+    @Slot("Qt::Orientation")
+    def _handle_orientation_changed(self, orientation):
+        self._orientation = orientation
+        scroll_sub_line_button = self._toolbar.widgetForAction(self._scroll_sub_line_action)
+        scroll_add_line_button = self._toolbar.widgetForAction(self._scroll_add_line_action)
+        max_width = self.sizeHintForColumn(0)
+        max_height = self.sizeHintForRow(0)
+        row_count = self.model().rowCount() if self.model() else 0
+        if self._orientation == Qt.Horizontal:
             self.setFlow(QListView.LeftToRight)
-        elif orientation == Qt.Vertical:
+            scroll_sub_line_button.setArrowType(Qt.LeftArrow)
+            scroll_add_line_button.setArrowType(Qt.RightArrow)
+            max_width *= row_count
+        elif self._orientation == Qt.Vertical:
             self.setFlow(QListView.TopToBottom)
-
-    def updateGeometries(self):
-        """Resize to contents."""
-        super().updateGeometries()
-        size = self.contentsSize()
-        if not size.isValid():
-            size = QSize(0, 0)
+            scroll_sub_line_button.setArrowType(Qt.UpArrow)
+            scroll_add_line_button.setArrowType(Qt.DownArrow)
+            max_height *= row_count
+        self._contents_size = QSize(max_width, max_height)
         margin = 2 * self.frameWidth()
-        size += QSize(margin, margin)
-        self.setMaximumSize(size)
+        max_size = self._contents_size + QSize(margin, margin)
+        self.setMaximumSize(max_size)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        viewport_size = self.viewport().size()
+        if self._orientation == Qt.Horizontal:
+            obscured = self._contents_size.width() > viewport_size.width()
+        elif self._orientation == Qt.Vertical:
+            obscured = self._contents_size.height() > viewport_size.height()
+        self._update_obscured(obscured)
+
+    def _update_obscured(self, obscured):
+        if self._obscured == obscured:
+            return
+        self._obscured = obscured
+        self._scroll_sub_line_action.setVisible(obscured)
+        self._scroll_add_line_action.setVisible(obscured)
