@@ -75,6 +75,12 @@ class ProgressBarWidget(QWidget):
         progress_bar.setTextVisible(False)
         button_box = QDialogButtonBox()
         button_box.setCenterButtons(True)
+        previews_button = button_box.addButton("Show previews", QDialogButtonBox.NoRole)
+        previews_button.setCheckable(True)
+        previews_button.toggled.connect(layout_generator.set_show_previews)
+        previews_button.toggled.connect(
+            lambda checked: previews_button.setText(f"{'Hide' if checked else 'Show'} previews")
+        )
         cancel_button = button_box.addButton("Cancel", QDialogButtonBox.NoRole)
         cancel_button.clicked.connect(layout_generator.stop)
         inner_layout.addStretch()
@@ -104,12 +110,13 @@ class GraphLayoutGenerator(QObject):
     blocked = Signal(bool)
     msg = Signal(str)
 
-    def __init__(self, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=10, weight_exp=-2):
+    def __init__(self, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=12, weight_exp=-2):
         super().__init__()
         if vertex_count == 0:
             vertex_count = 1
         if heavy_positions is None:
             heavy_positions = dict()
+        self._show_previews = False
         self.vertex_count = vertex_count
         self.src_inds = src_inds
         self.dst_inds = dst_inds
@@ -142,6 +149,10 @@ class GraphLayoutGenerator(QObject):
         self._state = _State.STOPPED
         self.clean_up()
         self.stopped.emit()
+
+    @Slot(bool)
+    def set_show_previews(self, checked):
+        self._show_previews = checked
 
     def emit_finished(self, x, y):
         if self._state == _State.STOPPED:
@@ -235,6 +246,9 @@ class GraphLayoutGenerator(QObject):
         for iteration in range(self.iterations):
             if self._state == _State.STOPPED:
                 return
+            if self._show_previews:
+                x, y = layout[:, 0], layout[:, 1]
+                self.emit_finished(x, y)
             self.progressed.emit(iteration)
             step = maxstep * np.exp(lambda_ * iteration)  # how big adjustments are allowed?
             rand_order = np.random.permutation(
