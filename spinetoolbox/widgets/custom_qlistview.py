@@ -20,6 +20,8 @@ from PySide2.QtWidgets import QListView, QApplication
 from PySide2.QtGui import QDrag
 from PySide2.QtCore import Qt, QMimeData, QSize, Slot
 
+_SCROLL_BUTTON_SS = "background-color: rgba(255, 255, 255, 0); max-width: 12px; max-height: 12px; border: 0px;"
+
 
 class DragListView(QListView):
     """Custom QListView class with dragging support.
@@ -104,8 +106,8 @@ class ProjectItemDragListView(DragListView):
             toolbar (MainToolBar)
         """
         self._toolbar = toolbar
-        self._create_scroll_sub_line_action()
         self._toolbar.addWidget(self)
+        self._create_scroll_sub_line_action()
         self._create_scroll_add_line_action()
         self._toolbar.orientationChanged.connect(self._handle_orientation_changed)
         self._update_orientation_and_size()
@@ -125,12 +127,12 @@ class ProjectItemDragListView(DragListView):
     def _create_scroll_sub_line_action(self):
         self._scroll_sub_line_action = self._toolbar.addAction("", self._scroll_sub_line)
         button = self._toolbar.widgetForAction(self._scroll_sub_line_action)
-        button.setStyleSheet("background-color: rgba(255, 255, 255, 0); border: 0px")
+        button.setStyleSheet(_SCROLL_BUTTON_SS)
 
     def _create_scroll_add_line_action(self):
         self._scroll_add_line_action = self._toolbar.addAction("", self._scroll_add_line)
         button = self._toolbar.widgetForAction(self._scroll_add_line_action)
-        button.setStyleSheet("background-color: rgba(255, 255, 255, 0); border: 0px")
+        button.setStyleSheet(_SCROLL_BUTTON_SS)
 
     @Slot(bool)
     def _scroll_sub_line(self, _checked=False):
@@ -166,6 +168,8 @@ class ProjectItemDragListView(DragListView):
             self.setFlow(QListView.LeftToRight)
             scroll_sub_line_button.setArrowType(Qt.LeftArrow)
             scroll_add_line_button.setArrowType(Qt.RightArrow)
+            scroll_sub_line_button.setMaximumWidth(16)
+            scroll_add_line_button.setMaximumWidth(16)
             max_width *= row_count
         elif self._orientation == Qt.Vertical:
             self.setFlow(QListView.TopToBottom)
