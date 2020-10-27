@@ -162,6 +162,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor._handle_menu_graph_about_to_show()
         self._menu.exec_(e.globalPos())
 
+    def _compute_min_zoom(self):
+        return self.zoom_factor * self._items_fitting_zoom
+
     def _use_smooth_zoom(self):
         return self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false") == "true"
 
