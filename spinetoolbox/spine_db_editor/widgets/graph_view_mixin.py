@@ -16,11 +16,11 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 import itertools
-from PySide2.QtCore import Signal, Slot, QRectF
+from PySide2.QtCore import Signal, Slot, QRectF, QTimer
 from PySide2.QtWidgets import QGraphicsTextItem, QActionGroup
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
-from spinedb_api import to_database, from_database
+from spinedb_api import from_database
 from ...widgets.custom_qwidgets import ZoomWidgetAction, RotateWidgetAction
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
 from ..graphics_items import (
@@ -300,7 +300,10 @@ class GraphViewMixin:
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
-        self.build_graph()
+        if visible:
+            QTimer.singleShot(0, self.build_graph)
+        else:
+            self._stop_layout_generators()
 
     @Slot(dict)
     def rebuild_graph(self, selected):
@@ -319,9 +322,7 @@ class GraphViewMixin:
             return
         self.ui.graphicsView.clear_cross_hairs_items()  # Needed
         self._persistent = persistent
-        for layout_gen in self.layout_gens:
-            if layout_gen.is_running():
-                layout_gen.stop()
+        self._stop_layout_generators()
         self._update_graph_data()
         layout_gen = self._make_layout_generator()
         self.layout_gens.append(layout_gen)
@@ -330,6 +331,11 @@ class GraphViewMixin:
         layout_gen.finished.connect(lambda x, y: self._complete_graph(x, y))  # pylint: disable=unnecessary-lambda
         layout_gen.destroyed.connect(lambda obj=None, layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
         layout_gen.start()
+
+    def _stop_layout_generators(self):
+        for layout_gen in self.layout_gens:
+            if layout_gen.is_running():
+                layout_gen.stop()
 
     def _complete_graph(self, x, y):
         """
