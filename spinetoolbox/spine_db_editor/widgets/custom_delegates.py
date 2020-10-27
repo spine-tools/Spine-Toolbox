@@ -174,34 +174,6 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
 
     parameter_value_editor_requested = Signal("QModelIndex")
 
-    def setModelData(self, editor, model, index):
-        """Sends signal."""
-        self.data_committed.emit(index, to_database(editor.data()))
-
-    def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
-        """Emits the signal to request a standalone `ParameterValueEditor` from parent widget."""
-        value = index.data(PARSED_ROLE)
-        if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
-            editor = ParameterValueLineEditor(parent)
-            editor.set_data(value)
-            return editor
-        self.parameter_value_editor_requested.emit(index)
-
-
-class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
-    """A delegate for the either the default value."""
-
-    def createEditor(self, parent, option, index):
-        """Returns or requests a parameter_value editor."""
-        db_map = self._get_db_map(index)
-        if not db_map:
-            return None
-        return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
-
-
-class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
-    """A delegate for the parameter_value."""
-
     def __init__(self, parent, db_mngr):
         super().__init__(parent, db_mngr)
         self._db_value_list_lookup = {}
@@ -212,18 +184,14 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         db_value = self._db_value_list_lookup.get(display_value, to_database(display_value))
         self.data_committed.emit(index, db_value)
 
-    def _get_value_list_id(self, index, db_map):
-        """Returns a value list item for the given index and db_map."""
-        h = index.model().header.index
-        parameter_name = index.sibling(index.row(), h("parameter_name")).data()
-        parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", parameter_name)
-        entity_class_id = index.model().get_entity_class_id(index, db_map)
-        parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
-        value_list_ids = {
-            self.db_mngr.get_item(db_map, "parameter_definition", id_).get("value_list_id") for id_ in parameter_ids
-        }
-        if len(value_list_ids) == 1:
-            return next(iter(value_list_ids))
+    def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
+        """Emits the signal to request a standalone `ParameterValueEditor` from parent widget."""
+        value = index.data(PARSED_ROLE)
+        if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
+            editor = ParameterValueLineEditor(parent)
+            editor.set_data(value)
+            return editor
+        self.parameter_value_editor_requested.emit(index)
 
     def createEditor(self, parent, option, index):
         """If the parameter has associated a value list, returns a SearchBarEditor.
@@ -242,6 +210,35 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor
         return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
+
+
+class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
+    """A delegate for the either the default value."""
+
+    def _get_value_list_id(self, index, db_map):
+        """Returns a value list item for the given index and db_map."""
+        h = index.model().header.index
+        value_list_name = index.sibling(index.row(), h("value_list_name")).data()
+        value_lists = self.db_mngr.get_items_by_field(db_map, "parameter_value_list", "name", value_list_name)
+        if len(value_lists) == 1:
+            return value_lists[0]["id"]
+
+
+class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
+    """A delegate for the parameter_value."""
+
+    def _get_value_list_id(self, index, db_map):
+        """Returns a value list item for the given index and db_map."""
+        h = index.model().header.index
+        parameter_name = index.sibling(index.row(), h("parameter_name")).data()
+        parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", parameter_name)
+        entity_class_id = index.model().get_entity_class_id(index, db_map)
+        parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
+        value_list_ids = {
+            self.db_mngr.get_item(db_map, "parameter_definition", id_).get("value_list_id") for id_ in parameter_ids
+        }
+        if len(value_list_ids) == 1:
+            return next(iter(value_list_ids))
 
 
 class TagListDelegate(ParameterDelegate):

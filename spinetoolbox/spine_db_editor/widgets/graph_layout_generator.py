@@ -180,7 +180,7 @@ class GraphLayoutGenerator(QObject):
         start = 0
         slices = []
         iteration = 0
-        self.msg.emit("Computing shortest-path matrix...")
+        self.msg.emit("Step 1 of 2: Computing shortest-path matrix...")
         while start < self.vertex_count:
             if self._state == _State.STOPPED:
                 return
@@ -242,7 +242,7 @@ class GraphLayoutGenerator(QObject):
         minstep = 1 / np.max(weights[mask])
         lambda_ = np.log(minstep / maxstep) / (self.iterations - 1)  # exponential decay of allowed adjustment
         sets = self.sets()  # construct sets of bus pairs
-        self.msg.emit("Generating layout...")
+        self.msg.emit("Step 2 of 2: Generating layout...")
         for iteration in range(self.iterations):
             if self._state == _State.STOPPED:
                 return
