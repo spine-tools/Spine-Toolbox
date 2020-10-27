@@ -16,6 +16,7 @@ please check the :ref:`Terminology` section. If you want to contribute to this p
    :caption: Contents:
 
    getting_started
+   tutorials
    setting_up
    main_window
    project_items

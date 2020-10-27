@@ -1,0 +1,75 @@
+Bastusel_upper	demand	Base	-0.2579768519
+Bastusel_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 5581.44, "2019-01-07T23:00:00": 5417.28}}
+Bastusel_upper	has_state	Base	"value_true"
+Bastusel_upper	node_state_cap	Base	8208
+Bastusel_upper	state_coeff	Base	1
+Bergnäs_upper	demand	Base	-22.29
+Bergnäs_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 114543.6, "2019-01-07T23:00:00": 105898.8}}
+Bergnäs_upper	has_state	Base	"value_true"
+Bergnäs_upper	node_state_cap	Base	216120
+Bergnäs_upper	state_coeff	Base	1
+Båtfors_upper	demand	Base	-2
+Båtfors_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 1117.2, "2019-01-07T23:00:00": 891.1}}
+Båtfors_upper	has_state	Base	"value_true"
+Båtfors_upper	node_state_cap	Base	1330
+Båtfors_upper	state_coeff	Base	1
+Finnfors_upper	demand	Base	0
+Finnfors_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 234.0, "2019-01-07T23:00:00": 234.0}}
+Finnfors_upper	has_state	Base	"value_true"
+Finnfors_upper	node_state_cap	Base	300
+Finnfors_upper	state_coeff	Base	1
+Gallejaur_upper	demand	Base	15.356962963
+Gallejaur_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 1224.0, "2019-01-07T23:00:00": 2808.0}}
+Gallejaur_upper	has_state	Base	"value_true"
+Gallejaur_upper	node_state_cap	Base	3600
+Gallejaur_upper	state_coeff	Base	1
+Granfors_upper	demand	Base	0
+Granfors_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 232.4, "2019-01-07T23:00:00": 212.8}}
+Granfors_upper	has_state	Base	"value_true"
+Granfors_upper	node_state_cap	Base	280
+Granfors_upper	state_coeff	Base	1
+Grytfors_upper	demand	Base	-3.78
+Grytfors_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 1060.8, "2019-01-07T23:00:00": 1110.72}}
+Grytfors_upper	has_state	Base	"value_true"
+Grytfors_upper	node_state_cap	Base	1248
+Grytfors_upper	state_coeff	Base	1
+Krångfors_upper	demand	Base	0
+Krångfors_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 201.3, "2019-01-07T23:00:00": 207.9}}
+Krångfors_upper	has_state	Base	"value_true"
+Krångfors_upper	node_state_cap	Base	330
+Krångfors_upper	state_coeff	Base	1
+Kvistforsen_upper	demand	Base	-1.3273809524
+Kvistforsen_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 769.066666704, "2019-01-07T23:00:00": 560.0}}
+Kvistforsen_upper	has_state	Base	"value_true"
+Kvistforsen_upper	node_state_cap	Base	1120
+Kvistforsen_upper	state_coeff	Base	1
+Rebnis_upper	demand	Base	-3.68
+Rebnis_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 70243.509200184, "2019-01-07T23:00:00": 59524.122689676}}
+Rebnis_upper	has_state	Base	"value_true"
+Rebnis_upper	node_state_cap	Base	205560
+Rebnis_upper	state_coeff	Base	1
+Rengård_upper	demand	Base	-10.37
+Rengård_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 1022.0, "2019-01-07T23:00:00": 770.0}}
+Rengård_upper	has_state	Base	"value_true"
+Rengård_upper	node_state_cap	Base	1400
+Rengård_upper	state_coeff	Base	1
+Sadva_upper	demand	Base	-5.43
+Sadva_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 99057.7777728, "2019-01-07T23:00:00": 93831.111108}}
+Sadva_upper	has_state	Base	"value_true"
+Sadva_upper	node_state_cap	Base	168000
+Sadva_upper	state_coeff	Base	1
+Selsfors_upper	demand	Base	0
+Selsfors_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 40.0, "2019-01-07T23:00:00": 200.0}}
+Selsfors_upper	has_state	Base	"value_true"
+Selsfors_upper	node_state_cap	Base	500
+Selsfors_upper	state_coeff	Base	1
+Slagnäs_upper	demand	Base	0
+Slagnäs_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 384.0, "2019-01-07T23:00:00": 537.6}}
+Slagnäs_upper	has_state	Base	"value_true"
+Slagnäs_upper	node_state_cap	Base	768
+Slagnäs_upper	state_coeff	Base	1
+Vargfors_upper	demand	Base	-3.5584953704
+Vargfors_upper	fix_node_state	Base	{"type": "time_series", "data": {"2018-12-31T23:00:00": 3386.76, "2019-01-07T23:00:00": 3847.68}}
+Vargfors_upper	has_state	Base	"value_true"
+Vargfors_upper	node_state_cap	Base	4008
+Vargfors_upper	state_coeff	Base	1
