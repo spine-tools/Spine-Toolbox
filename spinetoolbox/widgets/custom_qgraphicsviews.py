@@ -48,7 +48,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     @property
     def zoom_factor(self):
-        return self.transform().m11()
+        return self.transform().m11()  # The [1, 1] element contains the x scaling factor
 
     def keyPressEvent(self, event):
         """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
@@ -140,10 +140,6 @@ class CustomQGraphicsView(QGraphicsView):
                 self.time_line = QTimeLine(200, self)
                 self.time_line.finished.connect(self._handle_resize_time_line_finished)
                 self.time_line.start()
-                if new_size.width() > old_size.width() or new_size.height() > old_size.height():
-                    if self.zoom_factor < self._min_zoom:
-                        # Reset the zoom if the view has grown and the current zoom is too small
-                        self.reset_zoom()
         super().resizeEvent(event)
 
     def setScene(self, scene):
@@ -171,11 +167,10 @@ class CustomQGraphicsView(QGraphicsView):
         if rect.isEmpty():
             return
         viewport_scene_rect = self._get_viewport_scene_rect()
-        fitting_margin = 100
-        x_factor = viewport_scene_rect.width() / (rect.width() + fitting_margin)
-        y_factor = viewport_scene_rect.height() / (rect.height() + fitting_margin)
-        self._items_fitting_zoom = min(x_factor, y_factor)
-        self._min_zoom = min(self._items_fitting_zoom, 0.1)
+        x_factor = viewport_scene_rect.width() / rect.width()
+        y_factor = viewport_scene_rect.height() / rect.height()
+        self._items_fitting_zoom = 0.9 * min(x_factor, y_factor)
+        self._min_zoom = self.zoom_factor * self._items_fitting_zoom
 
     def _handle_zoom_time_line_advanced(self, pos):
         """Performs zoom whenever the smooth zoom time line advances."""
@@ -230,7 +225,7 @@ class CustomQGraphicsView(QGraphicsView):
         if zoom_focus is None:
             zoom_focus = self.viewport().rect().center()
         initial_focus_on_scene = self.mapToScene(zoom_focus)
-        current_zoom = self.zoom_factor  # The [1, 1] element contains the x scaling factor
+        current_zoom = self.zoom_factor
         proposed_zoom = current_zoom * factor
         if proposed_zoom < self._min_zoom:
             factor = self._min_zoom / current_zoom
