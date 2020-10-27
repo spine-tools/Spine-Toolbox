@@ -169,8 +169,11 @@ class CustomQGraphicsView(QGraphicsView):
         viewport_scene_rect = self._get_viewport_scene_rect()
         x_factor = viewport_scene_rect.width() / rect.width()
         y_factor = viewport_scene_rect.height() / rect.height()
-        self._items_fitting_zoom = 0.9 * min(x_factor, y_factor)
-        self._min_zoom = self.zoom_factor * self._items_fitting_zoom
+        self._items_fitting_zoom = 0.8 * min(x_factor, y_factor)
+        self._min_zoom = self._compute_min_zoom()
+
+    def _compute_min_zoom(self):
+        return min(0.5, self.zoom_factor * self._items_fitting_zoom)
 
     def _handle_zoom_time_line_advanced(self, pos):
         """Performs zoom whenever the smooth zoom time line advances."""
