@@ -36,12 +36,12 @@ from ..graphics_items import (
 from .graph_layout_generator import GraphLayoutGenerator, make_heat_map
 from ...helpers import get_save_file_name_in_last_dir
 from .add_items_dialogs import AddReadyRelationshipsDialog
+from .select_position_parameters_dialog import SelectPositionParametersDialog
 
 
 class GraphViewMixin:
     """Provides the graph view for the DS form."""
 
-    _POS_PARAM_NAME = "entity_graph_position"
     _VERTEX_EXTENT = 64
     _ARC_WIDTH = 0.15 * _VERTEX_EXTENT
     _ARC_LENGTH_HINT = 1.5 * _VERTEX_EXTENT
@@ -56,6 +56,8 @@ class GraphViewMixin:
         )
         self.ui.actionShow_cascading_relationships.setChecked(self._show_cascading_relationships)
         self._persistent = False
+        self._pos_x_parameter = "x"
+        self._pos_y_parameter = "y"
         self.scene = None
         self.object_items = list()
         self.relationship_items = list()
@@ -121,6 +123,7 @@ class GraphViewMixin:
         self.ui.actionPrune_selected_entities.triggered.connect(self.prune_selected_entities)
         self.ui.actionPrune_selected_classes.triggered.connect(self.prune_selected_classes)
         self.ui.actionRestore_all_pruned.triggered.connect(self.restore_all_pruned_items)
+        self.ui.actionSelect_position_parameters.triggered.connect(self.select_position_parameters)
         self.ui.actionSave_positions.triggered.connect(self.save_positions)
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
         self.ui.actionExport_graph_as_pdf.triggered.connect(self.export_as_pdf)
@@ -434,33 +437,35 @@ class GraphViewMixin:
                 self.src_inds.append(relationship_ind)
                 self.dst_inds.append(object_ind)
 
+    def _get_parameter_positions(self, parameter_name):
+        if not parameter_name:
+            yield from []
+        for p in self.db_mngr.get_items_by_field(
+            self.graph_db_map, "parameter_value", "parameter_name", parameter_name
+        ):
+            pos = from_database(p["value"])
+            if isinstance(pos, float):
+                yield p["entity_id"], pos
+
     def _make_layout_generator(self):
         """Returns a layout generator for the current graph.
 
         Returns:
             GraphLayoutGenerator
         """
-        parameter_positions = {
-            p["entity_id"]: dict(from_database(p["value"]).value_to_database_data())
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
-            )
-        }
+        fixed_positions = {}
         if self._persistent:
-            persisted_positions = {
-                item.entity_id: {"x": item.pos().x(), "y": item.pos().y()}
-                for item in self.ui.graphicsView.items()
-                if isinstance(item, EntityItem)
-            }
-        else:
-            persisted_positions = {}
-        persisted_positions.update(parameter_positions)
+            for item in self.ui.graphicsView.items():
+                if isinstance(item, EntityItem):
+                    fixed_positions[item.entity_id] = {"x": item.pos().x(), "y": item.pos().y()}
+        param_pos_x = dict(self._get_parameter_positions(self._pos_x_parameter))
+        param_pos_y = dict(self._get_parameter_positions(self._pos_y_parameter))
+        for entity_id in param_pos_x.keys() & param_pos_y.keys():
+            fixed_positions[entity_id] = {"x": param_pos_x[entity_id], "y": param_pos_y[entity_id]}
         entity_ids = self.object_ids + self.relationship_ids
-        heavy_positions = {
-            ind: persisted_positions[id_] for ind, id_ in enumerate(entity_ids) if id_ in persisted_positions
-        }
+        heavy_positions = {ind: fixed_positions[id_] for ind, id_ in enumerate(entity_ids) if id_ in fixed_positions}
         return GraphLayoutGenerator(
-            len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions
+            len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions,
         )
 
     def _make_new_items(self, x, y):
@@ -570,27 +575,45 @@ class GraphViewMixin:
         db_map_typed_data = {self.graph_db_map: {}}
         for item in self.selected_items:
             id_ = item.entity_id
-            db_map_typed_data[self.graph_db_map].setdefault(item.entity_type, []).add(id_)
+            db_map_typed_data[self.graph_db_map].setdefault(item.entity_type, []).append(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     @Slot(bool)
+    def select_position_parameters(self, checked=False):
+        dialog = SelectPositionParametersDialog(self)
+        dialog.show()
+        dialog.selection_made.connect(self._set_position_parameters)
+
+    @Slot(str, str)
+    def _set_position_parameters(self, parameter_pos_x, parameter_pos_y):
+        self._pos_x_parameter = parameter_pos_x
+        self._pos_y_parameter = parameter_pos_y
+
+    @Slot(bool)
     def save_positions(self, checked=False):
+        parameter_names = (self._pos_x_parameter, self._pos_y_parameter)
+        if not all(parameter_names):
+            msg = "You haven't selected the position parameters. Please go to Graph -> Select position parameters"
+            self.notification_stack.push(msg)
+            return
         obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
         rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]
         db_map_data = dict()
         data = db_map_data[self.graph_db_map] = dict()
-        data["object_parameters"] = [(item.entity_class_name, self._POS_PARAM_NAME) for item in obj_items]
-        data["relationship_parameters"] = [(item.entity_class_name, self._POS_PARAM_NAME) for item in rel_items]
-        value = lambda item: {
-            "type": "map",
-            "index_type": "str",
-            "data": [["x", item.pos().x()], ["y", item.pos().y()]],
-        }
-        data["object_parameter_values"] = [
-            (item.entity_class_name, item.entity_name, self._POS_PARAM_NAME, value(item)) for item in obj_items
+        data["object_parameters"] = [
+            (item.entity_class_name, parameter_name) for item in obj_items for parameter_name in parameter_names
         ]
+        data["relationship_parameters"] = [
+            (item.entity_class_name, parameter_name) for item in rel_items for parameter_name in parameter_names
+        ]
+        data["object_parameter_values"] = [
+            (item.entity_class_name, item.entity_name, self._pos_x_parameter, item.pos().x()) for item in obj_items
+        ] + [(item.entity_class_name, item.entity_name, self._pos_y_parameter, item.pos().y()) for item in obj_items]
         data["relationship_parameter_values"] = [
-            (item.entity_class_name, item.object_name_list.split(","), self._POS_PARAM_NAME, value(item))
+            (item.entity_class_name, item.object_name_list.split(","), self._pos_x_parameter, item.pos().x())
+            for item in rel_items
+        ] + [
+            (item.entity_class_name, item.object_name_list.split(","), self._pos_y_parameter, item.pos().y())
             for item in rel_items
         ]
         self.db_mngr.import_data(db_map_data)
@@ -600,8 +623,9 @@ class GraphViewMixin:
         entity_ids = {x.entity_id for x in self.selected_items}
         value_ids_to_remove = [
             p["id"]
+            for parameter_name in (self._pos_x_parameter, self._pos_y_parameter)
             for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
+                self.graph_db_map, "parameter_value", "parameter_name", parameter_name
             )
             if p["entity_id"] in entity_ids
         ]

@@ -122,6 +122,7 @@
     </widget>
     <addaction name="actionShow_cascading_relationships"/>
     <addaction name="separator"/>
+    <addaction name="actionSelect_position_parameters"/>
     <addaction name="actionSave_positions"/>
     <addaction name="actionClear_positions"/>
     <addaction name="separator"/>
@@ -1335,6 +1336,11 @@
    </property>
    <property name="shortcut">
     <string>F2</string>
+   </property>
+  </action>
+  <action name="actionSelect_position_parameters">
+   <property name="text">
+    <string>Select position parameters...</string>
    </property>
   </action>
  </widget>
