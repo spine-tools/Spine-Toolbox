@@ -410,18 +410,18 @@ class ObjectItem(EntityItem):
     def _make_menu(self):
         menu = super()._make_menu()
         menu.addSeparator()
-        self._add_relationships_menu = menu.addMenu("Add relationships...")
-        self._add_relationships_menu.triggered.connect(self._start_relationship)
+        add_relationships_menu = menu.addMenu("Add relationships...")
+        add_relationships_menu.triggered.connect(self._start_relationship)
+        self._populate_add_relationships_menu(add_relationships_menu)
         return menu
 
-    def _populate_add_relationships_menu(self, add_title=False):
+    def _populate_add_relationships_menu(self, menu):
         """
         Populates the 'Add relationships' menu.
+
+        Args:
+            menu (QMenu)
         """
-        self._add_relationships_menu.clear()
-        if add_title:
-            title = TitleWidgetAction("Add relationships", self._spine_db_editor)
-            self._add_relationships_menu.addAction(title)
         self._relationship_class_per_action.clear()
         object_class_ids_in_graph = {x.entity_class_id for x in self.scene().items() if isinstance(x, ObjectItem)}
         db_map_object_class_ids = {self.db_map: {self.entity_class_id}}
@@ -430,24 +430,19 @@ class ObjectItem(EntityItem):
             if not set(object_class_id_list) <= object_class_ids_in_graph:
                 continue
             icon = self.db_mngr.entity_class_icon(self.db_map, "relationship_class", rel_cls["id"])
-            action = self._add_relationships_menu.addAction(icon, rel_cls["name"])
+            action = menu.addAction(icon, rel_cls["name"])
             rel_cls = rel_cls.copy()
             rel_cls["object_class_id_list"] = object_class_id_list
             self._relationship_class_per_action[action] = rel_cls
-        self._add_relationships_menu.setEnabled(bool(self._relationship_class_per_action))
-
-    def contextMenuEvent(self, e):
-        """Shows context menu.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        self._populate_add_relationships_menu()
-        super().contextMenuEvent(e)
+        menu.setEnabled(bool(self._relationship_class_per_action))
 
     def mouseDoubleClickEvent(self, e):
-        self._populate_add_relationships_menu(add_title=True)
-        self._add_relationships_menu.popup(e.screenPos())
+        add_relationships_menu = QMenu(self._spine_db_editor)
+        title = TitleWidgetAction("Add relationships", self._spine_db_editor)
+        add_relationships_menu.addAction(title)
+        add_relationships_menu.triggered.connect(self._start_relationship)
+        self._populate_add_relationships_menu(add_relationships_menu)
+        add_relationships_menu.popup(e.screenPos())
 
     @Slot("QAction")
     def _start_relationship(self, action):
