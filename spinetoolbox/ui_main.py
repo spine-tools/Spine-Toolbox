@@ -36,7 +36,6 @@ from PySide2.QtWidgets import (
     QUndoStack,
 )
 from spinetoolbox.graphics_items import ProjectItemIcon
-from .import_editor.widgets.import_editor_window import ImportEditorWindow
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items, upgrade_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
@@ -475,7 +474,7 @@ class ToolboxUI(QMainWindow):
         # Parse project info
         name = project_info["project"]["name"]  # Project name
         desc = project_info["project"]["description"]  # Project description
-        specs = project_info["project"]["specifications"]
+        spec_paths_per_type = project_info["project"]["specifications"]
         connections = project_info["project"]["connections"]
         project_items = project_info["items"]
         # Init project item model
@@ -497,8 +496,12 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setEnabled(True)
-        # Init tool spec model
-        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in specs]
+        # Init tool spec model. We don't use the information on the item type in spec_paths_per_type, but we could...
+        deserialized_paths = [
+            deserialize_path(path, self._project.project_dir)
+            for paths in spec_paths_per_type.values()
+            for path in paths
+        ]
         self.init_specification_model(deserialized_paths)
         # Populate project model with project items
         if not self._project.load(project_items):
@@ -535,13 +538,11 @@ class ToolboxUI(QMainWindow):
             if not spec.save():
                 self.msg_error.emit("Project saving failed")
                 return
-        # Put project's specification definition files into a list
-        tool_spec_paths = [
-            self.specification_model.specification(i).definition_file_path
-            for i in range(self.specification_model.rowCount())
-        ]
-        # Serialize tool spec paths
-        serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
+        # Put project's specification definition files into a dict by item type
+        serialized_tool_spec_paths = dict()
+        for spec in self.specification_model.specifications():
+            serialized_path = serialize_path(spec.definition_file_path, self._project.project_dir)
+            serialized_tool_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
         if not self._project.save(serialized_tool_spec_paths):
             self.msg_error.emit("Project saving failed")
             return

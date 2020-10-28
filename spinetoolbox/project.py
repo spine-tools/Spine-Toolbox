@@ -184,7 +184,7 @@ class SpineToolboxProject(MetaObject):
         into a dictionary and writes it to a JSON file.
 
         Args:
-            spec_paths (list): List of absolute paths to specification files
+            spec_paths (dict): List of absolute paths to specification files keyed by item type
 
         Returns:
             bool: True or False depending on success

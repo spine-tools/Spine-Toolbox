@@ -22,7 +22,7 @@ import os
 import json
 import copy
 from PySide2.QtWidgets import QFileDialog, QMessageBox
-from spinetoolbox.helpers import create_dir, serialize_path
+from spinetoolbox.helpers import create_dir, serialize_path, deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .helpers import recursive_overwrite
 
@@ -114,8 +114,19 @@ class ProjectUpgrader:
         new = copy.deepcopy(old)
         project = new["project"]
         project["version"] = 3
-        specs = project["specifications"].pop("Tool", [])
-        project["specifications"] = specs
+        # Put DT specs in their own subkey
+        project["specifications"]["Data Transformer"] = dt_specs = []
+        tool_specs = project["specifications"].get("Tool", [])
+        for i, spec in reversed(list(enumerate(tool_specs))):
+            spec_path = deserialize_path(spec, project_dir)
+            with open(spec_path, "r") as fp:
+                try:
+                    spec = json.load(fp)
+                except ValueError:
+                    continue
+                if spec.get("item_type") == "Data Transformer":
+                    dt_specs.append(tool_specs.pop(i))
+        project["specifications"]["Importer"] = importer_specs = []
         for item_name, old_item_dict in old["items"].items():
             item_type = old_item_dict["type"]
             new["items"][item_name] = factories[item_type].item_class().upgrade_v2_to_v3(item_name, old_item_dict, self)
@@ -146,7 +157,7 @@ class ProjectUpgrader:
                     # FIXME: Let's try and handle write errors here...
                     with open(spec_path, "w") as fp:
                         json.dump(spec, fp, indent=4)
-                    specs.append(serialize_path(spec_path, project_dir))
+                    importer_specs.append(serialize_path(spec_path, project_dir))
         return new
 
     @staticmethod
@@ -558,8 +569,8 @@ class ProjectUpgrader:
         if not isinstance(project["name"], str) or not isinstance(project["description"], str):
             self._toolbox.msg_error.emit("Invalid project.json file. 'name' and 'description' must be strings.")
             return False
-        if not isinstance(project["specifications"], list):
-            self._toolbox.msg_error.emit("Invalid project.json file. 'specifications' must be a list.")
+        if not isinstance(project["specifications"], dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'specifications' must be a dict.")
             return False
         if not isinstance(project["connections"], list):
             self._toolbox.msg_error.emit("Invalid project.json file. 'connections' must be a list.")
