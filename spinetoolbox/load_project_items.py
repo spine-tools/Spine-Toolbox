@@ -23,11 +23,11 @@ import sys
 import pkgutil
 from .project_item.project_item_info import ProjectItemInfo
 from .project_item.project_item_factory import ProjectItemFactory
-from .config import REQUIRED_SPINE_ITEMS_VERSION
+from .config import PREFERRED_SPINE_ITEMS_VERSION
 
 
 def _spine_items_version_check():
-    """Check if spine_items is the correct version."""
+    """Check if spine_items is the preferred version."""
     try:
         import spine_items
     except ModuleNotFoundError:
@@ -39,8 +39,8 @@ def _spine_items_version_check():
         # Version not reported (should never happen as spine_items has always reported its version)
         return False
     current_split = [int(x) for x in current_version.split(".")]
-    required_split = [int(x) for x in REQUIRED_SPINE_ITEMS_VERSION.split(".")]
-    return current_split >= required_split
+    preferred_split = [int(x) for x in PREFERRED_SPINE_ITEMS_VERSION.split(".")]
+    return current_split >= preferred_split
 
 
 def upgrade_project_items():
