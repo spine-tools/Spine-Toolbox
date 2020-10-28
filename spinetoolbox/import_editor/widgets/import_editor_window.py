@@ -19,35 +19,45 @@ Contains ImportPreviewWindow class.
 import json
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QGuiApplication, QKeySequence
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QFileDialog, QDialogButtonBox, QDockWidget, QUndoStack
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QErrorMessage,
+    QFileDialog,
+    QDialogButtonBox,
+    QDockWidget,
+    QUndoStack,
+    QMessageBox,
+)
+from spinetoolbox.spine_io.connection_manager import ConnectionManager
 from ..commands import RestoreMappingsFromDict
 from ...helpers import ensure_window_is_on_screen
-from spinetoolbox.spine_io.connection_manager import ConnectionManager
 from .import_editor import ImportEditor
 from .import_mapping_options import ImportMappingOptions
 from .import_mappings import ImportMappings
+from .importer_specification_toolbar import ImporterSpecificationToolbar
 
 
 class ImportEditorWindow(QMainWindow):
     """A QMainWindow to let users define Mappings for an Importer item."""
 
-    settings_updated = Signal(dict)
     connection_failed = Signal(str)
+    specification_updated = Signal(dict)
 
-    def __init__(self, importer, filepath, connector, connector_settings, mapping_settings, toolbox):
+    def __init__(self, toolbox, specification, filepath, connector, connector_settings):
         """
         Args:
-            importer (spinetoolbox.project_items.importer.importer.Importer): Project item that owns this preview window
+            toolbox (QMainWindow): ToolboxUI class
+            specification (ImporterSpecification)
             filepath (str): Importee path
             connector (SourceConnection): Asynchronous data reader
-            mapping_settings (dict): Default mapping specification
-            toolbox (QMainWindow): ToolboxUI class
+            connector_settings (dict): Additional connector settings, such as the gams path
         """
         from ..ui.import_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, flags=Qt.Window)
-        self._importer = importer
+
         self._toolbox = toolbox
+        self._specification = specification
         self._app_settings = self._toolbox.qsettings()
         self._connection_manager = ConnectionManager(connector, connector_settings)
         self._connection_manager.source = filepath
@@ -60,7 +70,7 @@ class ImportEditorWindow(QMainWindow):
         self._insert_undo_redo_actions()
         self._import_mappings = ImportMappings(self._ui, self._undo_stack)
         self._editor = ImportEditor(
-            self._ui, self._ui_error, self._undo_stack, self._connection_manager, mapping_settings
+            self._ui, self._ui_error, self._undo_stack, self._connection_manager, specification.mapping
         )
         self._ui.source_data_table.set_undo_stack(self._undo_stack, self._editor.select_table)
         self._import_mappings.mapping_selection_changed.connect(self._editor.set_model)
@@ -76,11 +86,12 @@ class ImportEditorWindow(QMainWindow):
         self._import_mappings.about_to_undo.connect(self._editor.select_table)
         self._editor.preview_data_updated.connect(self._import_mapping_options.set_num_available_columns)
         self._import_mapping_options.about_to_undo.connect(self._import_mappings.focus_on_changing_specification)
-
         self._size = None
         self.takeCentralWidget()
+        self._spec_toolbar = ImporterSpecificationToolbar(self)
+        self.addToolBar(Qt.TopToolBarArea, self._spec_toolbar)
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle(f"Import Editor    -- {importer.name} --")
+        self.setWindowTitle("Import Editor")
         self.settings_group = "mappingPreviewWindow"
         self.apply_classic_ui_style()
         self.restore_ui()
@@ -88,7 +99,7 @@ class ImportEditorWindow(QMainWindow):
         self._button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         self._ui.statusbar.addPermanentWidget(self._button_box)
         self._ui.statusbar.layout().setContentsMargins(6, 6, 6, 6)
-        self._button_box.button(QDialogButtonBox.Ok).clicked.connect(self.apply_and_close)
+        self._button_box.button(QDialogButtonBox.Ok).clicked.connect(self.save_and_close)
         self._button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
         self._ui.export_mappings_action.triggered.connect(self.export_mapping_to_file)
         self._ui.import_mappings_action.triggered.connect(self.import_mapping_from_file)
@@ -182,10 +193,16 @@ class ImportEditorWindow(QMainWindow):
             json.dump(settings, file_p)
         self._ui.statusbar.showMessage(f"Mapping saved to: {filename[0]}", 10000)
 
-    def apply_and_close(self):
-        """Apply changes to mappings and close preview window."""
-        settings = self._editor.get_settings_dict()
-        self.settings_updated.emit(settings)
+    def save_and_close(self):
+        """Save spec and close window."""
+        name = self._spec_toolbar.name()
+        if not name:
+            QMessageBox.information(self, "Specification name missing", "Please enter a name for the specification.")
+            return
+        mapping = self._editor.get_settings_dict()
+        description = self._spec_toolbar.description()
+        definition = {"name": name, "mapping": mapping, "description": description, "item_type": "Importer"}
+        self.specification_updated.emit(definition)
         self.close()
 
     def start_ui(self):

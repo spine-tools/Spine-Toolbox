@@ -31,11 +31,12 @@ class TestImportEditorWindow(unittest.TestCase):
             QApplication()
 
     def test_closeEvent(self):
-        importer = mock.NonCallableMagicMock()
-        importer.name = mock.MagicMock(return_value="importer")
+        spec = mock.NonCallableMagicMock()
+        spec.name = "spec_name"
+        spec.description = "spec_desc"
         toolbox = QWidget()
         toolbox.qsettings = mock.MagicMock(return_value=QSettings())
-        widget = ImportEditorWindow(importer, "", SourceConnection, {}, {}, toolbox)
+        widget = ImportEditorWindow(toolbox, spec, "", SourceConnection, {})
         widget._app_settings = mock.NonCallableMagicMock()
         widget.closeEvent()
         widget._app_settings.beginGroup.assert_called_once_with("mappingPreviewWindow")

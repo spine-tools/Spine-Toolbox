@@ -95,7 +95,11 @@ class TestProjectUpgrader(unittest.TestCase):
             # Upgrade to version 2
             with mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save:
+            ) as mock_backup, mock.patch(
+                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
+            ) as mock_force_save, mock.patch(
+                'spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION', 2
+            ):
                 proj_dict_v2 = pu.upgrade(proj_dict_v1, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()

@@ -336,7 +336,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Import preview", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Import Editor", None))
         self.export_mappings_action.setText(QCoreApplication.translate("MainWindow", u"Export mappings...", None))
         self.import_mappings_action.setText(QCoreApplication.translate("MainWindow", u"Import mappings...", None))
         self.actionSave.setText(QCoreApplication.translate("MainWindow", u"Save", None))

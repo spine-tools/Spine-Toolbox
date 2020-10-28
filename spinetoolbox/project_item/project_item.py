@@ -402,6 +402,23 @@ class ProjectItem(MetaObject):
         Args:
             item_name (str): item's name
             item_dict (dict): Version 1 item dictionary
+            project_upgrader (ProjectUpgrader)
+
+        Returns:
+            dict: Version 2 item dictionary
+        """
+        return item_dict
+
+    @staticmethod
+    def upgrade_v2_to_v3(item_name, item_dict, project_upgrader):
+        """
+        Upgrades item's dictionary from v2 to v3.
+
+        Subclasses should reimplement this method if there are changes between version 2 and version 3.
+
+        Args:
+            item_name (str): item's name
+            item_dict (dict): Version 1 item dictionary
 
         Returns:
             dict: Version 2 item dictionary
