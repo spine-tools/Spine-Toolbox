@@ -52,17 +52,24 @@ UPGRADING PROJECT ITEMS...
 (Depending on your internet connection, this may take a few moments.)
             """
         )
-        subprocess.check_call(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "install",
-                "--upgrade",
-                "git+https://github.com/Spine-project/spine-items.git@master",
-            ],
-            timeout=30,
-        )
+        try:
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--upgrade",
+                    "git+https://github.com/Spine-project/spine-items.git@master",
+                ],
+                timeout=30,
+                check=True,
+                capture_output=True,
+            )
+        except subprocess.CalledProcessError as err:
+            fail_color = "\033[91m"
+            end_color = "\033[0m"
+            print(fail_color + err.stderr.decode("utf-8") + end_color)
     try:
         import spine_items
     except ModuleNotFoundError:
