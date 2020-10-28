@@ -22,7 +22,7 @@ class TestSpineDBEditorAddMixin:
     def test_add_object_classes_to_object_tree_model(self):
         """Test that object classes are added to the object tree model.
         """
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
         fish_item, dog_item = root_item.children
@@ -34,11 +34,11 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_objects_to_object_tree_model(self):
         """Test that objects are added to the object tree model."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
         pluto_item, scooby_item = dog_item.children
@@ -53,12 +53,12 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_relationship_classes_to_object_tree_model(self):
         """Test that relationship classes are added to the object tree model."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
         pluto_item = dog_item.child(0)
@@ -73,13 +73,13 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_relationships_to_object_tree_model(self):
         """Test that relationships are added to the object tree model."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item, dog_item = root_item.children
         nemo_item = fish_item.child(0)
         pluto_item, scooby_item = dog_item.children
@@ -114,7 +114,7 @@ class TestSpineDBEditorAddMixin:
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""
         self.put_mock_object_parameter_definitions_in_db_mngr()
-        model = self.tree_view_form.object_parameter_definition_model
+        model = self.spine_db_editor.object_parameter_definition_model
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -127,7 +127,7 @@ class TestSpineDBEditorAddMixin:
     def test_add_relationship_parameter_definitions_to_model(self):
         """Test that relationship parameter definitions are added to the model."""
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
-        model = self.tree_view_form.relationship_parameter_definition_model
+        model = self.spine_db_editor.relationship_parameter_definition_model
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -140,7 +140,7 @@ class TestSpineDBEditorAddMixin:
     def test_add_object_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
         self.put_mock_object_parameter_values_in_db_mngr()
-        model = self.tree_view_form.object_parameter_value_model
+        model = self.spine_db_editor.object_parameter_value_model
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -158,7 +158,7 @@ class TestSpineDBEditorAddMixin:
     def test_add_relationship_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
         self.put_mock_relationship_parameter_values_in_db_mngr()
-        model = self.tree_view_form.relationship_parameter_value_model
+        model = self.spine_db_editor.relationship_parameter_value_model
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
