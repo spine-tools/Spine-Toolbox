@@ -594,7 +594,7 @@ class GraphViewMixin:
         parameter_names = (self._pos_x_parameter, self._pos_y_parameter)
         if not all(parameter_names):
             msg = "You haven't selected the position parameters. Please go to Graph -> Select position parameters"
-            self.notification_stack.push(msg)
+            self.msg.emit(msg)
             return
         obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
         rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]

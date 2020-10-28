@@ -289,7 +289,11 @@ class SpineDBEditorBase(QMainWindow):
 
     def import_from_json(self, file_path):
         with open(file_path) as f:
-            data = json.load(f)
+            try:
+                data = json.load(f)
+            except json.decoder.JSONDecodeError as err:
+                self.msg_error.emit(f"File {file_path} is not a valid json: {err}")
+                return
         self.import_data(data)
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
