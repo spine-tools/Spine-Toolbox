@@ -81,10 +81,14 @@ class ObjectTreeModel(MultiDBTreeModel):
         for db_map, items in db_map_data.items():
             d = dict()
             for item in items:
-                d.setdefault(item["class_id"], dict())[item["id"]] = None
-            for class_id, ids in d.items():
-                for parent_item in self.find_items(db_map, (None, None, class_id)):
-                    result.setdefault(parent_item, {})[db_map] = list(ids.keys())
+                object_class_id_list = tuple(int(obj_id) for obj_id in item["object_class_id_list"].split(","))
+                object_id_list = tuple(int(obj_id) for obj_id in item["object_id_list"].split(","))
+                key = (item["class_id"], object_class_id_list, object_id_list)
+                d.setdefault(key, dict())[item["id"]] = None
+            for (class_id, object_class_id_list, object_id_list), ids in d.items():
+                for object_class_id, object_id in zip(object_class_id_list, object_id_list):
+                    for parent_item in self.find_items(db_map, (object_class_id, object_id, class_id)):
+                        result.setdefault(parent_item, {})[db_map] = list(ids.keys())
         return result
 
     def _parent_entity_group_data(self, db_map_data):

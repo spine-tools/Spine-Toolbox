@@ -181,10 +181,7 @@ class MultiDBTreeItem(TreeItem):
             db_map (DiffDatabaseMapping): create children for this db_map
             children_data (iter): create childs from these dictionaries
         """
-        new_children = []
-        for id_ in children_ids:
-            new_children.append(self.child_item_type(self.model, {db_map: id_}))
-        return new_children
+        return [self.child_item_type(self.model, {db_map: id_}) for id_ in children_ids]
 
     def _merge_children(self, new_children):
         """Merges new children into this item. Ensures that each children has a valid display id afterwards.
