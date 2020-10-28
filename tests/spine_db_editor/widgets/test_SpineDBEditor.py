@@ -52,7 +52,12 @@ class TestSpineDBEditor(
 
     @staticmethod
     def _relationship(*args):
-        return dict(zip(["id", "class_id", "name", "class_name", "object_id_list", "object_name_list"], args))
+        return dict(
+            zip(
+                ["id", "class_id", "name", "class_name", "object_class_id_list", "object_id_list", "object_name_list"],
+                args,
+            )
+        )
 
     @staticmethod
     def _object_parameter_definition(*args):
@@ -158,6 +163,7 @@ class TestSpineDBEditor(
             cls.dog_fish_class["id"],
             "dog__fish_pluto__nemo",
             cls.dog_fish_class["name"],
+            str(cls.dog_class["id"]) + "," + str(cls.fish_class["id"]),
             str(cls.pluto_object["id"]) + "," + str(cls.nemo_object["id"]),
             cls.pluto_object["name"] + "," + cls.nemo_object["name"],
         )
@@ -166,6 +172,7 @@ class TestSpineDBEditor(
             cls.fish_dog_class["id"],
             "fish__dog_nemo__pluto",
             cls.fish_dog_class["name"],
+            str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
             str(cls.nemo_object["id"]) + "," + str(cls.pluto_object["id"]),
             cls.nemo_object["name"] + "," + cls.pluto_object["name"],
         )
@@ -174,6 +181,7 @@ class TestSpineDBEditor(
             cls.fish_dog_class["id"],
             "fish__dog_nemo__scooby",
             cls.fish_dog_class["name"],
+            str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
             str(cls.nemo_object["id"]) + "," + str(cls.scooby_object["id"]),
             cls.nemo_object["name"] + "," + cls.scooby_object["name"],
         )
