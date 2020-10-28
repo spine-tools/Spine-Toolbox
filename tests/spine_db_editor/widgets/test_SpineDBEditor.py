@@ -25,17 +25,17 @@ from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
-from .test_treeViewFormAdd import TestTreeViewFormAddMixin
-from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
-from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin
-from .test_treeViewFormFilter import TestTreeViewFormFilterMixin
+from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
+from .test_SpineDBEditorUpdate import TestSpineDBEditorUpdateMixin
+from .test_SpineDBEditorRemove import TestSpineDBEditorRemoveMixin
+from .test_SpineDBEditorFilter import TestSpineDBEditorFilterMixin
 
 
-class TestTreeViewForm(
-    TestTreeViewFormAddMixin,
-    TestTreeViewFormUpdateMixin,
-    TestTreeViewFormRemoveMixin,
-    TestTreeViewFormFilterMixin,
+class TestSpineDBEditorMixin(
+    TestSpineDBEditorAddMixin,
+    TestSpineDBEditorUpdateMixin,
+    TestSpineDBEditorRemoveMixin,
+    TestSpineDBEditorFilterMixin,
     unittest.TestCase,
 ):
     @staticmethod

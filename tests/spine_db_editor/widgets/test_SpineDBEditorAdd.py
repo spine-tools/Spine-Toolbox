@@ -18,7 +18,7 @@ Unit tests for the TreeViewFormAddMixin class.
 from PySide2.QtCore import Qt
 
 
-class TestTreeViewFormAddMixin:
+class TestSpineDBEditorAddMixin:
     def test_add_object_classes_to_object_tree_model(self):
         """Test that object classes are added to the object tree model.
         """

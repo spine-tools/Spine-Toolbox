@@ -19,7 +19,7 @@ Unit tests for the TreeViewFormFilterMixin class.
 from PySide2.QtCore import Qt, QItemSelectionModel
 
 
-class TestTreeViewFormFilterMixin:
+class TestSpineDBEditorFilterMixin:
     @property
     def _parameter_models(self):
         return (

@@ -19,7 +19,7 @@ from unittest import mock
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 
 
-class TestTreeViewFormRemoveMixin:
+class TestSpineDBEditorRemoveMixin:
     def test_remove_object_classes_from_object_tree_model(self):
         """Test that object classes are removed from the object tree model.
         """

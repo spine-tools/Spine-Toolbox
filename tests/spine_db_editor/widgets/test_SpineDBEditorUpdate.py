@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 
 
-class TestTreeViewFormUpdateMixin:
+class TestSpineDBEditorUpdateMixin:
     def test_update_object_classes_in_object_tree_model(self):
         """Test that object classes are updated in the object tree model.
         """
