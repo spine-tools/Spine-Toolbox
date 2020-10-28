@@ -1193,25 +1193,22 @@ def relationship_classes_to_sets(db_map, set_settings):
     return sets
 
 
-def object_parameters(db_map, set_settings, fallback_on_none, logger):
+def object_parameters(db_map, fallback_on_none, logger):
     """
     Converts object parameters from database to :class:`Parameter` objects.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        set_settings (SetSettings): export settings
         fallback_on_none (NoneFallback): fallback when encountering Nones
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
     Returns:
         dict: a map from parameter name to dict which maps domain names to :class:`Parameter`
     """
-    parameters = dict()
     classes_with_ignored_parameters = set() if logger is not None else None
-    if fallback_on_none == NoneFallback.USE_DEFAULT_VALUE:
-        default_values = _default_object_parameter_values(db_map, set_settings, classes_with_ignored_parameters)
-    else:
-        default_values = None
+    parameters, default_values = _read_object_parameter_definitions(
+        db_map, classes_with_ignored_parameters, fallback_on_none
+    )
     for parameter_row in db_map.query(db_map.object_parameter_value_sq).all():
         domain = parameter_row.object_class_name
         name = parameter_row.parameter_name
@@ -1244,24 +1241,29 @@ def object_parameters(db_map, set_settings, fallback_on_none, logger):
     return parameters
 
 
-def _default_object_parameter_values(db_map, set_settings, classes_with_ignored_parameters):
+def _read_object_parameter_definitions(db_map, classes_with_ignored_parameters, fallback_on_none):
     """
-    Reads default parameter values from the database.
+    Reads parameters names and their default values from the database.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        set_settings (SetSettings): export settings
         classes_with_ignored_parameters (set, optional): a set of problematic relationship_class names; if not None,
             relationship_class names are added to this set in case of errors instead of raising an exception
+        fallback_on_none (NoneFallback): fallback when encountering Nones
     Returns:
-        dict: a map from parameter name to dict of domain name and the parsed default value
+        tuple: a skeleton parameters dict and
+            a map from parameter name to dict of domain name and the parsed default value
     """
-    values = dict()
+    parameters = dict()
+    default_values = dict()
     for definition_row in db_map.query(db_map.object_parameter_definition_sq).all():
         domain_name = definition_row.object_class_name
-        if not set_settings.is_exportable(domain_name):
-            continue
         name = definition_row.parameter_name
+        by_dimensions = parameters.setdefault(name, dict())
+        domain_names = (domain_name,)
+        by_dimensions[domain_names] = Parameter(domain_names, [], [])
+        if fallback_on_none != NoneFallback.USE_DEFAULT_VALUE:
+            continue
         try:
             parsed_default_value = _read_value(definition_row.default_value)
         except GdxUnsupportedValueTypeException:
@@ -1269,30 +1271,27 @@ def _default_object_parameter_values(db_map, set_settings, classes_with_ignored_
                 classes_with_ignored_parameters.add(domain_name)
                 continue
             raise
-        by_dimension = values.setdefault(name, dict())
-        by_dimension[(domain_name,)] = parsed_default_value
-    return values
+        by_dimension = default_values.setdefault(name, dict())
+        by_dimension[domain_names] = parsed_default_value
+    return parameters, default_values
 
 
-def relationship_parameters(db_map, set_settings, fallback_on_none, logger):
+def relationship_parameters(db_map, fallback_on_none, logger):
     """
     Converts relationship parameters from database to :class:`Parameter` objects.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        set_settings (SetSettings): export settings
         fallback_on_none (NoneFallback): fallback when encountering Nones
         logger (LoggingInterface, optional): a logger; if not None, some errors are logged and ignored instead of
             raising an exception
     Returns:
         dict: a map from parameter name to dict which maps domain names to :class:`Parameter`
     """
-    parameters = dict()
     classes_with_ignored_parameters = set() if logger is not None else None
-    if fallback_on_none == NoneFallback.USE_DEFAULT_VALUE:
-        default_values = _default_relationship_parameter_values(db_map, set_settings, classes_with_ignored_parameters)
-    else:
-        default_values = None
+    parameters, default_values = _read_relationship_parameter_definitions(
+        db_map, classes_with_ignored_parameters, fallback_on_none
+    )
     for parameter_row in db_map.query(db_map.relationship_parameter_value_sq).all():
         set_name = parameter_row.relationship_class_name
         name = parameter_row.parameter_name
@@ -1326,35 +1325,39 @@ def relationship_parameters(db_map, set_settings, fallback_on_none, logger):
     return parameters
 
 
-def _default_relationship_parameter_values(db_map, set_settings, classes_with_ignored_parameters):
+def _read_relationship_parameter_definitions(db_map, classes_with_ignored_parameters, fallback_on_none):
     """
-    Reads default parameter values from the database.
+    Reads parameters names and their default values from the database.
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        set_settings (SetSettings): export settings
         classes_with_ignored_parameters (set, optional): a set of problematic relationship_class names; if not None,
             relationship_class names are added to this set in case of errors instead of raising an exception
+        fallback_on_none (NoneFallback): fallback when encountering Nones
     Returns:
-        dict: a map from parameter name to dict of set name and the parsed default value
+        tuple: a skeleton parameters dict and
+            a map from parameter name to dict of domain name and the parsed default value
     """
-    values = dict()
+    parameters = dict()
+    default_values = dict()
     for definition_row in db_map.query(db_map.relationship_parameter_definition_sq).all():
-        set_name = definition_row.relationship_class_name
-        if not set_settings.is_exportable(set_name):
-            continue
         name = definition_row.parameter_name
+        dimensions = tuple(definition_row.object_class_name_list.split(","))
+        by_dimensions = parameters.setdefault(name, dict())
+        by_dimensions[dimensions] = Parameter(dimensions, [], [])
+        if fallback_on_none != NoneFallback.USE_DEFAULT_VALUE:
+            continue
         try:
             parsed_default_value = _read_value(definition_row.default_value)
         except GdxUnsupportedValueTypeException:
             if classes_with_ignored_parameters is not None:
-                classes_with_ignored_parameters.add(set_name)
+                classes_with_ignored_parameters.add(definition_row.relationship_class_name)
                 continue
             raise
         dimensions = tuple(definition_row.object_class_name_list.split(","))
-        by_dimensions = values.setdefault(name, dict())
+        by_dimensions = default_values.setdefault(name, dict())
         by_dimensions[dimensions] = parsed_default_value
-    return values
+    return parameters, default_values
 
 
 def _update_using_existing_relationship_parameter_values(
@@ -2025,7 +2028,7 @@ def to_gdx_file(
             otherwise some errors are logged and ignored
     """
     domains = object_classes_to_domains(database_map)
-    domain_parameters = object_parameters(database_map, set_settings, none_fallback, logger)
+    domain_parameters = object_parameters(database_map, none_fallback, logger)
     domains, global_parameters_domain = extract_domain(domains, set_settings.global_parameters_domain_name)
     domains += _create_additional_domains(set_settings)
     domains = sort_sets(domains, set_settings.domain_tiers)
@@ -2035,7 +2038,7 @@ def to_gdx_file(
     sets = list(sets_with_ids.values())
     sets = sort_sets(sets, set_settings.set_tiers)
     sort_records_inplace(sets, set_settings)
-    set_parameters = relationship_parameters(database_map, set_settings, none_fallback, logger)
+    set_parameters = relationship_parameters(database_map, none_fallback, logger)
     parameters = _combine_parameters(domain_parameters, set_parameters)
     erasable = expand_indexed_parameter_values(parameters, indexing_settings, domains_with_names)
     erase_parameters(parameters, erasable)

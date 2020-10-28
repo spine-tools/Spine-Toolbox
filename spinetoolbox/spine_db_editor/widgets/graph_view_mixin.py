@@ -465,7 +465,7 @@ class GraphViewMixin:
         entity_ids = self.object_ids + self.relationship_ids
         heavy_positions = {ind: fixed_positions[id_] for ind, id_ in enumerate(entity_ids) if id_ in fixed_positions}
         return GraphLayoutGenerator(
-            len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions,
+            len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions
         )
 
     def _make_new_items(self, x, y):

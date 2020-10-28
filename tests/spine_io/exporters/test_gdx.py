@@ -207,23 +207,18 @@ class TestGdx(unittest.TestCase):
             dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_object_parameters(database_map, [("domain", "parameter", 3.14)])
             dbmanip.import_object_parameter_values(database_map, [("domain", "record", "parameter", 2.3)])
-            settings = gdx.make_set_settings(database_map)
-            parameters = gdx.object_parameters(database_map, settings, gdx.NoneFallback.USE_IT, None)
+            parameters = gdx.object_parameters(database_map, gdx.NoneFallback.USE_IT, None)
             database_map.connection.close()
         self.assertEqual(parameters, {"parameter": {("domain",): gdx.Parameter(("domain",), [("record",)], [2.3])}})
 
-    def test_object_parameters_exports_parameters_of_non_exportable_domains(self):
+    def test_object_parameters_finds_empty_parameters(self):
         with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_object_parameters.sqlite")
+            database_map = self._make_database_map(tmp_dir_name, "test_object_parameters_finds_empty_parameters.sqlite")
             dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_object_parameters(database_map, [("domain", "parameter", 3.14)])
-            dbmanip.import_object_parameter_values(database_map, [("domain", "record", "parameter", 2.3)])
-            settings = gdx.make_set_settings(database_map)
-            settings.metadata("domain").exportable = gdx.ExportFlag.NON_EXPORTABLE
-            parameters = gdx.object_parameters(database_map, settings, gdx.NoneFallback.USE_IT, None)
+            parameters = gdx.object_parameters(database_map, gdx.NoneFallback.USE_IT, None)
             database_map.connection.close()
-        self.assertEqual(parameters, {"parameter": {("domain",): gdx.Parameter(("domain",), [("record",)], [2.3])}})
+        self.assertEqual(parameters, {"parameter": {("domain",): gdx.Parameter(("domain",), [], [])}})
 
     def test_object_parameters_replaces_nones_by_default_values(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -234,8 +229,7 @@ class TestGdx(unittest.TestCase):
             dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_object_parameters(database_map, [("domain", "parameter", 3.14)])
             dbmanip.import_object_parameter_values(database_map, [("domain", "record", "parameter", None)])
-            settings = gdx.make_set_settings(database_map)
-            parameters = gdx.object_parameters(database_map, settings, gdx.NoneFallback.USE_DEFAULT_VALUE, None)
+            parameters = gdx.object_parameters(database_map, gdx.NoneFallback.USE_DEFAULT_VALUE, None)
             database_map.connection.close()
         self.assertEqual(parameters, {"parameter": {("domain",): gdx.Parameter(("domain",), [("record",)], [3.14])}})
 
@@ -282,25 +276,21 @@ class TestGdx(unittest.TestCase):
             dbmanip.import_relationships(database_map, [("set", ["record"])])
             dbmanip.import_relationship_parameters(database_map, [("set", "parameter", 3.14)])
             dbmanip.import_relationship_parameter_values(database_map, [["set", ["record"], "parameter", 2.3]])
-            settings = gdx.make_set_settings(database_map)
-            parameters = gdx.relationship_parameters(database_map, settings, gdx.NoneFallback.USE_IT, None)
+            parameters = gdx.relationship_parameters(database_map, gdx.NoneFallback.USE_IT, None)
             database_map.connection.close()
         self.assertEqual(parameters, {"parameter": {("domain",): gdx.Parameter(("domain",), [("record",)], [2.3])}})
 
-    def test_relationship_parameters_exports_parameters_of_non_exportable_sets(self):
+    def test_relationship_parameters_finds_empty_parameters(self):
         with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_relationship_parameters.sqlite")
+            database_map = self._make_database_map(
+                tmp_dir_name, "test_relationship_parameters_finds_empty_parameters.sqlite"
+            )
             dbmanip.import_object_classes(database_map, ["domain"])
-            dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
-            dbmanip.import_relationships(database_map, [("set", ["record"])])
             dbmanip.import_relationship_parameters(database_map, [("set", "parameter", 3.14)])
-            dbmanip.import_relationship_parameter_values(database_map, [["set", ["record"], "parameter", 2.3]])
-            settings = gdx.make_set_settings(database_map)
-            settings.metadata("set").exportable = gdx.ExportFlag.NON_EXPORTABLE
-            parameters = gdx.relationship_parameters(database_map, settings, gdx.NoneFallback.USE_IT, None)
+            parameters = gdx.relationship_parameters(database_map, gdx.NoneFallback.USE_IT, None)
             database_map.connection.close()
-        self.assertEqual(parameters, {"parameter": {("domain",): gdx.Parameter(("domain",), [("record",)], [2.3])}})
+        self.assertEqual(parameters, {"parameter": {("domain",): gdx.Parameter(("domain",), [], [])}})
 
     def test_relationship_parameters_replaces_nones_by_default_values(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -313,8 +303,7 @@ class TestGdx(unittest.TestCase):
             dbmanip.import_relationships(database_map, [("set", ["record"])])
             dbmanip.import_relationship_parameters(database_map, [("set", "parameter", 3.14)])
             dbmanip.import_relationship_parameter_values(database_map, [["set", ["record"], "parameter", None]])
-            settings = gdx.make_set_settings(database_map)
-            parameters = gdx.relationship_parameters(database_map, settings, gdx.NoneFallback.USE_DEFAULT_VALUE, None)
+            parameters = gdx.relationship_parameters(database_map, gdx.NoneFallback.USE_DEFAULT_VALUE, None)
             database_map.connection.close()
         self.assertEqual(parameters, {"parameter": {("domain",): gdx.Parameter(("domain",), [("record",)], [3.14])}})
 
