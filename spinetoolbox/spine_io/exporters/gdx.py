@@ -1222,12 +1222,7 @@ def object_parameters(db_map, fallback_on_none, logger):
         if fallback_on_none == NoneFallback.USE_DEFAULT_VALUE and parsed_value is None:
             parsed_value = default_values[name][(domain,)]
         dimensions = (domain,)
-        by_dimensions = parameters.setdefault(name, dict())
-        parameter = by_dimensions.get(dimensions)
-        if parameter is None:
-            by_dimensions[dimensions] = Parameter(dimensions, [(parameter_row.object_name,)], [parsed_value])
-            continue
-        parameter.data[(parameter_row.object_name,)] = parsed_value
+        parameters[name][dimensions].data[(parameter_row.object_name,)] = parsed_value
     for name, by_dimensions in parameters.items():
         for parameter in by_dimensions.values():
             if not parameter.is_consistent():
@@ -1305,13 +1300,8 @@ def relationship_parameters(db_map, fallback_on_none, logger):
         dimensions = tuple(parameter_row.object_class_name_list.split(","))
         if fallback_on_none == NoneFallback.USE_DEFAULT_VALUE and parsed_value is None:
             parsed_value = default_values[name][dimensions]
-        by_dimensions = parameters.setdefault(name, dict())
-        parameter = by_dimensions.get(dimensions)
         keys = tuple(parameter_row.object_name_list.split(","))
-        if parameter is None:
-            by_dimensions[dimensions] = Parameter(dimensions, [keys], [parsed_value])
-            continue
-        parameter.data[keys] = parsed_value
+        parameters[name][dimensions].data[keys] = parsed_value
     for name, by_dimensions in parameters.items():
         for parameter in by_dimensions.values():
             if not parameter.is_consistent():
