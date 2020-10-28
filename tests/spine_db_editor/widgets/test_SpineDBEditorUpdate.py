@@ -22,29 +22,29 @@ from PySide2.QtCore import Qt
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 
 
-class TestTreeViewFormUpdateMixin:
+class TestSpineDBEditorUpdateMixin:
     def test_update_object_classes_in_object_tree_model(self):
         """Test that object classes are updated in the object tree model.
         """
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
         self.fish_class = self._object_class(1, "octopus", "An octopus.", 1, None)
         self.db_mngr.object_classes_updated.emit({self.mock_db_map: [self.fish_class]})
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(0)
         self.assertEqual(fish_item.item_type, "object_class")
         self.assertEqual(fish_item.display_data, "octopus")
 
     def test_update_objects_in_object_tree_model(self):
         """Test that objects are updated in the object tree model."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
         self.nemo_object = self._object(1, self.fish_class["id"], 'dory', 'The one that forgets.')
         self.db_mngr.objects_updated.emit({self.mock_db_map: [self.nemo_object]})
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(0)
         nemo_item = fish_item.child(0)
         self.assertEqual(nemo_item.item_type, "object")
@@ -52,7 +52,7 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_relationship_classes_in_object_tree_model(self):
         """Test that relationship classes are updated in the object tree model."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
@@ -61,7 +61,7 @@ class TestTreeViewFormUpdateMixin:
             3, "octopus__dog", str(self.fish_class["id"]) + "," + str(self.dog_class["id"]), "octopus,dog"
         )
         self.db_mngr.relationship_classes_updated.emit({self.mock_db_map: [self.fish_dog_class]})
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
@@ -75,7 +75,7 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_object_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
-        model = self.tree_view_form.object_parameter_definition_model
+        model = self.spine_db_editor.object_parameter_definition_model
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
@@ -93,7 +93,7 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_relationship_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
-        model = self.tree_view_form.relationship_parameter_definition_model
+        model = self.spine_db_editor.relationship_parameter_definition_model
         model.init_model()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
@@ -118,7 +118,7 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_object_parameter_values_in_model(self):
         """Test that object parameter values are updated in the model."""
-        model = self.tree_view_form.object_parameter_value_model
+        model = self.spine_db_editor.object_parameter_value_model
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
@@ -149,7 +149,7 @@ class TestTreeViewFormUpdateMixin:
 
     def test_update_relationship_parameter_values_in_model(self):
         """Test that relationship parameter values are updated in the model."""
-        model = self.tree_view_form.relationship_parameter_value_model
+        model = self.spine_db_editor.relationship_parameter_value_model
         model.init_model()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationship_parameter_values_in_db_mngr()

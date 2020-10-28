@@ -25,17 +25,17 @@ from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
-from .test_treeViewFormAdd import TestTreeViewFormAddMixin
-from .test_treeViewFormUpdate import TestTreeViewFormUpdateMixin
-from .test_treeViewFormRemove import TestTreeViewFormRemoveMixin
-from .test_treeViewFormFilter import TestTreeViewFormFilterMixin
+from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
+from .test_SpineDBEditorUpdate import TestSpineDBEditorUpdateMixin
+from .test_SpineDBEditorRemove import TestSpineDBEditorRemoveMixin
+from .test_SpineDBEditorFilter import TestSpineDBEditorFilterMixin
 
 
-class TestTreeViewForm(
-    TestTreeViewFormAddMixin,
-    TestTreeViewFormUpdateMixin,
-    TestTreeViewFormRemoveMixin,
-    TestTreeViewFormFilterMixin,
+class TestSpineDBEditor(
+    TestSpineDBEditorAddMixin,
+    TestSpineDBEditorUpdateMixin,
+    TestSpineDBEditorRemoveMixin,
+    TestSpineDBEditorFilterMixin,
     unittest.TestCase,
 ):
     @staticmethod
@@ -78,7 +78,7 @@ class TestTreeViewForm(
 
     @staticmethod
     def _object_parameter_value(*args):
-        return dict(
+        d = dict(
             zip(
                 [
                     "id",
@@ -93,10 +93,12 @@ class TestTreeViewForm(
                 args,
             )
         )
+        d["entity_id"] = d["object_id"]
+        return d
 
     @staticmethod
     def _relationship_parameter_value(*args):
-        return dict(
+        d = dict(
             zip(
                 [
                     "id",
@@ -114,6 +116,8 @@ class TestTreeViewForm(
                 args,
             )
         )
+        d["entity_id"] = d["relationship_id"]
+        return d
 
     @classmethod
     def setUpClass(cls):
@@ -278,9 +282,9 @@ class TestTreeViewForm(
 
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
             self.db_mngr.show_spine_db_editor({"mock_url": "mock_db"}, None)
-            self.tree_view_form = self.db_mngr._db_editors[("mock_url",)]
-            self.mock_db_map = self.tree_view_form.first_db_map
-            self.tree_view_form.pivot_table_model = mock.MagicMock()
+            self.spine_db_editor = self.db_mngr._db_editors[("mock_url",)]
+            self.mock_db_map = self.spine_db_editor.first_db_map
+            self.spine_db_editor.pivot_table_model = mock.MagicMock()
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -289,10 +293,10 @@ class TestTreeViewForm(
         with mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
         ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
-            self.tree_view_form.close()
+            self.spine_db_editor.close()
             mock_save_w_s.assert_called_once()
-        self.tree_view_form.deleteLater()
-        self.tree_view_form = None
+        self.spine_db_editor.deleteLater()
+        self.spine_db_editor = None
 
     def put_mock_object_classes_in_db_mngr(self):
         """Put fish and dog object classes in the db mngr."""
@@ -355,23 +359,23 @@ class TestTreeViewForm(
         self.fetch_object_tree_model()
 
     def fetch_object_tree_model(self):
-        for item in self.tree_view_form.object_tree_model.visit_all():
+        for item in self.spine_db_editor.object_tree_model.visit_all():
             if item.can_fetch_more():
                 item.fetch_more()
 
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in object parameter_definition models according the object tree selection."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
         # Select fish item in object tree
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(0)
-        fish_index = self.tree_view_form.object_tree_model.index_from_item(fish_item)
-        self.tree_view_form.ui.treeView_object.setCurrentIndex(fish_index)
-        self.tree_view_form.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        fish_index = self.spine_db_editor.object_tree_model.index_from_item(fish_item)
+        self.spine_db_editor.ui.treeView_object.setCurrentIndex(fish_index)
+        self.spine_db_editor.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
         # Check default in object parameter_definition
-        model = self.tree_view_form.object_parameter_definition_model
+        model = self.spine_db_editor.object_parameter_definition_model
         model.empty_model.fetchMore()
         h = model.header.index
         row_data = []

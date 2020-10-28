@@ -206,12 +206,12 @@ class TreeViewMixin:
                 (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data.get("relationships", [])
             ],
             "object_parameter_values": [
-                (cls_name, dup_name, param_name, val)
-                for (cls_name, obj_name, param_name, val) in data.get("object_parameter_values", [])
+                (cls_name, dup_name, param_name, val, alt)
+                for (cls_name, obj_name, param_name, val, alt) in data.get("object_parameter_values", [])
             ],
             "relationship_parameter_values": [
-                (cls_name, _replace_name(obj_name_lst), param_name, val)
-                for (cls_name, obj_name_lst, param_name, val) in data.get("relationship_parameter_values", [])
+                (cls_name, _replace_name(obj_name_lst), param_name, val, alt)
+                for (cls_name, obj_name_lst, param_name, val, alt) in data.get("relationship_parameter_values", [])
             ],
         }
         self.db_mngr.import_data({db_map: data for db_map in object_item.db_maps}, command_text="Duplicate object")

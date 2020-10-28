@@ -19,14 +19,14 @@ from unittest import mock
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 
 
-class TestTreeViewFormRemoveMixin:
+class TestSpineDBEditorRemoveMixin:
     def test_remove_object_classes_from_object_tree_model(self):
         """Test that object classes are removed from the object tree model.
         """
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         self.assertEqual(root_item.child_count(), 2)
         self.db_mngr.object_classes_removed.emit({self.mock_db_map: [self.fish_class]})
         dog_item = root_item.child(0)
@@ -35,11 +35,11 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_objects_from_object_tree_model(self):
         """Test that objects are removed from the object tree model."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(0)
         self.assertEqual(fish_item.child_count(), 1)
         self.db_mngr.objects_removed.emit({self.mock_db_map: [self.nemo_object]})
@@ -47,12 +47,12 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_relationship_classes_from_object_tree_model(self):
         """Test that relationship classes removed from in the object tree model."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
         self.assertEqual(pluto_item.child_count(), 2)
@@ -61,13 +61,13 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_relationships_from_object_tree_model(self):
         """Test that relationships are removed from the object tree model."""
-        self.tree_view_form.init_models()
+        self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationships_in_db_mngr()
         self.fetch_object_tree_model()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(0)
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
@@ -80,7 +80,7 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_object_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""
-        model = self.tree_view_form.object_parameter_definition_model
+        model = self.spine_db_editor.object_parameter_definition_model
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
@@ -98,7 +98,7 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_relationship_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""
-        model = self.tree_view_form.relationship_parameter_definition_model
+        model = self.spine_db_editor.relationship_parameter_definition_model
         model.init_model()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
@@ -116,7 +116,7 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_object_parameter_values_from_model(self):
         """Test that object parameter values are removed from the model."""
-        model = self.tree_view_form.object_parameter_value_model
+        model = self.spine_db_editor.object_parameter_value_model
         model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
@@ -137,7 +137,7 @@ class TestTreeViewFormRemoveMixin:
 
     def test_remove_relationship_parameter_values_from_model(self):
         """Test that relationship parameter values are removed from the model."""
-        model = self.tree_view_form.relationship_parameter_value_model
+        model = self.spine_db_editor.relationship_parameter_value_model
         model.init_model()
         self.put_mock_relationship_classes_in_db_mngr()
         self.put_mock_relationship_parameter_values_in_db_mngr()

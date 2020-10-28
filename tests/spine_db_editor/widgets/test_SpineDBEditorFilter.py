@@ -19,23 +19,23 @@ Unit tests for the TreeViewFormFilterMixin class.
 from PySide2.QtCore import Qt, QItemSelectionModel
 
 
-class TestTreeViewFormFilterMixin:
+class TestSpineDBEditorFilterMixin:
     @property
     def _parameter_models(self):
         return (
-            self.tree_view_form.object_parameter_definition_model,
-            self.tree_view_form.object_parameter_value_model,
-            self.tree_view_form.relationship_parameter_definition_model,
-            self.tree_view_form.relationship_parameter_value_model,
+            self.spine_db_editor.object_parameter_definition_model,
+            self.spine_db_editor.object_parameter_value_model,
+            self.spine_db_editor.relationship_parameter_definition_model,
+            self.spine_db_editor.relationship_parameter_value_model,
         )
 
     @property
     def _filtered_fields(self):
         return {
-            self.tree_view_form.object_parameter_definition_model: ("object_class_name",),
-            self.tree_view_form.object_parameter_value_model: ("object_class_name", "object_name"),
-            self.tree_view_form.relationship_parameter_definition_model: ("relationship_class_name",),
-            self.tree_view_form.relationship_parameter_value_model: ("relationship_class_name", "object_name_list"),
+            self.spine_db_editor.object_parameter_definition_model: ("object_class_name",),
+            self.spine_db_editor.object_parameter_value_model: ("object_class_name", "object_name"),
+            self.spine_db_editor.relationship_parameter_definition_model: ("relationship_class_name",),
+            self.spine_db_editor.relationship_parameter_value_model: ("relationship_class_name", "object_name_list"),
         }
 
     @staticmethod
@@ -59,15 +59,15 @@ class TestTreeViewFormFilterMixin:
         """Test that parameter tables are filtered when selecting object classes in the object tree.
         """
         self.put_mock_dataset_in_db_mngr()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(0)
-        fish_index = self.tree_view_form.object_tree_model.index_from_item(fish_item)
-        self.tree_view_form.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        fish_index = self.spine_db_editor.object_tree_model.index_from_item(fish_item)
+        self.spine_db_editor.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
         filtered_values = {
-            self.tree_view_form.object_parameter_definition_model: [('dog',)],
-            self.tree_view_form.object_parameter_value_model: [('dog', 'pluto'), ('dog', 'scooby')],
-            self.tree_view_form.relationship_parameter_definition_model: [],
-            self.tree_view_form.relationship_parameter_value_model: [],
+            self.spine_db_editor.object_parameter_definition_model: [('dog',)],
+            self.spine_db_editor.object_parameter_value_model: [('dog', 'pluto'), ('dog', 'scooby')],
+            self.spine_db_editor.relationship_parameter_definition_model: [],
+            self.spine_db_editor.relationship_parameter_value_model: [],
         }
         self._assert_filter(filtered_values)
 
@@ -75,16 +75,16 @@ class TestTreeViewFormFilterMixin:
         """Test that parameter tables are filtered when selecting objects in the object tree.
         """
         self.put_mock_dataset_in_db_mngr()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)
-        pluto_index = self.tree_view_form.object_tree_model.index_from_item(pluto_item)
-        self.tree_view_form.ui.treeView_object.selectionModel().select(pluto_index, QItemSelectionModel.Select)
+        pluto_index = self.spine_db_editor.object_tree_model.index_from_item(pluto_item)
+        self.spine_db_editor.ui.treeView_object.selectionModel().select(pluto_index, QItemSelectionModel.Select)
         filtered_values = {
-            self.tree_view_form.object_parameter_definition_model: [('fish',)],
-            self.tree_view_form.object_parameter_value_model: [('fish', 'nemo'), ('dog', 'scooby')],
-            self.tree_view_form.relationship_parameter_definition_model: [],
-            self.tree_view_form.relationship_parameter_value_model: [('fish__dog', 'nemo,scooby')],
+            self.spine_db_editor.object_parameter_definition_model: [('fish',)],
+            self.spine_db_editor.object_parameter_value_model: [('fish', 'nemo'), ('dog', 'scooby')],
+            self.spine_db_editor.relationship_parameter_definition_model: [],
+            self.spine_db_editor.relationship_parameter_value_model: [('fish__dog', 'nemo,scooby')],
         }
         self._assert_filter(filtered_values)
 
@@ -92,17 +92,19 @@ class TestTreeViewFormFilterMixin:
         """Test that parameter tables are filtered when selecting relationship classes in the object tree.
         """
         self.put_mock_dataset_in_db_mngr()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
-        pluto_fish_dog_index = self.tree_view_form.object_tree_model.index_from_item(pluto_fish_dog_item)
-        self.tree_view_form.ui.treeView_object.selectionModel().select(pluto_fish_dog_index, QItemSelectionModel.Select)
+        pluto_fish_dog_index = self.spine_db_editor.object_tree_model.index_from_item(pluto_fish_dog_item)
+        self.spine_db_editor.ui.treeView_object.selectionModel().select(
+            pluto_fish_dog_index, QItemSelectionModel.Select
+        )
         filtered_values = {
-            self.tree_view_form.object_parameter_definition_model: [],
-            self.tree_view_form.object_parameter_value_model: [],
-            self.tree_view_form.relationship_parameter_definition_model: [('dog__fish',)],
-            self.tree_view_form.relationship_parameter_value_model: [('dog__fish', 'pluto,nemo')],
+            self.spine_db_editor.object_parameter_definition_model: [],
+            self.spine_db_editor.object_parameter_value_model: [],
+            self.spine_db_editor.relationship_parameter_definition_model: [('dog__fish',)],
+            self.spine_db_editor.relationship_parameter_value_model: [('dog__fish', 'pluto,nemo')],
         }
         self._assert_filter(filtered_values)
 
@@ -110,20 +112,20 @@ class TestTreeViewFormFilterMixin:
         """Test that parameter tables are filtered when selecting relationships in the object tree.
         """
         self.put_mock_dataset_in_db_mngr()
-        root_item = self.tree_view_form.object_tree_model.root_item
+        root_item = self.spine_db_editor.object_tree_model.root_item
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
         fish_dog_nemo_pluto_item = pluto_fish_dog_item.child(0)
-        fish_dog_nemo_pluto_index = self.tree_view_form.object_tree_model.index_from_item(fish_dog_nemo_pluto_item)
-        self.tree_view_form.ui.treeView_object.selectionModel().select(
+        fish_dog_nemo_pluto_index = self.spine_db_editor.object_tree_model.index_from_item(fish_dog_nemo_pluto_item)
+        self.spine_db_editor.ui.treeView_object.selectionModel().select(
             fish_dog_nemo_pluto_index, QItemSelectionModel.Select
         )
         filtered_values = {
-            self.tree_view_form.object_parameter_definition_model: [],
-            self.tree_view_form.object_parameter_value_model: [],
-            self.tree_view_form.relationship_parameter_definition_model: [('dog__fish',)],
-            self.tree_view_form.relationship_parameter_value_model: [
+            self.spine_db_editor.object_parameter_definition_model: [],
+            self.spine_db_editor.object_parameter_value_model: [],
+            self.spine_db_editor.relationship_parameter_definition_model: [('dog__fish',)],
+            self.spine_db_editor.relationship_parameter_value_model: [
                 ('fish__dog', 'nemo,scooby'),
                 ('dog__fish', 'pluto,nemo'),
             ],

@@ -1162,7 +1162,7 @@ class SpineDBManager(QObject):
         Condenses all in a single command for undo/redo.
 
         Args:
-            db_map_data (dict(DiffDatabaseMapping, list)): Maps dbs to data to be passed as keyword arguments
+            db_map_data (dict(DiffDatabaseMapping, dict())): Maps dbs to data to be passed as keyword arguments
                 to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
