@@ -31,7 +31,7 @@ from .test_SpineDBEditorRemove import TestSpineDBEditorRemoveMixin
 from .test_SpineDBEditorFilter import TestSpineDBEditorFilterMixin
 
 
-class TestSpineDBEditorMixin(
+class TestSpineDBEditor(
     TestSpineDBEditorAddMixin,
     TestSpineDBEditorUpdateMixin,
     TestSpineDBEditorRemoveMixin,
@@ -78,7 +78,7 @@ class TestSpineDBEditorMixin(
 
     @staticmethod
     def _object_parameter_value(*args):
-        return dict(
+        d = dict(
             zip(
                 [
                     "id",
@@ -93,10 +93,12 @@ class TestSpineDBEditorMixin(
                 args,
             )
         )
+        d["entity_id"] = d["object_id"]
+        return d
 
     @staticmethod
     def _relationship_parameter_value(*args):
-        return dict(
+        d = dict(
             zip(
                 [
                     "id",
@@ -114,6 +116,8 @@ class TestSpineDBEditorMixin(
                 args,
             )
         )
+        d["entity_id"] = d["relationship_id"]
+        return d
 
     @classmethod
     def setUpClass(cls):
