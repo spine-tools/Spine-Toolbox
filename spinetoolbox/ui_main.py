@@ -239,15 +239,6 @@ class ToolboxUI(QMainWindow):
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
-        if not upgrade_project_items():
-            msg = (
-                "<b>The automatic process to install project item modules has failed.</b> "
-                "Please check your internet connection and restart Spine Toolbox."
-                "<p>You can also try to install these modules manually, by running</p>"
-                "<p>pip install --upgrade git+https://github.com/Spine-project/spine-items.git</p>"
-            )
-            self.msg_error.emit(msg)
-            return
         self._item_categories, self.item_factories = load_project_items(self)
         self._item_specification_factories = load_item_specification_factories()
         for item_type, factory in self.item_factories.items():
