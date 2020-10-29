@@ -304,7 +304,9 @@ def _drop_parameters_conflicting_with_sets(parameters, set_settings, logger):
         dict: filtered parameters
     """
     keep = dict()
-    reserved_names = set_settings.domain_names | set_settings.set_names
+    reserved_names = {name for name in set_settings.domain_names if set_settings.is_exportable(name)} | {
+        name for name in set_settings.set_names if set_settings.is_exportable(name)
+    }
     for parameter_name, by_dimensions in parameters.items():
         if parameter_name in reserved_names:
             if logger is not None:
