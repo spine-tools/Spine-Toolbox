@@ -291,6 +291,35 @@ class Parameter:
         self.data = new_data
 
 
+def _drop_parameters_conflicting_with_sets(parameters, set_settings, logger):
+    """
+    Filters out parameters whose names clash with existing domain or set names.
+
+    Args:
+        parameters (dict): a mapping from parameter name to a dict of domain names and :class:`Parameter`
+        set_settings (SetSettings): export settings
+        logger (LoggerInterface, optional): a logger
+
+    Return:
+        dict: filtered parameters
+    """
+    keep = dict()
+    reserved_names = set_settings.domain_names | set_settings.set_names
+    for parameter_name, by_dimensions in parameters.items():
+        if parameter_name in reserved_names:
+            if logger is not None:
+                logger.msg_warning.emit(
+                    f"Skipping parameter '{parameter_name}' as it conflicts with a domain/set with the same name."
+                )
+                continue
+            else:
+                raise GdxExportException(
+                    f"Parameter '{parameter_name}' conflicts with a domain/set with the same name."
+                )
+        keep[parameter_name] = by_dimensions
+    return keep
+
+
 class Picking:
     """
     An interface for picking objects.
@@ -2076,6 +2105,7 @@ def to_gdx_file(
         if global_parameters_domain is not None:
             erasable = domain_parameters_to_gams_scalars(output_file, domain_parameters, global_parameters_domain.name)
             erase_parameters(parameters, erasable)
+        parameters = _drop_parameters_conflicting_with_sets(parameters, set_settings, logger)
         parameters_to_gams(output_file, parameters, none_export)
 
 
