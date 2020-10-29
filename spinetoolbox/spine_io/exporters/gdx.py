@@ -115,6 +115,36 @@ class Set:
         return self.domain_names[0] is None
 
 
+def _drop_sets_not_in_settings(sets, set_names, logger):
+    """
+    Removes sets for ``sets`` that are not mentioned in ``set_names``.
+
+    Args:
+        sets (Iterable of Set): sets
+        set_names (Iterable of str): names to check against
+        logger (LoggerInterface, optional): a logger
+
+    Returns:
+        list of Set: remaining sets
+    """
+    keep = list()
+    missing_names = list()
+    for set_ in sets:
+        if set_.name in set_names:
+            keep.append(set_)
+        else:
+            missing_names.append(set_.name)
+    if missing_names:
+        if logger is not None:
+            logger.msg_warning.emit(
+                "Skipping the following domains/sets which are missing from export settings: "
+                f"{', '.join(missing_names)}"
+            )
+        else:
+            raise GdxExportException(f"Missing domains/sets in export settings: {', '.join(missing_names)}")
+    return keep
+
+
 class Record:
     """
     Represents a GAMS set element in a :class:`Set`.
@@ -1166,7 +1196,7 @@ def object_classes_to_domains(db_map):
     return domains
 
 
-def relationship_classes_to_sets(db_map, set_settings):
+def relationship_classes_to_sets(db_map):
     """
     Converts relationship classes and relationships from a database to the intermediate format.
 
@@ -1175,14 +1205,11 @@ def relationship_classes_to_sets(db_map, set_settings):
 
     Args:
         db_map (DatabaseMapping or DiffDatabaseMapping): a database map
-        set_settings (SetSettings): export settings
     Returns:
          list of Set: exportable sets
     """
     sets = dict()
-    for relationship_class_row in db_map.wide_relationship_class_list():
-        if not set_settings.is_exportable(relationship_class_row.name):
-            continue
+    for relationship_class_row in db_map.query(db_map.wide_relationship_class_sq):
         object_class_names = tuple(relationship_class_row.object_class_name_list.split(","))
         set_ = Set(relationship_class_row.name, relationship_class_row.description, object_class_names)
         class_id = relationship_class_row.id
@@ -1950,26 +1977,33 @@ def sort_sets(sets, order):
     Returns:
         list: sorted :class:`Set` objects
     """
-    try:
-        sorted_sets = sorted(sets, key=lambda set_: order[set_.name])
-    except KeyError as error:
-        raise GdxExportException(f"Cannot sort sets: missing set '{error}' in settings.")
+    sorted_sets = sorted(sets, key=lambda set_: order[set_.name])
     return sorted_sets
 
 
-def sort_records_inplace(sets, set_settings):
+def sort_records_inplace(sets, set_settings, logger):
     """
     Sorts the record lists of given domains according to the order given in settings.
 
     Args:
         sets (list of Set): a list of :class:`Set` objects whose records are to be sorted
         set_settings (SetSettings): settings that define the sorting order
+        logger (LoggerInterface, optional): a logger
     """
     for current_set in sets:
         sorted_keys = set_settings.records(current_set.name).records
         sort_indexes = {key: index for index, key in enumerate(sorted_keys)}
         # pylint: disable=cell-var-from-loop
-        sorted_records = sorted(current_set.records, key=lambda record: sort_indexes[record.keys])
+        try:
+            sorted_records = sorted(current_set.records, key=lambda record: sort_indexes[record.keys])
+        except KeyError as missing:
+            missing = ", ".join(missing.args[0])
+            message = f"Could not sort records in {current_set.name} as it contains an unknown key '{missing}'."
+            if logger is not None:
+                logger.msg_warning.emit(message)
+                continue
+            else:
+                raise GdxExportException(message)
         current_set.records = sorted_records
 
 
@@ -2018,16 +2052,18 @@ def to_gdx_file(
             otherwise some errors are logged and ignored
     """
     domains = object_classes_to_domains(database_map)
+    domains = _drop_sets_not_in_settings(domains, set_settings.domain_names, logger)
     domain_parameters = object_parameters(database_map, none_fallback, logger)
     domains, global_parameters_domain = extract_domain(domains, set_settings.global_parameters_domain_name)
     domains += _create_additional_domains(set_settings)
     domains = sort_sets(domains, set_settings.domain_tiers)
-    sort_records_inplace(domains, set_settings)
+    sort_records_inplace(domains, set_settings, logger)
     domains_with_names = {domain.name: domain for domain in domains}
-    sets_with_ids = relationship_classes_to_sets(database_map, set_settings)
+    sets_with_ids = relationship_classes_to_sets(database_map)
     sets = list(sets_with_ids.values())
+    sets = _drop_sets_not_in_settings(sets, set_settings.set_names, logger)
     sets = sort_sets(sets, set_settings.set_tiers)
-    sort_records_inplace(sets, set_settings)
+    sort_records_inplace(sets, set_settings, logger)
     set_parameters = relationship_parameters(database_map, none_fallback, logger)
     parameters = _combine_parameters(domain_parameters, set_parameters)
     erasable = expand_indexed_parameter_values(parameters, indexing_settings, domains_with_names)

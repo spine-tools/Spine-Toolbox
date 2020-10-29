@@ -240,8 +240,7 @@ class TestGdx(unittest.TestCase):
             dbmanip.import_objects(database_map, [("domain", "record")])
             dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
             dbmanip.import_relationships(database_map, [("set", ["record"])])
-            settings = gdx.make_set_settings(database_map)
-            sets_with_ids = gdx.relationship_classes_to_sets(database_map, settings)
+            sets_with_ids = gdx.relationship_classes_to_sets(database_map)
             database_map.connection.close()
         sets = list(sets_with_ids.values())
         self.assertEqual(len(sets), 1)
@@ -252,20 +251,6 @@ class TestGdx(unittest.TestCase):
         self.assertEqual(len(set_item.records), 1)
         record = set_item.records[0]
         self.assertEqual(record.keys, ("record",))
-
-    def test_relationship_classes_to_sets_omits_non_exportable_sets(self):
-        def test_relationship_classes_to_sets(self):
-            with TemporaryDirectory() as tmp_dir_name:
-                database_map = self._make_database_map(tmp_dir_name, "test_relationship_classes_to_sets.sqlite")
-                dbmanip.import_object_classes(database_map, ["domain"])
-                dbmanip.import_objects(database_map, [("domain", "record")])
-                dbmanip.import_relationship_classes(database_map, [("set", ["domain"])])
-                dbmanip.import_relationships(database_map, [("set", ["record"])])
-                settings = gdx.make_set_settings(database_map)
-                settings.metadata("set").exportable = gdx.ExportFlag.NON_EXPORTABLE
-                sets = gdx.relationship_classes_to_sets(database_map, settings)
-                database_map.connection.close()
-            self.assertEqual(sets, list())
 
     def test_relationship_parameters(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -618,7 +603,7 @@ class TestGdx(unittest.TestCase):
             set(),
             {"d1": gdx.LiteralRecords([("rB",), ("rA",)]), "d2": gdx.LiteralRecords([("rD",), ("rC",)])},
         )
-        gdx.sort_records_inplace([domain1, domain2], set_settings)
+        gdx.sort_records_inplace([domain1, domain2], set_settings, None)
         self.assertEqual(domain1.records, [gdx.Record(("rB",)), gdx.Record(("rA",))])
         self.assertEqual(domain2.records, [gdx.Record(("rD",)), gdx.Record(("rC",))])
 
