@@ -15,15 +15,20 @@ Functions to load project item modules.
 :author: A. Soininen (VTT)
 :date:   29.4.2020
 """
+import site
 import pathlib
 import importlib
 import importlib.util
 import subprocess
+import os
 import sys
 import pkgutil
+import tempfile
+import zipfile
 from .project_item.project_item_info import ProjectItemInfo
 from .project_item.project_item_factory import ProjectItemFactory
 from .config import PREFERRED_SPINE_ITEMS_VERSION
+from .version import __version__ as curr_toolbox_version
 
 
 def _spine_items_version_check():
@@ -43,36 +48,80 @@ def _spine_items_version_check():
     return current_split >= preferred_split
 
 
+def _download_spine_items(tmpdirname):
+    """Downloads spine_items to a temporary directory.
+
+    Args:
+        tmpdirname (str)
+    """
+    args = [
+        sys.executable,
+        "-m",
+        "pip",
+        "download",
+        "-d",
+        tmpdirname,
+        "git+https://github.com/Spine-project/spine-items.git@master",
+    ]
+    try:
+        subprocess.run(args, timeout=30, check=True)
+    except subprocess.CalledProcessError:
+        pass
+
+
+def _install_spine_items(tmpdirname):
+    """Installs spine_items from a temporary directory.
+
+    Args:
+        tmpdirname (str)
+    """
+    args = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--find-links",
+        tmpdirname,
+        "spine_items",
+    ]
+    try:
+        subprocess.run(args, timeout=30, check=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 def upgrade_project_items():
-    if not _spine_items_version_check():
-        print(
-            """
+    if _spine_items_version_check():
+        return
+    print(
+        """
 UPGRADING PROJECT ITEMS...
 
 (Depending on your internet connection, this may take a few moments.)
-            """
-        )
-        try:
-            subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--upgrade",
-                    "git+https://github.com/Spine-project/spine-items.git@master",
-                ],
-                timeout=30,
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            pass
-    try:
-        import spine_items
-    except ModuleNotFoundError:
-        # Failed to install module
-        return False
-    return True
+        """
+    )
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Download
+        _download_spine_items(tmpdirname)
+        if not os.listdir(tmpdirname):
+            return
+        # Unpack
+        zip_fp = os.path.join(tmpdirname, os.listdir(tmpdirname)[0])
+        with zipfile.ZipFile(zip_fp, 'r') as zip_ref:
+            zip_ref.extractall(tmpdirname)
+        # Query toolbox version required by items
+        spine_items_path = os.path.join(tmpdirname, "spine-items", "spine_items")
+        version_file_path = os.path.join(spine_items_path, "version.py")
+        version = {}
+        with open(version_file_path) as fp:
+            exec(fp.read(), version)
+        req_toolbox_version = version.get("REQUIRED_SPINE_TOOLBOX_VERSION", "0.5.2")
+        # Install items if compatible with current toolbox
+        if curr_toolbox_version < req_toolbox_version:
+            return
+        if _install_spine_items(tmpdirname):
+            importlib.reload(site)  # This refreshes sys.path, so import spine_items work
 
 
 def load_project_items(toolbox):
