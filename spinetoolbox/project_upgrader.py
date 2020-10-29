@@ -84,12 +84,13 @@ class ProjectUpgrader:
         while v < LATEST_PROJECT_VERSION:
             if v == 1:
                 project_dict = self.upgrade_v1_to_v2(project_dict, self._toolbox.item_factories)
-                self._toolbox.msg_success.emit("Project upgraded successfully")
                 v += 1
+                self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
             # Example on what to do when version 3 comes
             elif v == 2:
                 project_dict = self.upgrade_v2_to_v3(project_dict, project_dir, self._toolbox.item_factories)
                 v += 1
+                self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
 
     @staticmethod
