@@ -64,12 +64,9 @@ UPGRADING PROJECT ITEMS...
                 ],
                 timeout=30,
                 check=True,
-                capture_output=True,
             )
-        except subprocess.CalledProcessError as err:
-            fail_color = "\033[91m"
-            end_color = "\033[0m"
-            print(fail_color + err.stderr.decode("utf-8") + end_color)
+        except subprocess.CalledProcessError:
+            pass
     try:
         import spine_items
     except ModuleNotFoundError:
