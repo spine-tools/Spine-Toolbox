@@ -1,10 +1,12 @@
 {
     "project": {
-        "version": 2,
+        "version": 3,
         "name": "UnitTest Project",
         "description": "Project for unit tests.",
         "specifications": {
-            "Tool": []
+            "Tool": [],
+            "Data Transformer": [],
+            "Importer": []
         },
         "connections": [
             {
