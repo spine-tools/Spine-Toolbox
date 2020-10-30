@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/python-3.6%20|%203.7-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://img.shields.io/travis/Spine-project/Spine-Toolbox/master.svg?label=master)](https://travis-ci.com/Spine-project/Spine-Toolbox.svg?branch=master)
-[![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/dev/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
+[![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
 
 An application to define, manage, and execute various energy system simulation models.
 
@@ -27,8 +27,9 @@ Guide.
 Installing requires you to [clone](https://help.github.com/articles/cloning-a-repository/) or 
 download the latest version of the source code to your computer.
 
-The development happens on the `dev` branch and all the latest features and bug fixes will be added there
-first. The `master` branch contains the most stable version of the application. 
+The development happens on the `master` branch and all the latest features and 
+bug fixes will be added there first. The `release-X` branches contain the most 
+stable versions of the application. 
 
 The **recommended** way to install and run Spine Toolbox is by using Anaconda or Miniconda environments.
 
@@ -50,8 +51,8 @@ Step-by-step instructions:
 
         conda activate spinetoolbox
 
-6. Clone either the `master` or `dev` branch from Spine Toolbox 
-repository on GitHub onto your computer. 
+6. Clone either the `master` or the latest release branch from Spine Toolbox 
+   repository on GitHub onto your computer. 
 7. cd to Spine Toolbox root directory (the one with requirements.txt)
 8. Install requirements using **pip**
 
@@ -69,7 +70,7 @@ here, please see [Troubleshooting](#troubleshooting) section below.
 
 Step-by-step instructions:
 
-1. Clone either the `master` or `dev` branch onto your computer
+1. Clone either the `master` or the latest release branch onto your computer
 2. Install either Python 3.6 or Python 3.7
 3. Install requirements
 

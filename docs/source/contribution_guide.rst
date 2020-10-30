@@ -143,7 +143,7 @@ A corollary: don't submit unrelated changes in the same branch/pull request! The
 to reject your awesome bugfix because the feature you put in with it needs more review.
 
 Name your new branch descriptively, e.g. ``issue#XXX-fixing-a-serious-bug`` or ``issue#ZZZ-cool-new-feature``. 
-New branches should in general be based on the latest ``dev`` branch. 
+New branches should in general be based on the latest ``master`` branch. 
 In case you want to include a new feature still in development, you can also start working from its branch.
 The developers will backport any relevant bug-fixes to previous or upcoming releases under preparation.
 
