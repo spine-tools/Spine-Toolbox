@@ -93,8 +93,14 @@ def _install_spine_items(tmpdirname):
 
 
 def upgrade_project_items():
+    """
+    Upgrades project items.
+
+    Returns:
+        bool: True if upgraded, False if no action taken.
+    """
     if _spine_items_version_check():
-        return
+        return False
     print(
         """
 UPGRADING PROJECT ITEMS...
@@ -106,7 +112,7 @@ UPGRADING PROJECT ITEMS...
         # Download
         _download_spine_items(tmpdirname)
         if not os.listdir(tmpdirname):
-            return
+            return False
         # Unpack
         zip_fp = os.path.join(tmpdirname, os.listdir(tmpdirname)[0])
         with zipfile.ZipFile(zip_fp, 'r') as zip_ref:
@@ -118,11 +124,23 @@ UPGRADING PROJECT ITEMS...
         with open(version_file_path) as fp:
             exec(fp.read(), version)
         req_toolbox_version = version.get("REQUIRED_SPINE_TOOLBOX_VERSION", "0.5.2")
-        # Install items if compatible with current toolbox
+        # Check if new items is compatible with current toolbox
         if curr_toolbox_version < req_toolbox_version:
-            return
-        if _install_spine_items(tmpdirname):
-            importlib.reload(site)  # This refreshes sys.path, so import spine_items work
+            return False
+        # Check if new items are already installed
+        try:
+            import spine_items
+
+            curr_items_version = spine_items.__version__
+            new_items_version = version["__version__"]
+            if curr_items_version == new_items_version:
+                return False
+
+        except ModuleNotFoundError:
+            pass
+        if not _install_spine_items(tmpdirname):
+            return False
+    return True
 
 
 def load_project_items(toolbox):
