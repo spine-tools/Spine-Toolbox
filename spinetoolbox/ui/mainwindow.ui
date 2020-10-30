@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>26</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -550,11 +550,6 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionData_Store">
-   <property name="text">
-    <string>Data Store</string>
-   </property>
-  </action>
   <action name="actionDocumentation">
    <property name="text">
     <string>Documentation</string>
@@ -570,42 +565,6 @@
    </property>
    <property name="shortcut">
     <string>F12</string>
-   </property>
-  </action>
-  <action name="actionAdd_Data_Connection">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/file-alt.svg</normaloff>:/icons/project_item_icons/file-alt.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add Data Connection</string>
-   </property>
-  </action>
-  <action name="actionAdd_Data_Store">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/database.svg</normaloff>:/icons/project_item_icons/database.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add Data Store</string>
-   </property>
-  </action>
-  <action name="actionAdd_Tool">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/hammer.svg</normaloff>:/icons/project_item_icons/hammer.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add Tool</string>
-   </property>
-  </action>
-  <action name="actionAdd_View">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/binoculars.svg</normaloff>:/icons/project_item_icons/binoculars.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add View</string>
    </property>
   </action>
   <action name="actionSave">
@@ -770,18 +729,6 @@
    </property>
    <property name="text">
     <string>Export project to GraphML</string>
-   </property>
-  </action>
-  <action name="actionAdd_Importer">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add Importer</string>
-   </property>
-   <property name="toolTip">
-    <string>Add Importer</string>
    </property>
   </action>
   <action name="actionGetting_started">

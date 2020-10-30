@@ -63,6 +63,26 @@ class CustomContextMenu(QMenu):
         return self.option
 
 
+class ProjectItemContextMenu(CustomContextMenu):
+    """Context menu for project items in the Project tree widget and in the Design View."""
+
+    def __init__(self, parent, position):
+        """
+        Args:
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+        """
+        super().__init__(parent, position)
+        self.add_action("Copy")
+        self.add_action("Paste")
+        self.add_action("Duplicate")
+        self.addSeparator()
+        self.add_action("Open directory...")
+        self.addSeparator()
+        self.add_action("Rename")
+        self.add_action("Remove item")
+
+
 class CategoryProjectItemContextMenu(CustomContextMenu):
     """Context menu for category project items in the QTreeView."""
 
@@ -89,26 +109,6 @@ class ProjectItemModelContextMenu(CustomContextMenu):
         self.add_action("Open project directory...")
         self.addSeparator()
         self.add_action("Export project to GraphML")
-
-
-class ProjectItemContextMenu(CustomContextMenu):
-    """Context menu for project items in the Project tree widget and in the Design View."""
-
-    def __init__(self, parent, position):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (ToolboxUI)
-            position (QPoint): Position on screen
-        """
-        super().__init__(parent, position)
-        self.add_action("Copy")
-        self.add_action("Paste")
-        self.add_action("Duplicate")
-        self.addSeparator()
-        self.add_action("Open directory...")
-        self.addSeparator()
-        self.add_action("Rename")
-        self.add_action("Remove item")
 
 
 class LinkContextMenu(CustomContextMenu):

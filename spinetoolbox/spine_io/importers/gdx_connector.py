@@ -17,16 +17,8 @@ Contains GDXConnector class and a help function.
 """
 
 from gdx2py import GdxFile, GAMSParameter, GAMSScalar, GAMSSet
-from PySide2.QtWidgets import QFileDialog
 from ..io_api import SourceConnection
 from ..gdx_utils import find_gams_directory
-
-
-def select_gdx_file(parent=None):
-    """
-    Launches QFileDialog with .gdx filter
-    """
-    return QFileDialog.getOpenFileName(parent, "", "*.gdx")
 
 
 class GdxConnector(SourceConnection):
@@ -38,8 +30,8 @@ class GdxConnector(SourceConnection):
     OPTIONS = {}
     """dict with option specification for source"""
 
-    SELECT_SOURCE_UI = select_gdx_file
-    """Modal widget that returns source object and action (OK, CANCEL)."""
+    FILE_EXTENSIONS = "*.gdx"
+    """File extensions for modal widget that returns source object and action (OK, CANCEL)."""
 
     def __init__(self, settings):
         """
@@ -121,6 +113,14 @@ class GdxConnector(SourceConnection):
             header.append("Value")
             symbol_keys = list(symbol.keys())
             if symbol_keys and isinstance(symbol_keys[0], str):
-                return iter([keys] + [value] for keys, value in zip(symbol_keys, symbol.values())), header, len(header)
-            return iter(list(keys) + [value] for keys, value in zip(symbol_keys, symbol.values())), header, len(header)
+                return (
+                    iter([keys] + [value] for keys, value in zip(symbol_keys, symbol.values())),
+                    header,
+                    len(header),
+                )
+            return (
+                iter(list(keys) + [value] for keys, value in zip(symbol_keys, symbol.values())),
+                header,
+                len(header),
+            )
         raise RuntimeError("Unknown GAMS symbol type.")

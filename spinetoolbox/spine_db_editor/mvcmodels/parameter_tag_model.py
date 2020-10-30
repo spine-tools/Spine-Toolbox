@@ -16,18 +16,10 @@ A tree model for parameter_tags.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, QModelIndex
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
-from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
-from spinetoolbox.helpers import try_number_from_string
-from .tree_item_utility import (
-    EmptyChildMixin,
-    LastGrayMixin,
-    AllBoldMixin,
-    EditableMixin,
-    NonLazyTreeItem,
-    NonLazyDBItem,
-)
+from .tree_model_base import TreeModelBase
+from .tree_item_utility import EmptyChildMixin, LastGrayMixin, EditableMixin, NonLazyTreeItem, NonLazyDBItem
 from ...helpers import CharIconEngine
 
 
@@ -86,7 +78,7 @@ class TagItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
             return QIcon(engine.pixmap())
         return super().data(column, role)
 
-    def set_data(self, column, value, role):
+    def set_data(self, column, value, role=Qt.EditRole):
         if role != Qt.EditRole or value == self.data(column, role):
             return False
         if self.id:
@@ -105,7 +97,7 @@ class TagItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
         self.model.dataChanged.emit(index, sibling)
 
 
-class ParameterTagModel(MinimalTreeModel):
+class ParameterTagModel(TreeModelBase):
     """A model to display parameter_tag data in a tree view.
 
 
@@ -115,67 +107,26 @@ class ParameterTagModel(MinimalTreeModel):
         db_maps (iter): DiffDatabaseMapping instances
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initialize class"""
-        super().__init__(parent)
-        self.db_mngr = db_mngr
-        self.db_maps = db_maps
-
-    def receive_parameter_tags_added(self, db_map_data):
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            # First realize the ones added locally
-            ids = {x["tag"]: x["id"] for x in items}
-            for tag_item in db_item.children[:-1]:
-                id_ = ids.pop(tag_item.tag, None)
-                if not id_:
-                    continue
-                tag_item.handle_added_to_db(identifier=id_)
-            # Now append the ones added externally
-            children = [TagItem(id_) for id_ in ids.values()]
+    def add_parameter_tags(self, db_map_data):
+        for db_item, items in self._items_per_db_item(db_map_data).items():
+            children = [TagItem(id_) for id_ in {x["id"] for x in items}]
             db_item.insert_children(db_item.child_count() - 1, *children)
 
-    def receive_parameter_tags_updated(self, db_map_data):
-        self.layoutAboutToBeChanged.emit()
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            ids = {x["id"] for x in items}
-            tag_items = {tag_item.id: tag_item for tag_item in db_item.children[:-1]}
-            for id_ in ids.intersection(tag_items):
-                tag_items[id_].handle_updated_in_db()
-        self.layoutChanged.emit()
+    def update_parameter_tags(self, db_map_data):
+        for root_item, items in self._items_per_db_item(db_map_data).items():
+            self._update_leaf_items(root_item, {x["id"] for x in items})
 
-    def receive_parameter_tags_removed(self, db_map_data):
-        self.layoutAboutToBeChanged.emit()
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            ids = {x["id"] for x in items}
-            removed_rows = []
-            for row, tag_item in enumerate(db_item.children[:-1]):
-                if tag_item.id in ids:
-                    removed_rows.append(row)
-            for row in sorted(removed_rows, reverse=True):
-                db_item.remove_children(row, 1)
-        self.layoutChanged.emit()
+    def remove_parameter_tags(self, db_map_data):
+        for root_item, items in self._items_per_db_item(db_map_data).items():
+            self._remove_leaf_items(root_item, {x["id"] for x in items})
 
-    def build_tree(self):
-        """Initialize the internal data structure of the model."""
-        self.beginResetModel()
-        self._invisible_root_item = NonLazyTreeItem(self)
-        self.endResetModel()
-        db_items = [DBItem(db_map) for db_map in self.db_maps]
-        self._invisible_root_item.append_children(*db_items)
+    @staticmethod
+    def _make_db_item(db_map):
+        return DBItem(db_map)
 
-    def columnCount(self, parent=QModelIndex()):
-        """Returns the number of columns under the given parent. Always 2.
-        """
-        return 2
+    @staticmethod
+    def _top_children():
+        return []
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:

@@ -18,9 +18,9 @@ ImportMappings widget.
 
 from PySide2.QtCore import QObject, QItemSelectionModel, Signal, Slot
 from ...widgets.custom_delegates import ComboBoxDelegate
-from ..commands import CreateMapping, DeleteMapping
+from ..commands import CreateMapping, DeleteMapping, DuplicateMapping
 
-MAPPING_CHOICES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
+SOURCE_TYPES = ("Constant", "Column", "Row", "Column Header", "Headers", "Table Name", "None")
 
 
 class ImportMappings(QObject):
@@ -29,7 +29,7 @@ class ImportMappings(QObject):
     """
 
     mapping_selection_changed = Signal(object)
-    """Emitted when a new mapping specification is selected from the Mappings list."""
+    """Emitted with a new MappingSpecificationModel whenever a new mapping is selected from the Mappings list."""
     mapping_data_changed = Signal(object)
     """Emits the new MappingListModel."""
     about_to_undo = Signal(str)
@@ -47,21 +47,38 @@ class ImportMappings(QObject):
         self._mappings_model = None
         self._undo_stack = undo_stack
         # initialize interface
-        self._ui.table_view_mappings.setItemDelegateForColumn(1, ComboBoxDelegate(MAPPING_CHOICES))
+        # NOTE: We make the delegate an attribute so it's never accidentally gc'ed
+        self._src_type_delegate = ComboBoxDelegate(SOURCE_TYPES)
+        self._ui.table_view_mappings.setItemDelegateForColumn(1, self._src_type_delegate)
 
         # connect signals
         self._ui.new_button.clicked.connect(self.new_mapping)
         self._ui.remove_button.clicked.connect(self.delete_selected_mapping)
-        self.mapping_selection_changed.connect(self._ui.table_view_mappings.setModel)
+        self._ui.duplicate_button.clicked.connect(self.duplicate_selected_mapping)
+        self.mapping_selection_changed.connect(self._update_table_view_mappings)
+
+    @Slot(object)
+    def _update_table_view_mappings(self, mapping_spec_model):
+        current_model = self._ui.table_view_mappings.model()
+        if current_model is not None:
+            current_model.modelReset.disconnect(self._resize_table_view_mappings_columns)
+        self._ui.table_view_mappings.setModel(mapping_spec_model)
+        self._resize_table_view_mappings_columns()
+        mapping_spec_model.modelReset.connect(self._resize_table_view_mappings_columns)
+
+    @Slot()
+    def _resize_table_view_mappings_columns(self):
+        self._ui.table_view_mappings.resizeColumnsToContents()
 
     @Slot(str, object)
     def set_mappings_model(self, source_table_name, model):
         """
-        Sets new mappings.
+        Called when the user selects a new source table.
+        Sets a new MappingListModel model.
 
         Args:
-            source_table_name (str): source table's name
-            model (MappingListModel): mapping list model
+            source_table_name (str): newly selected source table's name
+            model (MappingListModel): mapping list model attached to that source table.
         """
         self._source_table = source_table_name
         if self._mappings_model is not None:
@@ -76,6 +93,7 @@ class ImportMappings(QObject):
             self._select_row(0)
         else:
             self._ui.list_view.clearSelection()
+            self.mapping_selection_changed.emit(None)
 
     @Slot(str, str)
     def focus_on_changing_specification(self, source_table_name, mapping_name):
@@ -133,6 +151,28 @@ class ImportMappings(QObject):
             return
         self._mappings_model.insert_mapping_specification(name, row, mapping_specification)
         self._select_row(row)
+
+    @Slot()
+    def duplicate_selected_mapping(self):
+        """
+        Pushes a DuplicateMapping command to the undo stack.
+        """
+        selection_model = self._ui.list_view.selectionModel()
+        if self._mappings_model is None or not selection_model.hasSelection():
+            return
+        row = selection_model.currentIndex().row()
+        command = DuplicateMapping(self._source_table, self, row)
+        self._undo_stack.push(command)
+
+    def duplicate_mapping(self, source_table_name, row):
+        if self._mappings_model is None:
+            return
+        spec = self._mappings_model.mapping_specifications[row]
+        dup_spec = spec.duplicate(source_table_name, self._undo_stack)
+        prefix = self._mappings_model.mapping_name_at(row) + "--"
+        name = self._mappings_model._make_new_mapping_name(prefix)
+        self.insert_mapping_specification(source_table_name, name, row + 1, dup_spec)
+        return name
 
     @Slot()
     def delete_selected_mapping(self):

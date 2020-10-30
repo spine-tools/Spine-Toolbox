@@ -17,12 +17,12 @@ Unit tests for ProjectItemModel class.
 """
 
 import unittest
-from unittest.mock import MagicMock, NonCallableMagicMock, patch
+from unittest.mock import NonCallableMagicMock
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.project_item_model import ProjectItemModel
 from spinetoolbox.project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
-from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item.project_item import ProjectItem
 from ..mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -79,8 +79,8 @@ class TestProjectItemModel(unittest.TestCase):
 
     def test_setData(self):
         model = self.toolbox.project_item_model
-        item_dict = dict(name="view", description="", x=0, y=0)
-        self.toolbox.project().add_project_items("View", item_dict)
+        item_dict = {"view": {"type": "View", "description": "", "x": 0, "y": 0}}
+        self.toolbox.project().add_project_items(item_dict)
         leaf_index = model.find_item("view")
         status = model.setData(leaf_index, "new view item name")
         self.assertTrue(status)

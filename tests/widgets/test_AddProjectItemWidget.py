@@ -18,9 +18,10 @@ Unit tests for AddProjectItemWidget.
 
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtWidgets import QApplication, QWidget
+from PySide2.QtWidgets import QApplication
 from PySide2.QtGui import QStandardItemModel
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from ..mock_helpers import MockQWidget
 
 
 class TestAddProjectItemWidget(unittest.TestCase):
@@ -29,19 +30,49 @@ class TestAddProjectItemWidget(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
+    def setUp(self):
+        """Set up toolbox."""
+        self.toolbox = MockQWidget()
+        self.toolbox.project = lambda: None
+        self.toolbox.item_factories = MagicMock()
+        self.toolbox.propose_item_name = propose_item_name = MagicMock()
+        self.toolbox.filtered_spec_factory_models = filtered_spec_factory_models = MagicMock()
+        filtered_spec_factory_models.__getitem__.side_effect = lambda key: QStandardItemModel()
+        propose_item_name.side_effect = lambda x: ""
+        self.factory = MagicMock()
+        self.toolbox.item_factories.__getitem__.side_effect = lambda key: self.factory
+
+    def tearDown(self):
+        """Clean up."""
+        # clean_up_toolboxui_with_project(self.toolbox)
+
     def test_name_field_initially_selected(self):
         prefix = "project_item"
-        toolbox = QWidget()
-        toolbox.project = MagicMock()
-        toolbox.filtered_spec_factory_models = MagicMock()
-        toolbox.filtered_spec_factory_models.__getitem__.side_effect = lambda x: QStandardItemModel()
-        toolbox.propose_item_name = MagicMock()
-        toolbox.propose_item_name.side_effect = lambda x: x
+        self.toolbox.propose_item_name.side_effect = lambda x: prefix + " 1"
         class_ = MagicMock()
         class_.default_name_prefix.return_value = prefix
-        widget = AddProjectItemWidget(toolbox, 0.0, 0.0, class_=class_)
-        self.assertEqual(widget.ui.lineEdit_name.selectedText(), prefix)
+        class_.item_type.return_value = "Data Store"
+        widget = AddProjectItemWidget(self.toolbox, 0.0, 0.0, class_=class_)
+        self.assertEqual(widget.ui.lineEdit_name.selectedText(), prefix + " 1")
+
+    def test_specifications_combo_box_disabled_if_item_does_not_support_specifications(self,):
+        self.factory.supports_specifications.return_value = False
+        prefix = "project_item"
+        class_ = MagicMock()
+        class_.default_name_prefix.return_value = prefix
+        class_.item_type.return_value = "Data Store"
+        widget = AddProjectItemWidget(self.toolbox, 0.0, 0.0, class_=class_)
+        self.assertFalse(widget.ui.comboBox_specification.isEnabled())
+
+    def test_specifications_combo_box_enabled_if_item_supports_specifications(self):
+        self.factory.supports_specifications.return_value = True
+        prefix = "project_item"
+        class_ = MagicMock()
+        class_.default_name_prefix.return_value = prefix
+        class_.item_type.return_value = "Tool"
+        widget = AddProjectItemWidget(self.toolbox, 0.0, 0.0, class_=class_)
+        self.assertTrue(widget.ui.comboBox_specification.isEnabled())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

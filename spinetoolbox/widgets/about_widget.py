@@ -21,6 +21,7 @@ from PySide2.QtCore import Qt, QPoint
 from PySide2.QtGui import QTextCursor
 import spinedb_api
 import spine_engine
+import spine_items
 from spinetoolbox import __version__, __version_info__
 
 
@@ -57,6 +58,7 @@ class AboutWidget(QWidget):
         self.ui.label_spine_toolbox.setText("Spine Toolbox<br/>v{0}<br/>{1}".format(__version__, full_version))
         self.ui.label_spinedb_api.setText("spinedb_api<br/>v{0}".format(spinedb_api.__version__))
         self.ui.label_spine_engine.setText("spine_engine<br/>v{0}".format(spine_engine.__version__))
+        self.ui.label_spine_items.setText("spine_items<br/>v{0}".format(spine_items.__version__))
         self.setup_license_text()
         self._mousePressPos = None
         self._mouseReleasePos = None

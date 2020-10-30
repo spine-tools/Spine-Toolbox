@@ -39,6 +39,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_id = {}
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
+        self._has_children_cache = None
 
     @property
     def db_mngr(self):
@@ -180,10 +181,7 @@ class MultiDBTreeItem(TreeItem):
             db_map (DiffDatabaseMapping): create children for this db_map
             children_data (iter): create childs from these dictionaries
         """
-        new_children = []
-        for id_ in children_ids:
-            new_children.append(self.child_item_type(self.model, {db_map: id_}))
-        return new_children
+        return [self.child_item_type(self.model, {db_map: id_}) for id_ in children_ids]
 
     def _merge_children(self, new_children):
         """Merges new children into this item. Ensures that each children has a valid display id afterwards.
@@ -204,14 +202,16 @@ class MultiDBTreeItem(TreeItem):
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
-        if self.can_fetch_more():
-            return any(self._get_children_ids(db_map) for db_map in self.db_maps)
-        return bool(self.child_count())
+        if not self.can_fetch_more():
+            return bool(self.child_count())
+        if self._has_children_cache is None:
+            self._has_children_cache = any(self._get_children_ids(db_map) for db_map in self.db_maps)
+        return self._has_children_cache
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
         super().fetch_more()
-        db_map_ids = {db_map: list(self._get_children_ids(db_map)) for db_map in self.db_maps}
+        db_map_ids = {db_map: self._get_children_ids(db_map) for db_map in self.db_maps}
         self.append_children_by_id(db_map_ids)
 
     def _get_children_ids(self, db_map):
@@ -227,6 +227,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
         if self.can_fetch_more():
+            self._has_children_cache = None
             self.model.layoutChanged.emit()
             return
         new_children = []
@@ -242,6 +243,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
         if self.can_fetch_more():
+            self._has_children_cache = None
             self.model.layoutChanged.emit()
             return
         for db_map, ids in db_map_ids.items():
@@ -365,9 +367,15 @@ class MultiDBTreeItem(TreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
-        if role == Qt.DisplayRole:
-            return (self.display_data, self.display_database)[column]
-        return None
+        if column == 0:
+            if role == Qt.DecorationRole:
+                return self.display_icon
+            if role == Qt.DisplayRole:
+                return self.display_data
+            if role == Qt.EditRole:
+                return self.edit_data
+        if column and role == Qt.DisplayRole:
+            return self.display_database
 
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""

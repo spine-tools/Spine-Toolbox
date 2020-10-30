@@ -19,16 +19,8 @@ Contains CSVConnector class and a help function.
 
 import csv
 from itertools import islice
-from PySide2.QtWidgets import QFileDialog
 import chardet
 from ..io_api import SourceConnection
-
-
-def select_csv_file(parent=None):
-    """
-    Launches QFileDialog with no filter
-    """
-    return QFileDialog.getOpenFileName(parent, "", "*.*")
 
 
 class CSVConnector(SourceConnection):
@@ -37,20 +29,20 @@ class CSVConnector(SourceConnection):
     DISPLAY_NAME = "Text/CSV"
     """name of data source, ex: "Text/CSV""" ""
 
-    _ENCODINGS = ['utf-8', 'utf-16', 'utf-32', 'ascii', 'iso-8859-1', 'iso-8859-2']
+    _ENCODINGS = ["utf-8", "utf-16", "utf-32", "ascii", "iso-8859-1", "iso-8859-2"]
     """List of available text encodings"""
 
     OPTIONS = {
-        "encoding": {'type': list, 'label': "Encoding", 'Items': _ENCODINGS, 'default': _ENCODINGS[0]},
-        "delimiter": {'type': list, 'label': "Delimiter", 'Items': [",", ";", "Tab"], 'default': ','},
-        "delimiter_custom": {'type': str, 'label': 'Custom Delimiter', 'MaxLength': 1, 'default': ''},
-        "quotechar": {'type': str, 'label': 'Quotechar', 'MaxLength': 1, 'default': ''},
-        "has_header": {'type': bool, 'label': 'Has header', 'default': False},
-        "skip": {'type': int, 'label': 'Skip rows', 'Minimum': 0, 'default': 0},
+        "encoding": {"type": list, "label": "Encoding", "Items": _ENCODINGS, "default": _ENCODINGS[0]},
+        "delimiter": {"type": list, "label": "Delimiter", "Items": [",", ";", "Tab"], "default": ","},
+        "delimiter_custom": {"type": str, "label": "Custom Delimiter", "MaxLength": 1, "default": ""},
+        "quotechar": {"type": str, "label": "Quotechar", "MaxLength": 1, "default": ""},
+        "has_header": {"type": bool, "label": "Has header", "default": False},
+        "skip": {"type": int, "label": "Skip rows", "Minimum": 0, "default": 0},
     }
     """dict with option specification for source."""
 
-    SELECT_SOURCE_UI = select_csv_file
+    FILE_EXTENSIONS = "*.*"
     """Modal widget that returns source object and action (OK, CANCEL)"""
 
     def __init__(self, settings):
@@ -78,7 +70,7 @@ class CSVConnector(SourceConnection):
         """
         options = {}
         # try to find options for file
-        with open(self._filename, 'rb') as input_file:
+        with open(self._filename, "rb") as input_file:
             sniff_result = chardet.detect(input_file.read(1024))
         sniffed_encoding = sniff_result["encoding"]
         if sniffed_encoding is not None:
@@ -95,10 +87,10 @@ class CSVConnector(SourceConnection):
             with open(self._filename, encoding=encoding) as csvfile:
                 try:
                     dialect = csv.Sniffer().sniff(csvfile.read(1024))
-                    if dialect.delimiter in [',', ';']:
+                    if dialect.delimiter in [",", ";"]:
                         options["delimiter"] = dialect.delimiter
-                    elif dialect.delimiter == '\t':
-                        options["delimiter"] = 'Tab'
+                    elif dialect.delimiter == "\t":
+                        options["delimiter"] = "Tab"
                     else:
                         options["delimiter_custom"] = dialect.delimiter
                     options.update({"quotechar": dialect.quotechar, "skip": 0})
@@ -136,9 +128,9 @@ class CSVConnector(SourceConnection):
         if not delimiter:
             delimiter = options.get("delimiter", ",")
         if not delimiter:
-            delimiter = ','
+            delimiter = ","
         elif delimiter == "Tab":
-            delimiter = '\t'
+            delimiter = "\t"
         dialect = {"delimiter": delimiter}
         quotechar = options.get("quotechar", None)
         if quotechar:

@@ -60,17 +60,6 @@ class MultiDBTreeModel(MinimalTreeModel):
     def columnCount(self, parent=QModelIndex()):
         return 2
 
-    def data(self, index, role=Qt.DisplayRole):
-        item = self.item_from_index(index)
-        if index.column() == 0:
-            if role == Qt.DecorationRole:
-                return item.display_icon
-            if role == Qt.DisplayRole:
-                return item.display_data
-            if role == Qt.EditRole:
-                return item.edit_data
-        return item.data(index.column(), role)
-
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return ("name", "database")[section]

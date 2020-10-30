@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>969</width>
-    <height>1136</height>
+    <height>1167</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -38,23 +38,6 @@
      <verstretch>0</verstretch>
     </sizepolicy>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_2">
-    <property name="spacing">
-     <number>0</number>
-    </property>
-    <property name="leftMargin">
-     <number>0</number>
-    </property>
-    <property name="topMargin">
-     <number>0</number>
-    </property>
-    <property name="rightMargin">
-     <number>0</number>
-    </property>
-    <property name="bottomMargin">
-     <number>0</number>
-    </property>
-   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -139,6 +122,7 @@
     </widget>
     <addaction name="actionShow_cascading_relationships"/>
     <addaction name="separator"/>
+    <addaction name="actionSelect_position_parameters"/>
     <addaction name="actionSave_positions"/>
     <addaction name="actionClear_positions"/>
     <addaction name="separator"/>
@@ -212,7 +196,7 @@
         <string>alternative tree</string>
        </property>
        <property name="editTriggers">
-        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::EditKeyPressed</set>
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
        </property>
        <property name="dragEnabled">
         <bool>true</bool>
@@ -273,7 +257,7 @@
         <string>parameter value list</string>
        </property>
        <property name="editTriggers">
-        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::EditKeyPressed</set>
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
@@ -574,10 +558,10 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_object_tree">
    <property name="features">
-    <set>QDockWidget::NoDockWidgetFeatures</set>
+    <set>QDockWidget::AllDockWidgetFeatures</set>
    </property>
    <property name="allowedAreas">
-    <set>Qt::LeftDockWidgetArea</set>
+    <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
     <string>Object tree</string>
@@ -912,6 +896,49 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_tool_feature_tree">
+   <property name="windowTitle">
+    <string>Tool/Feature tree</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_13">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="ToolFeatureTreeView" name="treeView_tool_feature">
+       <property name="editTriggers">
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
+       </property>
+       <property name="dragEnabled">
+        <bool>true</bool>
+       </property>
+       <property name="dragDropMode">
+        <enum>QAbstractItemView::InternalMove</enum>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>
@@ -1005,7 +1032,7 @@
   <action name="actionImport">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/database-import.svg</normaloff>:/icons/project_item_icons/database-import.svg</iconset>
+     <normaloff>:/icons/menu_icons/database-import.svg</normaloff>:/icons/menu_icons/database-import.svg</iconset>
    </property>
    <property name="text">
     <string>Import...</string>
@@ -1020,7 +1047,7 @@
    </property>
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
+     <normaloff>:/icons/menu_icons/database-export.svg</normaloff>:/icons/menu_icons/database-export.svg</iconset>
    </property>
    <property name="text">
     <string>Export...</string>
@@ -1203,7 +1230,7 @@
   <action name="actionExport_session">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/project_item_icons/database-export.svg</normaloff>:/icons/project_item_icons/database-export.svg</iconset>
+     <normaloff>:/icons/menu_icons/database-export.svg</normaloff>:/icons/menu_icons/database-export.svg</iconset>
    </property>
    <property name="text">
     <string>Export session...</string>
@@ -1311,6 +1338,11 @@
     <string>F2</string>
    </property>
   </action>
+  <action name="actionSelect_position_parameters">
+   <property name="text">
+    <string>Select position parameters...</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -1370,6 +1402,11 @@
   </customwidget>
   <customwidget>
    <class>ParameterTagTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ToolFeatureTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>

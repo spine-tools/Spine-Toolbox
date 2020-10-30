@@ -115,5 +115,5 @@ class TestExcelExport(unittest.TestCase):
         self.assertEqual(headers_out, test_header_out)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

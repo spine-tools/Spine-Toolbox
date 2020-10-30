@@ -59,7 +59,7 @@ class ObjectTreeRootItem(EntityRootItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object_class ids."""
+        """See super class."""
         return [x["id"] for x in self.db_mngr.get_items(db_map, "object_class")]
 
 
@@ -78,7 +78,7 @@ class RelationshipTreeRootItem(EntityRootItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object_class ids."""
+        """See super class."""
         return [x["id"] for x in self.db_mngr.get_items(db_map, "relationship_class")]
 
 
@@ -114,7 +114,7 @@ class EntityClassItem(MultiDBTreeItem):
         return super().data(column, role)
 
     def _get_children_ids(self, db_map):
-        """See base class"""
+        """See super class"""
         raise NotImplementedError()
 
     def fetch_more(self):
@@ -185,11 +185,11 @@ class ObjectClassItem(EntityClassItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
-        """Returns a list of object_class ids."""
+        """see super class."""
         return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
 
 
-class RelationshipClassItem(EntityClassItem):
+class RelationshipClassItemBase(EntityClassItem):
     """A relationship_class item."""
 
     visual_key = ["name", "object_class_name_list"]
@@ -208,14 +208,26 @@ class RelationshipClassItem(EntityClassItem):
         """See base class."""
         raise NotImplementedError()
 
+
+class RelationshipClassItem(RelationshipClassItemBase):
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
     def _get_children_ids(self, db_map):
-        """Returns a list of object_class ids."""
-        if not isinstance(self.parent_item, ObjectItem):
-            return [
-                x["id"]
-                for x in self.db_mngr.get_items(db_map, "relationship")
-                if x["class_id"] == self.db_map_id(db_map)
-            ]
+        """see super class."""
+        return [
+            x["id"] for x in self.db_mngr.get_items(db_map, "relationship") if x["class_id"] == self.db_map_id(db_map)
+        ]
+
+
+class ObjectRelationshipClassItem(RelationshipClassItemBase):
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
+    def _get_children_ids(self, db_map):
+        """see super class."""
         object_id = self.parent_item.db_map_id(db_map)
         return [
             x["id"]
@@ -276,7 +288,7 @@ class ObjectItem(EntityItem):
     @property
     def child_item_type(self):
         """Returns RelationshipClassItem."""
-        return RelationshipClassItem
+        return ObjectRelationshipClassItem
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -291,6 +303,7 @@ class ObjectItem(EntityItem):
         raise NotImplementedError()
 
     def _get_children_ids(self, db_map):
+        """See base class"""
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         return [
             x["id"]

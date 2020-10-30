@@ -19,9 +19,8 @@ A tree model for parameter_value lists.
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QIcon
 from spinedb_api import to_database
-from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
-from spinetoolbox.helpers import try_number_from_string
+from .tree_model_base import TreeModelBase
 from .tree_item_utility import (
     EmptyChildMixin,
     LastGrayMixin,
@@ -87,7 +86,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
             return QIcon(engine.pixmap())
         return super().data(column, role)
 
-    def set_data(self, column, value, role):
+    def set_data(self, column, value, role=Qt.EditRole):
         if role != Qt.EditRole or value == self.name:
             return False
         if self.id:
@@ -174,14 +173,15 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
     def data(self, column, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, PARSED_ROLE):
             if self._is_empty:
-                return {PARSED_ROLE: None}.get(role, "Enter new list value here...")
+                if role == PARSED_ROLE:
+                    return None
+                return "Enter new list value here..."
             return self.db_mngr.get_value_list_item(self.db_map, self.parent_item.id, self.child_number(), role)
         return super().data(column, role)
 
-    def set_data(self, column, value, role):
+    def set_data(self, column, value, role=Qt.EditRole):
         if role != Qt.EditRole:
             return False
-        value = try_number_from_string(value)
         value = to_database(value)
         return self.set_data_in_db(value)
 
@@ -189,7 +189,7 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
         return self.parent_item.set_child_data(self, db_value)
 
 
-class ParameterValueListModel(MinimalTreeModel):
+class ParameterValueListModel(TreeModelBase):
     """A model to display parameter_value_list data in a tree view.
 
 
@@ -199,17 +199,8 @@ class ParameterValueListModel(MinimalTreeModel):
         db_maps (iter): DiffDatabaseMapping instances
     """
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """Initialize class"""
-        super().__init__(parent)
-        self.db_mngr = db_mngr
-        self.db_maps = db_maps
-
-    def receive_parameter_value_lists_added(self, db_map_data):
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
+    def add_parameter_value_lists(self, db_map_data):
+        for db_item, items in self._items_per_db_item(db_map_data).items():
             # First realize the ones added locally
             ids = {x["name"]: x["id"] for x in items}
             for list_item in db_item.children[:-1]:
@@ -217,44 +208,24 @@ class ParameterValueListModel(MinimalTreeModel):
                 if not id_:
                     continue
                 list_item.handle_added_to_db(identifier=id_)
-            # Now append the ones added externally
             children = [ListItem(id_) for id_ in ids.values()]
             db_item.insert_children(db_item.child_count() - 1, *children)
 
-    def receive_parameter_value_lists_updated(self, db_map_data):
-        self.layoutAboutToBeChanged.emit()
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            ids = {x["id"] for x in items}
-            list_items = {list_item.id: list_item for list_item in db_item.children[:-1]}
-            for id_ in ids.intersection(list_items):
-                list_items[id_].handle_updated_in_db()
-        self.layoutChanged.emit()
+    def update_parameter_value_lists(self, db_map_data):
+        for root_item, items in self._items_per_db_item(db_map_data).items():
+            self._update_leaf_items(root_item, {x["id"] for x in items})
 
-    def receive_parameter_value_lists_removed(self, db_map_data):
-        self.layoutAboutToBeChanged.emit()
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            ids = {x["id"] for x in items}
-            removed_rows = []
-            for row, list_item in enumerate(db_item.children[:-1]):
-                if list_item.id in ids:
-                    removed_rows.append(row)
-            for row in sorted(removed_rows, reverse=True):
-                db_item.remove_children(row, 1)
-        self.layoutChanged.emit()
+    def remove_parameter_value_lists(self, db_map_data):
+        for root_item, items in self._items_per_db_item(db_map_data).items():
+            self._remove_leaf_items(root_item, {x["id"] for x in items})
 
-    def build_tree(self):
-        """Initialize the internal data structure of the model."""
-        self.beginResetModel()
-        self._invisible_root_item = NonLazyTreeItem(self)
-        self.endResetModel()
-        db_items = [DBItem(db_map) for db_map in self.db_maps]
-        self._invisible_root_item.append_children(*db_items)
+    @staticmethod
+    def _make_db_item(db_map):
+        return DBItem(db_map)
+
+    @staticmethod
+    def _top_children():
+        return []
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 1.

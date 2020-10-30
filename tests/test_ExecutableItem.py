@@ -18,7 +18,7 @@ Unit tests for ExecutableItem.
 import unittest
 from unittest import mock
 from spine_engine import ExecutionDirection
-from spinetoolbox.executable_item_base import ExecutableItemBase
+from spinetoolbox.project_item.executable_item_base import ExecutableItemBase
 
 
 class TestExecutableItem(unittest.TestCase):
@@ -63,5 +63,5 @@ class TestExecutableItem(unittest.TestCase):
         item._output_resources_forward.assert_called_once_with()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

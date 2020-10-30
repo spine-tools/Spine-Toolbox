@@ -22,8 +22,8 @@ import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 from spine_engine import SpineEngine, SpineEngineState
+from spinetoolbox.helpers import deserialize_path
 from .dag_handler import DirectedGraphHandler
-from .helpers import deserialize_path
 from .load_project_items import load_executable_items, load_item_specification_factories
 
 
@@ -194,28 +194,27 @@ def open_project(project_dict, project_dir, logger):
     executable_classes = load_executable_items()
     executable_items = list()
     dag_handler = DirectedGraphHandler()
-    for item_dicts in project_dict["objects"].values():
-        for item_name, item_dict in item_dicts.items():
-            dag_handler.add_dag_node(item_name)
-            try:
-                item_type = item_dict["type"]
-            except KeyError:
-                logger.msg_error.emit(
-                    "Project item is missing the 'type' attribute in the project.json file."
-                    " This might be caused by an outdated project file."
-                )
-                return None, None
-            executable_class = executable_classes[item_type]
-            try:
-                item = executable_class.from_dict(
-                    item_dict, item_name, project_dir, app_settings, item_specifications, logger
-                )
-            except KeyError as missing_key:
-                logger.msg_error.emit(f"'{missing_key}' is missing in the project.json file.")
-                item = None
-            if item is None:
-                return None, None
-            executable_items.append(item)
+    for item_name, item_dict in project_dict["items"].items():
+        dag_handler.add_dag_node(item_name)
+        try:
+            item_type = item_dict["type"]
+        except KeyError:
+            logger.msg_error.emit(
+                "Project item is missing the 'type' attribute in the project.json file."
+                " This might be caused by an outdated project file."
+            )
+            return None, None
+        executable_class = executable_classes[item_type]
+        try:
+            item = executable_class.from_dict(
+                item_dict, item_name, project_dir, app_settings, item_specifications, logger
+            )
+        except KeyError as missing_key:
+            logger.msg_error.emit(f"'{missing_key}' is missing in the project.json file.")
+            item = None
+        if item is None:
+            return None, None
+        executable_items.append(item)
     for connection in project_dict["project"]["connections"]:
         from_name = connection["from"][0]
         to_name = connection["to"][0]

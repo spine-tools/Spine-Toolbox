@@ -16,12 +16,11 @@ Widget for assisting the user in configuring SpineOpt.jl.
 :date:   9.1.2019
 """
 
-import sys
 from PySide2.QtCore import Signal, Slot
 from spinetoolbox.widgets.state_machine_widget import StateMachineWidget
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.config import JULIA_EXECUTABLE
-from spinetoolbox.helpers import busy_effect
+from spinetoolbox.helpers import busy_effect, python_interpreter
 
 
 class SpineOptConfigurationAssistant(StateMachineWidget):
@@ -110,7 +109,8 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
     def _make_report_bad_julia_version(self):
         return self._make_report_state(
             "report_bad_julia_version",
-            f"<html><p>SpineOpt.jl requires Julia version >= {self._required_julia_version}, whereas current version is {self._julia_version}. "
+            f"<html><p>SpineOpt.jl requires Julia version >= {self._required_julia_version}, "
+            f"whereas current version is {self._julia_version}. "
             "Upgrade Julia and try again.</p></html>",
         )
 
@@ -155,7 +155,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
             "prompt_to_reconfigure_py_call",
             "<html><p>Spine Toolbox needs to do the following modifications to the Julia project "
             f"at <b>{self._julia_active_project}</b>:</p>"
-            f"<p>Change the Python program used by PyCall.jl to {sys.executable}</p>",
+            f"<p>Change the Python program used by PyCall.jl to {python_interpreter(self._toolbox.qsettings())}</p>",
         )
 
     def _make_prompt_to_install_py_call(self):
@@ -199,9 +199,9 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("using Pkg; Pkg.add(PackageSpec(url=ARGS[1])); Pkg.add(PackageSpec(url=ARGS[2]));")
-        args.append("https://github.com/Spine-project/SpineInterface.jl.git")
-        args.append("https://github.com/Spine-project/SpineOpt.jl.git")
+        args.append("using Pkg; Pkg.Registry.add(RegistrySpec(url=ARGS[1])); Pkg.add(ARGS[2]);")
+        args.append("https://github.com/Spine-project/SpineJuliaRegistry.git")
+        args.append("SpineOpt")
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_spine_opt_process_finished)
         self.exec_mngr.start_execution()
@@ -229,7 +229,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         self.exec_mngr.execution_finished.disconnect(self._handle_check_py_call_program_finished)
         if ret == 0:
             self._py_call_program = self.exec_mngr.process_output
-            if self._py_call_program == sys.executable:
+            if self._py_call_program == python_interpreter(self._toolbox.qsettings()):
                 self.spine_opt_ready.emit()
             else:
                 self.py_call_reconfiguration_needed.emit()
@@ -245,7 +245,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         args.append("-e")
         args.append("using PyCall; ENV[ARGS[1]] = ARGS[2]; using Pkg; Pkg.build(ARGS[3]);")
         args.append("PYTHON")
-        args.append(sys.executable)
+        args.append(python_interpreter(self._toolbox.qsettings()))
         args.append("PyCall")
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_reconfigure_py_call_finished)
@@ -266,7 +266,9 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("using Pkg; Pkg.add(ARGS[1]);")
+        args.append("ENV[ARGS[1]] = ARGS[2]; using Pkg; Pkg.add(ARGS[3]);")
+        args.append("PYTHON")
+        args.append(python_interpreter(self._toolbox.qsettings()))
         args.append("PyCall")
         self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia_exe, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_install_py_call_finished)
@@ -299,9 +301,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         updating_spine_opt.addTransition(self.spine_opt_process_failed, prompt_to_install_latest_spine_opt)
         updating_spine_opt.addTransition(self.py_call_program_check_needed, checking_py_call_program)
         prompt_to_install_latest_spine_opt.addTransition(self.button_right.clicked, installing_latest_spine_opt)
-        installing_latest_spine_opt.addTransition(
-            self.spine_opt_process_failed, report_spine_opt_installation_failed
-        )
+        installing_latest_spine_opt.addTransition(self.spine_opt_process_failed, report_spine_opt_installation_failed)
         installing_latest_spine_opt.addTransition(self.py_call_program_check_needed, checking_py_call_program)
         checking_py_call_program.addTransition(self.py_call_reconfiguration_needed, prompt_to_reconfigure_py_call)
         checking_py_call_program.addTransition(self.py_call_installation_needed, prompt_to_install_py_call)

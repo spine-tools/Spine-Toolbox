@@ -19,15 +19,7 @@ Contains SqlAlchemyConnector class and a help function.
 
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import Session
-from PySide2.QtWidgets import QInputDialog
 from ..io_api import SourceConnection
-
-
-def select_sa_conn_string(parent=None):
-    """
-    Launches QInputDialog for entering connection string
-    """
-    return QInputDialog.getText(parent, "SqlAlchemy", "SqlAlchemy connection string:")
 
 
 class SqlAlchemyConnector(SourceConnection):
@@ -40,7 +32,7 @@ class SqlAlchemyConnector(SourceConnection):
     OPTIONS = {}
 
     # Modal widget that returns source object and action (OK, CANCEL)
-    SELECT_SOURCE_UI = select_sa_conn_string
+    FILE_EXTENSIONS = "*.*"
 
     def __init__(self, settings):
         super().__init__(settings)

@@ -19,7 +19,9 @@ Classes and functions that can be shared among unit test modules.
 import os
 import os.path
 import shutil
+from tempfile import TemporaryDirectory
 from unittest import mock
+from unittest.mock import MagicMock
 from PySide2.QtWidgets import QWidget
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
@@ -93,9 +95,6 @@ def clean_up_toolboxui_with_project(toolbox):
     project_dir = toolbox.project().project_dir
     if os.path.exists(project_dir):
         shutil.rmtree(project_dir)
-    work_dir = toolbox.work_dir
-    if os.path.exists(work_dir):
-        shutil.rmtree(work_dir)
     toolbox.deleteLater()
 
 
@@ -118,51 +117,81 @@ def qsettings_value_side_effect(key, defaultValue="0"):
 
 def add_ds(project, name, x=0, y=0):
     """Helper function to create a Data Store to given project with given name and coordinates."""
-    item = dict(name=name, description="", url=dict(), x=x, y=y)
+    item = {name: {"type": "Data Store", "description": "", "url": dict(), "x": x, "y": y}}
     # This mocks create_dir in both project_item.py and in data_store.py
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
-        project.add_project_items("Data Store", item)
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
+        project.add_project_items(item)
     return
 
 
 def add_dc(project, name, x=0, y=0):
     """Helper function to create a Data Connection to given project with given name and coordinates."""
-    item = dict(name=name, description="", references=list(), x=x, y=y)
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
-        project.add_project_items("Data Connection", item)
+    item = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
+        project.add_project_items(item)
     return
 
 
 def add_tool(project, name, tool_spec="", x=0, y=0):
     """Helper function to add a Tool to given project."""
-    item = dict(name=name, description="", specification=tool_spec, execute_in_work=False, x=x, y=y)
-    with mock.patch("spinetoolbox.project_item.create_dir"):
-        project.add_project_items("Tool", item)
+    item = {
+        name: {"type": "Tool", "description": "", "specification": tool_spec, "execute_in_work": False, "x": x, "y": y}
+    }
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
+        project.add_project_items(item)
     return
 
 
 def add_view(project, name, x=0, y=0):
     """Helper function to add a View to given project."""
-    item = dict(name=name, description="", x=x, y=y)
-    with mock.patch("spinetoolbox.project_item.create_dir"):
-        project.add_project_items("View", item)
+    item = {name: {"type": "View", "description": "", "x": x, "y": y}}
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
+        project.add_project_items(item)
     return
 
 
 def add_importer(project, name, x=0, y=0):
     """Helper function to add an Importer View to given project."""
-    item = dict(name=name, description="", mappings=None, x=x, y=y)
+    item = {name: {"type": "Importer", "description": "", "mappings": None, "x": x, "y": y}}
     # This mocks create_dir in both project_item.py and in importer.py
-    with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir, mock.patch(
-        "spinetoolbox.project_items.importer.importer.create_dir"
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir, mock.patch(
+        "spine_items.importer.importer.create_dir"
     ) as mock_create_dir2:
-        project.add_project_items("Importer", item)
+        project.add_project_items(item)
     return
 
 
 def add_exporter(project, name, x=0, y=0):
     """Helper function to add an exporter to given project."""
-    item = dict(name=name, description="", x=x, y=y, settings_packs=None)
-    with mock.patch("spinetoolbox.project_item.create_dir"):
-        project.add_project_items("Exporter", item)
+    item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "settings_packs": None}}
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
+        project.add_project_items(item)
     return
+
+
+def create_mock_toolbox():
+    mock_toolbox = MagicMock()
+    mock_toolbox.msg = MagicMock()
+    mock_toolbox.msg.attach_mock(MagicMock(), "emit")
+    mock_toolbox.msg_warning = MagicMock()
+    mock_toolbox.msg_warning.attach_mock(MagicMock(), "emit")
+    mock_toolbox.undo_stack.push.side_effect = lambda cmd: cmd.redo()
+    return mock_toolbox
+
+
+def create_mock_project():
+    mock_project = MagicMock()
+    with TemporaryDirectory() as items_dir:
+        mock_project.items_dir = items_dir
+    with TemporaryDirectory() as project_dir:
+        mock_project.project_dir = project_dir
+    return mock_project
+
+
+def mock_finish_project_item_construction(factory, project_item, mock_toolbox):
+    icon = factory.make_icon(mock_toolbox)
+    project_item.set_icon(icon)
+    properties_widget = factory.make_properties_widget(mock_toolbox)
+    project_item.set_properties_ui(properties_widget.ui)
+    project_item.create_data_dir()
+    project_item.set_up()

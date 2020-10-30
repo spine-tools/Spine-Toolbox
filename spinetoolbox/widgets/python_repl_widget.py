@@ -22,8 +22,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs, get_kernel_spec, NoSuchKernel
-from ..helpers import busy_effect
-from ..config import PYTHON_EXECUTABLE
+from spinetoolbox.helpers import busy_effect, python_interpreter
 from ..execution_managers import QProcessExecutionManager
 from .spine_console_widget import SpineConsoleWidget
 from .custom_qlistview import DragListView
@@ -42,10 +41,7 @@ class PythonReplWidget(SpineConsoleWidget):
         """Class constructor."""
         super().__init__(toolbox)
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
-        self.kernel_name = None
         self.kernel_display_name = ""
-        self.kernel_manager = None
-        self.kernel_client = None
         self.python_cmd = None  # Contains the path to selected python executable (i.e. pythondir/python.exe on Win.)
         self.install_proc_exec_mngr = None  # QSubProcess instance for installing required packages
         self.may_need_restart = True  # Has the user changed the Python environment in Settings
@@ -77,19 +73,12 @@ class PythonReplWidget(SpineConsoleWidget):
         cannot be determined."""
         if not self.may_need_restart:
             return self.kernel_name, self.kernel_display_name
-        python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
-        if python_path:
-            self.python_cmd = python_path
-        else:
-            self.python_cmd = PYTHON_EXECUTABLE
-        program = str(self.python_cmd)
-        args = list()
-        args.append("-V")
-        proc_exec_mngr = QProcessExecutionManager(self._toolbox, program, args, silent=True)
+        self.python_cmd = python_interpreter(self._toolbox.qsettings())
+        proc_exec_mngr = QProcessExecutionManager(self._toolbox, self.python_cmd, ["-V"], silent=True)
         proc_exec_mngr.start_execution()
         if not proc_exec_mngr.wait_for_process_finished(msecs=5000):
             self._toolbox.msg_error.emit(
-                "Couldn't determine Python version. Please check " "the <b>Python interpreter</b> option in Settings."
+                "Couldn't determine Python version. Please check the <b>Python interpreter</b> option in Settings."
             )
             return None
         python_version_str = proc_exec_mngr.process_output
@@ -100,7 +89,6 @@ class PythonReplWidget(SpineConsoleWidget):
         ver = p_v_list[1]  # version e.g. 3.7.1
         kernel_name = "python-" + ver[:3]
         kernel_display_name = "Python-" + ver
-        self.may_need_restart = False
         return kernel_name, kernel_display_name
 
     @Slot()
@@ -125,6 +113,7 @@ class PythonReplWidget(SpineConsoleWidget):
             self._toolbox.msg.emit("*** Starting Python Console ***")
         self.kernel_name = k_name
         self.kernel_display_name = k_display_name
+        self.may_need_restart = False
         self.check_and_install_requirements()
 
     def check_and_install_requirements(self):
@@ -244,15 +233,14 @@ class PythonReplWidget(SpineConsoleWidget):
 
     def start_kernelspec_install_process(self):
         """Install kernel specifications for the selected Python environment."""
-        # python -m ipykernel install --user --name python-3.4 --display-name Python3.4
-        # Creates kernelspecs to
-        # C:\Users\ttepsa\AppData\Roaming\jupyter\kernels\python-3.4
+        # python -m ipykernel install --sys-prefix --name python-X.Y --display-name PythonX.Y
+        # Creates kernelspecs to {sys.prefix}/share/jupyter/kernels/
         program = "{0}".format(self.python_cmd)  # selected python environment
         args = list()
         args.append("-m")
         args.append("ipykernel")
         args.append("install")
-        args.append("--user")
+        args.append("--sys-prefix")
         args.append("--name")
         args.append(self.kernel_name)
         args.append("--display-name")
@@ -396,12 +384,13 @@ class PythonReplWidget(SpineConsoleWidget):
 
     def shutdown_kernel(self, hush=False):
         """Shut down Python kernel."""
-        if not self.kernel_client:
+        if self.kernel_manager is None or not self.kernel_manager.is_alive():
             return
         self.disconnect_signals()
         if not hush:
             self._toolbox.msg.emit("Shutting down Python Console...")
-        self.kernel_client.stop_channels()
+        if self.kernel_client is not None:
+            self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel()
 
     def push_vars(self, var_name, var_value):

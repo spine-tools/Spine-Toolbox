@@ -18,13 +18,13 @@ Unit tests for the :module:`spinetoolbox.load_project_items` module.
 import unittest
 from unittest.mock import MagicMock
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.executable_item_base import ExecutableItemBase
+from spinetoolbox.project_item.executable_item_base import ExecutableItemBase
 from spinetoolbox.load_project_items import load_executable_items, load_item_specification_factories, load_project_items
-from spinetoolbox.project_item import ProjectItemFactory
-from spinetoolbox.project_item_specification_factory import ProjectItemSpecificationFactory
+from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
+from spinetoolbox.project_item.project_item_specification_factory import ProjectItemSpecificationFactory
 
 
-class MyTestCase(unittest.TestCase):
+class TestLoadProjectItems(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -35,6 +35,7 @@ class MyTestCase(unittest.TestCase):
         categories, factories = load_project_items(toolbox)
         expected_categories = {
             "Data Connection": "Data Connections",
+            "Data Transformer": "Manipulators",
             "Data Store": "Data Stores",
             "Importer": "Importers",
             "Exporter": "Exporters",
@@ -44,17 +45,21 @@ class MyTestCase(unittest.TestCase):
             "Gimlet": "Tools",
         }
         self.assertEqual(categories, expected_categories)
-        self.assertEqual(len(factories), 8)
+        self.assertEqual(len(factories), len(expected_categories))
         for item_type in expected_categories:
             self.assertIn(item_type, factories)
         for factory in factories.values():
-            self.assertIsInstance(factory, ProjectItemFactory)
+            self.assertTrue(issubclass(factory, ProjectItemFactory))
 
     def test_load_item_specification_factories(self):
         factories = load_item_specification_factories()
-        self.assertEqual(len(factories), 1)
+        self.assertEqual(len(factories), 3)
         self.assertIn("Tool", factories)
         self.assertTrue(issubclass(factories["Tool"], ProjectItemSpecificationFactory))
+        self.assertIn("Data Transformer", factories)
+        self.assertTrue(issubclass(factories["Data Transformer"], ProjectItemSpecificationFactory))
+        self.assertIn("Importer", factories)
+        self.assertTrue(issubclass(factories["Importer"], ProjectItemSpecificationFactory))
 
     def test_item_factories_report_specification_support_correctly(self):
         toolbox = MagicMock()

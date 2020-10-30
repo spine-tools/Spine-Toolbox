@@ -55,7 +55,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         """
         raise NotImplementedError()
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
 
         Args:
@@ -235,6 +235,11 @@ class ParameterDefinitionTableView(ParameterTableView):
 
 
 class ParameterValueTableView(ParameterTableView):
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self._show_value_metadata_action = None
+
     @property
     def value_column_header(self):
         return "value"
@@ -245,6 +250,21 @@ class ParameterValueTableView(ParameterTableView):
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+
+    def create_context_menu(self):
+        """Creates a context menu for this view."""
+        super().create_context_menu()
+        self._menu.addSeparator()
+        self._show_value_metadata_action = self._menu.addAction(
+            "Show parameter value metadata", self.show_value_metadata
+        )
+
+    def show_value_metadata(self):
+        db_map_ids = {}
+        for index in self.selectedIndexes():
+            db_map, id_ = self.model().db_map_id(index)
+            db_map_ids.setdefault(db_map, []).append(id_)
+        self._spine_db_editor.show_db_map_parameter_value_metadata(db_map_ids)
 
 
 class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
@@ -306,9 +326,9 @@ class PivotTableView(CopyPasteTableView):
 
     @property
     def db_map(self):
-        return self.source_model.pivot_db_map
+        return self.source_model.db_map
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
         self.create_context_menu()
         h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
@@ -357,12 +377,12 @@ class PivotTableView(CopyPasteTableView):
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_relationships(self):
-        if self.model().sourceModel().item_type != "relationship":
+        if self.model().sourceModel().item_type != "parameter_value":
             return
         rel_ids_by_object_ids = {rel["object_id_list"]: rel["id"] for rel in self._spine_db_editor._get_entities()}
-        relationship_ids = {}
+        relationship_ids = set()
         for index in self._selected_entity_indexes:
-            object_ids, _ = self.source_model.object_and_parameter_ids(index)
+            object_ids, _, _ = self.source_model.object_parameter_and_alternative_ids(index)
             object_ids = ",".join([str(id_) for id_ in object_ids])
             relationship_ids.add(rel_ids_by_object_ids[object_ids])
         db_map_typed_data = {self.db_map: {"relationship": relationship_ids}}
@@ -444,7 +464,7 @@ class PivotTableView(CopyPasteTableView):
             object_name = self.source_model.header_name(index)
             self.remove_objects_action.setText("Remove object: {}".format(object_name))
             if self.remove_relationships_action.isEnabled():
-                object_names, _ = self.source_model.object_and_parameter_names(index)
+                object_names, _, _ = self.source_model.object_parameter_and_alternative_names(index)
                 relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
                 self.remove_relationships_action.setText("Remove relationship: {}".format(relationship_name))
         if len(self._selected_parameter_indexes) == 1:

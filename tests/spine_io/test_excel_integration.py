@@ -30,11 +30,11 @@ from spinedb_api import (
     to_database,
 )
 from spinetoolbox.spine_io.exporters.excel import export_spine_database_to_xlsx
-from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 
-_TEMP_EXCEL_FILENAME = 'excel.xlsx'
-_TEMP_SQLITE_FILENAME = 'first.sqlite'
-_TEMP_SQLITE_TEST_FILENAME = 'second.sqlite'
+_TEMP_EXCEL_FILENAME = "excel.xlsx"
+_TEMP_SQLITE_FILENAME = "first.sqlite"
+_TEMP_SQLITE_TEST_FILENAME = "second.sqlite"
 
 
 class TestExcelIntegration(unittest.TestCase):
@@ -47,166 +47,166 @@ class TestExcelIntegration(unittest.TestCase):
         """Creates a database with objects, relationship, parameters and values."""
         url = TestExcelIntegration._sqlite_url(_TEMP_SQLITE_FILENAME, directory)
         create_new_spine_database(url)
-        db_map = DiffDatabaseMapping(url, username='IntegrationTest', upgrade=True)
+        db_map = DiffDatabaseMapping(url, username="IntegrationTest", upgrade=True)
 
         # create empty database for loading excel into
         url = TestExcelIntegration._sqlite_url(_TEMP_SQLITE_TEST_FILENAME, directory)
         create_new_spine_database(url)
-        db_map_test = DiffDatabaseMapping(url, username='IntegrationTest', upgrade=True)
+        db_map_test = DiffDatabaseMapping(url, username="IntegrationTest", upgrade=True)
 
         # delete all object_classes to empty database
         oc = set(oc.id for oc in db_map_test.object_class_list().all())
         if oc:
             db_map_test.cascade_remove_items(object_class_ids=oc)
-            db_map_test.commit_session('empty database')
+            db_map_test.commit_session("empty database")
 
         oc = set(oc.id for oc in db_map.object_class_list().all())
         if oc:
             db_map.cascade_remove_items(object_class_ids=oc)
-            db_map.commit_session('empty database')
+            db_map.commit_session("empty database")
 
         # create object classes
-        oc_1 = db_map.add_object_class(**{'name': 'object_class_1'})
-        oc_2 = db_map.add_object_class(**{'name': 'object_class_2'})
-        oc_3 = db_map.add_object_class(**{'name': 'object_class_3'})
+        oc_1 = db_map.add_object_class(**{"name": "object_class_1"})
+        oc_2 = db_map.add_object_class(**{"name": "object_class_2"})
+        oc_3 = db_map.add_object_class(**{"name": "object_class_3"})
 
         # create relationship classes
         relc1 = db_map.add_wide_relationship_class(
-            **{'name': 'relationship_class', 'object_class_id_list': [oc_1.id, oc_2.id]}
+            **{"name": "relationship_class", "object_class_id_list": [oc_1.id, oc_2.id]}
         )
         relc2 = db_map.add_wide_relationship_class(
-            **{'name': 'relationship_class2', 'object_class_id_list': [oc_1.id, oc_2.id]}
+            **{"name": "relationship_class2", "object_class_id_list": [oc_1.id, oc_2.id]}
         )
 
         # create objects
-        oc1_obj1 = db_map.add_object(**{'name': 'oc1_obj1', 'class_id': oc_1.id})
-        oc1_obj2 = db_map.add_object(**{'name': 'oc1_obj2', 'class_id': oc_1.id})
-        oc2_obj1 = db_map.add_object(**{'name': 'oc2_obj1', 'class_id': oc_2.id})
-        oc2_obj2 = db_map.add_object(**{'name': 'oc2_obj2', 'class_id': oc_2.id})
-        oc3_obj1 = db_map.add_object(**{'name': 'oc3_obj1', 'class_id': oc_3.id})
+        oc1_obj1 = db_map.add_object(**{"name": "oc1_obj1", "class_id": oc_1.id})
+        oc1_obj2 = db_map.add_object(**{"name": "oc1_obj2", "class_id": oc_1.id})
+        oc2_obj1 = db_map.add_object(**{"name": "oc2_obj1", "class_id": oc_2.id})
+        oc2_obj2 = db_map.add_object(**{"name": "oc2_obj2", "class_id": oc_2.id})
+        oc3_obj1 = db_map.add_object(**{"name": "oc3_obj1", "class_id": oc_3.id})
 
         # add relationships
         rel1 = db_map.add_wide_relationship(
-            **{'name': 'rel1', 'class_id': relc1.id, 'object_id_list': [oc1_obj1.id, oc2_obj1.id]}
+            **{"name": "rel1", "class_id": relc1.id, "object_id_list": [oc1_obj1.id, oc2_obj1.id]}
         )
         rel2 = db_map.add_wide_relationship(
-            **{'name': 'rel2', 'class_id': relc1.id, 'object_id_list': [oc1_obj2.id, oc2_obj2.id]}
+            **{"name": "rel2", "class_id": relc1.id, "object_id_list": [oc1_obj2.id, oc2_obj2.id]}
         )
 
         # create parameters
-        p1 = db_map.add_parameter_definition(**{'name': 'parameter1', 'object_class_id': oc_1.id})
-        p2 = db_map.add_parameter_definition(**{'name': 'parameter2', 'object_class_id': oc_1.id})
-        p3 = db_map.add_parameter_definition(**{'name': 'parameter3', 'object_class_id': oc_2.id})
-        p4 = db_map.add_parameter_definition(**{'name': 'parameter4', 'object_class_id': oc_2.id})
-        p5 = db_map.add_parameter_definition(**{'name': 'parameter5', 'object_class_id': oc_3.id})
-        p6 = db_map.add_parameter_definition(**{'name': 'parameter6', 'object_class_id': oc_3.id})
-        rel_p1 = db_map.add_parameter_definition(**{'name': 'rel_parameter1', 'relationship_class_id': relc1.id})
-        rel_p2 = db_map.add_parameter_definition(**{'name': 'rel_parameter2', 'relationship_class_id': relc1.id})
-        rel_p3 = db_map.add_parameter_definition(**{'name': 'rel_parameter3', 'relationship_class_id': relc1.id})
-        rel_p4 = db_map.add_parameter_definition(**{'name': 'rel_parameter4', 'relationship_class_id': relc1.id})
+        p1 = db_map.add_parameter_definition(**{"name": "parameter1", "object_class_id": oc_1.id})
+        p2 = db_map.add_parameter_definition(**{"name": "parameter2", "object_class_id": oc_1.id})
+        p3 = db_map.add_parameter_definition(**{"name": "parameter3", "object_class_id": oc_2.id})
+        p4 = db_map.add_parameter_definition(**{"name": "parameter4", "object_class_id": oc_2.id})
+        p5 = db_map.add_parameter_definition(**{"name": "parameter5", "object_class_id": oc_3.id})
+        p6 = db_map.add_parameter_definition(**{"name": "parameter6", "object_class_id": oc_3.id})
+        rel_p1 = db_map.add_parameter_definition(**{"name": "rel_parameter1", "relationship_class_id": relc1.id})
+        rel_p2 = db_map.add_parameter_definition(**{"name": "rel_parameter2", "relationship_class_id": relc1.id})
+        rel_p3 = db_map.add_parameter_definition(**{"name": "rel_parameter3", "relationship_class_id": relc1.id})
+        rel_p4 = db_map.add_parameter_definition(**{"name": "rel_parameter4", "relationship_class_id": relc1.id})
 
         # add parameter values
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': p1.id,
-                'object_id': oc1_obj1.id,
-                'object_class_id': oc_1.id,
-                'value': '0',
+                "parameter_definition_id": p1.id,
+                "object_id": oc1_obj1.id,
+                "object_class_id": oc_1.id,
+                "value": "0",
                 "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': p2.id,
-                'object_id': oc1_obj2.id,
-                'object_class_id': oc_1.id,
-                'value': '3.5',
+                "parameter_definition_id": p2.id,
+                "object_id": oc1_obj2.id,
+                "object_class_id": oc_1.id,
+                "value": "3.5",
                 "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': p3.id,
-                'object_id': oc2_obj1.id,
-                'object_class_id': oc_2.id,
-                'value': '[1, 2, 3, 4]',
+                "parameter_definition_id": p3.id,
+                "object_id": oc2_obj1.id,
+                "object_class_id": oc_2.id,
+                "value": "[1, 2, 3, 4]",
                 "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': p4.id,
-                'object_id': oc2_obj2.id,
-                'object_class_id': oc_2.id,
-                'value': '[5, 6, 7]',
+                "parameter_definition_id": p4.id,
+                "object_id": oc2_obj2.id,
+                "object_class_id": oc_2.id,
+                "value": "[5, 6, 7]",
                 "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': rel_p1.id,
-                'relationship_id': rel1.id,
-                'relationship_class_id': relc1.id,
-                'value': '0',
+                "parameter_definition_id": rel_p1.id,
+                "relationship_id": rel1.id,
+                "relationship_class_id": relc1.id,
+                "value": "0",
                 "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': rel_p2.id,
-                'relationship_id': rel2.id,
-                'relationship_class_id': relc1.id,
-                'value': '4',
+                "parameter_definition_id": rel_p2.id,
+                "relationship_id": rel2.id,
+                "relationship_class_id": relc1.id,
+                "value": "4",
                 "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': rel_p3.id,
-                'relationship_id': rel1.id,
-                'relationship_class_id': relc1.id,
-                'value': '[5, 6, 7]',
+                "parameter_definition_id": rel_p3.id,
+                "relationship_id": rel1.id,
+                "relationship_class_id": relc1.id,
+                "value": "[5, 6, 7]",
                 "alternative_id": 1,
             }
         )
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': rel_p4.id,
-                'relationship_id': rel2.id,
-                'relationship_class_id': relc1.id,
-                'value': '[1, 2, 3, 4]',
+                "parameter_definition_id": rel_p4.id,
+                "relationship_id": rel2.id,
+                "relationship_class_id": relc1.id,
+                "value": "[1, 2, 3, 4]",
                 "alternative_id": 1,
             }
         )
 
-        time = [np.datetime64('2005-02-25T00:00'), np.datetime64('2005-02-25T01:00'), np.datetime64('2005-02-25T02:00')]
+        time = [np.datetime64("2005-02-25T00:00"), np.datetime64("2005-02-25T01:00"), np.datetime64("2005-02-25T02:00")]
         value = [1, 2, 3]
         ts_val = to_database(TimeSeriesVariableResolution(time, value, False, False))
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': p5.id,
-                'object_id': oc3_obj1.id,
-                'object_class_id': oc_3.id,
-                'value': ts_val,
+                "parameter_definition_id": p5.id,
+                "object_id": oc3_obj1.id,
+                "object_class_id": oc_3.id,
+                "value": ts_val,
                 "alternative_id": 1,
             }
         )
 
-        timepattern = ['m1', 'm2', 'm3']
+        timepattern = ["m1", "m2", "m3"]
         value = [1.1, 2.2, 3.3]
         ts_val = to_database(TimePattern(timepattern, value))
         db_map.add_parameter_value(
             **{
-                'parameter_definition_id': p6.id,
-                'object_id': oc3_obj1.id,
-                'object_class_id': oc_3.id,
-                'value': ts_val,
+                "parameter_definition_id": p6.id,
+                "object_id": oc3_obj1.id,
+                "object_class_id": oc_3.id,
+                "value": ts_val,
                 "alternative_id": 1,
             }
         )
 
         # commit
-        db_map.commit_session('test')
+        db_map.commit_session("test")
 
         return db_map, db_map_test
 
@@ -218,7 +218,7 @@ class TestExcelIntegration(unittest.TestCase):
         oc = {c.id: c.name for c in oc}
         oc_org = db2.object_class_list().all()
         oc_org = {c.id: c.name for c in oc_org}
-        self.assertEqual(set(oc.values()), set(oc_org.values()), msg='Difference in objects classes')
+        self.assertEqual(set(oc.values()), set(oc_org.values()), msg="Difference in objects classes")
         # objects
         ol = db1.object_list().all()
         ol_id = {o.id: o.name for o in ol}
@@ -226,13 +226,13 @@ class TestExcelIntegration(unittest.TestCase):
         ol_org = db2.object_list().all()
         ol_id_org = {o.id: o.name for o in ol_org}
         ol_org = {o.name: oc_org[o.class_id] for o in ol_org}
-        self.assertEqual(ol, ol_org, msg='Difference in objects')
+        self.assertEqual(ol, ol_org, msg="Difference in objects")
         # relationship classes
         rc = db1.query(db1.relationship_class_sq).all()
         rc = {c.id: (c.name, tuple(oc[o.object_class_id] for o in rc if o.name == c.name)) for c in rc}
         rc_org = db2.query(db2.relationship_class_sq).all()
         rc_org = {c.id: (c.name, tuple(oc_org[o.object_class_id] for o in rc_org if o.name == c.name)) for c in rc_org}
-        self.assertEqual(set(rc.values()), set(rc_org.values()), msg='Difference in relationship classes')
+        self.assertEqual(set(rc.values()), set(rc_org.values()), msg="Difference in relationship classes")
         # relationships
         rel = db1.query(db1.relationship_sq).all()
         rel = {c.id: (rc[c.class_id][0], tuple(ol_id[o.object_id] for o in rel if o.id == c.id)) for c in rel}
@@ -241,7 +241,7 @@ class TestExcelIntegration(unittest.TestCase):
             c.id: (rc_org[c.class_id][0], tuple(ol_id_org[o.object_id] for o in rel_org if o.id == c.id))
             for c in rel_org
         }
-        self.assertEqual(set(rc.values()), set(rc_org.values()), msg='Difference in relationships')
+        self.assertEqual(set(rc.values()), set(rc_org.values()), msg="Difference in relationships")
         # parameters
         par = db1.parameter_definition_list().all()
         par = {
@@ -252,7 +252,7 @@ class TestExcelIntegration(unittest.TestCase):
             p.id: (p.name, oc_org[p.object_class_id] if p.object_class_id else rc_org[p.relationship_class_id][0])
             for p in par_org
         }
-        self.assertEqual(set(par.values()), set(par_org.values()), msg='Difference in parameters')
+        self.assertEqual(set(par.values()), set(par_org.values()), msg="Difference in parameters")
         # parameters values
         parv = db1.parameter_value_list().all()
         parv = set(
@@ -274,33 +274,19 @@ class TestExcelIntegration(unittest.TestCase):
             )
             for p in parv_org
         )
-        self.assertEqual(parv, parv_org, msg='Difference in parameter values')
+        self.assertEqual(parv, parv_org, msg="Difference in parameter values")
 
     def _import_xlsx_to_database(self, excel_file_name, db_map):
-        connector = ExcelConnector(None)
-        connector.connect_to_source(excel_file_name)
-        sheets = connector.get_tables()
-        table_mappings = {
-            sheet_name: settings["mapping"]
-            for sheet_name, settings in sheets.items()
-            if settings["mapping"] is not None
-        }
-        table_options = {
-            sheet_name: settings["options"]
-            for sheet_name, settings in sheets.items()
-            if settings["options"] is not None
-        }
+        data, _errors = get_mapped_data_from_xlsx(excel_file_name)
         # table_mappings (Excel file) contains a sheet json_relationship_class which
         # adds a duplicate 'relationship_class' to data. A duplicate is considered
         # an error by spinedb_api import_data() function. Is this intentional?
-        data, _errors = connector.get_mapped_data(table_mappings, table_options, {}, {})
         # TODO: Check if db_map is supposed to have two relationship classes called relationship_class or not?
         import_num, import_errors = import_data(db_map, **data)
         self.assertEqual(import_errors, [])
-        db_map.commit_session('Excel import')
+        db_map.commit_session("Excel import")
         return import_num
 
-    @unittest.skip("This test is obsolete, needs refactoring")
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""
         with TemporaryDirectory() as directory:
@@ -320,7 +306,6 @@ class TestExcelIntegration(unittest.TestCase):
                 db_map.connection.close()
                 empty_db_map.connection.close()
 
-    @unittest.skip("This test is obsolete, needs refactoring")
     def test_import_to_existing_data(self):
         """Integration test importing data to a database with existing items"""
         with TemporaryDirectory() as directory:
@@ -349,5 +334,5 @@ class TestExcelIntegration(unittest.TestCase):
                 empty_db_map.connection.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

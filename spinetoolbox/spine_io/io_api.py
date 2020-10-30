@@ -32,8 +32,8 @@ class SourceConnection:
     # dict with option specification for source.
     OPTIONS = {}
 
-    # Modal widget that that returns action (OK, CANCEL) and source object
-    SELECT_SOURCE_UI = NotImplemented
+    # File extensions for modal widget that that returns action (OK, CANCEL) and source object
+    FILE_EXTENSIONS = NotImplemented
 
     def __init__(self, settings):
         """
@@ -84,20 +84,7 @@ class SourceConnection:
         and value is the mappings for that table.
         emits mapped data when ready.
         """
-        mapped_data = {
-            "object_classes": [],
-            "objects": [],
-            "object_parameters": [],
-            "object_parameter_values": [],
-            "relationship_classes": [],
-            "relationships": [],
-            "relationship_parameters": [],
-            "relationship_parameter_values": [],
-            "object_groups": [],
-            "alternatives": [],
-            "scenarios": [],
-            "scenario_alternatives": [],
-        }
+        mapped_data = {}
         errors = []
         for table, mapping in tables_mappings.items():
             types = {col: spec.convert_function() for col, spec in table_types.get(table, {}).items()}
@@ -110,7 +97,7 @@ class SourceConnection:
                 errors.append(str(error))
                 continue
             for key, value in data.items():
-                mapped_data[key].extend(value)
+                mapped_data.setdefault(key, []).extend(value)
             errors.extend([(table, f"Could not map row: {row_number}, Error: {err}") for row_number, err in t_errors])
 
         return mapped_data, errors

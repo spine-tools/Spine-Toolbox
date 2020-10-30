@@ -20,9 +20,11 @@ and project dicts from earlier versions to the latest version.
 import shutil
 import os
 import json
+import copy
 from PySide2.QtWidgets import QFileDialog, QMessageBox
+from spinetoolbox.helpers import create_dir, serialize_path, deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
-from .helpers import create_dir, recursive_overwrite, serialize_path
+from .helpers import recursive_overwrite
 
 
 class ProjectUpgrader:
@@ -59,7 +61,7 @@ class ProjectUpgrader:
                 self._toolbox.msg_error.emit("Upgrading project failed")
                 return False
             self._toolbox.msg_warning.emit("Backed up project.json -> project.json.bak")
-            upgraded_dict = self.upgrade_to_latest(v, project_dict)
+            upgraded_dict = self.upgrade_to_latest(v, project_dict, project_dir)
             # Force save project dict to project.json
             if not self.force_save(upgraded_dict, project_dir):
                 self._toolbox.msg_error.emit("Upgrading project failed")
@@ -68,32 +70,99 @@ class ProjectUpgrader:
         else:
             return project_dict
 
-    def upgrade_to_latest(self, v, project_dict):
+    def upgrade_to_latest(self, v, project_dict, project_dir):
         """Upgrades the given project dictionary to the latest version.
 
         Args:
             v (int): Current version of the project dictionary
             project_dict (dict): Project dictionary (JSON) to be upgraded
+            project_dir (str): Path to current project directory
 
         Returns:
             dict: Upgraded project dictionary
         """
         while v < LATEST_PROJECT_VERSION:
             if v == 1:
-                item_makers = dict()
-                for item_type, factory in self._toolbox.item_factories.items():
-                    item_makers[item_type] = factory.item_maker
-                project_dict = self.upgrade_v1_to_v2(project_dict, item_makers)
-                self._toolbox.msg_success.emit("Project upgraded successfully")
+                project_dict = self.upgrade_v1_to_v2(project_dict, self._toolbox.item_factories)
                 v += 1
+                self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
             # Example on what to do when version 3 comes
-            # if v == 2:
-            #     project_dict = self.upgrade_v2_to_v3(project_dict)
-            #     v += 1
+            elif v == 2:
+                project_dict = self.upgrade_v2_to_v3(project_dict, project_dir, self._toolbox.item_factories)
+                v += 1
+                self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
 
     @staticmethod
-    def upgrade_v1_to_v2(old, item_makers):
+    def make_unique_importer_specification_name(importer_name, label, k):
+        return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
+
+    def upgrade_v2_to_v3(self, old, project_dir, factories):
+        """Upgrades version 2 project dictionary to version 3.
+
+        Changes:
+            1. Move "specifications" from "project" -> "Tool" to just "project"
+            2. The "mappings" from importer items are used to build Importer specifications
+
+        Args:
+            old (dict): Version 2 project dictionary
+            project_dir (str): Path to current project directory
+            factories (dict): Mapping of item type to item factory
+
+        Returns:
+            dict: Version 3 project dictionary
+        """
+        new = copy.deepcopy(old)
+        project = new["project"]
+        project["version"] = 3
+        # Put DT specs in their own subkey
+        project["specifications"]["Data Transformer"] = dt_specs = []
+        tool_specs = project["specifications"].get("Tool", [])
+        for i, spec in reversed(list(enumerate(tool_specs))):
+            spec_path = deserialize_path(spec, project_dir)
+            with open(spec_path, "r") as fp:
+                try:
+                    spec = json.load(fp)
+                except ValueError:
+                    continue
+                if spec.get("item_type") == "Data Transformer":
+                    dt_specs.append(tool_specs.pop(i))
+        project["specifications"]["Importer"] = importer_specs = []
+        for item_name, old_item_dict in old["items"].items():
+            item_type = old_item_dict["type"]
+            new["items"][item_name] = factories[item_type].item_class().upgrade_v2_to_v3(item_name, old_item_dict, self)
+            if item_type == "Importer":
+                mappings = old_item_dict.get("mappings")
+                # Sanitize old mappings, as we use to do in Importer.from_dict
+                if mappings is None:
+                    mappings = list()
+                # Convert table_types and table_row_types keys to int since json always has strings as keys.
+                for _, mapping in mappings:
+                    table_types = mapping.get("table_types", {})
+                    mapping["table_types"] = {
+                        table_name: {int(col): t for col, t in col_types.items()}
+                        for table_name, col_types in table_types.items()
+                    }
+                    table_row_types = mapping.get("table_row_types", {})
+                    mapping["table_row_types"] = {
+                        table_name: {int(row): t for row, t in row_types.items()}
+                        for table_name, row_types in table_row_types.items()
+                    }
+                # Convert serialized paths to absolute in mappings
+                _fix_1d_array_to_array(mappings)
+                # Make item specs from sanitized mappings
+                for k, (label, mapping) in enumerate(mappings):
+                    spec_name = self.make_unique_importer_specification_name(item_name, label, k)
+                    spec = dict(name=spec_name, item_type="Importer", mapping=mapping)
+                    spec_path = os.path.join(project_dir, spec_name + ".json")
+                    # FIXME: Let's try and handle write errors here...
+                    with open(spec_path, "w") as fp:
+                        json.dump(spec, fp, indent=4)
+                    importer_specs.append(serialize_path(spec_path, project_dir))
+        return new
+
+    @staticmethod
+    def upgrade_v1_to_v2(old, factories):
         """Upgrades version 1 project dictionary to version 2.
 
         Changes:
@@ -105,7 +174,7 @@ class ProjectUpgrader:
 
         Args:
             old (dict): Version 1 project dictionary
-            item_makers (dict): Mapping of item type to item class
+            factories (dict): Mapping of item type to item factory
 
         Returns:
             dict: Version 2 project dictionary
@@ -129,8 +198,7 @@ class ProjectUpgrader:
                 # Upgrade item_dict to version 2 if needed
                 v1_item_dict = old["objects"][category][item_name]
                 item_type = old["objects"][category][item_name]["type"]
-                item_maker = item_makers[item_type]
-                v2_item_dict = item_maker.upgrade_v1_to_v2(item_name, v1_item_dict)
+                v2_item_dict = factories[item_type].item_class().upgrade_v1_to_v2(item_name, v1_item_dict)
                 items[item_name] = v2_item_dict  # Store items using their name as key
         return dict(project=new, items=items)
 
@@ -156,7 +224,7 @@ class ProjectUpgrader:
                 spec_paths = old["project"]["tool_templates"]
             except KeyError:
                 spec_paths = list()
-        new["tool_specifications"] = self.upgrade_tool_specification_paths(spec_paths, old_project_dir)
+        new["tool_specifications"] = self.upgrade_specification_paths(spec_paths, old_project_dir)
         # Old projects may have obsolete category names that need to be updated
         if "Data Interfaces" in old["objects"].keys():
             old["objects"]["Importers"] = old["objects"]["Data Interfaces"]
@@ -196,7 +264,7 @@ class ProjectUpgrader:
             if item_type not in self._toolbox.item_factories:
                 self._toolbox.msg_error.emit(f"Upgrading project item failed. Unknown item type '{item_type}'.")
                 continue
-            item_class = self._toolbox.item_factories[item_type].item_maker
+            item_class = self._toolbox.item_factories[item_type].item_class()
             for item_name, item_dict in old["objects"][category].items():
                 new_item_dict = item_class.upgrade_from_no_version_to_version_1(item_name, item_dict, old_project_dir)
                 new_objects[category][item_name] = new_item_dict
@@ -253,8 +321,8 @@ class ProjectUpgrader:
         return connections
 
     @staticmethod
-    def upgrade_tool_specification_paths(spec_paths, old_project_dir):
-        """Upgrades a list of tool specifications paths to new format.
+    def upgrade_specification_paths(spec_paths, old_project_dir):
+        """Upgrades a list of specifications paths to new format.
         Paths in (old) project directory (yes, old is correct) are converted
         to relative, others as absolute.
         """
@@ -366,6 +434,8 @@ class ProjectUpgrader:
             is_valid = self.is_valid_v1(p)
         elif v == 2:
             is_valid = self.is_valid_v2(p)
+        elif v == 3:
+            is_valid = self.is_valid_v3(p)
         else:
             raise NotImplementedError(f"No validity check available for version {v}")
         return is_valid
@@ -462,6 +532,52 @@ class ProjectUpgrader:
             return False
         return True
 
+    def is_valid_v3(self, p):
+        """Checks that the given project JSON dictionary contains
+        a valid version 3 Spine Toolbox project. Valid meaning, that
+        it contains all required keys and values are of the correct
+        type.
+
+        Args:
+            p (dict): Project information JSON
+
+        Returns:
+            bool: True if project is a valid version 2 project, False if it is not
+        """
+        if "project" not in p:
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
+            return False
+        if "items" not in p:
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'items' not found.")
+            return False
+        required_project_keys = ["version", "name", "description", "specifications", "connections"]
+        project = p["project"]
+        items = p["items"]
+        if not isinstance(project, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'project' must be a dict.")
+            return False
+        if not isinstance(items, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'items' must be a dict.")
+            return False
+        for req_key in required_project_keys:
+            if req_key not in project:
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
+                return False
+        # Check types in project dict
+        if not project["version"] == 3:
+            self._toolbox.msg_error.emit("Invalid project version:'{0}'".format(project["version"]))
+            return False
+        if not isinstance(project["name"], str) or not isinstance(project["description"], str):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'name' and 'description' must be strings.")
+            return False
+        if not isinstance(project["specifications"], dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'specifications' must be a dict.")
+            return False
+        if not isinstance(project["connections"], list):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'connections' must be a list.")
+            return False
+        return True
+
     def backup_project_file(self, project_dir):
         """Makes a backup copy of project.json file."""
         src = os.path.join(project_dir, ".spinetoolbox", PROJECT_FILENAME)
@@ -485,3 +601,25 @@ class ProjectUpgrader:
             self._toolbox.msg_error.emit("Saving project.json file failed. Check permissions.")
             return False
         return True
+
+
+def _fix_1d_array_to_array(mappings):
+    """
+    Replaces '1d array' with 'array' for parameter type in Importer mappings.
+
+    With spinedb_api >= 0.3, '1d array' parameter type was replaced by 'array'.
+    Other settings in a mapping are backwards compatible except the name.
+    """
+    for more_mappings in mappings:
+        for settings in more_mappings:
+            table_mappings = settings.get("table_mappings")
+            if table_mappings is None:
+                continue
+            for sheet_settings in table_mappings.values():
+                for setting in sheet_settings:
+                    parameter_setting = setting.get("parameters")
+                    if parameter_setting is None:
+                        continue
+                    parameter_type = parameter_setting.get("parameter_type")
+                    if parameter_type == "1d array":
+                        parameter_setting["parameter_type"] = "array"

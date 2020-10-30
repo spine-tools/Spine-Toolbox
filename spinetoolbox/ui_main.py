@@ -35,9 +35,9 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
 )
+from spinetoolbox.graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
-from .graphics_items import ProjectItemIcon
-from .load_project_items import load_item_specification_factories, load_project_items
+from .load_project_items import load_item_specification_factories, load_project_items, upgrade_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import (
     ProjectItemFactoryModel,
@@ -57,6 +57,7 @@ from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
+from .widgets.spine_datapackage_widget import SpineDatapackageWidget
 from .project import SpineToolboxProject
 from .config import (
     STATUSBAR_SS,
@@ -66,20 +67,20 @@ from .config import (
     _program_root,
     LATEST_PROJECT_VERSION,
     DEFAULT_WORK_DIR,
-    PROJECT_FILENAME
+    PROJECT_FILENAME,
 )
 from .helpers import (
     ensure_window_is_on_screen,
     get_datetime,
-    busy_effect,
     set_taskbar_icon,
     supported_img_formats,
-    create_dir,
     recursive_overwrite,
+    ChildCyclingKeyPressFilter,
+    open_url,
+    busy_effect,
+    create_dir,
     serialize_path,
     deserialize_path,
-    open_url,
-    ChildCyclingKeyPressFilter
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
@@ -129,6 +130,7 @@ class ToolboxUI(QMainWindow):
         # Class variables
         self.undo_stack = QUndoStack(self)
         self._item_categories = dict()
+        self._item_properties_uis = dict()
         self.item_factories = dict()  # maps item types to `ProjectItemFactory` objects
         self._item_specification_factories = dict()  # maps item types to `ProjectItemSpecificationFactory` objects
         self._project = None
@@ -138,7 +140,6 @@ class ToolboxUI(QMainWindow):
         self.filtered_spec_factory_models = {}
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
-        self.work_dir = None
         # Widget and form references
         self.settings_form = None
         self.specification_context_menu = None
@@ -237,11 +238,20 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
-        """Collects attributes from project item modules into a dict.
-        This dict is then used to perform all project item related tasks.
-        """
+        """Collects data from project item factories."""
+        if not upgrade_project_items():
+            msg = (
+                "<b>The automatic process to install project item modules has failed.</b> "
+                "Please check your internet connection and restart Spine Toolbox."
+                "<p>You can also try to install these modules manually, by running</p>"
+                "<p>pip install --upgrade git+https://github.com/Spine-project/spine-items.git</p>"
+            )
+            self.msg_error.emit(msg)
+            return
         self._item_categories, self.item_factories = load_project_items(self)
         self._item_specification_factories = load_item_specification_factories()
+        for item_type, factory in self.item_factories.items():
+            self._item_properties_uis[item_type] = factory.make_properties_widget(self)
         self.init_project_item_factory_model()
         self.add_specification_popup_menu = AddSpecificationPopupMenu(self)
 
@@ -277,21 +287,19 @@ class ToolboxUI(QMainWindow):
             new_work_dir (str, optional): If given, changes the work directory to given
                 and creates the directory if it does not exist.
         """
+        verbose = new_work_dir is not None
         if not new_work_dir:
-            self.work_dir = self._qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
-            if not self.work_dir:
-                # It is possible we still don't have a directory set
-                self.work_dir = DEFAULT_WORK_DIR
-        else:
-            self.work_dir = new_work_dir
-            self.msg.emit("Work directory is now <b>{0}</b>".format(self.work_dir))
+            new_work_dir = self._qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
+            if not new_work_dir:
+                # It is possible "appSettings/workDir" is an empty string???
+                new_work_dir = DEFAULT_WORK_DIR
         try:
-            create_dir(self.work_dir)
+            create_dir(new_work_dir)
+            self._qsettings.setValue("appSettings/workDir", new_work_dir)
+            if verbose:
+                self._toolbox.msg.emit(f"Work directory is now <b>{new_work_dir}</b>")
         except OSError:
-            self.msg_error.emit(
-                "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
-            )
-            self.work_dir = None
+            self.msg_error.emit(f"[OSError] Creating work directory {new_work_dir} failed. Check permissions.")
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -466,7 +474,7 @@ class ToolboxUI(QMainWindow):
         # Parse project info
         name = project_info["project"]["name"]  # Project name
         desc = project_info["project"]["description"]  # Project description
-        tool_specs = project_info["project"]["specifications"]["Tool"]
+        spec_paths_per_type = project_info["project"]["specifications"]
         connections = project_info["project"]["connections"]
         project_items = project_info["items"]
         # Init project item model
@@ -488,8 +496,12 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setEnabled(True)
-        # Init tool spec model
-        deserialized_paths = [deserialize_path(spec, self._project.project_dir) for spec in tool_specs]
+        # Init tool spec model. We don't use the information on the item type in spec_paths_per_type, but we could...
+        deserialized_paths = [
+            deserialize_path(path, self._project.project_dir)
+            for paths in spec_paths_per_type.values()
+            for path in paths
+        ]
         self.init_specification_model(deserialized_paths)
         # Populate project model with project items
         if not self._project.load(project_items):
@@ -526,13 +538,11 @@ class ToolboxUI(QMainWindow):
             if not spec.save():
                 self.msg_error.emit("Project saving failed")
                 return
-        # Put project's specification definition files into a list
-        tool_spec_paths = [
-            self.specification_model.specification(i).definition_file_path
-            for i in range(self.specification_model.rowCount())
-        ]
-        # Serialize tool spec paths
-        serialized_tool_spec_paths = [serialize_path(spec, self._project.project_dir) for spec in tool_spec_paths]
+        # Put project's specification definition files into a dict by item type
+        serialized_tool_spec_paths = dict()
+        for spec in self.specification_model.specifications():
+            serialized_path = serialize_path(spec.definition_file_path, self._project.project_dir)
+            serialized_tool_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
         if not self._project.save(serialized_tool_spec_paths):
             self.msg_error.emit("Project saving failed")
             return
@@ -738,14 +748,23 @@ class ToolboxUI(QMainWindow):
         except FileNotFoundError:
             self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
             return None
-        return self.load_specification(definition, def_path)
+        item_type = definition.get("item_type", "Tool")
+        if item_type == "Tool":
+            includes_main_path = definition.get("includes_main_path", ".")
+            if not os.path.isabs(includes_main_path):
+                definition["includes_main_path"] = os.path.normpath(
+                    os.path.join(os.path.dirname(def_path), includes_main_path)
+                )
+        spec = self.load_specification(definition)
+        if spec is not None:
+            spec.definition_file_path = def_path
+        return spec
 
-    def load_specification(self, definition, def_path):
+    def load_specification(self, definition):
         """Returns a Tool specification from a definition dictionary.
 
         Args:
             definition (dict): Dictionary with the tool definition
-            def_path (str): Path of the specification definition file
 
         Returns:
             ToolSpecification, NoneType
@@ -755,9 +774,7 @@ class ToolboxUI(QMainWindow):
         factory = self._item_specification_factories.get(item_type)
         if factory is None:
             return None
-        return factory.make_specification(
-            definition, def_path, self._qsettings, self, self.julia_repl, self.python_repl
-        )
+        return factory.make_specification(definition, self._qsettings, self, self.julia_repl, self.python_repl)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -926,21 +943,35 @@ class ToolboxUI(QMainWindow):
         if answer[0] == "":  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
-        # Load tool definition
+        # Load specification
         specification = self.load_specification_from_file(def_file)
         if not specification:
             return
-        if self.specification_model.find_specification(specification.name):
-            # Tool specification already added to project
-            self.msg_warning.emit("Specification <b>{0}</b> already in project".format(specification.name))
-            return
-        # Add definition file path into tool specification
+        # Add definition file path into specification
         specification.definition_file_path = def_file
         self.add_specification(specification)
 
     def add_specification(self, specification):
         """Pushes a new AddSpecificationCommand to the undo stack."""
-        self.undo_stack.push(AddSpecificationCommand(self, specification))
+        row = self.specification_model.specification_row(specification.name)
+        if row >= 0:
+            if self.specification_model.specification(row) != specification:
+                button = QMessageBox.question(
+                    self,
+                    "Duplicate specification name",
+                    f"There's already a specification called <b>{specification.name}</b> in the current project.<br>"
+                    "Do you want to replace it?",
+                )
+                if button != QMessageBox.Yes:
+                    return
+            self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
+        else:
+            self.undo_stack.push(AddSpecificationCommand(self, specification))
+
+    def update_specification(self, specification):
+        row = self.specification_model.specification_row(specification.name)
+        if row >= 0:
+            self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
 
     def do_add_specification(self, specification, row=None):
         """Adds a ProjectItemSpecification instance to project.
@@ -950,10 +981,6 @@ class ToolboxUI(QMainWindow):
         """
         self.specification_model.insertRow(specification, row)
         self.msg_success.emit("Specification <b>{0}</b> added to project".format(specification.name))
-
-    def update_specification(self, row, specification):
-        """Pushes a new UpdateSpecificationCommand to the undo stack."""
-        self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
 
     def do_update_specification(self, row, specification):
         """Updates a specification and refreshes all items that use it.
@@ -966,13 +993,25 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Unable to update specification <b>{0}</b>".format(specification.name))
             return
         self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
-        for project_item in self._get_specific_items(specification):
-            project_item.do_set_specification(specification)
-            self.msg.emit(
-                "Specification <b>{0}</b> successfully updated in Item <b>{1}</b>".format(
-                    specification.name, project_item.name
+        for item in self.project_item_model.items():
+            project_item = item.project_item
+            project_item_spec = project_item.specification()
+            if project_item_spec is None or project_item_spec.name != specification.name:
+                continue
+            if specification.item_type == project_item.item_type():
+                self.msg_success.emit(
+                    f"Specification <b>{specification.name}</b> successfully updated "
+                    f"in Item <b>{project_item.name}</b>"
                 )
-            )
+                project_item.do_set_specification(specification)
+            else:
+                self.msg_warning.emit(
+                    f"Specification <b>{specification.name}</b> "
+                    f"of type <b>{specification.item_type}</b> "
+                    f"is no longer valid for Item <b>{project_item.name}</b> "
+                    f"of type <b>{project_item.item_type()}</b>"
+                )
+                project_item.do_set_specification(None)
 
     def undo_update_specification(self, row):
         """Reverts a specification update and refreshes all items that use it.
@@ -985,13 +1024,14 @@ class ToolboxUI(QMainWindow):
             return
         specification = self.specification_model.specification(row)
         self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
-        for project_item in self._get_specific_items(specification):
-            project_item.undo_set_specification()
-            self.msg.emit(
-                "Specification <b>{0}</b> successfully updated in Item <b>{1}</b>".format(
-                    specification.name, project_item.name
+        for item in self.project_item_model.items():
+            project_item = item.project_item
+            if project_item.undo_specification == specification:
+                project_item.undo_set_specification()
+                self.msg_success.emit(
+                    f"Specification <b>{specification.name}</b> successfully updated "
+                    f"in Item <b>{project_item.name}</b>"
                 )
-            )
 
     def _get_specific_items(self, specification):
         """Yields project items with given specification.
@@ -1012,7 +1052,7 @@ class ToolboxUI(QMainWindow):
             return
         selected = self.main_toolbar.project_item_spec_list_view.selectedIndexes()
         if not selected:
-            self.msg.emit("Select a Specific item to remove")
+            self.msg.emit("Select a specification to remove")
             return
         index = selected[0]
         if not index.isValid():
@@ -1097,7 +1137,7 @@ class ToolboxUI(QMainWindow):
         if not factory.supports_specifications():
             return
         global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
-        self.specification_context_menu = factory.specification_menu_maker(self, ind)
+        self.specification_context_menu = factory.make_specification_menu(self, ind)
         self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
@@ -1317,20 +1357,25 @@ class ToolboxUI(QMainWindow):
         if factory is None:
             self.msg_error.emit(f"{item_type} not found in factories")
             return
-        self.add_project_item_form = factory.add_form_maker(self, x, y, spec)
+        self.add_project_item_form = factory.make_add_item_widget(self, x, y, spec)
         self.add_project_item_form.show()
 
     @Slot()
-    def show_specification_form(self, item_type, specification=None):
-        """Show specification widget."""
+    def show_specification_form(self, item_type, specification=None, **kwargs):
+        """
+        Show specification widget.
+
+        Args:
+            item_type (str): item's type
+            specification (ProjectItemSpecification, optional): item's specification
+        """
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
         factory = self.item_factories[item_type]
         if not factory.supports_specifications():
             return
-        form = factory.specification_form_maker(self, specification)
-        form.show()
+        factory.show_specification_widget(self, specification, **kwargs)
 
     @Slot()
     def show_settings(self):
@@ -1437,10 +1482,12 @@ class ToolboxUI(QMainWindow):
         self.link_context_menu.deleteLater()
         self.link_context_menu = None
 
-    def tear_down_items(self):
+    def tear_down_items_and_factories(self):
         """Calls the tear_down method on all project items, so they can clean up their mess if needed."""
         if not self._project:
             return
+        for factory in self.item_factories.values():
+            factory.tear_down()
         for item in self.project_item_model.items():
             if isinstance(item, LeafProjectTreeItem):
                 item.project_item.tear_down()
@@ -1624,7 +1671,7 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
         self.python_repl.shutdown_kernel()
-        self.tear_down_items()
+        self.tear_down_items_and_factories()
         event.accept()
 
     def _serialize_selected_items(self):
@@ -1632,28 +1679,22 @@ class ToolboxUI(QMainWindow):
         Serializes selected project items into a dictionary.
 
         The serialization protocol tries to imitate the format in which projects are saved.
-        The format of the dictionary is following:
-        `{"item_category_1": [{"name": "item_1_name", ...}, ...], ...}`
 
         Returns:
-             a dict containing serialized version of selected project items
+             dict: a dict containing serialized version of selected project items
         """
         selected_project_items = self.ui.graphicsView.scene().selectedItems()
-        serialized_items = dict()
+        items_dict = dict()
         for item_icon in selected_project_items:
             if not isinstance(item_icon, ProjectItemIcon):
                 continue
             name = item_icon.name()
             index = self.project_item_model.find_item(name)
             project_item = self.project_item_model.item(index).project_item
-            item_type = project_item.item_type()
-            items = serialized_items.setdefault(item_type, list())
-            item_dict = project_item.item_dict()
-            item_dict["name"] = project_item.name
-            items.append(item_dict)
-        return serialized_items
+            items_dict[name] = project_item.item_dict()
+        return items_dict
 
-    def _deserialized_item_position_shifts(self, serialized_items):
+    def _deserialized_item_position_shifts(self, item_dicts):
         """
         Calculates horizontal and vertical shifts for project items being deserialized.
 
@@ -1662,9 +1703,9 @@ class ToolboxUI(QMainWindow):
         In case the items don't fit the scene rect we clamp their coordinates within it.
 
         Args:
-            serialized_items (dict): a dictionary of serialized items being deserialized
+            item_dicts (dict): a dictionary of serialized items being deserialized
         Returns:
-            a tuple of (horizontal shift, vertical shift) in scene's coordinates
+            tuple: a tuple of (horizontal shift, vertical shift) in scene's coordinates
         """
         mouse_position = self.ui.graphicsView.mapFromGlobal(QCursor.pos())
         if self.ui.graphicsView.rect().contains(mouse_position):
@@ -1672,7 +1713,7 @@ class ToolboxUI(QMainWindow):
         else:
             mouse_over_design_view = None
         if mouse_over_design_view is not None:
-            first_item = next(iter(serialized_items.values()))[0]
+            first_item = next(iter(item_dicts.values()))
             x = first_item["x"]
             y = first_item["y"]
             shift_x = x - mouse_over_design_view.x()
@@ -1690,28 +1731,28 @@ class ToolboxUI(QMainWindow):
         item_dict["x"] = new_x
         item_dict["y"] = new_y
 
-    def _deserialize_items(self, serialized_items):
+    def _deserialize_items(self, items_dict):
         """
         Deserializes project items from a dictionary and adds them to the current project.
 
         Args:
-            serialized_items (dict): serialized project items
+            items_dict (dict): serialized project items
         """
         if self._project is None:
             return
         scene = self.ui.graphicsView.scene()
         scene.clearSelection()
-        shift_x, shift_y = self._deserialized_item_position_shifts(serialized_items)
+        shift_x, shift_y = self._deserialized_item_position_shifts(items_dict)
         scene_rect = scene.sceneRect()
-        for item_type, item_dicts in serialized_items.items():
-            for item in item_dicts:
-                name = item["name"]
-                if self.project_item_model.find_item(name) is not None:
-                    new_name = self.propose_item_name(name)
-                    item["name"] = new_name
-                self._set_deserialized_item_position(item, shift_x, shift_y, scene_rect)
-                item.pop("type")
-            self._project.add_project_items(item_type, *item_dicts, set_selected=True, verbosity=False)
+        final_items_dict = dict()
+        for name, item_dict in items_dict.items():
+            if self.project_item_model.find_item(name) is not None:
+                new_name = self.propose_item_name(name)
+                final_items_dict[new_name] = item_dict
+            else:
+                final_items_dict[name] = item_dict
+            self._set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect)
+        self._project.add_project_items(final_items_dict, set_selected=True, verbosity=False)
 
     @Slot()
     def project_item_to_clipboard(self):
@@ -1734,14 +1775,16 @@ class ToolboxUI(QMainWindow):
         if byte_data.isNull():
             return
         item_dump = str(byte_data.data(), "utf-8")
-        serialized_items = json.loads(item_dump)
-        self._deserialize_items(serialized_items)
+        item_dicts = json.loads(item_dump)
+        self._deserialize_items(item_dicts)
 
     @Slot()
     def duplicate_project_item(self):
         """Duplicates the selected project items."""
-        serialized_items = self._serialize_selected_items()
-        self._deserialize_items(serialized_items)
+        item_dicts = self._serialize_selected_items()
+        if not item_dicts:
+            return
+        self._deserialize_items(item_dicts)
 
     def propose_item_name(self, prefix):
         """
@@ -1821,3 +1864,21 @@ class ToolboxUI(QMainWindow):
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
         self._project.project_execution_about_to_start.connect(self._scroll_event_log_to_end)
+
+    def project_item_properties_ui(self, item_type):
+        """
+        Returns the properties tab widget's ui.
+
+        Args:
+            item_type (str): project item's type
+        Returns:
+            QWidget: item's properties tab widget
+        """
+        return self._item_properties_uis[item_type].ui
+
+    def project_item_icon(self, item_type):
+        return self.item_factories[item_type].make_icon(self)
+
+    @staticmethod
+    def create_spine_datapackage_form(dc):
+        return SpineDatapackageWidget(dc)

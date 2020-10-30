@@ -19,12 +19,24 @@ from collections import namedtuple
 from collections.abc import Iterable
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QCursor, QFont, QIcon
-from PySide2.QtWidgets import QHeaderView, QMenu, QTableView, QToolButton
+from PySide2.QtWidgets import (
+    QHeaderView,
+    QMenu,
+    QTableView,
+    QToolButton,
+    QDialog,
+    QDialogButtonBox,
+    QVBoxLayout,
+    QSpinBox,
+    QDateTimeEdit,
+    QLineEdit,
+    QFormLayout,
+)
 from spinetoolbox.helpers import CharIconEngine
+from spinetoolbox.spine_io.io_api import TYPE_STRING_TO_CLASS
+from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 from ..commands import SetColumnOrRowType
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
-from ...spine_io.io_api import TYPE_STRING_TO_CLASS
-from ...spine_io.type_conversion import value_to_convert_spec, NewIntegerSequenceDateTimeConvertSpecDialog
 
 _ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
 _ALLOWED_TYPES.append("integer sequence datetime")
@@ -39,6 +51,49 @@ _TYPE_TO_FONT_AWESOME_ICON = {
 }
 
 Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
+
+
+class NewIntegerSequenceDateTimeConvertSpecDialog(QDialog):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setWindowTitle("New integer sequence datetime")
+
+        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.datetime = QDateTimeEdit()
+        self.start_integer = QSpinBox()
+        self.duration = QLineEdit("1h")
+        self.duration.textChanged.connect(self._validate)
+
+        self.layout = QVBoxLayout()
+        self.form = QFormLayout()
+        self.form.addRow("Initial datetime", self.datetime)
+        self.form.addRow("Initial integer", self.start_integer)
+        self.form.addRow("Timestep duration", self.duration)
+        self.layout.addLayout(self.form)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
+
+        self._validate()
+
+    def _validate(self):
+        try:
+            Duration(self.duration.text())
+        except ParameterValueFormatError:
+            self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
+            return
+        self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
+
+    def get_spec(self):
+        start_datetime = DateTime(self.datetime.dateTime().toString(Qt.ISODate))
+        duration = Duration(self.duration.text())
+        start_int = self.start_integer.value()
+        return IntegerSequenceDateTimeConvertSpec(start_datetime, start_int, duration)
 
 
 class TableViewWithButtonHeader(QTableView):
@@ -103,14 +158,16 @@ class TableViewWithButtonHeader(QTableView):
     @Slot("QPoint")
     def _show_horizontal_header_menu(self, pos):
         """Opens the context menu of the horizontal header."""
-        screen_pos = self._horizontal_header.mapToGlobal(pos)
-        self._horizontal_menu.exec_(screen_pos)
+        if self._horizontal_header.display_all or self._horizontal_header.sections_with_buttons:
+            screen_pos = self._horizontal_header.mapToGlobal(pos)
+            self._horizontal_menu.exec_(screen_pos)
 
     @Slot("QPoint")
     def _show_vertical_header_menu(self, pos):
         """Opens the context menu of the vertical header."""
-        screen_pos = self._vertical_header.mapToGlobal(pos)
-        self._vertical_menu.exec_(screen_pos)
+        if self._vertical_header.display_all or self._vertical_header.sections_with_buttons:
+            screen_pos = self._vertical_header.mapToGlobal(pos)
+            self._vertical_menu.exec_(screen_pos)
 
     @Slot("QAction")
     def _set_all_column_data_types(self, action):

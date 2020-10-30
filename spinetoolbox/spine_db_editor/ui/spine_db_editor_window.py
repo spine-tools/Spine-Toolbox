@@ -37,6 +37,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipP
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterValueTableView
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeScenarioTreeView
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ParameterTagTreeView
+from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ToolFeatureTreeView
 
 from spinetoolbox import resources_icons_rc
 
@@ -44,7 +45,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(969, 1136)
+        MainWindow.resize(969, 1167)
         MainWindow.setLayoutDirection(Qt.LeftToRight)
         MainWindow.setDockOptions(QMainWindow.AllowNestedDocks|QMainWindow.AllowTabbedDocks|QMainWindow.AnimatedDocks|QMainWindow.GroupedDragging)
         self.actionCommit = QAction(MainWindow)
@@ -83,13 +84,13 @@ class Ui_MainWindow(object):
         self.actionImport = QAction(MainWindow)
         self.actionImport.setObjectName(u"actionImport")
         icon5 = QIcon()
-        icon5.addFile(u":/icons/project_item_icons/database-import.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u":/icons/menu_icons/database-import.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionImport.setIcon(icon5)
         self.actionExport = QAction(MainWindow)
         self.actionExport.setObjectName(u"actionExport")
         self.actionExport.setEnabled(True)
         icon6 = QIcon()
-        icon6.addFile(u":/icons/project_item_icons/database-export.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon6.addFile(u":/icons/menu_icons/database-export.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionExport.setIcon(icon6)
         self.actionCopy = QAction(MainWindow)
         self.actionCopy.setObjectName(u"actionCopy")
@@ -205,6 +206,8 @@ class Ui_MainWindow(object):
         icon17 = QIcon()
         icon17.addFile(u":/icons/menu_icons/question-circle.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionUser_guide.setIcon(icon17)
+        self.actionSelect_position_parameters = QAction(MainWindow)
+        self.actionSelect_position_parameters.setObjectName(u"actionSelect_position_parameters")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -212,10 +215,6 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
         self.centralwidget.setSizePolicy(sizePolicy)
-        self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
-        self.verticalLayout_2.setSpacing(0)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -254,7 +253,7 @@ class Ui_MainWindow(object):
         self.treeView_alternative_scenario.setObjectName(u"treeView_alternative_scenario")
         self.treeView_alternative_scenario.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.treeView_alternative_scenario.setAcceptDrops(True)
-        self.treeView_alternative_scenario.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.EditKeyPressed)
+        self.treeView_alternative_scenario.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.treeView_alternative_scenario.setDragEnabled(True)
         self.treeView_alternative_scenario.setDragDropMode(QAbstractItemView.InternalMove)
         self.treeView_alternative_scenario.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -277,7 +276,7 @@ class Ui_MainWindow(object):
         self.treeView_parameter_value_list = ParameterValueListTreeView(self.dockWidgetContents)
         self.treeView_parameter_value_list.setObjectName(u"treeView_parameter_value_list")
         self.treeView_parameter_value_list.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.EditKeyPressed)
+        self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.treeView_parameter_value_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.treeView_parameter_value_list.setUniformRowHeights(True)
 
@@ -402,8 +401,8 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_relationship_parameter_definition)
         self.dockWidget_object_tree = QDockWidget(MainWindow)
         self.dockWidget_object_tree.setObjectName(u"dockWidget_object_tree")
-        self.dockWidget_object_tree.setFeatures(QDockWidget.NoDockWidgetFeatures)
-        self.dockWidget_object_tree.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self.dockWidget_object_tree.setFeatures(QDockWidget.AllDockWidgetFeatures)
+        self.dockWidget_object_tree.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.dockWidgetContents_6 = QWidget()
         self.dockWidgetContents_6.setObjectName(u"dockWidgetContents_6")
         self.verticalLayout_4 = QVBoxLayout(self.dockWidgetContents_6)
@@ -543,6 +542,25 @@ class Ui_MainWindow(object):
 
         self.dockWidget_parameter_tag.setWidget(self.dockWidgetContents_9)
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_parameter_tag)
+        self.dockWidget_tool_feature_tree = QDockWidget(MainWindow)
+        self.dockWidget_tool_feature_tree.setObjectName(u"dockWidget_tool_feature_tree")
+        self.dockWidgetContents_13 = QWidget()
+        self.dockWidgetContents_13.setObjectName(u"dockWidgetContents_13")
+        self.verticalLayout_2 = QVBoxLayout(self.dockWidgetContents_13)
+        self.verticalLayout_2.setSpacing(0)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.treeView_tool_feature = ToolFeatureTreeView(self.dockWidgetContents_13)
+        self.treeView_tool_feature.setObjectName(u"treeView_tool_feature")
+        self.treeView_tool_feature.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
+        self.treeView_tool_feature.setDragEnabled(True)
+        self.treeView_tool_feature.setDragDropMode(QAbstractItemView.InternalMove)
+        self.treeView_tool_feature.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        self.verticalLayout_2.addWidget(self.treeView_tool_feature)
+
+        self.dockWidget_tool_feature_tree.setWidget(self.dockWidgetContents_13)
+        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_tool_feature_tree)
         QWidget.setTabOrder(self.tableView_object_parameter_value, self.tableView_object_parameter_definition)
         QWidget.setTabOrder(self.tableView_object_parameter_definition, self.tableView_relationship_parameter_value)
         QWidget.setTabOrder(self.tableView_relationship_parameter_value, self.tableView_relationship_parameter_definition)
@@ -589,6 +607,7 @@ class Ui_MainWindow(object):
         self.menuView.addAction(self.actionGraph_style)
         self.menuGraph.addAction(self.actionShow_cascading_relationships)
         self.menuGraph.addSeparator()
+        self.menuGraph.addAction(self.actionSelect_position_parameters)
         self.menuGraph.addAction(self.actionSave_positions)
         self.menuGraph.addAction(self.actionClear_positions)
         self.menuGraph.addSeparator()
@@ -709,6 +728,7 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(shortcut)
         self.actionUser_guide.setShortcut(QCoreApplication.translate("MainWindow", u"F2", None))
 #endif // QT_CONFIG(shortcut)
+        self.actionSelect_position_parameters.setText(QCoreApplication.translate("MainWindow", u"Select position parameters...", None))
         self.menuSession.setTitle(QCoreApplication.translate("MainWindow", u"Session", None))
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"Edit", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
@@ -758,5 +778,6 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(accessibility)
         self.treeView_parameter_tag.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter value list", None))
 #endif // QT_CONFIG(accessibility)
+        self.dockWidget_tool_feature_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Tool/Feature tree", None))
     # retranslateUi
 

@@ -20,16 +20,13 @@ import unittest
 from networkx import DiGraph
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.project_items.view.view import View
-from spinetoolbox.project_items.view.view_icon import ViewIcon
-from spinetoolbox.project_items.view.widgets.view_properties_widget import ViewPropertiesWidget
+from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_tree_item import (
     BaseProjectTreeItem,
     CategoryProjectTreeItem,
     LeafProjectTreeItem,
     RootProjectTreeItem,
 )
-from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
 
 
@@ -100,8 +97,8 @@ class TestLeafProjectTreeItem(unittest.TestCase):
         expected_name = "ABC"
         expected_short_name = "abc"
         toolbox = create_toolboxui_with_project()
-        project_item_dict = dict(name="View", description="", x=0, y=0)
-        toolbox.project().add_project_items("View", project_item_dict)
+        project_item_dict = {"View": {"type": "View", "description": "", "x": 0, "y": 0}}
+        toolbox.project().add_project_items(project_item_dict)
         index = toolbox.project_item_model.find_item("View")
         leaf = toolbox.project_item_model.item(index)
         leaf.rename(expected_name)
@@ -130,7 +127,7 @@ class TestLeafProjectTreeItem(unittest.TestCase):
     def _leaf_item(toolbox=None):
         if toolbox is None:
             toolbox = create_toolboxui_with_project()
-        project_item = View(toolbox, toolbox.project(), toolbox, "View", "A View item", 0.0, 0.0)
+        project_item = ProjectItem("PI", "A Project item", 0.0, 0.0, toolbox.project(), toolbox)
         item = LeafProjectTreeItem(project_item, toolbox)
         return toolbox, item
 

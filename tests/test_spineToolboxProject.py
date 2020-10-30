@@ -16,14 +16,13 @@ Unit tests for SpineToolboxProject class.
 :date:   14.11.2018
 """
 
-import os
 import unittest
 from unittest import mock
 import logging
 import sys
 from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
-from spine_engine import SpineEngineState
+from spinetoolbox.project_item.executable_item_base import ExecutableItemBase
 from .mock_helpers import (
     clean_up_toolboxui_with_project,
     create_toolboxui_with_project,
@@ -34,7 +33,11 @@ from .mock_helpers import (
     add_importer,
     add_exporter,
 )
-from spinetoolbox.executable_item_base import ExecutableItemBase
+
+
+def _mock_settings_value_side_effect(key, defaultValue=""):
+    if key == "appSettings/useExperimentalEngine":
+        return "false"
 
 
 # noinspection PyUnusedLocal
@@ -174,13 +177,17 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_execute_project_with_single_item(self):
         view, view_executable = self._make_item(self.add_view)
-        self.toolbox.project().execute_project()
+        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
+            mock_settings_value.side_effect = _mock_settings_value_side_effect
+            self.toolbox.project().execute_project()
         self.assertTrue(view_executable.execute_forward_called)
 
     def test_execute_project_with_two_dags(self):
         item1, item1_executable = self._make_item(self.add_dc)
         item2, item2_executable = self._make_item(self.add_view)
-        self.toolbox.project().execute_project()
+        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
+            mock_settings_value.side_effect = _mock_settings_value_side_effect
+            self.toolbox.project().execute_project()
         self.assertTrue(item1_executable.execute_forward_called)
         self.assertTrue(item2_executable.execute_forward_called)
 
@@ -188,7 +195,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1, item1_executable = self._make_item(self.add_dc)
         item2, item2_executable = self._make_item(self.add_view)
         self.toolbox.project().set_item_selected(item2)
-        self.toolbox.project().execute_selected()
+        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
+            mock_settings_value.side_effect = _mock_settings_value_side_effect
+            self.toolbox.project().execute_selected()
         self.assertFalse(item1_executable.execute_forward_called)
         self.assertTrue(item2_executable.execute_forward_called)
 
@@ -213,37 +222,41 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.toolbox.project().dag_handler.add_graph_edge(data_store.name, data_connection.name)
         self.toolbox.project().dag_handler.add_graph_edge(data_connection.name, view.name)
         self.toolbox.project().set_item_selected(data_connection)
-        self.toolbox.project().execute_selected()
+        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
+            mock_settings_value.side_effect = _mock_settings_value_side_effect
+            self.toolbox.project().execute_selected()
         self.assertFalse(data_store_executable.execute_forward_called)
         self.assertTrue(data_connection_executable.execute_forward_called)
         self.assertFalse(view_executable.execute_forward_called)
 
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
-        item = dict(name="DS", description="", url=dict(), x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir"):
-            self.toolbox.project().add_project_items("Data Store", item)
+        item = {"DS": {"type": "Data Store", "description": "", "url": dict(), "x": 0, "y": 0}}
+        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
+            self.toolbox.project().add_project_items(item)
         return "DS"
 
     def add_dc(self):
         """Helper method to add Data Connection. Returns created items name."""
-        item = dict(name="DC", description="", references=list(), x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir"):
-            self.toolbox.project().add_project_items("Data Connection", item)
+        item = {"DC": {"type": "Data Connection", "description": "", "references": list(), "x": 0, "y": 0}}
+        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
+            self.toolbox.project().add_project_items(item)
         return "DC"
 
     def add_tool(self):
         """Helper method to add Tool. Returns created items name."""
-        item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir"):
-            self.toolbox.project().add_project_items("Tool", item)
+        item = {
+            "tool": {"type": "Tool", "description": "", "specification": "", "execute_in_work": False, "x": 0, "y": 0}
+        }
+        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
+            self.toolbox.project().add_project_items(item)
         return "tool"
 
     def add_view(self):
         """Helper method to add View. Returns created items name."""
-        item = dict(name="view", description="", x=0, y=0)
-        with mock.patch("spinetoolbox.project_item.create_dir"):
-            self.toolbox.project().add_project_items("View", item)
+        item = {"view": {"type": "View", "description": "", "x": 0, "y": 0}}
+        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
+            self.toolbox.project().add_project_items(item)
         return "view"
 
     def _make_item(self, add_item_function):

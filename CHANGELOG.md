@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 ### Changed
+- Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
+  Project Items are now in a separate package called spine_items, which is upgraded at Spine Toolbox's startup. 
+- IPython kernel specifications are created for the current Python interpreter,
+  and not globally for the user.
+- New project item Data Transformer can be used to configure Spine database filters for successor items.
+  Currently it support renaming entity classes.
+
 ### Deprecated
 ### Removed
 ### Fixed
@@ -49,7 +56,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   The number still indicates the execution order but may show the same numbers for items in different parallel
   branches.
 - Project.json file format has been upgraded to version 2. Version 1 project.json files are upgraded to version 2
-  automatically when a project is opened. 
+  automatically when a project is opened.
+- Default Python interpreter is now sys.executable i.e. the one that was used in launching the app.
+  Previously the default was the Python in user's PATH. This affects the Python used by Python Tool 
+  specifications and the PyCall used by SpineOpt.jl configuration assistant.
 
 ## [0.4.0-final.0] - 2020-04-03
 

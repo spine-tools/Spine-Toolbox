@@ -19,15 +19,7 @@ Contains JSONConnector class.
 import sys
 import os
 import ijson
-from PySide2.QtWidgets import QFileDialog
 from ..io_api import SourceConnection
-
-
-def select_json_file(parent=None):
-    """
-    Launches QFileDialog with .json filter
-    """
-    return QFileDialog.getOpenFileName(parent, "", "*.json")
 
 
 class JSONConnector(SourceConnection):
@@ -37,10 +29,10 @@ class JSONConnector(SourceConnection):
     DISPLAY_NAME = "JSON"
 
     # dict with option specification for source.
-    OPTIONS = {"max_depth": {'type': int, 'label': 'Maximum depth', 'default': 8}}
+    OPTIONS = {"max_depth": {"type": int, "label": "Maximum depth", "default": 8}}
 
-    # Modal widget that that returns source object and action (OK, CANCEL)
-    SELECT_SOURCE_UI = select_json_file
+    # File extensions for modal widget that that returns source object and action (OK, CANCEL)
+    FILE_EXTENSIONS = "*.json"
 
     def __init__(self, settings):
         super().__init__(settings)
@@ -87,7 +79,7 @@ class JSONConnector(SourceConnection):
         Return data read from data source table in table. If max_rows is
         specified only that number of rows.
         """
-        return self.file_iterator(table, options, max_rows=max_rows), [], options["max_depth"]
+        return (self.file_iterator(table, options, max_rows=max_rows), [], options["max_depth"])
 
 
 def _tabulize_json(obj):

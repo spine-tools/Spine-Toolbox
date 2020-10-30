@@ -48,7 +48,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     @property
     def zoom_factor(self):
-        return self.transform().m11()
+        return self.transform().m11()  # The [1, 1] element contains the x scaling factor
 
     def keyPressEvent(self, event):
         """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
@@ -140,10 +140,6 @@ class CustomQGraphicsView(QGraphicsView):
                 self.time_line = QTimeLine(200, self)
                 self.time_line.finished.connect(self._handle_resize_time_line_finished)
                 self.time_line.start()
-                if new_size.width() > old_size.width() or new_size.height() > old_size.height():
-                    if self.zoom_factor < self._min_zoom:
-                        # Reset the zoom if the view has grown and the current zoom is too small
-                        self.reset_zoom()
         super().resizeEvent(event)
 
     def setScene(self, scene):
@@ -171,11 +167,13 @@ class CustomQGraphicsView(QGraphicsView):
         if rect.isEmpty():
             return
         viewport_scene_rect = self._get_viewport_scene_rect()
-        fitting_margin = 100
-        x_factor = viewport_scene_rect.width() / (rect.width() + fitting_margin)
-        y_factor = viewport_scene_rect.height() / (rect.height() + fitting_margin)
-        self._items_fitting_zoom = min(x_factor, y_factor)
-        self._min_zoom = min(self._items_fitting_zoom, 0.1)
+        x_factor = viewport_scene_rect.width() / rect.width()
+        y_factor = viewport_scene_rect.height() / rect.height()
+        self._items_fitting_zoom = 0.8 * min(x_factor, y_factor)
+        self._min_zoom = self._compute_min_zoom()
+
+    def _compute_min_zoom(self):
+        return min(0.5, self.zoom_factor * self._items_fitting_zoom)
 
     def _handle_zoom_time_line_advanced(self, pos):
         """Performs zoom whenever the smooth zoom time line advances."""
@@ -230,7 +228,7 @@ class CustomQGraphicsView(QGraphicsView):
         if zoom_focus is None:
             zoom_focus = self.viewport().rect().center()
         initial_focus_on_scene = self.mapToScene(zoom_focus)
-        current_zoom = self.zoom_factor  # The [1, 1] element contains the x scaling factor
+        current_zoom = self.zoom_factor
         proposed_zoom = current_zoom * factor
         if proposed_zoom < self._min_zoom:
             factor = self._min_zoom / current_zoom
@@ -356,8 +354,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
         self.scene().addItem(link)
-        src_name = link.src_icon._project_item.name
-        dst_name = link.dst_icon._project_item.name
+        src_name = link.src_icon.name()
+        dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
         return replaced_link
 
@@ -457,8 +455,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
             return
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
-        if hasattr(icon, "start_animation"):
-            icon.start_animation()
+        if hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_started.emit()
 
     @Slot(str, "QVariant", "QVariant")
     def _stop_animation(self, item_name, direction, _):
@@ -467,8 +465,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
             return
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
-        if hasattr(icon, "stop_animation"):
-            icon.stop_animation()
+        if hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_stopped.emit()
 
     @Slot(str, "QVariant", "QVariant")
     def _run_leave_animation(self, item_name, direction, engine_state):
@@ -495,7 +493,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
         links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
-        animation_group = QParallelAnimationGroup(item)
+        animation_group = QParallelAnimationGroup()
         for link in links:
             animation_group.addAnimation(link.make_execution_animation())
         return animation_group

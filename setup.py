@@ -17,7 +17,10 @@ Setup script for Python's setuptools.
 """
 
 from setuptools import setup, find_packages
-from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
+from spinetoolbox.config import (
+    REQUIRED_SPINEDB_API_VERSION,
+    REQUIRED_SPINE_ENGINE_VERSION,
+)
 
 with open("README.md", encoding="utf8") as readme_file:
     readme = readme_file.read()
@@ -26,7 +29,7 @@ version = {}
 with open("spinetoolbox/version.py") as fp:
     exec(fp.read(), version)
 
-requirements = [
+install_requires = [
     "pyside2 >=5.14, <5.15",
     "datapackage >= 1.15",
     "jupyter-client < 5.3.2",
@@ -34,16 +37,16 @@ requirements = [
     "sqlalchemy >= 1.3",
     "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
     "spine_engine >= {}".format(REQUIRED_SPINE_ENGINE_VERSION),
-    "openpyxl > 3.0",
     "numpy >= 1.15.1",
     "matplotlib >= 3.0",
     "scipy >= 1.1.0",
     "networkx > 2.2",
+    "cx_Oracle >= 6.3.1",
+    "pandas >= 0.24.0",
+    "openpyxl > 3.0",
     "pymysql >= 0.9.2",
     "pyodbc >= 4.0.23",
     "psycopg2 >= 2.7.4",
-    "cx_Oracle >= 6.3.1",
-    "pandas >= 0.24.0",
     "gdx2py >= 2.0.4",
     "ijson >= 2.6.1",
 ]
@@ -56,7 +59,7 @@ setup(
     author="Spine Project consortium",
     author_email="spine_info@vtt.fi",
     url="https://github.com/Spine-project/Spine-Toolbox",
-    packages=find_packages(),
+    packages=find_packages(exclude=("tests",)),
     entry_points={"console_scripts": ["spinetoolbox=spinetoolbox.main:main"]},
     include_package_data=True,
     license="LGPL-3.0-or-later",
@@ -64,6 +67,6 @@ setup(
     keywords="",
     classifiers=[],
     python_requires='>=3.6, <3.8',
-    install_requires=requirements,
+    install_requires=install_requires,
     test_suite="tests",
 )

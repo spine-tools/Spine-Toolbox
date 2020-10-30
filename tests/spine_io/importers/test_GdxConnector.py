@@ -231,5 +231,5 @@ class TestGdxConnector(unittest.TestCase):
             next(data_iterator)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

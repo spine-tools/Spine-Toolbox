@@ -18,7 +18,6 @@ Contains ExcelConnector class and a help function.
 
 from itertools import islice, takewhile
 import io
-from PySide2.QtWidgets import QFileDialog
 from openpyxl import load_workbook
 from spinedb_api import (
     RelationshipClassMapping,
@@ -33,13 +32,6 @@ from spinedb_api import (
 from ..io_api import SourceConnection
 
 
-def select_excel_file(parent=None):
-    """
-    Launches QFileDialog with .xlsx and friends filter
-    """
-    return QFileDialog.getOpenFileName(parent, "", "*.xlsx;*.xlsm;*.xltx;*.xltm")
-
-
 class ExcelConnector(SourceConnection):
     """Template class to read data from another QThread."""
 
@@ -48,15 +40,14 @@ class ExcelConnector(SourceConnection):
 
     # dict with option specification for source.
     OPTIONS = {
-        "header": {'type': bool, 'label': 'Has header', 'default': False},
-        "row": {'type': int, 'label': 'Skip rows', 'Minimum': 0, 'default': 0},
-        "column": {'type': int, 'label': 'Skip columns', 'Minimum': 0, 'default': 0},
-        "read_until_col": {'type': bool, 'label': 'Read until empty column on first row', 'default': False},
-        "read_until_row": {'type': bool, 'label': 'Read until empty row on first column', 'default': False},
+        "header": {"type": bool, "label": "Has header", "default": False},
+        "row": {"type": int, "label": "Skip rows", "Minimum": 0, "default": 0},
+        "column": {"type": int, "label": "Skip columns", "Minimum": 0, "default": 0},
+        "read_until_col": {"type": bool, "label": "Read until empty column on first row", "default": False},
+        "read_until_row": {"type": bool, "label": "Read until empty row on first column", "default": False},
     }
 
-    # Modal widget that that returns source object and action (OK, CANCEL)
-    SELECT_SOURCE_UI = select_excel_file
+    FILE_EXTENSIONS = "*.xlsx;*.xlsm;*.xltx;*.xltm"
 
     def __init__(self, settings):
         super().__init__(settings)
@@ -178,7 +169,7 @@ class ExcelConnector(SourceConnection):
         """
         mapped_data, errors = super().get_mapped_data(tables_mappings, options, table_types, table_row_types, max_rows)
         for key in ("object_parameter_values", "relationship_parameter_values"):
-            for index, value in enumerate(mapped_data[key]):
+            for index, value in enumerate(mapped_data.get(key, [])):
                 val = value[-1]
                 if isinstance(val, str) and val and val[0] == "{":
                     try:
@@ -248,7 +239,7 @@ def create_mapping_from_sheet(worksheet):
             return None, None
         if not isinstance(rel_dimension, int):
             return None, None
-        if not rel_dimension >= 1:
+        if rel_dimension < 1:
             return None, None
         if sheet_data.lower() == "parameter":
             obj_classes = next(islice(worksheet.iter_rows(), 3, 4))
@@ -259,26 +250,28 @@ def create_mapping_from_sheet(worksheet):
         if not all(isinstance(r, str) for r in obj_classes) or any(r is None or r.isspace() for r in obj_classes):
             return None, None
         if sheet_data.lower() == "parameter":
+            has_parameters = worksheet.cell(row=4, column=rel_dimension + 1).value is not None
             options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
-            mapping = RelationshipClassMapping.from_dict(
-                {
-                    "map_type": "RelationshipClass",
-                    "name": rel_cls_name,
-                    "object_classes": obj_classes,
-                    "objects": list(range(rel_dimension)),
-                    "parameters": {
-                        "map_type": "parameter",
-                        "name": {"map_type": "row", "value_reference": -1},
-                        "parameter_type": "single value",
-                    },
+            map_dict = {
+                "map_type": "RelationshipClass",
+                "name": rel_cls_name,
+                "object_classes": obj_classes,
+                "objects": list(range(rel_dimension)),
+            }
+            if has_parameters:
+                map_dict["parameters"] = {
+                    "map_type": "parameter",
+                    "name": {"map_type": "row", "value_reference": -1},
+                    "parameter_type": "single value",
                 }
-            )
+            mapping = RelationshipClassMapping.from_dict(map_dict)
         elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = RelationshipClassMapping.from_dict(
                 {
                     "map_type": "RelationshipClass",
                     "name": rel_cls_name,
+                    "skip_columns": [0],
                     "object_classes": obj_classes,
                     "objects": [{"map_type": "row", "value_reference": i} for i in range(rel_dimension)],
                     "parameters": {
@@ -313,19 +306,16 @@ def create_mapping_from_sheet(worksheet):
         if not obj_cls_name:
             return None, None
         if sheet_data.lower() == "parameter":
+            has_parameters = worksheet["B4"].value is not None
             options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
-            mapping = ObjectClassMapping.from_dict(
-                {
-                    "map_type": "ObjectClass",
-                    "name": obj_cls_name,
-                    "objects": 0,
-                    "parameters": {
-                        "map_type": "parameter",
-                        "name": {"map_type": "row", "value_reference": -1},
-                        "parameter_type": "single value",
-                    },
+            map_dict = {"map_type": "ObjectClass", "name": obj_cls_name, "objects": 0}
+            if has_parameters:
+                map_dict["parameters"] = {
+                    "map_type": "parameter",
+                    "name": {"map_type": "row", "value_reference": -1},
+                    "parameter_type": "single value",
                 }
-            )
+            mapping = ObjectClassMapping.from_dict(map_dict)
         elif sheet_data.lower() == "array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = ObjectClassMapping.from_dict(
@@ -333,6 +323,7 @@ def create_mapping_from_sheet(worksheet):
                     "map_type": "ObjectClass",
                     "name": obj_cls_name,
                     "objects": {"map_type": "row", "value_reference": 0},
+                    "skip_columns": [0],
                     "parameters": {
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": 1},

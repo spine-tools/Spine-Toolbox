@@ -17,6 +17,7 @@ Contains ConnectionManager class.
 """
 
 from PySide2.QtCore import QObject, QThread, Signal, Slot
+from PySide2.QtWidgets import QFileDialog
 
 
 class ConnectionManager(QObject):
@@ -164,7 +165,8 @@ class ConnectionManager(QObject):
 
         ex: fileselect if source is a file.
         """
-        source, action = self._connection.SELECT_SOURCE_UI()
+        ext = self._connection.FILE_EXTENSIONS
+        source, action = QFileDialog.getOpenFileName(None, "", ext)
         if not source or not action:
             return False
         self._source = source

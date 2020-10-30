@@ -19,7 +19,7 @@ Utility functions for .gdx import/export.
 import os
 import sys
 
-if sys.platform == 'win32':
+if sys.platform == "win32":
     import winreg
 
 

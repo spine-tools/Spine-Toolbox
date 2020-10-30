@@ -16,11 +16,11 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 import itertools
-from PySide2.QtCore import Signal, Slot, QRectF
+from PySide2.QtCore import Signal, Slot, QRectF, QTimer
 from PySide2.QtWidgets import QGraphicsTextItem, QActionGroup
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
-from spinedb_api import to_database, from_database
+from spinedb_api import from_database
 from ...widgets.custom_qwidgets import ZoomWidgetAction, RotateWidgetAction
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
 from ..graphics_items import (
@@ -36,18 +36,17 @@ from ..graphics_items import (
 from .graph_layout_generator import GraphLayoutGenerator, make_heat_map
 from ...helpers import get_save_file_name_in_last_dir
 from .add_items_dialogs import AddReadyRelationshipsDialog
+from .select_position_parameters_dialog import SelectPositionParametersDialog
 
 
 class GraphViewMixin:
     """Provides the graph view for the DS form."""
 
-    _POS_PARAM_NAME = "entity_graph_position"
     _VERTEX_EXTENT = 64
     _ARC_WIDTH = 0.15 * _VERTEX_EXTENT
     _ARC_LENGTH_HINT = 1.5 * _VERTEX_EXTENT
 
     graph_selection_changed = Signal(object)
-    graph_build_finished = Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -57,6 +56,8 @@ class GraphViewMixin:
         )
         self.ui.actionShow_cascading_relationships.setChecked(self._show_cascading_relationships)
         self._persistent = False
+        self._pos_x_parameter = "x"
+        self._pos_y_parameter = "y"
         self.scene = None
         self.object_items = list()
         self.relationship_items = list()
@@ -80,7 +81,7 @@ class GraphViewMixin:
         self.rotate_widget_action = None
         self.graph_db_action_group = QActionGroup(self)
         self.layout_gens = list()
-        self.ui.graphicsView.connect_data_store_form(self)
+        self.ui.graphicsView.connect_spine_db_editor(self)
         self.setup_widget_actions()
         self.populate_graph_db_action_group()
 
@@ -122,6 +123,7 @@ class GraphViewMixin:
         self.ui.actionPrune_selected_entities.triggered.connect(self.prune_selected_entities)
         self.ui.actionPrune_selected_classes.triggered.connect(self.prune_selected_classes)
         self.ui.actionRestore_all_pruned.triggered.connect(self.restore_all_pruned_items)
+        self.ui.actionSelect_position_parameters.triggered.connect(self.select_position_parameters)
         self.ui.actionSave_positions.triggered.connect(self.save_positions)
         self.ui.actionClear_positions.triggered.connect(self.clear_saved_positions)
         self.ui.actionExport_graph_as_pdf.triggered.connect(self.export_as_pdf)
@@ -301,7 +303,10 @@ class GraphViewMixin:
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
-        self.build_graph()
+        if visible:
+            QTimer.singleShot(0, self.build_graph)
+        else:
+            self._stop_layout_generators()
 
     @Slot(dict)
     def rebuild_graph(self, selected):
@@ -320,25 +325,27 @@ class GraphViewMixin:
             return
         self.ui.graphicsView.clear_cross_hairs_items()  # Needed
         self._persistent = persistent
-        for layout_gen in self.layout_gens:
-            layout_gen.stop()
+        self._stop_layout_generators()
         self._update_graph_data()
         layout_gen = self._make_layout_generator()
         self.layout_gens.append(layout_gen)
         layout_gen.show_progress_widget(self.ui.graphicsView)
-        layout_gen.finished.connect(self._complete_graph)
-        layout_gen.done.connect(lambda layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
+        # NOTE: Connecting like below allows us to connect more than one layout finished to _complete_graph
+        layout_gen.finished.connect(lambda x, y: self._complete_graph(x, y))  # pylint: disable=unnecessary-lambda
+        layout_gen.destroyed.connect(lambda obj=None, layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
         layout_gen.start()
 
-    @Slot(object, object)
+    def _stop_layout_generators(self):
+        for layout_gen in self.layout_gens:
+            if layout_gen.is_running():
+                layout_gen.stop()
+
     def _complete_graph(self, x, y):
         """
         Args:
             x (list): Horizontal coordinates
             y (list): Vertical coordinates
         """
-        if self.layout_gens:
-            return
         self.hidden_items.clear()
         self.removed_items.clear()
         self.selected_items.clear()
@@ -355,7 +362,6 @@ class GraphViewMixin:
             self.ui.graphicsView.reset_zoom()
         else:
             self.ui.graphicsView.apply_zoom()
-        self.graph_build_finished.emit()
 
     def _get_selected_entity_ids(self):
         """Returns a set of ids corresponding to selected entities in the trees.
@@ -431,31 +437,33 @@ class GraphViewMixin:
                 self.src_inds.append(relationship_ind)
                 self.dst_inds.append(object_ind)
 
+    def _get_parameter_positions(self, parameter_name):
+        if not parameter_name:
+            yield from []
+        for p in self.db_mngr.get_items_by_field(
+            self.graph_db_map, "parameter_value", "parameter_name", parameter_name
+        ):
+            pos = from_database(p["value"])
+            if isinstance(pos, float):
+                yield p["entity_id"], pos
+
     def _make_layout_generator(self):
         """Returns a layout generator for the current graph.
 
         Returns:
             GraphLayoutGenerator
         """
-        parameter_positions = {
-            p["entity_id"]: dict(from_database(p["value"]).value_to_database_data())
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
-            )
-        }
+        fixed_positions = {}
         if self._persistent:
-            persisted_positions = {
-                item.entity_id: {"x": item.pos().x(), "y": item.pos().y()}
-                for item in self.ui.graphicsView.items()
-                if isinstance(item, EntityItem)
-            }
-        else:
-            persisted_positions = {}
-        persisted_positions.update(parameter_positions)
+            for item in self.ui.graphicsView.items():
+                if isinstance(item, EntityItem):
+                    fixed_positions[item.entity_id] = {"x": item.pos().x(), "y": item.pos().y()}
+        param_pos_x = dict(self._get_parameter_positions(self._pos_x_parameter))
+        param_pos_y = dict(self._get_parameter_positions(self._pos_y_parameter))
+        for entity_id in param_pos_x.keys() & param_pos_y.keys():
+            fixed_positions[entity_id] = {"x": param_pos_x[entity_id], "y": param_pos_y[entity_id]}
         entity_ids = self.object_ids + self.relationship_ids
-        heavy_positions = {
-            ind: persisted_positions[id_] for ind, id_ in enumerate(entity_ids) if id_ in persisted_positions
-        }
+        heavy_positions = {ind: fixed_positions[id_] for ind, id_ in enumerate(entity_ids) if id_ in fixed_positions}
         return GraphLayoutGenerator(
             len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions
         )
@@ -567,68 +575,57 @@ class GraphViewMixin:
         db_map_typed_data = {self.graph_db_map: {}}
         for item in self.selected_items:
             id_ = item.entity_id
-            db_map_typed_data[self.graph_db_map].setdefault(item.entity_type, []).add(id_)
+            db_map_typed_data[self.graph_db_map].setdefault(item.entity_type, []).append(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     @Slot(bool)
+    def select_position_parameters(self, checked=False):
+        dialog = SelectPositionParametersDialog(self)
+        dialog.show()
+        dialog.selection_made.connect(self._set_position_parameters)
+
+    @Slot(str, str)
+    def _set_position_parameters(self, parameter_pos_x, parameter_pos_y):
+        self._pos_x_parameter = parameter_pos_x
+        self._pos_y_parameter = parameter_pos_y
+
+    @Slot(bool)
     def save_positions(self, checked=False):
-        items_per_class_id = {}
-        for item in self.selected_items:
-            items_per_class_id.setdefault(item.entity_class_id, []).append(item)
-        pos_def_class_ids = {
-            p["entity_class_id"]
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_definition", "parameter_name", self._POS_PARAM_NAME
-            )
-        }
-        defs_to_add = [
-            {"name": self._POS_PARAM_NAME, "entity_class_id": class_id}
-            for class_id in items_per_class_id.keys() - pos_def_class_ids
+        parameter_names = (self._pos_x_parameter, self._pos_y_parameter)
+        if not all(parameter_names):
+            msg = "You haven't selected the position parameters. Please go to Graph -> Select position parameters"
+            self.msg.emit(msg)
+            return
+        obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
+        rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]
+        db_map_data = dict()
+        data = db_map_data[self.graph_db_map] = dict()
+        data["object_parameters"] = [
+            (item.entity_class_name, parameter_name) for item in obj_items for parameter_name in parameter_names
         ]
-        if defs_to_add:
-            self.db_mngr.add_parameter_definitions({self.graph_db_map: defs_to_add})
-        pos_def_id_lookup = {
-            p["entity_class_id"]: p["id"]
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_definition", "parameter_name", self._POS_PARAM_NAME
-            )
-        }
-        pos_val_id_lookup = {
-            (p["entity_class_id"], p["entity_id"]): p["id"]
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
-            )
-        }
-        vals_to_add = list()
-        vals_to_update = list()
-        for class_id, items in items_per_class_id.items():
-            for item in items:
-                pos_val_id = pos_val_id_lookup.get((class_id, item.entity_id), None)
-                value = {"type": "map", "index_type": "str", "data": [["x", item.pos().x()], ["y", item.pos().y()]]}
-                if pos_val_id is None:
-                    vals_to_add.append(
-                        {
-                            "name": "pos_x",
-                            "entity_class_id": class_id,
-                            "entity_id": item.entity_id,
-                            "parameter_definition_id": pos_def_id_lookup[class_id],
-                            "value": to_database(value),
-                        }
-                    )
-                else:
-                    vals_to_update.append({"id": pos_val_id, "value": to_database(value)})
-        if vals_to_add:
-            self.db_mngr.add_parameter_values({self.graph_db_map: vals_to_add})
-        if vals_to_update:
-            self.db_mngr.update_parameter_values({self.graph_db_map: vals_to_update})
+        data["relationship_parameters"] = [
+            (item.entity_class_name, parameter_name) for item in rel_items for parameter_name in parameter_names
+        ]
+        data["object_parameter_values"] = [
+            (item.entity_class_name, item.entity_name, self._pos_x_parameter, item.pos().x()) for item in obj_items
+        ] + [(item.entity_class_name, item.entity_name, self._pos_y_parameter, item.pos().y()) for item in obj_items]
+        data["relationship_parameter_values"] = [
+            (item.entity_class_name, item.object_name_list.split(","), self._pos_x_parameter, item.pos().x())
+            for item in rel_items
+        ] + [
+            (item.entity_class_name, item.object_name_list.split(","), self._pos_y_parameter, item.pos().y())
+            for item in rel_items
+        ]
+        self.db_mngr.import_data(db_map_data)
 
     @Slot(bool)
     def clear_saved_positions(self, checked=False):
         entity_ids = {x.entity_id for x in self.selected_items}
         value_ids_to_remove = [
             p["id"]
+            for parameter_name in (self._pos_x_parameter, self._pos_y_parameter)
             for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_value", "parameter_name", self._POS_PARAM_NAME
+                self.graph_db_map, "parameter_value", "parameter_name", parameter_name
             )
             if p["entity_id"] in entity_ids
         ]

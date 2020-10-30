@@ -18,15 +18,18 @@ Spine Toolbox project class.
 
 import os
 import json
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Slot, Signal, QEventLoop
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
-from .metaobject import MetaObject
-from .helpers import create_dir, inverted, erase_dir
+from spine_engine.spine_engine_experimental import SpineEngineExperimental
+from spinetoolbox.metaobject import MetaObject
+from spinetoolbox.helpers import create_dir
+from .helpers import inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
 from .spine_db_manager import SpineDBManager
+from .subscribers import NodeExecStartedSubscriber, NodeExecFinishedSubscriber, LoggingSubscriber
 from .project_commands import (
     SetProjectNameCommand,
     SetProjectDescriptionCommand,
@@ -34,6 +37,7 @@ from .project_commands import (
     RemoveProjectItemCommand,
     RemoveAllProjectItemsCommand,
 )
+from .spine_engine_worker import SpineEngineWorker
 
 
 class SpineToolboxProject(MetaObject):
@@ -79,6 +83,8 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler = DirectedGraphHandler()
         self.db_mngr = SpineDBManager(settings, logger, self)
         self.engine = None
+        self._engine_loop = None
+        self._engine_worker = None
         self._execution_stopped = True
         self._dag_execution_list = None
         self._dag_execution_permits_list = None
@@ -88,6 +94,9 @@ class SpineToolboxProject(MetaObject):
         self.items_dir = None  # Full path to items directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
         self._toolbox.undo_stack.clear()
+        self.start_subscriber = NodeExecStartedSubscriber()
+        self.finish_subscriber = NodeExecFinishedSubscriber()
+        self.log_subscriber = LoggingSubscriber(self._logger)
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
 
@@ -175,7 +184,7 @@ class SpineToolboxProject(MetaObject):
         into a dictionary and writes it to a JSON file.
 
         Args:
-            spec_paths (list): List of absolute paths to specification files
+            spec_paths (dict): List of absolute paths to specification files keyed by item type
 
         Returns:
             bool: True or False depending on success
@@ -184,8 +193,7 @@ class SpineToolboxProject(MetaObject):
         project_dict["version"] = LATEST_PROJECT_VERSION
         project_dict["name"] = self.name
         project_dict["description"] = self.description
-        project_dict["specifications"] = dict()
-        project_dict["specifications"]["Tool"] = spec_paths
+        project_dict["specifications"] = spec_paths
         # Compute connections directly from Links on scene
         project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
         items_dict = dict()  # Dictionary for storing project items
@@ -212,58 +220,48 @@ class SpineToolboxProject(MetaObject):
             bool: True if successful, False otherwise
         """
         self._logger.msg.emit("Loading project items...")
-        empty = True
-        items_by_type = dict()  # Key: item_type, value: list of items
-        for item_name, item_dict in items_dict.items():
-            empty = False
-            item_type = item_dict.pop("type")  # ProjectItem constructors do not need this
-            item_dict["name"] = item_name  # ProjectItem constructors need this
-            items_by_type.setdefault(item_type, list()).append(item_dict)
-        for item_type, items in items_by_type.items():
-            if not self.make_and_add_project_items(item_type, items, verbosity=False):
-                return False
-        if empty:
+        if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
+        self.make_and_add_project_items(items_dict, verbosity=False)
         return True
 
-    def add_project_items(self, item_type, *items, set_selected=False, verbosity=True):
+    def add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.
         """
-        if not items:
+        if not items_dict:
             return
         self._toolbox.undo_stack.push(
-            AddProjectItemsCommand(self, item_type, items, set_selected=set_selected, verbosity=verbosity)
+            AddProjectItemsCommand(self, items_dict, set_selected=set_selected, verbosity=verbosity)
         )
 
-    def make_project_tree_items(self, item_type, items):
+    def make_project_tree_items(self, items_dict):
         """Creates and returns a dictionary mapping category indexes to a list of corresponding LeafProjectTreeItem instances.
 
         Args:
-            item_type (str): item type
-            items (list): one or more dicts of items to add
+            items_dict (dict): a mapping from item name to item dict
 
         Returns:
             dict(QModelIndex, list(LeafProjectTreeItem))
         """
-        factory = self._toolbox.item_factories.get(item_type)
-        if factory is None:
-            self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
-            for item in items:
-                self._logger.msg_error.emit(f"Loading project item <b>{item['name']}</b> failed")
-            return {None: None}
         project_items_by_category = {}
-        for item_dict in items:
+        for item_name, item_dict in items_dict.items():
+            item_type = item_dict["type"]
+            factory = self._toolbox.item_factories.get(item_type)
+            if factory is None:
+                self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
+                self._logger.msg_error.emit(f"Loading project item <b>{item_name}</b> failed")
+                return {}
             try:
-                project_item = factory.make_item(self._toolbox, self, self._logger, **item_dict)
+                project_item = factory.make_item(item_name, item_dict, self._toolbox, self, self._logger)
             except TypeError:
                 self._logger.msg_error.emit(
-                    f"Creating <b>{item_type}</b> project item <b>{item_dict['name']}</b> failed. "
+                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     "This is most likely caused by an outdated project file."
                 )
                 continue
             except KeyError as error:
                 self._logger.msg_error.emit(
-                    f"Creating <b>{item_type}</b> project item <b>{item_dict['name']}</b> failed. "
+                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     f"This is most likely caused by an outdated or corrupted project file "
                     f"(missing JSON key: {str(error)})."
                 )
@@ -290,8 +288,7 @@ class SpineToolboxProject(MetaObject):
         for project_tree_item in project_tree_items:
             project_item = project_tree_item.project_item
             self._project_item_model.insert_item(project_tree_item, category_ind)
-            factory = self._toolbox.item_factories[project_item.item_type()]
-            factory.activate_project_item(self._toolbox, project_item)
+            self._finish_project_item_construction(project_item)
             # Append new node to networkx graph
             self.add_to_dag(project_item.name)
             if verbosity:
@@ -312,22 +309,18 @@ class SpineToolboxProject(MetaObject):
         ind = self._project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
-    def make_and_add_project_items(self, item_type, items, set_selected=False, verbosity=True):
+    def make_and_add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Adds items to project at loading.
 
         Args:
-            item_type (str): Item type e.g. "Tool"
-            items (list): one or more dict of items to add
+            items_dict (dict): a mapping from item name to item dict
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        for category_ind, project_tree_items in self.make_project_tree_items(item_type, items).items():
-            if not category_ind:
-                continue
+        for category_ind, project_tree_items in self.make_project_tree_items(items_dict).items():
             self.do_add_project_tree_items(
                 category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity
             )
-        return True
 
     def add_to_dag(self, item_name):
         """Add new node (project item) to the directed graph."""
@@ -469,6 +462,16 @@ class SpineToolboxProject(MetaObject):
             execution_permits (dict): Dictionary, where keys are node names in dag and value is a boolean
             dag_identifier (str): Identifier number for printing purposes
         """
+        if self.engine is not None:
+            self._logger.msg_error.emit("Execution already in progress.")
+            return
+        if self._settings.value("appSettings/useExperimentalEngine", defaultValue="false") == "false":
+            self._execute_dag_normal(dag, execution_permits, dag_identifier)
+        else:
+            self._execute_dag_experimental(dag, execution_permits, dag_identifier)
+        self.engine = None
+
+    def _get_node_successors(self, dag, dag_identifier):
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
             self._logger.msg_warning.emit("<b>Graph {0} is not a Directed Acyclic Graph</b>".format(dag_identifier))
@@ -478,13 +481,17 @@ class SpineToolboxProject(MetaObject):
                 "Please edit connections in Design View to execute it. "
                 "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
             )
+            return None
+        return node_successors
+
+    def _execute_dag_normal(self, dag, execution_permits, dag_identifier):
+        node_successors = self._get_node_successors(dag, dag_identifier)
+        if node_successors is None:
             return
         items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
         self.engine = SpineEngine(items, node_successors, execution_permits)
-        self.engine.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
-        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
-        self.engine.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
-        self.engine.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
+        # connect exec_started and exec_finished signals
+        self.connect_subscriber_signals()
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         self.engine.run()
@@ -494,10 +501,92 @@ class SpineToolboxProject(MetaObject):
             SpineEngineState.COMPLETED: "completed successfully",
         }[self.engine.state()]
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
-        self.engine.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._run_leave_animation)
-        self.engine.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
+        # disconnect exec_started and exec_finished signals
+        self.disconnect_subscriber_signals()
+
+    def _execute_dag_experimental(self, dag, execution_permits, dag_identifier):
+        if self._engine_worker is not None:
+            self._logger.msg_error.emit("Execution already in progress.")
+            return
+        # TODO: We may want to introduce a new group "executionSettings", for more clarity
+        self._settings.beginGroup("appSettings")
+        settings = {}
+        for key in self._settings.childKeys():
+            value = self._settings.value(key)
+            try:
+                json.dumps(value)
+            except (TypeError, json.decoder.JSONDecodeError):
+                continue
+            settings[f"appSettings/{key}"] = value
+        self._settings.endGroup()
+        # FIXME: These four lines below should be removed once the Kernel editor is in place (See issue #839)
+        # When that happens, both "appSettings/juliaKernel" and "appSettings/pythonKernel" will be readily
+        # available from `self._settings`
+        if self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
+            settings["appSettings/juliaKernel"] = self._toolbox.julia_repl.julia_kernel_name()
+        if self._settings.value("appSettings/useEmbeddedPython", defaultValue="2") == "2":
+            settings["appSettings/pythonKernel"], _ = self._toolbox.python_repl.python_kernel_name()
+        node_successors = self._get_node_successors(dag, dag_identifier)
+        if node_successors is None:
+            return
+        items = {}
+        specifications = {}
+        for name in node_successors:
+            project_item = self._project_item_model.get_item(name).project_item
+            items[name] = project_item.item_dict()
+            spec = project_item.specification()
+            if spec is not None:
+                specifications.setdefault(project_item.item_type(), list()).append(spec.to_dict())
+        d = {
+            "items": items,
+            "specifications": specifications,
+            "node_successors": node_successors,
+            "execution_permits": execution_permits,
+            "settings": settings,
+            "project_dir": self.project_dir,
+        }
+        self.engine = SpineEngineExperimental(json.dumps(d))
+        self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
+        self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
+        self._engine_loop = QEventLoop()
+        self._engine_worker = SpineEngineWorker(self.engine, self._toolbox)
+        self._engine_worker.finished.connect(self._engine_loop.quit)
+        self._engine_worker.finished.connect(self._handle_worker_finished)
+        self._engine_worker.start()
+        self._engine_loop.exec_()
+        outcome = {
+            SpineEngineState.USER_STOPPED: "stopped by the user",
+            SpineEngineState.FAILED: "failed",
+            SpineEngineState.COMPLETED: "completed successfully",
+        }[self.engine.state()]
+        self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
+
+    @Slot()
+    def _handle_worker_finished(self):
+        self._engine_worker.clean_up()
+        self._engine_worker = None
+
+    def connect_subscriber_signals(self):
+        # register subscribers to relevant events
+        self.engine.publisher.register('exec_started', self.start_subscriber)
+        self.engine.publisher.register('exec_finished', self.finish_subscriber)
+        self.engine.publisher.register('log_event', self.log_subscriber)
+        self.start_subscriber.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
+
+    def disconnect_subscriber_signals(self):
+        self.start_subscriber.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(
+            self._toolbox.ui.graphicsView._run_leave_animation
+        )
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
+        # unregister subscribers
+        self.engine.publisher.unregister('exec_started', self.start_subscriber)
+        self.engine.publisher.unregister('exec_finished', self.finish_subscriber)
+        self.engine.publisher.unregister('log_event', self.log_subscriber)
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
@@ -584,16 +673,6 @@ class SpineToolboxProject(MetaObject):
     def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""
         node_successors = self.dag_handler.node_successors(dag)
-        reduced_node_successors = dict(node_successors)
-        reversed_ranking = []
-        while reduced_node_successors:
-            same_ranks = [node for node, successors in reduced_node_successors.items() if not successors]
-            for ranked_node in same_ranks:
-                del reduced_node_successors[ranked_node]
-                for node, successors in reduced_node_successors.items():
-                    reduced_node_successors[node] = [s for s in successors if s != ranked_node]
-            reversed_ranking.append(same_ranks)
-        ranks = {node: rank for rank, nodes in enumerate(reversed(reversed_ranking)) for node in nodes}
         if not node_successors:
             # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
@@ -604,6 +683,7 @@ class SpineToolboxProject(MetaObject):
             return
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
+        ranks = _ranks(node_successors)
         for item_name in node_successors:
             item = self._project_item_model.get_item(item_name).project_item
             resources = []
@@ -630,7 +710,7 @@ class SpineToolboxProject(MetaObject):
     def settings(self):
         return self._settings
 
-    @Slot(str, "QVariant", "QVariant")
+    @Slot(str, object, object)
     def _handle_dag_node_execution_finished(self, item_name, execution_direction, engine_state):
         """Handles successful execution of a dag node.
         Performs post successful execution actions in corresponding project item."""
@@ -649,3 +729,48 @@ class SpineToolboxProject(MetaObject):
             if items_successors is not None:
                 return [self._project_item_model.get_item(successor).project_item for successor in items_successors]
         return []
+
+    def _finish_project_item_construction(self, project_item):
+        """
+        Activates the given project item so it works with the given toolbox.
+        This is mainly intended to facilitate adding items back with redo.
+
+        Args:
+            project_item (ProjectItem)
+        """
+        icon = project_item.get_icon()
+        if icon is not None:
+            icon.activate()
+        else:
+            icon = self._toolbox.project_item_icon(project_item.item_type())
+            project_item.set_icon(icon)
+        properties_ui = self._toolbox.project_item_properties_ui(project_item.item_type())
+        project_item.set_properties_ui(properties_ui)
+        project_item.create_data_dir()
+        project_item.set_up()
+
+
+def _ranks(node_successors):
+    """
+    Calculates node ranks.
+
+    Args:
+        node_successors (dict): a mapping from successor name to a list of predecessor names
+
+    Returns:
+        dict: a mapping from node name to rank
+    """
+    node_predecessors = dict()
+    for predecessor, successors in node_successors.items():
+        node_predecessors.setdefault(predecessor, list())
+        for successor in successors:
+            node_predecessors.setdefault(successor, list()).append(predecessor)
+    ranking = []
+    while node_predecessors:
+        same_ranks = [node for node, predecessor in node_predecessors.items() if not predecessor]
+        for ranked_node in same_ranks:
+            del node_predecessors[ranked_node]
+            for node, successors in node_predecessors.items():
+                node_predecessors[node] = [s for s in successors if s != ranked_node]
+        ranking.append(same_ranks)
+    return {node: rank for rank, nodes in enumerate(ranking) for node in nodes}

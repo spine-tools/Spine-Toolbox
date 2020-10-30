@@ -287,6 +287,40 @@ class CreateMapping(QUndoCommand):
         )
 
 
+class DuplicateMapping(QUndoCommand):
+    """Duplicates an existing mapping."""
+
+    def __init__(self, source_table_name, import_mappings, row):
+        """
+        Args:
+            source_table_name (src): source table name
+            import_mappings (ImportMappings): mappings manager
+            row (int): row where the new mapping should be created
+        """
+        text = "duplicate mapping"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._import_mappings = import_mappings
+        self._mapping_name = None
+        self._row = row
+        self._stored_mapping_specification = None
+
+    def redo(self):
+        """Creates a new mapping at the given row in mappings list."""
+        if self._mapping_name is None:
+            self._mapping_name = self._import_mappings.duplicate_mapping(self._source_table_name, self._row)
+        else:
+            self._import_mappings.insert_mapping_specification(
+                self._source_table_name, self._mapping_name, self._row + 1, self._stored_mapping_specification
+            )
+
+    def undo(self):
+        """Deletes the created mapping."""
+        self._stored_mapping_specification = self._import_mappings.delete_mapping(
+            self._source_table_name, self._mapping_name
+        )
+
+
 class DeleteMapping(QUndoCommand):
     """Command to delete a mapping."""
 
@@ -393,7 +427,7 @@ class SetParameterType(QUndoCommand):
             mapping_specification_name (str): name of the mapping specification
             options_widget (ImportMappingOptions): options widget
             new_type (str): name of the new parameter type
-            previous_parameter (ParameterDefinitionMapping): previous parameter mapping
+            previous_parameter (ParameterMappingBase): previous parameter mapping
         """
         text = "parameter type change"
         super().__init__(text)
@@ -413,6 +447,35 @@ class SetParameterType(QUndoCommand):
         """Restores a parameter to its previous type"""
         mapping = parameter_mapping_from_dict(self._previous_parameter)
         self._options_widget.set_parameter_mapping(self._source_table_name, self._mapping_specification_name, mapping)
+
+
+class SetValueType(QUndoCommand):
+    """Command to change the value type of an item mapping."""
+
+    def __init__(self, source_table_name, mapping_specification_name, options_widget, new_type, old_type):
+        """
+        Args:
+            source_table_name (str): name of the source table
+            mapping_specification_name (str): name of the mapping specification
+            options_widget (ImportMappingOptions): options widget
+            new_type (str): name of the new value type
+            old_type (str): name of the old value type
+        """
+        text = "value type change"
+        super().__init__(text)
+        self._source_table_name = source_table_name
+        self._mapping_specification_name = mapping_specification_name
+        self._options_widget = options_widget
+        self._new_type = new_type
+        self._old_type = old_type
+
+    def redo(self):
+        """Changes a parameter's value type."""
+        self._options_widget.set_value_type(self._source_table_name, self._mapping_specification_name, self._new_type)
+
+    def undo(self):
+        """Restores a parameter to its previous value type"""
+        self._options_widget.set_value_type(self._source_table_name, self._mapping_specification_name, self._old_type)
 
 
 class SetReadStartRow(QUndoCommand):

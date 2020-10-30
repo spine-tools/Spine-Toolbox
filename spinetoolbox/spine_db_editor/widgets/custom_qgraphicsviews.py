@@ -63,7 +63,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.cross_hairs_items.clear()
         self.viewport().unsetCursor()
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
         self.create_context_menu()
 
@@ -161,6 +161,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         e.accept()
         self._spine_db_editor._handle_menu_graph_about_to_show()
         self._menu.exec_(e.globalPos())
+
+    def _compute_min_zoom(self):
+        return self.zoom_factor * self._items_fitting_zoom
 
     def _use_smooth_zoom(self):
         return self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false") == "true"

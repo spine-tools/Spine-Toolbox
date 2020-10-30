@@ -21,6 +21,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QEvent
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect
+from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate, ParameterValueListDelegate
 
 
 class EntityTreeView(CopyTreeView):
@@ -39,8 +40,9 @@ class EntityTreeView(CopyTreeView):
         self._add_relationship_classes_action = None
         self._add_relationships_action = None
         self._manage_relationships_action = None
+        self._show_entity_metadata_action = None
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
 
         Args:
@@ -173,6 +175,17 @@ class EntityTreeView(CopyTreeView):
         relationship_class_key = item.display_id
         self._spine_db_editor.show_manage_relationships_form(relationship_class_key=relationship_class_key)
 
+    def show_entity_metadata(self):
+        """Shows entity's metadata."""
+        db_map_ids = {}
+        for index in set(self._selected_indexes.get("object", {})) | set(
+            self._selected_indexes.get("relationship", {})
+        ):
+            item = self.model().item_from_index(index)
+            for db_map, id_ in item.db_map_ids.items():
+                db_map_ids.setdefault(db_map, list()).append(id_)
+        self._spine_db_editor.show_db_map_entity_metadata(db_map_ids)
+
     def contextMenuEvent(self, event):
         """Shows context menu.
 
@@ -282,6 +295,7 @@ class ObjectTreeView(EntityTreeView):
         self.duplicate_object_action = self._menu.addAction(
             self._spine_db_editor.ui.actionAdd_objects.icon(), "Duplicate object", self.duplicate_object
         )
+        self._show_entity_metadata_action = self._menu.addAction("Show entity metadata", self.show_entity_metadata)
         self._menu.addSeparator()
 
     def connect_signals(self):
@@ -323,7 +337,7 @@ class ObjectTreeView(EntityTreeView):
         self.expand(next_index)
 
     def duplicate_object(self):
-        """Duplicate the object at the current index using the connected Spine db editor."""
+        """Duplicates the object at the current index using the connected Spine db editor."""
         index = self.currentIndex()
         self._spine_db_editor.duplicate_object(index)
 
@@ -343,6 +357,7 @@ class RelationshipTreeView(EntityTreeView):
 
     def _add_middle_actions(self):
         self._add_relationship_actions()
+        self._show_entity_metadata_action = self._menu.addAction("Show entity metadata", self.show_entity_metadata)
 
     def update_actions_visibility(self, item):
         super().update_actions_visibility(item)
@@ -385,7 +400,7 @@ class ItemTreeView(CopyTreeView):
         """Updates the visible property of actions according to whether or not they apply to given item."""
         raise NotImplementedError()
 
-    def connect_data_store_form(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
         self.create_context_menu()
         self.connect_signals()
@@ -409,6 +424,53 @@ class ItemTreeView(CopyTreeView):
         self._menu.exec_(event.globalPos())
 
 
+class ToolFeatureTreeView(ItemTreeView):
+    """Custom QTreeView class for tools and features in SpineDBEditor.
+    """
+
+    def connect_spine_db_editor(self, spine_db_editor):
+        """see base class"""
+        super().connect_spine_db_editor(spine_db_editor)
+        delegate = ToolFeatureDelegate(self._spine_db_editor)
+        delegate.data_committed.connect(self.model().setData)
+        self.setItemDelegateForColumn(0, delegate)
+
+    def remove_selected(self):
+        """See base class."""
+        if not self.selectionModel().hasSelection():
+            return
+        db_map_typed_data_to_rm = {}
+        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
+        for db_item in self.model()._invisible_root_item.children:
+            db_map_typed_data_to_rm[db_item.db_map] = {
+                "feature": set(),
+                "tool": set(),
+                "tool_feature": set(),
+                "tool_feature_method": set(),
+            }
+            for feat_item in reversed(db_item.child(0).children[:-1]):
+                if feat_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["feature"].add(feat_item.id)
+            for tool_item in reversed(db_item.child(1).children[:-1]):
+                if tool_item in items:
+                    db_map_typed_data_to_rm[db_item.db_map]["tool"].add(tool_item.id)
+                    continue
+                tool_feat_root_item = tool_item.child(0)
+                for tool_feat_item in reversed(tool_feat_root_item.children):
+                    if tool_feat_item in items:
+                        db_map_typed_data_to_rm[db_item.db_map]["tool_feature"].add(tool_feat_item.id)
+                        continue
+                    tool_feat_meth_root_item = tool_feat_item.child(1)
+                    for tool_feat_meth_item in reversed(tool_feat_meth_root_item.children):
+                        if tool_feat_meth_item in items:
+                            db_map_typed_data_to_rm[db_item.db_map]["tool_feature_method"].add(tool_feat_meth_item.id)
+        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
+        self.selectionModel().clearSelection()
+
+    def update_actions_visibility(self, item):
+        """See base class."""
+
+
 class AlternativeScenarioTreeView(ItemTreeView):
     """Custom QTreeView class for the alternative scenario tree in SpineDBEditor."""
 
@@ -420,19 +482,17 @@ class AlternativeScenarioTreeView(ItemTreeView):
         self._selected_alternative_ids = dict()
         self.setMouseTracking(True)
 
-    def mouseMoveEvent(self, e):
-        super().mouseMoveEvent(e)
-        index = self.indexAt(e.pos())
-        if not index.isValid():
-            return
-        item = self.model().item_from_index(index)
-        cursor = Qt.OpenHandCursor if item.item_type == "alternative" else Qt.ArrowCursor
-        self.setCursor(cursor)
-
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+
+    def connect_spine_db_editor(self, spine_db_editor):
+        """see base class"""
+        super().connect_spine_db_editor(spine_db_editor)
+        delegate = AlternativeScenarioDelegate(self._spine_db_editor)
+        delegate.data_committed.connect(self.model().setData)
+        self.setItemDelegateForColumn(0, delegate)
 
     def _db_map_alt_ids_from_selection(self, selection):
         db_map_ids = {}
@@ -450,7 +510,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
             if index.column() != 0:
                 continue
             item = self.model().item_from_index(index)
-            if item.item_type == "scenario" and item.id:
+            if item.item_type == "scenario_alternative root":
                 db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
         return db_map_ids
 
@@ -489,9 +549,10 @@ class AlternativeScenarioTreeView(ItemTreeView):
                 if scen_item in items:
                     db_map_typed_data_to_rm[db_item.db_map]["scenario"].add(scen_item.id)
                     continue
-                curr_alt_id_list = scen_item.alternative_id_list
+                scen_alt_root_item = scen_item.scenario_alternative_root_item
+                curr_alt_id_list = scen_alt_root_item.alternative_id_list
                 new_alt_id_list = [
-                    id_ for alt_item, id_ in zip(scen_item.children, curr_alt_id_list) if alt_item not in items
+                    id_ for alt_item, id_ in zip(scen_alt_root_item.children, curr_alt_id_list) if alt_item not in items
                 ]
                 if new_alt_id_list != curr_alt_id_list:
                     item = {"id": scen_item.id, "alternative_id_list": ",".join([str(id_) for id_ in new_alt_id_list])}
@@ -512,6 +573,14 @@ class ParameterValueListTreeView(ItemTreeView):
         """Initialize the view."""
         super().__init__(parent=parent)
         self.open_in_editor_action = None
+
+    def connect_spine_db_editor(self, spine_db_editor):
+        """see base class"""
+        super().connect_spine_db_editor(spine_db_editor)
+        delegate = ParameterValueListDelegate(self._spine_db_editor)
+        delegate.data_committed.connect(self.model().setData)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+        self.setItemDelegateForColumn(0, delegate)
 
     def create_context_menu(self):
         """Creates a context menu for this view."""

@@ -40,7 +40,7 @@ class ProjectItemFactoryModel(QStandardItemModel):
         self.appendRow(new_item)
 
     def flags(self, index):
-        return super().flags(index) & ~Qt.ItemIsSelectable
+        return super().flags(index) & ~Qt.ItemIsSelectable & ~Qt.ItemIsEditable
 
     @staticmethod
     def is_index_draggable(index):
@@ -153,6 +153,7 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         else:
             self._undo_specs[row] = undo_spec
             self._specs[row] = spec
+            self.dataChanged.emit(self.index(row), self.index(row))
             return True
 
     def undo_update_specification(self, row):
@@ -160,6 +161,7 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         if undo_spec is None:
             return False
         self._specs[row] = undo_spec
+        self.dataChanged.emit(self.index(row), self.index(row))
         return True
 
     def specification(self, row):

@@ -394,7 +394,7 @@ class PivotTableModelBase(QAbstractTableModel):
             font = QFont()
             font.setBold(True)
             return font
-        if role == Qt.BackgroundColorRole:
+        if role == Qt.BackgroundRole:
             return self._color_data(index)
         if role == Qt.TextAlignmentRole:
             return self._text_alignment_data(index)
@@ -473,7 +473,7 @@ class TopLeftHeaderItem:
     def __init__(self, model):
         """
         Args:
-            model (PivotTableModel)
+            model (PivotTableModelBase)
         """
         self._model = model
 
@@ -633,8 +633,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "parameter_value"
 
-    def object_and_parameter_ids(self, index):
-        """Returns the object and parameter ids corresponding to the given data index.
+    def object_parameter_and_alternative_ids(self, index):
+        """Returns the object, parameter, and alternative ids corresponding to the given data index.
         Used by PivotTableView.
 
         Args:
@@ -643,13 +643,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         Returns:
             list(int): object ids
             int: parameter id
+            int: alternative id
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
         return header_ids[: self._object_class_count], header_ids[-2], header_ids[-1]
 
-    def object_and_parameter_names(self, index):
-        """Returns the object and parameter names corresponding to the given data index.
+    def object_parameter_and_alternative_names(self, index):
+        """Returns the object, parameter, and alternative names corresponding to the given data index.
         Used by PivotTableView.
 
         Args:
@@ -658,8 +659,9 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         Returns:
             list(str): object names
             str: parameter name
+            str: alternative name
         """
-        objects_ids, parameter_id, alternative_id = self.object_and_parameter_ids(index)
+        objects_ids, parameter_id, alternative_id = self.object_parameter_and_alternative_ids(index)
         object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
         parameter_name = self.db_mngr.get_item(self.db_map, "parameter_definition", parameter_id).get(
             "parameter_name", ""
@@ -679,7 +681,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         if not self.index_in_data(index):
             return ""
-        object_names, parameter_name, alternative_name = self.object_and_parameter_names(index)
+        object_names, parameter_name, alternative_name = self.object_parameter_and_alternative_names(index)
         return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name + " - " + alternative_name
 
     def column_name(self, column):
@@ -933,7 +935,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             return None
         if data[0][0] is None:
             return None
-        parameter_index = self._header_ids(row, column)[-2]
+        parameter_index = self._header_ids(row, column)[-3]
         return self.db_mngr.get_value_index(self.db_map, "parameter_value", data[0][0], parameter_index, role)
 
     @staticmethod

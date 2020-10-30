@@ -19,7 +19,7 @@ Contains the SpineDBEditor class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMenu
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMenu, QMessageBox
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from sqlalchemy.engine.url import URL, make_url
@@ -33,8 +33,10 @@ from spinedb_api import (
     SpineDBVersionError,
     Anyone,
 )
+from spinetoolbox.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spinetoolbox.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
-from .select_db_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
+from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -42,21 +44,18 @@ from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .db_session_history_dialog import DBSessionHistoryDialog
 from ...widgets.notification import NotificationStack
-from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ...helpers import (
-    busy_effect,
     ensure_window_is_on_screen,
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
     format_string_list,
-    open_url,
     focused_widget_has_callable,
     call_on_focused_widget,
+    busy_effect,
+    open_url,
 )
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
-from ...spine_io.exporters.excel import export_spine_database_to_xlsx
-from ...spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...spine_db_parcel import SpineDBParcel
 
 
@@ -98,9 +97,6 @@ class SpineDBEditorBase(QMainWindow):
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.notification_stack = NotificationStack(self)
-        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
-        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
-        self.ui.treeView_parameter_value_list.connect_data_store_form(self)
         self.silenced = False
         fm = QFontMetrics(QFont("", 0))
         self.default_row_height = 1.2 * fm.lineSpacing()
@@ -293,7 +289,11 @@ class SpineDBEditorBase(QMainWindow):
 
     def import_from_json(self, file_path):
         with open(file_path) as f:
-            data = json.load(f)
+            try:
+                data = json.load(f)
+            except json.decoder.JSONDecodeError as err:
+                self.msg_error.emit(f"File {file_path} is not a valid json: {err}")
+                return
         self.import_data(data)
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
@@ -447,7 +447,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def _open_sqlite_url(self, url, codename):
         """Opens sqlite url."""
-        self.db_mngr.show_data_store_form({url: codename}, None)
+        self.db_mngr.show_spine_db_editor({url: codename}, None)
 
     def _add_sqlite_url_to_project(self, url):
         """Adds sqlite url to project."""
@@ -473,8 +473,8 @@ class SpineDBEditorBase(QMainWindow):
         database = make_url(url).database
         url_as_dict = {"dialect": "sqlite", "database": database}
         if not data_store:
-            data_store_dict = {"name": name, "description": "", "x": 0, "y": 0, "url": url_as_dict}
-            project.add_project_items("Data Store", data_store_dict)
+            data_store_dict = {name: {"type": "Data Store", "description": "", "x": 0, "y": 0, "url": url_as_dict}}
+            project.add_project_items(data_store_dict)
             action = "added"
         elif data_store.update_url(**url_as_dict):
             action = "updated"
@@ -523,7 +523,7 @@ class SpineDBEditorBase(QMainWindow):
         """Exports given data into Excel file."""
         # NOTE: We import data into an in-memory Spine db and then export that to excel.
         url = URL("sqlite", database="")
-        db_map = DiffDatabaseMapping(url, _create_engine=create_new_spine_database)
+        db_map = DiffDatabaseMapping(url, create=True)
         import_data(db_map, **data_for_export)
         file_name = os.path.split(file_path)[1]
         try:
@@ -572,6 +572,50 @@ class SpineDBEditorBase(QMainWindow):
         for button in self.ui.dockWidget_exports.findChildren(OpenFileButton):
             self.ui.horizontalLayout_exports.removeWidget(button)
             button.hide()
+
+    @staticmethod
+    def _parse_db_map_metadata(db_map_metadata):
+        s = "<ul>"
+        for db_map_name, element_metadata in db_map_metadata.items():
+            s += f"<li>{db_map_name}<ul>"
+            for element_name, metadata in element_metadata.items():
+                s += f"<li>{element_name}<ul>"
+                for name, value in metadata.items():
+                    s += f"<li>{name}: {value}</li>"
+                s += "</ul>"
+            s += "</ul>"
+        s += "</ul>"
+        return s
+
+    @staticmethod
+    def _metadata_per_entity(db_map, entity_ids):
+        d = {}
+        sq = db_map.ext_entity_metadata_sq
+        for x in db_map.query(sq).filter(db_map.in_(sq.c.entity_id, entity_ids)):
+            d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
+        return d
+
+    def show_db_map_entity_metadata(self, db_map_ids):
+        metadata = {
+            db_map.codename: self._metadata_per_entity(db_map, entity_ids) for db_map, entity_ids in db_map_ids.items()
+        }
+        QMessageBox.information(self, "Entity metadata", self._parse_db_map_metadata(metadata))
+
+    @staticmethod
+    def _metadata_per_parameter_value(db_map, param_val_ids):
+        d = {}
+        sq = db_map.ext_parameter_value_metadata_sq
+        for x in db_map.query(sq).filter(db_map.in_(sq.c.parameter_value_id, param_val_ids)):
+            param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
+            d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
+        return d
+
+    def show_db_map_parameter_value_metadata(self, db_map_ids):
+        metadata = {
+            db_map.codename: self._metadata_per_parameter_value(db_map, param_val_ids)
+            for db_map, param_val_ids in db_map_ids.items()
+        }
+        QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))
 
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
@@ -673,9 +717,21 @@ class SpineDBEditorBase(QMainWindow):
         pass
 
     def receive_parameter_value_lists_fetched(self, db_map_data):
-        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
+        self.parameter_value_list_model.add_parameter_value_lists(db_map_data)
 
     def receive_parameter_tags_fetched(self, db_map_data):
+        pass
+
+    def receive_features_fetched(self, db_map_data):
+        pass
+
+    def receive_tools_fetched(self, db_map_data):
+        pass
+
+    def receive_tool_features_fetched(self, db_map_data):
+        pass
+
+    def receive_tool_feature_methods_fetched(self, db_map_data):
         pass
 
     def receive_scenarios_added(self, db_map_data):
@@ -707,10 +763,21 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_added(self, db_map_data):
         self.notify_items_changed("added", "parameter_value_list", db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_added(db_map_data)
 
     def receive_parameter_tags_added(self, db_map_data):
         self.notify_items_changed("added", "parameter_tag", db_map_data)
+
+    def receive_features_added(self, db_map_data):
+        self.notify_items_changed("added", "feature", db_map_data)
+
+    def receive_tools_added(self, db_map_data):
+        self.notify_items_changed("added", "tool", db_map_data)
+
+    def receive_tool_features_added(self, db_map_data):
+        self.notify_items_changed("added", "tool_feature", db_map_data)
+
+    def receive_tool_feature_methods_added(self, db_map_data):
+        self.notify_items_changed("added", "tool_feature_method", db_map_data)
 
     def receive_scenarios_updated(self, db_map_data):
         self.notify_items_changed("updated", "scenario", db_map_data)
@@ -738,10 +805,21 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter_value_list", db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_updated(db_map_data)
 
     def receive_parameter_tags_updated(self, db_map_data):
         self.notify_items_changed("updated", "parameter_tag", db_map_data)
+
+    def receive_features_updated(self, db_map_data):
+        self.notify_items_changed("updated", "feature", db_map_data)
+
+    def receive_tools_updated(self, db_map_data):
+        self.notify_items_changed("updated", "tool", db_map_data)
+
+    def receive_tool_features_updated(self, db_map_data):
+        self.notify_items_changed("updated", "tool_feature", db_map_data)
+
+    def receive_tool_feature_methods_updated(self, db_map_data):
+        self.notify_items_changed("updated", "tool_feature_method", db_map_data)
 
     def receive_parameter_definition_tags_set(self, db_map_data):
         self.notify_items_changed("set", "parameter_definition tag", db_map_data)
@@ -775,10 +853,21 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter_value_list", db_map_data)
-        self.parameter_value_list_model.receive_parameter_value_lists_removed(db_map_data)
 
     def receive_parameter_tags_removed(self, db_map_data):
         self.notify_items_changed("removed", "parameter_tag", db_map_data)
+
+    def receive_features_removed(self, db_map_data):
+        self.notify_items_changed("removed", "feature", db_map_data)
+
+    def receive_tools_removed(self, db_map_data):
+        self.notify_items_changed("removed", "tool", db_map_data)
+
+    def receive_tool_features_removed(self, db_map_data):
+        self.notify_items_changed("removed", "tool_feature", db_map_data)
+
+    def receive_tool_feature_methods_removed(self, db_map_data):
+        self.notify_items_changed("removed", "tool_feature_method", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -899,13 +988,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Horizontal)
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_alternative_scenario_tree, Qt.Horizontal
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_tool_feature_tree, Qt.Horizontal
         )
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical
+            self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
         )
-        self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_tag, Qt.Vertical
+        )
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
@@ -926,12 +1018,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
         docks = [
-            self.ui.dockWidget_alternative_scenario_tree,
+            self.ui.dockWidget_tool_feature_tree,
             self.ui.dockWidget_parameter_value_list,
+            self.ui.dockWidget_alternative_scenario_tree,
             self.ui.dockWidget_parameter_tag,
         ]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.4 * height, 0.4 * height, 0.2 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.3 * height, 0.1 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot(bool)
@@ -941,7 +1034,10 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical)
+        self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.dockWidget_tool_feature_tree, Qt.Vertical)
+        self.splitDockWidget(
+            self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
+        )
         self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_object_parameter_value.hide()
         self.ui.dockWidget_object_parameter_definition.hide()
@@ -967,8 +1063,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical
+            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Vertical
         )
+        self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
         self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
         self.tabify_and_raise(
             [

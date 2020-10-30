@@ -16,6 +16,7 @@ QUndoCommand subclasses for modifying the project.
 :date:   12.2.2020
 """
 
+
 from PySide2.QtWidgets import QUndoCommand
 
 
@@ -26,6 +27,55 @@ class SpineToolboxCommand(QUndoCommand):
         closing the project without saving changes.
         """
         return False
+
+
+class SetItemSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, item, specification):
+        """Command to set the specification for a Tool.
+
+        Args:
+            item (ProjectItem): the Item
+            specification (ProjectItemSpecification): the new spec
+        """
+        super().__init__()
+        self.item = item
+        self.redo_specification = specification
+        self.setText(f"set specification of {item.name}")
+
+    def redo(self):
+        self.item.do_set_specification(self.redo_specification)
+
+    def undo(self):
+        self.item.undo_set_specification()
+
+
+class MoveIconCommand(SpineToolboxCommand):
+    def __init__(self, graphics_item):
+        """Command to move icons in the Design view.
+
+        Args:
+            graphics_item (ProjectItemIcon): the icon
+        """
+        super().__init__()
+        self.graphics_item = graphics_item
+        self.previous_pos = {x: x._previous_pos for x in graphics_item.icon_group}
+        self.current_pos = {x: x._current_pos for x in graphics_item.icon_group}
+        if len(graphics_item.icon_group) == 1:
+            self.setText(f"move {list(graphics_item.icon_group)[0].name()}")
+        else:
+            self.setText("move multiple items")
+
+    def redo(self):
+        for item, current_post in self.current_pos.items():
+            item.setPos(current_post)
+        self.graphics_item.update_links_geometry()
+        self.graphics_item.notify_item_move()
+
+    def undo(self):
+        for item, previous_pos in self.previous_pos.items():
+            item.setPos(previous_pos)
+        self.graphics_item.update_links_geometry()
+        self.graphics_item.notify_item_move()
 
 
 class SetProjectNameCommand(SpineToolboxCommand):
@@ -71,23 +121,22 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, item_type, items, set_selected=False, verbosity=True):
+    def __init__(self, project, items_dict, set_selected=False, verbosity=True):
         """Command to add items.
 
         Args:
             project (SpineToolboxProject): the project
-            item_type (str): The factory name
-            items (Iterable): one or more dict of items to add
+            items_dict (dict): a mapping from item name to item dict
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
         super().__init__()
         self.project = project
-        self.project_tree_items = project.make_project_tree_items(item_type, items)
+        self.project_tree_items = project.make_project_tree_items(items_dict)
         self.set_selected = set_selected
         self.verbosity = verbosity
-        if len(items) == 1:
-            self.setText(f"add {items[0]['name']}")
+        if len(items_dict) == 1:
+            self.setText(f"add {next(iter(items_dict))}")
         else:
             self.setText("add multiple items")
 
@@ -238,55 +287,6 @@ class RemoveLinkCommand(SpineToolboxCommand):
 
     def undo(self):
         self.graphics_view._add_link(self.link)
-
-
-class MoveIconCommand(SpineToolboxCommand):
-    def __init__(self, graphics_item):
-        """Command to move icons in the Design view.
-
-        Args:
-            graphics_item (ProjectItemIcon): the icon
-        """
-        super().__init__()
-        self.graphics_item = graphics_item
-        self.previous_pos = {x: x._previous_pos for x in graphics_item.icon_group}
-        self.current_pos = {x: x._current_pos for x in graphics_item.icon_group}
-        if len(graphics_item.icon_group) == 1:
-            self.setText(f"move {list(graphics_item.icon_group)[0]._project_item.name}")
-        else:
-            self.setText("move multiple items")
-
-    def redo(self):
-        for item, current_post in self.current_pos.items():
-            item.setPos(current_post)
-        self.graphics_item.update_links_geometry()
-        self.graphics_item.notify_item_move()
-
-    def undo(self):
-        for item, previous_pos in self.previous_pos.items():
-            item.setPos(previous_pos)
-        self.graphics_item.update_links_geometry()
-        self.graphics_item.notify_item_move()
-
-
-class SetItemSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, item, specification):
-        """Command to set the specification for a Tool.
-
-        Args:
-            item (ProjectItem): the Item
-            specification (ProjectItemSpecification): the new spec
-        """
-        super().__init__()
-        self.item = item
-        self.redo_specification = specification
-        self.setText(f"set specification of {item.name}")
-
-    def redo(self):
-        self.item.do_set_specification(self.redo_specification)
-
-    def undo(self):
-        self.item.undo_set_specification()
 
 
 class AddSpecificationCommand(SpineToolboxCommand):

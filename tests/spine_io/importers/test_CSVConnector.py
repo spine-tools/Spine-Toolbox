@@ -26,10 +26,10 @@ from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 class TestCSVConnector(unittest.TestCase):
     @staticmethod
     def _write_basic_csv(file_name):
-        with open(file_name, "w", newline='') as csv_file:
+        with open(file_name, "w", newline="") as csv_file:
             writer = csv.writer(csv_file)
-            writer.writerow(['1a', '1b', '1c'])
-            writer.writerow(['2a', '2b', '2c'])
+            writer.writerow(["1a", "1b", "1c"])
+            writer.writerow(["2a", "2b", "2c"])
 
     def test_get_tables(self):
         with TemporaryDirectory() as data_directory:
@@ -70,9 +70,9 @@ class TestCSVConnector(unittest.TestCase):
             data, header = connector.get_data("", options)
             self.assertTrue(not header)
             self.assertEqual(len(data), 2)
-            self.assertEqual(data[0], ['1a', '1b', '1c'])
-            self.assertEqual(data[1], ['2a', '2b', '2c'])
+            self.assertEqual(data[0], ["1a", "1b", "1c"])
+            self.assertEqual(data[1], ["2a", "2b", "2c"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

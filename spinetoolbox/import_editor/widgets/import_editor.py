@@ -20,13 +20,13 @@ from copy import deepcopy
 from PySide2.QtCore import QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
 from spinedb_api import ObjectClassMapping
+from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
 from .options_widget import OptionsWidget
 from ..commands import PasteMappings, PasteOptions
 from ..mvcmodels.mapping_list_model import MappingListModel
 from ..mvcmodels.mapping_specification_model import MappingSpecificationModel
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 from ..mvcmodels.source_table_list_model import SourceTableItem, SourceTableListModel
-from ...spine_io.type_conversion import value_to_convert_spec
 from ...widgets.custom_menus import CustomContextMenu
 
 
@@ -331,6 +331,8 @@ class ImportEditor(QObject):
     @Slot()
     def _update_display_row_types(self):
         mapping_specification = self._preview_table_model.mapping_specification()
+        if mapping_specification is None:
+            return
         if mapping_specification.last_pivot_row == -1:
             pivoted_rows = []
         else:
@@ -496,7 +498,7 @@ class MappingTableMenu(QMenu):
             ("Map column to...", "Column", col),
             ("Map header to...", "Column Header", col),
             ("Map row to...", "Row", row),
-            ("Map all headers to...", "Headers", -1),
+            ("Map all headers to...", "Headers", 0),
         ]
 
         for title, map_type, value in menus:
