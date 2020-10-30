@@ -65,10 +65,9 @@ class ProjectUpgrader:
             return False
         if v < LATEST_PROJECT_VERSION:
             # Back up project.json file before upgrading
-            if not self.backup_project_file(project_dir):
+            if not self.backup_project_file(project_dir, v):
                 self._toolbox.msg_error.emit("Upgrading project failed")
                 return False
-            self._toolbox.msg_warning.emit("Backed up project.json -> project.json.bak")
             upgraded_dict = self.upgrade_to_latest(v, project_dict, project_dir)
             # Force save project dict to project.json
             if not self.force_save(upgraded_dict, project_dir):
@@ -586,15 +585,17 @@ class ProjectUpgrader:
             return False
         return True
 
-    def backup_project_file(self, project_dir):
+    def backup_project_file(self, project_dir, v):
         """Makes a backup copy of project.json file."""
         src = os.path.join(project_dir, ".spinetoolbox", PROJECT_FILENAME)
-        dst = os.path.join(project_dir, ".spinetoolbox", "project.json.bak")
+        backup_filename = "project.json.bak" + str(v)
+        dst = os.path.join(project_dir, ".spinetoolbox", backup_filename)
         try:
             shutil.copyfile(src, dst)
         except OSError:
             self._toolbox.msg_error.emit(f"Making a backup of '{src}' failed. Check permissions.")
             return False
+        self._toolbox.msg_warning.emit(f"Backed up project.json -> {backup_filename}")
         return True
 
     def force_save(self, p, project_dir):
