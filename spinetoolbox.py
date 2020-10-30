@@ -20,4 +20,5 @@ Starts Spine Toolbox.
 if __name__ == "__main__":
     import sys
     from spinetoolbox.main import main
+
     sys.exit(main())

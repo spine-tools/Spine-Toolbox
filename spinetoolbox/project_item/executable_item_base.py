@@ -60,6 +60,24 @@ class ExecutableItemBase:
             return self._execute_forward(resources)
         return self._execute_backward(resources)
 
+    def skip_execution(self, resources, direction):
+        """
+        Skip executing the item.
+
+        This method is called when the item is not selected for execution. Only lightweight bookkeeping
+        or processing should be done in this case, e.g. forward input resources.
+
+        Subclasses can implement :func:`ExecutableItemBase._skip_forward` and/or
+        :func:`ExecutableItemBase._skip_backward` to do the appropriate work in each direction.
+
+        Args:
+            resources (list of ProjectItemResource): available resources
+            direction (ExecutionDirection): direction of execution
+        """
+        {ExecutionDirection.FORWARD: self._skip_forward, ExecutionDirection.BACKWARD: self._skip_backward}[direction](
+            resources
+        )
+
     @staticmethod
     def item_type():
         """Returns the item's type identifier string."""
@@ -95,12 +113,23 @@ class ExecutableItemBase:
         The default implementation just returns True.
 
         Args:
-            resources (list): a list of ProjectItemResources available for execution
+            resources (list of ProjectItemResource): resources available for execution
 
         Returns:
             bool: True if execution succeeded, False otherwise
         """
         return True
+
+    # pylint: disable=no-self-use
+    def _skip_forward(self, resources):
+        """
+        Skips this items execution in the forward direction.
+
+        The default implementation does nothing.
+
+        Args:
+            resources (list of ProjectItemResource): available resources
+        """
 
     # pylint: disable=no-self-use
     def _execute_backward(self, resources):
@@ -110,12 +139,23 @@ class ExecutableItemBase:
         The default implementation just returns True.
 
         Args:
-            resources (list): a list of ProjectItemResources available for execution
+            resources (list of ProjectItemResource): resources available for execution
 
         Returns:
             bool: True if execution succeeded, False otherwise
         """
         return True
+
+    # pylint: disable=no-self-use
+    def _skip_backward(self, resources):
+        """
+        Skips this items execution in the backward direction.
+
+        The default implementation does nothing.
+
+        Args:
+            resources (list of ProjectItemResource): available resources
+        """
 
     # pylint: disable=no-self-use
     def _output_resources_forward(self):
