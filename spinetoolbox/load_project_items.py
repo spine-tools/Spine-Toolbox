@@ -80,6 +80,7 @@ def _install_spine_items(tmpdirname):
         "-m",
         "pip",
         "install",
+        "--upgrade",
         "--find-links",
         tmpdirname,
         "spine_items",
