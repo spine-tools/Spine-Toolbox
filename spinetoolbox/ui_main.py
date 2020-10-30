@@ -37,7 +37,7 @@ from PySide2.QtWidgets import (
 )
 from spinetoolbox.graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
-from .load_project_items import load_item_specification_factories, load_project_items, upgrade_project_items
+from .load_project_items import load_item_specification_factories, load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import (
     ProjectItemFactoryModel,

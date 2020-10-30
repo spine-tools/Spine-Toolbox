@@ -153,7 +153,7 @@ class SpineDBCommand(AgedUndoCommand):
         "entity_group": "add_entity_groups",
         "parameter_definition": "add_parameter_definitions",
         "parameter_definition_tag": "add_parameter_definition_tags",
-        "parameter_value": "add_parameter_values",
+        "parameter_value": "add_checked_parameter_values",
         "parameter_value_list": "add_wide_parameter_value_lists",
         "parameter_tag": "add_parameter_tags",
         "alternative": "add_alternatives",
@@ -189,7 +189,7 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship_class": "update_wide_relationship_classes",
         "relationship": "update_wide_relationships",
         "parameter_definition": "update_parameter_definitions",
-        "parameter_value": "update_parameter_values",
+        "parameter_value": "update_checked_parameter_values",
         "parameter_value_list": "update_wide_parameter_value_lists",
         "parameter_tag": "update_parameter_tags",
         "alternative": "update_alternatives",
@@ -366,10 +366,10 @@ class AddItemsCommand(SpineDBCommand):
         return {_format_item(self.item_type, item): [] for item in self.redo_db_map_data[self.db_map]}
 
 
-class AddCheckedParameterValuesCommand(AddItemsCommand):
+class CheckAddParameterValuesCommand(AddItemsCommand):
     def __init__(self, db_mngr, db_map, data, parent=None):
         super().__init__(db_mngr, db_map, data, "parameter_value", parent=parent)
-        self.method_name = "add_checked_parameter_values"
+        self.method_name = "add_parameter_values"
 
 
 class UpdateItemsCommand(SpineDBCommand):
@@ -412,10 +412,10 @@ class UpdateItemsCommand(SpineDBCommand):
         return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map]}
 
 
-class UpdateCheckedParameterValuesCommand(UpdateItemsCommand):
+class CheckUpdateParameterValuesCommand(UpdateItemsCommand):
     def __init__(self, db_mngr, db_map, data, parent=None):
         super().__init__(db_mngr, db_map, data, "parameter_value", parent=parent)
-        self.method_name = "update_checked_parameter_values"
+        self.method_name = "update_parameter_values"
 
 
 class RemoveItemsCommand(SpineDBCommand):

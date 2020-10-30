@@ -18,7 +18,7 @@ A tree model for parameter_value lists.
 
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QIcon
-from spinedb_api import to_database
+from spinedb_api import to_database, from_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from .tree_model_base import TreeModelBase
 from .tree_item_utility import (
@@ -120,8 +120,8 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
 
     def update_value_list_in_db(self, child, value):
         value_list = self._new_value_list(child.child_number(), value)
-        db_item = dict(id=self.id, value_list=value_list)
-        self.db_mngr.update_parameter_value_lists({self.db_map: [db_item]})
+        data = [(self.name, from_database(value)) for value in value_list]
+        self.db_mngr.import_data({self.db_map: {"parameter_value_lists": data}})
 
     def add_to_db(self, child, value):
         """Add item to db."""

@@ -47,9 +47,9 @@ from .spine_db_commands import (
     AgedUndoStack,
     AgedUndoCommand,
     AddItemsCommand,
-    AddCheckedParameterValuesCommand,
+    CheckAddParameterValuesCommand,
     UpdateItemsCommand,
-    UpdateCheckedParameterValuesCommand,
+    CheckUpdateParameterValuesCommand,
     RemoveItemsCommand,
 )
 from .widgets.commit_dialog import CommitDialog
@@ -1307,7 +1307,7 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_definition"))
 
     def add_parameter_values(self, db_map_data):
-        """Adds parameter values to db.
+        """Adds parameter values to db without checking integrity.
 
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
@@ -1315,14 +1315,14 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_value"))
 
-    def add_checked_parameter_values(self, db_map_data):
-        """Adds parameter values in db without checking integrity.
+    def check_add_parameter_values(self, db_map_data):
+        """Adds parameter values in db *with* checking integrity.
 
         Args:
             db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddCheckedParameterValuesCommand(self, db_map, data))
+            self.undo_stack[db_map].push(CheckAddParameterValuesCommand(self, db_map, data))
 
     def add_parameter_value_lists(self, db_map_data):
         """Adds parameter_value lists to db.
@@ -1442,7 +1442,7 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_definition"))
 
     def update_parameter_values(self, db_map_data):
-        """Updates parameter values in db.
+        """Updates parameter values in db without checking integrity.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
@@ -1450,14 +1450,14 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_value"))
 
-    def update_checked_parameter_values(self, db_map_data):
-        """Updates parameter values in db without checking integrity.
+    def check_update_parameter_values(self, db_map_data):
+        """Updates parameter values in db *with* checking integrity.
 
         Args:
             db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateCheckedParameterValuesCommand(self, db_map, data))
+            self.undo_stack[db_map].push(CheckUpdateParameterValuesCommand(self, db_map, data))
 
     def update_expanded_parameter_values(self, db_map_data):
         """Updates expanded parameter values in db without checking integrity.

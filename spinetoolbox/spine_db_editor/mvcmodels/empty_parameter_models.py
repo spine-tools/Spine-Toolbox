@@ -278,7 +278,7 @@ class EmptyParameterValueModel(
                 if err:
                     db_map_error_log.setdefault(db_map, []).extend(err)
         if any(db_map_param_val.values()):
-            self.db_mngr.add_parameter_values(db_map_param_val)
+            self.db_mngr.check_add_parameter_values(db_map_param_val)
         if db_map_error_log:
             self.db_mngr.error_msg(db_map_error_log)
 
