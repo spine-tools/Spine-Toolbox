@@ -55,6 +55,14 @@ class ProjectUpgrader:
             dict: Latest version of the project info dictionary
         """
         v = project_dict["project"]["version"]
+        n = project_dict["project"]["name"]
+        if v > LATEST_PROJECT_VERSION:
+            # User is trying to load a more recent project than this version of Toolbox can handle
+            self._toolbox.msg_warning.emit(f"Opening project <b>{n}</b> failed. The project's version is {v}, while "
+                                           f"this version of Spine Toolbox supports project versions up to and "
+                                           f"including {LATEST_PROJECT_VERSION}. To open this project, you should "
+                                           f"upgrade Spine Toolbox")
+            return False
         if v < LATEST_PROJECT_VERSION:
             # Back up project.json file before upgrading
             if not self.backup_project_file(project_dir):
