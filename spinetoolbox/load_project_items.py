@@ -64,7 +64,7 @@ def _download_spine_items(tmpdirname):
         "git+https://github.com/Spine-project/spine-items.git@master",
     ]
     try:
-        subprocess.run(args, timeout=30, check=True)
+        subprocess.run(args, check=True)
     except subprocess.CalledProcessError:
         pass
 
@@ -85,7 +85,7 @@ def _install_spine_items(tmpdirname):
         "spine_items",
     ]
     try:
-        subprocess.run(args, timeout=30, check=True)
+        subprocess.run(args, check=True)
         return True
     except subprocess.CalledProcessError:
         return False
