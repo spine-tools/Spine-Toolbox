@@ -458,8 +458,9 @@ class ToolboxUI(QMainWindow):
             self.ui.textBrowser_process_output.clear()
         # Check if project dictionary needs to be upgraded
         project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
-        # Check that project info is valid
-        if not ProjectUpgrader(self).is_valid(LATEST_PROJECT_VERSION, project_info):
+        if not project_info:
+            return False
+        if not ProjectUpgrader(self).is_valid(LATEST_PROJECT_VERSION, project_info):  # Check project info validity
             self.msg_error.emit(f"Opening project in directory {project_dir} failed")
             return False
         # Parse project info

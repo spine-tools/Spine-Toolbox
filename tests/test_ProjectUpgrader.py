@@ -26,6 +26,7 @@ from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_upgrader import ProjectUpgrader
 from spinetoolbox.resources_icons_rc import qInitResources
 from .mock_helpers import create_toolboxui
+from spinetoolbox.config import LATEST_PROJECT_VERSION
 
 
 class TestProjectUpgrader(unittest.TestCase):
@@ -105,6 +106,12 @@ class TestProjectUpgrader(unittest.TestCase):
                 mock_force_save.assert_called_once()
                 self.assertTrue(pu.is_valid(2, proj_dict_v2))
 
+    def test_upgrade_with_too_recent_project_version(self):
+        """Tests that projects with too recent versions are not opened."""
+        project_dict = make_v2_project_dict()
+        project_dict["project"]["version"] = LATEST_PROJECT_VERSION + 1
+        pu = ProjectUpgrader(self.toolbox)
+        self.assertFalse(pu.upgrade(project_dict, project_dir=""))
 
 def make_no_version_project_dict():
     """Returns an example project dictionary as it was in legacy .proj files."""
