@@ -33,6 +33,7 @@ class SpineEngineWorker(QObject):
         super().__init__()
         self._engine = engine
         self._toolbox = toolbox
+        self._executing_item_name = None
         self._engine.publisher.register('exec_started', self, self._handle_dag_node_execution_started)
         self._engine.publisher.register('exec_finished', self, self._handle_dag_node_execution_finished)
         self._engine.publisher.register('msg', self, self._handle_msg)
@@ -85,6 +86,7 @@ class SpineEngineWorker(QObject):
 
     def _do_handle_dag_node_execution_started(self, item_name, direction):
         """Starts item icon animation when executing forward."""
+        self._executing_item_name = item_name
         self._dag_node_execution_started.emit(item_name, direction)
 
     def _handle_dag_node_execution_finished(self, data):
@@ -110,6 +112,8 @@ class SpineEngineWorker(QObject):
         self.finished.emit()
 
     def clean_up(self):
+        if self._executing_item_name:
+            self._dag_node_execution_finished.emit(self._executing_item_name, None, None)
         self._engine.publisher.unregister('exec_started', self)
         self._engine.publisher.unregister('exec_finished', self)
         self._engine.publisher.unregister('msg', self)
