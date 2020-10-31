@@ -647,6 +647,9 @@ class SpineToolboxProject(MetaObject):
     def stop(self):
         """Stops execution. Slot for the main window Stop tool button in the toolbar."""
         if self._execution_stopped:
+            if self._engine_worker:
+                self._logger.msg_warning.emit("Waiting for the last item to finish, execution will stop right after")
+                return
             self._logger.msg.emit("No execution in progress")
             return
         self._logger.msg.emit("Stopping...")
