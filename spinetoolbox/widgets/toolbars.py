@@ -43,6 +43,10 @@ class MainToolBar(QToolBar):
         self.add_project_item_list_view()
         self.add_project_item_spec_list_view()
         self.add_execute_buttons()
+        self.project_item_spec_list_view.doubleClicked.connect(self._toolbox.edit_specification)
+        self.project_item_spec_list_view.customContextMenuRequested.connect(
+            self._toolbox.show_specification_context_menu
+        )
 
     def add_project_item_list_view(self):
         self.project_item_list_view.setModel(self._toolbox.project_item_factory_model)

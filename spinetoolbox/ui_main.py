@@ -693,30 +693,6 @@ class ToolboxUI(QMainWindow):
         self.main_toolbar.project_item_spec_list_view.setModel(self.specification_model)
         # Set model to Tool project item combo box
         self.specification_model_changed.emit()
-        # Note: If ProjectItemSpecFactoryModel signals are in use, they should be reconnected here.
-        # Reconnect ProjectItemSpecFactoryModel and QListView signals. Make sure that signals are connected only once.
-        n_recv_sig1 = self.main_toolbar.project_item_spec_list_view.receivers(
-            SIGNAL("doubleClicked(QModelIndex)")
-        )  # nr of receivers
-        if n_recv_sig1 == 0:
-            # logging.debug("Connecting doubleClicked signal for QListView")
-            self.main_toolbar.project_item_spec_list_view.doubleClicked.connect(self.edit_specification)
-        elif n_recv_sig1 > 1:  # Check that this never gets over 1
-            logging.error("Number of receivers for QListView doubleClicked signal is now: %d", n_recv_sig1)
-        else:
-            pass  # signal already connected
-        n_recv_sig2 = self.main_toolbar.project_item_spec_list_view.receivers(
-            SIGNAL("customContextMenuRequested(QPoint)")
-        )
-        if n_recv_sig2 == 0:
-            # logging.debug("Connecting customContextMenuRequested signal for QListView")
-            self.main_toolbar.project_item_spec_list_view.customContextMenuRequested.connect(
-                self.show_specification_context_menu
-            )
-        elif n_recv_sig2 > 1:  # Check that this never gets over 1
-            logging.error("Number of receivers for QListView customContextMenuRequested signal is now: %d", n_recv_sig2)
-        else:
-            pass  # signal already connected
         if n_specs == 0:
             self.msg_warning.emit("Project has no specifications")
 
@@ -797,14 +773,9 @@ class ToolboxUI(QMainWindow):
         """Clean UI to make room for a new or opened project."""
         if not self.project():
             return
-        item_names = self.project_item_model.item_names()
-        for name in item_names:
-            self.project().do_remove_item(name)
         self.activate_no_selection_tab()  # Clear properties widget
-        if self._project:
-            self._project.deleteLater()
+        self._project.deleteLater()
         self._project = None
-        self.specification_model = None
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
 
     def undo_critical_commands(self):
