@@ -25,6 +25,8 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
+from spinetoolbox.widgets.custom_combobox import OpenProjectDialogComboBox
+
 from spinetoolbox import resources_icons_rc
 
 class Ui_Dialog(object):
@@ -75,7 +77,7 @@ class Ui_Dialog(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
-        self.comboBox_current_path = QComboBox(Dialog)
+        self.comboBox_current_path = OpenProjectDialogComboBox(Dialog)
         self.comboBox_current_path.setObjectName(u"comboBox_current_path")
         self.comboBox_current_path.setContextMenuPolicy(Qt.CustomContextMenu)
         self.comboBox_current_path.setEditable(True)

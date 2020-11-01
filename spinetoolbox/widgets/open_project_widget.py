@@ -68,8 +68,6 @@ class OpenProjectDialog(QDialog):
         self.validator = DirValidator()
         self.ui.comboBox_current_path.setValidator(self.validator)
         self.ui.comboBox_current_path.setInsertPolicy(QComboBox.NoInsert)
-        # Override QCombobox keyPressEvent to catch the Enter key press
-        self.ui.comboBox_current_path.keyPressEvent = self.combobox_key_press_event
         # Read recent project directories and populate combobox
         recents = self._toolbox.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
         if recents:
@@ -132,48 +130,6 @@ class OpenProjectDialog(QDialog):
         self.ui.treeView_file_system.scrollTo(current_index, hint=QAbstractItemView.PositionAtTop)
         self.ui.treeView_file_system.resizeColumnToContents(0)
         self.set_selected_path(current_index)
-
-    def combobox_key_press_event(self, e):
-        """Interrupts Enter and Return key presses when QComboBox is in focus.
-        This is needed to prevent showing the 'Not a valid Spine Toolbox project'
-        Notifier every time Enter is pressed.
-
-        Args:
-            e (QKeyEvent): Received key press event.
-        """
-        if e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
-            state = self.ui.comboBox_current_path.validator().state
-            fm_current_index = self.ui.treeView_file_system.currentIndex()
-            if state == QValidator.Intermediate:
-                # Remove path from qsettings
-                self.remove_directory_from_recents(os.path.abspath(self.selection()), self._toolbox.qsettings())
-                # Remove path from combobox as well
-                cb_index = self.ui.comboBox_current_path.findText(os.path.abspath(self.selection()))
-                if cb_index == -1:
-                    pass
-                    # logging.error("{0} not found in combobox")
-                else:
-                    self.ui.comboBox_current_path.removeItem(cb_index)
-                notification = Notification(self, "Path does not exist")
-                notification.show()
-            elif state == QValidator.Acceptable:
-                p = self.ui.comboBox_current_path.currentText()
-                fm_index = self.file_model.index(p)
-                if not fm_current_index == fm_index:
-                    self.ui.treeView_file_system.collapseAll()
-                    self.ui.treeView_file_system.setCurrentIndex(fm_index)
-                    self.ui.treeView_file_system.expand(fm_index)
-                    self.ui.treeView_file_system.scrollTo(fm_index, hint=QAbstractItemView.PositionAtTop)
-                else:
-                    project_json_fp = os.path.abspath(os.path.join(self.selection(), ".spinetoolbox", "project.json"))
-                    if os.path.isfile(project_json_fp):
-                        self.done(QDialog.Accepted)
-            else:
-                # INVALID (or None). Happens if Enter key is pressed and the combobox text has not been edited yet.
-                pass
-            e.accept()
-        else:
-            QComboBox.keyPressEvent(self.ui.comboBox_current_path, e)
 
     @Slot()
     def validator_state_changed(self):

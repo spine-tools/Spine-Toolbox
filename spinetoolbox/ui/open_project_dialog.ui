@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
+# Copyright (C) 2017-2020 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -91,7 +91,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QComboBox" name="comboBox_current_path">
+    <widget class="OpenProjectDialogComboBox" name="comboBox_current_path">
      <property name="contextMenuPolicy">
       <enum>Qt::CustomContextMenu</enum>
      </property>
@@ -144,6 +144,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>OpenProjectDialogComboBox</class>
+   <extends>QComboBox</extends>
+   <header>spinetoolbox/widgets/custom_combobox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>comboBox_current_path</tabstop>
   <tabstop>treeView_file_system</tabstop>
