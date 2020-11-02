@@ -19,6 +19,7 @@ Provides the main() function.
 from argparse import ArgumentParser
 import sys
 import logging
+import os
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
 from .spinedb_api_version_check import spinedb_api_version_check
@@ -37,7 +38,18 @@ if not spine_engine_version_check():
 
 from .load_project_items import upgrade_project_items
 
-upgrade_project_items()
+_skip_project_items_upgrade = False
+if sys.argv[-1] == "--skip-project-items-upgrade":
+    _skip_project_items_upgrade = True
+    sys.argv.pop()
+
+if not _skip_project_items_upgrade and upgrade_project_items():
+    # Restart, otherwise the newer version is not picked.
+    # Not even importlib.reload(site) or importlib.invalidate_caches() are sufficient,
+    # because of .pyc files.
+    python = sys.executable
+    os.execl(python, python, *sys.argv, "--skip-project-items-upgrade")
+
 from .ui_main import ToolboxUI
 from .version import __version__
 from .headless import headless_main

@@ -17,7 +17,7 @@ Spine Toolbox application main file.
 """
 
 import sys
-from .main import main
+from spinetoolbox.main import main
 
 return_code = main()
 sys.exit(return_code)

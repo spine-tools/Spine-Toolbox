@@ -197,3 +197,17 @@ class ExecutableItemBase:
             ExecutableItemBase: deserialized executable item
         """
         raise NotImplementedError()
+
+    @staticmethod
+    def _get_specification(name, item_type, specification_name, specifications, logger):
+        if not specification_name:
+            logger.msg_error.emit(f"<b>{name}<b>: No specification defined. Unable to execute.")
+            return None
+        try:
+            return specifications[item_type][specification_name]
+        except KeyError as missing:
+            if missing == item_type:
+                logger.msg_error.emit(f"No specifications defined for item type '{item_type}'.")
+                return None
+            logger.msg_error.emit(f"Cannot find data specification '{missing}'.")
+            return None

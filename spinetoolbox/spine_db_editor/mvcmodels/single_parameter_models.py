@@ -378,7 +378,7 @@ class SingleParameterValueMixin(ConvertToDBMixin):
             if err:
                 error_log += err
         if param_vals:
-            self.db_mngr.update_parameter_values({self.db_map: param_vals})
+            self.db_mngr.check_update_parameter_values({self.db_map: param_vals})
         if error_log:
             self.db_mngr.error_msg({self.db_map: error_log})
 
