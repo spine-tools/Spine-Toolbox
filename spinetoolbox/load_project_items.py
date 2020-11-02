@@ -15,7 +15,6 @@ Functions to load project item modules.
 :author: A. Soininen (VTT)
 :date:   29.4.2020
 """
-import site
 import pathlib
 import importlib
 import importlib.util
@@ -25,8 +24,8 @@ import sys
 import pkgutil
 import tempfile
 import zipfile
-from .project_item.project_item_info import ProjectItemInfo
-from .project_item.project_item_factory import ProjectItemFactory
+from spine_engine.project_item.project_item_info import ProjectItemInfo
+from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from .config import PREFERRED_SPINE_ITEMS_VERSION
 from .version import __version__ as curr_toolbox_version
 

@@ -46,34 +46,7 @@ else:
 PLUGINS_PATH = os.path.abspath(os.path.join(_program_root, "plugins"))
 ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/latest"
 
-
-_on_windows = sys.platform == "win32"
-
-
-def _executable(name):
-    """Appends a .exe extension to `name` on Windows platform."""
-    if _on_windows:
-        return name + ".exe"
-    return name
-
-
-# GAMS
-GAMS_EXECUTABLE = _executable("gams")
-GAMSIDE_EXECUTABLE = _executable("gamside")
-
-# Julia
-JULIA_EXECUTABLE = _executable("julia")
-
-# Python
-PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
-
-# Tool output directory name
-TOOL_OUTPUT_DIR = "output"
-
-# Gimlet default work directory name
-GIMLET_WORK_DIR_NAME = "work"
-
-# Julia REPL constants
+# Jupyter kernel constants
 JUPYTER_KERNEL_TIME_TO_DEAD = 5.0
 JUPYTER_KERNEL_RESTART_LIMIT = 3
 
@@ -81,9 +54,7 @@ JUPYTER_KERNEL_RESTART_LIMIT = 3
 PROJECT_FILENAME = "project.json"
 
 # Stylesheets
-STATUSBAR_SS = (
-    "QStatusBar{" "background-color: #EBEBE0;" "border-width: 1px;" "border-color: gray;" "border-style: groove;}"
-)
+STATUSBAR_SS = "QStatusBar{background-color: #EBEBE0; border-width: 1px; border-color: gray; border-style: groove;}"
 
 SETTINGS_SS = (
     "#SettingsForm{background-color: ghostwhite;}"

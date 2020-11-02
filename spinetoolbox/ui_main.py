@@ -22,7 +22,7 @@ import logging
 import json
 import pathlib
 import numpy as np
-from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
+from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, Qt, Signal, Slot, QSettings, QUrl
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor
 from PySide2.QtWidgets import (
     QMainWindow,
@@ -35,6 +35,7 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
 )
+from spine_engine.helpers_qt_free import serialize_path, deserialize_path
 from spinetoolbox.graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items
@@ -70,6 +71,7 @@ from .config import (
     PROJECT_FILENAME,
 )
 from .helpers import (
+    create_dir,
     ensure_window_is_on_screen,
     get_datetime,
     set_taskbar_icon,
@@ -78,9 +80,6 @@ from .helpers import (
     ChildCyclingKeyPressFilter,
     open_url,
     busy_effect,
-    create_dir,
-    serialize_path,
-    deserialize_path,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem

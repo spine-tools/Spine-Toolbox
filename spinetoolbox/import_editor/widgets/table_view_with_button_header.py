@@ -33,8 +33,8 @@ from PySide2.QtWidgets import (
     QFormLayout,
 )
 from spinetoolbox.helpers import CharIconEngine
-from spinetoolbox.spine_io.io_api import TYPE_STRING_TO_CLASS
-from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
+from spine_engine.spine_io.io_api import TYPE_STRING_TO_CLASS
+from spine_engine.spine_io.type_conversion import value_to_convert_spec
 from ..commands import SetColumnOrRowType
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 

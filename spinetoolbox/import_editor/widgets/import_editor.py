@@ -20,7 +20,7 @@ from copy import deepcopy
 from PySide2.QtCore import QItemSelectionModel, QModelIndex, QObject, QPoint, Qt, Signal, Slot
 from PySide2.QtWidgets import QMenu
 from spinedb_api import ObjectClassMapping
-from spinetoolbox.spine_io.type_conversion import value_to_convert_spec
+from spine_engine.spine_io.type_conversion import value_to_convert_spec
 from .options_widget import OptionsWidget
 from ..commands import PasteMappings, PasteOptions
 from ..mvcmodels.mapping_list_model import MappingListModel

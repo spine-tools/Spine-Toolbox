@@ -26,8 +26,7 @@ from spinedb_api import (
     mapping_non_pivoted_columns,
 )
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
-from spinetoolbox.spine_io.type_conversion import ConvertSpec
-from .mapping_specification_model import MappingSpecificationModel
+from spine_engine.spine_io.type_conversion import ConvertSpec
 from ..mapping_colors import ERROR_COLOR
 
 

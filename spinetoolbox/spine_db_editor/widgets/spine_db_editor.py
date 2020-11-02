@@ -33,8 +33,8 @@ from spinedb_api import (
     SpineDBVersionError,
     Anyone,
 )
-from spinetoolbox.spine_io.exporters.excel import export_spine_database_to_xlsx
-from spinetoolbox.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from spine_engine.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spine_engine.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog

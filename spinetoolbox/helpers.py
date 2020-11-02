@@ -48,24 +48,6 @@ from PySide2.QtGui import (
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
 
-# pylint: disable=unused-import
-from .helpers_qt_free import (
-    CMDLINE_TAG_EDGE,
-    CmdlineTag,
-    split_cmdline_args,
-    shorten,
-    path_in_dir,
-    serialize_path,
-    serialize_url,
-    deserialize_path,
-    split_cmdline_args,
-    serialize_checked_states,
-    deserialize_checked_states,
-    expand_tags,
-    python_interpreter,
-    create_log_file_timestamp,
-)
-
 if os.name == "nt":
     import ctypes
 

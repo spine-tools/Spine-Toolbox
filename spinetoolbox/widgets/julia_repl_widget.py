@@ -21,8 +21,8 @@ import logging
 from PySide2.QtWidgets import QMessageBox, QAction, QApplication
 from PySide2.QtCore import Slot, Qt
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
+from spine_engine.config import JULIA_EXECUTABLE
 from ..execution_managers import QProcessExecutionManager
-from ..config import JULIA_EXECUTABLE
 from ..helpers import busy_effect
 from .spine_console_widget import SpineConsoleWidget, CustomQtKernelManager
 from .custom_qlistview import DragListView

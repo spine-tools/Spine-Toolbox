@@ -19,8 +19,9 @@ Widget for assisting the user in configuring SpineOpt.jl.
 from PySide2.QtCore import Signal, Slot
 from spinetoolbox.widgets.state_machine_widget import StateMachineWidget
 from spinetoolbox.execution_managers import QProcessExecutionManager
-from spinetoolbox.config import JULIA_EXECUTABLE
-from spinetoolbox.helpers import busy_effect, python_interpreter
+from spinetoolbox.helpers import busy_effect
+from spine_engine.config import JULIA_EXECUTABLE
+from spine_engine.helpers_qt_free import python_interpreter
 
 
 class SpineOptConfigurationAssistant(StateMachineWidget):

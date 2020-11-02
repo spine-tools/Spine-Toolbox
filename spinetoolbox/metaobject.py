@@ -17,7 +17,7 @@ MetaObject class.
 """
 
 from PySide2.QtCore import QObject
-from spinetoolbox.helpers import shorten
+from spine_engine.helpers_qt_free import shorten
 
 
 class MetaObject(QObject):

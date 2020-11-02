@@ -23,8 +23,7 @@ from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from spine_engine.spine_engine_experimental import SpineEngineExperimental
 from spinetoolbox.metaobject import MetaObject
-from spinetoolbox.helpers import create_dir
-from .helpers import inverted, erase_dir
+from spinetoolbox.helpers import create_dir, inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem

@@ -21,7 +21,7 @@ from PySide2.QtCore import Signal, Slot
 from spinetoolbox.helpers import create_dir, rename_dir, open_url
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.project_commands import SetItemSpecificationCommand
-from spinetoolbox.helpers import shorten
+from spine_engine.helpers_qt_free import shorten
 
 
 class ProjectItem(MetaObject):
