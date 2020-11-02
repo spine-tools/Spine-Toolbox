@@ -21,7 +21,7 @@ from unittest import mock
 from PySide2.QtCore import QSettings
 from PySide2.QtWidgets import QApplication, QWidget
 from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
-from spinetoolbox.spine_io.io_api import SourceConnection
+from spine_engine.spine_io.io_api import SourceConnection
 
 
 class TestImportEditorWindow(unittest.TestCase):

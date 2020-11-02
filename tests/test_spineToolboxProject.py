@@ -22,7 +22,7 @@ import logging
 import sys
 from PySide2.QtCore import QVariantAnimation
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.project_item.executable_item_base import ExecutableItemBase
+from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from .mock_helpers import (
     clean_up_toolboxui_with_project,
     create_toolboxui_with_project,
