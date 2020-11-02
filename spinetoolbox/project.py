@@ -550,7 +550,7 @@ class SpineToolboxProject(MetaObject):
         self._engine_loop = QEventLoop()
         self._engine_worker = SpineEngineWorker(self.engine, self._toolbox)
         self._engine_worker.finished.connect(self._engine_loop.quit)
-        self._engine_worker.finished.connect(self._handle_worker_finished)
+        self._engine_worker.finished.connect(self._handle_engine_worker_finished)
         self._engine_worker.start()
         self._engine_loop.exec_()
         outcome = {
@@ -561,7 +561,7 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
 
     @Slot()
-    def _handle_worker_finished(self):
+    def _handle_engine_worker_finished(self):
         self._engine_worker.clean_up()
         self._engine_worker = None
 
