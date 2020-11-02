@@ -317,3 +317,108 @@ def create_log_file_timestamp():
         return ""
     extension = stamp.strftime("%Y%m%dT%H%M%S")
     return extension
+
+
+class _Signal:
+    """A PySide2.QtCore.Signal replacement.
+    """
+
+    def __init__(self):
+        self._callbacks = set()
+
+    def connect(self, callback):
+        self._callbacks.add(callback)
+
+    def disconnect(self, callback):
+        self._callbacks.discard(callback)
+
+    def emit(self, msg):
+        for callback in self._callbacks:
+            callback(msg)
+
+
+_JOB_DONE = "job_done"
+"""Sentinel for QueueLogger and QueueLoggerSignalHandler to signal that the job is done."""
+
+
+class QueueLogger:
+    """A :class:`LoggerInterface` compliant logger that uses a multiprocessing.Queue.
+
+    When this logger 'emits' messages, a tuple (msg_type, msg_content) is put into the queue.
+    """
+
+    msg = _Signal()
+    msg_success = _Signal()
+    msg_warning = _Signal()
+    msg_error = _Signal()
+    msg_proc = _Signal()
+    msg_proc_error = _Signal()
+    """Emitted whenever a message needs to be logged."""
+    job_done = _Signal()
+    """Emitted when the job is done."""
+
+    def __init__(self, queue):
+        """
+        Args:
+            queue (multiprocessing.Queue)
+        """
+        self._queue = queue
+        self.msg.connect(lambda x: self._put_msg(('msg', x)))
+        self.msg_success.connect(lambda x: self._put_msg(('msg_success', x)))
+        self.msg_warning.connect(lambda x: self._put_msg(('msg_warning', x)))
+        self.msg_error.connect(lambda x: self._put_msg(('msg_error', x)))
+        self.msg_proc.connect(lambda x: self._put_msg(('msg_proc', x)))
+        self.msg_proc_error.connect(lambda x: self._put_msg(('msg_proc_error', x)))
+        self.job_done.connect(lambda x: self._put_msg((_JOB_DONE, x)))
+
+    def _put_msg(self, msg):
+        self._queue.put(msg)
+
+
+class QueueLoggerSignalHandler:
+    """A class for handling 'signals' emitted by a QueueLogger from a child process.
+    'msg_...' signals are forwarded to a LoggerInterface,
+    whereas the 'job_done' signal is used to know that the child process has finished.
+
+    Usage:
+
+        def f(queue):
+            logger = QueueLogger(queue)
+            # Log some messages
+            logger.msg.emit("starting child process...")
+            ...
+            # Job done
+            logger.job_done.emit(0)
+
+        queue = multiprocessing.Queue()
+        p = multiprocessing.Process(target=f,  args=(queue,))
+        handler = QueueLoggerSignalHandler(queue, main_logger)
+        p.start()
+        while not handler.is_the_job_done():
+            pass
+        p.join()
+        success = handler.process_exitcode == 0
+    """
+
+    def __init__(self, queue, logger):
+        """
+        Args:
+            queue (multiprocessing.Queue): The queue where the concerned QueueLogger is putting messages
+            logger (LoggerInterface): The logger where to forward messages to.
+        """
+        self._queue = queue
+        self._logger = logger
+        self._process_exitcode = None
+
+    def is_the_job_done(self):
+        msg_type, msg_content = self._queue.get()
+        if msg_type == _JOB_DONE:
+            self._queue.close()
+            self._process_exitcode = msg_content
+            return True
+        getattr(self._logger, msg_type).emit(msg_content)
+        return False
+
+    @property
+    def process_exitcode(self):
+        return self._process_exitcode
