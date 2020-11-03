@@ -28,6 +28,7 @@ from spine_engine.project_item.project_item_info import ProjectItemInfo
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from .config import PREFERRED_SPINE_ITEMS_VERSION
 from .version import __version__ as curr_toolbox_version
+from spine_engine.version import __version__ as curr_engine_version
 
 
 def _spine_items_version_check():
@@ -114,10 +115,17 @@ UPGRADING PROJECT ITEMS...
         with open(version_file_path) as fp:
             exec(fp.read(), version)
         req_toolbox_version = version.get("REQUIRED_SPINE_TOOLBOX_VERSION", "0.5.2")
-        # Check if new items is compatible with current toolbox
-        curr_toolbox_version_split = [int(x) for x in curr_toolbox_version.split(".")]
-        req_toolbox_version_split = [int(x) for x in req_toolbox_version.split(".")]
-        if curr_toolbox_version_split < req_toolbox_version_split:
+        req_engine_version = version.get("REQUIRED_SPINE_ENGINE_VERSION", "0.7.3")
+        # Check if new items is compatible with current toolbox and engine
+        version_split = lambda version: [int(x) for x in version.split(".")]
+        curr_toolbox_version_split = version_split(curr_toolbox_version)
+        curr_engine_version_split = version_split(curr_engine_version)
+        req_toolbox_version_split = version_split(req_toolbox_version)
+        req_engine_version_split = version_split(req_engine_version)
+        if (
+            curr_toolbox_version_split < req_toolbox_version_split
+            or curr_engine_version_split < req_engine_version_split
+        ):
             return False
         # Check if new items are already installed
         try:
