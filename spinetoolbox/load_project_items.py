@@ -74,16 +74,7 @@ def _install_spine_items(tmpdirname):
     Args:
         tmpdirname (str)
     """
-    args = [
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        "--upgrade",
-        "--find-links",
-        tmpdirname,
-        "spine_items",
-    ]
+    args = [sys.executable, "-m", "pip", "install", "--upgrade", "--find-links", tmpdirname, "spine_items"]
     try:
         subprocess.run(args, check=True)
         return True

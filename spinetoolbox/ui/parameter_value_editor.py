@@ -41,14 +41,6 @@ class Ui_ParameterValueEditor(object):
         self.parameter_type_selector_layout.addWidget(self.parameter_type_selector_label)
 
         self.parameter_type_selector = QComboBox(ParameterValueEditor)
-        self.parameter_type_selector.addItem("")
-        self.parameter_type_selector.addItem("")
-        self.parameter_type_selector.addItem("")
-        self.parameter_type_selector.addItem("")
-        self.parameter_type_selector.addItem("")
-        self.parameter_type_selector.addItem("")
-        self.parameter_type_selector.addItem("")
-        self.parameter_type_selector.addItem("")
         self.parameter_type_selector.setObjectName(u"parameter_type_selector")
 
         self.parameter_type_selector_layout.addWidget(self.parameter_type_selector)
@@ -83,14 +75,5 @@ class Ui_ParameterValueEditor(object):
     def retranslateUi(self, ParameterValueEditor):
         ParameterValueEditor.setWindowTitle(QCoreApplication.translate("ParameterValueEditor", u"Edit parameter_value", None))
         self.parameter_type_selector_label.setText(QCoreApplication.translate("ParameterValueEditor", u"Parameter type", None))
-        self.parameter_type_selector.setItemText(0, QCoreApplication.translate("ParameterValueEditor", u"Plain value", None))
-        self.parameter_type_selector.setItemText(1, QCoreApplication.translate("ParameterValueEditor", u"Map", None))
-        self.parameter_type_selector.setItemText(2, QCoreApplication.translate("ParameterValueEditor", u"Time series - fixed resolution", None))
-        self.parameter_type_selector.setItemText(3, QCoreApplication.translate("ParameterValueEditor", u"Time series - variable resolution", None))
-        self.parameter_type_selector.setItemText(4, QCoreApplication.translate("ParameterValueEditor", u"Time pattern", None))
-        self.parameter_type_selector.setItemText(5, QCoreApplication.translate("ParameterValueEditor", u"Array", None))
-        self.parameter_type_selector.setItemText(6, QCoreApplication.translate("ParameterValueEditor", u"Datetime", None))
-        self.parameter_type_selector.setItemText(7, QCoreApplication.translate("ParameterValueEditor", u"Duration", None))
-
     # retranslateUi
 

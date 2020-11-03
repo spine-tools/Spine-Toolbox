@@ -36,48 +36,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="parameter_type_selector">
-       <item>
-        <property name="text">
-         <string>Plain value</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Map</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Time series - fixed resolution</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Time series - variable resolution</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Time pattern</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Array</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Datetime</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Duration</string>
-        </property>
-       </item>
-      </widget>
+      <widget class="QComboBox" name="parameter_type_selector"/>
      </item>
      <item>
       <spacer name="parameter_type_selector_spacer">

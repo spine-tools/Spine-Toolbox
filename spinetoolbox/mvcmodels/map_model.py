@@ -23,13 +23,11 @@ from spinedb_api import (
     convert_leaf_maps_to_specialized_containers,
     DateTime,
     Duration,
-    from_database,
     IndexedValue,
     Map,
     ParameterValueFormatError,
     TimePattern,
     TimeSeries,
-    to_database,
 )
 
 
@@ -108,7 +106,7 @@ class MapModel(QAbstractTableModel):
                 return None
         data = row[column_index]
         if role == Qt.EditRole:
-            return to_database(data if data is not None else "")
+            return data
         if isinstance(data, DateTime):
             return str(data.value)
         if isinstance(data, Duration):
@@ -199,7 +197,7 @@ class MapModel(QAbstractTableModel):
 
         Args:
             index (QModelIndex): an index to the model
-            value (str): JSON representation of the value
+            value (object): JSON representation of the value
             role (int): a role
         Returns:
             True if the operation was successful
@@ -209,13 +207,9 @@ class MapModel(QAbstractTableModel):
         if not value:
             self._rows[index.row()][index.column()] = None
             return True
-        try:
-            new_value = from_database(value)
-        except ParameterValueFormatError:
+        if not isinstance(value, (str, int, float, Duration, DateTime, IndexedValue)):
             return False
-        if not isinstance(new_value, (str, float, Duration, DateTime, IndexedValue)):
-            return False
-        self._rows[index.row()][index.column()] = new_value
+        self._rows[index.row()][index.column()] = value
         self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
         return True
 

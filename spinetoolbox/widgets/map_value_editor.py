@@ -10,26 +10,23 @@
 ######################################################################################################################
 
 """
-An editor dialog for editing database (relationship) parameter values.
+An editor dialog for map indexes and values.
 
 :author: A. Soininen (VTT)
-:date:   28.6.2019
+:date:   2.11.2020
 """
-from PySide2.QtWidgets import QMessageBox
-from spinedb_api import ParameterValueFormatError, to_database
+from PySide2.QtCore import Qt
 from .array_editor import ArrayEditor
 from .duration_editor import DurationEditor
 from .datetime_editor import DatetimeEditor
-from .map_editor import MapEditor
 from .parameter_value_editor_base import ParameterValueEditorBase, ValueType
 from .plain_parameter_value_editor import PlainParameterValueEditor
 from .time_pattern_editor import TimePatternEditor
 from .time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
 from .time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
-from ..mvcmodels.shared import PARSED_ROLE
 
 
-class ParameterValueEditor(ParameterValueEditorBase):
+class MapValueEditor(ParameterValueEditorBase):
     """Dialog for editing parameter values in Database editor."""
 
     def __init__(self, index, parent=None):
@@ -40,7 +37,6 @@ class ParameterValueEditor(ParameterValueEditorBase):
         """
         editors = {
             ValueType.PLAIN_VALUE: PlainParameterValueEditor(),
-            ValueType.MAP: MapEditor(),
             ValueType.TIME_SERIES_FIXED_RESOLUTION: TimeSeriesFixedResolutionEditor(),
             ValueType.TIME_SERIES_VARIABLE_RESOLUTION: TimeSeriesVariableResolutionEditor(),
             ValueType.TIME_PATTERN: TimePatternEditor(),
@@ -50,19 +46,10 @@ class ParameterValueEditor(ParameterValueEditorBase):
         }
 
         super().__init__(index, editors, parent)
-        model = index.model()
-        self._index = index
-        self.set_data_delayed = model.get_set_data_delayed(index)
-        self.setWindowTitle(f"Edit value    -- {model.index_name(index)} --")
-        self._select_editor(index.data(PARSED_ROLE))
+        self._model = index.model()
+        self.setWindowTitle(f"Edit map value")
+        self._select_editor(index.data(Qt.EditRole))
 
     def _set_data(self, value):
         """See base class."""
-        try:
-            value = to_database(value)
-        except ParameterValueFormatError as error:
-            message = f"Cannot set value: {error}"
-            QMessageBox.warning(self, "Parameter Value error", message)
-            return False
-        self.set_data_delayed(value)
-        return True
+        return self._model.setData(self._index, value)

@@ -16,10 +16,12 @@ An editor widget for editing a map type parameter values.
 :date:   11.2.2020
 """
 
-from PySide2.QtCore import QPoint, Qt, Slot
+from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide2.QtWidgets import QMenu, QWidget
 from spinedb_api import Map
+from .map_value_editor import MapValueEditor
 from ..mvcmodels.map_model import MapModel
+from ..spine_db_editor.widgets.custom_delegates import MapEditorTableDelegate
 
 
 class MapEditor(QWidget):
@@ -40,6 +42,9 @@ class MapEditor(QWidget):
         self._ui.map_table_view.setModel(self._model)
         self._ui.map_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.map_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
+        delegate = MapEditorTableDelegate(self._ui.map_table_view)
+        delegate.value_editor_requested.connect(self._open_value_editor)
+        self._ui.map_table_view.setItemDelegate(delegate)
         self._ui.convert_leaves_button.clicked.connect(self._convert_leaves)
 
     @Slot(bool)
@@ -49,6 +54,8 @@ class MapEditor(QWidget):
     @Slot(QPoint)
     def _show_table_context_menu(self, pos):
         menu = QMenu(self._ui.map_table_view)
+        menu.addAction("Open value editor...")
+        menu.addSeparator()
         menu.addAction("Insert row before")
         menu.addAction("Insert row after")
         menu.addAction("Remove row")
@@ -63,7 +70,10 @@ class MapEditor(QWidget):
         selected_indexes = self._ui.map_table_view.selectedIndexes()
         selected_rows = sorted([index.row() for index in selected_indexes])
         first_row = selected_rows[0]
-        if action_text == "Insert row before":
+        if action_text == "Open value editor...":
+            index = self._ui.map_table_view.indexAt(pos)
+            self._open_value_editor(index)
+        elif action_text == "Insert row before":
             self._model.insertRows(first_row, 1)
         elif action_text == "Insert row after":
             self._model.insertRows(first_row + 1, 1)
@@ -81,3 +91,14 @@ class MapEditor(QWidget):
     def value(self):
         """Returns the parameter_value currently being edited."""
         return self._model.value()
+
+    @Slot(QModelIndex)
+    def _open_value_editor(self, index):
+        """
+        Opens value editor dialog for given map model index.
+
+        Args:
+            index (QModelIndex): index
+        """
+        editor = MapValueEditor(index, self)
+        editor.show()

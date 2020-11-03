@@ -25,7 +25,7 @@ from PySide2.QtWidgets import (
     QApplication,
     QStyleOptionComboBox,
 )
-from .custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor
+from .custom_editors import SearchBarEditor, CheckListEditor
 
 
 class ComboBoxDelegate(QStyledItemDelegate):
@@ -64,28 +64,6 @@ class ComboBoxDelegate(QStyledItemDelegate):
     def _finalize_editing(self, editor):
         self.commitData.emit(editor)
         self.closeEditor.emit(editor)
-
-
-class LineEditDelegate(QStyledItemDelegate):
-    """A delegate that places a fully functioning QLineEdit.
-
-    Attributes:
-        parent (QMainWindow): either data store or spine datapackage widget
-    """
-
-    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-
-    def createEditor(self, parent, option, index):
-        """Return CustomLineEditor."""
-        return CustomLineEditor(parent)
-
-    def setEditorData(self, editor, index):
-        """Init the line editor with previous data from the index."""
-        editor.set_data(index.data(Qt.EditRole))
-
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        self.data_committed.emit(index, editor.data())
 
 
 class CheckBoxDelegate(QStyledItemDelegate):

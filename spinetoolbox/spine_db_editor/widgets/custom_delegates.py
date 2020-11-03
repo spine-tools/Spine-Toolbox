@@ -17,7 +17,7 @@ Custom item delegates.
 """
 
 from numbers import Number
-from PySide2.QtCore import Qt, Signal, QPoint
+from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal
 from PySide2.QtWidgets import QStyledItemDelegate
 from PySide2.QtGui import QIcon, QFontMetrics
 from spinedb_api import to_database
@@ -28,7 +28,7 @@ from ...widgets.custom_delegates import CheckBoxDelegate
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent):
         """
@@ -78,8 +78,8 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
 
 class ParameterPivotTableDelegate(QStyledItemDelegate):
 
-    parameter_value_editor_requested = Signal("QModelIndex")
-    data_committed = Signal("QModelIndex", "QVariant")
+    parameter_value_editor_requested = Signal(QModelIndex)
+    data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent):
         """
@@ -110,6 +110,27 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
             self.parameter_value_editor_requested.emit(index.model().mapToSource(index))
             return None
         return CustomLineEditor(parent)
+
+
+class MapEditorTableDelegate(QStyledItemDelegate):
+    """Delegate for Map editor's table cells."""
+
+    value_editor_requested = Signal(QModelIndex)
+    """Emitted when editing the value requires the full blown editor dialog."""
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        data = editor.data()
+        model.setData(index, data)
+
+    def createEditor(self, parent, option, index):
+        value = index.data(Qt.EditRole)
+        if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
+            editor = ParameterValueLineEditor(parent)
+            editor.set_data(value)
+            return editor
+        self.value_editor_requested.emit(index)
+        return None
 
 
 class ParameterDelegate(QStyledItemDelegate):

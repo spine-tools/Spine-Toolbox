@@ -22,7 +22,7 @@ from PySide2.QtWidgets import (
     QComboBox,
     QLineEdit,
     QTableView,
-    QItemDelegate,
+    QStyledItemDelegate,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -83,7 +83,7 @@ class CustomComboEditor(QComboBox):
         return self.currentText()
 
 
-class _CustomLineEditDelegate(QItemDelegate):
+class _CustomLineEditDelegate(QStyledItemDelegate):
     """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
     """
 
@@ -112,7 +112,7 @@ class _CustomLineEditDelegate(QItemDelegate):
             return QCoreApplication.sendEvent(self.parent(), event)
         if event.type() == QEvent.ShortcutOverride and event.key() == Qt.Key_Escape:
             # Close editor so we don't need to escape twice to close the parent SearchBarEditor
-            self.parent().closeEditor(editor, QItemDelegate.NoHint)
+            self.parent().closeEditor(editor, QStyledItemDelegate.NoHint)
             return True
         return super().eventFilter(editor, event)
 
@@ -390,7 +390,7 @@ class CheckListEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
 
-class _IconPainterDelegate(QItemDelegate):
+class _IconPainterDelegate(QStyledItemDelegate):
     """A delegate to highlight decorations in a QListWidget."""
 
     def paint(self, painter, option, index):

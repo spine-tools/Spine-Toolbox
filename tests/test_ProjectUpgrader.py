@@ -113,6 +113,7 @@ class TestProjectUpgrader(unittest.TestCase):
         pu = ProjectUpgrader(self.toolbox)
         self.assertFalse(pu.upgrade(project_dict, project_dir=""))
 
+
 def make_no_version_project_dict():
     """Returns an example project dictionary as it was in legacy .proj files."""
     p = """
