@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs, get_kernel_spec, NoSuchKernel
 from spinetoolbox.helpers import busy_effect
-from spine_engine.helpers_qt_free import python_interpreter
+from spine_engine.utils.helpers import python_interpreter
 from ..execution_managers import QProcessExecutionManager
 from .spine_console_widget import SpineConsoleWidget
 from .custom_qlistview import DragListView

@@ -21,7 +21,7 @@ from spinetoolbox.widgets.state_machine_widget import StateMachineWidget
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.helpers import busy_effect
 from spine_engine.config import JULIA_EXECUTABLE
-from spine_engine.helpers_qt_free import python_interpreter
+from spine_engine.utils.helpers import python_interpreter
 
 
 class SpineOptConfigurationAssistant(StateMachineWidget):

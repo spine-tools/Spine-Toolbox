@@ -20,7 +20,7 @@ from pathlib import Path
 from tempfile import gettempdir, NamedTemporaryFile, TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
-from spine_engine.helpers_qt_free import deserialize_path, serialize_path, serialize_url
+from spine_engine.utils.serialization import deserialize_path, serialize_path, serialize_url
 from spinetoolbox.helpers import rename_dir, first_non_null, interpret_icon_id, make_icon_id
 
 

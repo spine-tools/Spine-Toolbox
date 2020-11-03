@@ -23,7 +23,7 @@ import json
 import copy
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from spinetoolbox.helpers import create_dir, recursive_overwrite
-from spine_engine.helpers_qt_free import serialize_path, deserialize_path
+from spine_engine.utils.serialization import serialize_path, deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 
 
