@@ -161,21 +161,24 @@ class ProjectItemDragListView(DragListView):
         self._orientation = self._toolbar.orientation()
         scroll_sub_line_button = self._toolbar.widgetForAction(self._scroll_sub_line_action)
         scroll_add_line_button = self._toolbar.widgetForAction(self._scroll_add_line_action)
-        max_width = self.sizeHintForColumn(0)
-        max_height = self.sizeHintForRow(0)
-        row_count = self.model().rowCount() if self.model() else 0
+        if self.model():
+            indexes = (self.model().index(i, 0) for i in range(self.model().rowCount()))
+        else:
+            indexes = ()
         if self._orientation == Qt.Horizontal:
             self.setFlow(QListView.LeftToRight)
             scroll_sub_line_button.setArrowType(Qt.LeftArrow)
             scroll_add_line_button.setArrowType(Qt.RightArrow)
             scroll_sub_line_button.setMaximumWidth(16)
             scroll_add_line_button.setMaximumWidth(16)
-            max_width *= row_count
+            max_width = sum(self.visualRect(index).width() for index in indexes)
+            max_height = self.sizeHintForRow(0)
         elif self._orientation == Qt.Vertical:
             self.setFlow(QListView.TopToBottom)
             scroll_sub_line_button.setArrowType(Qt.UpArrow)
             scroll_add_line_button.setArrowType(Qt.DownArrow)
-            max_height *= row_count
+            max_width = self.sizeHintForColumn(0)
+            max_height = sum(self.visualRect(index).height() for index in indexes)
         self._contents_size = QSize(max_width, max_height)
         margin = 2 * self.frameWidth()
         max_size = self._contents_size + QSize(margin, margin)
