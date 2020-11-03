@@ -124,7 +124,9 @@ UPGRADING PROJECT ITEMS...
             exec(fp.read(), version)
         req_toolbox_version = version.get("REQUIRED_SPINE_TOOLBOX_VERSION", "0.5.2")
         # Check if new items is compatible with current toolbox
-        if curr_toolbox_version < req_toolbox_version:
+        curr_toolbox_version_split = [int(x) for x in curr_toolbox_version.split(".")]
+        req_toolbox_version_split = [int(x) for x in req_toolbox_version.split(".")]
+        if curr_toolbox_version_split < req_toolbox_version_split:
             return False
         # Check if new items are already installed
         try:
