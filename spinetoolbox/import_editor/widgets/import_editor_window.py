@@ -28,7 +28,7 @@ from PySide2.QtWidgets import (
     QUndoStack,
     QMessageBox,
 )
-from spinetoolbox.spine_io.connection_manager import ConnectionManager
+from ..connection_manager import ConnectionManager
 from ..commands import RestoreMappingsFromDict
 from ...helpers import ensure_window_is_on_screen
 from .import_editor import ImportEditor
