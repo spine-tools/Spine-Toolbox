@@ -37,7 +37,7 @@ class MapModel(QAbstractTableModel):
 
     This model represents the Map as a 2D table.
     Each row consists of one or more index columns and a value column.
-    The last columns of a row are padded with None.
+    The last columns of a row are padded with Nones.
 
     Example:
         ::
@@ -79,8 +79,8 @@ class MapModel(QAbstractTableModel):
     def columnCount(self, index=QModelIndex()):
         """Returns the number of columns in this model."""
         if not self._rows:
-            return 0
-        return len(self._rows[0])
+            return 1
+        return len(self._rows[0]) + 1
 
     def convert_leaf_maps(self):
         converted = convert_leaf_maps_to_specialized_containers(self.value())
@@ -92,8 +92,12 @@ class MapModel(QAbstractTableModel):
         if role not in (Qt.DisplayRole, Qt.EditRole) or not index.isValid():
             return None
         row_index = index.row()
+        if row_index == len(self._rows):
+            return ""
         column_index = index.column()
         row = self._rows[row_index]
+        if column_index == len(row):
+            return ""
         if (
             role == Qt.DisplayRole
             and column_index < len(row) - 1
@@ -170,7 +174,7 @@ class MapModel(QAbstractTableModel):
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows."""
-        return len(self._rows)
+        return len(self._rows) + 1
 
     def removeRows(self, row, count, parent=QModelIndex()):
         """
@@ -184,10 +188,11 @@ class MapModel(QAbstractTableModel):
         Returns:
             True if the operation was successful
         """
-        if not self._rows:
+        if not self._rows or row == len(self._rows):
             return False
-        self.beginRemoveRows(parent, row, row + count - 1)
-        self._rows = self._rows[:row] + self._rows[row + count :]
+        last = min(row + count - 1, len(self._rows) - 1)
+        self.beginRemoveRows(parent, row, last)
+        self._rows = self._rows[:row] + self._rows[last + 1 :]
         self.endRemoveRows()
         return True
 
@@ -204,12 +209,20 @@ class MapModel(QAbstractTableModel):
         """
         if not index.isValid() or role != Qt.EditRole:
             return False
+        row_index = index.row()
+        if row_index == len(self._rows):
+            self.insertRow(row_index)
+        row = self._rows[row_index]
+        column_index = index.column()
+        if column_index == len(row):
+            self.append_column()
+            row = self._rows
         if not value:
-            self._rows[index.row()][index.column()] = None
+            row[column_index] = None
             return True
         if not isinstance(value, (str, int, float, Duration, DateTime, IndexedValue)):
             return False
-        self._rows[index.row()][index.column()] = value
+        row[column_index] = value
         self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
         return True
 

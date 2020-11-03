@@ -28,33 +28,42 @@ class TestMapModel(unittest.TestCase):
         map_value = Map(["A", "B"], [-1.1, nested_map])
         model = MapModel(map_value)
         model.append_column()
-        self.assertEqual(model.columnCount(), 4)
-        expected_table = [["A", -1.1, None, None], ["B", "a", 1.1, None], [None, "b", 2.2, None]]
-        for row in range(3):
-            for column in range(4):
-                index = model.index(row, column)
-                self.assertEqual(index.data(), expected_table[row][column])
+        self.assertEqual(model.columnCount(), 5)
+        expected_table = [
+            ["A", -1.1, None, None, ""],
+            ["B", "a", 1.1, None, ""],
+            [None, "b", 2.2, None, ""],
+            ["", "", "", "", ""],
+        ]
+        for y, row in enumerate(expected_table):
+            for x, expected in enumerate(row):
+                index = model.index(y, x)
+                self.assertEqual(index.data(), expected)
 
     def test_columnCount(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
         model = MapModel(map_value)
-        self.assertEqual(model.columnCount(), 2)
+        self.assertEqual(model.columnCount(), 3)
 
     def test_columnCount_nested_maps(self):
         nested_map = Map(["a", "b"], [1.1, 2.2])
         map_value = Map(["A", "B"], [-1.1, nested_map])
         model = MapModel(map_value)
-        self.assertEqual(model.columnCount(), 3)
+        self.assertEqual(model.columnCount(), 4)
 
     def test_convert_leaf_maps(self):
         nested_map = Map([DateTime("2020-07-03 12:00:00"), DateTime("2020-07-03 12:00:00")], [22.2, 23.3])
         map_ = Map([1.0], [nested_map])
         model = MapModel(map_)
         model.convert_leaf_maps()
-        self.assertEqual(model.columnCount(), 2)
-        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.columnCount(), 3)
+        self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.index(0, 0).data(), 1.0)
         self.assertEqual(model.index(0, 1).data(), "Time series")
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "")
+        self.assertEqual(model.index(1, 1).data(), "")
+        self.assertEqual(model.index(1, 2).data(), "")
 
     def test_data_DisplayRole(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
@@ -155,117 +164,152 @@ class TestMapModel(unittest.TestCase):
     def test_insertRows_to_empty_model(self):
         map_value = Map([], [], str)
         model = MapModel(map_value)
-        self.assertEqual(model.rowCount(), 0)
-        self.assertTrue(model.insertRows(0, 1))
         self.assertEqual(model.rowCount(), 1)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(), "key")
-        index = model.index(0, 1)
-        self.assertEqual(index.data(), 0.0)
+        self.assertTrue(model.insertRows(0, 1))
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.index(0, 0).data(), "key")
+        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "")
+        self.assertEqual(model.index(1, 1).data(), "")
+        self.assertEqual(model.index(1, 2).data(), "")
 
     def test_insertRows_to_beginning(self):
         map_value = Map(["a"], [1.1])
         model = MapModel(map_value)
         self.assertTrue(model.insertRows(0, 1))
-        self.assertEqual(model.rowCount(), 2)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(), "key")
-        index = model.index(0, 1)
-        self.assertEqual(index.data(), 0.0)
-        index = model.index(1, 0)
-        self.assertEqual(index.data(), "a")
-        index = model.index(1, 1)
-        self.assertEqual(index.data(), 1.1)
+        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.index(0, 0).data(), "key")
+        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "a")
+        self.assertEqual(model.index(1, 1).data(), 1.1)
+        self.assertEqual(model.index(1, 2).data(), "")
+        self.assertEqual(model.index(2, 0).data(), "")
+        self.assertEqual(model.index(2, 1).data(), "")
+        self.assertEqual(model.index(2, 2).data(), "")
 
     def test_insertRows_to_end(self):
         map_value = Map(["a"], [1.1])
         model = MapModel(map_value)
         self.assertTrue(model.insertRows(1, 1))
-        self.assertEqual(model.rowCount(), 2)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(), "a")
-        index = model.index(0, 1)
-        self.assertEqual(index.data(), 1.1)
-        index = model.index(1, 0)
-        self.assertEqual(index.data(), "key")
-        index = model.index(1, 1)
-        self.assertEqual(index.data(), 0.0)
+        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.index(0, 0).data(), "a")
+        self.assertEqual(model.index(0, 1).data(), 1.1)
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "key")
+        self.assertEqual(model.index(1, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 2).data(), "")
 
     def test_insertRows_to_middle_of_nested_map(self):
         nested_map = Map(["a", "b"], [1.1, 2.2])
         map_value = Map(["A"], [nested_map])
         model = MapModel(map_value)
         self.assertTrue(model.insertRows(1, 1))
-        self.assertEqual(model.rowCount(), 3)
-        expected_table = [["A", "a", 1.1], [None, "key", 0.0], [None, "b", 2.2]]
-        for row in range(3):
-            for column in range(3):
-                index = model.index(row, column)
-                self.assertEqual(index.data(), expected_table[row][column])
+        self.assertEqual(model.rowCount(), 4)
+        expected_table = [["A", "a", 1.1, ""], [None, "key", 0.0, ""], [None, "b", 2.2, ""], ["", "", "", ""]]
+        for y, row in  enumerate(expected_table):
+            for x, expected in enumerate(row):
+                self.assertEqual(model.index(y, x).data(), expected)
 
     def test_rowCount(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
         model = MapModel(map_value)
-        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.rowCount(), 3)
 
     def test_rowCount_nested_maps(self):
         nested_map = Map(["a", "b"], [1.1, 2.2])
         map_value = Map(["A", "B"], [-1.1, nested_map])
         model = MapModel(map_value)
-        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.rowCount(), 4)
 
     def test_removeRows_single_row(self):
         map_value = Map(["a"], [1.1])
         model = MapModel(map_value)
         self.assertTrue(model.removeRows(0, 1))
-        self.assertEqual(model.rowCount(), 0)
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.columnCount(), 1)
+        self.assertEqual(model.index(0, 0).data(), "")
 
     def test_removeRows_first_row(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
         model = MapModel(map_value)
         self.assertTrue(model.removeRows(0, 1))
-        self.assertEqual(model.rowCount(), 1)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(), "b")
-        index = model.index(0, 1)
-        self.assertEqual(index.data(), 2.2)
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.index(0, 0).data(), "b")
+        self.assertEqual(model.index(0, 1).data(), 2.2)
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "")
+        self.assertEqual(model.index(1, 1).data(), "")
+        self.assertEqual(model.index(1, 2).data(), "")
 
     def test_removeRows_last_row(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
         model = MapModel(map_value)
         self.assertTrue(model.removeRows(0, 1))
-        self.assertEqual(model.rowCount(), 1)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(), "b")
-        index = model.index(0, 1)
-        self.assertEqual(index.data(), 2.2)
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.index(0, 0).data(), "b")
+        self.assertEqual(model.index(0, 1).data(), 2.2)
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "")
+        self.assertEqual(model.index(1, 1).data(), "")
+        self.assertEqual(model.index(1, 2).data(), "")
 
     def test_removeRows_middle_row_in_nested_map(self):
         nested_map = Map(["a", "b", "c"], [1.1, 2.2, 3.3])
         map_value = Map(["A"], [nested_map])
         model = MapModel(map_value)
         self.assertTrue(model.removeRows(1, 1))
-        self.assertEqual(model.rowCount(), 2)
-        expected_table = [["A", "a", 1.1], [None, "c", 3.3]]
-        for row in range(2):
-            for column in range(3):
-                index = model.index(row, column)
-                self.assertEqual(index.data(), expected_table[row][column])
+        self.assertEqual(model.rowCount(), 3)
+        expected_table = [["A", "a", 1.1, ""], [None, "c", 3.3, ""], ["", "", "", ""]]
+        for y, row in enumerate(expected_table):
+            for x, expected in enumerate(row):
+                self.assertEqual(model.index(y, x).data(), expected)
 
     def test_setData(self):
         map_value = Map(["a"], [1.1])
         model = MapModel(map_value)
-        index = model.index(0, 0)
-        model.setData(index, Duration("1 month"))
-        index = model.index(0, 0)
-        self.assertEqual(index.data(), "1M")
+        self.assertTrue(model.setData(model.index(0, 0), Duration("1 month")))
+        self.assertEqual(model.index(0, 0).data(), "1M")
+
+    def test_setData_expands_empty_table(self):
+        model = MapModel(Map([], [], Duration))
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.columnCount(), 1)
+        self.assertEqual(model.index(0, 0).data(), "")
+        self.assertTrue(model.setData(model.index(0, 0), Duration("1 month")))
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 3)
+        self.assertEqual(model.index(0, 0).data(), "1M")
+        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "")
+        self.assertEqual(model.index(1, 1).data(), "")
+        self.assertEqual(model.index(1, 2).data(), "")
+
+    def test_setData_expands_rows(self):
+        model = MapModel(Map([Duration("1 month")], [1.1]))
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.columnCount(), 3)
+        self.assertTrue(model.setData(model.index(1, 1), 2.2))
+        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.columnCount(), 3)
+        self.assertEqual(model.index(0, 0).data(), "1M")
+        self.assertEqual(model.index(0, 1).data(), 1.1)
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 0).data(), "key")
+        self.assertEqual(model.index(1, 1).data(), 2.2)
+        self.assertEqual(model.index(1, 2).data(), "")
+        self.assertEqual(model.index(2, 0).data(), "")
+        self.assertEqual(model.index(2, 1).data(), "")
+        self.assertEqual(model.index(2, 2).data(), "")
 
     def test_trim_columns(self):
         map_value = Map(["a"], [1.1])
         model = MapModel(map_value)
         model.append_column()
         model.trim_columns()
-        self.assertEqual(model.columnCount(), 2)
+        self.assertEqual(model.columnCount(), 3)
 
     def test_value(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
@@ -297,9 +341,9 @@ class TestMapModel(unittest.TestCase):
     def test_value_interleaved_rows(self):
         model = MapModel(Map(["a"], [0.0]))
         model.insertRows(1, 2)
-        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.rowCount(), 4)
         model.append_column()
-        self.assertEqual(model.columnCount(), 3)
+        self.assertEqual(model.columnCount(), 4)
         model.setData(model.index(0, 0), "key1")
         model.setData(model.index(0, 1), "a")
         model.setData(model.index(0, 2), -2.0)
@@ -318,9 +362,9 @@ class TestMapModel(unittest.TestCase):
     def test_value_interleaved_rows_nested_maps_with_same_indexes(self):
         model = MapModel(Map(["a"], [0.0]))
         model.insertRows(1, 3)
-        self.assertEqual(model.rowCount(), 4)
+        self.assertEqual(model.rowCount(), 5)
         model.append_column()
-        self.assertEqual(model.columnCount(), 3)
+        self.assertEqual(model.columnCount(), 4)
         model.setData(model.index(0, 0), "key1")
         model.setData(model.index(0, 1), "kkey1")
         model.setData(model.index(0, 2), "value11")
