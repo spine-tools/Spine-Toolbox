@@ -562,6 +562,8 @@ class SpineToolboxProject(MetaObject):
 
     @Slot()
     def _handle_engine_worker_finished(self):
+        if not self._engine_worker:
+            return
         self._engine_worker.clean_up()
         self._engine_worker = None
 
@@ -646,15 +648,13 @@ class SpineToolboxProject(MetaObject):
     def stop(self):
         """Stops execution. Slot for the main window Stop tool button in the toolbar."""
         if self._execution_stopped:
-            if self._engine_worker:
-                self._logger.msg_warning.emit("Waiting for the last item to finish, execution will stop right after")
-                return
             self._logger.msg.emit("No execution in progress")
             return
         self._logger.msg.emit("Stopping...")
         self._execution_stopped = True
         if self.engine:
             self.engine.stop()
+        self._handle_engine_worker_finished()
 
     def export_graphs(self):
         """Exports all valid directed acyclic graphs in project to GraphML files."""
