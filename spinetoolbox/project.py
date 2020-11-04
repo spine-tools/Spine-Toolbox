@@ -571,7 +571,7 @@ class SpineToolboxProject(MetaObject):
         # register subscribers to relevant events
         self.engine.publisher.register('exec_started', self.start_subscriber)
         self.engine.publisher.register('exec_finished', self.finish_subscriber)
-        self.engine.publisher.register('log_event', self.log_subscriber)
+        self.engine.publisher.register('log_msg', self.log_subscriber)
         self.start_subscriber.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
         self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
         self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
@@ -587,7 +587,7 @@ class SpineToolboxProject(MetaObject):
         # unregister subscribers
         self.engine.publisher.unregister('exec_started', self.start_subscriber)
         self.engine.publisher.unregister('exec_finished', self.finish_subscriber)
-        self.engine.publisher.unregister('log_event', self.log_subscriber)
+        self.engine.publisher.unregister('log_msg', self.log_subscriber)
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""

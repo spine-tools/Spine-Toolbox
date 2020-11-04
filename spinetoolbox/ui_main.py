@@ -80,6 +80,8 @@ from .helpers import (
     ChildCyclingKeyPressFilter,
     open_url,
     busy_effect,
+    format_log_message,
+    format_process_message,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
@@ -96,10 +98,10 @@ class ToolboxUI(QMainWindow):
     msg_error = Signal(str)
     msg_warning = Signal(str)
     msg_proc = Signal(str)
+    msg_proc_error = Signal(str)
     information_box = Signal(str, str)
     error_box = Signal(str, str)
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
-    msg_proc_error = Signal(str)
     specification_model_changed = Signal()
 
     def __init__(self):
@@ -1235,9 +1237,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        open_tag = "<span style='color:white;white-space: pre-wrap;'>"
-        date_str = get_datetime(show=self.show_datetime)
-        message = open_tag + date_str + msg + "</span>"
+        message = format_log_message("msg", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1249,9 +1249,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        open_tag = "<span style='color:#00ff00;white-space: pre-wrap;'>"
-        date_str = get_datetime(show=self.show_datetime)
-        message = open_tag + date_str + msg + "</span>"
+        message = format_log_message("msg_success", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1263,9 +1261,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        open_tag = "<span style='color:#ff3333;white-space: pre-wrap;'>"
-        date_str = get_datetime(show=self.show_datetime)
-        message = open_tag + date_str + msg + "</span>"
+        message = format_log_message("msg_error", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1277,9 +1273,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        open_tag = "<span style='color:yellow;white-space: pre-wrap;'>"
-        date_str = get_datetime(show=self.show_datetime)
-        message = open_tag + date_str + msg + "</span>"
+        message = format_log_message("msg_warning", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1291,8 +1285,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        open_tag = "<span style='color:white;white-space: pre;'>"
-        message = open_tag + msg + "</span>"
+        message = format_process_message("msg", msg)
         self.ui.textBrowser_process_output.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1304,11 +1297,22 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        open_tag = "<span style='color:#ff3333;white-space: pre;'>"
-        message = open_tag + msg + "</span>"
+        message = format_process_message("msg_error", msg)
         self.ui.textBrowser_process_output.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
+
+    def set_event_log_document(self, new_document):
+        self.ui.textBrowser_eventlog.setDocument(new_document)
+
+    def restore_event_log_document(self):
+        self.ui.textBrowser_eventlog.restore_original_document()
+
+    def set_process_output_document(self, new_document):
+        self.ui.textBrowser_process_output.setDocument(new_document)
+
+    def restore_process_output_document(self):
+        self.ui.textBrowser_process_output.restore_original_document()
 
     def show_add_project_item_form(self, item_type, x=0, y=0, spec=""):
         """Show add project item widget."""

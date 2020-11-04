@@ -22,7 +22,7 @@ from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Slot, Qt, QTimeLine, QSettings, QRectF
 from spine_engine import ExecutionDirection, SpineEngineState
-from ..graphics_items import Link
+from ..graphics_items import Link, ProjectItemIcon
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
 from .custom_qgraphicsscene import DesignGraphicsScene
 
@@ -476,24 +476,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """
         if direction == ExecutionDirection.BACKWARD or engine_state != SpineEngineState.RUNNING:
             return
-        loop = QEventLoop()
-        animation = self._make_execution_leave_animation(item_name)
-        animation.finished.connect(loop.quit)
-        animation.start()
-        if animation.state() == QParallelAnimationGroup.Running:
-            loop.exec_()
-
-    def _make_execution_leave_animation(self, item_name):
-        """
-        Returns animation to play when execution leaves this item.
-
-        Returns:
-            QParallelAnimationGroup
-        """
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
-        links = set(link for conn in icon.connectors.values() for link in conn.links if link.src_connector == conn)
-        animation_group = QParallelAnimationGroup()
-        for link in links:
-            animation_group.addAnimation(link.make_execution_animation())
-        return animation_group
+        icon.run_execution_leave_animation()

@@ -17,13 +17,61 @@ Contains SpineEngineWorker.
 """
 
 from PySide2.QtCore import Signal, Slot, QObject, QThread
+from spine_engine import ExecutionDirection, SpineEngineState
+
+
+class _SignalHandler(QObject):
+    def __init__(self, toolbox):
+        self._toolbox = toolbox
+        self._project_items = {}
+
+    @Slot(list)
+    def _handle_dag_execution_started(self, item_names):
+        self._project_items.clear()
+        for item_name in item_names:
+            item = self._toolbox.project_item_model.get_item(item_name)
+            if item is None:
+                continue
+            self._project_items[item_name] = item.project_item
+        for item in self._project_items.values():
+            item.get_icon().execution_icon.hide()
+
+    @Slot(str, object)
+    def _handle_node_execution_started(self, item_name, direction):
+        icon = self._project_items[item_name].get_icon()
+        icon.execution_icon.mark_execution_started()
+        if direction == ExecutionDirection.FORWARD and hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_started.emit()
+
+    @Slot(str, object, object, bool)
+    def _handle_node_execution_finished(self, item_name, direction, state, success):
+        item = self._project_items[item_name]
+        item.item_executed.emit(direction, state)
+        icon = item.get_icon()
+        icon.execution_icon.mark_execution_finished(success)
+        if direction == ExecutionDirection.FORWARD:
+            if hasattr(icon, "animation_signaller"):
+                icon.animation_signaller.animation_stopped.emit()
+            if state == SpineEngineState.RUNNING:
+                icon.run_execution_leave_animation()
+
+    @Slot(str, str, str)
+    def _handle_log_message_arrived(self, item_name, msg_type, msg_text):
+        self._project_items[item_name].get_icon().execution_icon.add_log_message(msg_type, msg_text)
+
+    @Slot(str, str, str)
+    def _handle_process_message_arrived(self, item_name, msg_type, msg_text):
+        self._project_items[item_name].get_icon().execution_icon.add_process_message(msg_type, msg_text)
 
 
 class SpineEngineWorker(QObject):
 
     finished = Signal()
-    _dag_node_execution_started = Signal(str, object)
-    _dag_node_execution_finished = Signal(str, object, object)
+    _dag_execution_started = Signal(list)
+    _node_execution_started = Signal(str, object)
+    _node_execution_finished = Signal(str, object, object, bool)
+    _log_message_arrived = Signal(str, str, str)
+    _process_message_arrived = Signal(str, str, str)
 
     def __init__(self, engine, toolbox):
         """
@@ -34,19 +82,23 @@ class SpineEngineWorker(QObject):
         self._engine = engine
         self._toolbox = toolbox
         self._executing_items = []
-        self._engine.publisher.register('exec_started', self, self._handle_dag_node_execution_started)
-        self._engine.publisher.register('exec_finished', self, self._handle_dag_node_execution_finished)
-        self._engine.publisher.register('msg', self, self._handle_msg)
-        self._engine.publisher.register('msg_standard_execution', self, self._handle_msg_standard_execution)
-        self._engine.publisher.register('msg_kernel_execution', self, self._handle_msg_kernel_execution)
+        self._signal_handler = _SignalHandler(toolbox)
+        self._engine.publisher.register('exec_started', self, self._handle_node_execution_started)
+        self._engine.publisher.register('exec_finished', self, self._handle_node_execution_finished)
+        self._engine.publisher.register('log_msg', self, self._handle_log_msg)
+        self._engine.publisher.register('process_msg', self, self._handle_process_msg)
+        self._engine.publisher.register('standard_execution_msg', self, self._handle_standard_execution_msg)
+        self._engine.publisher.register('kernel_execution_msg', self, self._handle_kernel_execution_msg)
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
-        self._dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
-        self._dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
-        self._dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
+        self._dag_execution_started.connect(self._signal_handler._handle_dag_execution_started)
+        self._node_execution_started.connect(self._signal_handler._handle_node_execution_started)
+        self._node_execution_finished.connect(self._signal_handler._handle_node_execution_finished)
+        self._log_message_arrived.connect(self._signal_handler._handle_log_message_arrived)
+        self._process_message_arrived.connect(self._signal_handler._handle_process_message_arrived)
 
-    def _handle_msg_standard_execution(self, msg):
+    def _handle_standard_execution_msg(self, msg):
         if msg["type"] == "execution_failed_to_start":
             self._toolbox.msg_error.emit(f"Program <b>{msg['program']}</b> failed to start: {msg['error']}")
         elif msg["type"] == "execution_started":
@@ -56,7 +108,7 @@ class SpineEngineWorker(QObject):
                 "\tExecution is in progress. See Process Log for messages " "(stdout&stderr)"
             )
 
-    def _handle_msg_kernel_execution(self, msg):
+    def _handle_kernel_execution_msg(self, msg):
         language = msg["language"].capitalize()
         if msg["type"] == "kernel_started":
             console = {"julia": self._toolbox.julia_repl, "python": self._toolbox.python_repl}.get(msg["language"])
@@ -75,35 +127,38 @@ class SpineEngineWorker(QObject):
             self._toolbox.msg.emit(f"\tStarting program on {language} kernel <b>{msg['kernel_name']}</b>")
             self._toolbox.msg_warning.emit(f"See {language} Console for messages.")
 
-    def _handle_msg(self, data):
-        self._do_handle_msg(**data)
+    def _handle_process_msg(self, data):
+        self._do_handle_process_msg(**data)
 
-    def _do_handle_msg(self, msg_type, msg_text):
-        getattr(self._toolbox, msg_type).emit(msg_text)
+    def _do_handle_process_msg(self, author, msg_type, msg_text):
+        self._process_message_arrived.emit(author, msg_type, msg_text)
 
-    def _handle_dag_node_execution_started(self, data):
-        self._do_handle_dag_node_execution_started(**data)
+    def _handle_log_msg(self, data):
+        self._do_handle_log_msg(**data)
 
-    def _do_handle_dag_node_execution_started(self, item_name, direction):
+    def _do_handle_log_msg(self, author, msg_type, msg_text):
+        self._log_message_arrived.emit(author, msg_type, msg_text)
+
+    def _handle_node_execution_started(self, data):
+        self._do_handle_node_execution_started(**data)
+
+    def _do_handle_node_execution_started(self, item_name, direction):
         """Starts item icon animation when executing forward."""
         self._executing_items.append(item_name)
-        self._dag_node_execution_started.emit(item_name, direction)
+        self._node_execution_started.emit(item_name, direction)
 
-    def _handle_dag_node_execution_finished(self, data):
-        self._do_handle_dag_node_execution_finished(**data)
+    def _handle_node_execution_finished(self, data):
+        self._do_handle_node_execution_finished(**data)
 
-    def _do_handle_dag_node_execution_finished(self, item_name, direction, state):
+    def _do_handle_node_execution_finished(self, item_name, direction, state, success):
         self._executing_items.remove(item_name)
-        self._dag_node_execution_finished.emit(item_name, direction, state)
-        item = self._toolbox.project_item_model.get_item(item_name)
-        if item is None:
-            return
-        item.project_item.item_executed.emit(direction, state)
+        self._node_execution_finished.emit(item_name, direction, state, success)
 
     def thread(self):
         return self._thread
 
     def start(self):
+        self._dag_execution_started.emit(list(self._engine.item_names))
         self._thread.start()
 
     @Slot()
@@ -114,12 +169,13 @@ class SpineEngineWorker(QObject):
 
     def clean_up(self):
         for item in self._executing_items:
-            self._dag_node_execution_finished.emit(item, None, None)
+            self._node_execution_finished.emit(item, None, None)
         self._engine.publisher.unregister('exec_started', self)
         self._engine.publisher.unregister('exec_finished', self)
-        self._engine.publisher.unregister('msg', self)
-        self._engine.publisher.unregister('msg_standard_execution', self)
-        self._engine.publisher.unregister('msg_kernel_execution', self)
+        self._engine.publisher.unregister('log_msg', self)
+        self._engine.publisher.unregister('process_msg', self)
+        self._engine.publisher.unregister('standard_execution_msg', self)
+        self._engine.publisher.unregister('kernel_execution_msg', self)
         self._thread.quit()
         self._thread.wait()
         self.deleteLater()

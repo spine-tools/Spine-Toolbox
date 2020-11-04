@@ -44,6 +44,7 @@ from PySide2.QtGui import (
     QPainterPath,
     QPen,
     QKeySequence,
+    QTextCursor,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
@@ -59,6 +60,36 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     from pandas.plotting import register_matplotlib_converters
 
     register_matplotlib_converters()
+
+
+def format_log_message(msg_type, message, show_datetime=True):
+    color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
+    open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
+    date_str = get_datetime(show=show_datetime)
+    return open_tag + date_str + message + "</span>"
+
+
+def format_process_message(msg_type, message):
+    color = {"msg": "white", "msg_error": "#ff3333"}[msg_type]
+    open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
+    return open_tag + message + "</span>"
+
+
+def add_message_to_document(document, message):
+    """Adds a message to a document and return the cursor.
+
+    Args:
+        document (QTextDocument)
+        message (str)
+
+    Returns:
+        QTextCursor
+    """
+    cursor = QTextCursor(document)
+    cursor.movePosition(QTextCursor.End)
+    cursor.insertBlock()
+    cursor.insertHtml(message)
+    return cursor
 
 
 def busy_effect(func):

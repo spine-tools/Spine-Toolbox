@@ -17,8 +17,9 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 """
 
 from PySide2.QtCore import Slot
-from PySide2.QtGui import QDesktopServices, QTextCursor
+from PySide2.QtGui import QDesktopServices, QTextCursor, QTextDocument
 from PySide2.QtWidgets import QTextBrowser, QAction
+from spinetoolbox.helpers import add_message_to_document
 
 
 class CustomQTextBrowser(QTextBrowser):
@@ -30,10 +31,17 @@ class CustomQTextBrowser(QTextBrowser):
             parent (QWidget): Parent widget
         """
         super().__init__(parent=parent)
+        self._original_document = QTextDocument()
+        self.setDocument(self._original_document)
         self._max_blocks = 2000
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
         self.anchorClicked.connect(self._open_external_link)
+
+    def restore_original_document(self):
+        self.setDocument(self._original_document)
+        vertical_scroll_bar = self.verticalScrollBar()
+        vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
 
     @Slot(str)
     def append(self, text):
@@ -46,16 +54,17 @@ class CustomQTextBrowser(QTextBrowser):
         Args:
             text (str): text to add
         """
-        super().append(text)
-        block_count = super().document().blockCount()
+        cursor = add_message_to_document(self._original_document, text)
+        block_count = self._original_document.blockCount()
         if block_count > self._max_blocks:
             blocks_to_remove = block_count - self._max_blocks
-            cursor = self.textCursor()
             cursor.movePosition(QTextCursor.Start)
             for _ in range(blocks_to_remove):
                 cursor.select(QTextCursor.BlockUnderCursor)
                 cursor.removeSelectedText()
                 cursor.deleteChar()  # Remove the trailing newline
+        vertical_scroll_bar = self.verticalScrollBar()
+        vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
 
     def contextMenuEvent(self, event):
         """Reimplemented method to add a clear action into the default context menu.

@@ -17,13 +17,14 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, sin, cos, pi
-from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
+from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation, QParallelAnimationGroup, QEventLoop
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
     QGraphicsTextItem,
     QGraphicsSimpleTextItem,
     QGraphicsRectItem,
+    QGraphicsEllipseItem,
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
     QStyle,
@@ -40,9 +41,12 @@ from PySide2.QtGui import (
     QTransform,
     QPalette,
     QTextBlockFormat,
+    QFont,
+    QTextDocument,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.project_commands import MoveIconCommand
+from spinetoolbox.helpers import format_log_message, format_process_message, add_message_to_document
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -82,6 +86,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         )
         # Make exclamation and rank icons
         self.exclamation_icon = ExclamationIcon(self)
+        self.execution_icon = ExecutionIcon(self)
         self.rank_icon = RankIcon(self)
         brush = QBrush(background_color)
         self._setup(brush, icon_file, icon_color)
@@ -135,8 +140,11 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
-        # Set exclamation and rank icons position
+        # Set exclamation, execution_log, and rank icons position
         self.exclamation_icon.setPos(self.rect().topRight() - self.exclamation_icon.sceneBoundingRect().topRight())
+        self.execution_icon.setPos(
+            self.rect().bottomRight() - 0.5 * self.execution_icon.sceneBoundingRect().bottomRight()
+        )
         self.rank_icon.setPos(self.rect().topLeft())
 
     def name(self):
@@ -172,6 +180,16 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def incoming_links(self):
         return [l for conn in self.connectors.values() for l in conn.incoming_links()]
+
+    def run_execution_leave_animation(self):
+        animation_group = QParallelAnimationGroup()
+        for link in self.outgoing_links():
+            animation_group.addAnimation(link.make_execution_animation())
+        loop = QEventLoop()
+        animation_group.finished.connect(loop.quit)
+        animation_group.start()
+        if animation_group.state() == QParallelAnimationGroup.Running:
+            loop.exec_()
 
     def hoverEnterEvent(self, event):
         """Sets a drop shadow effect to icon when mouse enters its boundaries.
@@ -402,10 +420,74 @@ class ConnectorButton(QGraphicsRectItem):
             link_drawer.update_geometry()
 
 
+class ExecutionIcon(QGraphicsEllipseItem):
+
+    _CHECK = "\uf00c"
+    _CROSS = "\uf00d"
+
+    def __init__(self, parent):
+        """An icon to show information about the item's execution.
+
+        Args:
+            parent (ProjectItemIcon): the parent item
+        """
+        super().__init__(parent)
+        self._parent = parent
+        self._text_item = QGraphicsTextItem(self)
+        font = QFont('Font Awesome 5 Free Solid')
+        self._text_item.setFont(font)
+        parent_rect = parent.rect()
+        self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
+        self.setPen(Qt.NoPen)
+        color = qApp.palette().color(QPalette.Normal, QPalette.Window)
+        self.setBrush(QBrush(color))
+        self._log_document = QTextDocument()
+        self._process_document = QTextDocument()
+        self.setAcceptHoverEvents(True)
+        # self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.hide()
+
+    def _repaint(self, text, color):
+        self._text_item.prepareGeometryChange()
+        self._text_item.setPos(0, 0)
+        self._text_item.setPlainText(text)
+        self._text_item.setDefaultTextColor(color)
+        size = self._text_item.boundingRect().size()
+        dim_max = max(size.width(), size.height())
+        rect_w = self.rect().width()
+        self._text_item.setScale(rect_w / dim_max)
+        self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+        self.show()
+
+    def mark_execution_started(self):
+        self._repaint(self._CHECK, QColor("orange"))
+
+    def mark_execution_finished(self, success):
+        if success:
+            self._repaint(self._CHECK, QColor("green"))
+        else:
+            self._repaint(self._CROSS, QColor("red"))
+
+    def add_log_message(self, msg_type, msg_text):
+        message = format_log_message(msg_type, msg_text)
+        add_message_to_document(self._log_document, message)
+
+    def add_process_message(self, msg_type, msg_text):
+        message = format_process_message(msg_type, msg_text)
+        add_message_to_document(self._process_document, message)
+
+    def hoverEnterEvent(self, event):
+        self._parent._toolbox.set_event_log_document(self._log_document)
+        self._parent._toolbox.set_process_output_document(self._process_document)
+
+    def hoverLeaveEvent(self, event):
+        self._parent._toolbox.restore_event_log_document()
+        self._parent._toolbox.restore_process_output_document()
+
+
 class ExclamationIcon(QGraphicsSvgItem):
     def __init__(self, parent):
-        """Exclamation icon graphics item.
-        Used to notify that a ProjectItem is missing some configuration.
+        """An icon to notify that a ProjectItem is missing some configuration.
 
         Args:
             parent (ProjectItemIcon): the parent item
@@ -462,8 +544,7 @@ class ExclamationIcon(QGraphicsSvgItem):
 
 class RankIcon(QGraphicsTextItem):
     def __init__(self, parent):
-        """Rank icon graphics item.
-        Used to show the rank of a ProjectItem within its DAG
+        """An icon to show the rank of a ProjectItem within its DAG
 
         Args:
             parent (ProjectItemIcon): the parent item
