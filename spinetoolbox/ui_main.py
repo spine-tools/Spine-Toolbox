@@ -1302,17 +1302,17 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    def set_event_log_document(self, new_document):
-        self.ui.textBrowser_eventlog.setDocument(new_document)
+    def add_override_event_log_document(self, document):
+        self.ui.textBrowser_eventlog.add_override_document(document)
 
-    def restore_event_log_document(self):
-        self.ui.textBrowser_eventlog.restore_original_document()
+    def remove_override_event_log_document(self, document):
+        self.ui.textBrowser_eventlog.remove_override_document(document)
 
-    def set_process_output_document(self, new_document):
-        self.ui.textBrowser_process_output.setDocument(new_document)
+    def add_override_process_output_document(self, document):
+        self.ui.textBrowser_process_output.add_override_document(document)
 
-    def restore_process_output_document(self):
-        self.ui.textBrowser_process_output.restore_original_document()
+    def remove_override_process_output_document(self, document):
+        self.ui.textBrowser_process_output.remove_override_document(document)
 
     def show_add_project_item_form(self, item_type, x=0, y=0, spec=""):
         """Show add project item widget."""

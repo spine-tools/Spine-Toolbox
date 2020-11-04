@@ -433,19 +433,53 @@ class ExecutionIcon(QGraphicsEllipseItem):
         """
         super().__init__(parent)
         self._parent = parent
+        self._execution_state = "not started"
         self._text_item = QGraphicsTextItem(self)
         font = QFont('Font Awesome 5 Free Solid')
         self._text_item.setFont(font)
         parent_rect = parent.rect()
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
         self.setPen(Qt.NoPen)
-        color = qApp.palette().color(QPalette.Normal, QPalette.Window)
-        self.setBrush(QBrush(color))
+        self.setBrush(qApp.palette().window())
         self._log_document = QTextDocument()
         self._process_document = QTextDocument()
         self.setAcceptHoverEvents(True)
-        # self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.hide()
+
+    def paint(self, painter, option, widget=None):
+        """Highlights if selected."""
+        if option.state & (QStyle.State_Selected):
+            self.setBrush(qApp.palette().highlight())
+            option.state &= ~QStyle.State_Selected
+        else:
+            self.setBrush(qApp.palette().window())
+        super().paint(painter, option, widget)
+
+    def itemChange(self, change, value):
+        """
+        Adds or removes override documents depending on whether or not the item is selected.
+        """
+        if change == QGraphicsItem.ItemSelectedHasChanged:
+            if value:
+                self._add_override_documents()
+            else:
+                self._remove_override_documents()
+        return super().itemChange(change, value)
+
+    def _add_override_documents(self):
+        """Add event log and process output documents to the list of override documents
+        in the respective browser.
+        """
+        self._parent._toolbox.add_override_event_log_document(self._log_document)
+        self._parent._toolbox.add_override_process_output_document(self._process_document)
+
+    def _remove_override_documents(self):
+        """Remove event log and process output documents to the list of override documents
+        in the respective browser.
+        """
+        self._parent._toolbox.remove_override_event_log_document(self._log_document)
+        self._parent._toolbox.remove_override_process_output_document(self._process_document)
 
     def _repaint(self, text, color):
         self._text_item.prepareGeometryChange()
@@ -460,12 +494,15 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self.show()
 
     def mark_execution_started(self):
+        self._execution_state = "in progress"
         self._repaint(self._CHECK, QColor("orange"))
 
     def mark_execution_finished(self, success):
         if success:
+            self._execution_state = "complete"
             self._repaint(self._CHECK, QColor("green"))
         else:
+            self._execution_state = "failed"
             self._repaint(self._CROSS, QColor("red"))
 
     def add_log_message(self, msg_type, msg_text):
@@ -477,12 +514,13 @@ class ExecutionIcon(QGraphicsEllipseItem):
         add_message_to_document(self._process_document, message)
 
     def hoverEnterEvent(self, event):
-        self._parent._toolbox.set_event_log_document(self._log_document)
-        self._parent._toolbox.set_process_output_document(self._process_document)
+        tip = (
+            f"<p><b>Execution {self._execution_state}</b>. Select to see messages in Event Log and Process Output.</p>"
+        )
+        QToolTip.showText(event.screenPos(), tip)
 
     def hoverLeaveEvent(self, event):
-        self._parent._toolbox.restore_event_log_document()
-        self._parent._toolbox.restore_process_output_document()
+        QToolTip.hideText()
 
 
 class ExclamationIcon(QGraphicsSvgItem):
