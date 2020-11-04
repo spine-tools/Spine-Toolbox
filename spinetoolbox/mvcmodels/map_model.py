@@ -122,7 +122,7 @@ class MapModel(QAbstractTableModel):
                 return "Time pattern"
             if isinstance(data, Array):
                 return "Array"
-            return data
+            return str(data) if data is not None else None
         if role == Qt.FontRole:
             if self._is_in_expanse(row_index, column_index):
                 return None
