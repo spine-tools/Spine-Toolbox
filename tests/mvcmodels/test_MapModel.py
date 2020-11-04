@@ -18,6 +18,7 @@ Unit tests for MapModel class.
 
 import unittest
 from PySide2.QtCore import Qt
+from PySide2.QtGui import QColor
 from spinedb_api import DateTime, Duration, Map, ParameterValueFormatError
 from spinetoolbox.mvcmodels.map_model import MapModel
 
@@ -32,7 +33,7 @@ class TestMapModel(unittest.TestCase):
         expected_table = [
             ["A", -1.1, None, None, ""],
             ["B", "a", 1.1, None, ""],
-            [None, "b", 2.2, None, ""],
+            ["B", "b", 2.2, None, ""],
             ["", "", "", "", ""],
         ]
         for y, row in enumerate(expected_table):
@@ -68,79 +69,121 @@ class TestMapModel(unittest.TestCase):
     def test_data_DisplayRole(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
         model = MapModel(map_value)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(), "a")
-        index = model.index(1, 0)
-        self.assertEqual(index.data(), "b")
-        index = model.index(0, 1)
-        self.assertEqual(index.data(), 1.1)
-        index = model.index(1, 1)
-        self.assertEqual(index.data(), 2.2)
+        self.assertEqual(model.index(0, 0).data(), "a")
+        self.assertEqual(model.index(1, 0).data(), "b")
+        self.assertEqual(model.index(2, 0).data(), "")
+        self.assertEqual(model.index(0, 1).data(), 1.1)
+        self.assertEqual(model.index(1, 1).data(), 2.2)
+        self.assertEqual(model.index(2, 1).data(), "")
+        self.assertEqual(model.index(0, 2).data(), "")
+        self.assertEqual(model.index(1, 2).data(), "")
+        self.assertEqual(model.index(2, 2).data(), "")
 
     def test_data_EditRole(self):
         map_value = Map(["a", "b"], [1.1, 2.2])
         model = MapModel(map_value)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(Qt.EditRole), "a")
-        index = model.index(1, 0)
-        self.assertEqual(index.data(Qt.EditRole), "b")
-        index = model.index(0, 1)
-        self.assertEqual(index.data(Qt.EditRole), 1.1)
-        index = model.index(1, 1)
-        self.assertEqual(index.data(Qt.EditRole), 2.2)
+        self.assertEqual(model.index(0, 0).data(Qt.EditRole), "a")
+        self.assertEqual(model.index(1, 0).data(Qt.EditRole), "b")
+        self.assertEqual(model.index(0, 1).data(Qt.EditRole), 1.1)
+        self.assertEqual(model.index(1, 1).data(Qt.EditRole), 2.2)
+
+    def test_data_BackgroundRole(self):
+        map_value = Map(["a"], [1.1])
+        model = MapModel(map_value)
+        expected = QColor(245, 245, 245)
+        self.assertEqual(model.index(0, 0).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(1, 0).data(Qt.BackgroundRole), expected)
+        self.assertEqual(model.index(0, 1).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(1, 1).data(Qt.BackgroundRole), expected)
+        self.assertEqual(model.index(0, 2).data(Qt.BackgroundRole), expected)
+        self.assertEqual(model.index(1, 2).data(Qt.BackgroundRole), expected)
+
+    def test_data_FontRole(self):
+        map_value = Map(["a"], [1.1])
+        model = MapModel(map_value)
+        self.assertEqual(model.index(0, 0).data(Qt.FontRole), None)
+        self.assertEqual(model.index(1, 0).data(Qt.FontRole), None)
+        self.assertTrue(model.index(0, 1).data(Qt.FontRole).bold())
+        self.assertEqual(model.index(1, 1).data(Qt.FontRole), None)
+        self.assertEqual(model.index(0, 2).data(Qt.FontRole), None)
+        self.assertEqual(model.index(1, 2).data(Qt.FontRole), None)
 
     def test_data_nested_maps_DisplayRole(self):
         nested_map = Map(["a", "b"], [1.1, 2.2])
         map_value = Map(["A", "B"], [-1.1, nested_map])
         model = MapModel(map_value)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(), "A")
-        index = model.index(1, 0)
-        self.assertEqual(index.data(), "B")
-        index = model.index(2, 0)
-        self.assertEqual(index.data(), None)
-        index = model.index(0, 1)
-        self.assertEqual(index.data(), -1.1)
-        index = model.index(1, 1)
-        self.assertEqual(index.data(), "a")
-        index = model.index(2, 1)
-        self.assertEqual(index.data(), "b")
-        index = model.index(0, 2)
-        self.assertEqual(index.data(), None)
-        index = model.index(1, 2)
-        self.assertEqual(index.data(), 1.1)
-        index = model.index(2, 2)
-        self.assertEqual(index.data(), 2.2)
+        self.assertEqual(model.index(0, 0).data(), "A")
+        self.assertEqual(model.index(1, 0).data(), "B")
+        self.assertEqual(model.index(2, 0).data(), "B")
+        self.assertEqual(model.index(3, 0).data(), "")
+        self.assertEqual(model.index(0, 1).data(), -1.1)
+        self.assertEqual(model.index(1, 1).data(), "a")
+        self.assertEqual(model.index(2, 1).data(), "b")
+        self.assertEqual(model.index(3, 1).data(), "")
+        self.assertEqual(model.index(0, 2).data(), None)
+        self.assertEqual(model.index(1, 2).data(), 1.1)
+        self.assertEqual(model.index(2, 2).data(), 2.2)
+        self.assertEqual(model.index(3, 2).data(), "")
+        self.assertEqual(model.index(0, 3).data(), "")
+        self.assertEqual(model.index(1, 3).data(), "")
+        self.assertEqual(model.index(2, 3).data(), "")
+        self.assertEqual(model.index(3, 3).data(), "")
 
     def test_data_nested_maps_EditRole(self):
         nested_map = Map(["a", "b"], [1.1, 2.2])
         map_value = Map(["A", "B"], [-1.1, nested_map])
         model = MapModel(map_value)
-        index = model.index(0, 0)
-        self.assertEqual(index.data(Qt.EditRole), "A")
-        index = model.index(1, 0)
-        self.assertEqual(index.data(Qt.EditRole), "B")
-        index = model.index(2, 0)
-        self.assertEqual(index.data(Qt.EditRole), "B")
-        index = model.index(0, 1)
-        self.assertEqual(index.data(Qt.EditRole), -1.1)
-        index = model.index(1, 1)
-        self.assertEqual(index.data(Qt.EditRole), "a")
-        index = model.index(2, 1)
-        self.assertEqual(index.data(Qt.EditRole), "b")
-        index = model.index(0, 2)
-        self.assertEqual(index.data(Qt.EditRole), None)
-        index = model.index(1, 2)
-        self.assertEqual(index.data(Qt.EditRole), 1.1)
-        index = model.index(2, 2)
-        self.assertEqual(index.data(Qt.EditRole), 2.2)
+        self.assertEqual(model.index(0, 0).data(Qt.EditRole), "A")
+        self.assertEqual(model.index(1, 0).data(Qt.EditRole), "B")
+        self.assertEqual(model.index(2, 0).data(Qt.EditRole), "B")
+        self.assertEqual(model.index(0, 1).data(Qt.EditRole), -1.1)
+        self.assertEqual(model.index(1, 1).data(Qt.EditRole), "a")
+        self.assertEqual(model.index(2, 1).data(Qt.EditRole), "b")
+        self.assertEqual(model.index(0, 2).data(Qt.EditRole), None)
+        self.assertEqual(model.index(1, 2).data(Qt.EditRole), 1.1)
+        self.assertEqual(model.index(2, 2).data(Qt.EditRole), 2.2)
+
+    def test_data_nested_maps_FontRole(self):
+        nested_map = Map(["a", "b"], [1.1, 2.2])
+        map_value = Map(["A", "B"], [-1.1, nested_map])
+        model = MapModel(map_value)
+        self.assertEqual(model.index(0, 0).data(Qt.FontRole), None)
+        self.assertEqual(model.index(1, 0).data(Qt.FontRole), None)
+        self.assertEqual(model.index(2, 0).data(Qt.FontRole), None)
+        self.assertTrue(model.index(0, 1).data(Qt.FontRole).bold())
+        self.assertEqual(model.index(1, 1).data(Qt.FontRole), None)
+        self.assertEqual(model.index(2, 1).data(Qt.FontRole), None)
+        self.assertEqual(model.index(0, 2).data(Qt.FontRole), None)
+        self.assertTrue(model.index(1, 2).data(Qt.FontRole).bold())
+        self.assertTrue(model.index(2, 2).data(Qt.FontRole).bold())
+
+    def test_data_nested_maps_BackgroundRole(self):
+        nested_map = Map(["a", "b"], [1.1, 2.2])
+        map_value = Map(["A", "B"], [-1.1, nested_map])
+        model = MapModel(map_value)
+        self.assertEqual(model.index(0, 0).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(1, 0).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(2, 0).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(3, 0).data(Qt.BackgroundRole), QColor(245, 245, 245))
+        self.assertEqual(model.index(0, 1).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(1, 1).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(2, 1).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(3, 1).data(Qt.BackgroundRole), QColor(245, 245, 245))
+        self.assertEqual(model.index(0, 2).data(Qt.BackgroundRole), QColor(255, 240, 240))
+        self.assertEqual(model.index(1, 2).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(2, 2).data(Qt.BackgroundRole), None)
+        self.assertEqual(model.index(3, 2).data(Qt.BackgroundRole), QColor(245, 245, 245))
+        self.assertEqual(model.index(0, 3).data(Qt.BackgroundRole), QColor(245, 245, 245))
+        self.assertEqual(model.index(1, 3).data(Qt.BackgroundRole), QColor(245, 245, 245))
+        self.assertEqual(model.index(2, 3).data(Qt.BackgroundRole), QColor(245, 245, 245))
+        self.assertEqual(model.index(3, 3).data(Qt.BackgroundRole), QColor(245, 245, 245))
 
     def test_data_DisplayRole_repeated_indexes_do_not_show(self):
         leaf_map = Map(["a", "b"], [1.1, 2.2])
         nested_map = Map(["A"], [leaf_map])
         root_map = Map(["root"], [nested_map])
         model = MapModel(root_map)
-        expected_data = [["root", "A", "a", 1.1], [None, None, "b", 2.2]]
+        expected_data = [["root", "A", "a", 1.1], ["root", "A", "b", 2.2]]
         for row in range(2):
             for column in range(4):
                 index = model.index(row, column)
@@ -207,8 +250,8 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value)
         self.assertTrue(model.insertRows(1, 1))
         self.assertEqual(model.rowCount(), 4)
-        expected_table = [["A", "a", 1.1, ""], [None, "key", 0.0, ""], [None, "b", 2.2, ""], ["", "", "", ""]]
-        for y, row in  enumerate(expected_table):
+        expected_table = [["A", "a", 1.1, ""], ["A", "key", 0.0, ""], ["A", "b", 2.2, ""], ["", "", "", ""]]
+        for y, row in enumerate(expected_table):
             for x, expected in enumerate(row):
                 self.assertEqual(model.index(y, x).data(), expected)
 
@@ -261,7 +304,7 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value)
         self.assertTrue(model.removeRows(1, 1))
         self.assertEqual(model.rowCount(), 3)
-        expected_table = [["A", "a", 1.1, ""], [None, "c", 3.3, ""], ["", "", "", ""]]
+        expected_table = [["A", "a", 1.1, ""], ["A", "c", 3.3, ""], ["", "", "", ""]]
         for y, row in enumerate(expected_table):
             for x, expected in enumerate(row):
                 self.assertEqual(model.index(y, x).data(), expected)

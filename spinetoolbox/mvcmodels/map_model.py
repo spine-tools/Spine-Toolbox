@@ -16,8 +16,10 @@ A model for maps, used by the parameter_value editors.
 :date:    11.2.2020
 """
 
+from numbers import Number
 from itertools import takewhile
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide2.QtGui import QColor, QFont
 from spinedb_api import (
     Array,
     convert_leaf_maps_to_specialized_containers,
@@ -65,6 +67,10 @@ class MapModel(QAbstractTableModel):
         super().__init__()
         rows = _as_rows(map_value)
         self._rows = _make_square(rows)
+        self._BOLD = QFont()
+        self._BOLD.setBold(True)
+        self._EMTPY_COLOR = QColor(255, 240, 240)
+        self._EXPANSE_COLOR = QColor(245, 245, 245)
 
     def append_column(self):
         """Appends a new column to the right."""
@@ -89,39 +95,42 @@ class MapModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data associated with the given role."""
-        if role not in (Qt.DisplayRole, Qt.EditRole) or not index.isValid():
-            return None
         row_index = index.row()
-        if row_index == len(self._rows):
-            return ""
         column_index = index.column()
-        row = self._rows[row_index]
-        if column_index == len(row):
-            return ""
-        if (
-            role == Qt.DisplayRole
-            and column_index < len(row) - 1
-            and row[column_index + 1] is not None
-            and row_index > 0
-        ):
-            indexes_above = self._rows[row_index - 1][: column_index + 1]
-            current_indexes = self._rows[row_index][: column_index + 1]
-            if current_indexes == indexes_above:
-                return None
-        data = row[column_index]
+        if role == Qt.BackgroundRole:
+            if self._is_in_expanse(row_index, column_index):
+                return self._EXPANSE_COLOR
+            data_length = len(list(takewhile(lambda x: x is not None, self._rows[row_index])))
+            if column_index >= data_length:
+                return self._EMTPY_COLOR
+            return None
         if role == Qt.EditRole:
+            if self._is_in_expanse(row_index, column_index):
+                return ""
+            return self._rows[row_index][column_index]
+        if role == Qt.DisplayRole:
+            if self._is_in_expanse(row_index, column_index):
+                return ""
+            data = self._rows[row_index][column_index]
+            if isinstance(data, DateTime):
+                return str(data.value)
+            if isinstance(data, Duration):
+                return str(data)
+            if isinstance(data, TimeSeries):
+                return "Time series"
+            if isinstance(data, TimePattern):
+                return "Time pattern"
+            if isinstance(data, Array):
+                return "Array"
             return data
-        if isinstance(data, DateTime):
-            return str(data.value)
-        if isinstance(data, Duration):
-            return str(data)
-        if isinstance(data, TimeSeries):
-            return "Time series"
-        if isinstance(data, TimePattern):
-            return "Time pattern"
-        if isinstance(data, Array):
-            return "Array"
-        return data
+        if role == Qt.FontRole:
+            if self._is_in_expanse(row_index, column_index):
+                return None
+            row = self._rows[row_index]
+            data_length = len(list(takewhile(lambda x: x is not None, row)))
+            if column_index == data_length - 1:
+                return self._BOLD
+        return None
 
     def flags(self, index):
         """Returns flags at index."""
@@ -134,11 +143,16 @@ class MapModel(QAbstractTableModel):
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Vertical:
-            return section + 1
+            if section < len(self._rows):
+                return section + 1
+            return None
         if section == 0:
             return "Index"
-        if self._rows and section == len(self._rows[0]) - 1:
-            return "Value"
+        if self._rows:
+            if section == len(self._rows[0]) - 1:
+                return "Value"
+            if section == len(self._rows[0]):
+                return None
         return "Index or value"
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -164,6 +178,21 @@ class MapModel(QAbstractTableModel):
         self._rows = self._rows[:row] + count * [template] + self._rows[row:]
         self.endInsertRows()
         return True
+
+    def _is_in_expanse(self, row, column):
+        """
+        Returns True, if given row and column is in the right or bottom 'expanding' zone
+
+        Args:
+            row (int): row index
+            column (int): column index
+
+        Returns:
+            bool: True if the cell is in the expanse, False otherwise
+        """
+        if row == len(self._rows):
+            return True
+        return column == len(self._rows[0])
 
     def reset(self, map_value):
         """Resets the model to given map_value."""
@@ -216,14 +245,18 @@ class MapModel(QAbstractTableModel):
         column_index = index.column()
         if column_index == len(row):
             self.append_column()
-            row = self._rows
+            row = self._rows[row_index]
         if not value:
             row[column_index] = None
             return True
         if not isinstance(value, (str, int, float, Duration, DateTime, IndexedValue)):
             return False
-        row[column_index] = value
+        row[column_index] = value if not isinstance(value, Number) else float(value)
         self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
+        if column_index > 0:
+            top_left = self.index(row_index, 0)
+            bottom_right = self.index(row_index, len(row))
+            self.dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
         return True
 
     def trim_columns(self):
