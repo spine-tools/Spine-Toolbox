@@ -151,7 +151,6 @@ class TabularViewMixin:
     def _handle_pivot_table_visibility_changed(self, visible):
         if visible:
             self.reload_pivot_table()
-            self.reload_frozen_table()
             self.ui.dockWidget_frozen_table.setVisible(True)
 
     @Slot(bool)
@@ -174,7 +173,6 @@ class TabularViewMixin:
     def _handle_entity_tree_current_changed(self, current):
         if self.ui.dockWidget_pivot_table.isVisible():
             self.reload_pivot_table(current=current)
-            self.reload_frozen_table()
 
     def _get_entities(self, class_id=None, class_type=None):
         """Returns a list of dict items from the object or relationship tree model
@@ -367,6 +365,7 @@ class TabularViewMixin:
         """Updates current class (type and id) and reloads pivot table for it."""
         if current is not None:
             self.current = current
+        self.clear_pivot_table()
         if self.current is None:
             return
         if self._is_class_index(self.current):
@@ -384,7 +383,6 @@ class TabularViewMixin:
         """Reloads pivot table.
         """
         if self.current_class_id is None:
-            self.clear_pivot_table()
             return
         qApp.processEvents()  # pylint: disable=undefined-variable
         if action is None:
@@ -404,19 +402,21 @@ class TabularViewMixin:
         self.ui.pivot_table.setItemDelegate(delegate)
         self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
         if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship_class":
-            self.clear_pivot_table()
             return
         pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
         object_class_ids = dict(zip(self.current_object_class_name_list, self.current_object_class_id_list))
         self.pivot_table_model.call_reset_model(object_class_ids, pivot)
         self.pivot_table_proxy.clear_filter()
+        self.reload_frozen_table()
 
     def clear_pivot_table(self):
         self.wipe_out_filter_menus()
         if self.pivot_table_model:
             self.pivot_table_model.clear_model()
             self.pivot_table_proxy.clear_filter()
+        if self.frozen_table_model:
+            self.frozen_table_model.clear_model()
 
     def wipe_out_filter_menus(self):
         while self.filter_menus:
@@ -821,4 +821,3 @@ class TabularViewMixin:
         """Reacts to session rolled back event."""
         super().receive_session_rolled_back(db_maps)
         self.reload_pivot_table()
-        self.reload_frozen_table()
