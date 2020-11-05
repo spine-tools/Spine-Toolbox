@@ -424,6 +424,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
 
     _CHECK = "\uf00c"
     _CROSS = "\uf00d"
+    _CLOCK = "\uf017"
 
     def __init__(self, parent):
         """An icon to show information about the item's execution.
@@ -492,6 +493,10 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._text_item.setScale(rect_w / dim_max)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
         self.show()
+
+    def mark_execution_wating(self):
+        self._execution_state = "waiting for dependencies"
+        self._repaint(self._CLOCK, QColor("orange"))
 
     def mark_execution_started(self):
         self._execution_state = "in progress"

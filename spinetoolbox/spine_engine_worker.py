@@ -34,22 +34,23 @@ class _SignalHandler(QObject):
                 continue
             self._project_items[item_name] = item.project_item
         for item in self._project_items.values():
-            item.get_icon().execution_icon.hide()
+            item.get_icon().execution_icon.mark_execution_wating()
 
     @Slot(str, object)
     def _handle_node_execution_started(self, item_name, direction):
         icon = self._project_items[item_name].get_icon()
-        icon.execution_icon.mark_execution_started()
-        if direction == ExecutionDirection.FORWARD and hasattr(icon, "animation_signaller"):
-            icon.animation_signaller.animation_started.emit()
+        if direction == ExecutionDirection.FORWARD:
+            icon.execution_icon.mark_execution_started()
+            if hasattr(icon, "animation_signaller"):
+                icon.animation_signaller.animation_started.emit()
 
     @Slot(str, object, object, bool)
     def _handle_node_execution_finished(self, item_name, direction, state, success):
         item = self._project_items[item_name]
         item.item_executed.emit(direction, state)
         icon = item.get_icon()
-        icon.execution_icon.mark_execution_finished(success)
         if direction == ExecutionDirection.FORWARD:
+            icon.execution_icon.mark_execution_finished(success)
             if hasattr(icon, "animation_signaller"):
                 icon.animation_signaller.animation_stopped.emit()
             if state == SpineEngineState.RUNNING:
