@@ -17,7 +17,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, sin, cos, pi
-from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation, QParallelAnimationGroup, QEventLoop
+from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation, QParallelAnimationGroup
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -182,14 +182,10 @@ class ProjectItemIcon(QGraphicsRectItem):
         return [l for conn in self.connectors.values() for l in conn.incoming_links()]
 
     def run_execution_leave_animation(self):
-        animation_group = QParallelAnimationGroup()
+        animation_group = QParallelAnimationGroup(self._toolbox)
         for link in self.outgoing_links():
             animation_group.addAnimation(link.make_execution_animation())
-        loop = QEventLoop()
-        animation_group.finished.connect(loop.quit)
         animation_group.start()
-        if animation_group.state() == QParallelAnimationGroup.Running:
-            loop.exec_()
 
     def hoverEnterEvent(self, event):
         """Sets a drop shadow effect to icon when mouse enters its boundaries.
