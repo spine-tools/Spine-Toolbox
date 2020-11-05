@@ -539,7 +539,7 @@ class ToolboxUI(QMainWindow):
         if not self._project.save(serialized_tool_spec_paths):
             self.msg_error.emit("Project saving failed")
             return
-        self.msg.emit("Project <b>{0}</b> saved".format(self._project.name))
+        self.msg.emit(f"Project <b>{self._project.name}</b> saved")
         self.undo_stack.setClean()
 
     @Slot()
@@ -730,13 +730,13 @@ class ToolboxUI(QMainWindow):
         return spec
 
     def load_specification(self, definition):
-        """Returns a Tool specification from a definition dictionary.
+        """Returns Item specification from a definition dictionary.
 
         Args:
-            definition (dict): Dictionary with the tool definition
+            definition (dict): Dictionary with the definition
 
         Returns:
-            ToolSpecification, NoneType
+            ProjectItemSpecification or NoneType: specification or None if specification factory was not found
         """
         # NOTE: Default to Tools so tool-specs work out of the box
         item_type = definition.get("item_type", "Tool")
@@ -954,9 +954,9 @@ class ToolboxUI(QMainWindow):
             specification (ProjectItemSpecification): An updated specification
         """
         if not self.specification_model.update_specification(row, specification):
-            self.msg_error.emit("Unable to update specification <b>{0}</b>".format(specification.name))
+            self.msg_error.emit(f"Unable to update specification <b>{specification.name}</b>")
             return
-        self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
+        self.msg_success.emit(f"Specification <b>{specification.name}</b> successfully updated")
         for item in self.project_item_model.items():
             project_item = item.project_item
             project_item_spec = project_item.specification()
@@ -981,13 +981,13 @@ class ToolboxUI(QMainWindow):
         """Reverts a specification update and refreshes all items that use it.
 
         Args:
-            row (int): Row of tool specification in ProjectItemSpecFactoryModel
+            row (int): Row of item specification in ProjectItemSpecFactoryModel
         """
         if not self.specification_model.undo_update_specification(row):
-            self.msg_error.emit("Unable to update specification at row <b>{0}</b>".format(row))
+            self.msg_error.emit(f"Unable to update specification at row <b>{row}</b>")
             return
         specification = self.specification_model.specification(row)
-        self.msg_success.emit("Specification <b>{0}</b> successfully updated".format(specification.name))
+        self.msg_success.emit(f"Specification <b>{specification.name}</b> successfully updated")
         for item in self.project_item_model.items():
             project_item = item.project_item
             if project_item.undo_specification == specification:
