@@ -82,8 +82,7 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler = DirectedGraphHandler()
         self.db_mngr = SpineDBManager(settings, logger, self)
         self.engine = None
-        self._engine_loop = None
-        self._engine_worker = None
+        self._engine_workers = []
         self._execution_stopped = True
         self._dag_execution_list = None
         self._dag_execution_permits_list = None
@@ -433,8 +432,14 @@ class SpineToolboxProject(MetaObject):
             execution_permits (Sequence(dict))
         """
         self._execution_stopped = False
+        if self._settings.value("appSettings/useExperimentalEngine", defaultValue="false") == "false":
+            self._execute_dags_normal(dags, execution_permits)
+        else:
+            self._execute_dags_experimental(dags, execution_permits)
+
+    def _execute_dags_normal(self, dags, execution_permits_list):
         self._dag_execution_list = list(dags)
-        self._dag_execution_permits_list = list(execution_permits)
+        self._dag_execution_permits_list = list(execution_permits_list)
         self._dag_execution_index = 0
         self.execute_next_dag()
 
@@ -453,23 +458,6 @@ class SpineToolboxProject(MetaObject):
         self._dag_execution_index += 1
         self.dag_execution_finished.emit()
 
-    def execute_dag(self, dag, execution_permits, dag_identifier):
-        """Executes given dag.
-
-        Args:
-            dag (DiGraph): Executed DAG
-            execution_permits (dict): Dictionary, where keys are node names in dag and value is a boolean
-            dag_identifier (str): Identifier number for printing purposes
-        """
-        if self.engine is not None:
-            self._logger.msg_error.emit("Execution already in progress.")
-            return
-        if self._settings.value("appSettings/useExperimentalEngine", defaultValue="false") == "false":
-            self._execute_dag_normal(dag, execution_permits, dag_identifier)
-        else:
-            self._execute_dag_experimental(dag, execution_permits, dag_identifier)
-        self.engine = None
-
     def _get_node_successors(self, dag, dag_identifier):
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
@@ -483,7 +471,17 @@ class SpineToolboxProject(MetaObject):
             return None
         return node_successors
 
-    def _execute_dag_normal(self, dag, execution_permits, dag_identifier):
+    def execute_dag(self, dag, execution_permits, dag_identifier):
+        """Executes given dag.
+
+        Args:
+            dag (DiGraph): Executed DAG
+            execution_permits (dict): Dictionary, where keys are node names in dag and value is a boolean
+            dag_identifier (str): Identifier number for printing purposes
+        """
+        if self.engine is not None:
+            self._logger.msg_error.emit("Execution already in progress.")
+            return
         node_successors = self._get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
@@ -502,14 +500,12 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
         # disconnect exec_started and exec_finished signals
         self.disconnect_subscriber_signals()
+        self.engine = None
 
-    def _execute_dag_experimental(self, dag, execution_permits, dag_identifier):
-        if self._engine_worker is not None:
-            self._logger.msg_error.emit("Execution already in progress.")
-            return
-        # TODO: We may want to introduce a new group "executionSettings", for more clarity
-        self._settings.beginGroup("appSettings")
+    def _make_settings_dict(self):
+        # XXX: We may want to introduce a new group "executionSettings", for more clarity
         settings = {}
+        self._settings.beginGroup("appSettings")
         for key in self._settings.childKeys():
             value = self._settings.value(key)
             try:
@@ -525,6 +521,18 @@ class SpineToolboxProject(MetaObject):
             settings["appSettings/juliaKernel"] = self._toolbox.julia_repl.julia_kernel_name()
         if self._settings.value("appSettings/useEmbeddedPython", defaultValue="2") == "2":
             settings["appSettings/pythonKernel"], _ = self._toolbox.python_repl.python_kernel_name()
+        return settings
+
+    def _execute_dags_experimental(self, dags, execution_permits_list):
+        if self._engine_workers:
+            self._logger.msg_error.emit("Execution already in progress.")
+            return
+        settings = self._make_settings_dict()
+        for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
+            dag_identifier = f"{k + 1}/{len(dags)}"
+            self._execute_dag_experimental(dag, execution_permits, dag_identifier, settings)
+
+    def _execute_dag_experimental(self, dag, execution_permits, dag_identifier, settings):
         node_successors = self._get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
@@ -544,28 +552,27 @@ class SpineToolboxProject(MetaObject):
             "settings": settings,
             "project_dir": self.project_dir,
         }
-        self.engine = SpineEngineExperimental(json.dumps(d))
+        engine = SpineEngineExperimental(json.dumps(d), debug=False)
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        self._engine_loop = QEventLoop()
-        self._engine_worker = SpineEngineWorker(self.engine, self._toolbox)
-        self._engine_worker.finished.connect(self._engine_loop.quit)
-        self._engine_worker.finished.connect(self._handle_engine_worker_finished)
-        self._engine_worker.start()
-        self._engine_loop.exec_()
+        worker = SpineEngineWorker(engine, dag_identifier, self._toolbox)
+        self._engine_workers.append(worker)
+        worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
+        worker.start()
+
+    def _handle_engine_worker_finished(self, worker):
         outcome = {
             SpineEngineState.USER_STOPPED: "stopped by the user",
             SpineEngineState.FAILED: "failed",
             SpineEngineState.COMPLETED: "completed successfully",
-        }[self.engine.state()]
-        self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
-
-    @Slot()
-    def _handle_engine_worker_finished(self):
-        if not self._engine_worker:
-            return
-        self._engine_worker.clean_up()
-        self._engine_worker = None
+        }.get(worker.engine.state())
+        if outcome is not None:
+            self._logger.msg.emit("<b>DAG {0} {1}</b>".format(worker.dag_identifier, outcome))
+        try:
+            self._engine_workers.remove(worker)
+        except ValueError:
+            pass
+        worker.clean_up()
 
     def connect_subscriber_signals(self):
         # register subscribers to relevant events
@@ -652,9 +659,12 @@ class SpineToolboxProject(MetaObject):
             return
         self._logger.msg.emit("Stopping...")
         self._execution_stopped = True
+        # Stop regular engine
         if self.engine:
             self.engine.stop()
-        self._handle_engine_worker_finished()
+        # Stop experimental engines
+        for worker in self._engine_workers:
+            worker.engine.stop()
 
     def export_graphs(self):
         """Exports all valid directed acyclic graphs in project to GraphML files."""

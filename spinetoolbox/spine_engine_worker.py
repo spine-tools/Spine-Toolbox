@@ -73,22 +73,23 @@ class SpineEngineWorker(QObject):
     _log_message_arrived = Signal(str, str, str)
     _process_message_arrived = Signal(str, str, str)
 
-    def __init__(self, engine, toolbox):
+    def __init__(self, engine, dag_identifier, toolbox):
         """
         Args:
             engine (SpineEngine): engine to run
         """
         super().__init__()
-        self._engine = engine
+        self.engine = engine
+        self.dag_identifier = dag_identifier
         self._toolbox = toolbox
         self._executing_items = []
         self._signal_handler = _SignalHandler(toolbox)
-        self._engine.publisher.register('exec_started', self, self._handle_node_execution_started)
-        self._engine.publisher.register('exec_finished', self, self._handle_node_execution_finished)
-        self._engine.publisher.register('log_msg', self, self._handle_log_msg)
-        self._engine.publisher.register('process_msg', self, self._handle_process_msg)
-        self._engine.publisher.register('standard_execution_msg', self, self._handle_standard_execution_msg)
-        self._engine.publisher.register('kernel_execution_msg', self, self._handle_kernel_execution_msg)
+        self.engine.publisher.register('exec_started', self, self._handle_node_execution_started)
+        self.engine.publisher.register('exec_finished', self, self._handle_node_execution_finished)
+        self.engine.publisher.register('log_msg', self, self._handle_log_msg)
+        self.engine.publisher.register('process_msg', self, self._handle_process_msg)
+        self.engine.publisher.register('standard_execution_msg', self, self._handle_standard_execution_msg)
+        self.engine.publisher.register('kernel_execution_msg', self, self._handle_kernel_execution_msg)
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
@@ -158,24 +159,24 @@ class SpineEngineWorker(QObject):
         return self._thread
 
     def start(self):
-        self._dag_execution_started.emit(list(self._engine.item_names))
+        self._dag_execution_started.emit(list(self.engine.item_names))
         self._thread.start()
 
     @Slot()
     def do_work(self):
         """Does the work and emits finished when done."""
-        self._engine.run()
+        self.engine.run()
         self.finished.emit()
 
     def clean_up(self):
         for item in self._executing_items:
-            self._node_execution_finished.emit(item, None, None)
-        self._engine.publisher.unregister('exec_started', self)
-        self._engine.publisher.unregister('exec_finished', self)
-        self._engine.publisher.unregister('log_msg', self)
-        self._engine.publisher.unregister('process_msg', self)
-        self._engine.publisher.unregister('standard_execution_msg', self)
-        self._engine.publisher.unregister('kernel_execution_msg', self)
+            self._node_execution_finished.emit(item, None, None, False)
+        self.engine.publisher.unregister('exec_started', self)
+        self.engine.publisher.unregister('exec_finished', self)
+        self.engine.publisher.unregister('log_msg', self)
+        self.engine.publisher.unregister('process_msg', self)
+        self.engine.publisher.unregister('standard_execution_msg', self)
+        self.engine.publisher.unregister('kernel_execution_msg', self)
         self._thread.quit()
         self._thread.wait()
         self.deleteLater()
