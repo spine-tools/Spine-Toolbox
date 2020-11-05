@@ -177,7 +177,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         if filter_expression and (isinstance(filter_expression, str) and not filter_expression.isspace()):
             self._select_all_str = '(Select all filtered)'
             self._filter_expression = filter_expression
-            self._filter_index = [i for i, item in enumerate(self._data) if re.search(self._filter_expression, item)]
+            self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
             self._selected_filtered = set(self._data[i] for i in self._filter_index)
             self._add_to_selection = False
             self.beginResetModel()
@@ -188,6 +188,9 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self.endResetModel()
         else:
             self.remove_filter()
+
+    def search_filter_expression(self, item):
+        return re.search(self._filter_expression, item)
 
     def set_base_filter(self, condition):
         """Sets the base filter. The other filter, the one that works by typing in the search bar, should be applied
@@ -264,7 +267,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             if self._is_filtered:
                 self._selected_filtered.update(data)
         if self._is_filtered:
-            self._filter_index = [i for i, item in enumerate(self._data) if re.search(self._filter_expression, item)]
+            self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
         self._all_selected = self._check_all_selected()
 
     def remove_items(self, data):
@@ -279,7 +282,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._data_set.difference_update(data)
         self._selected.difference_update(data)
         if self._is_filtered:
-            self._filter_index = [i for i, item in enumerate(self._data) if re.search(self._filter_expression, item)]
+            self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
             self._selected_filtered.difference_update(data)
         self._all_selected = self._check_all_selected()
 
@@ -353,3 +356,6 @@ class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         if role == Qt.DisplayRole and data not in (self._select_all_str, self._empty_str, self._add_to_selection_str):
             return self.data_to_value(data)
         return data
+
+    def search_filter_expression(self, item):
+        return re.search(self._filter_expression, self.data_to_value(item))
