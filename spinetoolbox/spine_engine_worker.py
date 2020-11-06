@@ -81,12 +81,6 @@ class SpineEngineWorker(QObject):
             self._project_items[item_name] = item.project_item
         self.sucessful_executions = []
         self._signal_handler = _SignalHandler()
-        self.engine.publisher.register('exec_started', self, self._handle_node_execution_started)
-        self.engine.publisher.register('exec_finished', self, self._handle_node_execution_finished)
-        self.engine.publisher.register('log_msg', self, self._handle_log_msg)
-        self.engine.publisher.register('process_msg', self, self._handle_process_msg)
-        self.engine.publisher.register('standard_execution_msg', self, self._handle_standard_execution_msg)
-        self.engine.publisher.register('kernel_execution_msg', self, self._handle_kernel_execution_msg)
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
@@ -95,6 +89,33 @@ class SpineEngineWorker(QObject):
         self._node_execution_finished.connect(self._signal_handler._handle_node_execution_finished)
         self._log_message_arrived.connect(self._signal_handler._handle_log_message_arrived)
         self._process_message_arrived.connect(self._signal_handler._handle_process_message_arrived)
+
+    def thread(self):
+        return self._thread
+
+    def start(self):
+        self._dag_execution_started.emit(list(self._project_items.values()))
+        self._thread.start()
+
+    @Slot()
+    def do_work(self):
+        """Does the work and emits finished when done."""
+        for event_type, data in self.engine.run_iterator():
+            self._process_event(event_type, data)
+        self.finished.emit()
+
+    def _process_event(self, event_type, data):
+        handler = {
+            'exec_started': self._handle_node_execution_started,
+            'exec_finished': self._handle_node_execution_finished,
+            'log_msg': self._handle_log_msg,
+            'process_msg': self._handle_process_msg,
+            'standard_execution_msg': self._handle_standard_execution_msg,
+            'kernel_execution_msg': self._handle_kernel_execution_msg,
+        }.get(event_type)
+        if handler is None:
+            return
+        handler(data)
 
     def _handle_standard_execution_msg(self, msg):
         if msg["type"] == "execution_failed_to_start":
@@ -158,27 +179,8 @@ class SpineEngineWorker(QObject):
         self._executing_items.remove(item)
         self._node_execution_finished.emit(item, direction, state, success)
 
-    def thread(self):
-        return self._thread
-
-    def start(self):
-        self._dag_execution_started.emit(list(self._project_items.values()))
-        self._thread.start()
-
-    @Slot()
-    def do_work(self):
-        """Does the work and emits finished when done."""
-        self.engine.run()
-        self.finished.emit()
-
     def clean_up(self):
         for item in self._executing_items:
             self._node_execution_finished.emit(item, None, None, False)
-        self.engine.publisher.unregister('exec_started', self)
-        self.engine.publisher.unregister('exec_finished', self)
-        self.engine.publisher.unregister('log_msg', self)
-        self.engine.publisher.unregister('process_msg', self)
-        self.engine.publisher.unregister('standard_execution_msg', self)
-        self.engine.publisher.unregister('kernel_execution_msg', self)
         self._thread.quit()
         self._thread.wait()
