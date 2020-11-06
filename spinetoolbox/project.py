@@ -18,7 +18,7 @@ Spine Toolbox project class.
 
 import os
 import json
-from PySide2.QtCore import Slot, Signal, QEventLoop
+from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from spine_engine.spine_engine_experimental import SpineEngineExperimental
@@ -471,6 +471,28 @@ class SpineToolboxProject(MetaObject):
             return None
         return node_successors
 
+    def connect_subscriber_signals(self):
+        # register subscribers to relevant events
+        self.engine.publisher.register('exec_started', self.start_subscriber)
+        self.engine.publisher.register('exec_finished', self.finish_subscriber)
+        self.engine.publisher.register('log_msg', self.log_subscriber)
+        self.start_subscriber.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
+        self.finish_subscriber.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
+
+    def disconnect_subscriber_signals(self):
+        self.start_subscriber.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
+        self.finish_subscriber.dag_node_execution_finished.disconnect(
+            self._toolbox.ui.graphicsView._run_leave_animation
+        )
+        self.finish_subscriber.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
+        # unregister subscribers
+        self.engine.publisher.unregister('exec_started', self.start_subscriber)
+        self.engine.publisher.unregister('exec_finished', self.finish_subscriber)
+        self.engine.publisher.unregister('log_msg', self.log_subscriber)
+
     def execute_dag(self, dag, execution_permits, dag_identifier):
         """Executes given dag.
 
@@ -501,6 +523,7 @@ class SpineToolboxProject(MetaObject):
         # disconnect exec_started and exec_finished signals
         self.disconnect_subscriber_signals()
         self.engine = None
+        self.notify_changes_in_dag(dag)
 
     def _make_settings_dict(self):
         # XXX: We may want to introduce a new group "executionSettings", for more clarity
@@ -555,46 +578,34 @@ class SpineToolboxProject(MetaObject):
         engine = SpineEngineExperimental(json.dumps(d), debug=False)
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        worker = SpineEngineWorker(engine, dag_identifier, self._toolbox)
+        worker = SpineEngineWorker(self._toolbox, engine, dag, dag_identifier)
         self._engine_workers.append(worker)
         worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
         worker.start()
 
     def _handle_engine_worker_finished(self, worker):
-        outcome = {
+        worker.clean_up()
+        finished_outcomes = {
             SpineEngineState.USER_STOPPED: "stopped by the user",
             SpineEngineState.FAILED: "failed",
             SpineEngineState.COMPLETED: "completed successfully",
-        }.get(worker.engine.state())
+        }
+        outcome = finished_outcomes.get(worker.engine.state())
         if outcome is not None:
             self._logger.msg.emit("<b>DAG {0} {1}</b>".format(worker.dag_identifier, outcome))
-        try:
-            self._engine_workers.remove(worker)
-        except ValueError:
-            pass
-        worker.clean_up()
-
-    def connect_subscriber_signals(self):
-        # register subscribers to relevant events
-        self.engine.publisher.register('exec_started', self.start_subscriber)
-        self.engine.publisher.register('exec_finished', self.finish_subscriber)
-        self.engine.publisher.register('log_msg', self.log_subscriber)
-        self.start_subscriber.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
-        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
-        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
-        self.finish_subscriber.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
-
-    def disconnect_subscriber_signals(self):
-        self.start_subscriber.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
-        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
-        self.finish_subscriber.dag_node_execution_finished.disconnect(
-            self._toolbox.ui.graphicsView._run_leave_animation
-        )
-        self.finish_subscriber.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
-        # unregister subscribers
-        self.engine.publisher.unregister('exec_started', self.start_subscriber)
-        self.engine.publisher.unregister('exec_finished', self.finish_subscriber)
-        self.engine.publisher.unregister('log_msg', self.log_subscriber)
+        if any(worker.engine.state() not in finished_outcomes for worker in self._engine_workers):
+            return
+        # Only after all workers have finished, notify changes and handle successful executions.
+        # Doing it while executing leads to deadlocks in acquiring sqlalchemy's infamous _CONFIGURE_MUTEX lock,
+        # needed to create DatabaseMapping instances. It seems that the lock gets confused when
+        # being acquired by threads from different processes or maybe even different QThreads
+        # Can't say I really understand it totally.
+        for finished_worker in self._engine_workers:
+            self.notify_changes_in_dag(finished_worker.dag)
+            for item, direction, state in self.sucessful_executions:
+                item.handle_execution_successful(direction, state)
+            finished_worker.deleteLater()
+        self._engine_workers.clear()
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
@@ -630,9 +641,6 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
         self._logger.msg.emit("-------------------------------------------------")
         self.execute_dags(dags, execution_permit_list)
-        for name in executable_item_names:
-            # Make sure transient files and file pattern resources get updated throughout the DAG
-            self.notify_changes_in_containing_dag(name)
 
     def execute_project(self):
         """Executes all dags in the project."""
@@ -649,8 +657,6 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
         self._logger.msg.emit("--------------------------------------------")
         self.execute_dags(dags, execution_permit_list)
-        # Make sure transient file resources are updated after execution.
-        self.notify_changes_in_all_dags()
 
     def stop(self):
         """Stops execution. Slot for the main window Stop tool button in the toolbar."""

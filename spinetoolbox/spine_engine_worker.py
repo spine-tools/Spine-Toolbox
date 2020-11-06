@@ -21,33 +21,21 @@ from spine_engine import ExecutionDirection, SpineEngineState
 
 
 class _SignalHandler(QObject):
-    def __init__(self, toolbox):
-        self._toolbox = toolbox
-        self._project_items = {}
-
     @Slot(list)
-    def _handle_dag_execution_started(self, item_names):
-        self._project_items.clear()
-        for item_name in item_names:
-            item = self._toolbox.project_item_model.get_item(item_name)
-            if item is None:
-                continue
-            self._project_items[item_name] = item.project_item
-        for item in self._project_items.values():
+    def _handle_dag_execution_started(self, project_items):
+        for item in project_items:
             item.get_icon().execution_icon.mark_execution_wating()
 
-    @Slot(str, object)
-    def _handle_node_execution_started(self, item_name, direction):
-        icon = self._project_items[item_name].get_icon()
+    @Slot(object, object)
+    def _handle_node_execution_started(self, item, direction):
+        icon = item.get_icon()
         if direction == ExecutionDirection.FORWARD:
             icon.execution_icon.mark_execution_started()
             if hasattr(icon, "animation_signaller"):
                 icon.animation_signaller.animation_started.emit()
 
-    @Slot(str, object, object, bool)
-    def _handle_node_execution_finished(self, item_name, direction, state, success):
-        item = self._project_items[item_name]
-        item.item_executed.emit(direction, state)
+    @Slot(object, object, object, bool)
+    def _handle_node_execution_finished(self, item, direction, state, success):
         icon = item.get_icon()
         if direction == ExecutionDirection.FORWARD:
             icon.execution_icon.mark_execution_finished(success)
@@ -56,35 +44,43 @@ class _SignalHandler(QObject):
             if state == SpineEngineState.RUNNING:
                 icon.run_execution_leave_animation()
 
-    @Slot(str, str, str)
-    def _handle_log_message_arrived(self, item_name, msg_type, msg_text):
-        self._project_items[item_name].get_icon().execution_icon.add_log_message(msg_type, msg_text)
+    @Slot(object, str, str)
+    def _handle_log_message_arrived(self, item, msg_type, msg_text):
+        item.get_icon().execution_icon.add_log_message(msg_type, msg_text)
 
-    @Slot(str, str, str)
-    def _handle_process_message_arrived(self, item_name, msg_type, msg_text):
-        self._project_items[item_name].get_icon().execution_icon.add_process_message(msg_type, msg_text)
+    @Slot(object, str, str)
+    def _handle_process_message_arrived(self, item, msg_type, msg_text):
+        item.get_icon().execution_icon.add_process_message(msg_type, msg_text)
 
 
 class SpineEngineWorker(QObject):
 
     finished = Signal()
     _dag_execution_started = Signal(list)
-    _node_execution_started = Signal(str, object)
-    _node_execution_finished = Signal(str, object, object, bool)
-    _log_message_arrived = Signal(str, str, str)
-    _process_message_arrived = Signal(str, str, str)
+    _node_execution_started = Signal(object, object)
+    _node_execution_finished = Signal(object, object, object, bool)
+    _log_message_arrived = Signal(object, str, str)
+    _process_message_arrived = Signal(object, str, str)
 
-    def __init__(self, engine, dag_identifier, toolbox):
+    def __init__(self, toolbox, engine, dag, dag_identifier):
         """
         Args:
             engine (SpineEngine): engine to run
         """
         super().__init__()
-        self.engine = engine
-        self.dag_identifier = dag_identifier
         self._toolbox = toolbox
+        self.engine = engine
+        self.dag = dag
+        self.dag_identifier = dag_identifier
         self._executing_items = []
-        self._signal_handler = _SignalHandler(toolbox)
+        self._project_items = {}
+        for item_name in self.engine.item_names:
+            item = self._toolbox.project_item_model.get_item(item_name)
+            if item is None:
+                continue
+            self._project_items[item_name] = item.project_item
+        self.sucessful_executions = []
+        self._signal_handler = _SignalHandler()
         self.engine.publisher.register('exec_started', self, self._handle_node_execution_started)
         self.engine.publisher.register('exec_finished', self, self._handle_node_execution_finished)
         self.engine.publisher.register('log_msg', self, self._handle_log_msg)
@@ -133,34 +129,40 @@ class SpineEngineWorker(QObject):
         self._do_handle_process_msg(**data)
 
     def _do_handle_process_msg(self, author, msg_type, msg_text):
-        self._process_message_arrived.emit(author, msg_type, msg_text)
+        item = self._project_items[author]
+        self._process_message_arrived.emit(item, msg_type, msg_text)
 
     def _handle_log_msg(self, data):
         self._do_handle_log_msg(**data)
 
     def _do_handle_log_msg(self, author, msg_type, msg_text):
-        self._log_message_arrived.emit(author, msg_type, msg_text)
+        item = self._project_items[author]
+        self._log_message_arrived.emit(item, msg_type, msg_text)
 
     def _handle_node_execution_started(self, data):
         self._do_handle_node_execution_started(**data)
 
     def _do_handle_node_execution_started(self, item_name, direction):
         """Starts item icon animation when executing forward."""
-        self._executing_items.append(item_name)
-        self._node_execution_started.emit(item_name, direction)
+        item = self._project_items[item_name]
+        self._executing_items.append(item)
+        self._node_execution_started.emit(item, direction)
 
     def _handle_node_execution_finished(self, data):
         self._do_handle_node_execution_finished(**data)
 
     def _do_handle_node_execution_finished(self, item_name, direction, state, success):
-        self._executing_items.remove(item_name)
-        self._node_execution_finished.emit(item_name, direction, state, success)
+        item = self._project_items[item_name]
+        if success:
+            self.sucessful_executions.append((item, direction, state))
+        self._executing_items.remove(item)
+        self._node_execution_finished.emit(item, direction, state, success)
 
     def thread(self):
         return self._thread
 
     def start(self):
-        self._dag_execution_started.emit(list(self.engine.item_names))
+        self._dag_execution_started.emit(list(self._project_items.values()))
         self._thread.start()
 
     @Slot()
@@ -180,4 +182,3 @@ class SpineEngineWorker(QObject):
         self.engine.publisher.unregister('kernel_execution_msg', self)
         self._thread.quit()
         self._thread.wait()
-        self.deleteLater()
