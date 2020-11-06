@@ -35,22 +35,6 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         # No need to cache indexes here anymore, as spinedb_api.TimeSeriesFixedResolution already does it
         self.locale = QLocale()
 
-    def data(self, index, role=Qt.DisplayRole):
-        """
-        Returns the time stamp or the corresponding value at given model index.
-
-        Column index 0 refers to time stamps while index 1 to values.
-
-        Args:
-            index (QModelIndex): an index to the model
-            role (int): a role
-        """
-        if not index.isValid() or role not in (Qt.DisplayRole, Qt.EditRole):
-            return None
-        if index.column() == 0:
-            return str(self._value.indexes[index.row()])
-        return float(self._value.values[index.row()])
-
     def flags(self, index):
         """Returns flags at index."""
         if not index.isValid():
@@ -139,7 +123,10 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
             return False
         if index.column() != 1:
             return False
-        self._value.values[index.row()] = value
+        row = index.row()
+        if row == len(self._value):
+            self.insertRow(row)
+        self._value.values[row] = value
         self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole])
         return True
 

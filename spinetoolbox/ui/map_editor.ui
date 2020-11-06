@@ -27,7 +27,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QTableView" name="map_table_view">
+    <widget class="MapTableView" name="map_table_view">
      <attribute name="horizontalHeaderVisible">
       <bool>true</bool>
      </attribute>
@@ -64,6 +64,13 @@ and values are floats.</string>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>MapTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

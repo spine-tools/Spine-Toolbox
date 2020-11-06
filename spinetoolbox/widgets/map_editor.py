@@ -17,11 +17,12 @@ An editor widget for editing a map type parameter values.
 """
 
 from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
-from PySide2.QtWidgets import QMenu, QWidget
+from PySide2.QtWidgets import QWidget
 from spinedb_api import Map
 from .map_value_editor import MapValueEditor
+from .indexed_value_table_context_menu import MapTableContextMenu
 from ..mvcmodels.map_model import MapModel
-from ..spine_db_editor.widgets.custom_delegates import MapEditorTableDelegate
+from ..spine_db_editor.widgets.custom_delegates import ParameterValueElementDelegate
 
 
 class MapEditor(QWidget):
@@ -42,8 +43,8 @@ class MapEditor(QWidget):
         self._ui.map_table_view.setModel(self._model)
         self._ui.map_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.map_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
-        delegate = MapEditorTableDelegate(self._ui.map_table_view)
-        delegate.value_editor_requested.connect(self._open_value_editor)
+        delegate = ParameterValueElementDelegate(self._ui.map_table_view)
+        delegate.value_editor_requested.connect(self.open_value_editor)
         self._ui.map_table_view.setItemDelegate(delegate)
         self._ui.convert_leaves_button.clicked.connect(self._convert_leaves)
 
@@ -52,37 +53,15 @@ class MapEditor(QWidget):
         self._model.convert_leaf_maps()
 
     @Slot(QPoint)
-    def _show_table_context_menu(self, pos):
-        menu = QMenu(self._ui.map_table_view)
-        menu.addAction("Open value editor...")
-        menu.addSeparator()
-        menu.addAction("Insert row before")
-        menu.addAction("Insert row after")
-        menu.addAction("Remove row")
-        menu.addSeparator()
-        menu.addAction("Append column")
-        menu.addAction("Trim columns")
-        global_pos = self._ui.map_table_view.mapToGlobal(pos)
-        action = menu.exec_(global_pos)
-        if action is None:
-            return
-        action_text = action.text()
-        selected_indexes = self._ui.map_table_view.selectedIndexes()
-        selected_rows = sorted([index.row() for index in selected_indexes])
-        first_row = selected_rows[0]
-        if action_text == "Open value editor...":
-            index = self._ui.map_table_view.indexAt(pos)
-            self._open_value_editor(index)
-        elif action_text == "Insert row before":
-            self._model.insertRows(first_row, 1)
-        elif action_text == "Insert row after":
-            self._model.insertRows(first_row + 1, 1)
-        elif action_text == "Remove row":
-            self._model.removeRows(first_row, 1)
-        elif action_text == "Append column":
-            self._model.append_column()
-        elif action_text == "Trim columns":
-            self._model.trim_columns()
+    def _show_table_context_menu(self, position):
+        """
+        Opens table context menu.
+
+        Args:
+            position (QPoint): menu's position
+        """
+        menu = MapTableContextMenu(self, self._ui.map_table_view, position)
+        menu.exec_(self._ui.map_table_view.mapToGlobal(position))
 
     def set_value(self, value):
         """Sets the parameter_value to be edited."""
@@ -93,7 +72,7 @@ class MapEditor(QWidget):
         return self._model.value()
 
     @Slot(QModelIndex)
-    def _open_value_editor(self, index):
+    def open_value_editor(self, index):
         """
         Opens value editor dialog for given map model index.
 

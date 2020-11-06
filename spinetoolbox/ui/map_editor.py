@@ -25,6 +25,8 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
+from spinetoolbox.widgets.custom_qtableview import MapTableView
+
 
 class Ui_MapEditor(object):
     def setupUi(self, MapEditor):
@@ -33,7 +35,7 @@ class Ui_MapEditor(object):
         MapEditor.resize(400, 300)
         self.verticalLayout = QVBoxLayout(MapEditor)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.map_table_view = QTableView(MapEditor)
+        self.map_table_view = MapTableView(MapEditor)
         self.map_table_view.setObjectName(u"map_table_view")
         self.map_table_view.horizontalHeader().setVisible(True)
 

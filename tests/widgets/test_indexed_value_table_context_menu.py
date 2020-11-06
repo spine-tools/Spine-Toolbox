@@ -17,72 +17,361 @@ Unit tests for the indexed_value_table_context_menu module.
 """
 
 import unittest
-from spinetoolbox.widgets.indexed_value_table_context_menu import _remove_rows
+from unittest.mock import MagicMock
+from PySide2.QtWidgets import QApplication
+from spinedb_api import Array, Map, TimePattern, TimeSeriesFixedResolution, TimeSeriesVariableResolution
+from spinetoolbox.mvcmodels.array_model import ArrayModel
+from spinetoolbox.widgets.array_editor import ArrayEditor
+from spinetoolbox.widgets.indexed_value_table_context_menu import (
+    ArrayTableContextMenu,
+    IndexedValueTableContextMenu,
+    MapTableContextMenu,
+)
+from spinetoolbox.widgets.map_editor import MapEditor
+from spinetoolbox.widgets.time_pattern_editor import TimePatternEditor
+from spinetoolbox.widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
+from spinetoolbox.widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
 
 
-class _MockModel:
-    def __init__(self):
-        self.row = list()
-        self.count = list()
+class TestArrayTableContextMenu(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
 
-    def removeRows(self, row, count):
-        self.row.append(row)
-        self.count.append(count)
+    def test_insert_row_after(self):
+        editor = ArrayEditor()
+        editor.set_value(Array([-1.0]))
+        table_view = editor._ui.array_table_view
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = ArrayTableContextMenu(editor, table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row after")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), -1.0)
+        self.assertEqual(model.index(1, 0).data(), 0.0)
+
+    def test_insert_row_before(self):
+        editor = ArrayEditor()
+        editor.set_value(Array([-1.0]))
+        table_view = editor._ui.array_table_view
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = ArrayTableContextMenu(editor, table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row before")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), 0.0)
+        self.assertEqual(model.index(1, 0).data(), -1.0)
+
+    def test_remove_rows(self):
+        editor = ArrayEditor()
+        editor.set_value(Array([-1.0, -2.0]))
+        table_view = editor._ui.array_table_view
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = ArrayTableContextMenu(editor, table_view, rect.center())
+        remove_action = _find_action(menu, "Remove rows")
+        self.assertIsNotNone(remove_action)
+        remove_action.trigger()
+        self.assertEqual(model.rowCount(), 1 + 1)
+        self.assertEqual(model.index(0, 0).data(), -2.0)
+
+    def test_show_value_editor(self):
+        editor = ArrayEditor()
+        editor.set_value(Array([-1.0]))
+        table_view = editor._ui.array_table_view
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        editor.open_value_editor = MagicMock()
+        menu = ArrayTableContextMenu(editor, table_view, rect.center())
+        open_action = _find_action(menu, "Open value editor...")
+        self.assertIsNotNone(open_action)
+        open_action.trigger()
+        editor.open_value_editor.assert_called_once_with(model.index(0, 0))
 
 
 class TestIndexedValueTableContextMenu(unittest.TestCase):
-    def test_remove_rows_first_row(self):
-        model = _MockModel()
-        selected_rows = [0]
-        _remove_rows(selected_rows, model)
-        self.assertEqual(len(model.row), 1)
-        self.assertEqual(model.row[0], 0)
-        self.assertEqual(len(model.count), 1)
-        self.assertEqual(model.count[0], 1)
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
 
-    def test_remove_rows_single_row(self):
-        model = _MockModel()
-        selected_rows = [23]
-        _remove_rows(selected_rows, model)
-        self.assertEqual(len(model.row), 1)
-        self.assertEqual(model.row[0], 23)
-        self.assertEqual(len(model.count), 1)
-        self.assertEqual(model.count[0], 1)
+    def test_insert_row_after_with_time_pattern_editor(self):
+        editor = TimePatternEditor()
+        editor.set_value(TimePattern(["1d"], [-1.1]))
+        table_view = editor._ui.pattern_edit_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = IndexedValueTableContextMenu(table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row after")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), "1d")
+        self.assertEqual(model.index(0, 1).data(), -1.1)
+        self.assertEqual(model.index(1, 0).data(), "2")
+        self.assertEqual(model.index(1, 1).data(), 0.0)
 
-    def test_remove_rows_single_block(self):
-        model = _MockModel()
-        selected_rows = [3, 4, 5]
-        _remove_rows(selected_rows, model)
-        self.assertEqual(len(model.row), 1)
-        self.assertEqual(model.row[0], 3)
-        self.assertEqual(len(model.count), 1)
-        self.assertEqual(model.count[0], 3)
+    def test_insert_row_after_with_time_series_fixed_resolution_editor(self):
+        editor = TimeSeriesFixedResolutionEditor()
+        editor.set_value(TimeSeriesFixedResolution("2020-11-11T14:25", "1D", [-1.1], False, False))
+        table_view = editor._ui.time_series_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = IndexedValueTableContextMenu(table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row after")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
+        self.assertEqual(model.index(0, 1).data(), -1.1)
+        self.assertEqual(model.index(1, 0).data(), "2020-11-12T14:25:00")
+        self.assertEqual(model.index(1, 1).data(), 0.0)
 
-    def test_remove_rows_multiple_blocks(self):
-        model = _MockModel()
-        selected_rows = [3, 4, 5, 7]
-        _remove_rows(selected_rows, model)
-        self.assertEqual(len(model.row), 2)
-        self.assertEqual(model.row[0], 7)
-        self.assertEqual(model.row[1], 3)
-        self.assertEqual(len(model.count), 2)
-        self.assertEqual(model.count[0], 1)
-        self.assertEqual(model.count[1], 3)
+    def test_insert_row_after_with_time_series_variable_resolution_editor(self):
+        editor = TimeSeriesVariableResolutionEditor()
+        editor.set_value(TimeSeriesVariableResolution(["2020-11-11T14:25"], [-1.1], False, False))
+        table_view = editor._ui.time_series_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = IndexedValueTableContextMenu(table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row after")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
+        self.assertEqual(model.index(0, 1).data(), -1.1)
+        self.assertEqual(model.index(1, 0).data(), "2020-11-11T15:25:00")
+        self.assertEqual(model.index(1, 1).data(), 0.0)
 
-    def test_remove_rows_scattered(self):
-        model = _MockModel()
-        selected_rows = [3, 5, 6, 8, 10]
-        _remove_rows(selected_rows, model)
-        self.assertEqual(len(model.row), 4)
-        self.assertEqual(model.row[0], 10)
-        self.assertEqual(model.row[1], 8)
-        self.assertEqual(model.row[2], 5)
-        self.assertEqual(model.row[3], 3)
-        self.assertEqual(len(model.count), 4)
-        self.assertEqual(model.count[0], 1)
-        self.assertEqual(model.count[1], 1)
-        self.assertEqual(model.count[2], 2)
-        self.assertEqual(model.count[3], 1)
+    def test_insert_row_before_with_time_pattern_editor(self):
+        editor = TimePatternEditor()
+        editor.set_value(TimePattern(["1d"], [-1.1]))
+        table_view = editor._ui.pattern_edit_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = IndexedValueTableContextMenu(table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row before")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), "1")
+        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 0).data(), "1d")
+        self.assertEqual(model.index(1, 1).data(), -1.1)
+
+    def test_insert_row_before_with_time_series_fixed_resolution_editor(self):
+        editor = TimeSeriesFixedResolutionEditor()
+        editor.set_value(TimeSeriesFixedResolution("2020-11-11T14:25", "1D", [-1.1], False, False))
+        table_view = editor._ui.time_series_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = IndexedValueTableContextMenu(table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row before")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
+        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 0).data(), "2020-11-12T14:25:00")
+        self.assertEqual(model.index(1, 1).data(), -1.1)
+
+    def test_insert_row_before_with_time_series_variable_resolution_editor(self):
+        editor = TimeSeriesVariableResolutionEditor()
+        editor.set_value(TimeSeriesVariableResolution(["2020-11-11T14:25"], [-1.1], False, False))
+        table_view = editor._ui.time_series_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = IndexedValueTableContextMenu(table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row before")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), "2020-11-11T13:25:00")
+        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 0).data(), "2020-11-11T14:25:00")
+        self.assertEqual(model.index(1, 1).data(), -1.1)
+
+    def test_remove_rows_with_time_pattern_editor(self):
+        editor = TimePatternEditor()
+        editor.set_value(TimePattern(["1d", "2d"], [-1.1, -2.2]))
+        table_view = editor._ui.pattern_edit_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = ArrayTableContextMenu(editor, table_view, rect.center())
+        remove_action = _find_action(menu, "Remove rows")
+        self.assertIsNotNone(remove_action)
+        remove_action.trigger()
+        self.assertEqual(model.rowCount(), 1 + 1)
+        self.assertEqual(model.index(0, 0).data(), "2d")
+        self.assertEqual(model.index(0, 1).data(), -2.2)
+
+    def test_remove_rows_with_time_series_fixed_resolution_editor(self):
+        editor = TimeSeriesFixedResolutionEditor()
+        editor.set_value(TimeSeriesFixedResolution("2020-11-11T14:25", "1D", [-1.1, -2.2], False, False))
+        table_view = editor._ui.time_series_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = ArrayTableContextMenu(editor, table_view, rect.center())
+        remove_action = _find_action(menu, "Remove rows")
+        self.assertIsNotNone(remove_action)
+        remove_action.trigger()
+        self.assertEqual(model.rowCount(), 1 + 1)
+        self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
+        self.assertEqual(model.index(0, 1).data(), -2.2)
+
+    def test_remove_rows_with_time_series_variable_resolution_editor(self):
+        editor = TimeSeriesVariableResolutionEditor()
+        editor.set_value(
+            TimeSeriesVariableResolution(["2020-11-11T14:25", "2020-11-12T14:25"], [-1.1, -2.2], False, False)
+        )
+        table_view = editor._ui.time_series_table
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = ArrayTableContextMenu(editor, table_view, rect.center())
+        remove_action = _find_action(menu, "Remove rows")
+        self.assertIsNotNone(remove_action)
+        remove_action.trigger()
+        self.assertEqual(model.rowCount(), 1 + 1)
+        self.assertEqual(model.index(0, 0).data(), "2020-11-12T14:25:00")
+        self.assertEqual(model.index(0, 1).data(), -2.2)
+
+
+class TestMapTableContextMenu(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def test_insert_column_after(self):
+        editor = MapEditor()
+        editor.set_value(Map(["a"], [-1.0]))
+        table_view = editor._ui.map_table_view
+        table_view.selectColumn(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = MapTableContextMenu(editor, table_view, rect.center())
+        insert_action = _find_action(menu, "Insert column after")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.columnCount(), 3 + 1)
+        self.assertEqual(model.index(0, 0).data(), "a")
+        self.assertEqual(model.index(0, 1).data(), None)
+        self.assertEqual(model.index(0, 2).data(), -1.0)
+
+    def test_insert_column_before(self):
+        editor = MapEditor()
+        editor.set_value(Map(["a"], [-1.0]))
+        table_view = editor._ui.map_table_view
+        table_view.selectColumn(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = MapTableContextMenu(editor, table_view, rect.center())
+        insert_action = _find_action(menu, "Insert column before")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.columnCount(), 3 + 1)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), "a")
+        self.assertEqual(model.index(0, 2).data(), -1.0)
+
+    def test_insert_row_after(self):
+        editor = MapEditor()
+        editor.set_value(Map(["a"], [-1.0]))
+        table_view = editor._ui.map_table_view
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = MapTableContextMenu(editor, table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row after")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), "a")
+        self.assertEqual(model.index(0, 1).data(), -1.0)
+        self.assertEqual(model.index(1, 0).data(), "a")
+        self.assertEqual(model.index(1, 1).data(), -1.0)
+
+    def test_insert_row_before(self):
+        editor = MapEditor()
+        editor.set_value(Map(["a"], [-1.0]))
+        table_view = editor._ui.map_table_view
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = MapTableContextMenu(editor, table_view, rect.center())
+        insert_action = _find_action(menu, "Insert row before")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), None)
+        self.assertEqual(model.index(1, 0).data(), "a")
+        self.assertEqual(model.index(1, 1).data(), -1.0)
+
+    def test_remove_columns(self):
+        editor = MapEditor()
+        editor.set_value(Map(["a"], [-1.0]))
+        table_view = editor._ui.map_table_view
+        table_view.selectColumn(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = MapTableContextMenu(editor, table_view, rect.center())
+        insert_action = _find_action(menu, "Remove columns")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.columnCount(), 1 + 1)
+        self.assertEqual(model.index(0, 0).data(), -1.0)
+
+    def test_remove_rows(self):
+        editor = MapEditor()
+        editor.set_value(Map(["a"], [-1.0]))
+        table_view = editor._ui.map_table_view
+        table_view.selectRow(0)
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        menu = MapTableContextMenu(editor, table_view, rect.center())
+        insert_action = _find_action(menu, "Remove rows")
+        self.assertIsNotNone(insert_action)
+        insert_action.trigger()
+        self.assertEqual(model.rowCount(), 1)
+
+    def test_show_value_editor(self):
+        editor = MapEditor()
+        editor.set_value(Map(["a"], [-1.0]))
+        table_view = editor._ui.map_table_view
+        model = table_view.model()
+        rect = table_view.visualRect(model.index(0, 0))
+        editor.open_value_editor = MagicMock()
+        menu = MapTableContextMenu(editor, table_view, rect.center())
+        open_action = _find_action(menu, "Open value editor...")
+        self.assertIsNotNone(open_action)
+        open_action.trigger()
+        editor.open_value_editor.assert_called_once_with(model.index(0, 0))
+
+
+def _find_action(menu, text):
+    """Returns ``QAction`` with given text or None if not found."""
+    for action in menu.actions():
+        if action.text() == text:
+            return action
+    return None
 
 
 if __name__ == '__main__':

@@ -95,7 +95,12 @@ class ParameterValueEditorBase(QWidget):
     def accept(self):
         """Saves the parameter_value shown in the currently selected editor widget to the database manager."""
         editor = self._ui.editor_stack.currentWidget()
-        success = self._set_data(editor.value())
+        try:
+            value = editor.value()
+        except ParameterValueFormatError as error:
+            QMessageBox.warning(self.parent(), "Error", str(error))
+            return
+        success = self._set_data(value)
         if success:
             self.close()
 

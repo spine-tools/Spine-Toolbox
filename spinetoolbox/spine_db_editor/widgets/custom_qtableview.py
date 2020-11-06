@@ -17,7 +17,7 @@ Custom QTableView classes that support copy-paste and the like.
 """
 
 from PySide2.QtCore import Qt, Signal, Slot
-from PySide2.QtWidgets import QTableView, QAbstractItemView, QMenu
+from PySide2.QtWidgets import QAction, QTableView, QAbstractItemView, QMenu
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
 from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints, PivotTablePlottingHints
@@ -103,7 +103,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             plot_widget.use_as_window(self.window(), self.value_column_header)
             plot_widget.show()
 
-    @Slot("QAction")
+    @Slot(QAction)
     def plot_in_window(self, action):
         """Plots current index in the window given by action's name."""
         plot_window_name = action.text()
@@ -472,7 +472,7 @@ class PivotTableView(CopyPasteTableView):
             parameter_name = self.source_model.header_name(index)
             self.remove_parameters_action.setText("Remove parameter_definition: {}".format(parameter_name))
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _plot_in_window(self, action):
         window_id = action.text()
         plot_window = PlotWidget.plot_windows.get(window_id)

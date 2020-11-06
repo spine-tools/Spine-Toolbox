@@ -26,7 +26,7 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.plot_widget import PlotWidget
-from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
+from spinetoolbox.widgets.custom_qtableview import ArrayTableView
 
 
 class Ui_Form(object):
@@ -63,7 +63,7 @@ class Ui_Form(object):
 
         self.verticalLayout_3.addLayout(self.formLayout)
 
-        self.array_table_view = CopyPasteTableView(self.verticalLayoutWidget)
+        self.array_table_view = ArrayTableView(self.verticalLayoutWidget)
         self.array_table_view.setObjectName(u"array_table_view")
 
         self.verticalLayout_3.addWidget(self.array_table_view)

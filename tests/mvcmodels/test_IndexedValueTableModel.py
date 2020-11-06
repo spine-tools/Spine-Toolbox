@@ -70,14 +70,14 @@ class TestIndexedValueTableModel(unittest.TestCase):
     def test_reset(self):
         new_value = MockValue(['d'], [1])
         self._model.reset(new_value)
-        self.assertEqual(self._model.rowCount(), 1)
+        self.assertEqual(self._model.rowCount(), 2)
         model_index = self._model.index(0, 0)
         self.assertEqual(self._model.data(model_index), 'd')
         model_index = self._model.index(0, 1)
         self.assertEqual(self._model.data(model_index), 1)
 
     def test_row_count(self):
-        self.assertEqual(self._model.rowCount(), 3)
+        self.assertEqual(self._model.rowCount(), 4)
 
 
 if __name__ == '__main__':

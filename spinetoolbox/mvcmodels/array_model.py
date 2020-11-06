@@ -15,10 +15,12 @@ Contains logic for the fixed step time series editor widget.
 :author: A. Soininen (VTT)
 :date:   14.6.2019
 """
-
+import locale
+from numbers import Number
+import numpy
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtGui import QColor
-from spinedb_api import Array, from_database, ParameterValueFormatError, to_database
+from spinedb_api import Array, from_database, ParameterValueFormatError, SpineDBAPIError
+from .indexed_value_table_model import EXPANSE_COLOR
 
 
 class ArrayModel(QAbstractTableModel):
@@ -44,44 +46,95 @@ class ArrayModel(QAbstractTableModel):
             return
         top_row = indexes[0].row()
         bottom_row = top_row
+        indexes, values = self._convert_to_data_type(indexes, values)
+        if not indexes:
+            return
         for index, value in zip(indexes, values):
             row = index.row()
             top_row = min(top_row, row)
             bottom_row = max(bottom_row, row)
-            self._set_data(index, value)
+            if row == len(self._data):
+                self.insertRow(len(self._data))
+            self._data[row] = value
         top_left = self.index(top_row, 0)
         bottom_right = self.index(bottom_row, 0)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole])
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.ToolTipRole])
 
     def columnCount(self, parent=QModelIndex()):
         """Returns 1."""
         return 1
 
+    def _convert_to_data_type(self, indexes, values):
+        """
+        Converts values from string to current data type filtering failed conversions.
+
+        Args:
+            indexes (list of QModelIndex): indexes
+            values (list of str): values to convert
+
+        Returns:
+            tuple: indexes and converted values
+        """
+        filtered = list()
+        converted = list()
+        if self._data_type == float:
+            for index, value in zip(indexes, values):
+                if value is None:
+                    converted.append(numpy.nan)
+                    filtered.append(index)
+                    continue
+                try:
+                    number = locale.atof(value)
+                    converted.append(number)
+                    filtered.append(index)
+                except ValueError:
+                    pass
+        elif self._data_type == str:
+            for index, value in zip(indexes, values):
+                converted.append(str(value) if value is not None else "")
+                filtered.append(index)
+        else:
+            for index, value in zip(indexes, values):
+                try:
+                    data = self._data_type(value)
+                    converted.append(data)
+                    filtered.append(index)
+                    continue
+                except SpineDBAPIError:
+                    pass
+                try:
+                    data = from_database(value)
+                    if isinstance(data, self._data_type):
+                        converted.append(data)
+                        filtered.append(index)
+                except ParameterValueFormatError:
+                    pass
+        return filtered, converted
+
     def data(self, index, role=Qt.DisplayRole):
         """Returns model's data for given role."""
-        if not index.isValid() or not self._data:
+        if not index.isValid():
             return None
+        row = index.row()
         if role == Qt.DisplayRole:
-            element = self._data[index.row()]
+            if row == len(self._data):
+                return None
+            element = self._data[row]
             if isinstance(element, (float, str)):
                 return element
-            if isinstance(element, _ErrorCell):
-                return "Error"
             return str(element)
         if role == Qt.EditRole:
-            element = self._data[index.row()]
-            if isinstance(element, _ErrorCell):
-                return element.edit_value
-            return to_database(self._data[index.row()])
+            if row == len(self._data):
+                return self._data_type()
+            return self._data[row]
         if role == Qt.ToolTipRole:
-            element = self._data[index.row()]
-            if isinstance(element, _ErrorCell):
-                return element.tooltip
+            if row == len(self._data):
+                return None
+            element = self._data[row]
             return str(element)
         if role == Qt.BackgroundRole:
-            element = self._data[index.row()]
-            if isinstance(element, _ErrorCell):
-                return QColor(255, 128, 128)
+            if row == len(self._data):
+                return EXPANSE_COLOR
             return None
         return None
 
@@ -96,18 +149,27 @@ class ArrayModel(QAbstractTableModel):
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Vertical:
-            return section
+            return section + 1
         return "Value"
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts rows to the array."""
-        # In case the array is initially empty we need to add an extra cell to account for the virtual empty cell.
         self.beginInsertRows(parent, row, row + count - 1)
-        filler_size = count if self._data else count + 1
-        filler = filler_size * [self._data_type()]
-        self._data = self._data[:row] + filler + self._data[row:]
+        self._data = self._data[:row] + [self._data_type() for _ in range(count)] + self._data[row:]
         self.endInsertRows()
         return True
+
+    def is_expanse_row(self, row):
+        """
+        Returns True if row is the expanse row.
+
+        Args:
+            row (int): a row
+
+        Returns:
+            bool: True is row is expanse row, False otherwise
+        """
+        return row == len(self._data)
 
     def removeRows(self, row, count, parent=QModelIndex()):
         """Removes rows from the array."""
@@ -118,7 +180,7 @@ class ArrayModel(QAbstractTableModel):
             if len(self._data) == 1:
                 self._data.clear()
                 self.dataChanged.emit(
-                    self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundRole]
+                    self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.ToolTipRole, Qt.BackgroundRole]
                 )
                 return False
         first_row = row if count < len(self._data) else 1
@@ -126,7 +188,9 @@ class ArrayModel(QAbstractTableModel):
         self._data = self._data[:row] + self._data[row + count :]
         self.endRemoveRows()
         if not self._data:
-            self.dataChanged.emit(self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundRole])
+            self.dataChanged.emit(
+                self.index(0, 0), self.index(0, 0), [Qt.DisplayRole, Qt.ToolTipRole, Qt.BackgroundRole]
+            )
         return True
 
     def reset(self, value):
@@ -147,9 +211,7 @@ class ArrayModel(QAbstractTableModel):
 
         Note: returns 1 even if the array is empty.
         """
-        if not self._data:
-            return 1
-        return len(self._data)
+        return len(self._data) + 1
 
     def set_array_type(self, new_type):
         """Changes the data type of array's elements."""
@@ -168,44 +230,15 @@ class ArrayModel(QAbstractTableModel):
         if not index.isValid():
             return False
         if role == Qt.EditRole:
-            self._set_data(index, value)
-            self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.EditRole, Qt.BackgroundRole])
+            if isinstance(value, (str, Number)):
+                try:
+                    value = self._data_type(value)
+                except ValueError:
+                    return False
+            row = index.row()
+            if row == len(self._data):
+                self.insertRow(row)
+            self._data[row] = value
+            self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole, Qt.BackgroundRole])
             return True
         return False
-
-    def _set_data(self, index, value):
-        """
-        Sets data for given index.
-
-        In case of errors the value at index is replaced by an ``_ErrorCell`` sentinel.
-
-        Args:
-            index (QModelIndex): an index
-            value (str): value in database format
-        """
-        if not self._data:
-            self._data = [None]
-        try:
-            element = from_database(value)
-        except ParameterValueFormatError as error:
-            self._data[index.row()] = _ErrorCell(value, f"Cannot parse: {error}")
-        else:
-            if not isinstance(element, self._data_type):
-                self._data[index.row()] = _ErrorCell(
-                    value, f"Expected '{self._data_type.__name__}', not {type(element).__name__}"
-                )
-            else:
-                self._data[index.row()] = element
-
-
-class _ErrorCell:
-    """A sentinel class to mark erroneous cells in the table."""
-
-    def __init__(self, edit_value, tooltip):
-        """
-        Args:
-            edit_value (str): the JSON string that caused the error
-            tooltip (str): tooltip that should be shown on the table cell
-        """
-        self.edit_value = edit_value
-        self.tooltip = tooltip

@@ -16,11 +16,11 @@ An editor widget for editing a time pattern type (relationship) parameter values
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import QPoint, Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimePattern
 from ..mvcmodels.time_pattern_model import TimePatternModel
-from .indexed_value_table_context_menu import handle_table_context_menu
+from .indexed_value_table_context_menu import IndexedValueTableContextMenu
 
 
 class TimePatternEditor(QWidget):
@@ -42,9 +42,16 @@ class TimePatternEditor(QWidget):
         self._ui.pattern_edit_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.pattern_edit_table.customContextMenuRequested.connect(self._show_table_context_menu)
 
-    @Slot("QPoint", name="_show_table_context_menu")
-    def _show_table_context_menu(self, pos):
-        handle_table_context_menu(pos, self._ui.pattern_edit_table, self._model, self)
+    @Slot(QPoint)
+    def _show_table_context_menu(self, position):
+        """
+        Opens the table's context menu.
+
+        Args:
+            position (QPoint): menu's position on the table
+        """
+        menu = IndexedValueTableContextMenu(self._ui.pattern_edit_table, position)
+        menu.exec_(self._ui.pattern_edit_table.mapToGlobal(position))
 
     def set_value(self, value):
         """Sets the parameter_value to be edited."""

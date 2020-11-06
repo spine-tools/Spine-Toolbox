@@ -15,7 +15,7 @@ A model for maps, used by the parameter_value editors.
 :authors: A. Soininen (VTT)
 :date:    11.2.2020
 """
-
+from copy import deepcopy
 from numbers import Number
 from itertools import takewhile
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
@@ -31,6 +31,7 @@ from spinedb_api import (
     TimePattern,
     TimeSeries,
 )
+from .indexed_value_table_model import EXPANSE_COLOR
 
 
 class MapModel(QAbstractTableModel):
@@ -70,7 +71,6 @@ class MapModel(QAbstractTableModel):
         self._BOLD = QFont()
         self._BOLD.setBold(True)
         self._EMTPY_COLOR = QColor(255, 240, 240)
-        self._EXPANSE_COLOR = QColor(245, 245, 245)
 
     def append_column(self):
         """Appends a new column to the right."""
@@ -81,6 +81,33 @@ class MapModel(QAbstractTableModel):
         self.beginInsertColumns(QModelIndex(), first, last)
         self._rows = list(map(lambda row: row + [None], self._rows))
         self.endInsertColumns()
+
+    def clear(self, indexes):
+        """
+        Clears table cells.
+
+        Args:
+            indexes (list of QModelIndex): indexes to clear
+        """
+        top = self.rowCount()
+        left = self.columnCount()
+        bottom = 0
+        right = 0
+        for index in indexes:
+            row = index.row()
+            column = index.column()
+            if self._is_in_expanse(row, column):
+                continue
+            top = min(top, row)
+            bottom = max(bottom, row)
+            left = min(left, column)
+            right = max(right, column)
+            self._rows[row][column] = None
+        if top <= bottom:
+            self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.DisplayRole, Qt.ToolTipRole])
+            self.dataChanged.emit(
+                self.index(top, 0), self.index(bottom, self.columnCount() - 2), [Qt.BackgroundRole, Qt.FontRole]
+            )
 
     def columnCount(self, index=QModelIndex()):
         """Returns the number of columns in this model."""
@@ -99,8 +126,8 @@ class MapModel(QAbstractTableModel):
         column_index = index.column()
         if role == Qt.BackgroundRole:
             if self._is_in_expanse(row_index, column_index):
-                return self._EXPANSE_COLOR
-            data_length = len(list(takewhile(lambda x: x is not None, self._rows[row_index])))
+                return EXPANSE_COLOR
+            data_length = _data_length(self._rows[row_index])
             if column_index >= data_length:
                 return self._EMTPY_COLOR
             return None
@@ -122,12 +149,14 @@ class MapModel(QAbstractTableModel):
                 return "Time pattern"
             if isinstance(data, Array):
                 return "Array"
-            return str(data) if data is not None else None
+            if isinstance(data, Number):
+                return float(data)
+            return data
         if role == Qt.FontRole:
             if self._is_in_expanse(row_index, column_index):
                 return None
             row = self._rows[row_index]
-            data_length = len(list(takewhile(lambda x: x is not None, row)))
+            data_length = _data_length(row)
             if column_index == data_length - 1:
                 return self._BOLD
         return None
@@ -155,6 +184,25 @@ class MapModel(QAbstractTableModel):
                 return None
         return "Index or value"
 
+    def insertColumns(self, column, count, parent=QModelIndex()):
+        """
+        Inserts new columns into the map.
+
+        Args:
+            column (int): column index where to insert
+            count (int): number of new columns
+            parent (QModelIndex): ignored
+
+        Return:
+            bool: True if insertion was successful, False otherwise
+        """
+        if not self._rows:
+            return False
+        self.beginInsertColumns(parent, column, column + count - 1)
+        self._rows = [row[:column] + count * [None] + row[column:] for row in self._rows]
+        self.endInsertColumns()
+        return True
+
     def insertRows(self, row, count, parent=QModelIndex()):
         """
         Inserts new rows into the map.
@@ -164,18 +212,22 @@ class MapModel(QAbstractTableModel):
             count (int): number of rows to insert
             parent (QModelIndex): an index to a parent model
         Returns:
-            True if the operation was successful
+            bool: True if the operation was successful
         """
         self.beginInsertRows(parent, row, row + count - 1)
-        if row > 0:
-            row_before = self._rows[row - 1]
-        else:
-            if self._rows:
-                row_before = len(self._rows[0]) * [None]
+        if self._rows:
+            if row == self.rowCount():
+                row = len(self._rows)
+            if row > 0:
+                row_before = self._rows[row - 1]
             else:
-                row_before = [None, None]
-        template = row_before[:-2] + ["key", 0.0]
-        self._rows = self._rows[:row] + count * [template] + self._rows[row:]
+                row_before = len(self._rows[0]) * [None]
+        else:
+            row_before = [None, None]
+        inserted = list()
+        for i in range(count):
+            inserted.append(deepcopy(row_before))
+        self._rows = self._rows[:row] + inserted + self._rows[row:]
         self.endInsertRows()
         return True
 
@@ -194,24 +246,59 @@ class MapModel(QAbstractTableModel):
             return True
         return column == len(self._rows[0])
 
-    def reset(self, map_value):
-        """Resets the model to given map_value."""
-        self.beginResetModel()
-        rows = _as_rows(map_value)
-        self._rows = _make_square(rows)
-        self.endResetModel()
+    def is_expanse_column(self, column):
+        """
+        Returns True if given column is the expanse column.
 
-    def rowCount(self, parent=QModelIndex()):
-        """Returns the number of rows."""
-        return len(self._rows) + 1
+        Args:
+            column (int): column
+
+        Returns:
+            bool: True if column is expanse column, False otherwise
+        """
+        if not self._rows:
+            return True
+        return column == len(self._rows[0])
+
+    def is_expanse_row(self, row):
+        """
+        Returns True if given row is the expanse row.
+
+        Args:
+            row (int): row
+
+        Returns:
+            bool: True if row is the expanse row, False otherwise
+        """
+        return row == len(self._rows)
+
+    def removeColumns(self, column, count, parent=QModelIndex()):
+        """
+        Removes columns from the map.
+
+        Args:
+            column (int): first column to remove
+            count (int): number of columns to remove
+            parent (QModelIndex): an index to a parent model
+
+        Returns:
+            True if the operation was successful
+        """
+        if not self._rows or column == len(self._rows[0]):
+            return False
+        last = min(column + count - 1, len(self._rows[0]) - 1)
+        self.beginRemoveColumns(parent, column, last)
+        self._rows = [row[:column] + row[column + count :] for row in self._rows]
+        self.endRemoveColumns()
+        return True
 
     def removeRows(self, row, count, parent=QModelIndex()):
         """
         Removes rows from the map.
 
         Args:
-            row (int): an index where to remove the data
-            count (int): number of rows pairs to remove
+            row (int): first row to remove
+            count (int): number of rows to remove
             parent (QModelIndex): an index to a parent model
 
         Returns:
@@ -225,6 +312,38 @@ class MapModel(QAbstractTableModel):
         self.endRemoveRows()
         return True
 
+    def reset(self, map_value):
+        """Resets the model to given map_value."""
+        self.beginResetModel()
+        rows = _as_rows(map_value)
+        self._rows = _make_square(rows)
+        self.endResetModel()
+
+    def rowCount(self, parent=QModelIndex()):
+        """Returns the number of rows."""
+        return len(self._rows) + 1
+
+    def set_box(self, top_left, bottom_right, data):
+        """
+        Sets data for several indexes at once.
+
+        Args:
+            top_left (QModelIndex): a sequence of model indexes
+            bottom_right (QModelIndex): a sequence of values corresponding to the indexes
+            data (list of list): box of data
+        """
+        for row_index in range(top_left.row(), bottom_right.row() + 1):
+            data_row = data[row_index - top_left.row()]
+            first_column = top_left.column()
+            for column_index in range(first_column, bottom_right.column() + 1):
+                self._rows[row_index][column_index] = data_row[column_index - first_column]
+        self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole, Qt.ToolTipRole])
+        self.dataChanged.emit(
+            self.index(top_left.row(), 0),
+            self.index(bottom_right.row(), self.columnCount() - 2),
+            [Qt.BackgroundRole, Qt.FontRole],
+        )
+
     def setData(self, index, value, role=Qt.EditRole):
         """
         Sets data in the map.
@@ -234,15 +353,23 @@ class MapModel(QAbstractTableModel):
             value (object): JSON representation of the value
             role (int): a role
         Returns:
-            True if the operation was successful
+            bool: True if the operation was successful
         """
         if not index.isValid() or role != Qt.EditRole:
             return False
         row_index = index.row()
+        column_index = index.column()
         if row_index == len(self._rows):
             self.insertRow(row_index)
-        row = self._rows[row_index]
-        column_index = index.column()
+            row = self._rows[row_index]
+            for i in range(column_index + 1, len(row)):
+                row[i] = None
+            top_left = self.index(row_index, column_index + 1)
+            if top_left.isValid():
+                bottom_right = self.index(row_index, len(row))
+                self.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole, Qt.ToolTipRole])
+        else:
+            row = self._rows[row_index]
         if column_index == len(row):
             self.append_column()
             row = self._rows[row_index]
@@ -266,7 +393,7 @@ class MapModel(QAbstractTableModel):
         max_data_length = 2
         column_count = len(self._rows[0])
         for row in self._rows:
-            data_length = sum(1 for _ in takewhile(lambda x: x is not None, row))
+            data_length = _data_length(row)
             max_data_length = max(max_data_length, data_length)
         if max_data_length == column_count:
             return
@@ -327,6 +454,8 @@ def _rows_to_dict(rows):
                 if not isinstance(column, (str, int, float, DateTime, Duration)):
                     raise ParameterValueFormatError(f"Index on row {rows.index(row) + 1} column {i + 1} is not scalar.")
                 current = current.setdefault(column, dict())
+                if not isinstance(current, dict):
+                    raise ParameterValueFormatError(f"Indexing broken on row {rows.index(row) + 1} column {i + 1}.")
             else:
                 value = row[i + 1]
                 if value is None:
@@ -354,3 +483,16 @@ def _reconstruct_map(tree):
         indexes.append(key)
         values.append(value)
     return Map(indexes, values)
+
+
+def _data_length(row):
+    """
+    Counts the number of non-None elements at the beginning of row.
+
+    Args:
+        row (list): a row of data
+
+    Returns:
+        int: data length
+    """
+    return len(list(takewhile(lambda x: x is not None, row)))

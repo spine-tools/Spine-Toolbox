@@ -17,7 +17,7 @@ Contains logic for the fixed step time series editor widget.
 """
 
 from datetime import datetime
-from PySide2.QtCore import QDate, QPoint, Qt, Slot
+from PySide2.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
 from PySide2.QtWidgets import QCalendarWidget, QWidget
 from spinedb_api import (
     duration_to_relativedelta,
@@ -27,7 +27,7 @@ from spinedb_api import (
 )
 from ..plotting import add_time_series_plot
 from ..mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
-from .indexed_value_table_context_menu import handle_table_context_menu
+from .indexed_value_table_context_menu import IndexedValueTableContextMenu
 
 
 def _resolution_to_text(resolution):
@@ -50,12 +50,13 @@ def _text_to_resolution(text):
 class TimeSeriesFixedResolutionEditor(QWidget):
     """
     A widget for editing time series data with a fixed time step.
-
-    Attributes:
-        parent (QWidget): a parent widget
     """
 
     def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): a parent widget
+        """
         # pylint: disable=import-outside-toplevel
         from ..ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 
@@ -91,7 +92,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
             self._ui.splitter.setCollapsible(i, False)
         self._update_plot()
 
-    @Slot(name='_resolution_changed')
+    @Slot()
     def _resolution_changed(self):
         """Updates the models after resolution change."""
         try:
@@ -101,12 +102,18 @@ class TimeSeriesFixedResolutionEditor(QWidget):
             text = _resolution_to_text(self._model.value.resolution)
             self._ui.resolution_edit.setText(text)
 
-    @Slot("QPoint", name="_show_table_context_menu")
-    def _show_table_context_menu(self, pos):
-        """Shows the table's context menu."""
-        handle_table_context_menu(pos, self._ui.time_series_table, self._model, self)
+    @Slot(QPoint)
+    def _show_table_context_menu(self, position):
+        """
+        Shows the table's context menu.
 
-    @Slot("QDate", name='_select_date')
+        Args:
+            position (QPoint): menu's position in table view's coordinates
+        """
+        menu = IndexedValueTableContextMenu(self._ui.time_series_table, position)
+        menu.exec_(self._ui.time_series_table.mapToGlobal(position))
+
+    @Slot(QDate)
     def _select_date(self, selected_date):
         self._calendar.hide()
         time = self._model.value.start.time()
@@ -123,7 +130,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
 
-    @Slot(name='_show_calendar')
+    @Slot()
     def _show_calendar(self):
         start = self._model.value.start
         if start.year >= 100:
@@ -136,7 +143,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._calendar.move(calendar_x, calendar_y)
         self._calendar.show()
 
-    @Slot(name='_start_time_changed')
+    @Slot()
     def _start_time_changed(self):
         """Updates the model due to start time change."""
         text = self._ui.start_time_edit.text()
@@ -145,7 +152,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         except ParameterValueFormatError:
             self._ui.start_time_edit.setText(str(self._model.value.start))
 
-    @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
+    @Slot(QModelIndex, QModelIndex, list)
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updated the plot."""
         self._ui.plot_widget.canvas.axes.cla()

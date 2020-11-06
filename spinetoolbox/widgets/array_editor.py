@@ -10,22 +10,31 @@
 ######################################################################################################################
 
 """
-Contains an editor widget array type parameter values.
+Contains an editor widget for array type parameter values.
 
 :author: A. Soininen (VTT)
 :date:   25.3.2020
 """
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide2.QtWidgets import QWidget
-from spinedb_api import DateTime, Duration
-from .indexed_value_table_context_menu import handle_table_context_menu
+from spinedb_api import DateTime, Duration, ParameterValueFormatError
+from .array_value_editor import ArrayValueEditor
+from .indexed_value_table_context_menu import ArrayTableContextMenu
+from .parameter_value_editor_base import ValueType
 from ..mvcmodels.array_model import ArrayModel
 from ..plotting import add_array_plot
+from ..spine_db_editor.widgets.custom_delegates import ParameterValueElementDelegate
 
 
 class ArrayEditor(QWidget):
+    """Editor widget for Arrays."""
+
     def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         from ..ui.array_editor import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
@@ -40,6 +49,9 @@ class ArrayEditor(QWidget):
         self._ui.array_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.array_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
         self._ui.value_type_combo_box.currentTextChanged.connect(self._change_value_type)
+        delegate = ParameterValueElementDelegate(self._ui.array_table_view)
+        delegate.value_editor_requested.connect(self.open_value_editor)
+        self._ui.array_table_view.setItemDelegate(delegate)
         for i in range(self._ui.splitter.count()):
             self._ui.splitter.setCollapsible(i, False)
 
@@ -67,16 +79,43 @@ class ArrayEditor(QWidget):
         self._model.set_array_type(value_type)
         self._check_if_plotting_enabled(type_name)
 
-    @Slot("QPoint")
-    def _show_table_context_menu(self, pos):
-        """Shows the table's context menu."""
-        handle_table_context_menu(pos, self._ui.array_table_view, self._model, self)
+    @Slot(QModelIndex)
+    def open_value_editor(self, index):
+        """
+        Opens an editor widget for array element.
 
-    @Slot("QModelIndex", "QModelIndex", "list")
+        Args:
+            index (QModelIndex): element's index
+        """
+
+        value_type = {
+            "Float": ValueType.PLAIN_VALUE,
+            "Datetime": ValueType.DATETIME,
+            "Duration": ValueType.DURATION,
+            "String": ValueType.PLAIN_VALUE,
+        }[self._ui.value_type_combo_box.currentText()]
+        editor = ArrayValueEditor(index, value_type, self)
+        editor.show()
+
+    @Slot(QPoint)
+    def _show_table_context_menu(self, position):
+        """
+        Shows the table's context menu.
+
+        Args:
+            position (QPoint): menu's position on the table
+        """
+        menu = ArrayTableContextMenu(self, self._ui.array_table_view, position)
+        menu.exec_(self._ui.array_table_view.mapToGlobal(position))
+
+    @Slot(QModelIndex, QModelIndex, list)
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updates the plot widget."""
         if self._ui.value_type_combo_box.currentText() != "Float":
             return
         self._ui.plot_widget.canvas.axes.cla()
-        add_array_plot(self._ui.plot_widget, self._model.array())
+        try:
+            add_array_plot(self._ui.plot_widget, self._model.array())
+        except ParameterValueFormatError:
+            return
         self._ui.plot_widget.canvas.draw()

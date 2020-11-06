@@ -34,17 +34,23 @@ class TestArrayModel(unittest.TestCase):
 
     def test_data_for_first_row_returns_none_with_empty_array(self):
         model = ArrayModel()
-        roles = [Qt.DisplayRole, Qt.EditRole, Qt.ToolTip, Qt.BackgroundRole]
+        roles = [Qt.DisplayRole, Qt.ToolTip]
         index = model.index(0, 0)
         self.assertTrue(index.isValid())
         for role in roles:
             self.assertIsNone(model.data(index, role))
 
+    def test_data_in_edit_role_for_first_row_returns_default_float_with_empty_array(self):
+        model = ArrayModel()
+        index = model.index(0, 0)
+        self.assertTrue(index.isValid())
+        self.assertEqual(model.data(index, Qt.EditRole), 0.0)
+
     def test_insertRows_when_empty_array(self):
         model = ArrayModel()
         self.assertTrue(model.insertRows(0, 2))
         self.assertEqual(model.rowCount(), 3)
-        expected_data = [0.0, 0.0, 0.0]
+        expected_data = [0.0, 0.0, None]
         for row, expected in enumerate(expected_data):
             index = model.index(row, 0)
             self.assertEqual(index.data(), expected)
@@ -60,17 +66,6 @@ class TestArrayModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1)
         index = model.index(0, 0)
         self.assertIsNone(index.data())
-
-    def test_errors_in_cells_are_marked_by_ErrorCell(self):
-        model = ArrayModel()
-        index = model.index(0, 0)
-        self.assertTrue(model.setData(index, "This won't work"))
-        self.assertEqual(model.data(index, Qt.DisplayRole), "Error")
-        self.assertEqual(
-            model.data(index, Qt.ToolTipRole),
-            "Cannot parse: Could not decode the value: Expecting value: line 1 column 1 (char 0)",
-        )
-        self.assertEqual(model.data(index, Qt.EditRole), "This won't work")
 
 
 if __name__ == '__main__':

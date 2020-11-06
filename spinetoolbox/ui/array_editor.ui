@@ -69,7 +69,7 @@
         </layout>
        </item>
        <item>
-        <widget class="CopyPasteTableView" name="array_table_view"/>
+        <widget class="ArrayTableView" name="array_table_view"/>
        </item>
       </layout>
      </widget>
@@ -164,7 +164,7 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>CopyPasteTableView</class>
+   <class>ArrayTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>

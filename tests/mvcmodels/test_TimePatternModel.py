@@ -42,28 +42,28 @@ class TestTimePatternModel(unittest.TestCase):
         model = TimePatternModel(TimePattern(['a', 'b'], [-5.0, 7.0]))
         self.assertTrue(model.insertRows(0, 1))
         self.assertEqual(len(model.value), 3)
-        self.assertEqual(model.value.indexes, ['', 'a', 'b'])
+        self.assertEqual(model.value.indexes, ['1', 'a', 'b'])
         numpy.testing.assert_equal(model.value.values, np.array([0.0, -5.0, 7.0]))
 
     def test_insert_single_row_in_the_middle(self):
         model = TimePatternModel(TimePattern(['a', 'b'], [-5.0, 7.0]))
         self.assertTrue(model.insertRows(1, 1))
         self.assertEqual(len(model.value), 3)
-        self.assertEqual(model.value.indexes, ['a', '', 'b'])
+        self.assertEqual(model.value.indexes, ['a', '2', 'b'])
         numpy.testing.assert_equal(model.value.values, np.array([-5.0, 0.0, 7.0]))
 
     def test_insert_multiple_rows_in_the_middle(self):
         model = TimePatternModel(TimePattern(['a', 'b'], [-5.0, 7.0]))
         self.assertTrue(model.insertRows(1, 3))
         self.assertEqual(len(model.value), 5)
-        self.assertEqual(model.value.indexes, ['a', '', '', '', 'b'])
+        self.assertEqual(model.value.indexes, ['a', '2', '3', '4', 'b'])
         numpy.testing.assert_equal(model.value.values, np.array([-5.0, 0.0, 0.0, 0.0, 7.0]))
 
     def test_insert_rows_in_the_end(self):
         model = TimePatternModel(TimePattern(['a', 'b'], [-5.0, 7.0]))
         self.assertTrue(model.insertRows(2, 1))
         self.assertEqual(len(model.value), 3)
-        self.assertEqual(model.value.indexes, ['a', 'b', ''])
+        self.assertEqual(model.value.indexes, ['a', 'b', '3'])
         numpy.testing.assert_equal(model.value.values, np.array([-5.0, 7.0, 0.0]))
 
     def test_remove_rows_from_the_beginning(self):

@@ -19,7 +19,7 @@ Unit tests for MapModel class.
 import unittest
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QColor
-from spinedb_api import DateTime, Duration, Map, ParameterValueFormatError
+from spinedb_api import Array, DateTime, Duration, Map, ParameterValueFormatError
 from spinetoolbox.mvcmodels.map_model import MapModel
 
 
@@ -210,8 +210,8 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1)
         self.assertTrue(model.insertRows(0, 1))
         self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.index(0, 0).data(), "key")
-        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), None)
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "")
         self.assertEqual(model.index(1, 1).data(), "")
@@ -222,8 +222,8 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value)
         self.assertTrue(model.insertRows(0, 1))
         self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.index(0, 0).data(), "key")
-        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), None)
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "a")
         self.assertEqual(model.index(1, 1).data(), 1.1)
@@ -240,8 +240,8 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(0, 0).data(), "a")
         self.assertEqual(model.index(0, 1).data(), 1.1)
         self.assertEqual(model.index(0, 2).data(), "")
-        self.assertEqual(model.index(1, 0).data(), "key")
-        self.assertEqual(model.index(1, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 0).data(), "a")
+        self.assertEqual(model.index(1, 1).data(), 1.1)
         self.assertEqual(model.index(1, 2).data(), "")
 
     def test_insertRows_to_middle_of_nested_map(self):
@@ -250,7 +250,7 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value)
         self.assertTrue(model.insertRows(1, 1))
         self.assertEqual(model.rowCount(), 4)
-        expected_table = [["A", "a", 1.1, ""], ["A", "key", 0.0, ""], ["A", "b", 2.2, ""], ["", "", "", ""]]
+        expected_table = [["A", "a", 1.1, ""], ["A", "a", 1.1, ""], ["A", "b", 2.2, ""], ["", "", "", ""]]
         for y, row in enumerate(expected_table):
             for x, expected in enumerate(row):
                 self.assertEqual(model.index(y, x).data(), expected)
@@ -324,7 +324,7 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.index(0, 0).data(), "1M")
-        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(0, 1).data(), None)
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "")
         self.assertEqual(model.index(1, 1).data(), "")
@@ -340,7 +340,7 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(0, 0).data(), "1M")
         self.assertEqual(model.index(0, 1).data(), 1.1)
         self.assertEqual(model.index(0, 2).data(), "")
-        self.assertEqual(model.index(1, 0).data(), "key")
+        self.assertEqual(model.index(1, 0).data(), "1M")
         self.assertEqual(model.index(1, 1).data(), 2.2)
         self.assertEqual(model.index(1, 2).data(), "")
         self.assertEqual(model.index(2, 0).data(), "")
@@ -441,6 +441,12 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value)
         with self.assertRaises(ParameterValueFormatError):
             model.value()
+
+    def test_value_shortening_rows(self):
+        original = Map(["a", "b", "c"], [0.0, Map(["bb"], [Map(["bbb"], [Array([-1.0])])]), Array([-2.0])])
+        model = MapModel(original)
+        map_ = model.value()
+        self.assertEqual(map_, original)
 
 
 if __name__ == '__main__':

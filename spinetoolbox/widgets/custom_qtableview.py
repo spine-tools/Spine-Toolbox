@@ -19,10 +19,19 @@ Custom QTableView classes that support copy-paste and the like.
 import csv
 import io
 import locale
-import numpy as np
+from numbers import Number
 from PySide2.QtWidgets import QTableView, QApplication
-from PySide2.QtCore import Qt, Slot, QItemSelectionModel, QPoint
+from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
+from spinedb_api import (
+    DateTime,
+    Duration,
+    from_database,
+    IndexedValue,
+    ParameterValueFormatError,
+    SpineDBAPIError,
+    to_database,
+)
 from ..helpers import busy_effect
 
 
@@ -49,7 +58,7 @@ class CopyPasteTableView(QTableView):
         if not selection:
             return False
         indexes = [ind for ind in selection.indexes() if ind.flags() & Qt.ItemIsEditable]
-        return self.model().batch_set_data(indexes, [None for _ in indexes])
+        return self.model().batch_set_data(indexes, len(indexes) * [None])
 
     @busy_effect
     def copy(self):
@@ -104,7 +113,7 @@ class CopyPasteTableView(QTableView):
         Args:
             text (str): a CSV formatted table
         Returns:
-            a list of rows
+            list: a list of rows
         """
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter="\t", quotechar="'")
@@ -171,7 +180,10 @@ class CopyPasteTableView(QTableView):
         columns = []
         columns_append = columns.append
         h = self.horizontalHeader()
-        is_visual_column_hidden = lambda x: h.isSectionHidden(h.logicalIndex(x))
+
+        def is_visual_column_hidden(c):
+            h.isSectionHidden(h.logicalIndex(c))
+
         for _ in range(len(data[0])):
             while is_visual_column_hidden(visual_column):
                 visual_column += 1
@@ -207,15 +219,10 @@ class CopyPasteTableView(QTableView):
 
 
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
-    """Custom QTableView class with autofilter functionality.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
+    """Custom QTableView class with autofilter functionality."""
 
     def __init__(self, parent):
-        """Initializes the view.
-
+        """
         Args:
             parent (QObject)
         """
@@ -311,23 +318,6 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
         """Pastes data from clipboard to selection."""
         raise NotImplementedError()
 
-    @staticmethod
-    def _range(indexes):
-        """
-        Returns the top left and bottom right corners of selected model indexes.
-
-        Args:
-            indexes (list): a list of selected QModelIndex objects
-        Returns:
-            a tuple (top row, bottom row, left column, right column)
-        """
-        rows = np.empty(len(indexes), dtype=int)
-        columns = np.empty(len(indexes), dtype=int)
-        for i, index in enumerate(indexes):
-            rows[i] = index.row()
-            columns[i] = index.column()
-        return np.amin(rows), np.amax(rows), np.amin(columns), np.amax(columns)
-
     def _select_pasted(self, indexes):
         """Selects the given model indexes."""
         selection_model = self.selectionModel()
@@ -347,21 +337,20 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if not 'text/plain' in data_formats:
+        if 'text/plain' not in data_formats:
             return False
         try:
             pasted_table = self._read_pasted_text(QApplication.clipboard().text())
         except ValueError:
             return False
-        selected_indexes = selection_model.selectedIndexes()
         if isinstance(pasted_table, tuple):
             # Always use the first column
             pasted_table = pasted_table[0]
         paste_length = len(pasted_table)
-        first_row, last_row, _, _ = self._range(selected_indexes)
+        first_row, last_row, _, _ = _range(selection_model.selection())
         selection_length = last_row - first_row + 1
         model = self.model()
-        model_row_count = model.rowCount()
+        model_row_count = model.rowCount() - 1
         if selection_length == 1:
             # If a single row is selected, we paste everything.
             if model_row_count <= first_row + paste_length:
@@ -384,7 +373,7 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         Args:
             text (str): a CSV table containing numbers
         Returns:
-            A list of floats
+            list of float: A list of floats
         """
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter='\t')
@@ -403,7 +392,7 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
             first_row (int): index of the first row where to paste
             paste_length (int): length of the paste selection (can be different from len(values))
         Returns:
-            A tuple (list(pasted indexes), list(pasted values))
+            tuple: A tuple (list(pasted indexes), list(pasted values))
         """
         values_to_set = list()
         indexes_to_set = list()
@@ -426,21 +415,20 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if not 'text/plain' in data_formats:
+        if 'text/plain' not in data_formats:
             return False
         try:
             pasted_table = self._read_pasted_text(QApplication.clipboard().text())
         except ValueError:
             return False
-        selected_indexes = selection_model.selectedIndexes()
         paste_single_column = isinstance(pasted_table, list)
         paste_length = len(pasted_table) if paste_single_column else len(pasted_table[0])
-        first_row, last_row, first_column, _ = self._range(selected_indexes)
+        first_row, last_row, first_column, _ = _range(selection_model.selection())
         selection_length = last_row - first_row + 1
         model = self.model()
-        model_row_count = model.rowCount()
-        if selection_length == 1:
-            # If a single row is selected, we paste everything.
+        model_row_count = model.rowCount() - 1
+        if selection_length == 1 or model.is_expanse_row(last_row):
+            # If a single row or the expanse row is selected, we paste everything.
             if model_row_count <= first_row + paste_length:
                 model.insertRows(model_row_count, paste_length - (model_row_count - first_row))
         elif paste_length > selection_length:
@@ -471,7 +459,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             first_row (int): first row index
             paste_length (int): selection length for pasting
         Returns:
-            a tuple (modified model indexes, modified model values)
+            tuple_ a tuple (modified model indexes, modified model values)
         """
         values_to_set = list()
         indexes_to_set = list()
@@ -493,7 +481,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             first_row (int): first row index
             paste_length (int): selection length for pasting
         Returns:
-            a tuple (modified model indexes, modified model values)
+            tuple: a tuple (modified model indexes, modified model values)
         """
         values_to_set = list()
         indexes_to_set = list()
@@ -513,7 +501,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         Args:
             text (str): a CSV table
         Returns:
-            a tuple (data indexes, data values)
+            tuple: a tuple (data indexes, data values)
         """
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter='\t')
@@ -539,7 +527,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         return data_indexes, data_values
 
 
-class ArrayTableView(CopyPasteTableView):
+class ArrayTableView(IndexedParameterValueTableViewBase):
     """Custom QTableView with copy and paste methods for single column tables."""
 
     def copy(self):
@@ -547,12 +535,226 @@ class ArrayTableView(CopyPasteTableView):
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
             return False
-        selected_indexes = sorted(selection_model.selectedIndexes(), key=lambda index: index.row())
+        model = self.model()
+        selected_indexes = [i for i in selection_model.selectedIndexes() if not model.is_expanse_row(i.row())]
+        selected_indexes.sort(key=lambda index: index.row())
         values = [index.data() for index in selected_indexes]
         with io.StringIO() as output:
             writer = csv.writer(output, delimiter='\t')
             for value in values:
-                value = locale.str(value) if value is not None else ""
+                value = locale.str(value) if isinstance(value, Number) else value
                 writer.writerow([value])
             QApplication.clipboard().setText(output.getvalue())
         return True
+
+    def paste(self):
+        """Paste data from clipboard."""
+        selection_model = self.selectionModel()
+        if not selection_model.hasSelection():
+            return False
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        data_formats = mime_data.formats()
+        if 'text/plain' not in data_formats:
+            return False
+        try:
+            pasted_table = self._read_pasted_text(QApplication.clipboard().text())
+        except ValueError:
+            return False
+        if isinstance(pasted_table, tuple):
+            # Always use the first column
+            pasted_table = pasted_table[0]
+        paste_length = len(pasted_table)
+        first_row, last_row, _, _ = _range(selection_model.selection())
+        selection_length = last_row - first_row + 1
+        model = self.model()
+        model_row_count = model.rowCount() - 1
+        if selection_length == 1:
+            # If a single row is selected, we paste everything.
+            if model_row_count <= first_row + paste_length:
+                model.insertRows(model_row_count, paste_length - (model_row_count - first_row))
+        elif paste_length > selection_length:
+            # If multiple row are selected, we paste what fits the selection.
+            paste_length = selection_length
+            pasted_table = pasted_table[0:selection_length]
+        values_to_set = list()
+        indexes_to_set = list()
+        create_model_index = self.model().index
+        for row in range(first_row, first_row + paste_length):
+            values_to_set.append(pasted_table[row - first_row])
+            indexes_to_set.append(create_model_index(row, 0))
+        model.batch_set_data(indexes_to_set, values_to_set)
+        self._select_pasted(indexes_to_set)
+
+    @staticmethod
+    def _read_pasted_text(text):
+        """
+        Reads the first column of given CSV table.
+
+        Args:
+            text (str): a CSV table
+
+        Returns:
+            list of str: data column
+        """
+        with io.StringIO(text) as input_stream:
+            reader = csv.reader(input_stream, delimiter='\t')
+            column = [row[0] for row in reader if row]
+        return column
+
+
+class MapTableView(CopyPasteTableView):
+    """Custom QTableView with copy and paste methods for map tables."""
+
+    def copy(self):
+        """Copy current selection to clipboard in Excel compatible csv format."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        top, bottom, left, right = _range(selection)
+        model = self.model()
+        out_table = list()
+        for y in range(top, bottom + 1):
+            row = (right - left + 1) * [None]
+            for x in range(left, right + 1):
+                index = model.index(y, x)
+                if not selection.contains(index):
+                    continue
+                data = index.data(Qt.EditRole)
+                try:
+                    number = float(data)
+                    str_data = locale.str(number)
+                except ValueError:
+                    str_data = str(data)
+                except TypeError:
+                    if isinstance(data, IndexedValue):
+                        str_data = to_database(data)
+                    else:
+                        str_data = str(data)
+                row[x - left] = str_data
+            out_table.append(row)
+        with io.StringIO() as output:
+            writer = csv.writer(output, delimiter="\t", quotechar="'")
+            writer.writerows(out_table)
+            QApplication.clipboard().setText(output.getvalue())
+        return True
+
+    def delete_content(self):
+        """Delete content in current selection."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        self.model().clear(selection.indexes())
+
+    def paste(self):
+        """
+        Pastes data from clipboard.
+
+        Returns:
+            bool: True if data was pasted successfully, False otherwise
+        """
+        selection_model = self.selectionModel()
+        if not selection_model.hasSelection():
+            return False
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        data_formats = mime_data.formats()
+        if 'text/plain' not in data_formats:
+            return False
+        pasted_table = self._read_pasted_text(QApplication.clipboard().text())
+        paste_length = len(pasted_table)
+        paste_width = len(pasted_table[0]) if pasted_table else 0
+        first_row, last_row, first_column, last_column = _range(selection_model.selection())
+        selection_length = last_row - first_row + 1
+        selection_width = last_column - first_column + 1
+        model = self.model()
+        model_column_count = model.columnCount()
+        model_row_count = model.rowCount()
+        if (
+            (selection_length == 1 and selection_width == 1)
+            or model.is_expanse_row(last_row)
+            or model.is_expanse_column(last_column)
+        ):
+            # If a single cell or expanse is selected, we paste everything.
+            if model_row_count <= first_row + paste_length:
+                model.insertRows(model_row_count, paste_length - (model_row_count - 1 - first_row))
+            if model_column_count <= first_column + paste_width:
+                model.insertColumns(model_column_count, paste_width - (model_column_count - 1 - first_column))
+            capped_length = paste_length
+            capped_width = paste_width
+        else:
+            capped_length = min(paste_length, selection_length)
+            capped_width = min(paste_length, selection_width)
+        top_left = model.index(first_row, first_column)
+        bottom_right = model.index(first_row + capped_length - 1, first_column + capped_width - 1)
+        model.set_box(top_left, bottom_right, pasted_table)
+        selection = QItemSelection(top_left, bottom_right)
+        self.selectionModel().select(selection, QItemSelectionModel.ClearAndSelect)
+        return True
+
+    @staticmethod
+    def _read_pasted_text(text):
+        """
+        Parses a given CSV table
+
+        Args:
+            text (str): a CSV table
+        Returns:
+            list of list: a list of table rows
+        """
+        data = list()
+        with io.StringIO(text) as input_stream:
+            reader = csv.reader(input_stream, delimiter='\t')
+            for row in reader:
+                data_row = list()
+                for cell in row:
+                    try:
+                        number = locale.atof(cell)
+                        data_row.append(number)
+                        continue
+                    except ValueError:
+                        pass
+                    try:
+                        # Try parsing Duration before DateTime because DateTime will happily accept strings like '1h'
+                        value = Duration(cell)
+                        data_row.append(value)
+                        continue
+                    except SpineDBAPIError:
+                        pass
+                    try:
+                        value = DateTime(cell)
+                        data_row.append(value)
+                        continue
+                    except SpineDBAPIError:
+                        pass
+                    try:
+                        value = from_database(cell)
+                        data_row.append(value)
+                        continue
+                    except ParameterValueFormatError:
+                        pass
+                    data_row.append(cell)
+                data.append(data_row)
+        return data
+
+
+def _range(selection):
+    """
+    Returns the top left and bottom right corners of selection.
+
+    Args:
+        selection (QItemSelection): a list of selected QItemSelection objects
+    Returns:
+        tuple of int: a tuple (top row, bottom row, left column, right column)
+    """
+    left = selection[0].left()
+    top = selection[0].top()
+    right = selection[0].right()
+    bottom = selection[0].bottom()
+    for i in range(1, len(selection)):
+        range_ = selection[i]
+        left = min(left, range_.left())
+        top = min(top, range_.top())
+        right = max(right, range_.right())
+        bottom = max(bottom, range_.bottom())
+    return top, bottom, left, right

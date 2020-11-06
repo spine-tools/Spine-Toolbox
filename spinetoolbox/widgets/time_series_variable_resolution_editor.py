@@ -16,23 +16,24 @@ Contains logic for the variable resolution time series editor widget.
 :date:   31.5.2019
 """
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution
 from ..plotting import add_time_series_plot
 from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
-from .indexed_value_table_context_menu import handle_table_context_menu
+from .indexed_value_table_context_menu import IndexedValueTableContextMenu
 
 
 class TimeSeriesVariableResolutionEditor(QWidget):
     """
     A widget for editing variable resolution time series data.
-
-    Attributes:
-        parent (QWidget): a parent widget
     """
 
     def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): a parent widget
+        """
         # pylint: disable=import-outside-toplevel
         from ..ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 
@@ -58,10 +59,16 @@ class TimeSeriesVariableResolutionEditor(QWidget):
             self._ui.splitter.setCollapsible(i, False)
         self._update_plot()
 
-    @Slot("QPoint")
-    def _show_table_context_menu(self, pos):
-        """Shows the table's context menu."""
-        handle_table_context_menu(pos, self._ui.time_series_table, self._model, self)
+    @Slot(QPoint)
+    def _show_table_context_menu(self, position):
+        """
+        Shows the table's context menu.
+
+        Args:
+            position (QPoint): menu's position on the table
+        """
+        menu = IndexedValueTableContextMenu(self._ui.time_series_table, position)
+        menu.exec_(self._ui.time_series_table.mapToGlobal(position))
 
     def set_value(self, value):
         """Sets the time series being edited."""
@@ -69,7 +76,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._ui.ignore_year_check_box.setChecked(value.ignore_year)
         self._ui.repeat_check_box.setChecked(value.repeat)
 
-    @Slot("QModelIndex", "QModelIndex", "list")
+    @Slot(QModelIndex, QModelIndex, list)
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updates the plot widget."""
         self._ui.plot_widget.canvas.axes.cla()

@@ -17,6 +17,9 @@ A model for indexed parameter values, used by the parameter_value editors.
 """
 
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide2.QtGui import QColor
+
+EXPANSE_COLOR = QColor(245, 245, 245)
 
 
 class IndexedValueTableModel(QAbstractTableModel):
@@ -39,11 +42,18 @@ class IndexedValueTableModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data at index for given role."""
-        if not index.isValid() or role not in (Qt.DisplayRole, Qt.EditRole):
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            row = index.row()
+            if row == len(self._value):
+                return None
+            if index.column() == 0:
+                return str(self._value.indexes[index.row()])
+            return float(self._value.values[index.row()])
+        if role == Qt.BackgroundRole:
+            if index.row() == len(self._value):
+                return EXPANSE_COLOR
             return None
-        if index.column() == 0:
-            return str(self._value.indexes[index.row()])
-        return float(self._value.values[index.row()])
+        return None
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Returns a header."""
@@ -53,6 +63,18 @@ class IndexedValueTableModel(QAbstractTableModel):
             return section + 1
         return self._index_header if section == 0 else self._value_header
 
+    def is_expanse_row(self, row):
+        """
+        Returns True if row is the expanse row.
+
+        Args:
+            row (int): a row
+
+        Returns:
+            bool: True if row is the expanse row, False otherwise
+        """
+        return row == len(self._value)
+
     def reset(self, value):
         """Resets the model."""
         self.beginResetModel()
@@ -61,7 +83,7 @@ class IndexedValueTableModel(QAbstractTableModel):
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows."""
-        return len(self._value)
+        return len(self._value) + 1
 
     @property
     def value(self):

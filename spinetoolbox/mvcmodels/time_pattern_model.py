@@ -23,11 +23,12 @@ from .indexed_value_table_model import IndexedValueTableModel
 
 
 class TimePatternModel(IndexedValueTableModel):
-    def __init__(self, value):
-        """A model for time pattern type parameter values.
+    """A model for time pattern type parameter values."""
 
+    def __init__(self, value):
+        """
         Args:
-            value(TimePattern): a time pattern value
+            value (TimePattern): a time pattern value
         """
         super().__init__(value, "Time period", "Value")
 
@@ -48,14 +49,14 @@ class TimePatternModel(IndexedValueTableModel):
             count (int): number of time period - value pairs to insert
             parent (QModelIndex): an index to a parent model
         Returns:
-            True if the operation was successful
+            bool: True if the operation was successful
         """
         self.beginInsertRows(parent, row, row + count - 1)
         old_indexes = self._value.indexes
         old_values = self._value.values
         new_indexes = list(old_indexes)
-        for _ in range(count):
-            new_indexes.insert(row, "")
+        for i in range(count):
+            new_indexes.insert(row, str(row + (count - i)))
         if row == len(old_values):
             new_values = np.append(old_values, np.zeros(count))
         else:
@@ -74,7 +75,7 @@ class TimePatternModel(IndexedValueTableModel):
             parent (QModelIndex): an index to a parent model
 
         Returns:
-            True if the operation was successful
+            bool: True if the operation was successful
         """
         if len(self._value) == 1:
             return False
@@ -103,14 +104,17 @@ class TimePatternModel(IndexedValueTableModel):
             value (str, float): a new time period or value
             role (int): a role
         Returns:
-            True if the operation was successful
+            bool: True if the operation was successful
         """
         if not index.isValid() or role != Qt.EditRole:
             return False
+        row = index.row()
+        if row == len(self._value):
+            self.insertRow(row)
         if index.column() == 0:
-            self._value.indexes[index.row()] = value
+            self._value.indexes[row] = value
         else:
-            self._value.values[index.row()] = value
+            self._value.values[row] = value
         self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
 

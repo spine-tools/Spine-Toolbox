@@ -112,18 +112,35 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
         return CustomLineEditor(parent)
 
 
-class MapEditorTableDelegate(QStyledItemDelegate):
-    """Delegate for Map editor's table cells."""
+class ParameterValueElementDelegate(QStyledItemDelegate):
+    """Delegate for Array and Map editors' table cells."""
 
     value_editor_requested = Signal(QModelIndex)
     """Emitted when editing the value requires the full blown editor dialog."""
 
     def setModelData(self, editor, model, index):
-        """Send signal."""
+        """
+        Sets data in the model.
+
+        editor (CustomLineEditor): editor widget
+        model (QAbstractItemModel): model
+        index (QModelIndex): target index
+        """
         data = editor.data()
         model.setData(index, data)
 
     def createEditor(self, parent, option, index):
+        """
+        Creates an editor widget or emits ``value_editor_requested`` for complex values.
+
+        Args:
+            parent (QWidget): parent widget
+            option (QStyleOptionViewItem): unused
+            index (QModelIndex): element's model index
+
+        Returns:
+            ParameterValueLineEditor: editor widget
+        """
         value = index.data(Qt.EditRole)
         if value is None or isinstance(value, (Number, str)) and not isinstance(value, bool):
             editor = ParameterValueLineEditor(parent)
