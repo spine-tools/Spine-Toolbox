@@ -575,7 +575,7 @@ class SpineToolboxProject(MetaObject):
             "settings": settings,
             "project_dir": self.project_dir,
         }
-        engine = SpineEngineExperimental(json.dumps(d), debug=False)
+        engine = SpineEngineExperimental(json.dumps(d), debug=True)
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         worker = SpineEngineWorker(self._toolbox, engine, dag, dag_identifier)
@@ -602,7 +602,7 @@ class SpineToolboxProject(MetaObject):
         # Can't say I really understand it totally.
         for finished_worker in self._engine_workers:
             self.notify_changes_in_dag(finished_worker.dag)
-            for item, direction, state in self.sucessful_executions:
+            for item, direction, state in finished_worker.sucessful_executions:
                 item.handle_execution_successful(direction, state)
             finished_worker.deleteLater()
         self._engine_workers.clear()
