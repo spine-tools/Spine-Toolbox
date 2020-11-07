@@ -21,9 +21,8 @@ import json
 from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
-from spine_engine.spine_engine_experimental import SpineEngineExperimental
 from spinetoolbox.metaobject import MetaObject
-from spinetoolbox.helpers import create_dir, inverted, erase_dir
+from spinetoolbox.helpers import create_dir, inverted, erase_dir, exchange_messages
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
@@ -559,26 +558,29 @@ class SpineToolboxProject(MetaObject):
         node_successors = self._get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
+        project_items = {name: self._project_item_model.get_item(name).project_item for name in node_successors}
         items = {}
         specifications = {}
-        for name in node_successors:
-            project_item = self._project_item_model.get_item(name).project_item
+        for name, project_item in project_items.items():
             items[name] = project_item.item_dict()
             spec = project_item.specification()
             if spec is not None:
                 specifications.setdefault(project_item.item_type(), list()).append(spec.to_dict())
-        d = {
-            "items": items,
-            "specifications": specifications,
-            "node_successors": node_successors,
-            "execution_permits": execution_permits,
-            "settings": settings,
-            "project_dir": self.project_dir,
-        }
-        engine = SpineEngineExperimental(json.dumps(d), debug=True)
+        run_msg = (
+            "run",
+            {
+                "items": items,
+                "specifications": specifications,
+                "node_successors": node_successors,
+                "execution_permits": execution_permits,
+                "settings": settings,
+                "project_dir": self.project_dir,
+            },
+        )
+        engine_id = exchange_messages(self._toolbox.get_engine_address(), json.dumps(run_msg))
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        worker = SpineEngineWorker(self._toolbox, engine, dag, dag_identifier)
+        worker = SpineEngineWorker(self._toolbox, engine_id, dag, dag_identifier, project_items)
         self._engine_workers.append(worker)
         worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
         worker.start()
@@ -586,14 +588,14 @@ class SpineToolboxProject(MetaObject):
     def _handle_engine_worker_finished(self, worker):
         worker.clean_up()
         finished_outcomes = {
-            SpineEngineState.USER_STOPPED: "stopped by the user",
-            SpineEngineState.FAILED: "failed",
-            SpineEngineState.COMPLETED: "completed successfully",
+            "USER_STOPPED": "stopped by the user",
+            "FAILED": "failed",
+            "COMPLETED": "completed successfully",
         }
-        outcome = finished_outcomes.get(worker.engine.state())
+        outcome = finished_outcomes.get(worker.engine_final_state())
         if outcome is not None:
             self._logger.msg.emit("<b>DAG {0} {1}</b>".format(worker.dag_identifier, outcome))
-        if any(worker.engine.state() not in finished_outcomes for worker in self._engine_workers):
+        if any(worker.engine_final_state() not in finished_outcomes for worker in self._engine_workers):
             return
         # Only after all workers have finished, notify changes and handle successful executions.
         # Doing it while executing leads to deadlocks in acquiring sqlalchemy's infamous _CONFIGURE_MUTEX lock,
@@ -670,7 +672,7 @@ class SpineToolboxProject(MetaObject):
             self.engine.stop()
         # Stop experimental engines
         for worker in self._engine_workers:
-            worker.engine.stop()
+            worker.stop_engine()
 
     def export_graphs(self):
         """Exports all valid directed acyclic graphs in project to GraphML files."""

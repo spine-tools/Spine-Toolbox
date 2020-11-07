@@ -16,41 +16,45 @@ Contains SpineEngineWorker.
 :date:   14.10.2020
 """
 
+import json
 from PySide2.QtCore import Signal, Slot, QObject, QThread
-from spine_engine import ExecutionDirection, SpineEngineState
+from spinetoolbox.helpers import exchange_messages
 
 
-class _SignalHandler(QObject):
-    @Slot(list)
-    def _handle_dag_execution_started(self, project_items):
-        for item in project_items:
-            item.get_icon().execution_icon.mark_execution_wating()
+@Slot(list)
+def _handle_dag_execution_started(project_items):
+    for item in project_items:
+        item.get_icon().execution_icon.mark_execution_wating()
 
-    @Slot(object, object)
-    def _handle_node_execution_started(self, item, direction):
-        icon = item.get_icon()
-        if direction == ExecutionDirection.FORWARD:
-            icon.execution_icon.mark_execution_started()
-            if hasattr(icon, "animation_signaller"):
-                icon.animation_signaller.animation_started.emit()
 
-    @Slot(object, object, object, bool)
-    def _handle_node_execution_finished(self, item, direction, state, success):
-        icon = item.get_icon()
-        if direction == ExecutionDirection.FORWARD:
-            icon.execution_icon.mark_execution_finished(success)
-            if hasattr(icon, "animation_signaller"):
-                icon.animation_signaller.animation_stopped.emit()
-            if state == SpineEngineState.RUNNING:
-                icon.run_execution_leave_animation()
+@Slot(object, object)
+def _handle_node_execution_started(item, direction):
+    icon = item.get_icon()
+    if direction == "FORWARD":
+        icon.execution_icon.mark_execution_started()
+        if hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_started.emit()
 
-    @Slot(object, str, str)
-    def _handle_log_message_arrived(self, item, msg_type, msg_text):
-        item.get_icon().execution_icon.add_log_message(msg_type, msg_text)
 
-    @Slot(object, str, str)
-    def _handle_process_message_arrived(self, item, msg_type, msg_text):
-        item.get_icon().execution_icon.add_process_message(msg_type, msg_text)
+@Slot(object, object, object, bool)
+def _handle_node_execution_finished(item, direction, state, success):
+    icon = item.get_icon()
+    if direction == "FORWARD":
+        icon.execution_icon.mark_execution_finished(success)
+        if hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_stopped.emit()
+        if state == "RUNNING":
+            icon.run_execution_leave_animation()
+
+
+@Slot(object, str, str)
+def _handle_log_message_arrived(item, msg_type, msg_text):
+    item.get_icon().execution_icon.add_log_message(msg_type, msg_text)
+
+
+@Slot(object, str, str)
+def _handle_process_message_arrived(item, msg_type, msg_text):
+    item.get_icon().execution_icon.add_process_message(msg_type, msg_text)
 
 
 class SpineEngineWorker(QObject):
@@ -62,33 +66,39 @@ class SpineEngineWorker(QObject):
     _log_message_arrived = Signal(object, str, str)
     _process_message_arrived = Signal(object, str, str)
 
-    def __init__(self, toolbox, engine, dag, dag_identifier):
+    def __init__(self, toolbox, engine_id, dag, dag_identifier, project_items):
         """
         Args:
-            engine (SpineEngine): engine to run
+            toolbox (ToolboxUI)
+            engine_id (str): uuid of engine in server
+            dag (DirectedGraphHandler)
+            dag_identifier (str)
+            project_items (list(ProjectItemBase))
         """
         super().__init__()
         self._toolbox = toolbox
-        self.engine = engine
+        self.engine_id = engine_id
         self.dag = dag
         self.dag_identifier = dag_identifier
+        self._engine_final_state = "UNKNOWN"
+        self._engine_stopped = False
         self._executing_items = []
-        self._project_items = {}
-        for item_name in self.engine.item_names:
-            item = self._toolbox.project_item_model.get_item(item_name)
-            if item is None:
-                continue
-            self._project_items[item_name] = item.project_item
+        self._project_items = project_items
         self.sucessful_executions = []
-        self._signal_handler = _SignalHandler()
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
-        self._dag_execution_started.connect(self._signal_handler._handle_dag_execution_started)
-        self._node_execution_started.connect(self._signal_handler._handle_node_execution_started)
-        self._node_execution_finished.connect(self._signal_handler._handle_node_execution_finished)
-        self._log_message_arrived.connect(self._signal_handler._handle_log_message_arrived)
-        self._process_message_arrived.connect(self._signal_handler._handle_process_message_arrived)
+        self._dag_execution_started.connect(_handle_dag_execution_started)
+        self._node_execution_started.connect(_handle_node_execution_started)
+        self._node_execution_finished.connect(_handle_node_execution_finished)
+        self._log_message_arrived.connect(_handle_log_message_arrived)
+        self._process_message_arrived.connect(_handle_process_message_arrived)
+
+    def stop_engine(self):
+        self._engine_stopped = True
+
+    def engine_final_state(self):
+        return self._engine_final_state
 
     def thread(self):
         return self._thread
@@ -100,8 +110,18 @@ class SpineEngineWorker(QObject):
     @Slot()
     def do_work(self):
         """Does the work and emits finished when done."""
-        for event_type, data in self.engine.run_iterator():
+        engine_address = self._toolbox.get_engine_address()
+        get_event_msg = ("get_event", self.engine_id)
+        stop_msg = ("stop", self.engine_id)
+        while True:
+            if self._engine_stopped:
+                exchange_messages(engine_address, json.dumps(stop_msg), send_only=True)
+            response = exchange_messages(engine_address, json.dumps(get_event_msg))
+            event_type, data = json.loads(response)
             self._process_event(event_type, data)
+            if event_type == "dag_exec_finished":
+                self._engine_final_state = data
+                break
         self.finished.emit()
 
     def _process_event(self, event_type, data):

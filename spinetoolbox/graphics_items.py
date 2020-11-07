@@ -500,7 +500,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
 
     def mark_execution_finished(self, success):
         if success:
-            self._execution_state = "complete"
+            self._execution_state = "completed"
             self._repaint(self._CHECK, QColor("green"))
         else:
             self._execution_state = "failed"

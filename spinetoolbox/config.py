@@ -20,12 +20,11 @@ import sys
 import os
 
 
-REQUIRED_SPINE_ENGINE_VERSION = "0.7.6"
+REQUIRED_SPINE_ENGINE_VERSION = "0.8.0"
 REQUIRED_SPINEDB_API_VERSION = "0.8.11"
 PREFERRED_SPINE_ITEMS_VERSION = "0.1.34"
 LATEST_PROJECT_VERSION = 3
-# SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
-# SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
+
 # Invalid characters for directory names
 # NOTE: "." is actually valid in a directory name but this is
 # to prevent the user from creating directories like /..../
