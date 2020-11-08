@@ -59,7 +59,7 @@ class SpineEngineClient:
         Args:
             engine_id (str): the engine id.
         """
-        self._send("stop_engine", engine_id)
+        self._send("stop_engine", engine_id, receive=False)
 
     def _send(self, request, *args, receive=True):
         """
