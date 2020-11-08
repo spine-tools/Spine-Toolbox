@@ -37,7 +37,8 @@ from PySide2.QtWidgets import (
 )
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from spine_engine.spine_engine_server import start_spine_engine_server  # FIXME: Remove when toolbox is engine-free
-from spinetoolbox.graphics_items import ProjectItemIcon
+from .spine_engine_client import SpineEngineClient
+from .graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
@@ -182,15 +183,17 @@ class ToolboxUI(QMainWindow):
         self.parse_assistant_modules()
         self.main_toolbar.setup()
         self.set_work_directory()
-        self._engine_address = ()
+        self._engine_server_address = None
+        self._start_local_engine_server()
 
-    def get_engine_address(self):
-        if not self._engine_address:
-            host = "localhost"
-            port = find_free_port(host)
-            self._engine_address = host, port
-            start_spine_engine_server(host, port)
-        return self._engine_address
+    def _start_local_engine_server(self):
+        host = "localhost"
+        port = find_free_port(host)
+        start_spine_engine_server(host, port)
+        self._engine_server_address = (host, port)
+
+    def get_engine_client(self):
+        return SpineEngineClient(self._engine_server_address)
 
     def connect_signals(self):
         """Connect signals."""

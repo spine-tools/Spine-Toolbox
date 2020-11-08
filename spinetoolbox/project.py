@@ -22,7 +22,7 @@ from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from spinetoolbox.metaobject import MetaObject
-from spinetoolbox.helpers import create_dir, inverted, erase_dir, exchange_messages
+from spinetoolbox.helpers import create_dir, inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
@@ -566,21 +566,17 @@ class SpineToolboxProject(MetaObject):
             spec = project_item.specification()
             if spec is not None:
                 specifications.setdefault(project_item.item_type(), list()).append(spec.to_dict())
-        run_msg = (
-            "run",
-            {
-                "items": items,
-                "specifications": specifications,
-                "node_successors": node_successors,
-                "execution_permits": execution_permits,
-                "settings": settings,
-                "project_dir": self.project_dir,
-            },
-        )
-        engine_id = exchange_messages(self._toolbox.get_engine_address(), json.dumps(run_msg))
+        data = {
+            "items": items,
+            "specifications": specifications,
+            "node_successors": node_successors,
+            "execution_permits": execution_permits,
+            "settings": settings,
+            "project_dir": self.project_dir,
+        }
         self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
         self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        worker = SpineEngineWorker(self._toolbox, engine_id, dag, dag_identifier, project_items)
+        worker = SpineEngineWorker(self._toolbox, data, dag, dag_identifier, project_items)
         self._engine_workers.append(worker)
         worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
         worker.start()

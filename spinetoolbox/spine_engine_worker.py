@@ -16,9 +16,7 @@ Contains SpineEngineWorker.
 :date:   14.10.2020
 """
 
-import json
 from PySide2.QtCore import Signal, Slot, QObject, QThread
-from spinetoolbox.helpers import exchange_messages
 
 
 @Slot(list)
@@ -66,7 +64,7 @@ class SpineEngineWorker(QObject):
     _log_message_arrived = Signal(object, str, str)
     _process_message_arrived = Signal(object, str, str)
 
-    def __init__(self, toolbox, engine_id, dag, dag_identifier, project_items):
+    def __init__(self, toolbox, data, dag, dag_identifier, project_items):
         """
         Args:
             toolbox (ToolboxUI)
@@ -77,7 +75,7 @@ class SpineEngineWorker(QObject):
         """
         super().__init__()
         self._toolbox = toolbox
-        self.engine_id = engine_id
+        self._data = data
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"
@@ -110,14 +108,12 @@ class SpineEngineWorker(QObject):
     @Slot()
     def do_work(self):
         """Does the work and emits finished when done."""
-        engine_address = self._toolbox.get_engine_address()
-        get_event_msg = ("get_event", self.engine_id)
-        stop_msg = ("stop", self.engine_id)
+        engine_client = self._toolbox.get_engine_client()
+        engine_id = engine_client.run_engine(self._data)
         while True:
             if self._engine_stopped:
-                exchange_messages(engine_address, json.dumps(stop_msg), send_only=True)
-            response = exchange_messages(engine_address, json.dumps(get_event_msg))
-            event_type, data = json.loads(response)
+                engine_client.stop_engine(engine_id)
+            event_type, data = engine_client.get_engine_event(engine_id)
             self._process_event(event_type, data)
             if event_type == "dag_exec_finished":
                 self._engine_final_state = data
