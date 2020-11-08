@@ -130,45 +130,51 @@ class SpineEngineWorker(QObject):
 
     def _process_event(self, event_type, data):
         handler = {
-            'exec_started': self._handle_node_execution_started,
-            'exec_finished': self._handle_node_execution_finished,
-            'log_msg': self._handle_log_msg,
-            'process_msg': self._handle_process_msg,
-            'standard_execution_msg': self._handle_standard_execution_msg,
-            'kernel_execution_msg': self._handle_kernel_execution_msg,
+            "exec_started": self._handle_node_execution_started,
+            "exec_finished": self._handle_node_execution_finished,
+            "log_msg": self._handle_log_msg,
+            "process_msg": self._handle_process_msg,
+            "standard_execution_msg": self._handle_standard_execution_msg,
+            "kernel_execution_msg": self._handle_kernel_execution_msg,
         }.get(event_type)
         if handler is None:
             return
         handler(data)
 
     def _handle_standard_execution_msg(self, msg):
+        item = self._project_items[msg["author"]]
         if msg["type"] == "execution_failed_to_start":
-            self._toolbox.msg_error.emit(f"Program <b>{msg['program']}</b> failed to start: {msg['error']}")
+            msg_text = f"Program <b>{msg['program']}</b> failed to start: {msg['error']}"
+            self._log_message_arrived.emit(item, "msg_error", msg_text)
+
         elif msg["type"] == "execution_started":
-            self._toolbox.msg.emit(f"\tStarting program <b>{msg['program']}</b>")
-            self._toolbox.msg.emit(f"\tArguments: <b>{msg['args']}</b>")
-            self._toolbox.msg_warning.emit(
-                "\tExecution is in progress. See Process Log for messages " "(stdout&stderr)"
+            self._log_message_arrived.emit(item, "msg", f"\tStarting program <b>{msg['program']}</b>")
+            self._log_message_arrived.emit(item, "msg", f"\tArguments: <b>{msg['args']}</b>")
+            self._log_message_arrived.emit(
+                item, "msg_warning", "\tExecution is in progress. See Process Log for messages (stdout&stderr)"
             )
 
     def _handle_kernel_execution_msg(self, msg):
+        item = self._project_items[msg["author"]]
         language = msg["language"].capitalize()
         if msg["type"] == "kernel_started":
             console = {"julia": self._toolbox.julia_repl, "python": self._toolbox.python_repl}.get(msg["language"])
             if console is not None:
                 console.connect_to_kernel(msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":
-            self._toolbox.msg_error.emit(
+            msg_text = (
                 f"\tUnable to find specification for {language} kernel <b>{msg['kernel_name']}</b>. "
                 f"Go to Settings->Tools to select a valid {language} kernel."
             )
+            self._log_message_arrived.emit(item, "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
-            self._toolbox.msg_error.emit(
-                f"\tExecution on {language} kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']} "
-            )
+            msg_text = f"\tExecution on {language} kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
+            self._log_message_arrived.emit(item, "msg_error", msg_text)
         elif msg["type"] == "execution_started":
-            self._toolbox.msg.emit(f"\tStarting program on {language} kernel <b>{msg['kernel_name']}</b>")
-            self._toolbox.msg_warning.emit(f"See {language} Console for messages.")
+            self._log_message_arrived.emit(
+                item, "msg", f"\tStarting program on {language} kernel <b>{msg['kernel_name']}</b>"
+            )
+            self._log_message_arrived.emit(item, "msg_warning", f"See {language} Console for messages.")
 
     def _handle_process_msg(self, data):
         self._do_handle_process_msg(**data)
