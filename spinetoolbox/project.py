@@ -582,7 +582,6 @@ class SpineToolboxProject(MetaObject):
         worker.start()
 
     def _handle_engine_worker_finished(self, worker):
-        worker.clean_up()
         finished_outcomes = {
             "USER_STOPPED": "stopped by the user",
             "FAILED": "failed",
@@ -602,7 +601,7 @@ class SpineToolboxProject(MetaObject):
             self.notify_changes_in_dag(finished_worker.dag)
             for item, direction, state in finished_worker.sucessful_executions:
                 item.handle_execution_successful(direction, state)
-            finished_worker.deleteLater()
+            finished_worker.clean_up()
         self._engine_workers.clear()
 
     def execute_selected(self):
