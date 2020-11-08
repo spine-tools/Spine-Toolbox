@@ -24,8 +24,6 @@ import json
 import logging
 import datetime
 import shutil
-import socket
-from contextlib import closing
 import matplotlib
 from PySide2.QtGui import QCursor, QDesktopServices
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
@@ -62,21 +60,6 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     from pandas.plotting import register_matplotlib_converters
 
     register_matplotlib_converters()
-
-
-def find_free_port(host):
-    """Finds a free port in given host.
-
-    Args:
-        host (str): Ex. 'localhost'
-
-    Returns:
-        int
-    """
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind((host, 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
 
 
 def format_log_message(msg_type, message, show_datetime=True):
