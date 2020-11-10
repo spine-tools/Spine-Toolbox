@@ -6,20 +6,34 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- Support for Experimental Spine Engine. This can be enabled in app Settings->General tab. Experimental 
+  engine provides the latest in-development features (e.g. parallel/multicore processing, etc.).
+- New project item: Data Transformer. Can be used to configure Spine database filters for successor items.
+  Currently it supports renaming entity classes.
+- Support for version 3 Spine Toolbox projects and an automatic upgrade of version 2 projects to version 3.
+- Python and Julia Kernel Editor. Provides the means to make new kernels for Python Console and Julia 
+  Console without leaving Spine Toolbox. Kernel Editor can be found in Settings->Tools tab.
+
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
-  Project Items are now in a separate package called spine_items, which is upgraded at Spine Toolbox's startup. 
-- IPython kernel specifications are created for the current Python interpreter,
-  and not globally for the user.
-- New project item Data Transformer can be used to configure Spine database filters for successor items.
-  Currently it support renaming entity classes.
+  Project Items are now in a separate package called spine_items, which is upgraded at Spine 
+  Toolbox's startup. 
+- User's now need to explicitly choose a kernel for the Python Console and the Julia Console. They are 
+  not chosen (nor created) automatically anymore. The kernels can be selected in the drop-down menus 
+  on application Settings->Tools window.
 - The Importer item now applies the same mapping to all input files.
   If the user needs to apply different mappings, they need to create different Importers.
   The specification can be shared using the json file.
 
 ### Deprecated
+- CustomQtKernelManager class
+
 ### Removed
+- python_repl_widget.py
+- julia_repl_widget.py
+
 ### Fixed
+
 ### Security
 
 ## [0.5.0-beta.0] - 2020-09-14

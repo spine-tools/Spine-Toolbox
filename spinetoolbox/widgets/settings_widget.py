@@ -22,6 +22,10 @@ from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QPixmap
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..graphics_items import Link
+from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
+from spinetoolbox.widgets.notification import Notification
+from spinetoolbox.helpers import select_python_interpreter, select_julia_executable, select_julia_project, \
+    file_is_valid, dir_is_valid
 
 
 class SettingsWidgetBase(QWidget):
@@ -39,9 +43,9 @@ class SettingsWidgetBase(QWidget):
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         self.setStyleSheet(SETTINGS_SS)
         self.ui.pushButton_ok.setDefault(True)
-        self._mousePressPos = None
-        self._mouseReleasePos = None
-        self._mouseMovePos = None
+        self._mouse_press_pos = None
+        self._mouse_release_pos = None
+        self._mouse_move_pos = None
 
     def connect_signals(self):
         """Connect signals."""
@@ -63,8 +67,8 @@ class SettingsWidgetBase(QWidget):
         Args:
             e (QMouseEvent): Mouse event
         """
-        self._mousePressPos = e.globalPos()
-        self._mouseMovePos = e.globalPos()
+        self._mouse_press_pos = e.globalPos()
+        self._mouse_move_pos = e.globalPos()
         super().mousePressEvent(e)
 
     def mouseReleaseEvent(self, e):
@@ -73,9 +77,9 @@ class SettingsWidgetBase(QWidget):
         Args:
             e (QMouseEvent): Mouse event
         """
-        if self._mousePressPos is not None:
-            self._mouseReleasePos = e.globalPos()
-            moved = self._mouseReleasePos - self._mousePressPos
+        if self._mouse_press_pos is not None:
+            self._mouse_release_pos = e.globalPos()
+            moved = self._mouse_release_pos - self._mouse_press_pos
             if moved.manhattanLength() > 3:
                 e.ignore()
                 return
@@ -88,13 +92,13 @@ class SettingsWidgetBase(QWidget):
         """
         currentpos = self.pos()
         globalpos = e.globalPos()
-        if not self._mouseMovePos:
+        if not self._mouse_move_pos:
             e.ignore()
             return
-        diff = globalpos - self._mouseMovePos
+        diff = globalpos - self._mouse_move_pos
         newpos = currentpos + diff
         self.move(newpos)
-        self._mouseMovePos = globalpos
+        self._mouse_move_pos = globalpos
 
     def update_ui(self):
         """Updates UI to reflect current settings. Called when the user choses to cancel their changes.
@@ -196,10 +200,8 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
 
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     """A widget to change user's preferred settings."""
-
     def __init__(self, toolbox):
-        """Initialize class.
-
+        """
         Args:
             toolbox (ToolboxUI): Parent widget.
         """
@@ -208,7 +210,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._project = self._toolbox.project()
         self._db_mngr = self._project.db_mngr if self._project else None
         self.orig_work_dir = ""  # Work dir when this widget was opened
-        self.orig_python_env = ""  # Used in determining if Python environment was changed
+        self._kernel_editor = None
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
@@ -223,15 +225,21 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Connect signals."""
         super().connect_signals()
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
-        self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_path)
-        self.ui.toolButton_browse_julia_project.clicked.connect(self.browse_julia_project_path)
-        self.ui.toolButton_browse_python.clicked.connect(self.browse_python_path)
+        self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_button_clicked)
+        self.ui.toolButton_browse_julia_project.clicked.connect(self.browse_julia_project_button_clicked)
+        self.ui.toolButton_browse_python.clicked.connect(self.browse_python_button_clicked)
+        self.ui.pushButton_open_kernel_editor_python.clicked.connect(self.show_python_kernel_editor)
+        self.ui.pushButton_open_kernel_editor_julia.clicked.connect(self.show_julia_kernel_editor)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_tree.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
         self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
+        self.ui.radioButton_use_julia_executable.clicked.connect(self.toggle_julia_execution_mode)
+        self.ui.radioButton_use_julia_console.clicked.connect(self.toggle_julia_execution_mode)
+        self.ui.radioButton_use_python_interpreter.clicked.connect(self.toggle_python_execution_mode)
+        self.ui.radioButton_use_python_console.clicked.connect(self.toggle_python_execution_mode)
 
     @Slot(bool)
     def browse_gams_path(self, checked=False):
@@ -265,68 +273,87 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         return
 
     @Slot(bool)
-    def browse_julia_path(self, checked=False):
-        """Open file browser where user can select a Julia executable (i.e. julia.exe on Windows)."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(
-            self, "Select Julia Executable (e.g. julia.exe on Windows)", os.path.abspath('C:\\')
-        )
-        if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
-            return
-        # Check that it's not a directory
-        if os.path.isdir(answer[0]):
-            msg = "Please select a valid Julia Executable (file) and not a directory"
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Executable", msg)
-            return
-        # Check that it's a file that actually exists
-        if not os.path.exists(answer[0]):
-            msg = "File {0} does not exist".format(answer[0])
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Executable", msg)
-            return
-        # Check that selected file at least starts with string 'julia'
-        _, selected_file = os.path.split(answer[0])
-        if not selected_file.lower().startswith("julia"):
-            msg = "Selected file <b>{0}</b> is not a valid Julia Executable".format(selected_file)
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Julia Executable", msg)
-            return
-        self.ui.lineEdit_julia_path.setText(answer[0])
-        return
+    def browse_julia_button_clicked(self, checked=False):
+        """Calls static method that shows a file browser for selecting the Julia path."""
+        select_julia_executable(self, self.ui.lineEdit_julia_path)
 
     @Slot(bool)
-    def browse_julia_project_path(self, checked=False):
-        """Open file browser where user can select a Julia project path."""
-        answer = QFileDialog.getExistingDirectory(self, "Select Julia project directory", os.path.abspath("C:\\"))
-        if not answer:  # Canceled (american-english), cancelled (british-english)
-            return
-        self.ui.lineEdit_julia_project_path.setText(answer)
+    def browse_julia_project_button_clicked(self, checked=False):
+        """Calls static method that shows a file browser for selecting a Julia project."""
+        select_julia_project(self, self.ui.lineEdit_julia_project_path)
 
     @Slot(bool)
-    def browse_python_path(self, checked=False):
-        """Open file browser where user can select a python interpreter (i.e. python.exe on Windows)."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(
-            self, "Select Python Interpreter (e.g. python.exe on Windows)", os.path.abspath("C:\\")
-        )
-        if answer[0] == "":  # Canceled
+    def browse_python_button_clicked(self, checked=False):
+        """Calls static method that shows a file browser for selecting Python interpreter."""
+        select_python_interpreter(self, self.ui.lineEdit_python_path)
+
+    @Slot(bool)
+    def show_python_kernel_editor(self, checked=False):
+        """Opens kernel editor, where user can make a kernel for the Python Console."""
+        p = self.ui.lineEdit_python_path.text()  # This may be an empty string
+        j = self.ui.lineEdit_julia_path.text()
+        current_kernel = self.ui.comboBox_python_kernel.currentText()
+        self._kernel_editor = KernelEditor(self, p, j, "python", current_kernel)
+        self._kernel_editor.finished.connect(self.python_kernel_editor_closed)
+        self._kernel_editor.open()
+
+    @Slot(int)
+    def python_kernel_editor_closed(self, ret_code):
+        """Catches the selected Python kernel name when the editor is closed."""
+        previous_python_kernel = self.ui.comboBox_python_kernel.currentText()
+        self.ui.comboBox_python_kernel.clear()
+        python_kernel_cb_items = ["Select Python kernel..."] + [*find_python_kernels().keys()]
+        self.ui.comboBox_python_kernel.addItems(python_kernel_cb_items)
+        if ret_code != 1:  # Editor closed with something else than clicking Ok.
+            # Set previous kernel selected in Python kernel combobox if it still exists
+            python_kernel_index = self.ui.comboBox_python_kernel.findText(previous_python_kernel)
+            if python_kernel_index == -1:
+                self.ui.comboBox_python_kernel.setCurrentIndex(0)  # Previous not found
+            else:
+                self.ui.comboBox_python_kernel.setCurrentIndex(python_kernel_index)
             return
-        # Check that it's not a directory
-        if os.path.isdir(answer[0]):
-            msg = "Please select a valid Python interpreter (file) and not a directory"
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Python Interpreter", msg)
+        new_kernel = self._kernel_editor.selected_kernel
+        index = self.ui.comboBox_python_kernel.findText(new_kernel)
+        if index == -1:  # New kernel not found, should be quite exceptional
+            notification = Notification(self, f"Python kernel {new_kernel} not found")
+            notification.show()
+            self.ui.comboBox_python_kernel.setCurrentIndex(0)
+        else:
+            self.ui.comboBox_python_kernel.setCurrentIndex(index)
+
+    @Slot(bool)
+    def show_julia_kernel_editor(self, checked=False):
+        """Opens kernel editor, where user can make a kernel the Julia Console."""
+        p = self.ui.lineEdit_python_path.text()  # This may be an empty string
+        j = self.ui.lineEdit_julia_path.text()
+        current_kernel = self.ui.comboBox_julia_kernel.currentText()
+        self._kernel_editor = KernelEditor(self, p, j, "julia", current_kernel)
+        self._kernel_editor.finished.connect(self.julia_kernel_editor_closed)
+        self._kernel_editor.open()
+
+    @Slot(int)
+    def julia_kernel_editor_closed(self, ret_code):
+        """Catches the selected Julia kernel name when the editor is closed."""
+        previous_julia_kernel = self.ui.comboBox_julia_kernel.currentText()
+        self.ui.comboBox_julia_kernel.clear()
+        julia_kernel_cb_items = ["Select Julia kernel..."] + [*find_julia_kernels().keys()]
+        self.ui.comboBox_julia_kernel.addItems(julia_kernel_cb_items)
+        if ret_code != 1:  # Editor closed with something else than clicking Ok.
+            # Set previous kernel selected in combobox if it still exists
+            previous_kernel_index = self.ui.comboBox_julia_kernel.findText(previous_julia_kernel)
+            if previous_kernel_index == -1:
+                self.ui.comboBox_julia_kernel.setCurrentIndex(0)
+            else:
+                self.ui.comboBox_julia_kernel.setCurrentIndex(previous_kernel_index)
             return
-        # Check that selected file at least starts with string 'python'
-        _, selected_file = os.path.split(answer[0])
-        if not selected_file.lower().startswith("python"):
-            msg = "Selected file <b>{0}</b> is not a valid Python interpreter".format(selected_file)
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Python Interpreter", msg)
-            return
-        self.ui.lineEdit_python_path.setText(answer[0])
-        return
+        new_kernel = self._kernel_editor.selected_kernel
+        index = self.ui.comboBox_julia_kernel.findText(new_kernel)
+        if index == -1:
+            notification = Notification(self, f"Julia kernel {new_kernel} not found")
+            notification.show()
+            self.ui.comboBox_julia_kernel.setCurrentIndex(0)
+        else:
+            self.ui.comboBox_julia_kernel.setCurrentIndex(index)
 
     @Slot(bool)
     def browse_work_path(self, checked=False):
@@ -382,6 +409,42 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             if isinstance(item, Link):
                 item.do_update_geometry(checked)
 
+    @Slot(bool)
+    def toggle_julia_execution_mode(self, checked=False):
+        """Toggles between console and non-console Julia execution
+        modes depending on radiobutton states.
+
+        Args:
+            checked (boolean): Toggle state
+        """
+        console_enabled = True
+        if self.ui.radioButton_use_julia_executable.isChecked():
+            console_enabled = False
+        elif self.ui.radioButton_use_julia_console.isChecked():
+            console_enabled = True
+        self.ui.comboBox_julia_kernel.setEnabled(console_enabled)
+        self.ui.lineEdit_julia_path.setEnabled(not console_enabled)
+        self.ui.lineEdit_julia_project_path.setEnabled(not console_enabled)
+        self.ui.toolButton_browse_julia.setEnabled(not console_enabled)
+        self.ui.toolButton_browse_julia_project.setEnabled(not console_enabled)
+
+    @Slot(bool)
+    def toggle_python_execution_mode(self, checked=False):
+        """Toggles between console and non-console Python execution
+        modes depending on radiobutton states.
+
+        Args:
+            checked (boolean): Toggle state
+        """
+        console_enabled = True
+        if self.ui.radioButton_use_python_interpreter.isChecked():
+            console_enabled = False
+        elif self.ui.radioButton_use_python_console.isChecked():
+            console_enabled = True
+        self.ui.comboBox_python_kernel.setEnabled(console_enabled)
+        self.ui.lineEdit_python_path.setEnabled(not console_enabled)
+        self.ui.toolButton_browse_python.setEnabled(not console_enabled)
+
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
@@ -399,11 +462,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
-        use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2")
+        use_embedded_julia = int(self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2"))
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
         julia_project_path = self._qsettings.value("appSettings/juliaProjectPath", defaultValue="")
-        use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="0")
+        julia_kernel = self._qsettings.value("appSettings/juliaKernel", defaultValue="")
+        use_embedded_python = int(self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="2"))
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
+        python_kernel = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
@@ -438,14 +503,34 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.bg_color = bg_color
         self.update_bg_color()
         self.ui.lineEdit_gams_path.setText(gams_path)
-        if use_embedded_julia == "2":
-            self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)
+        # Add Python and Julia kernels to comboBoxes
+        julia_kernel_cb_items = ["Select Julia kernel..."] + [*find_julia_kernels().keys()]  # Unpack to list literal
+        self.ui.comboBox_julia_kernel.addItems(julia_kernel_cb_items)
+        python_kernel_cb_items = ["Select Python kernel..."] + [*find_python_kernels().keys()]
+        self.ui.comboBox_python_kernel.addItems(python_kernel_cb_items)
+        if use_embedded_julia == 2:
+            self.ui.radioButton_use_julia_console.setChecked(True)
+        else:
+            self.ui.radioButton_use_python_interpreter.setChecked(True)
+        self.toggle_julia_execution_mode()
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
-        if use_embedded_python == "2":
-            self.ui.checkBox_use_embedded_python.setCheckState(Qt.Checked)
+        ind = self.ui.comboBox_julia_kernel.findText(julia_kernel)
+        if ind == -1:
+            self.ui.comboBox_julia_kernel.setCurrentIndex(0)
+        else:
+            self.ui.comboBox_julia_kernel.setCurrentIndex(ind)
+        if use_embedded_python == 2:
+            self.ui.radioButton_use_python_console.setChecked(True)
+        else:
+            self.ui.radioButton_use_python_interpreter.setChecked(True)
+        self.toggle_python_execution_mode()
         self.ui.lineEdit_python_path.setText(python_path)
-        self.orig_python_env = python_path
+        ind = self.ui.comboBox_python_kernel.findText(python_kernel)
+        if ind == -1:
+            self.ui.comboBox_python_kernel.setCurrentIndex(0)
+        else:
+            self.ui.comboBox_python_kernel.setCurrentIndex(ind)
         self.ui.lineEdit_work_dir.setText(work_dir)
         self.orig_work_dir = work_dir
 
@@ -493,33 +578,45 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         # GAMS
         gams_path = self.ui.lineEdit_gams_path.text().strip()
-        if not self.file_is_valid(gams_path, "Invalid GAMS Program"):  # Check it's a file and it exists
+        # Check gams_path is a file, it exists, and file name starts with 'gams'
+        if not file_is_valid(self, gams_path, "Invalid GAMS Program", extra_check="gams"):
             return
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
-        # Julia (cast to str because of Linux)
-        use_emb_julia = str(int(self.ui.checkBox_use_embedded_julia.checkState()))  # Cast to str because of Linux
+        # Julia (str because Linux)
+        use_emb_julia = "2" if self.ui.radioButton_use_julia_console.isChecked() else "0"
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
         julia_path = self.ui.lineEdit_julia_path.text().strip()
-        if not self.file_is_valid(julia_path, "Invalid Julia Executable"):  # Check it's a file and it exists
+        # Check julia_path is a file, it exists, and file name starts with 'julia'
+        if not file_is_valid(self, julia_path, "Invalid Julia Executable", extra_check="julia"):
             return
         self._qsettings.setValue("appSettings/juliaPath", julia_path)
         julia_project_path = self.ui.lineEdit_julia_project_path.text().strip()
-        if not self.dir_is_valid(julia_project_path, "Invalid Julia Project"):  # Check it's a directory and it exists
+        if not dir_is_valid(self, julia_project_path, "Invalid Julia Project"):  # Check it's a directory and it exists
             return
         self._qsettings.setValue("appSettings/juliaProjectPath", julia_project_path)
+        if self.ui.comboBox_julia_kernel.currentIndex() == 0:
+            julia_kernel = ""
+        else:
+            julia_kernel = self.ui.comboBox_julia_kernel.currentText()
+        self._qsettings.setValue("appSettings/juliaKernel", julia_kernel)
         # Python
-        use_emb_python = str(int(self.ui.checkBox_use_embedded_python.checkState()))  # Cast to str because of Linux
+        use_emb_python = "2" if self.ui.radioButton_use_python_console.isChecked() else "0"
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
         python_path = self.ui.lineEdit_python_path.text().strip()
-        if not self.file_is_valid(python_path, "Invalid Python Interpreter"):  # Check it's a file and it exists
+        # Check python_path is a file, it exists, and file name starts with 'python'
+        if not file_is_valid(self, python_path, "Invalid Python Interpreter", extra_check="python"):
             return
         self._qsettings.setValue("appSettings/pythonPath", python_path)
+        if self.ui.comboBox_python_kernel.currentIndex() == 0:
+            python_kernel = ""
+        else:
+            python_kernel = self.ui.comboBox_python_kernel.currentText()
+        self._qsettings.setValue("appSettings/pythonKernel", python_kernel)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
         self.set_work_directory(work_dir)
         # Check if something in the app needs to be updated
         self._toolbox.show_datetime = self._toolbox.update_datetime()
-        self.check_if_python_env_changed(python_path)
         # Project
         self.update_project_settings()
 
@@ -546,41 +643,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             new_work_dir = DEFAULT_WORK_DIR
         if self.orig_work_dir != new_work_dir:
             self._toolbox.set_work_directory(new_work_dir)
-
-    def check_if_python_env_changed(self, new_path):
-        """Checks if Python environment was changed.
-        This indicates that the Python Console may need a restart."""
-        if self.orig_python_env != new_path:
-            self._toolbox.python_repl.may_need_restart = True
-
-    def file_is_valid(self, file_path, msgbox_title):
-        """Checks that given path is not a directory and it's a file that actually exists.
-        Needed because the QLineEdits are editable."""
-        if file_path == "":
-            return True
-        if os.path.isdir(file_path):
-            msg = "Please select a file and not a directory"
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, msgbox_title, msg)
-            return False
-        if not os.path.exists(file_path):
-            msg = "File {0} does not exist".format(file_path)
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, msgbox_title, msg)
-            return False
-        return True
-
-    def dir_is_valid(self, dir_path, msgbox_title):
-        """Checks that given path is a directory.
-        Needed because the QLineEdits are editable."""
-        if dir_path == "":
-            return True
-        if not os.path.isdir(dir_path):
-            msg = "Please select a valid directory"
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, msgbox_title, msg)
-            return False
-        return True
 
     def update_ui(self):
         super().update_ui()

@@ -676,8 +676,8 @@
                <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="acceptRichText">
                <bool>false</bool>
@@ -802,6 +802,51 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
+            <item row="3" column="0">
+             <widget class="QLineEdit" name="lineEdit_julia_path">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia executable. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="placeholderText">
+               <string>Using Julia executable in system path</string>
+              </property>
+              <property name="clearButtonEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="CustomQComboBox" name="comboBox_julia_kernel">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel for the embedded Julia Console.&lt;/p&gt;&lt;p&gt;Only valid Julia kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QRadioButton" name="radioButton_use_julia_executable">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Julia Tools and scripts will be executed in a terminal as an individual process. Select the Julia executable and Julia project below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Use Julia executable</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
             <item row="4" column="0">
              <widget class="QLineEdit" name="lineEdit_julia_project_path">
               <property name="minimumSize">
@@ -830,6 +875,16 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
+            <item row="6" column="0">
+             <widget class="QRadioButton" name="radioButton_use_julia_console">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). Select the kernel for Julia Console from the drop-down menu below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Use embedded Julia Console</string>
+              </property>
+             </widget>
+            </item>
             <item row="3" column="1">
              <widget class="QToolButton" name="toolButton_browse_julia">
               <property name="maximumSize">
@@ -847,50 +902,16 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="3" column="0">
-             <widget class="QLineEdit" name="lineEdit_julia_path">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
+            <item row="7" column="1">
+             <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>20</height>
+                <height>24</height>
                </size>
               </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia executable. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="placeholderText">
-               <string>Using Julia executable in system path</string>
-              </property>
-              <property name="clearButtonEnabled">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_12">
-              <property name="font">
-               <font>
-                <pointsize>7</pointsize>
-               </font>
-              </property>
               <property name="text">
-               <string>Julia executable</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QCheckBox" name="checkBox_use_embedded_julia">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). If unchecked, Julia Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `julia script.jl` in terminal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Use embedded Julia Console</string>
+               <string>Kernel editor</string>
               </property>
              </widget>
             </item>
@@ -908,16 +929,14 @@ p, li { white-space: pre-wrap; }
            <property name="title">
             <string>Python</string>
            </property>
-           <layout class="QGridLayout" name="gridLayout_6">
+           <layout class="QGridLayout" name="gridLayout_2">
             <item row="0" column="0">
-             <widget class="QLabel" name="label_13">
-              <property name="font">
-               <font>
-                <pointsize>7</pointsize>
-               </font>
+             <widget class="QRadioButton" name="radioButton_use_python_interpreter">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Python Tools and scripts are executed in a separate process in terminal. Select the python interpreter you want to use into the line edit below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Python interpreter</string>
+               <string>Use Python interpreter</string>
               </property>
              </widget>
             </item>
@@ -946,16 +965,6 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_use_embedded_python">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Python Tools and scripts will be executed in the embedded Python Console (Shell). If unchecked, Python Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `python script.py` in terminal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Use embedded Python Console</string>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="1">
              <widget class="QToolButton" name="toolButton_browse_python">
               <property name="maximumSize">
@@ -973,21 +982,50 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
+            <item row="2" column="0">
+             <widget class="QRadioButton" name="radioButton_use_python_console">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Python Tools and scripts are executed in the embedded Python Console. Select the kernel for the Python Console from the drop-down menu below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Use embedded Python Console</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="CustomQComboBox" name="comboBox_python_kernel">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel for the embedded Python Console.&lt;/p&gt;&lt;p&gt;Only valid Python kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::AdjustToContents</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>24</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>Open kernel editor</string>
+              </property>
+              <property name="text">
+               <string>Kernel editor</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
-         </item>
-         <item>
-          <spacer name="verticalSpacer_7">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
          </item>
          <item>
           <spacer name="verticalSpacer_8">
@@ -1198,13 +1236,20 @@ p, li { white-space: pre-wrap; }
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomQComboBox</class>
+   <extends>QComboBox</extends>
+   <header>spinetoolbox/widgets/custom_qcombobox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
-  <tabstop>listWidget</tabstop>
   <tabstop>checkBox_open_previous_project</tabstop>
   <tabstop>checkBox_exit_prompt</tabstop>
   <tabstop>checkBox_save_at_exit</tabstop>
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
+  <tabstop>checkBox_use_experimental_engine</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
   <tabstop>checkBox_use_smooth_zoom</tabstop>
@@ -1218,14 +1263,20 @@ p, li { white-space: pre-wrap; }
   <tabstop>textEdit_project_description</tabstop>
   <tabstop>lineEdit_gams_path</tabstop>
   <tabstop>toolButton_browse_gams</tabstop>
+  <tabstop>radioButton_use_julia_executable</tabstop>
   <tabstop>lineEdit_julia_path</tabstop>
   <tabstop>toolButton_browse_julia</tabstop>
   <tabstop>lineEdit_julia_project_path</tabstop>
   <tabstop>toolButton_browse_julia_project</tabstop>
-  <tabstop>checkBox_use_embedded_julia</tabstop>
+  <tabstop>radioButton_use_julia_console</tabstop>
+  <tabstop>comboBox_julia_kernel</tabstop>
+  <tabstop>pushButton_open_kernel_editor_julia</tabstop>
+  <tabstop>radioButton_use_python_interpreter</tabstop>
   <tabstop>lineEdit_python_path</tabstop>
   <tabstop>toolButton_browse_python</tabstop>
-  <tabstop>checkBox_use_embedded_python</tabstop>
+  <tabstop>radioButton_use_python_console</tabstop>
+  <tabstop>comboBox_python_kernel</tabstop>
+  <tabstop>pushButton_open_kernel_editor_python</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
   <tabstop>checkBox_object_tree_sticky_selection</tabstop>
   <tabstop>checkBox_relationship_items_follow</tabstop>
@@ -1234,6 +1285,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_show_cascading_relationships</tabstop>
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
+  <tabstop>listWidget</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

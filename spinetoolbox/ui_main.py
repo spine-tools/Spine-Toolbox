@@ -54,8 +54,7 @@ from .widgets.custom_menus import (
 )
 from .widgets.settings_widget import SettingsWidget
 from .widgets.custom_qwidgets import ZoomWidgetAction
-from .widgets.julia_repl_widget import JuliaREPLWidget
-from .widgets.python_repl_widget import PythonReplWidget
+from .widgets.spine_console_widget import SpineConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.spine_datapackage_widget import SpineDatapackageWidget
@@ -156,18 +155,17 @@ class ToolboxUI(QMainWindow):
         self.main_toolbar = toolbars.MainToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         # Make julia REPL
-        self.julia_repl = JuliaREPLWidget(self)
-        self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
+        self.julia_console = SpineConsoleWidget(self, "Julia Console")
+        self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_console)
         # Make Python REPL
-        self.python_repl = PythonReplWidget(self)
-        self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
+        self.python_console = SpineConsoleWidget(self, "Python Console")
+        self.ui.dockWidgetContents_python_console.layout().addWidget(self.python_console)
         # Setup main window menu
         self.setup_zoom_widget_action()
         self.add_menu_actions()
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
-        self.test_variable_push = QAction(self)
         self.set_debug_qactions()
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
@@ -218,7 +216,6 @@ class ToolboxUI(QMainWindow):
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
-        self.test_variable_push.triggered.connect(self.python_repl.test_push_vars)
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Zoom actions
@@ -385,8 +382,8 @@ class ToolboxUI(QMainWindow):
             location,
             self.project_item_model,
             settings=self._qsettings,
-            embedded_julia_console=self.julia_repl,
-            embedded_python_console=self.python_repl,
+            embedded_julia_console=self.julia_console,
+            embedded_python_console=self.python_console,
             logger=self,
         )
         self._project.connect_signals()
@@ -480,8 +477,8 @@ class ToolboxUI(QMainWindow):
             project_dir,
             self.project_item_model,
             settings=self._qsettings,
-            embedded_julia_console=self.julia_repl,
-            embedded_python_console=self.python_repl,
+            embedded_julia_console=self.julia_console,
+            embedded_python_console=self.python_console,
             logger=self,
         )
         self._connect_project_signals()
@@ -742,7 +739,7 @@ class ToolboxUI(QMainWindow):
         factory = self._item_specification_factories.get(item_type)
         if factory is None:
             return None
-        return factory.make_specification(definition, self._qsettings, self, self.julia_repl, self.python_repl)
+        return factory.make_specification(definition, self._qsettings, self, self.julia_console, self.python_console)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1191,10 +1188,8 @@ class ToolboxUI(QMainWindow):
         """Set shortcuts for QActions that may be needed in debugging."""
         self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
         self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
-        self.test_variable_push.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_7))
         self.addAction(self.show_properties_tabbar)
         self.addAction(self.show_supported_img_formats)
-        self.addAction(self.test_variable_push)
 
     def add_menu_actions(self):
         """Add extra actions to View menu."""
@@ -1203,7 +1198,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_repl.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_console.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
         undo_action = self.undo_stack.createUndoAction(self)
         redo_action = self.undo_stack.createRedoAction(self)
@@ -1634,8 +1629,8 @@ class ToolboxUI(QMainWindow):
         # Save number of screens
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
-        self.julia_repl.shutdown_jupyter_kernel()
-        self.python_repl.shutdown_kernel()
+        self.julia_console.shutdown_kernel()
+        self.python_console.shutdown_kernel()
         self.tear_down_items_and_factories()
         event.accept()
 

@@ -46,8 +46,7 @@ PLUGINS_PATH = os.path.abspath(os.path.join(_program_root, "plugins"))
 ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/latest"
 
 # Jupyter kernel constants
-JUPYTER_KERNEL_TIME_TO_DEAD = 5.0
-JUPYTER_KERNEL_RESTART_LIMIT = 3
+JUPYTER_KERNEL_TIME_TO_DEAD = 8.0
 
 # Project constants
 PROJECT_FILENAME = "project.json"
