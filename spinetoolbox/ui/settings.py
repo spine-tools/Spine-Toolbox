@@ -25,6 +25,8 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
+from spinetoolbox.widgets.custom_qcombobox import CustomQComboBox
+
 from spinetoolbox import resources_icons_rc
 
 class Ui_SettingsForm(object):
@@ -397,21 +399,6 @@ class Ui_SettingsForm(object):
 
         self.gridLayout_5.addWidget(self.toolButton_browse_julia_project, 4, 1, 1, 1)
 
-        self.lineEdit_julia_project_path = QLineEdit(self.groupBox_julia)
-        self.lineEdit_julia_project_path.setObjectName(u"lineEdit_julia_project_path")
-        self.lineEdit_julia_project_path.setMinimumSize(QSize(0, 20))
-        self.lineEdit_julia_project_path.setMaximumSize(QSize(16777215, 20))
-        self.lineEdit_julia_project_path.setClearButtonEnabled(True)
-
-        self.gridLayout_5.addWidget(self.lineEdit_julia_project_path, 4, 0, 1, 1)
-
-        self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
-        self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
-        self.toolButton_browse_julia.setMaximumSize(QSize(22, 22))
-        self.toolButton_browse_julia.setIcon(icon4)
-
-        self.gridLayout_5.addWidget(self.toolButton_browse_julia, 3, 1, 1, 1)
-
         self.lineEdit_julia_path = QLineEdit(self.groupBox_julia)
         self.lineEdit_julia_path.setObjectName(u"lineEdit_julia_path")
         self.lineEdit_julia_path.setMinimumSize(QSize(0, 20))
@@ -420,16 +407,42 @@ class Ui_SettingsForm(object):
 
         self.gridLayout_5.addWidget(self.lineEdit_julia_path, 3, 0, 1, 1)
 
-        self.label_12 = QLabel(self.groupBox_julia)
-        self.label_12.setObjectName(u"label_12")
-        self.label_12.setFont(font)
+        self.comboBox_julia_kernel = CustomQComboBox(self.groupBox_julia)
+        self.comboBox_julia_kernel.setObjectName(u"comboBox_julia_kernel")
 
-        self.gridLayout_5.addWidget(self.label_12, 2, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.comboBox_julia_kernel, 7, 0, 1, 1)
 
-        self.checkBox_use_embedded_julia = QCheckBox(self.groupBox_julia)
-        self.checkBox_use_embedded_julia.setObjectName(u"checkBox_use_embedded_julia")
+        self.radioButton_use_julia_executable = QRadioButton(self.groupBox_julia)
+        self.radioButton_use_julia_executable.setObjectName(u"radioButton_use_julia_executable")
+        self.radioButton_use_julia_executable.setChecked(True)
 
-        self.gridLayout_5.addWidget(self.checkBox_use_embedded_julia, 6, 0, 1, 1)
+        self.gridLayout_5.addWidget(self.radioButton_use_julia_executable, 2, 0, 1, 1)
+
+        self.lineEdit_julia_project_path = QLineEdit(self.groupBox_julia)
+        self.lineEdit_julia_project_path.setObjectName(u"lineEdit_julia_project_path")
+        self.lineEdit_julia_project_path.setMinimumSize(QSize(0, 20))
+        self.lineEdit_julia_project_path.setMaximumSize(QSize(16777215, 20))
+        self.lineEdit_julia_project_path.setClearButtonEnabled(True)
+
+        self.gridLayout_5.addWidget(self.lineEdit_julia_project_path, 4, 0, 1, 1)
+
+        self.radioButton_use_julia_console = QRadioButton(self.groupBox_julia)
+        self.radioButton_use_julia_console.setObjectName(u"radioButton_use_julia_console")
+
+        self.gridLayout_5.addWidget(self.radioButton_use_julia_console, 6, 0, 1, 1)
+
+        self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
+        self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
+        self.toolButton_browse_julia.setMaximumSize(QSize(22, 22))
+        self.toolButton_browse_julia.setIcon(icon4)
+
+        self.gridLayout_5.addWidget(self.toolButton_browse_julia, 3, 1, 1, 1)
+
+        self.pushButton_open_kernel_editor_julia = QPushButton(self.groupBox_julia)
+        self.pushButton_open_kernel_editor_julia.setObjectName(u"pushButton_open_kernel_editor_julia")
+        self.pushButton_open_kernel_editor_julia.setMaximumSize(QSize(16777215, 24))
+
+        self.gridLayout_5.addWidget(self.pushButton_open_kernel_editor_julia, 7, 1, 1, 1)
 
 
         self.verticalLayout_8.addWidget(self.groupBox_julia)
@@ -437,13 +450,12 @@ class Ui_SettingsForm(object):
         self.groupBox_python = QGroupBox(self.ExternalTools)
         self.groupBox_python.setObjectName(u"groupBox_python")
         self.groupBox_python.setMinimumSize(QSize(0, 95))
-        self.gridLayout_6 = QGridLayout(self.groupBox_python)
-        self.gridLayout_6.setObjectName(u"gridLayout_6")
-        self.label_13 = QLabel(self.groupBox_python)
-        self.label_13.setObjectName(u"label_13")
-        self.label_13.setFont(font)
+        self.gridLayout_2 = QGridLayout(self.groupBox_python)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.radioButton_use_python_interpreter = QRadioButton(self.groupBox_python)
+        self.radioButton_use_python_interpreter.setObjectName(u"radioButton_use_python_interpreter")
 
-        self.gridLayout_6.addWidget(self.label_13, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.radioButton_use_python_interpreter, 0, 0, 1, 1)
 
         self.lineEdit_python_path = QLineEdit(self.groupBox_python)
         self.lineEdit_python_path.setObjectName(u"lineEdit_python_path")
@@ -451,26 +463,35 @@ class Ui_SettingsForm(object):
         self.lineEdit_python_path.setMaximumSize(QSize(16777215, 20))
         self.lineEdit_python_path.setClearButtonEnabled(True)
 
-        self.gridLayout_6.addWidget(self.lineEdit_python_path, 1, 0, 1, 1)
-
-        self.checkBox_use_embedded_python = QCheckBox(self.groupBox_python)
-        self.checkBox_use_embedded_python.setObjectName(u"checkBox_use_embedded_python")
-
-        self.gridLayout_6.addWidget(self.checkBox_use_embedded_python, 2, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.lineEdit_python_path, 1, 0, 1, 1)
 
         self.toolButton_browse_python = QToolButton(self.groupBox_python)
         self.toolButton_browse_python.setObjectName(u"toolButton_browse_python")
         self.toolButton_browse_python.setMaximumSize(QSize(22, 22))
         self.toolButton_browse_python.setIcon(icon4)
 
-        self.gridLayout_6.addWidget(self.toolButton_browse_python, 1, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.toolButton_browse_python, 1, 1, 1, 1)
+
+        self.radioButton_use_python_console = QRadioButton(self.groupBox_python)
+        self.radioButton_use_python_console.setObjectName(u"radioButton_use_python_console")
+
+        self.gridLayout_2.addWidget(self.radioButton_use_python_console, 2, 0, 1, 1)
+
+        self.comboBox_python_kernel = CustomQComboBox(self.groupBox_python)
+        self.comboBox_python_kernel.setObjectName(u"comboBox_python_kernel")
+        self.comboBox_python_kernel.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+
+        self.gridLayout_2.addWidget(self.comboBox_python_kernel, 3, 0, 1, 1)
+
+        self.pushButton_open_kernel_editor_python = QPushButton(self.groupBox_python)
+        self.pushButton_open_kernel_editor_python.setObjectName(u"pushButton_open_kernel_editor_python")
+        self.pushButton_open_kernel_editor_python.setMinimumSize(QSize(0, 0))
+        self.pushButton_open_kernel_editor_python.setMaximumSize(QSize(16777215, 24))
+
+        self.gridLayout_2.addWidget(self.pushButton_open_kernel_editor_python, 3, 1, 1, 1)
 
 
         self.verticalLayout_8.addWidget(self.groupBox_python)
-
-        self.verticalSpacer_7 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.verticalLayout_8.addItem(self.verticalSpacer_7)
 
         self.verticalSpacer_8 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -569,12 +590,12 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_7.addLayout(self.horizontalLayout)
 
-        QWidget.setTabOrder(self.listWidget, self.checkBox_open_previous_project)
         QWidget.setTabOrder(self.checkBox_open_previous_project, self.checkBox_exit_prompt)
         QWidget.setTabOrder(self.checkBox_exit_prompt, self.checkBox_save_at_exit)
         QWidget.setTabOrder(self.checkBox_save_at_exit, self.checkBox_datetime)
         QWidget.setTabOrder(self.checkBox_datetime, self.checkBox_delete_data)
-        QWidget.setTabOrder(self.checkBox_delete_data, self.lineEdit_work_dir)
+        QWidget.setTabOrder(self.checkBox_delete_data, self.checkBox_use_experimental_engine)
+        QWidget.setTabOrder(self.checkBox_use_experimental_engine, self.lineEdit_work_dir)
         QWidget.setTabOrder(self.lineEdit_work_dir, self.toolButton_browse_work)
         QWidget.setTabOrder(self.toolButton_browse_work, self.checkBox_use_smooth_zoom)
         QWidget.setTabOrder(self.checkBox_use_smooth_zoom, self.checkBox_use_curved_links)
@@ -587,15 +608,21 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.lineEdit_project_name, self.textEdit_project_description)
         QWidget.setTabOrder(self.textEdit_project_description, self.lineEdit_gams_path)
         QWidget.setTabOrder(self.lineEdit_gams_path, self.toolButton_browse_gams)
-        QWidget.setTabOrder(self.toolButton_browse_gams, self.lineEdit_julia_path)
+        QWidget.setTabOrder(self.toolButton_browse_gams, self.radioButton_use_julia_executable)
+        QWidget.setTabOrder(self.radioButton_use_julia_executable, self.lineEdit_julia_path)
         QWidget.setTabOrder(self.lineEdit_julia_path, self.toolButton_browse_julia)
         QWidget.setTabOrder(self.toolButton_browse_julia, self.lineEdit_julia_project_path)
         QWidget.setTabOrder(self.lineEdit_julia_project_path, self.toolButton_browse_julia_project)
-        QWidget.setTabOrder(self.toolButton_browse_julia_project, self.checkBox_use_embedded_julia)
-        QWidget.setTabOrder(self.checkBox_use_embedded_julia, self.lineEdit_python_path)
+        QWidget.setTabOrder(self.toolButton_browse_julia_project, self.radioButton_use_julia_console)
+        QWidget.setTabOrder(self.radioButton_use_julia_console, self.comboBox_julia_kernel)
+        QWidget.setTabOrder(self.comboBox_julia_kernel, self.pushButton_open_kernel_editor_julia)
+        QWidget.setTabOrder(self.pushButton_open_kernel_editor_julia, self.radioButton_use_python_interpreter)
+        QWidget.setTabOrder(self.radioButton_use_python_interpreter, self.lineEdit_python_path)
         QWidget.setTabOrder(self.lineEdit_python_path, self.toolButton_browse_python)
-        QWidget.setTabOrder(self.toolButton_browse_python, self.checkBox_use_embedded_python)
-        QWidget.setTabOrder(self.checkBox_use_embedded_python, self.checkBox_commit_at_exit)
+        QWidget.setTabOrder(self.toolButton_browse_python, self.radioButton_use_python_console)
+        QWidget.setTabOrder(self.radioButton_use_python_console, self.comboBox_python_kernel)
+        QWidget.setTabOrder(self.comboBox_python_kernel, self.pushButton_open_kernel_editor_python)
+        QWidget.setTabOrder(self.pushButton_open_kernel_editor_python, self.checkBox_commit_at_exit)
         QWidget.setTabOrder(self.checkBox_commit_at_exit, self.checkBox_object_tree_sticky_selection)
         QWidget.setTabOrder(self.checkBox_object_tree_sticky_selection, self.checkBox_relationship_items_follow)
         QWidget.setTabOrder(self.checkBox_relationship_items_follow, self.checkBox_smooth_entity_graph_zoom)
@@ -603,6 +630,7 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_show_cascading_relationships)
         QWidget.setTabOrder(self.checkBox_show_cascading_relationships, self.pushButton_ok)
         QWidget.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
+        QWidget.setTabOrder(self.pushButton_cancel, self.listWidget)
 
         self.retranslateUi(SettingsForm)
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
@@ -691,8 +719,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QCoreApplication.translate("SettingsForm", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
+"</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None))
         self.textEdit_project_description.setPlaceholderText("")
         self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
         self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
@@ -709,35 +737,52 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.toolButton_browse_julia_project.setText(QCoreApplication.translate("SettingsForm", u"...", None))
 #if QT_CONFIG(tooltip)
+        self.lineEdit_julia_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia executable. Leave blank to use Julia defined in your system path.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_julia_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Julia executable in system path", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Julia kernel for the embedded Julia Console.</p><p>Only valid Julia kernels are shown. Open Kernel editor to add kernels.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.radioButton_use_julia_executable.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When selected, Julia Tools and scripts will be executed in a terminal as an individual process. Select the Julia executable and Julia project below.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.radioButton_use_julia_executable.setText(QCoreApplication.translate("SettingsForm", u"Use Julia executable", None))
+#if QT_CONFIG(tooltip)
         self.lineEdit_julia_project_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia project</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_julia_project_path.setText("")
         self.lineEdit_julia_project_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Julia home project", None))
 #if QT_CONFIG(tooltip)
+        self.radioButton_use_julia_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). Select the kernel for Julia Console from the drop-down menu below.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.radioButton_use_julia_console.setText(QCoreApplication.translate("SettingsForm", u"Use embedded Julia Console", None))
+#if QT_CONFIG(tooltip)
         self.toolButton_browse_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia executable using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(tooltip)
-        self.lineEdit_julia_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia executable. Leave blank to use Julia defined in your system path.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.lineEdit_julia_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Julia executable in system path", None))
-        self.label_12.setText(QCoreApplication.translate("SettingsForm", u"Julia executable", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_use_embedded_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). If unchecked, Julia Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `julia script.jl` in terminal.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_use_embedded_julia.setText(QCoreApplication.translate("SettingsForm", u"Use embedded Julia Console", None))
+        self.pushButton_open_kernel_editor_julia.setText(QCoreApplication.translate("SettingsForm", u"Kernel editor", None))
         self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python", None))
-        self.label_13.setText(QCoreApplication.translate("SettingsForm", u"Python interpreter", None))
+#if QT_CONFIG(tooltip)
+        self.radioButton_use_python_interpreter.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When selected, Python Tools and scripts are executed in a separate process in terminal. Select the python interpreter you want to use into the line edit below.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.radioButton_use_python_interpreter.setText(QCoreApplication.translate("SettingsForm", u"Use Python interpreter", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_python_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Python interpreter. Leave blank to use the Python that was used in launching Spine Toolbox.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_python_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using current Python interpreter", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_use_embedded_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, Python Tools and scripts will be executed in the embedded Python Console (Shell). If unchecked, Python Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `python script.py` in terminal.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_use_embedded_python.setText(QCoreApplication.translate("SettingsForm", u"Use embedded Python Console", None))
-#if QT_CONFIG(tooltip)
         self.toolButton_browse_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Python interpreter using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.radioButton_use_python_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When selected, Python Tools and scripts are executed in the embedded Python Console. Select the kernel for the Python Console from the drop-down menu below.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.radioButton_use_python_console.setText(QCoreApplication.translate("SettingsForm", u"Use embedded Python Console", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Python kernel for the embedded Python Console.</p><p>Only valid Python kernels are shown. Open Kernel editor to add kernels.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.pushButton_open_kernel_editor_python.setToolTip(QCoreApplication.translate("SettingsForm", u"Open kernel editor", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_open_kernel_editor_python.setText(QCoreApplication.translate("SettingsForm", u"Kernel editor", None))
         self.groupBox_data_store.setTitle(QCoreApplication.translate("SettingsForm", u"Spine database editor", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Does not commit session and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Commits session and does not show message box</p><p><br/></p></body></html>", None))
