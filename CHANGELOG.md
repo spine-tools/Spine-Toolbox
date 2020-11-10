@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   and not globally for the user.
 - New project item Data Transformer can be used to configure Spine database filters for successor items.
   Currently it support renaming entity classes.
+- The Importer item now applies the same mapping to all input files.
+  If the user needs to apply different mappings, they need to create different Importers.
+  The specification can be shared using the json file.
 
 ### Deprecated
 ### Removed
