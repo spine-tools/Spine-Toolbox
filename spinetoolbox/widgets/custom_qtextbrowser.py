@@ -59,10 +59,7 @@ class CustomQTextBrowser(QTextBrowser):
         Args:
             document (QTextDocument)
         """
-        try:
-            self._override_documents.remove(document)
-        except ValueError:
-            pass
+        self._override_documents.remove(document)
         self.setDocument(self._override_documents[-1])
         self._scroll_to_bottom()
 
