@@ -32,9 +32,10 @@ from PySide2.QtWidgets import (
     QLineEdit,
     QFormLayout,
 )
+from spinedb_api import DateTime, Duration, ParameterValueFormatError
 from spinetoolbox.helpers import CharIconEngine
 from spine_engine.spine_io.io_api import TYPE_STRING_TO_CLASS
-from spine_engine.spine_io.type_conversion import value_to_convert_spec
+from spine_engine.spine_io.type_conversion import IntegerSequenceDateTimeConvertSpec, value_to_convert_spec
 from ..commands import SetColumnOrRowType
 from ..mvcmodels.source_data_table_model import SourceDataTableModel
 
@@ -56,7 +57,7 @@ Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
 class NewIntegerSequenceDateTimeConvertSpecDialog(QDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowTitle("New integer sequence datetime")
 
         QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
@@ -67,6 +68,7 @@ class NewIntegerSequenceDateTimeConvertSpecDialog(QDialog):
 
         self.datetime = QDateTimeEdit()
         self.start_integer = QSpinBox()
+        self.start_integer.setMaximum(2147483647)
         self.duration = QLineEdit("1h")
         self.duration.textChanged.connect(self._validate)
 
@@ -270,7 +272,7 @@ class HeaderWithButton(QHeaderView):
             type_str (str): data type name
         """
         if type_str == "integer sequence datetime":
-            dialog = NewIntegerSequenceDateTimeConvertSpecDialog()
+            dialog = NewIntegerSequenceDateTimeConvertSpecDialog(self)
             if not dialog.exec_():
                 return
             convert_spec = dialog.get_spec()
