@@ -292,6 +292,7 @@ class ProjectItemIcon(QGraphicsRectItem):
 
         In particular, destroys the drop shadow effect when the items is removed from a scene
         and keeps track of item's movements on the scene.
+        Adds or removes override documents depending on whether or not the item is selected.
 
         Args:
             change (GraphicsItemChange): a flag signalling the type of the change
@@ -305,6 +306,11 @@ class ProjectItemIcon(QGraphicsRectItem):
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
+        elif change == QGraphicsItem.ItemSelectedChange and self.execution_icon.isVisible():
+            if value:
+                self.execution_icon.add_override_documents()
+            else:
+                self.execution_icon.remove_override_documents()
         return super().itemChange(change, value)
 
     def show_item_info(self):
@@ -441,37 +447,17 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._log_document = QTextDocument()
         self._process_document = QTextDocument()
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
 
-    def paint(self, painter, option, widget=None):
-        """Highlights if selected."""
-        if option.state & (QStyle.State_Selected):
-            self.setBrush(qApp.palette().highlight())
-            option.state &= ~QStyle.State_Selected
-        else:
-            self.setBrush(qApp.palette().window())
-        super().paint(painter, option, widget)
-
-    def itemChange(self, change, value):
-        """
-        Adds or removes override documents depending on whether or not the item is selected.
-        """
-        if change == QGraphicsItem.ItemSelectedHasChanged:
-            if value:
-                self._add_override_documents()
-            else:
-                self._remove_override_documents()
-        return super().itemChange(change, value)
-
-    def _add_override_documents(self):
+    def add_override_documents(self):
         """Add event log and process output documents to the list of override documents
         in the respective browser.
         """
         self._parent._toolbox.add_override_event_log_document(self._log_document)
         self._parent._toolbox.add_override_process_output_document(self._process_document)
 
-    def _remove_override_documents(self):
+    def remove_override_documents(self):
         """Remove event log and process output documents to the list of override documents
         in the respective browser.
         """
