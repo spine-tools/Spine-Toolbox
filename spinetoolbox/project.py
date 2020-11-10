@@ -65,8 +65,8 @@ class SpineToolboxProject(MetaObject):
             p_dir (str): Project directory
             project_item_model (ProjectItemModel): project item tree model
             settings (QSettings): Toolbox settings
-            embedded_julia_console (JuliaREPLWidget): a Julia console widget for execution in the embedded console
-            embedded_python_console (PythonReplWidget): a Python console widget for execution in the embedded console
+            embedded_julia_console (JuliaConsoleWidget): a Julia console widget for execution in the embedded console
+            embedded_python_console (PythonConsoleWidget): a Python console widget for execution in the embedded console
             logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)

@@ -29,6 +29,22 @@ class TestAddProjectItemWidget(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
+    def setUp(self):
+        """Set up toolbox."""
+        self.toolbox = QWidget()
+        self.toolbox.project = lambda: None
+        self.toolbox.item_factories = MagicMock()
+        self.toolbox.propose_item_name = propose_item_name = MagicMock()
+        self.toolbox.filtered_spec_factory_models = filtered_spec_factory_models = MagicMock()
+        filtered_spec_factory_models.__getitem__.side_effect = lambda key: QStandardItemModel()
+        propose_item_name.side_effect = lambda x: ""
+        self.factory = MagicMock()
+        self.toolbox.item_factories.__getitem__.side_effect = lambda key: self.factory
+
+    def tearDown(self):
+        """Clean up."""
+        # clean_up_toolboxui_with_project(self.toolbox)
+
     def test_name_field_initially_selected(self):
         prefix = "project_item"
         toolbox = QWidget()

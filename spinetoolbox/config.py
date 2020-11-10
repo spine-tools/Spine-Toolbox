@@ -59,7 +59,6 @@ def _executable(name):
         return name + ".exe"
     return name
 
-
 # GAMS
 GAMS_EXECUTABLE = _executable("gams")
 GAMSIDE_EXECUTABLE = _executable("gamside")
@@ -70,10 +69,8 @@ JULIA_EXECUTABLE = _executable("julia")
 # Python
 PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
 
-
-# Julia REPL constants
-JL_REPL_TIME_TO_DEAD = 5.0
-JL_REPL_RESTART_LIMIT = 3
+# Jupyter kernel constants
+JUPYTER_KERNEL_TIME_TO_DEAD = 8.0
 
 # Project constants
 PROJECT_FILENAME = "project.json"

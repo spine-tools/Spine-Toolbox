@@ -25,22 +25,10 @@ import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
 
 
-class MockQWidget(QWidget):
-    """Dummy QWidget for mocking test_push_vars method in PythonReplWidget class."""
-
-    # noinspection PyMethodMayBeStatic
-    def test_push_vars(self):
-        return True
-
-
 def create_toolboxui():
     """Returns ToolboxUI, where QSettings among others has been mocked."""
-    with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-        "spinetoolbox.ui_main.PythonReplWidget"
-    ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+    with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
         # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
-        mock_julia_repl.return_value = QWidget()
-        mock_python_repl.return_value = MockQWidget()
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
     return toolbox
@@ -65,9 +53,9 @@ def create_project(toolbox):
 def create_toolboxui_with_project():
     """Returns ToolboxUI with a project instance where
     QSettings among others has been mocked."""
-    with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-        "spinetoolbox.ui_main.PythonReplWidget"
-    ) as mock_python_repl, mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, mock.patch(
+    with mock.patch(
+        "spinetoolbox.project.create_dir"
+    ) as mock_create_dir, mock.patch(
         "spinetoolbox.ui_main.ToolboxUI.save_project"
     ) as mock_save_project, mock.patch(
         "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
@@ -76,9 +64,6 @@ def create_toolboxui_with_project():
     ) as mock_qsettings_value, mock.patch(
         "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
     ) as mock_upd_recents:
-        # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
-        mock_julia_repl.return_value = QWidget()
-        mock_python_repl.return_value = MockQWidget()
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
         project_dir = os.path.abspath(

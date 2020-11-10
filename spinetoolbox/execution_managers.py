@@ -74,7 +74,7 @@ class ConsoleExecutionManager(ExecutionManager):
     @Slot()
     def _start_execution(self):
         """Starts execution."""
-        self._logger.msg_warning.emit(f"\tExecution started. See <b>{self._console.name}</b> for messages.")
+        self._logger.msg_warning.emit(f"\tExecution started. See <b>{self._console.name()}</b> for messages.")
         self._console.ready_to_execute.disconnect(self._start_execution)
         self._console.ready_to_execute.connect(self._execute_next_command)
         self._execute_next_command()

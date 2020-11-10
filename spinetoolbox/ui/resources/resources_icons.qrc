@@ -13,6 +13,8 @@
   </qresource>
   <qresource prefix="/icons">
     <file>project_item_icons/screwdriver.svg</file>
+    <file>minus.svg</file>
+    <file>plus.svg</file>
     <file>book.svg</file>
     <file>slash.svg</file>
     <file>home.svg</file>
@@ -31,8 +33,6 @@
     <file>file-link.svg</file>
     <file>folder.svg</file>
     <file>folder-link.svg</file>
-    <file>minus.svg</file>
-    <file>plus.svg</file>
     <file>qt_extended_48x48.png</file>
     <file>project_item_icons/stop-circle-regular.svg</file>
     <file>project_item_icons/play-circle-regular.svg</file>

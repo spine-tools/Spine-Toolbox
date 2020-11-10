@@ -727,7 +727,7 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox._qsettings = mock.NonCallableMagicMock()
         self.toolbox._perform_pre_exit_tasks = mock.MagicMock(return_value=True)
         self.toolbox.julia_repl = mock.NonCallableMagicMock()
-        self.toolbox.python_repl = mock.NonCallableMagicMock()
+        self.toolbox.python_console = mock.NonCallableMagicMock()
         self.toolbox.closeEvent(mock.MagicMock())
         qsettings_save_calls = self.toolbox._qsettings.setValue.call_args_list
         self.assertEqual(len(qsettings_save_calls), 6)

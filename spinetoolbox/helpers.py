@@ -26,7 +26,7 @@ import shutil
 import sys
 import urllib.parse
 import matplotlib
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle, QFileDialog
@@ -41,13 +41,12 @@ from PySide2.QtGui import (
     QFont,
     QStandardItemModel,
     QStandardItem,
-    QDesktopServices,
     QPainterPath,
     QPen,
     QKeySequence,
 )
 import spine_engine
-from .config import REQUIRED_SPINE_ENGINE_VERSION, PYTHON_EXECUTABLE
+from .config import REQUIRED_SPINE_ENGINE_VERSION, PYTHON_EXECUTABLE, JULIA_EXECUTABLE
 
 if os.name == "nt":
     import ctypes
@@ -863,10 +862,6 @@ def try_number_from_string(text):
         return None
 
 
-def open_url(url):
-    return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-
-
 def focused_widget_has_callable(parent, callable_name):
     """Returns True if the currently focused widget or one of its ancestors has the given callable."""
     focus_widget = parent.focusWidget()
@@ -907,6 +902,151 @@ class ChildCyclingKeyPressFilter(QObject):
         return QObject.eventFilter(self, obj, event)  # Pass event further
 
 
+def select_julia_executable(parent, line_edit):
+    """Opens file browser where user can select a Julia executable (i.e. julia.exe on Windows).
+    Used in SettingsWidget and KernelEditor.
+
+    Args:
+        parent (QWidget): Parent widget for the file dialog and message boxes
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+    """
+    # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+    answer = QFileDialog.getOpenFileName(
+        parent, "Select Julia Executable (e.g. julia.exe on Windows)", os.path.abspath('C:\\')
+    )
+    if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
+        return
+    # Check that it's not a directory
+    if os.path.isdir(answer[0]):
+        msg = "Please select a valid Julia Executable (file) and not a directory"
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid Julia Executable", msg)
+        return
+    # Check that it's a file that actually exists
+    if not os.path.exists(answer[0]):
+        msg = "File {0} does not exist".format(answer[0])
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid Julia Executable", msg)
+        return
+    # Check that selected file at least starts with string 'julia'
+    _, selected_file = os.path.split(answer[0])
+    if not selected_file.lower().startswith("julia"):
+        msg = "Selected file <b>{0}</b> is not a valid Julia Executable".format(selected_file)
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid Julia Executable", msg)
+        return
+    line_edit.setText(answer[0])
+    return
+
+
+def select_julia_project(parent, line_edit):
+    """Shows file browser and inserts selected julia project dir to give line_edit.
+    Used in SettingsWidget and KernelEditor.
+
+    Args:
+        parent (QWidget): Parent of QFileDialog
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+    """
+    answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", os.path.abspath("C:\\"))
+    if not answer:  # Canceled (american-english), cancelled (british-english)
+        return
+    line_edit.setText(answer)
+
+
+def select_python_interpreter(parent, line_edit):
+    """Opens file browser where user can select a python interpreter (i.e. python.exe on Windows).
+    Used in SettingsWidget and KernelEditor.
+
+    Args:
+        parent (QWidget): Parent widget for the file dialog and message boxes
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+    """
+    # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+    answer = QFileDialog.getOpenFileName(
+        parent, "Select Python Interpreter (e.g. python.exe on Windows)", os.path.abspath("C:\\")
+    )
+    if answer[0] == "":  # Canceled
+        return
+    # Check that it's not a directory
+    if os.path.isdir(answer[0]):
+        msg = "Please select a valid Python interpreter (file) and not a directory"
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid Python Interpreter", msg)
+        return
+    # Check that selected file at least starts with string 'python'
+    _, selected_file = os.path.split(answer[0])
+    if not selected_file.lower().startswith("python"):
+        msg = "Selected file <b>{0}</b> is not a valid Python interpreter".format(selected_file)
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid Python Interpreter", msg)
+        return
+    line_edit.setText(answer[0])
+    return
+
+
+def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
+    """Checks that given path is not a directory and it's a file that actually exists.
+    In addition, can be used to check if the file name in given file path starts with
+    the given extra_check string. Needed in SettingsWidget and KernelEditor because
+    the QLineEdits are editable. Returns True when file_path is an empty string so that
+    we can use default values (e.g. from line edit place holder text)
+
+    Args:
+        parent (QWidget): Parent widget for the message boxes
+        file_path (str): Path to check
+        msgbox_title (str): Title for message boxes
+        extra_check (str): Optional, string that must match the file name of the given file_path (without extension)
+
+    Returns:
+        bool: True if given path is an empty string or if path is valid, False otherwise
+    """
+    if file_path == "":
+        return True
+    if os.path.isdir(file_path):
+        msg = "Please select a file and not a directory"
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, msgbox_title, msg)
+        return False
+    if not os.path.exists(file_path):
+        msg = f"File {file_path} does not exist"
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, msgbox_title, msg)
+        return False
+    if extra_check is not None:
+        # Check that file name in given file path starts with the extra_check string (e.g. 'python' or 'julia')
+        _, file_name = os.path.split(file_path)
+        if not file_name.lower().startswith(extra_check):
+            msg = f"Selected file <b>{file_name}</b> is not a valid {extra_check} file"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(parent, msgbox_title, msg)
+            return False
+    return True
+
+
+def dir_is_valid(parent, dir_path, msgbox_title):
+    """Checks that given path is a directory. Needed in
+    SettingsWdiget and KernelEditor because the QLineEdits
+    are editable. Returns True when dir_path is an empty string so that
+    we can use default values (e.g. from line edit place holder text)
+
+    Args:
+        parent (QWidget): Parent widget for the message box
+        dir_path (str): Directory path to check
+        msgbox_title (str): Message box title
+
+    Returns:
+        bool: True if given path is an empty string or if path is an existing directory, False otherwise
+    """
+    if dir_path == "":
+        return True
+    if not os.path.isdir(dir_path):
+        msg = "Please select a valid directory"
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, msgbox_title, msg)
+        return False
+    return True
+
+
 def python_interpreter(app_settings):
     """Returns the full path to Python interpreter depending on
     user's settings and whether the app is frozen or not.
@@ -918,11 +1058,36 @@ def python_interpreter(app_settings):
         str: Path to python executable
     """
     python_path = app_settings.value("appSettings/pythonPath", defaultValue="")
+    return resolve_python_interpreter(python_path)
+
+
+def resolve_python_interpreter(python_path):
+    """Solves the full path to Python interpreter and returns it."""
     if python_path != "":
         path = python_path
     else:
         if not getattr(sys, "frozen", False):
-            path = sys.executable  # If not frozen, return the one that is currently used.
+            path = sys.executable  # If not frozen, return the one that is currently used
         else:
             path = PYTHON_EXECUTABLE  # If frozen, return the one in path
     return path
+
+
+def resolve_julia_executable_from_path():
+    """Returns full path to Julia executable in user's PATH env variable.
+    If not found, returns an empty string.
+
+    Note: In the long run, we should decide whether this is something we want to do
+    because adding julia-x.x./bin/ dir to the PATH is not recommended because this
+    also exposes some .dlls to other programs on user's (windows) system. I.e. it
+    may break other programs, and this is why the Julia installer does not
+    add (and does not even offer the chance to add) Julia to PATH.
+    """
+    p = ""
+    executable_paths = os.get_exec_path()
+    for path in executable_paths:
+        if "julia" in path.casefold():
+            julia_candidate = os.path.join(path, JULIA_EXECUTABLE)
+            if os.path.isfile(julia_candidate):
+                p = julia_candidate
+    return p

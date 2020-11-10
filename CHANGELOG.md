@@ -3,15 +3,6 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
-
-### Added
-### Changed
-### Deprecated
-### Removed
-### Fixed
-### Security
-
 ## [0.5.0-beta.0] - 2020-09-14
 
 ### Added
@@ -28,6 +19,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New Project Item: Gimlet. Can be used to run any command as part of the workflow 
   with or without a shell. Supported shells at the moment are cmd and powershell for 
   Windows and bash for other OS's.
+- Python and Julia Kernel Editor. Provides the means to make new kernels for Python Console and Julia 
+  Console without leaving Spine Toolbox. Kernel Editor can be found in Settings->Tools tab.
 
 ### Changed
 - The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
@@ -53,8 +46,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Default Python interpreter is now sys.executable i.e. the one that was used in launching the app.
   Previously the default was the Python in user's PATH. This affects the Python used by Python Tool 
   specifications and the PyCall used by SpineOpt.jl configuration assistant.
-- IPython kernel specifications are created for the current Python interpreter,
-  and not globally for the user.
+- User's now need to explicitly choose a kernel for the Python Console and the Julia Console. They are 
+  not chosen (nor created) automatically anymore. The kernels can be selected in the drop-down menus 
+  on application Settings->Tools window.
+
+### Deprecated
+- CustomQtKernelManager class
+
+### Removed
+- python_repl_widget.py
+- julia_repl_widget.py
 
 ## [0.4.0-final.0] - 2020-04-03
 
