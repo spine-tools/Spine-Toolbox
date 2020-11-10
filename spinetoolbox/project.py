@@ -699,13 +699,17 @@ class SpineToolboxProject(MetaObject):
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
         ranks = _ranks(node_successors)
-        for item_name in node_successors:
+        for item_name, child_names in node_successors.items():
             item = self._project_item_model.get_item(item_name).project_item
-            resources = []
+            upstream_resources = []
+            downstream_resources = []
             for parent_name in node_predecessors.get(item_name, set()):
                 parent_item = self._project_item_model.get_item(parent_name).project_item
-                resources += parent_item.resources_for_direct_successors()
-            item.handle_dag_changed(ranks[item_name], resources)
+                upstream_resources += parent_item.resources_for_direct_successors()
+            for child_name in child_names:
+                child_item = self._project_item_model.get_item(child_name).project_item
+                downstream_resources += child_item.resources_for_direct_predecessors()
+            item.handle_dag_changed(ranks[item_name], upstream_resources, downstream_resources)
 
     def notify_changes_in_all_dags(self):
         """Notifies all items of changes in all dags in the project."""

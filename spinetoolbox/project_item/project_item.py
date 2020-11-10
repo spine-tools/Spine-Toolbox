@@ -216,7 +216,19 @@ class ProjectItem(MetaObject):
         """
         return list()
 
-    def handle_dag_changed(self, rank, resources):
+    def resources_for_direct_predecessors(self):
+        """
+        Returns resources for direct predecessors.
+
+        These resources can include transient files that don't exist yet, or filename patterns.
+        The default implementation returns an empty list.
+
+        Returns:
+            list: a list of ProjectItemResources
+        """
+        return list()
+
+    def handle_dag_changed(self, rank, upstream_resources, downstream_resources):
         """
         Handles changes in the DAG.
 
@@ -224,13 +236,14 @@ class ProjectItem(MetaObject):
 
         Args:
             rank (int): item's execution order
-            resources (list): resources available from input items
+            upstream_resources (list): resources available from upstream
+            downstream_resources (list, optional): resources available from downstream
         """
         self.clear_notifications()
         self.set_rank(rank)
-        self._do_handle_dag_changed(resources)
+        self._do_handle_dag_changed(upstream_resources, downstream_resources)
 
-    def _do_handle_dag_changed(self, resources):
+    def _do_handle_dag_changed(self, upstream_resources, downstream_resources):
         """
         Handles changes in the DAG.
 
@@ -238,7 +251,8 @@ class ProjectItem(MetaObject):
         The default implementation does nothing.
 
         Args:
-            resources (list): resources available from input items
+            upstream_resources (list): resources available from upstream
+            downstream_resources (list, optional): resources available from downstream
         """
 
     def invalidate_workflow(self, edges):
