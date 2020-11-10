@@ -18,10 +18,10 @@ Unit tests for AddProjectItemWidget.
 
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtGui import QStandardItemModel
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
-from ..mock_helpers import MockQWidget
+from ..mock_helpers import create_mock_toolbox
 
 
 class TestAddProjectItemWidget(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestAddProjectItemWidget(unittest.TestCase):
 
     def setUp(self):
         """Set up toolbox."""
-        self.toolbox = MockQWidget()
+        self.toolbox = QWidget()
         self.toolbox.project = lambda: None
         self.toolbox.item_factories = MagicMock()
         self.toolbox.propose_item_name = propose_item_name = MagicMock()

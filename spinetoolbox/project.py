@@ -67,8 +67,8 @@ class SpineToolboxProject(MetaObject):
             p_dir (str): Project directory
             project_item_model (ProjectItemModel): project item tree model
             settings (QSettings): Toolbox settings
-            embedded_julia_console (JuliaREPLWidget): a Julia console widget for execution in the embedded console
-            embedded_python_console (PythonReplWidget): a Python console widget for execution in the embedded console
+            embedded_julia_console (JuliaConsoleWidget): a Julia console widget for execution in the embedded console
+            embedded_python_console (PythonConsoleWidget): a Python console widget for execution in the embedded console
             logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
@@ -536,13 +536,6 @@ class SpineToolboxProject(MetaObject):
                 continue
             settings[f"appSettings/{key}"] = value
         self._settings.endGroup()
-        # FIXME: These four lines below should be removed once the Kernel editor is in place (See issue #839)
-        # When that happens, both "appSettings/juliaKernel" and "appSettings/pythonKernel" will be readily
-        # available from `self._settings`
-        if self._settings.value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
-            settings["appSettings/juliaKernel"] = self._toolbox.julia_repl.julia_kernel_name()
-        if self._settings.value("appSettings/useEmbeddedPython", defaultValue="2") == "2":
-            settings["appSettings/pythonKernel"], _ = self._toolbox.python_repl.python_kernel_name()
         return settings
 
     def _execute_dags_experimental(self, dags, execution_permits_list):
