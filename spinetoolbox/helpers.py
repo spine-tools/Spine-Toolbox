@@ -26,7 +26,7 @@ import shutil
 import sys
 import urllib.parse
 import matplotlib
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QObject, QEvent
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QUrl, QPoint, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene, QFileIconProvider, QStyle, QFileDialog
@@ -44,6 +44,7 @@ from PySide2.QtGui import (
     QPainterPath,
     QPen,
     QKeySequence,
+    QDesktopServices,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION, PYTHON_EXECUTABLE, JULIA_EXECUTABLE
@@ -59,6 +60,10 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     from pandas.plotting import register_matplotlib_converters
 
     register_matplotlib_converters()
+
+
+def open_url(url):
+    return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
 
 
 def set_taskbar_icon():
