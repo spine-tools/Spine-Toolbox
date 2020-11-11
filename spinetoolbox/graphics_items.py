@@ -42,11 +42,11 @@ from PySide2.QtGui import (
     QPalette,
     QTextBlockFormat,
     QFont,
-    QTextDocument,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.helpers import format_log_message, format_process_message, add_message_to_document
+from spinetoolbox.widgets.custom_qtextbrowser import SignedTextDocument
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -95,6 +95,7 @@ class ProjectItemIcon(QGraphicsRectItem):
     def update(self, name, x, y):
         self.update_name_item(name)
         self.moveBy(x, y)
+        self.execution_icon.sign_documents(name)
 
     def activate(self):
         """Adds items to scene and setup graphics effect.
@@ -443,11 +444,15 @@ class ExecutionIcon(QGraphicsEllipseItem):
         parent_rect = parent.rect()
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
         self.setPen(Qt.NoPen)
-        self._log_document = QTextDocument()
-        self._process_document = QTextDocument()
+        self._log_document = SignedTextDocument()
+        self._process_document = SignedTextDocument()
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.hide()
+
+    def sign_documents(self, name):
+        self._log_document.author = name
+        self._process_document.author = name
 
     def paint(self, painter, option, widget=None):
         """Highlights if selected."""

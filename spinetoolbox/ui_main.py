@@ -1298,15 +1298,33 @@ class ToolboxUI(QMainWindow):
 
     def add_override_event_log_document(self, document):
         self.ui.textBrowser_eventlog.add_override_document(document)
+        self._update_event_log_title()
 
     def remove_override_event_log_document(self, document):
         self.ui.textBrowser_eventlog.remove_override_document(document)
+        self._update_event_log_title()
 
     def add_override_process_output_document(self, document):
         self.ui.textBrowser_process_output.add_override_document(document)
+        self._update_process_log_title()
 
     def remove_override_process_output_document(self, document):
         self.ui.textBrowser_process_output.remove_override_document(document)
+        self._update_process_log_title()
+
+    def _update_event_log_title(self):
+        new_title = "Event Log"
+        author = self.ui.textBrowser_eventlog.document().author
+        if author:
+            new_title = f"{new_title} --{author}"
+        self.ui.dockWidget_eventlog.setWindowTitle(new_title)
+
+    def _update_process_log_title(self):
+        new_title = "Process Log"
+        author = self.ui.textBrowser_process_output.document().author
+        if author:
+            new_title = f"{new_title} --{author}"
+        self.ui.dockWidget_process_output.setWindowTitle(new_title)
 
     def show_add_project_item_form(self, item_type, x=0, y=0, spec=""):
         """Show add project item widget."""

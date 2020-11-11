@@ -22,6 +22,10 @@ from PySide2.QtWidgets import QTextBrowser, QAction
 from spinetoolbox.helpers import add_message_to_document
 
 
+class SignedTextDocument(QTextDocument):
+    author = ""
+
+
 class CustomQTextBrowser(QTextBrowser):
     """Custom QTextBrowser class."""
 
@@ -31,7 +35,7 @@ class CustomQTextBrowser(QTextBrowser):
             parent (QWidget): Parent widget
         """
         super().__init__(parent=parent)
-        self._original_document = QTextDocument()
+        self._original_document = SignedTextDocument()
         self._override_documents = []
         self.add_override_document(self._original_document)
         self._max_blocks = 2000
