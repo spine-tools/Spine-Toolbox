@@ -1242,7 +1242,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_save_at_exit</tabstop>
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
-  <tabstop>checkBox_use_experimental_engine</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
   <tabstop>checkBox_use_smooth_zoom</tabstop>
