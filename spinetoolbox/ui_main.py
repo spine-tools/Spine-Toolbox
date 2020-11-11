@@ -1618,15 +1618,9 @@ class ToolboxUI(QMainWindow):
         # Save number of screens
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
-<<<<<<< HEAD
-        self.julia_repl.shutdown_jupyter_kernel()
-        self.python_repl.shutdown_kernel()
-        self.tear_down_items()
-=======
         self.julia_console.shutdown_kernel()
         self.python_console.shutdown_kernel()
-        self.tear_down_items_and_factories()
->>>>>>> df32cb9b... Support for creating and selecting Python kernels for the Python Console
+        self.tear_down_items()
         event.accept()
 
     def _serialize_selected_items(self):
