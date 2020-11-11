@@ -307,7 +307,12 @@ class ProjectItemIcon(QGraphicsRectItem):
             self.setGraphicsEffect(None)
         return super().itemChange(change, value)
 
-    def show_item_info(self):
+    def select_item(self):
+        """Update GUI to show the details of the selected item."""
+        ind = self._toolbox.project_item_model.find_item(self.name())
+        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
+
+    def activate_item(self):
         """Update GUI to show the details of the selected item."""
         item = self._toolbox.project_item_model.get_item(self.name()).project_item
         item.activate()
@@ -370,7 +375,7 @@ class ConnectorButton(QGraphicsRectItem):
         if not event.button() == Qt.LeftButton:
             event.accept()
             return
-        self._parent.show_item_info()
+        self._parent.select_item()
         link_drawer = self.scene().link_drawer
         if not link_drawer.isVisible():
             link_drawer.wake_up(self)
@@ -461,7 +466,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
         if change == QGraphicsItem.ItemSelectedHasChanged:
             if value:
                 self._add_override_documents()
-                self._parent.show_item_info()
+                self._parent.activate_item()
             else:
                 self._remove_override_documents()
         return super().itemChange(change, value)
