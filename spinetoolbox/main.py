@@ -29,13 +29,13 @@ from .spinedb_api_version_check import spinedb_api_version_check
 if not spinedb_api_version_check():
     sys.exit(1)
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
-from . import resources_icons_rc  # pylint: disable=unused-import
-from .helpers import pyside2_version_check, spine_engine_version_check
+from .spine_engine_version_check import spine_engine_version_check
 
 # Check for spine_engine version before we try to import possibly non-existent stuff below.
 if not spine_engine_version_check():
     sys.exit(1)
 
+from . import resources_icons_rc  # pylint: disable=unused-import
 from .load_project_items import upgrade_project_items
 
 _skip_project_items_upgrade = False
@@ -53,6 +53,7 @@ if not _skip_project_items_upgrade and upgrade_project_items():
 from .ui_main import ToolboxUI
 from .version import __version__
 from .headless import headless_main
+from .helpers import pyside2_version_check
 
 
 def main():

@@ -16,9 +16,9 @@ Contains SpineEngineWorker.
 :date:   14.10.2020
 """
 
-from PySide2.QtCore import Signal, Slot, QObject, QThread
 import socket
 import json
+from PySide2.QtCore import Signal, Slot, QObject, QThread
 from spine_engine.spine_engine_experimental import SpineEngineExperimental
 
 
