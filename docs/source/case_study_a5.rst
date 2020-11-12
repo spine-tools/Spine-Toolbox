@@ -8,7 +8,7 @@
              :width: 16
 
 .. _SpineData.jl: https://gitlab.vtt.fi/spine/data/tree/manuelma
-.. _SpineModel.jl: https://gitlab.vtt.fi/spine/model/tree/manuelma
+.. _SpineOpt.jl: https://github.com/Spine-project/SpineOpt.jl
 .. _Jupyter: http://jupyter.org/
 .. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
 
@@ -121,15 +121,15 @@ Setting up project
 #. Drag the Tool icon (|tool_icon|)
    from the toolbar and drop it into the *Design View*.
    This will open the *Add Tool* dialog.
-   Type "Spine model" as the Tool name and click **Ok**.
+   Type "SpineOpt" as the Tool name and click **Ok**.
 
    .. note:: Each item in the *Design view* is equipped with three *connectors*
       (the small squares at the item boundaries).
 
-#. Click on one of "input" connectors and then on one of "Spine model" connectors. This will create
+#. Click on one of "input" connectors and then on one of "SpineOpt" connectors. This will create
    a *connection* from the former to the latter.
 
-#. Repeat the procedure to create a *connection* from "Spine model" to "output". It should look something
+#. Repeat the procedure to create a *connection* from "SpineOpt" to "output". It should look something
    like this:
 
    .. todo:: Add image
@@ -142,10 +142,10 @@ Entering input data
 Creating input database
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to create a new Spine database for Spine Model in the 'input' Data Store:
+#. Follow the steps below to create a new Spine database for SpineOpt.jl in the 'input' Data Store:
 
    #. Select the 'input' Data Store item in the *Design View*.
-   #. Go to *Data Store Properties*, check the box that reads **For Spine Model** and press **New Spine db**.
+   #. Go to *Data Store Properties*, check the box that reads **For SpineOpt** and press **New Spine db**.
 
 #. Still in *Data Store Properties*, click **Open editor**. This will open the newly created database
    in the *Spine database editor*, looking similar to this:
@@ -431,7 +431,7 @@ Specifying relationship parameter values
 
 TODO
 
-Running Spine model
+Running SpineOpt.jl
 ===================
 
 Configuring Julia
@@ -448,11 +448,11 @@ Configuring Julia
 #. Click **Ok**.
 
 #. From the application main menu, select **File -> Tool configuration assistant.** This will install the
-   `Spine Model package <https://github.com/Spine-project/Spine-Model>`_
+   `SpineOpt.jl package <https://github.com/Spine-project/SpineOpt.jl>`_
    to the julia project specified above. Follow the instructions until completion.
 
 
-Creating a Tool specification for Spine Model
+Creating a Tool specification for SpineOpt.jl
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 TODO
