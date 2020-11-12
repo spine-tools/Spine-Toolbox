@@ -59,7 +59,7 @@ The following items are currently available:
 Data Store |data_store|
 =======================
 
-A Data store item represents a connection to a Spine model database.
+A Data store item represents a connection to a (Spine) database.
 Currently, the item supports sqlite and mysql dialects.
 The database can be accessed and modified in :ref:`Spine db editor <Spine db editor>`
 available from the item's properties or from a right-click context menu.

@@ -19,7 +19,7 @@
 
 
 .. _SpineData.jl: https://gitlab.vtt.fi/spine/data/tree/manuelma
-.. _SpineModel.jl: https://gitlab.vtt.fi/spine/model/tree/manuelma
+.. _SpineOpt.jl: https://github.com/Spine-project/SpineOpt.jl
 .. _Jupyter: http://jupyter.org/
 .. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
 

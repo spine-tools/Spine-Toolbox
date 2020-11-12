@@ -7,11 +7,11 @@
 Terminology
 ***********
 
-Here is a list of definitions related to Spine project, Spine Model, and Spine Toolbox.
+Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine Toolbox.
 
 - **Arc** Graph theory term. See *Connection*.
 - **Case study** Spine project has 13 case studies that help to improve, validate and deploy
-  different aspects of the Spine Model and Spine Toolbox.
+  different aspects of the SpineOpt.jl and Spine Toolbox.
 - **Connection** an arrow on Spine Toolbox Design View that is used to connect project items
   to each other to form a DAG.
 - **Data Connection** is a project item used to store a collection of data files that may or may not
@@ -56,9 +56,9 @@ Here is a list of definitions related to Spine project, Spine Model, and Spine T
   Spine Toolbox. A generic data structure allows representation of many different modelling entities.
   Data structures have a class defining the type of entity they represent, can have properties and can
   be related to other data structures. Spine data structures can be manipulated and visualized within
-  Spine Toolbox while Spine Model will be able to directly utilize as well as output them.
-- **Spine Model** An interpreter, which formulates a solver-ready mixed-integer optimization
-  problem based on the input data and the equations defined in the Spine Model. Outputs the solver
+  Spine Toolbox while SpineOpt.jl will be able to directly utilize as well as output them.
+- **SpineOpt.jl** An interpreter, which formulates a solver-ready mixed-integer optimization
+  problem based on the input data and the equations defined in the SpineOpt.jl. Outputs the solver
   results.
 - **Source directory** In context of Tool specifications, a source directory is the directory where
   the main program file of the Tool specification is located. This is also the recommended place for
@@ -77,10 +77,10 @@ Here is a list of definitions related to Spine project, Spine Model, and Spine T
   (Python, Julia, GAMS, executable), main program file (which can be e.g. a Windows batch (.bat) file
   or for Python scripts this would be the .py file where the __main__() method is located), All
   additional required program files, any optional input files (e.g. data), and output files. Also any
-  command line arguments can be defined in a Tool specification. Spine Model is a Tool specification
+  command line arguments can be defined in a Tool specification. SpineOpt.jl is a Tool specification
   from Spine Toolbox's point-of-view.
 - **Use case** Potential way to use Spine Toolbox. Use cases together are used to test the
-  functionality and stability of Spine Toolbox and Spine Model under different potential circumstances.
+  functionality and stability of Spine Toolbox and SpineOpt.jl under different potential circumstances.
 - **Vertice** Graph theory term. See *Project item*.
 - **View** A project item that can be used for visualizing project data.
 - **Work directory** Tool specifications can be executed in *Source directory* or in *work directory*.

@@ -14,7 +14,7 @@
 Setting up External Tools
 *************************
 
-This section describes how to set up Python, Julia, GAMS, and SpineModel.jl for Spine Toolbox.
+This section describes how to set up Python, Julia, GAMS, and SpineOpt.jl for Spine Toolbox.
 
 .. contents::
    :local:
@@ -255,11 +255,11 @@ If you have GAMS in your PATH environment variable, you can leave the GAMS execu
 File->Settings blank and Spine Toolbox will find it. You can also override the GAMS in your PATH by
 setting an explicit path to the GAMS executable (e.g. `C:\\GAMS\\win64\\28.2\\gams.exe`) line edit.
 
-Setting up SpineModel.jl
-************************
+Setting up SpineOpt.jl
+**********************
 
-There's a built-in configuration assistant in Spine Toolbox that downloads and configures SpineModel.jl
-for you automatically. You can find the configuration assistant in the main window menu
-**File->Tool configuration assistants...->SpineModel.jl** Before you run this, you need to
+There's a built-in configuration assistant in Spine Toolbox that downloads and configures SpineOpt.jl
+automatically. You can find the configuration assistant in the main window menu
+**File->Tool configuration assistants...->SpineOpt.jl** Before you run this, you need to
 set up Julia for Spine Toolbox. See instructions above (`Setting up Julia`_). After a Julia has been
 set up correctly, run the Tool configuration assistant and follow the instructions given.
