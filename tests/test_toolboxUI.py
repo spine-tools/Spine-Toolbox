@@ -28,6 +28,7 @@ from PySide2.QtTest import QTest
 from PySide2.QtGui import QDropEvent
 from spinetoolbox.graphics_items import ProjectItemIcon
 from spinetoolbox.project import SpineToolboxProject
+from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.graphics_items import Link
 from spinetoolbox.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
@@ -127,28 +128,6 @@ class TestToolboxUI(unittest.TestCase):
         """
         self.assertIsNone(self.toolbox.project())  # Make sure that there is no project open
         self.toolbox.init_specification_model(list())
-        self.assertEqual(self.toolbox.specification_model.rowCount(), 0)
-        # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.main_toolbar.project_item_spec_list_view.receivers(
-            SIGNAL("doubleClicked(QModelIndex)")
-        )
-        self.assertEqual(n_dbl_clicked_recv, 1)
-        n_context_menu_recv = self.toolbox.main_toolbar.project_item_spec_list_view.receivers(
-            SIGNAL("customContextMenuRequested(QPoint)")
-        )
-        self.assertEqual(n_context_menu_recv, 1)
-        # Initialize ToolSpecificationModel again and see that the signals are connected only once
-        self.toolbox.init_specification_model(list())
-        # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.main_toolbar.project_item_spec_list_view.receivers(
-            SIGNAL("doubleClicked(QModelIndex)")
-        )
-        self.assertEqual(n_dbl_clicked_recv, 1)
-        n_context_menu_recv = self.toolbox.main_toolbar.project_item_spec_list_view.receivers(
-            SIGNAL("customContextMenuRequested(QPoint)")
-        )
-        self.assertEqual(n_context_menu_recv, 1)
-        # Check that there's still no items in the model
         self.assertEqual(self.toolbox.specification_model.rowCount(), 0)
 
     def test_create_project(self):
@@ -545,7 +524,7 @@ class TestToolboxUI(unittest.TestCase):
         ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
             self.toolbox, "show_add_project_item_form"
         ) as mock_show_add_project_item_form:
-            mock_drop_event_source.return_value = self.toolbox.main_toolbar.project_item_list_view
+            mock_drop_event_source.return_value = ProjectItemDragMixin()
             gv.dropEvent(event)
             mock_show_add_project_item_form.assert_called_once()
             mock_show_add_project_item_form.assert_called_with(item_type, scene_pos.x(), scene_pos.y(), spec="spec")
