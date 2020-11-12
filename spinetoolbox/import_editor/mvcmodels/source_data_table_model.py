@@ -110,7 +110,7 @@ class SourceDataTableModel(MinimalTableModel):
                         self._column_type_errors[row, section] = e
             top_left = self.index(0, section)
             bottom_right = self.index(self.rowCount() - 1, section)
-        if orientation == Qt.Vertical:
+        else:
             for column in range(self.columnCount()):
                 self._row_type_errors.pop((section, column), None)
                 data = self.index(section, column).data(Qt.EditRole)

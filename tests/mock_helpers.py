@@ -55,9 +55,7 @@ def create_project(toolbox):
 def create_toolboxui_with_project():
     """Returns ToolboxUI with a project instance where
     QSettings among others has been mocked."""
-    with mock.patch(
-        "spinetoolbox.project.create_dir"
-    ) as mock_create_dir, mock.patch(
+    with mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, mock.patch(
         "spinetoolbox.ui_main.ToolboxUI.save_project"
     ) as mock_save_project, mock.patch(
         "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"

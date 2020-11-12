@@ -25,10 +25,19 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QI
 from jupyter_client.kernelspec import find_kernel_specs
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.widgets.notification import Notification, NotificationStack
-from spinetoolbox.helpers import open_url, busy_effect, select_python_interpreter, \
-    select_julia_executable, select_julia_project, file_is_valid, dir_is_valid, \
-    resolve_python_interpreter, resolve_julia_executable_from_path, \
-    ensure_window_is_on_screen, get_datetime
+from spinetoolbox.helpers import (
+    open_url,
+    busy_effect,
+    select_python_interpreter,
+    select_julia_executable,
+    select_julia_project,
+    file_is_valid,
+    dir_is_valid,
+    resolve_python_interpreter,
+    resolve_julia_executable_from_path,
+    ensure_window_is_on_screen,
+    get_datetime,
+)
 from spinetoolbox.config import MAINWINDOW_SS
 from spinetoolbox.logger_interface import LoggerInterface
 
@@ -174,7 +183,7 @@ class KernelEditor(QDialog):
         if kernel_name == "":
             kernel_name = "NA"
         if project == "":
-            project="@."
+            project = "@."
         tip = f"IJulia.installkernel({kernel_name}, --project={project})"
         self.ui.label_julia_cmd.setToolTip(tip)
 
@@ -261,11 +270,7 @@ class KernelEditor(QDialog):
                 f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
             )
             message_box = QMessageBox(
-                QMessageBox.Question,
-                "ipykernel Missing",
-                message,
-                QMessageBox.Ok | QMessageBox.Cancel,
-                parent=self,
+                QMessageBox.Question, "ipykernel Missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
             message_box.button(QMessageBox.Ok).setText("Install ipykernel")
             answer = message_box.exec_()
@@ -369,26 +374,23 @@ class KernelEditor(QDialog):
         # Ask permission to overwrite if kernel name is taken
         for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
             row_index = self.kernel_list_model.index(row, 0, self.ui.tableView_kernel_list.rootIndex())
-            if kernel_name == row_index.siblingAtColumn(
-                    self.find_column("Name")).data(Qt.DisplayRole):  # Name column
+            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole):  # Name column
                 name_taken = True
-            elif display_name == row_index.siblingAtColumn(
-                    self.find_column("Display Name")).data(Qt.DisplayRole):  # Display name column
+            elif display_name == row_index.siblingAtColumn(self.find_column("Display Name")).data(
+                Qt.DisplayRole
+            ):  # Display name column
                 display_name_taken = True
         if display_name_taken:
             # This now terminates the whole kernel making if display name is taken. We could just overwrite the kernel.
-            self.notification_stack.push(f"Display name {display_name} already exists."
-                                         f"Please provide a new name or remove the other kernel.")
+            self.notification_stack.push(
+                f"Display name {display_name} already exists." f"Please provide a new name or remove the other kernel."
+            )
             return False
         if name_taken:
             msg = f"Kernel <b>{kernel_name}</b> already exists.<br><br>Would you like to overwrite it?"
             # noinspection PyCallByClass, PyTypeChecker
             message_box = QMessageBox(
-                QMessageBox.Question,
-                "Overwrite kernel?",
-                msg,
-                buttons=QMessageBox.Ok | QMessageBox.Cancel,
-                parent=self,
+                QMessageBox.Question, "Overwrite kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
             message_box.button(QMessageBox.Ok).setText("Overwrite kernel")
             answer = message_box.exec_()
@@ -414,11 +416,13 @@ class KernelEditor(QDialog):
                 language = d["language"]
                 display_name = d["display_name"]
                 interpreter = d["exe"]
-                row = [QStandardItem(language),
-                       QStandardItem(name),
-                       QStandardItem(display_name),
-                       QStandardItem(interpreter),
-                       QStandardItem(location)]
+                row = [
+                    QStandardItem(language),
+                    QStandardItem(name),
+                    QStandardItem(display_name),
+                    QStandardItem(interpreter),
+                    QStandardItem(location),
+                ]
                 for item in row:  # Set items non-editable
                     item.setFlags(~Qt.ItemIsEditable)
                 self.kernel_list_model.appendRow(row)
@@ -445,20 +449,28 @@ class KernelEditor(QDialog):
                 display_name = d["display_name"]
                 executable = d["exe"]
                 project = d["project"]
-                row = [QStandardItem(language),
-                       QStandardItem(name),
-                       QStandardItem(display_name),
-                       QStandardItem(executable),
-                       QStandardItem(project),
-                       QStandardItem(location)]
+                row = [
+                    QStandardItem(language),
+                    QStandardItem(name),
+                    QStandardItem(display_name),
+                    QStandardItem(executable),
+                    QStandardItem(project),
+                    QStandardItem(location),
+                ]
                 for item in row:  # Set items non-editable
                     item.setFlags(~Qt.ItemIsEditable)
                 self.kernel_list_model.appendRow(row)
             # Add unknown/invalid kernels
             unknowns = find_unknown_kernels()
             for n, l in unknowns.items():
-                unknown_row = [QStandardItem(), QStandardItem(n), QStandardItem(), QStandardItem(), QStandardItem(),
-                               QStandardItem(l)]
+                unknown_row = [
+                    QStandardItem(),
+                    QStandardItem(n),
+                    QStandardItem(),
+                    QStandardItem(),
+                    QStandardItem(),
+                    QStandardItem(l),
+                ]
                 for item in unknown_row:  # Set items non-editable and paint bg red
                     item.setFlags(~Qt.ItemIsEditable)
                     item.setBackground(Qt.red)
@@ -590,11 +602,7 @@ class KernelEditor(QDialog):
         msg += f"<br><br>Directory<br><br><b>{d}</b><br><br>will be deleted."
         # noinspection PyCallByClass, PyTypeChecker
         message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove kernel?",
-            msg,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self,
+            QMessageBox.Question, "Remove kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
         )
         message_box.button(QMessageBox.Ok).setText("Remove kernel")
         answer = message_box.exec_()
@@ -741,11 +749,7 @@ class KernelEditor(QDialog):
                 f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
             )
             message_box = QMessageBox(
-                QMessageBox.Question,
-                "IJulia missing",
-                message,
-                QMessageBox.Ok | QMessageBox.Cancel,
-                parent=self,
+                QMessageBox.Question, "IJulia missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
             message_box.button(QMessageBox.Ok).setText("Install IJulia")
             answer = message_box.exec_()

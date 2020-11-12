@@ -12,7 +12,7 @@
 """
 Contains unit tests for the OptionsWidget class.
 
-:author: A. Soininen
+:author: A. Soininen (VTT)
 :date:   6.8.2020
 """
 import unittest

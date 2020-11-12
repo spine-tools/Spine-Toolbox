@@ -24,8 +24,13 @@ from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..graphics_items import Link
 from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
 from spinetoolbox.widgets.notification import Notification
-from spinetoolbox.helpers import select_python_interpreter, select_julia_executable, select_julia_project, \
-    file_is_valid, dir_is_valid
+from spinetoolbox.helpers import (
+    select_python_interpreter,
+    select_julia_executable,
+    select_julia_project,
+    file_is_valid,
+    dir_is_valid,
+)
 
 
 class SettingsWidgetBase(QWidget):
@@ -200,6 +205,7 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
 
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     """A widget to change user's preferred settings."""
+
     def __init__(self, toolbox):
         """
         Args:

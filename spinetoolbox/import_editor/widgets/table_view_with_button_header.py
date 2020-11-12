@@ -17,9 +17,10 @@ Classes for handling models in PySide2's model/view framework.
 """
 from collections import namedtuple
 from collections.abc import Iterable
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import QPoint, Qt, Signal, Slot
 from PySide2.QtGui import QCursor, QFont, QIcon
 from PySide2.QtWidgets import (
+    QAction,
     QHeaderView,
     QMenu,
     QTableView,
@@ -54,15 +55,18 @@ _TYPE_TO_FONT_AWESOME_ICON = {
 Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
 
 
-class NewIntegerSequenceDateTimeConvertSpecDialog(QDialog):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class IntegerSequenceDateTimeConvertSpecDialog(QDialog):
+    def __init__(self, convert_spec, parent):
+        """
+        Args:
+            convert_spec (IntegerSequenceDateTimeConvertSpec, optional): an existing conversion specification
+            parent (QWidget, optional): parent widget
+        """
+        super().__init__(parent)
         self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowTitle("New integer sequence datetime")
 
-        QBtn = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-
-        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
@@ -70,13 +74,17 @@ class NewIntegerSequenceDateTimeConvertSpecDialog(QDialog):
         self.start_integer = QSpinBox()
         self.start_integer.setMaximum(2147483647)
         self.duration = QLineEdit("1h")
+        if convert_spec is not None:
+            self.datetime.setDateTime(convert_spec.start_datetime.value)
+            self.start_integer.setValue(convert_spec.start_int)
+            self.duration.setText(str(convert_spec.duration))
         self.duration.textChanged.connect(self._validate)
 
         self.layout = QVBoxLayout()
         self.form = QFormLayout()
         self.form.addRow("Initial datetime", self.datetime)
         self.form.addRow("Initial integer", self.start_integer)
-        self.form.addRow("Timestep duration", self.duration)
+        self.form.addRow("Time step duration", self.duration)
         self.layout.addLayout(self.form)
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
@@ -157,28 +165,28 @@ class TableViewWithButtonHeader(QTableView):
         menu.addMenu(type_menu)
         return menu
 
-    @Slot("QPoint")
+    @Slot(QPoint)
     def _show_horizontal_header_menu(self, pos):
         """Opens the context menu of the horizontal header."""
         if self._horizontal_header.display_all or self._horizontal_header.sections_with_buttons:
             screen_pos = self._horizontal_header.mapToGlobal(pos)
             self._horizontal_menu.exec_(screen_pos)
 
-    @Slot("QPoint")
+    @Slot(QPoint)
     def _show_vertical_header_menu(self, pos):
         """Opens the context menu of the vertical header."""
         if self._vertical_header.display_all or self._vertical_header.sections_with_buttons:
             screen_pos = self._vertical_header.mapToGlobal(pos)
             self._vertical_menu.exec_(screen_pos)
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _set_all_column_data_types(self, action):
         """Sets all columns data types to the type given by action's text."""
         type_str = action.text()
         columns = range(self._horizontal_header.count())
         self._horizontal_header.change_data_types(columns, type_str)
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _set_all_row_data_types(self, action):
         """Sets all rows data types to the type given by action's text."""
         type_str = action.text()
@@ -256,7 +264,7 @@ class HeaderWithButton(QHeaderView):
         self._display_sections = set(sections)
         self.viewport().update()
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _menu_pressed(self, action):
         """Sets the data type of a row or column according to menu action."""
         logical_index = self.logicalIndexAt(self._button.pos())
@@ -271,8 +279,15 @@ class HeaderWithButton(QHeaderView):
             sections (Iterable or int or NoneType): row/column index
             type_str (str): data type name
         """
+        orientation = self.orientation()
         if type_str == "integer sequence datetime":
-            dialog = NewIntegerSequenceDateTimeConvertSpecDialog(self)
+            existing_spec = None
+            if sections is not None and (sections == 0 or sections):
+                section = sections if isinstance(sections, int) else next(iter(sections))
+                section_type = self.model().get_type(section, orientation)
+                if isinstance(section_type, IntegerSequenceDateTimeConvertSpec):
+                    existing_spec = section_type
+            dialog = IntegerSequenceDateTimeConvertSpecDialog(existing_spec, self)
             if not dialog.exec_():
                 return
             convert_spec = dialog.get_spec()
@@ -280,7 +295,6 @@ class HeaderWithButton(QHeaderView):
             convert_spec = value_to_convert_spec(type_str)
         if not isinstance(sections, Iterable):
             sections = [sections]
-        orientation = self.orientation()
         previous_convert_spec = self.model().get_type(sections[0], orientation)
         self._undo_stack.push(
             SetColumnOrRowType(self._source_table_name, self, sections, convert_spec, previous_convert_spec)
