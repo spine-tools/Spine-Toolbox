@@ -17,37 +17,6 @@ Contains a class for storing Tool specifications.
 """
 
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon
-
-
-class ProjectItemFactoryModel(QStandardItemModel):
-    """A model for listing project items in the Item Palette view."""
-
-    def add_item(self, item_type, factory):
-        """Add item to model.
-
-        Args:
-            item_type (str)
-            factory (ProjectItemFactory)
-        """
-        icon = QIcon(factory.icon())
-        new_item = QStandardItem("")
-        new_item.setData(icon, Qt.DecorationRole)
-        new_item.setData(item_type, Qt.UserRole + 1)
-        new_item.setToolTip(
-            f"<p>Drag-and-drop this icon into the Design View to create a new <b>{item_type}</b> item.</p>"
-        )
-        self.appendRow(new_item)
-
-    def flags(self, index):
-        return super().flags(index) & ~Qt.ItemIsSelectable & ~Qt.ItemIsEditable
-
-    @staticmethod
-    def is_index_draggable(index):
-        return True
-
-    def get_mime_data_text(self, index):
-        return ",".join([self.data(index, Qt.UserRole + 1), ""])
 
 
 class ProjectItemSpecFactoryModel(QAbstractListModel):
@@ -89,7 +58,10 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         if role == Qt.ToolTipRole:
             if row >= self.rowCount():
                 return ""
-            return self._specs[row].description
+            return (
+                "<p>Drag-and-drop this onto the Design View "
+                f"to create a new <b>{self._specs[row].name}</b> item.</p>"
+            )
         if role == Qt.DecorationRole:
             return self._icons[self._specs[row].item_type]
 
@@ -99,7 +71,7 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         Args:
             index (QModelIndex): Index of spec
         """
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled
 
     def insertRow(self, spec, row=None, parent=QModelIndex()):
         """Insert row (specification) into model.
@@ -205,14 +177,6 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
             return QModelIndex()
         return self.createIndex(row, 0)
 
-    @staticmethod
-    def is_index_draggable(index):
-        return True
-
-    def get_mime_data_text(self, index):
-        i = index.row()
-        return ",".join([self._specs[i].item_type, self._specs[i].name])
-
 
 class FilteredSpecFactoryModel(QSortFilterProxyModel):
     def __init__(self, item_type):
@@ -222,3 +186,7 @@ class FilteredSpecFactoryModel(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row, source_parent):
         spec = self.sourceModel().specification(source_row)
         return spec.item_type == self.item_type
+
+    def get_mime_data_text(self, index):
+        row = self.mapToSource(index).row()
+        return ",".join([self.item_type, self.sourceModel().specification(row).name])

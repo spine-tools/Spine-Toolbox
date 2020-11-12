@@ -21,8 +21,8 @@ from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEven
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
 from spinetoolbox.graphics_items import ProjectItemIcon
+from .project_item_drag import ProjectItemDragMixin
 from ..graphics_items import LinkDrawer
-from ..mvcmodels.project_item_factory_models import ProjectItemFactoryModel, ProjectItemSpecFactoryModel
 
 
 class CustomGraphicsScene(QGraphicsScene):
@@ -53,7 +53,7 @@ class CustomGraphicsScene(QGraphicsScene):
 class DesignGraphicsScene(CustomGraphicsScene):
     """A scene for the Design view.
 
-    Mainly, it handles drag and drop events of ProjectItemFactoryModel or ProjectItemSpecFactoryModel sources.
+    Mainly, it handles drag and drop events of ProjectItemDragMixin sources.
     """
 
     def __init__(self, parent, toolbox):
@@ -155,11 +155,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
     def _is_project_item_drag(source):
         """Checks whether or not source corresponds to a project item being dragged into the scene.
         """
-        if not hasattr(source, "model"):
-            return False
-        return callable(source.model) and isinstance(
-            source.model(), (ProjectItemFactoryModel, ProjectItemSpecFactoryModel)
-        )
+        return isinstance(source, ProjectItemDragMixin)
 
     def dragLeaveEvent(self, event):
         """Accept event."""
@@ -167,7 +163,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
+        only if drag source is not a ProjectItemDragMixin."""
         event.accept()
         source = event.source()
         if not self._is_project_item_drag(source):
@@ -175,15 +171,14 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not a ProjectItemFactoryModel or ProjectItemSpecFactoryModel."""
+        only if drag source is not a ProjectItemDragMixin."""
         event.accept()
         source = event.source()
         if not self._is_project_item_drag(source):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        """Only accept drops when the source is an instance of
-        ProjectItemFactoryModel or ProjectItemSpecFactoryModel.
+        """Only accept drops when the source is an instance of ProjectItemDragMixin.
         Capture text from event's mimedata and show the appropriate 'Add Item form.'
         """
         source = event.source()

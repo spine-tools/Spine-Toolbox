@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QAction, QApplication
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import NoSuchKernel
-from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 
@@ -216,7 +216,7 @@ class SpineConsoleWidget(RichJupyterWidget):
     def dragEnterEvent(self, e):
         """Don't accept project item drops."""
         source = e.source()
-        if isinstance(source, DragListView):
+        if isinstance(source, ProjectItemDragMixin):
             e.ignore()
         else:
             super().dragEnterEvent(e)

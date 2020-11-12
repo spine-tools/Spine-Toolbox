@@ -41,7 +41,6 @@ from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import (
-    ProjectItemFactoryModel,
     ProjectItemSpecFactoryModel,
     FilteredSpecFactoryModel,
 )
@@ -49,7 +48,6 @@ from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import (
     ProjectItemModelContextMenu,
     LinkContextMenu,
-    AddSpecificationPopupMenu,
     RecentProjectsPopupMenu,
 )
 from .widgets.settings_widget import SettingsWidget
@@ -133,7 +131,6 @@ class ToolboxUI(QMainWindow):
         self.item_factories = dict()  # maps item types to `ProjectItemFactory` objects
         self._item_specification_factories = dict()  # maps item types to `ProjectItemSpecificationFactory` objects
         self._project = None
-        self.project_item_factory_model = None
         self.project_item_model = None
         self.specification_model = None
         self.filtered_spec_factory_models = {}
@@ -148,7 +145,6 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form = None
         self.specification_form = None
         self.placing_item = ""
-        self.add_specification_popup_menu = None
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
@@ -240,13 +236,6 @@ class ToolboxUI(QMainWindow):
         self._item_specification_factories = load_item_specification_factories()
         for item_type, factory in self.item_factories.items():
             self._item_properties_uis[item_type] = factory.make_properties_widget(self)
-        self.init_project_item_factory_model()
-        self.add_specification_popup_menu = AddSpecificationPopupMenu(self)
-
-    def init_project_item_factory_model(self):
-        self.project_item_factory_model = ProjectItemFactoryModel(self)
-        for item_type, factory in self.item_factories.items():
-            self.project_item_factory_model.add_item(item_type, factory)
 
     def parse_assistant_modules(self):
         """Makes actions to run assistants from assistant modules."""
@@ -686,8 +675,6 @@ class ToolboxUI(QMainWindow):
             spec.definition_file_path = path
             # Insert tool into model
             self.specification_model.insertRow(spec)
-        # Set model to the tool specification list view
-        self.main_toolbar.project_item_spec_list_view.setModel(self.specification_model)
         # Set model to Tool project item combo box
         self.specification_model_changed.emit()
         if n_specs == 0:
@@ -1080,23 +1067,20 @@ class ToolboxUI(QMainWindow):
         if not res:
             self.msg_error.emit("Opening path {} failed".format(path))
 
-    @Slot("QPoint")
-    def show_specification_context_menu(self, pos):
+    @Slot("QModelIndex", "QPoint")
+    def show_specification_context_menu(self, ind, global_pos):
         """Context menu for item specifications.
 
         Args:
+            ind (QModelIndex): In the ProjectItemSpecFactoryModel
             pos (QPoint): Mouse position
         """
         if not self.project():
-            return
-        ind = self.main_toolbar.project_item_spec_list_view.indexAt(pos)
-        if not ind.isValid():
             return
         spec = self.specification_model.specification(ind.row())
         factory = self.item_factories[spec.item_type]
         if not factory.supports_specifications():
             return
-        global_pos = self.main_toolbar.project_item_spec_list_view.viewport().mapToGlobal(pos)
         self.specification_context_menu = factory.make_specification_menu(self, ind)
         self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()

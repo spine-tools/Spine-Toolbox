@@ -68,18 +68,18 @@ class ComboBoxDelegate(QStyledItemDelegate):
 
 class CheckBoxDelegate(QStyledItemDelegate):
     """A delegate that places a fully functioning QCheckBox.
-
-    Attributes:
-        parent (QMainWindow): either toolbox or spine datapackage widget
-        centered (bool): whether or not the checkbox should be center-aligned in the widget
     """
 
     data_committed = Signal("QModelIndex", "QVariant")
 
     def __init__(self, parent, centered=True):
+        """
+        Args:
+            parent (QWiget)
+            centered (bool): whether or not the checkbox should be center-aligned in the widget
+        """
         super().__init__(parent)
         self._centered = centered
-        self._checkbox_pressed = None
 
     def createEditor(self, parent, option, index):
         """Important, otherwise an editor is created if the user clicks in this cell.
@@ -115,13 +115,9 @@ class CheckBoxDelegate(QStyledItemDelegate):
         # Do nothing on double-click
         if event.type() == QEvent.MouseButtonDblClick:
             return True
-        if event.type() == QEvent.MouseButtonPress:
-            self._checkbox_pressed = self.get_checkbox_rect(option).contains(event.pos())
-        if event.type() == QEvent.MouseButtonPress:
-            if self._checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
-                self._checkbox_pressed = False
-                self.data_committed.emit(index, not index.data(Qt.EditRole))
-                return True
+        if event.type() == QEvent.MouseButtonPress and self.get_checkbox_rect(option).contains(event.pos()):
+            self.data_committed.emit(index, not index.data(Qt.EditRole))
+            return True
         return False
 
     def setModelData(self, editor, model, index):

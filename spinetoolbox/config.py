@@ -90,20 +90,6 @@ ICON_TOOLBAR_SS = (
     "background: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
     "padding: 3px;"
     "border-style: solid;}"
-    "QToolButton{background-color: white;"
-    "border-width: 1px;"
-    "border-style: inset;"
-    "border-color: darkslategray;"
-    "border-radius: 2px;}"
-    "QToolButton:pressed {background-color: lightGray;}"
-    "QLabel{color:black;"
-    "padding: 3px;}"
-)
-
-PARAMETER_TAG_TOOLBAR_SS = (
-    ICON_TOOLBAR_SS + "QToolButton:open{background-color: lightGray;"
-    "border-style: inset;}"
-    "QToolButton{border-style: outset;}"
 )
 
 TEXTBROWSER_SS = (

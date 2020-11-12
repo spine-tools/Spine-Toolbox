@@ -166,30 +166,6 @@ class CustomPopupMenu(QMenu):
             action.setToolTip(tooltip)
 
 
-class AddSpecificationPopupMenu(CustomPopupMenu):
-    """Popup menu class for add Tool specification button."""
-
-    def __init__(self, parent):
-        """
-        Args:
-            parent (QWidget): parent widget (ToolboxUI)
-        """
-        super().__init__(parent)
-        # Open empty Tool specification Form
-        self.add_action("Add Specification from file...", parent.import_specification)
-        self.addSeparator()
-        for item_type, factory in parent.item_factories.items():
-            if not factory.supports_specifications():
-                continue
-            # Pass item_type as keyword argument so it's not a cell variable
-            self.add_action(
-                f"Create {item_type} Specification...",
-                lambda checked=False, item_type=item_type: parent.show_specification_form(
-                    item_type, specification=None
-                ),
-            )
-
-
 class ItemSpecificationMenu(CustomPopupMenu):
     """Context menu class for item specifications."""
 
