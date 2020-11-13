@@ -51,8 +51,9 @@ class ImporterSpecificationToolbar(QToolBar):
         self.addWidget(widget)
         self.setObjectName("ImporterSpecificationToolbar")
         spec = parent._specification
-        self.set_name(spec.name)
-        self.set_description(spec.description)
+        if spec:
+            self.set_name(spec.name)
+            self.set_description(spec.description)
 
     def set_name(self, name):
         self._line_edit_name.setText(name)

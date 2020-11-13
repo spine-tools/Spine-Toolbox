@@ -42,6 +42,7 @@
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionLoad_file"/>
     <addaction name="export_mappings_action"/>
     <addaction name="import_mappings_action"/>
     <addaction name="separator"/>
@@ -571,11 +572,17 @@
    </widget>
   </widget>
   <action name="export_mappings_action">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Export mappings...</string>
    </property>
   </action>
   <action name="import_mappings_action">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Import mappings...</string>
    </property>
@@ -591,6 +598,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+W</string>
+   </property>
+  </action>
+  <action name="actionLoad_file">
+   <property name="text">
+    <string>Load file...</string>
    </property>
   </action>
  </widget>
