@@ -37,15 +37,15 @@ def _handle_node_execution_started(item, direction):
             icon.animation_signaller.animation_started.emit()
 
 
-@Slot(object, object, object, bool)
-def _handle_node_execution_finished(item, direction, state, success):
+@Slot(object, object, object, bool, bool)
+def _handle_node_execution_finished(item, direction, state, success, skipped):
     icon = item.get_icon()
     if direction == "FORWARD":
-        icon.execution_icon.mark_execution_finished(success)
+        icon.execution_icon.mark_execution_finished(success, skipped)
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_stopped.emit()
         if state == "RUNNING":
-            icon.run_execution_leave_animation()
+            icon.run_execution_leave_animation(skipped)
 
 
 @Slot(object, str, str)
@@ -63,7 +63,7 @@ class SpineEngineWorker(QObject):
     finished = Signal()
     _dag_execution_started = Signal(list)
     _node_execution_started = Signal(object, object)
-    _node_execution_finished = Signal(object, object, object, bool)
+    _node_execution_finished = Signal(object, object, object, bool, bool)
     _log_message_arrived = Signal(object, str, str)
     _process_message_arrived = Signal(object, str, str)
 
@@ -204,12 +204,12 @@ class SpineEngineWorker(QObject):
     def _handle_node_execution_finished(self, data):
         self._do_handle_node_execution_finished(**data)
 
-    def _do_handle_node_execution_finished(self, item_name, direction, state, success):
+    def _do_handle_node_execution_finished(self, item_name, direction, state, success, skipped):
         item = self._project_items[item_name]
-        if success:
+        if success and not skipped:
             self.sucessful_executions.append((item, direction, state))
         self._executing_items.remove(item)
-        self._node_execution_finished.emit(item, direction, state, success)
+        self._node_execution_finished.emit(item, direction, state, success, skipped)
 
     def clean_up(self):
         for item in self._executing_items:
@@ -313,7 +313,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         self._engine_data = engine_data
 
     def run_engine(self):
-        self._engine = SpineEngineExperimental(**self._engine_data, debug=False)
+        self._engine = SpineEngineExperimental(**self._engine_data, debug=True)
 
     def get_engine_event(self):
         return self._engine.get_event()

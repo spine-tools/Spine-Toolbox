@@ -42,7 +42,7 @@ class TestProjectItem(unittest.TestCase):
 
     def tearDown(self):
         """Clean up."""
-        self.data_connection.data_dir_watcher.removePath(self.data_connection.data_dir)
+        self.data_connection.file_system_watcher.removePath(self.data_connection.data_dir)
 
     def test_notify_destination(self):
         item = ProjectItem("name", "description", 0.0, 0.0, self.project, self.toolbox)

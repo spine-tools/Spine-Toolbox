@@ -182,10 +182,10 @@ class ProjectItemIcon(QGraphicsRectItem):
     def incoming_links(self):
         return [l for conn in self.connectors.values() for l in conn.incoming_links()]
 
-    def run_execution_leave_animation(self):
+    def run_execution_leave_animation(self, skipped):
         animation_group = QParallelAnimationGroup(self._toolbox)
         for link in self.outgoing_links():
-            animation_group.addAnimation(link.make_execution_animation())
+            animation_group.addAnimation(link.make_execution_animation(skipped))
         animation_group.start()
 
     def hoverEnterEvent(self, event):
@@ -510,10 +510,11 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._execution_state = "in progress"
         self._repaint(self._CHECK, QColor("orange"))
 
-    def mark_execution_finished(self, success):
+    def mark_execution_finished(self, success, skipped):
         if success:
-            self._execution_state = "completed"
-            self._repaint(self._CHECK, QColor("green"))
+            self._execution_state = "skipped" if skipped else "completed"
+            colorname = "orange" if skipped else "green"
+            self._repaint(self._CHECK, QColor(colorname))
         else:
             self._execution_state = "failed"
             self._repaint(self._CROSS, QColor("red"))
@@ -897,13 +898,17 @@ class Link(LinkBase):
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
         self.update_geometry()
+        self._color = QColor(255, 255, 0, 204)
+        self._exec_color = None
 
-    def make_execution_animation(self):
+    def make_execution_animation(self, skipped):
         """Returns an animation to play when execution 'passes' through this link.
 
         Returns:
             QVariantAnimation
         """
+        colorname = "lightGray" if skipped else "red"
+        self._exec_color = QColor(colorname)
         qsettings = self._toolbox.qsettings()
         duration = int(qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         animation = QVariantAnimation()
@@ -911,21 +916,19 @@ class Link(LinkBase):
         animation.setEndValue(1.0)
         animation.setDuration(duration)
         animation.valueChanged.connect(self._handle_execution_animation_value_changed)
-        animation.finished.connect(lambda: self.setBrush(QColor(255, 255, 0, 204)))
+        animation.finished.connect(lambda: self.setBrush(self._color))
         animation.finished.connect(animation.deleteLater)
         return animation
 
     @Slot("QVariant")
     def _handle_execution_animation_value_changed(self, step):
         gradient = QLinearGradient(self.src_center, self.dst_center)
-        yellow = QColor(255, 255, 0, 204)
-        red = QColor(255, 0, 0, 204)
         delta = 8 * self.magic_number / QLineF(self.src_center, self.dst_center).length()
-        gradient.setColorAt(0, yellow)
-        gradient.setColorAt(max(0.0, step - delta), yellow)
-        gradient.setColorAt(step, red)
-        gradient.setColorAt(min(1.0, step + delta), yellow)
-        gradient.setColorAt(1.0, yellow)
+        gradient.setColorAt(0, self._color)
+        gradient.setColorAt(max(0.0, step - delta), self._color)
+        gradient.setColorAt(step, self._exec_color)
+        gradient.setColorAt(min(1.0, step + delta), self._color)
+        gradient.setColorAt(1.0, self._color)
         self.setBrush(gradient)
 
     def has_parallel_link(self):
