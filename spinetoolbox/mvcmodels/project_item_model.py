@@ -292,6 +292,7 @@ class ProjectItemModel(QAbstractItemModel):
             return False
         item.set_name(value)
         if not item.project_item.rename(value):
+            item.set_name(old_name)
             return False
         self._toolbox.msg_success.emit(f"Project item <b>{old_name}</b> renamed to <b>{value}</b>")
         return True

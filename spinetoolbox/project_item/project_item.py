@@ -342,7 +342,7 @@ class ProjectItem(MetaObject):
             self.update_name_label()
         # Update name item of the QGraphicsItem
         self.get_icon().update_name_item(new_name)
-        self._toolbox.project().dag_handler.rename_node(old_name, new_name)
+        self._project.dag_handler.rename_node(old_name, new_name)
         return True
 
     def open_directory(self):
