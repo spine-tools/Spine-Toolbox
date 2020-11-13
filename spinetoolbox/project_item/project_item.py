@@ -327,6 +327,7 @@ class ProjectItem(MetaObject):
         Returns:
             bool: True if renaming succeeded, False otherwise
         """
+        old_name = self.name
         new_short_name = shorten(new_name)
         # Rename project item data directory
         new_data_dir = os.path.join(self._project.items_dir, new_short_name)
@@ -341,7 +342,7 @@ class ProjectItem(MetaObject):
             self.update_name_label()
         # Update name item of the QGraphicsItem
         self.get_icon().update_name_item(new_name)
-        # Rename node and edges in the graph (dag) that contains this project item
+        self._toolbox.project().dag_handler.rename_node(old_name, new_name)
         return True
 
     def open_directory(self):

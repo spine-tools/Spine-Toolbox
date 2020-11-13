@@ -171,6 +171,7 @@ class CustomQGraphicsView(QGraphicsView):
         y_factor = viewport_scene_rect.height() / rect.height()
         self._items_fitting_zoom = 0.9 * min(x_factor, y_factor)
         self._min_zoom = self._compute_min_zoom()
+        self._max_zoom = 10 * self._min_zoom
 
     def _compute_min_zoom(self):
         return min(0.5, self.zoom_factor * self._items_fitting_zoom)
