@@ -171,7 +171,9 @@ class TestSpineOptConfigurationAssistant(unittest.TestCase):
         self.goto_installing_py_call()
         self.assertEqual(self.widget.current_state, "installing_py_call")
 
+    @unittest.skip("test_report_spine_opt_ready1(): Update needed")
     def test_report_spine_opt_ready1(self):
+        # TODO: Change sys.executable to something else because Configuration assistant has been updated.
         self.goto_checking_py_call_program1()
         self.widget.exec_mngr.process_output = sys.executable
         self.widget.exec_mngr.execution_finished.emit(0)
