@@ -290,10 +290,10 @@ class ProjectItemModel(QAbstractItemModel):
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid name", msg)
             return False
-        if not item.project_item.rename(value):
-            return False
         item.set_name(value)
-        self._toolbox.project().dag_handler.rename_node(old_name, value)
+        if not item.project_item.rename(value):
+            item.set_name(old_name)
+            return False
         self._toolbox.msg_success.emit(f"Project item <b>{old_name}</b> renamed to <b>{value}</b>")
         return True
 
