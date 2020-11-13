@@ -483,4 +483,4 @@ class DesignQGraphicsView(CustomQGraphicsView):
             return
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
-        icon.run_execution_leave_animation()
+        icon.run_execution_leave_animation(False)

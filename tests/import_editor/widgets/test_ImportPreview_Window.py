@@ -21,7 +21,6 @@ from unittest import mock
 from PySide2.QtCore import QSettings
 from PySide2.QtWidgets import QApplication, QWidget
 from spinetoolbox.import_editor.widgets.import_editor_window import ImportEditorWindow
-from spine_engine.spine_io.io_api import SourceConnection
 
 
 class TestImportEditorWindow(unittest.TestCase):
@@ -36,7 +35,7 @@ class TestImportEditorWindow(unittest.TestCase):
         spec.description = "spec_desc"
         toolbox = QWidget()
         toolbox.qsettings = mock.MagicMock(return_value=QSettings())
-        widget = ImportEditorWindow(toolbox, spec, "", SourceConnection, {})
+        widget = ImportEditorWindow(toolbox, spec)
         widget._app_settings = mock.NonCallableMagicMock()
         widget.closeEvent()
         widget._app_settings.beginGroup.assert_called_once_with("mappingPreviewWindow")
