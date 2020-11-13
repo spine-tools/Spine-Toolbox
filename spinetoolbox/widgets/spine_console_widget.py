@@ -150,7 +150,7 @@ class SpineConsoleWidget(RichJupyterWidget):
                 kernel_path = kernels[k_name]
             except KeyError:
                 self._toolbox.msg_error.emit(
-                    f"Kernel {k_name} not found. Go to Settings->Tools " f"and select another Julia kernel."
+                    f"Kernel {k_name} not found. Go to Settings->Tools and select another Julia kernel."
                 )
                 self.execution_failed.emit(-1)
                 return
