@@ -20,7 +20,7 @@ import unittest
 from unittest.mock import Mock, MagicMock, patch
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
-from spinedb_api import from_database, Map, TimeSeries, TimeSeriesVariableResolution
+from spinedb_api import DateTime, from_database, Map, TimeSeries, TimeSeriesVariableResolution, to_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from spinetoolbox.plotting import (
     add_map_plot,
@@ -47,6 +47,33 @@ def _make_pivot_proxy_model():
     with patch.object(SpineDBEditor, "restore_ui"), patch.object(SpineDBEditor, "show"):
         data_store_widget = SpineDBEditor(db_mngr, mock_db_map)
     data_store_widget.create_header_widget = lambda *args, **kwargs: None
+    simple_map = Map(["a", "b"], [-1.1, -2.2])
+    nested_map = Map(
+        ["a", "b"],
+        [
+            Map([DateTime("2020-11-13T11:00"), DateTime("2020-11-13T12:00")], [-1.1, -2.2]),
+            Map([DateTime("2020-11-13T11:00"), DateTime("2020-11-13T12:00")], [-3.3, -4.4]),
+        ],
+    )
+    nested_map_with_time_series = Map(
+        ["a", "b"],
+        [
+            Map(
+                [DateTime("2020-11-13T11:00"), DateTime("2020-11-13T12:00")],
+                [
+                    TimeSeriesVariableResolution(["2020-11-13T11:00", "2020-11-13T12:00"], [-1.1, -2.2], False, False),
+                    TimeSeriesVariableResolution(["2020-11-13T12:00", "2020-11-13T13:00"], [-3.3, -4.4], False, False),
+                ],
+            ),
+            Map(
+                [DateTime("2020-11-13T11:00"), DateTime("2020-11-13T12:00")],
+                [
+                    TimeSeriesVariableResolution(["2020-11-13T11:00", "2020-11-13T12:00"], [-5.5, -6.6], False, False),
+                    TimeSeriesVariableResolution(["2020-11-13T12:00", "2020-11-13T13:00"], [-7.7, -8.8], False, False),
+                ],
+            ),
+        ],
+    )
     data_store_widget.load_parameter_value_data = lambda: {
         ('1', 'int_col', 'base_alternative'): '-3',
         ('2', 'int_col', 'base_alternative'): '-1',
@@ -69,6 +96,9 @@ def _make_pivot_proxy_model():
             'time_series_col',
             'base_alternative',
         ): '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
+        ("1", "map_col", "base_alternative"): to_database(simple_map),
+        ("2", "map_col", "base_alternative"): to_database(nested_map),
+        ("3", "map_col", "base_alternative"): to_database(nested_map_with_time_series),
     }
     data_store_widget.pivot_table_model = model = ParameterValuePivotTableModel(data_store_widget)
     object_class_names = {"object": 1}
@@ -105,7 +135,7 @@ class _MockParameterModel(QAbstractTableModel):
             return None
         return from_database(self._table[index.row()][index.column()])
 
-    def headerData(self, column):
+    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         return "value"
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -299,6 +329,40 @@ class TestPlotting(unittest.TestCase):
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertEqual(list(lines[0].get_ydata(orig=True)), [-2.3])
+
+    def test_plot_simple_map(self):
+        """Test that a selection containing a single plain number gets plotted."""
+        model = _make_pivot_proxy_model()
+        support = PivotTablePlottingHints()
+        plot_widget = plot_selection(model, [model.index(3, 4)], support)
+        self.assertEqual(plot_widget.plot_type, Map)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
+
+    def test_plot_nested_map(self):
+        """Test that a selection containing a single plain number gets plotted."""
+        model = _make_pivot_proxy_model()
+        support = PivotTablePlottingHints()
+        plot_widget = plot_selection(model, [model.index(4, 4)], support)
+        self.assertEqual(plot_widget.plot_type, TimeSeries)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [-3.3, -4.4])
+
+    def test_plot_nested_map_containing_time_series(self):
+        """Test that a selection containing a single plain number gets plotted."""
+        model = _make_pivot_proxy_model()
+        support = PivotTablePlottingHints()
+        plot_widget = plot_selection(model, [model.index(5, 4)], support)
+        self.assertEqual(plot_widget.plot_type, TimeSeries)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 4)
+        self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
+        self.assertEqual(list(lines[1].get_ydata(orig=True)), [-3.3, -4.4])
+        self.assertEqual(list(lines[2].get_ydata(orig=True)), [-5.5, -6.6])
+        self.assertEqual(list(lines[3].get_ydata(orig=True)), [-7.7, -8.8])
 
     def test_add_dictionary_plot(self):
         plot_widget = PlotWidget()

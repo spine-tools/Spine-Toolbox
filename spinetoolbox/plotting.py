@@ -29,7 +29,14 @@ from numbers import Number
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide2.QtCore import QModelIndex
-from spinedb_api import Array, IndexedValue, Map, ParameterValueFormatError, TimeSeries
+from spinedb_api import (
+    Array,
+    convert_leaf_maps_to_specialized_containers,
+    IndexedValue,
+    Map,
+    ParameterValueFormatError,
+    TimeSeries,
+)
 from .helpers import first_non_null
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
@@ -387,7 +394,7 @@ def _collect_single_column_values(model, column, rows, hints):
         hints (PlottingHints): a plot support object
 
     Returns:
-        a tuple of values and label(s)
+        tuple: values and label(s)
     """
     values = list()
     labels = list()
@@ -482,11 +489,13 @@ def _collect_column_values(model, column, rows, hints):
         hints (PlottingHints): a support object
 
     Returns:
-        a tuple of values and label(s)
+        tuple: a tuple of values and label(s)
     """
     values, labels = _collect_single_column_values(model, column, rows, hints)
     if not values:
         return values, labels
+    if isinstance(first_non_null(values), Map):
+        values, labels = _expand_maps(values, labels)
     if isinstance(first_non_null(values), (Array, Map, TimeSeries)):
         values = [x for x in values if x is not None]
         _raise_if_not_all_indexed_values(values)
@@ -500,6 +509,60 @@ def _collect_column_values(model, column, rows, hints):
     if not usable_x:
         return [], []
     return (usable_x, usable_y), labels
+
+
+def _expand_maps(maps, labels):
+    """
+    Gathers the leaf elements from ``maps`` and expands ``labels`` accordingly.
+
+    Args:
+        maps (list of Map): maps to expand
+        labels (list of str): map labels
+
+    Returns:
+        tuple: expanded maps and labels
+    """
+    expanded_values = list()
+    expanded_labels = list()
+    for map_, label in zip(maps, labels):
+        if map_ is None:
+            continue
+        map_ = convert_leaf_maps_to_specialized_containers(map_)
+        if isinstance(map_, (Array, TimeSeries)):
+            expanded_values.append(map_)
+            expanded_labels.append(label)
+            continue
+        nested_values, value_labels = _label_nested_maps(map_, label)
+        expanded_values += nested_values
+        expanded_labels += value_labels
+    return expanded_values, expanded_labels
+
+
+def _label_nested_maps(map_, label):
+    """
+    Collects leaf values from given Maps and labels them.
+
+    Args:
+        map_ (Map): a map
+        label (str): map's label
+
+    Returns:
+        tuple: list of values and list of corresponding labels
+    """
+    if map_ and not map_.is_nested():
+        if isinstance(map_.values[0], (Array, TimeSeries)):
+            labels = [label + " - " + str(index) for index in map_.indexes]
+            values = [value for value in map_.values]
+            return values, labels
+        return [map_], [label]
+    values = list()
+    labels = list()
+    for index, value in zip(map_.indexes, map_.values):
+        prefix_label = label + str(index)
+        nested_values, nested_labels = _label_nested_maps(value, prefix_label)
+        values += nested_values
+        labels += nested_labels
+    return values, labels
 
 
 def _filter_and_check(xs, ys):
