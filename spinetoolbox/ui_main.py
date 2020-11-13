@@ -978,12 +978,11 @@ class ToolboxUI(QMainWindow):
             project_item_spec = project_item.specification()
             if project_item_spec is None or project_item_spec.name != specification.name:
                 continue
-            if specification.item_type == project_item.item_type():
+            if project_item.do_set_specification(specification):
                 self.msg_success.emit(
                     f"Specification <b>{specification.name}</b> successfully updated "
                     f"in Item <b>{project_item.name}</b>"
                 )
-                project_item.do_set_specification(specification)
             else:
                 self.msg_warning.emit(
                     f"Specification <b>{specification.name}</b> "

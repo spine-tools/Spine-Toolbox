@@ -160,8 +160,11 @@ class ProjectItem(MetaObject):
         Args:
             specification (ProjectItemSpecification): specification of this item. None removes the specification.
         """
+        if specification and specification.item_type != self.item_type():
+            return False
         self.undo_specification = self._specification
         self._specification = specification
+        return True
 
     def undo_set_specification(self):
         self.do_set_specification(self.undo_specification)
