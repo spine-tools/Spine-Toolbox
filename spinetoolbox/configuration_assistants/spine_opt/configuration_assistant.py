@@ -314,7 +314,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         self.exec_mngr.execution_finished.disconnect(self._handle_check_py_call_program_finished)
         if ret == 0:
             self._py_call_program = self.exec_mngr.process_output
-            if self._py_call_program == self.python:
+            if self._py_call_program.replace(os.sep, "/") == self.python.replace(os.sep, "/"):
                 self.spine_opt_ready.emit()
             else:
                 self.py_call_reconfiguration_needed.emit()
