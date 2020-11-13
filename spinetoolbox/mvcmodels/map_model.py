@@ -373,7 +373,7 @@ class MapModel(QAbstractTableModel):
         if column_index == len(row):
             self.append_column()
             row = self._rows[row_index]
-        if not value:
+        if value != 0 and not value:
             row[column_index] = None
             return True
         if not isinstance(value, (str, int, float, Duration, DateTime, IndexedValue)):

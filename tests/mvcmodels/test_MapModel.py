@@ -347,6 +347,15 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(2, 1).data(), "")
         self.assertEqual(model.index(2, 2).data(), "")
 
+    def test_setData_does_not_clear_value_if_it_is_zero(self):
+        model = MapModel(Map([], [], str))
+        model.setData(model.index(0, 0), "idx")
+        model.setData(model.index(0, 1), 0.0)
+        self.assertEqual(model.rowCount(), 1 + 1)
+        self.assertEqual(model.columnCount(), 2 + 1)
+        self.assertEqual(model.index(0, 0).data(), "idx")
+        self.assertEqual(model.index(0, 1).data(), 0.0)
+
     def test_trim_columns(self):
         map_value = Map(["a"], [1.1])
         model = MapModel(map_value)
