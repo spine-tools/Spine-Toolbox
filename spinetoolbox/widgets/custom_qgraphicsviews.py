@@ -20,7 +20,7 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import QEventLoop, QParallelAnimationGroup, Slot, Qt, QTimeLine, QSettings, QRectF
+from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF
 from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import Link, ProjectItemIcon
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
@@ -169,7 +169,7 @@ class CustomQGraphicsView(QGraphicsView):
         viewport_scene_rect = self._get_viewport_scene_rect()
         x_factor = viewport_scene_rect.width() / rect.width()
         y_factor = viewport_scene_rect.height() / rect.height()
-        self._items_fitting_zoom = 0.8 * min(x_factor, y_factor)
+        self._items_fitting_zoom = 0.9 * min(x_factor, y_factor)
         self._min_zoom = self._compute_min_zoom()
 
     def _compute_min_zoom(self):
@@ -215,6 +215,10 @@ class CustomQGraphicsView(QGraphicsView):
         self.scene().center_items()
         self._update_zoom_limits()
         self._zoom(self._items_fitting_zoom)
+        extent = ProjectItemIcon.ITEM_EXTENT
+        factor = extent / self.mapFromScene(QRectF(0, 0, extent, 0)).boundingRect().width()
+        if factor < 1:
+            self._zoom(factor)
         self._set_preferred_scene_rect()
 
     def gentle_zoom(self, factor, zoom_focus=None):
