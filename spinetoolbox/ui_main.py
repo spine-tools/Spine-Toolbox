@@ -274,7 +274,7 @@ class ToolboxUI(QMainWindow):
             create_dir(new_work_dir)
             self._qsettings.setValue("appSettings/workDir", new_work_dir)
             if verbose:
-                self._toolbox.msg.emit(f"Work directory is now <b>{new_work_dir}</b>")
+                self.msg.emit(f"Work directory is now <b>{new_work_dir}</b>")
         except OSError:
             self.msg_error.emit(f"[OSError] Creating work directory {new_work_dir} failed. Check permissions.")
 
@@ -617,7 +617,7 @@ class ToolboxUI(QMainWindow):
         try:
             create_dir(spinetoolbox_dir)
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(spinetoolbox_dir))
+            self.msg_error.emit("Creating directory {0} failed".format(spinetoolbox_dir))
             return
         project_json_path = os.path.join(spinetoolbox_dir, PROJECT_FILENAME)
         with open(project_json_path, "w") as project_json_fp:
