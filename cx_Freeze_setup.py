@@ -12,17 +12,15 @@
 """
 cx-Freeze setup file for Spine Toolbox.
 
-Tested on Python3.6-64bit.
+Tested on Python3.7-64bit. cx_Freeze 6.3.
 
 To make a Spine Toolbox installation bundle please follow the next steps:
 
 On Windows:
-1. Build the application into build/spinetoolbox directory with command 'python cx_Freeze_setup.py build'
-2. Build importer_program into /build/importer_program with command 'python cx_Freeze_importer_program_setup.py build'
-3. Copy importer_program manually from directory /build/importer_program to build/spinetoolbox/importer_program
-4. Check version numbers and CHANGELOG
-5. Compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
-6. When Spine Toolbox is installed Importer Program is added to importer_program/ directory
+
+1. Build application with command 'python cx_Freeze_setup.py build'
+2. Check version numbers and CHANGELOG
+3. Compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
 
 On other platforms (not tested):
 1. Build the application into build/ directory with command 'python cx_Freeze_setup.py build'

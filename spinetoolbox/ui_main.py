@@ -627,7 +627,7 @@ class ToolboxUI(QMainWindow):
         try:
             create_dir(spinetoolbox_dir)
         except OSError:
-            self._toolbox.msg_error.emit("Creating directory {0} failed".format(spinetoolbox_dir))
+            self.msg_error.emit("Creating directory {0} failed".format(spinetoolbox_dir))
             return
         project_json_path = os.path.join(spinetoolbox_dir, PROJECT_FILENAME)
         with open(project_json_path, "w") as project_json_fp:
