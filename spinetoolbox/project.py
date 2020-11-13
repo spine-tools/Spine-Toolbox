@@ -90,13 +90,14 @@ class SpineToolboxProject(MetaObject):
         self.project_dir = None  # Full path to project directory
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
+        self.specs_dir = None  # Full path to specs directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
         self._toolbox.undo_stack.clear()
         self.start_subscriber = NodeExecStartedSubscriber()
         self.finish_subscriber = NodeExecFinishedSubscriber()
         self.log_subscriber = LoggingSubscriber(self._logger)
         if not self._create_project_structure(p_dir):
-            self._logger.msg_error.emit("Creating project directory " "structure to <b>{0}</b> failed".format(p_dir))
+            self._logger.msg_error.emit("Creating project directory structure in <b>{0}</b> failed".format(p_dir))
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -116,22 +117,14 @@ class SpineToolboxProject(MetaObject):
         self.project_dir = directory
         self.config_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
         self.items_dir = os.path.abspath(os.path.join(self.config_dir, "items"))
+        self.specs_dir = os.path.abspath(os.path.join(self.config_dir, "specifications"))
         self.config_file = os.path.abspath(os.path.join(self.config_dir, PROJECT_FILENAME))
-        try:
-            create_dir(self.project_dir)  # Make project directory
-        except OSError:
-            self._logger.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
-            return False
-        try:
-            create_dir(self.config_dir)  # Make project config directory
-        except OSError:
-            self._logger.msg_error.emit("Creating directory {0} failed".format(self.config_dir))
-            return False
-        try:
-            create_dir(self.items_dir)  # Make project items directory
-        except OSError:
-            self._logger.msg_error.emit("Creating directory {0} failed".format(self.items_dir))
-            return False
+        for dir_ in (self.project_dir, self.config_dir, self.items_dir, self.specs_dir):
+            try:
+                create_dir(dir_)
+            except OSError:
+                self._logger.msg_error.emit("Creating directory {0} failed".format(dir_))
+                return False
         return True
 
     def call_set_name(self, name):

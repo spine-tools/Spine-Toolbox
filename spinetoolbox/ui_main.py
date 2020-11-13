@@ -36,6 +36,7 @@ from PySide2.QtWidgets import (
     QUndoStack,
 )
 from spine_engine.utils.serialization import serialize_path, deserialize_path
+from spine_engine.utils.helpers import shorten
 from .graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items
@@ -894,12 +895,41 @@ class ToolboxUI(QMainWindow):
         specification = self.load_specification_from_file(def_file)
         if not specification:
             return
-        # Add definition file path into specification
-        specification.definition_file_path = def_file
         self.add_specification(specification)
+
+    def _save_specificiation_file(self, specification):
+        if specification.definition_file_path:
+            return specification.save()
+        specs_dir = self.project().specs_dir
+        specs_type_dir = os.path.join(specs_dir, specification.item_type)
+        try:
+            create_dir(specs_type_dir)
+        except OSError:
+            self._logger.msg_error.emit("Creating directory {0} failed".format(specs_type_dir))
+        candidate_def_file_path = os.path.join(specs_type_dir, shorten(specification.name) + ".json")
+        if not os.path.exists(candidate_def_file_path):
+            specification.definition_file_path = candidate_def_file_path
+            return specification.save()
+        answer = QFileDialog.getSaveFileName(
+            self, f"Save {specification.item_type} specification", candidate_def_file_path, "JSON (*.json)"
+        )
+        if not answer[0]:  # Cancel button clicked
+            return False
+        specification.definition_file_path = os.path.abspath(answer[0])
+        return specification.save()
+
+    def _emit_specification_saved(self, specification):
+        path = specification.definition_file_path
+        self.msg_success.emit(
+            f"Specification <b>{specification.name}</b> successfully saved as "
+            f"<a style='color:#99CCFF;' href='file:///{path}'>{path}</a>"
+        )
 
     def add_specification(self, specification):
         """Pushes a new AddSpecificationCommand to the undo stack."""
+        if not self._save_specificiation_file(specification):
+            return
+        self._emit_specification_saved(specification)
         row = self.specification_model.specification_row(specification.name)
         if row >= 0:
             if self.specification_model.specification(row) != specification:
@@ -916,6 +946,9 @@ class ToolboxUI(QMainWindow):
             self.undo_stack.push(AddSpecificationCommand(self, specification))
 
     def update_specification(self, specification):
+        if not self._save_specificiation_file(specification):
+            return
+        self._emit_specification_saved(specification)
         row = self.specification_model.specification_row(specification.name)
         if row >= 0:
             self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
