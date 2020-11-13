@@ -18,7 +18,7 @@ Spine Toolbox project class.
 
 import os
 import json
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Slot, Signal, QTimer
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
 from spinetoolbox.metaobject import MetaObject
@@ -78,6 +78,7 @@ class SpineToolboxProject(MetaObject):
         self._settings = settings
         self._embedded_julia_console = embedded_julia_console
         self._embedded_python_console = embedded_python_console
+        self._dags_about_to_be_notified = set()
         self.dag_handler = DirectedGraphHandler()
         self.db_mngr = SpineDBManager(settings, logger, self)
         self.engine = None
@@ -680,6 +681,15 @@ class SpineToolboxProject(MetaObject):
     @Slot(object)
     def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""
+        # We wait 100 msecs before do the notification. This is to avoid notifying multiple
+        # times the same dag, when multiple items in that dag change.
+        if dag in self._dags_about_to_be_notified:
+            return
+        self._dags_about_to_be_notified.add(dag)
+        QTimer.singleShot(100, lambda dag=dag: self._do_notify_changes_in_dag(dag))
+
+    def _do_notify_changes_in_dag(self, dag):
+        self._dags_about_to_be_notified.remove(dag)
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
             # Not a dag, invalidate workflow
@@ -692,6 +702,7 @@ class SpineToolboxProject(MetaObject):
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
         ranks = _ranks(node_successors)
+        # Memoize resources, so we don't call multiple times the same function
         resources_for_direct_successors = {}
         resources_for_direct_predecessors = {}
         for item_name, child_names in node_successors.items():
@@ -700,14 +711,14 @@ class SpineToolboxProject(MetaObject):
             downstream_resources = []
             for parent_name in node_predecessors.get(item_name, set()):
                 parent_item = self._project_item_model.get_item(parent_name).project_item
-                upstream_resources += resources_for_direct_successors.setdefault(
-                    parent_item, parent_item.resources_for_direct_successors()
-                )
+                if parent_item not in resources_for_direct_successors:
+                    resources_for_direct_successors[parent_item] = parent_item.resources_for_direct_successors()
+                upstream_resources += resources_for_direct_successors[parent_item]
             for child_name in child_names:
                 child_item = self._project_item_model.get_item(child_name).project_item
-                downstream_resources += resources_for_direct_predecessors.setdefault(
-                    child_item, child_item.resources_for_direct_predecessors()
-                )
+                if child_item not in resources_for_direct_predecessors:
+                    resources_for_direct_predecessors[child_item] = child_item.resources_for_direct_predecessors()
+                downstream_resources += resources_for_direct_predecessors[child_item]
             item.handle_dag_changed(ranks[item_name], upstream_resources, downstream_resources)
 
     def notify_changes_in_all_dags(self):
