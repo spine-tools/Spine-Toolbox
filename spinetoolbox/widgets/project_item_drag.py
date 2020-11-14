@@ -132,42 +132,21 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
 
     def __init__(self):
         super().__init__(None)
-        self._row_height = 0
-        self._hovered_index = QModelIndex()
-        self.setStyleSheet("QListView {background:" f"{ICON_BACKGROUND}" "}")
+        self.setStyleSheet(
+            f"QListView{{background: {ICON_BACKGROUND}; padding: 3px; border: 1px solid gray;}}"
+            "QListView::item{padding: 3px;}"
+            "QListView::item:hover{background: white; padding-left: -1px; border: 1px solid lightGray; border-radius: 1px}"
+        )
         self.setSelectionRectVisible(False)
         self.setResizeMode(QListView.Adjust)
-        self.setSpacing(6)
         self.setUniformItemSizes(True)
-        self.setMouseTracking(True)
-
-    def _index_at(self, pos):
-        # Similar to indexAt but also accounts for the space in between visualRects, due to `spacing`
-        if not self._row_height:
-            return QModelIndex()
-        hovered_row = pos.y() // self._row_height
-        return self.model().index(hovered_row, 0)
 
     def leaveEvent(self, event):
         super().leaveEvent(event)
-        self._hovered_index = QModelIndex()
         self.update()
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        hovered_index = self._index_at(event.pos())
-        if hovered_index != self._hovered_index:
-            self._hovered_index = hovered_index
-            self.update()
 
     def paintEvent(self, event):
         self.setCurrentIndex(QModelIndex())
-        if self._hovered_index.isValid():
-            painter = QPainter(self.viewport())
-            spacing = self.spacing()
-            rect = self.visualRect(self._hovered_index).adjusted(-spacing, -spacing, spacing, spacing)
-            painter.fillRect(rect, Qt.white)
-            painter.end()
         super().paintEvent(event)
 
     def contextMenuEvent(self, event):
@@ -181,7 +160,7 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
         """Register drag start position"""
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
-            index = self._index_at(event.pos())
+            index = self.indexAt(event.pos())
             if not index.isValid():
                 self.drag_start_pos = None
                 self.pixmap = None
@@ -199,6 +178,6 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
         if not model:
             self.setFixedHeight(0)
             return
-        self._row_height = self.visualRect(model.index(0, 0)).height() + 2 * self.spacing()
-        height = self._row_height * model.rowCount() + 2 * self.frameWidth()
+        row_height = self.visualRect(model.index(0, 0)).height()
+        height = row_height * model.rowCount() + 2 * self.frameWidth()
         self.setFixedHeight(height)
