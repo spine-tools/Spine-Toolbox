@@ -160,8 +160,8 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
             style_sheet += self._hover_addendum
         self.setStyleSheet(style_sheet)
 
-    def leaveEvent(self, event):
-        super().leaveEvent(event)
+    def hideEvent(self, event):
+        super().hideEvent(event)
         self._set_hover(False)
 
     def mouseMoveEvent(self, event):

@@ -16,10 +16,10 @@ Contains :class:`MultiCheckableListView`.
 :date:   13.8.2020
 """
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QListView
+from PySide2.QtWidgets import QTreeView
 
 
-class MultiCheckableListView(QListView):
+class MultiCheckableTreeView(QTreeView):
     """A list view which allows all selected items to be checked/unchecked with space bar."""
 
     def keyPressEvent(self, event):

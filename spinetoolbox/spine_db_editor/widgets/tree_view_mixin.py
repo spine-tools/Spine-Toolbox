@@ -103,12 +103,12 @@ class TreeViewMixin:
             view.resizeColumnToContents(0)
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()
-        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
     @Slot()
     def _expand_object_tree_root_index(self):
         qApp.processEvents()
         self.ui.treeView_object.expand(self.object_tree_model.root_index)
+        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
     @Slot()
     def _expand_relationship_tree_root_index(self):

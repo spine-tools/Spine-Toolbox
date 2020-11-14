@@ -86,12 +86,15 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="MultiCheckableListView" name="source_list">
-       <property name="contextMenuPolicy">
-        <enum>Qt::CustomContextMenu</enum>
+      <widget class="MultiCheckableTreeView" name="source_list">
+       <property name="textElideMode">
+        <enum>Qt::ElideLeft</enum>
        </property>
-       <property name="selectionMode">
-        <enum>QAbstractItemView::ExtendedSelection</enum>
+       <property name="rootIsDecorated">
+        <bool>true</bool>
+       </property>
+       <property name="headerHidden">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -613,13 +616,12 @@
    <header>spinetoolbox/import_editor/widgets/table_view_with_button_header.h</header>
   </customwidget>
   <customwidget>
-   <class>MultiCheckableListView</class>
-   <extends>QListView</extends>
-   <header>spinetoolbox/import_editor/widgets/multi_checkable_list_view.h</header>
+   <class>MultiCheckableTreeView</class>
+   <extends>QTreeView</extends>
+   <header>spinetoolbox/import_editor/widgets/multi_checkable_tree_view.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>source_list</tabstop>
   <tabstop>source_data_table</tabstop>
   <tabstop>new_button</tabstop>
   <tabstop>remove_button</tabstop>

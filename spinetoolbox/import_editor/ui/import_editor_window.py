@@ -26,7 +26,7 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
 from PySide2.QtWidgets import *
 
 from spinetoolbox.import_editor.widgets.table_view_with_button_header import TableViewWithButtonHeader
-from spinetoolbox.import_editor.widgets.multi_checkable_list_view import MultiCheckableListView
+from spinetoolbox.import_editor.widgets.multi_checkable_tree_view import MultiCheckableTreeView
 
 
 class Ui_MainWindow(object):
@@ -70,10 +70,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.source_list = MultiCheckableListView(self.dockWidgetContents)
+        self.source_list = MultiCheckableTreeView(self.dockWidgetContents)
         self.source_list.setObjectName(u"source_list")
-        self.source_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.source_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.source_list.setTextElideMode(Qt.ElideLeft)
+        self.source_list.setRootIsDecorated(True)
+        self.source_list.setHeaderHidden(True)
 
         self.verticalLayout_2.addWidget(self.source_list)
 
@@ -310,7 +311,6 @@ class Ui_MainWindow(object):
 
         self.dockWidget_mapping_spec.setWidget(self.dockWidgetContents_6)
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_mapping_spec)
-        QWidget.setTabOrder(self.source_list, self.source_data_table)
         QWidget.setTabOrder(self.source_data_table, self.new_button)
         QWidget.setTabOrder(self.new_button, self.remove_button)
         QWidget.setTabOrder(self.remove_button, self.list_view)

@@ -63,9 +63,10 @@ class ImportEditor(QObject):
         self._ui_preview_menu = None
         self._undo_stack = undo_stack
         self._preview_table_model = SourceDataTableModel()
-        self._source_table_model = SourceTableListModel(self._undo_stack)
+        self._source_table_model = SourceTableListModel(connector.source, self._undo_stack)
         self._restore_mappings(mapping_settings)
         self._ui.source_list.setModel(self._source_table_model)
+        self._source_table_model.modelReset.connect(self._ui.source_list.expandAll)
         # create ui
         self._ui.source_data_table.setModel(self._preview_table_model)
         self._ui_preview_menu = MappingTableMenu(self._ui.source_data_table)
@@ -139,7 +140,9 @@ class ImportEditor(QObject):
         """
         Sets selected table and requests data from connector
         """
-        item = self._source_table_model.table_at(selected.row())
+        item = self._source_table_model.table_at(selected)
+        if item is None:
+            return
         if item.name not in self._table_mappings:
             self._table_mappings[item.name] = MappingListModel([ObjectClassMapping()], item.name, self._undo_stack)
         self.source_table_selected.emit(item.name, self._table_mappings[item.name])

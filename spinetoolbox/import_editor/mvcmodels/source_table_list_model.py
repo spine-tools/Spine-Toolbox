@@ -16,7 +16,7 @@ Contains SourceTableListModel and associated list item classes
 :date:   6.8.2019
 """
 
-from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt
+from PySide2.QtCore import QAbstractItemModel, QModelIndex, Qt
 from ..commands import SetTableChecked
 
 
@@ -28,17 +28,42 @@ class SourceTableItem:
         self.checked = checked
 
 
-class SourceTableListModel(QAbstractListModel):
+class SourceTableListModel(QAbstractItemModel):
     """Model for source table lists which supports undo/redo functionality."""
 
-    def __init__(self, undo_stack):
+    def __init__(self, source, undo_stack):
         """
         Args:
             undo_stack (QUndoStack): undo stack
         """
         super().__init__()
+        self._root_item = SourceTableItem(source, None)
         self._tables = []
         self._undo_stack = undo_stack
+
+    @property
+    def _root_index(self):
+        return self.createIndex(0, 0, self._root_item)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 1
+
+    def rowCount(self, parent=QModelIndex()):
+        if not parent.isValid():
+            return 1
+        if parent.internalPointer() == self._root_item:
+            return len(self._tables)
+        return 0
+
+    def index(self, row, column, parent=QModelIndex()):
+        if not parent.isValid():
+            return self.createIndex(row, column, self._root_item)
+        return self.createIndex(row, column, self._tables[row])
+
+    def parent(self, index):
+        if index.internalPointer() == self._root_item:
+            return QModelIndex()
+        return self.createIndex(0, 0, self._root_item)
 
     def checked_table_names(self):
         return [table.name for table in self._tables if table.checked]
@@ -47,24 +72,21 @@ class SourceTableListModel(QAbstractListModel):
         if not index.isValid():
             return None
         if role == Qt.DisplayRole:
-            return self._tables[index.row()].name
+            return index.internalPointer().name
         if role == Qt.CheckStateRole:
-            return Qt.Checked if self._tables[index.row()].checked else Qt.Unchecked
+            if index.flags() & Qt.ItemIsUserCheckable:
+                return Qt.Checked if index.internalPointer().checked else Qt.Unchecked
         return None
 
     def flags(self, index):
+        if index.internalPointer() == self._root_item:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        return None
 
     def reset(self, items):
         self.beginResetModel()
         self._tables = items
         self.endResetModel()
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self._tables)
 
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
@@ -85,7 +107,7 @@ class SourceTableListModel(QAbstractListModel):
             checked (bool): True for checked, False for unchecked
         """
         self._tables[row].checked = checked
-        index = self.index(row, 0)
+        index = self.index(row, 0, parent=self._root_index)
         self.dataChanged.emit(index, index, [Qt.CheckStateRole])
 
     def set_multiple_checked_undoable(self, rows, checked):
@@ -103,13 +125,15 @@ class SourceTableListModel(QAbstractListModel):
             self._undo_stack.push(SetTableChecked(self._tables[row].name, self, row, checked))
         self._undo_stack.endMacro()
 
-    def table_at(self, row):
-        return self._tables[row]
+    def table_at(self, index):
+        if index.internalPointer() == self._root_item:
+            return None
+        return self._tables[index.row()]
 
     def table_index(self, table):
-        rows = {table.name: i for table, i in zip(self._tables, range(len(self._tables)))}
+        rows = {table.name: i for i, table in enumerate(self._tables)}
         try:
-            return self.index(rows[table], 0)
+            return self.index(rows[table], 0, parent=self._root_index)
         except KeyError:
             return QModelIndex()
 
