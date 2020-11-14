@@ -18,7 +18,7 @@ Classes for custom QListView.
 
 from PySide2.QtWidgets import QListView
 from PySide2.QtCore import Qt, QSize, Signal, Slot, QMimeData, QModelIndex
-from PySide2.QtGui import QDrag, QResizeEvent, QPainter, QCursor
+from PySide2.QtGui import QDrag, QResizeEvent
 from PySide2.QtWidgets import QMenu, QToolButton, QApplication
 from .custom_qwidgets import CustomWidgetAction
 from ..config import ICON_BACKGROUND
@@ -27,6 +27,8 @@ from ..config import ICON_BACKGROUND
 class ProjectItemDragMixin:
     """Custom class with dragging support.
     """
+
+    drag_about_to_start = Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,10 +49,11 @@ class ProjectItemDragMixin:
         drag.setPixmap(self.pixmap)
         drag.setMimeData(self.mime_data)
         drag.setHotSpot(self.pixmap.rect().center())
-        drag.exec_()
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None
+        self.drag_about_to_start.emit()
+        drag.exec_()
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
@@ -69,15 +72,15 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         self.setMouseTracking(True)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
         if not supports_specs:
-            self.list_view = None
+            self._list_view = None
             return
-        self.list_view = ProjectItemDragListView()
-        self.list_view.doubleClicked.connect(self._toolbox.edit_specification)
-        self.list_view.context_menu_requested.connect(self._toolbox.show_specification_context_menu)
+        self._list_view = ProjectItemDragListView()
+        self._list_view.doubleClicked.connect(self._toolbox.edit_specification)
+        self._list_view.context_menu_requested.connect(self._toolbox.show_specification_context_menu)
         self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         menu = QMenu(self)
         widget_action = CustomWidgetAction(menu)
-        widget_action.setDefaultWidget(self.list_view)
+        widget_action.setDefaultWidget(self._list_view)
         menu.addAction(widget_action)
         menu.addSeparator()
         menu.addAction(
@@ -90,30 +93,31 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         self.setMenu(menu)
         self.setPopupMode(QToolButton.MenuButtonPopup)
         self._toolbox.specification_model_changed.connect(self._update_spec_model)
+        self.drag_about_to_start.connect(self._handle_drag_about_to_start)
+        self._list_view.drag_about_to_start.connect(menu.hide)
 
     def setIconSize(self, size):
         super().setIconSize(size)
-        if self.list_view:
-            self.list_view.setIconSize(size)
+        if self._list_view:
+            self._list_view.setIconSize(size)
 
     @Slot()
     def _update_spec_model(self):
         model = self._toolbox.filtered_spec_factory_models.get(self.item_type)
-        self.list_view.setModel(model)
+        self._list_view.setModel(model)
         self._resize_list_view()
         model.rowsInserted.connect(lambda *args: self._resize_list_view())
         model.rowsRemoved.connect(lambda *args: self._resize_list_view())
 
     def _resize_list_view(self):
-        self.list_view._resize_to_contents()
+        self._list_view._resize_to_contents()
         event = QResizeEvent(QSize(), self.menu().size())
         QApplication.sendEvent(self.menu(), event)
 
-    def leaveEvent(self, event):
-        super().leaveEvent(event)
-        if self.isDown():
-            self.setDown(False)
-            self.update()
+    @Slot()
+    def _handle_drag_about_to_start(self):
+        self.setDown(False)
+        self.update()
 
     def mousePressEvent(self, event):
         """Register drag start position"""
@@ -132,18 +136,38 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
 
     def __init__(self):
         super().__init__(None)
-        self.setStyleSheet(
+        self._hover = True
+        self._main_style_sheet = (
             f"QListView{{background: {ICON_BACKGROUND}; padding: 3px; border: 1px solid gray;}}"
             "QListView::item{padding: 3px;}"
-            "QListView::item:hover{background: white; padding-left: -1px; border: 1px solid lightGray; border-radius: 1px}"
         )
+        self._hover_addendum = (
+            "QListView::item:hover{background: white; padding-left: -1px; "
+            "border: 1px solid lightGray; border-radius: 1px}"
+        )
+        self.setStyleSheet(self._main_style_sheet + self._hover_addendum)
         self.setSelectionRectVisible(False)
         self.setResizeMode(QListView.Adjust)
         self.setUniformItemSizes(True)
+        self.setMouseTracking(True)
+
+    def _set_hover(self, hover):
+        if hover == self._hover:
+            return
+        self._hover = hover
+        style_sheet = self._main_style_sheet
+        if hover:
+            style_sheet += self._hover_addendum
+        self.setStyleSheet(style_sheet)
 
     def leaveEvent(self, event):
         super().leaveEvent(event)
-        self.update()
+        self._set_hover(False)
+
+    def mouseMoveEvent(self, event):
+        if self.indexAt(event.pos()).isValid():
+            self._set_hover(True)
+        super().mouseMoveEvent(event)
 
     def paintEvent(self, event):
         self.setCurrentIndex(QModelIndex())
