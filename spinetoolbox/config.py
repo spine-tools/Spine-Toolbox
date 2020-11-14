@@ -83,14 +83,10 @@ SETTINGS_SS = (
     "QSlider::sub-page:horizontal{background: transparent;}"
 )
 
+ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
 # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
 # (known Qt issue)
-ICON_TOOLBAR_SS = (
-    "QToolBar{spacing: 6px; "
-    "background: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
-    "padding: 3px;"
-    "border-style: solid;}"
-)
+ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " f"background: {ICON_BACKGROUND}" "padding: 3px;" "border-style: solid;}"
 
 TEXTBROWSER_SS = (
     "QTextBrowser {background-color: #19232D; border: 1px solid #32414B; color: #F0F0F0; border-radius: 2px;}"

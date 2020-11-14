@@ -17,10 +17,11 @@ Classes for custom QListView.
 """
 
 from PySide2.QtWidgets import QListView
-from PySide2.QtCore import Qt, QSize, Signal, Slot, QMimeData
-from PySide2.QtGui import QDrag, QResizeEvent
+from PySide2.QtCore import Qt, QSize, Signal, Slot, QMimeData, QModelIndex
+from PySide2.QtGui import QDrag, QResizeEvent, QPainter, QCursor
 from PySide2.QtWidgets import QMenu, QToolButton, QApplication
 from .custom_qwidgets import CustomWidgetAction
+from ..config import ICON_BACKGROUND
 
 
 class ProjectItemDragMixin:
@@ -74,9 +75,9 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         self.list_view.doubleClicked.connect(self._toolbox.edit_specification)
         self.list_view.context_menu_requested.connect(self._toolbox.show_specification_context_menu)
         self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        widget_action = CustomWidgetAction(self)
-        widget_action.setDefaultWidget(self.list_view)
         menu = QMenu(self)
+        widget_action = CustomWidgetAction(menu)
+        widget_action.setDefaultWidget(self.list_view)
         menu.addAction(widget_action)
         menu.addSeparator()
         menu.addAction(
@@ -108,9 +109,11 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         event = QResizeEvent(QSize(), self.menu().size())
         QApplication.sendEvent(self.menu(), event)
 
-    def paintEvent(self, event):
-        self.setDown(False)
-        super().paintEvent(event)
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        if self.isDown():
+            self.setDown(False)
+            self.update()
 
     def mousePressEvent(self, event):
         """Register drag start position"""
@@ -129,10 +132,43 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
 
     def __init__(self):
         super().__init__(None)
-        self.setStyleSheet("QListView {background: transparent;}")
+        self._row_height = 0
+        self._hovered_index = QModelIndex()
+        self.setStyleSheet("QListView {background:" f"{ICON_BACKGROUND}" "}")
+        self.setSelectionRectVisible(False)
         self.setResizeMode(QListView.Adjust)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setSpacing(6)
+        self.setUniformItemSizes(True)
+        self.setMouseTracking(True)
+
+    def _index_at(self, pos):
+        # Similar to indexAt but also accounts for the space in between visualRects, due to `spacing`
+        if not self._row_height:
+            return QModelIndex()
+        hovered_row = pos.y() // self._row_height
+        return self.model().index(hovered_row, 0)
+
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        self._hovered_index = QModelIndex()
+        self.update()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        hovered_index = self._index_at(event.pos())
+        if hovered_index != self._hovered_index:
+            self._hovered_index = hovered_index
+            self.update()
+
+    def paintEvent(self, event):
+        self.setCurrentIndex(QModelIndex())
+        if self._hovered_index.isValid():
+            painter = QPainter(self.viewport())
+            spacing = self.spacing()
+            rect = self.visualRect(self._hovered_index).adjusted(-spacing, -spacing, spacing, spacing)
+            painter.fillRect(rect, Qt.white)
+            painter.end()
+        super().paintEvent(event)
 
     def contextMenuEvent(self, event):
         index = self.indexAt(event.pos())
@@ -145,7 +181,7 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
         """Register drag start position"""
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
-            index = self.indexAt(event.pos())
+            index = self._index_at(event.pos())
             if not index.isValid():
                 self.drag_start_pos = None
                 self.pixmap = None
@@ -159,10 +195,10 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
 
     @Slot()
     def _resize_to_contents(self):
-        if self.model():
-            indexes = (self.model().index(i, 0) for i in range(self.model().rowCount()))
-            height = sum(self.visualRect(index).height() for index in indexes)
-            height += 2 * self.frameWidth()
-        else:
-            height = 0
+        model = self.model()
+        if not model:
+            self.setFixedHeight(0)
+            return
+        self._row_height = self.visualRect(model.index(0, 0)).height() + 2 * self.spacing()
+        height = self._row_height * model.rowCount() + 2 * self.frameWidth()
         self.setFixedHeight(height)

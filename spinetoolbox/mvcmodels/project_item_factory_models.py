@@ -71,7 +71,7 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         Args:
             index (QModelIndex): Index of spec
         """
-        return Qt.ItemIsEnabled
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def insertRow(self, spec, row=None, parent=QModelIndex()):
         """Insert row (specification) into model.
