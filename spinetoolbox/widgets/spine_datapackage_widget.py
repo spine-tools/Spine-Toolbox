@@ -53,6 +53,7 @@ class SpineDatapackageWidget(QMainWindow):
 
         super().__init__(flags=Qt.Window)
         self._data_connection = data_connection
+        self._datapackage_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
         self.datapackage = CustomPackage(base_path=self._data_connection.data_dir, unsafe=True)
         self.selected_resource_index = None
         self.resources_model = DatapackageResourcesModel(self, self.datapackage)
@@ -126,10 +127,12 @@ class SpineDatapackageWidget(QMainWindow):
         self.msg_error.connect(self.add_error_message)
         self._file_watcher.directoryChanged.connect(self._handle_source_dir_changed)
         self._file_watcher.fileChanged.connect(self._handle_source_file_changed)
+        self.ui.actionInfer_datapackage.triggered.connect(self.load_datapackage)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionSave_All.triggered.connect(self.save_all)
+        self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.fields_model.dataChanged.connect(self._handle_fields_data_changed)
         self.undo_group.cleanChanged.connect(self.update_window_modified)
@@ -154,6 +157,8 @@ class SpineDatapackageWidget(QMainWindow):
             self.setWindowModified(dirty)
         except RuntimeError:
             return
+        dirty |= not os.path.exists(self._datapackage_path)
+        self.ui.actionSave_datapackage.setEnabled(dirty)
         self.ui.actionSave_All.setEnabled(dirty)
         for idx, action in enumerate(self._save_resource_actions):
             dirty = idx in dirty_resource_indexes
@@ -179,7 +184,8 @@ class SpineDatapackageWidget(QMainWindow):
         (either from existing datapackage.json or by inferring a new one from sources)
         and update ui."""
         super().showEvent(e)
-        self.load_datapackage()
+        if os.path.isfile(self._datapackage_path):
+            self.load_datapackage()
 
     def load_datapackage(self):
         self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
@@ -188,6 +194,7 @@ class SpineDatapackageWidget(QMainWindow):
                 "No resources found. Please add some CSV files to <b>{0}</b>. ".format(self._data_connection.data_dir)
             )
             return
+        self.ui.actionSave_All.setEnabled(True)
         self.datapackage.update_descriptor(os.path.join(self._data_connection.data_dir, "datapackage.json"))
         self._file_watcher.addPaths(self.datapackage.sources)
         self.append_save_resource_actions()
@@ -255,18 +262,19 @@ class SpineDatapackageWidget(QMainWindow):
         self.err_msg.showMessage(msg)
 
     @Slot(bool)
-    def save_all(self, checked=False):
+    def save_all(self, _=False):
         resource_paths = {k: r.source for k, r in enumerate(self.datapackage.resources) if self.is_resource_dirty(k)}
-        datapackage_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
+        datapackage_path = self._datapackage_path
         all_paths = list(resource_paths.values()) + [datapackage_path]
         if not self.get_permission(*all_paths):
             return
         for k, path in resource_paths.items():
             self._save_resource(k, path)
-        self._save_datapackage(datapackage_path)
+        self.save_datapackage()
 
-    def _save_datapackage(self, datapackage_path):
-        if self.datapackage.save(datapackage_path):
+    @Slot(bool)
+    def save_datapackage(self, _=False):
+        if self.datapackage.save(self._datapackage_path):
             self.msg.emit("'datapackage.json' succesfully saved")
             return
         self.msg_error.emit("Failed to save 'datapackage.json'")
@@ -278,7 +286,7 @@ class SpineDatapackageWidget(QMainWindow):
         if not self.get_permission(filepath, datapackage_path):
             return
         self._save_resource(resource_index, filepath)
-        self._save_datapackage(datapackage_path)
+        self.save_datapackage()
 
     def _save_resource(self, resource_index, filepath):
         headers = self.datapackage.resources[resource_index].schema.field_names
@@ -300,6 +308,8 @@ class SpineDatapackageWidget(QMainWindow):
     def get_permission(self, *filepaths):
         start_dir = self._data_connection.data_dir
         filepaths = [os.path.relpath(path, start_dir) for path in filepaths if os.path.isfile(path)]
+        if not filepaths:
+            return True
         pathlist = "".join([f"<li>{path}</li>" for path in filepaths])
         msg = f"The following file(s) in <b>{os.path.basename(start_dir)}</b> will be replaced: <ul>{pathlist}</ul>. Are you sure?"
         message_box = QMessageBox(

@@ -53,7 +53,7 @@
      <x>0</x>
      <y>0</y>
      <width>558</width>
-     <height>28</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -66,6 +66,9 @@
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionInfer_datapackage"/>
+    <addaction name="actionSave_datapackage"/>
+    <addaction name="separator"/>
     <addaction name="actionSave_All"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
@@ -381,6 +384,19 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionSave_datapackage">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save datapackage.json</string>
+   </property>
+  </action>
+  <action name="actionInfer_datapackage">
+   <property name="text">
+    <string>Infer datapackage</string>
    </property>
   </action>
  </widget>
