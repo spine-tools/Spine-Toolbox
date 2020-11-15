@@ -36,11 +36,11 @@ from PySide2.QtWidgets import (
 )
 from spinetoolbox.helpers import get_open_file_name_in_last_dir, ensure_window_is_on_screen
 from spinetoolbox.config import APPLICATION_PATH
-from spine_engine.utils.helpers import shorten
 from spine_engine.spine_io.importers.csv_reader import CSVConnector
 from spine_engine.spine_io.importers.excel_reader import ExcelConnector
 from spine_engine.spine_io.importers.gdx_connector import GdxConnector
 from spine_engine.spine_io.importers.json_reader import JSONConnector
+from spine_engine.spine_io.importers.datapackage_reader import DataPackageConnector
 from spine_engine.spine_io.gdx_utils import find_gams_directory
 from ..connection_manager import ConnectionManager
 from ..commands import RestoreMappingsFromDict
@@ -55,6 +55,7 @@ _CONNECTOR_NAME_TO_CLASS = {
     "ExcelConnector": ExcelConnector,
     "GdxConnector": GdxConnector,
     "JSONConnector": JSONConnector,
+    "DataPackageConnector": DataPackageConnector,
 }
 
 
@@ -198,13 +199,14 @@ class ImportEditorWindow(QMainWindow):
         """
         if filepath in self._memoized_connectors:
             return self._memoized_connectors[filepath]
-        connector_list = [CSVConnector, ExcelConnector, GdxConnector, JSONConnector]  # add others as needed
+        connector_list = list(_CONNECTOR_NAME_TO_CLASS.values())
         connector_names = [c.DISPLAY_NAME for c in connector_list]
         dialog = QDialog(self)
         dialog.setLayout(QVBoxLayout())
         connector_list_wg = QListWidget()
         connector_list_wg.addItems(connector_names)
         # Set current item in `connector_list_wg` based on file extension
+        basename = os.path.basename(filepath)
         _filename, file_extension = os.path.splitext(filepath)
         file_extension = file_extension.lower()
         if file_extension.startswith(".xls"):
@@ -213,6 +215,8 @@ class ImportEditorWindow(QMainWindow):
             row = connector_list.index(CSVConnector)
         elif file_extension == ".gdx":
             row = connector_list.index(GdxConnector)
+        elif basename == "datapackage.json":
+            row = connector_list.index(DataPackageConnector)
         elif file_extension == ".json":
             row = connector_list.index(JSONConnector)
         else:
