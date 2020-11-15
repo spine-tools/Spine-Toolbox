@@ -19,7 +19,7 @@ Classes for custom context menus and pop-up menus.
 import os
 from PySide2.QtWidgets import QAction, QMenu, QWidgetAction
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import Signal, Slot, QPersistentModelIndex
 from .custom_qwidgets import SimpleFilterWidget
 
 
@@ -177,10 +177,10 @@ class ItemSpecificationMenu(CustomPopupMenu):
             index (QModelIndex): the index
         """
         super().__init__(parent)
-        self.index = index
-        self.add_action("Edit specification", lambda: parent.edit_specification(index))
-        self.add_action("Remove specification", lambda: parent.remove_specification(index.row()))
-        self.add_action("Open specification file...", lambda: parent.open_specification_file(index))
+        self.index = QPersistentModelIndex(index)
+        self.add_action("Edit specification", lambda: parent.edit_specification(self.index))
+        self.add_action("Remove specification", lambda: parent.remove_specification(self.index.row()))
+        self.add_action("Open specification file...", lambda: parent.open_specification_file(self.index))
         self.addSeparator()
 
 
