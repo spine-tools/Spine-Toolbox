@@ -297,7 +297,7 @@ class ToolboxUI(QMainWindow):
         """
         p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
         getting_started_anchor = (
-            "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
+            "<a style='color:#99CCFF;' title='" + p + "' href='https://spine-toolbox.readthedocs.io/en/latest/getting_started.html'>Getting Started</a>"
         )
         welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
             getting_started_anchor
@@ -1386,24 +1386,23 @@ class ToolboxUI(QMainWindow):
     @Slot()
     def show_user_guide(self):
         """Open Spine Toolbox documentation index page in browser."""
-        doc_index_path = os.path.join(DOCUMENTATION_PATH, "index.html")
-        index_url = "file:///" + doc_index_path
+        # doc_index_path = os.path.join(DOCUMENTATION_PATH, "index.html")
+        # index_url = "file:///" + doc_index_path
+        index_url = "https://spine-toolbox.readthedocs.io/en/latest/"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = open_url(index_url)
         if not res:
-            logging.error("Failed to open editor for %s", index_url)
-            self.msg_error.emit("Unable to open file <b>{0}</b>".format(doc_index_path))
+            # logging.error("Failed to open editor for %s", index_url)
+            self.msg_error.emit(f"Unable to open URL <b>{index_url}</b>")
 
     @Slot()
     def show_getting_started_guide(self):
         """Open Spine Toolbox Getting Started HTML page in browser."""
-        getting_started_path = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
-        index_url = "file:///" + getting_started_path
+        index_url = "https://spine-toolbox.readthedocs.io/en/latest/getting_started.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = open_url(index_url)
         if not res:
-            logging.error("Failed to open editor for %s", index_url)
-            self.msg_error.emit("Unable to open file <b>{0}</b>".format(getting_started_path))
+            self.msg_error.emit(f"Unable to open URL <b>{index_url}</b>")
 
     @Slot("QPoint")
     def show_item_context_menu(self, pos):
