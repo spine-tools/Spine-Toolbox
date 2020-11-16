@@ -182,23 +182,25 @@ class SingleParameterModel(MinimalTableModel):
         # Background role
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
-        # Display, edit, tool tip role
-        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole, Qt.TextAlignmentRole, PARSED_ROLE):
+        # Display, edit, tool tip, alignment role of 'json fields'
+        if field in self.json_fields and role in (
+            Qt.DisplayRole,
+            Qt.EditRole,
+            Qt.ToolTipRole,
+            Qt.TextAlignmentRole,
+            PARSED_ROLE,
+        ):
+            id_ = self._main_data[index.row()]
+            return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
-            if field in self.json_fields:
-                return self.db_mngr.get_value(self.db_map, self.item_type, id_, role)
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ToolTipRole:
                 description = self.get_field_item(field, item).get("description", None)
                 if description not in (None, ""):
                     return description
-            if field == "alternative_id":
-                return self.get_field_item(field, item).get("name", None)
-
-            if field in self.json_fields:
-                return self.db_mngr.get_value(self.db_map, self.item_type, id_, field, role)
             data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
                 data = data.replace(",", self.db_mngr._GROUP_SEP)
