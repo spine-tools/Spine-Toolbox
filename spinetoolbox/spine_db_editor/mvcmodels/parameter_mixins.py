@@ -484,6 +484,49 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
         return []
 
 
+class ValidateValueInListMixin(ConvertToDBMixin):
+    """Validates that the chosen value is in the value list if one set."""
+
+    def _convert_to_db(self, item, db_map):
+        """Returns a db item (id-based) from the given model item (name-based).
+
+        Args:
+            item (dict): the model item
+            db_map (DiffDatabaseMapping): the database where the resulting item belongs
+
+        Returns:
+            dict: the db item
+            list: error log
+        """
+        item, err = super()._convert_to_db(item, db_map)
+        value = item.get("value")
+        param_def_id = self._get_parameter_definition_id(db_map, item)
+        param_def = self.db_mngr.get_item(db_map, "parameter_definition", param_def_id)
+        value_list = self.db_mngr.get_parameter_value_list(db_map, param_def.get("value_list_id"))
+        if value_list and value not in value_list:
+            msg = (
+                f"Invalid value '{value}' for parameter '{param_def['parameter_name']}', "
+                f"valid values are {', '.join(value_list)}"
+            )
+            item["has_valid_value"] = False
+            return item, [msg]
+        return item, err
+
+    def _get_parameter_definition_id(self, db_map, item):
+        raise NotImplementedError()
+
+
+class ValidateValueInListForInsertMixin(ValidateValueInListMixin):
+    def _get_parameter_definition_id(self, db_map, item):
+        return item.get("parameter_definition_id")
+
+
+class ValidateValueInListForUpdateMixin(ValidateValueInListMixin):
+    def _get_parameter_definition_id(self, db_map, item):
+        param_val = self.db_mngr.get_item(db_map, "parameter_value", item["id"])
+        return param_val.get("parameter_id")
+
+
 class MakeRelationshipOnTheFlyMixin:
     """Makes relationships on the fly."""
 

@@ -1247,9 +1247,6 @@
    <property name="text">
     <string>Settings...</string>
    </property>
-   <property name="shortcut">
-    <string>F1</string>
-   </property>
   </action>
   <action name="actionShow_cascading_relationships">
    <property name="checkable">
@@ -1335,7 +1332,7 @@
     <string>User guide</string>
    </property>
    <property name="shortcut">
-    <string>F2</string>
+    <string>F1</string>
    </property>
   </action>
   <action name="actionSelect_position_parameters">

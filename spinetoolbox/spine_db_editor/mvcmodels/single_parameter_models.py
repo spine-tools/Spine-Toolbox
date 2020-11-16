@@ -24,6 +24,7 @@ from ..mvcmodels.parameter_mixins import (
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeParameterTagMixin,
+    ValidateValueInListForUpdateMixin,
 )
 from ...mvcmodels.shared import PARSED_ROLE
 
@@ -324,7 +325,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
             self.db_mngr.error_msg({self.db_map: error_log})
 
 
-class SingleParameterValueMixin(ConvertToDBMixin):
+class SingleParameterValueMixin(ValidateValueInListForUpdateMixin, ConvertToDBMixin):
     """A parameter_value model for a single entity_class."""
 
     def __init__(self, *args, **kwargs):
@@ -373,14 +374,18 @@ class SingleParameterValueMixin(ConvertToDBMixin):
         self.build_lookup_dictionary(db_map_data)
         for item in items:
             param_val, err = self._convert_to_db(item, self.db_map)
-            if tuple(param_val.keys()) != ("id",):
+            if self._check_item(param_val):
                 param_vals.append(param_val)
             if err:
                 error_log += err
         if param_vals:
-            self.db_mngr.check_update_parameter_values({self.db_map: param_vals})
+            self.db_mngr.update_parameter_values({self.db_map: param_vals})
         if error_log:
             self.db_mngr.error_msg({self.db_map: error_log})
+
+    def _check_item(self, item):
+        """Checks if a db item is good to be updated."""
+        return tuple(item.keys()) != ("id",) and item.pop("has_valid_value", True)
 
 
 class SingleObjectParameterDefinitionModel(
