@@ -116,7 +116,7 @@ class PivotTableModelBase(QAbstractTableModel):
             return
         self.model.update_model(data)
         top_left = self.index(self.headerRowCount(), self.headerColumnCount())
-        bottom_right = self.index(self.rowCount(), self.columnCount())
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right)
 
     def add_to_model(self, db_map_data):
