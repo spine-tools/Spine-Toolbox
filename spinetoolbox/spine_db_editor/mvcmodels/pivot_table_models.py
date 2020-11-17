@@ -120,10 +120,10 @@ class PivotTableModelBase(QAbstractTableModel):
         bottom_right = self.index(self.rowCount(), self.columnCount())
         self.dataChanged.emit(top_left, bottom_right)
 
-    def add_to_model(self, data):
-        if not data:
+    def add_to_model(self, db_map_data):
+        if not db_map_data:
             return
-        row_count, column_count = self.model.add_to_model(data)
+        row_count, column_count = self.model.add_to_model(db_map_data)
         if row_count > 0:
             first = self.headerRowCount() + self.dataRowCount()
             self.beginInsertRows(QModelIndex(), first, first + row_count - 1)
@@ -449,10 +449,10 @@ class PivotTableModelBase(QAbstractTableModel):
     def _batch_set_header_data(self, header_data):
         data_by_top_left_id = {}
         for index, value in header_data:
-            header_id = self._header_id(index)
+            db_map, id_ = self._header_id(index)
             top_left_id = self._top_left_id(index)
-            item = dict(id=header_id, name=value)
-            data_by_top_left_id.setdefault(top_left_id, []).append(item)
+            item = dict(id=id_, name=value)
+            data_by_top_left_id.setdefault(top_left_id, {}).setdefault(db_map, []).append(item)
         return any(self.top_left_headers[id_].update_data(data) for id_, data in data_by_top_left_id.items())
 
     def _batch_set_empty_header_data(self, header_data, get_top_left_id):
@@ -462,8 +462,8 @@ class PivotTableModelBase(QAbstractTableModel):
             names_by_top_left_id.setdefault(top_left_id, set()).add(value)
         return any(self.top_left_headers[id_].add_data(names) for id_, names in names_by_top_left_id.items())
 
-    def receive_data_added_or_removed(self, data, action):
-        {"add": self.add_to_model, "remove": self.remove_from_model}[action](data)
+    def receive_data_added_or_removed(self, db_map_data, action):
+        {"add": self.add_to_model, "remove": self.remove_from_model}[action](db_map_data)
 
 
 class TopLeftHeaderItem:
@@ -517,20 +517,20 @@ class TopLeftObjectHeaderItem(TopLeftHeaderItem):
     def header_data(self, header_id, role=Qt.DisplayRole):
         return self._get_header_data_from_db("object", header_id, "name", role)
 
-    def update_data(self, data):
-        if not data:
+    def update_data(self, db_map_data):
+        if not db_map_data:
             return False
-        self.db_mngr.update_objects({self.db_map: data})
+        self.db_mngr.update_objects(db_map_data)
         return True
 
     def add_data(self, names):
         if not names:
             return False
-        data = []
-        for name in names:
-            item = {"name": name, "class_id": self._class_id}
-            data.append(item)
-        self.db_mngr.add_objects({self.db_map: data})
+        db_map_data = {
+            db_map: [{"name": name, "class_id": class_id} for name in names]
+            for db_map, class_id in self._class_id.items()
+        }
+        self.db_mngr.add_objects(db_map_data)
         return True
 
 
@@ -548,20 +548,20 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
     def header_data(self, header_id, role=Qt.DisplayRole):
         return self._get_header_data_from_db("parameter_definition", header_id, "parameter_name", role)
 
-    def update_data(self, data):
-        if not data:
+    def update_data(self, db_map_data):
+        if not db_map_data:
             return False
-        self.db_mngr.update_parameter_definitions({self.db_map: data})
+        self.db_mngr.update_parameter_definitions(db_map_data)
         return True
 
     def add_data(self, names):
         if not names:
             return False
-        data = []
-        for name in names:
-            item = {"name": name, "entity_class_id": self.model._parent.current_class_id}
-            data.append(item)
-        self.db_mngr.add_parameter_definitions({self.db_map: data})
+        db_map_data = {
+            db_map: [{"name": name, "entity_class_id": class_id} for name in names]
+            for db_map, class_id in self.model._parent.current_class_id.items()
+        }
+        self.db_mngr.add_parameter_definitions(db_map_data)
         return True
 
 
@@ -581,7 +581,7 @@ class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
             return header_id
         return str(header_id)
 
-    def update_data(self, _data):  # pylint: disable=no-self-use
+    def update_data(self, db_map_data):  # pylint: disable=no-self-use
         return False
 
     def add_data(self, _names):  # pylint: disable=no-self-use
@@ -602,20 +602,17 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
     def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
         return self._get_header_data_from_db("alternative", header_id, "name", role)
 
-    def update_data(self, data):
-        if not data:
+    def update_data(self, db_map_data):
+        if not db_map_data:
             return False
-        self.db_mngr.update_alternatives({self.db_map: data})
+        self.db_mngr.update_alternatives(db_map_data)
         return True
 
     def add_data(self, names):
         if not names:
             return False
-        data = []
-        for name in names:
-            item = {"name": name}
-            data.append(item)
-        self.db_mngr.add_alternatives({self.db_map: data})
+        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
+        self.db_mngr.add_alternatives(db_map_data)
         return True
 
 
@@ -649,7 +646,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "parameter_value"
 
-    def object_parameter_and_alternative_ids(self, index):
+    def all_header_ids(self, index):
         """Returns the object, parameter, and alternative ids corresponding to the given data index.
         Used by PivotTableView.
 
@@ -663,10 +660,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        return header_ids[: self._object_class_count], header_ids[-2], header_ids[-1]
+        return header_ids[: self._object_class_count], header_ids[-3], header_ids[-2], header_ids[-1]
 
-    def object_parameter_and_alternative_names(self, index):
-        """Returns the object, parameter, and alternative names corresponding to the given data index.
+    def all_header_names(self, index):
+        """Returns the object, parameter, alternative, an db names corresponding to the given data index.
         Used by PivotTableView.
 
         Args:
@@ -676,14 +673,13 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             list(str): object names
             str: parameter name
             str: alternative name
+            str: db name
         """
-        objects_ids, parameter_id, alternative_id = self.object_parameter_and_alternative_ids(index)
-        object_names = [self.db_mngr.get_item(self.db_map, "object", id_)["name"] for id_ in objects_ids]
-        parameter_name = self.db_mngr.get_item(self.db_map, "parameter_definition", parameter_id).get(
-            "parameter_name", ""
-        )
+        objects_ids, (_, parameter_id), (_, alternative_id), db_map = self.all_header_ids(index)
+        object_names = [self.db_mngr.get_item(db_map, "object", id_)["name"] for _, id_ in objects_ids]
+        parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("parameter_name", "")
         alternative_name = self.db_mngr.get_item(self.db_map, "alternative", alternative_id).get("name", "")
-        return object_names, parameter_name, alternative_name
+        return object_names, parameter_name, alternative_name, db_map.codename
 
     def index_name(self, index):
         """Returns a string that concatenates the object and parameter names corresponding to the given data index.
@@ -697,8 +693,16 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         if not self.index_in_data(index):
             return ""
-        object_names, parameter_name, alternative_name = self.object_parameter_and_alternative_names(index)
-        return self.db_mngr._GROUP_SEP.join(object_names) + " - " + parameter_name + " - " + alternative_name
+        object_names, parameter_name, alternative_name, db_name = self.all_header_names(index)
+        return (
+            self.db_mngr._GROUP_SEP.join(object_names)
+            + " - "
+            + parameter_name
+            + " - "
+            + alternative_name
+            + " - "
+            + db_name
+        )
 
     def column_name(self, column):
         """Returns a string that concatenates the object and parameter names corresponding to the given column.
@@ -751,20 +755,20 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
         return self._batch_set_parameter_value_data(row_map, column_map, data, values)
 
-    def _object_parameter_value_to_add(self, header_ids, value):
+    def _object_parameter_value_to_add(self, db_map, header_ids, value):
         return dict(
-            entity_class_id=self._parent.current_class_id,
+            entity_class_id=self._parent.current_class_id[db_map],
             entity_id=header_ids[0],
             parameter_definition_id=header_ids[-2],
             value=value,
             alternative_id=header_ids[-1],
         )
 
-    def _relationship_parameter_value_to_add(self, header_ids, value, rel_id_lookup):
+    def _relationship_parameter_value_to_add(self, db_map, header_ids, value, rel_id_lookup):
         object_id_list = ",".join([str(id_) for id_ in header_ids[:-2]])
-        relationship_id = rel_id_lookup[object_id_list]
+        relationship_id = rel_id_lookup[db_map, object_id_list]
         return dict(
-            entity_class_id=self._parent.current_class_id,
+            entity_class_id=self._parent.current_class_id[db_map],
             entity_id=relationship_id,
             parameter_definition_id=header_ids[-2],
             value=value,
@@ -775,12 +779,17 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         if self._parent.current_class_type == "object_class":
             return self._object_parameter_value_to_add
         if self._parent.current_class_type == "relationship_class":
-            relationships = self.db_mngr.get_items_by_field(
-                self.db_map, "relationship", "class_id", self._parent.current_class_id
-            )
-            rel_id_lookup = {x["object_id_list"]: x["id"] for x in relationships}
-            return lambda header_ids, value, rel_id_lookup=rel_id_lookup: self._relationship_parameter_value_to_add(
-                header_ids, value, rel_id_lookup
+            db_map_relationships = {
+                db_map: self.db_mngr.get_items_by_field(db_map, "relationship", "class_id", class_id)
+                for db_map, class_id in self._parent.current_class_id.items()
+            }
+            rel_id_lookup = {
+                (db_map, x["object_id_list"]): x["id"]
+                for db_map, relationships in db_map_relationships.items()
+                for x in relationships
+            }
+            return lambda db_map, header_ids, value, rel_id_lookup=rel_id_lookup: self._relationship_parameter_value_to_add(
+                db_map, header_ids, value, rel_id_lookup
             )
 
     @staticmethod
@@ -789,20 +798,23 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
 
     def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
         """Sets parameter values in batch."""
-        to_add = []
-        to_update = []
+        to_add = {}
+        to_update = {}
         parameter_value_to_add = self._make_parameter_value_to_add()
         for i, row in enumerate(row_map):
             for j, column in enumerate(column_map):
                 if (row, column) not in values:
                     continue
-                header_ids = self._header_ids(row, column)
+                header_ids = list(self._header_ids(row, column))
+                db_map = header_ids.pop()
+                header_ids = [id_ for _db_map, id_ in header_ids]
                 if data[i][j] is None:
-                    item = parameter_value_to_add(header_ids, values[row, column])
-                    to_add.append(item)
+                    item = parameter_value_to_add(db_map, header_ids, values[row, column])
+                    to_add.setdefault(db_map, []).append(item)
                 else:
-                    item = self._parameter_value_to_update(data[i][j], header_ids, values[row, column])
-                    to_update.append(item)
+                    _db_map, id_ = data[i][j]
+                    item = self._parameter_value_to_update(id_, header_ids, values[row, column])
+                    to_update.setdefault(db_map, []).append(item)
         if not to_add and not to_update:
             return False
         if to_add:
@@ -811,36 +823,40 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             self._update_parameter_values(to_update)
         return True
 
-    def _checked_parameter_values(self, items):
-        value_lists = {}
-        par_def_ids = {item["parameter_definition_id"] for item in items}
-        for par_def_id in par_def_ids:
-            param_val_list_id = self.db_mngr.get_item(self.db_map, "parameter_definition", par_def_id).get(
-                "parameter_value_list_id"
-            )
-            if not param_val_list_id:
-                continue
-            param_val_list = self.db_mngr.get_item(self.db_map, "parameter_value_list", param_val_list_id)
-            value_list = param_val_list.get("value_list")
-            if not value_list:
-                continue
-            value_lists[par_def_id] = value_list.split(";")
-        checked_items = []
-        for item in items:
-            par_def_id = item["parameter_definition_id"]
-            value_list = value_lists.get(par_def_id)
-            if value_list and item["value"] not in value_list:
-                continue
-            checked_items.append(item)
-        return checked_items
+    def _checked_parameter_values(self, db_map_data):
+        db_map_value_lists = {}
+        db_map_par_def_ids = {
+            db_map: {item["parameter_definition_id"] for item in items} for db_map, items in db_map_data.items()
+        }
+        for db_map, par_def_ids in db_map_par_def_ids.items():
+            for par_def_id in par_def_ids:
+                param_val_list_id = self.db_mngr.get_item(db_map, "parameter_definition", par_def_id).get(
+                    "parameter_value_list_id"
+                )
+                if not param_val_list_id:
+                    continue
+                param_val_list = self.db_mngr.get_item(db_map, "parameter_value_list", param_val_list_id)
+                value_list = param_val_list.get("value_list")
+                if not value_list:
+                    continue
+                db_map_value_lists.setdefault(db_map, {})[par_def_id] = value_list.split(";")
+        db_map_checked_items = {}
+        for db_map, items in db_map_data.items():
+            for item in items:
+                par_def_id = item["parameter_definition_id"]
+                value_list = db_map_value_lists.get(db_map, {}).get(par_def_id)
+                if value_list and item["value"] not in value_list:
+                    continue
+                db_map_checked_items.setdefault(db_map, []).append(item)
+        return db_map_checked_items
 
-    def _add_parameter_values(self, items):
-        items = self._checked_parameter_values(items)
-        self.db_mngr.add_checked_parameter_values({self.db_map: items})
+    def _add_parameter_values(self, db_map_data):
+        db_map_data = self._checked_parameter_values(db_map_data)
+        self.db_mngr.add_parameter_values(db_map_data)
 
-    def _update_parameter_values(self, items):
-        items = self._checked_parameter_values(items)
-        self.db_mngr.update_checked_parameter_values({self.db_map: items})
+    def _update_parameter_values(self, db_map_data):
+        db_map_data = self._checked_parameter_values(db_map_data)
+        self.db_mngr.update_parameter_values(db_map_data)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
@@ -854,39 +870,76 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         data = self.model.get_pivoted_data([row], [column])
-        header_ids = self._header_ids(row, column)
+        header_ids = list(self._header_ids(row, column))
+        db_map = header_ids.pop()
+        header_ids = [id_ for _db_map, id_ in header_ids]
         if data[0][0] is None:
-            parameter_value_to_add = self._make_parameter_value_to_add()
-            return lambda value, parameter_value_to_add=parameter_value_to_add, header_ids=header_ids: self._add_parameter_values(
-                [parameter_value_to_add(header_ids, value)]
+            func = self._make_parameter_value_to_add()
+            return lambda value, func=func, db_map=db_map, header_ids=header_ids: self._add_parameter_values(
+                {db_map: [func(db_map, header_ids, value)]}
             )
-        return lambda value, id_=data[0][0], header_ids=header_ids: self._update_parameter_values(
-            [self._parameter_value_to_update(id_, header_ids, value)]
+        _db_map, id_ = data[0][0]
+        return lambda value, id_=id_, header_ids=header_ids: self._update_parameter_values(
+            {db_map: [self._parameter_value_to_update(id_, header_ids, value)]}
         )
 
-    def receive_objects_added_or_removed(self, items, action):
+    def receive_objects_added_or_removed(self, db_map_data, action):
         if self._parent.current_class_type != "object_class":
             return False
-        objects = [x for x in items if x["class_id"] == self._parent.current_class_id]
-        if not objects:
+        db_map_entities = {
+            db_map: [x for x in items if x["class_id"] == self._parent.current_class_id.get(db_map)]
+            for db_map, items in db_map_data.items()
+        }
+        if not any(db_map_entities.values()):
             return False
-        data = self._parent.load_empty_parameter_value_data(entities=objects)
+        db_map_data = self._parent.load_empty_parameter_value_data(db_map_entities=db_map_entities)
+        self.receive_data_added_or_removed(db_map_data, action)
+        return True
+
+    def receive_relationships_added_or_removed(self, db_map_data, action):
+        if self._parent.current_class_type != "relationship_class":
+            return False
+        db_map_entities = {
+            db_map: [x for x in items if x["class_id"] == self._parent.current_class_id.get(db_map)]
+            for db_map, items in db_map_data.items()
+        }
+        if not any(db_map_entities.values()):
+            return False
+        data = self._parent.load_empty_parameter_value_data(db_map_entities=db_map_entities)
         self.receive_data_added_or_removed(data, action)
         return True
 
-    def receive_relationships_added_or_removed(self, relationships, action):
-        data = self._parent.load_empty_parameter_value_data(entities=relationships)
+    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):
+        db_map_parameter_ids = {
+            db_map: {
+                (db_map, x["id"])
+                for x in parameters
+                if (x.get("object_class_id") or x.get("relationship_class_id"))
+                == self._parent.current_class_id.get(db_map)
+            }
+            for db_map, parameters in db_map_data.items()
+        }
+        if not any(db_map_parameter_ids.values()):
+            return False
+        data = self._parent.load_empty_parameter_value_data(db_map_parameter_ids=db_map_parameter_ids)
         self.receive_data_added_or_removed(data, action)
         return True
 
-    def receive_parameter_definitions_added_or_removed(self, parameters, action):
-        parameter_ids = {x["id"] for x in parameters}
-        data = self._parent.load_empty_parameter_value_data(parameter_ids=parameter_ids)
-        self.receive_data_added_or_removed(data, action)
-        return True
-
-    def receive_parameter_values_added_or_removed(self, parameter_values, action):
-        data = self._parent.load_full_parameter_value_data(parameter_values=parameter_values, action=action)
+    def receive_parameter_values_added_or_removed(self, db_map_data, action):
+        db_map_parameter_values = {
+            db_map: [
+                x
+                for x in parameter_values
+                if (x.get("object_class_id") or x.get("relationship_class_id"))
+                == self._parent.current_class_id.get(db_map)
+            ]
+            for db_map, parameter_values in db_map_data.items()
+        }
+        if not any(db_map_parameter_values.values()):
+            return False
+        data = self._parent.load_full_parameter_value_data(
+            db_map_parameter_values=db_map_parameter_values, action=action
+        )
         self.update_model(data)
         return True
 
@@ -975,9 +1028,12 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     def call_reset_model(self, object_class_ids, pivot=None):
         """See base class."""
         data = self._parent.load_relationship_data()
+        top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
+        top_left_headers += [TopLeftDatabaseHeaderItem(self)]
         self.top_left_headers = {
             name: TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()
         }
+        self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot()
         super().reset_model(data, list(self.top_left_headers), *pivot)
@@ -1031,18 +1087,26 @@ class RelationshipPivotTableModel(PivotTableModelBase):
             self.db_mngr.remove_items({self.db_map: {"relationship": to_remove}})
         return True
 
-    def receive_objects_added_or_removed(self, items, action):
-        objects_per_class = dict()
-        for item in items:
-            objects_per_class.setdefault(item["class_id"], []).append(item)
-        if not set(objects_per_class.keys()).intersection(self._parent.current_object_class_id_list):
-            return False
-        data = self._parent.load_empty_relationship_data(objects_per_class=objects_per_class)
+    def receive_objects_added_or_removed(self, db_map_data, action):
+        db_map_class_objects = dict()
+        for db_map, items in db_map_data.items():
+            class_objects = db_map_class_objects[db_map] = dict()
+            for item in items:
+                class_objects.setdefault(item["class_id"], []).append(item)
+        data = self._parent.load_empty_relationship_data(db_map_class_objects=db_map_class_objects)
         self.receive_data_added_or_removed(data, action)
         return True
 
-    def receive_relationships_added_or_removed(self, relationships, action):
-        data = self._parent.load_full_relationship_data(relationships=relationships, action=action)
+    def receive_relationships_added_or_removed(self, db_map_data, action):
+        if self._parent.current_class_type != "relationship_class":
+            return False
+        db_map_relationships = {
+            db_map: [x for x in items if x["class_id"] == self._parent.current_class_id.get(db_map)]
+            for db_map, items in db_map_data.items()
+        }
+        if not any(db_map_relationships.values()):
+            return False
+        data = self._parent.load_full_relationship_data(db_map_relationships=db_map_relationships, action=action)
         self.update_model(data)
         return True
 
