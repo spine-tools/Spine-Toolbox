@@ -492,15 +492,6 @@ class FrozenTableView(QTableView):
 
     header_dropped = Signal(object, object)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.horizontalHeader().setVisible(False)
-        self.verticalHeader().setVisible(False)
-        self.setSortingEnabled(True)
-        self.setAcceptDrops(True)
-
     @property
     def area(self):
         return "frozen"

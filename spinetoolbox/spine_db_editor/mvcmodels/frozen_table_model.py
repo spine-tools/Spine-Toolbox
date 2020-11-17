@@ -104,6 +104,11 @@ class FrozenTableModel(QAbstractItemModel):
                 description = name
             return description
 
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            return None
+        return super().headerData(section, orientation, role=role)
+
     @property
     def headers(self):
         return self._headers

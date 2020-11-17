@@ -579,7 +579,6 @@ class TabularViewMixin:
                 frozen_values = self.find_frozen_values(frozen)
                 self.frozen_table_model.reset_model(frozen_values, frozen)
                 self.make_frozen_headers()
-                self.ui.frozen_table.resizeColumnsToContents()
             else:
                 self.frozen_table_model.clear_model()
         frozen_value = self.get_frozen_value(self.ui.frozen_table.currentIndex())
@@ -646,7 +645,6 @@ class TabularViewMixin:
             self.ui.frozen_table.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
             self.ui.frozen_table.clearSelection()
             self.ui.frozen_table.selectionModel().blockSignals(False)
-        self.ui.frozen_table.resizeColumnsToContents()
 
     def find_frozen_values(self, frozen):
         """Returns a list of tuples containing unique values (object ids) for the frozen indexes (object_class ids).

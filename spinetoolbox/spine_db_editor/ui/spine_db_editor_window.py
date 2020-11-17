@@ -495,6 +495,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_14.setContentsMargins(0, 0, 0, 0)
         self.frozen_table = FrozenTableView(self.dockWidgetContents_11)
         self.frozen_table.setObjectName(u"frozen_table")
+        self.frozen_table.setAcceptDrops(True)
+        self.frozen_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.frozen_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.frozen_table.verticalHeader().setVisible(False)
 
         self.verticalLayout_14.addWidget(self.frozen_table)
 
