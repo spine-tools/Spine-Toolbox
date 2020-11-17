@@ -49,6 +49,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - User's now need to explicitly choose a kernel for the Python Console and the Julia Console. They are 
   not chosen (nor created) automatically anymore. The kernels can be selected in the drop-down menus 
   on application Settings->Tools window.
+- Database revision handling has been improved. For example, the app does not offer to upgrade databases 
+  that are more recent than the current version of Spine Toolbox can handle.
 
 ### Deprecated
 - CustomQtKernelManager class
