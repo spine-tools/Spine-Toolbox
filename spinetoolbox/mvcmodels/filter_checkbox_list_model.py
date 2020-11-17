@@ -237,7 +237,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         if not self._is_filtered:
             return
         self.beginResetModel()
-        self._select_all_str = '(Select all)'
+        self._select_all_str = '(Select All)'
         self._filter_expression = ""
         if self._show_add_to_selection:
             self._action_rows.remove(self._add_to_selection_str)

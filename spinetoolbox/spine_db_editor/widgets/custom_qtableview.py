@@ -324,10 +324,6 @@ class PivotTableView(CopyPasteTableView):
     def db_mngr(self):
         return self.source_model.db_mngr
 
-    @property
-    def db_map(self):
-        return self.source_model.db_map
-
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
         self.create_context_menu()
@@ -367,30 +363,43 @@ class PivotTableView(CopyPasteTableView):
             row_mask.add(row)
             column_mask.add(column)
         data = self.source_model.model.get_pivoted_data(row_mask, column_mask)
-        ids = {item for row in data for item in row if item is not None}
-        db_map_typed_data = {self.db_map: {"parameter_value": ids}}
+        items = (item for row in data for item in row)
+        db_map_typed_data = {}
+        for item in items:
+            if item is None:
+                continue
+            db_map, id_ = item
+            db_map_typed_data.setdefault(db_map, {}).setdefault("parameter_value", set()).add(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_objects(self):
-        ids = {self.source_model._header_id(index) for index in self._selected_entity_indexes}
-        db_map_typed_data = {self.db_map: {"object": ids}}
+        db_map_typed_data = {}
+        for index in self._selected_entity_indexes:
+            db_map, id_ = self.source_model._header_id(index)
+            db_map_typed_data.setdefault(db_map, {}).setdefault("object", set()).add(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_relationships(self):
         if self.model().sourceModel().item_type != "parameter_value":
             return
-        rel_ids_by_object_ids = {rel["object_id_list"]: rel["id"] for rel in self._spine_db_editor._get_entities()}
-        relationship_ids = set()
+        db_map_relationship_lookup = {
+            db_map: {rel["object_id_list"]: rel["id"] for rel in rels}
+            for db_map, rels in self._spine_db_editor._get_db_map_entities().items()
+        }
+        db_map_typed_data = {}
         for index in self._selected_entity_indexes:
-            object_ids, _, _ = self.source_model.object_parameter_and_alternative_ids(index)
-            object_ids = ",".join([str(id_) for id_ in object_ids])
-            relationship_ids.add(rel_ids_by_object_ids[object_ids])
-        db_map_typed_data = {self.db_map: {"relationship": relationship_ids}}
+            db_map, object_ids = self.source_model.db_map_object_ids(index)
+            object_id_list = ",".join([str(id_) for id_ in object_ids])
+            id_ = db_map_relationship_lookup.get(db_map, {}).get(object_id_list)
+            if id_:
+                db_map_typed_data.setdefault(db_map, {}).setdefault("relationship", set()).add(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_parameters(self):
-        ids = {self.source_model._header_id(index) for index in self._selected_parameter_indexes}
-        db_map_typed_data = {self.db_map: {"parameter_definition": ids}}
+        db_map_typed_data = {}
+        for index in self._selected_parameter_indexes:
+            db_map, id_ = self.source_model._header_id(index)
+            db_map_typed_data.setdefault(db_map, {}).setdefault("parameter_definition", set()).add(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     def open_in_editor(self):
@@ -464,7 +473,7 @@ class PivotTableView(CopyPasteTableView):
             object_name = self.source_model.header_name(index)
             self.remove_objects_action.setText("Remove object: {}".format(object_name))
             if self.remove_relationships_action.isEnabled():
-                object_names, _, _ = self.source_model.object_parameter_and_alternative_names(index)
+                object_names = self.source_model.object_names(index)
                 relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
                 self.remove_relationships_action.setText("Remove relationship: {}".format(relationship_name))
         if len(self._selected_parameter_indexes) == 1:

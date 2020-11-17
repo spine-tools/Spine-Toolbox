@@ -47,7 +47,6 @@ class TabularViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # current state of ui
-        self.pivot_db_map = self.first_db_map
         self.current = None  # Current QModelIndex selected in one of the entity tree views
         self.current_class_type = None
         self.current_class_id = None
@@ -56,9 +55,7 @@ class TabularViewMixin:
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.pivot_db_action_group = QActionGroup(self)
         self.input_type_action_group = QActionGroup(self)
-        self.populate_pivot_db_action_group()
         self.populate_input_type_action_group()
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = None
@@ -67,16 +64,6 @@ class TabularViewMixin:
         self.ui.pivot_table.connect_spine_db_editor(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
-
-    def populate_pivot_db_action_group(self):
-        menu = self._make_db_menu()
-        if menu is None:
-            return
-        self.ui.menuPivot_table.addMenu(menu)
-        actions = menu.actions()
-        for action in actions:
-            self.pivot_db_action_group.addAction(action)
-        actions[0].setChecked(True)
 
     def populate_input_type_action_group(self):
         menu = QMenu("Input type", self)
@@ -89,11 +76,6 @@ class TabularViewMixin:
             action.setCheckable(True)
             menu.addAction(action)
         actions[self.current_input_type].setChecked(True)
-
-    @Slot("QAction")
-    def _update_pivot_db_map(self, action):
-        self.pivot_db_map = self.db_maps_by_codename[action.text()]
-        self.reload_pivot_table()
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -109,7 +91,6 @@ class TabularViewMixin:
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
-        self.pivot_db_action_group.triggered.connect(self._update_pivot_db_map)
         self.input_type_action_group.triggered.connect(self.do_reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
@@ -389,7 +370,9 @@ class TabularViewMixin:
             return self.db_mngr.get_value_indexes(db_map, "parameter_value", id_)
 
         data = self.load_parameter_value_data()
-        return {key[:-3] + (index,) + key[-3:]: value for key, value in data.items() for index in _indexes(value)}
+        return {
+            key[:-3] + ((None, index),) + key[-3:]: value for key, value in data.items() for index in _indexes(value)
+        }
 
     def get_pivot_preferences(self):
         """Returns saved pivot preferences.
@@ -510,7 +493,6 @@ class TabularViewMixin:
         Returns:
             TabularViewFilterMenu
         """
-        _get_field = lambda *args: self.db_mngr.get_field(self.pivot_db_map, *args)
         if identifier not in self.filter_menus:
             pivot_top_left_header = self.pivot_table_model.top_left_headers[identifier]
             data_to_value = pivot_top_left_header.header_data
@@ -705,7 +687,6 @@ class TabularViewMixin:
     def receive_db_map_data_updated(self, db_map_data, get_class_id):
         if not self.pivot_table_model:
             return
-        items = db_map_data.get(self.pivot_db_map, set())
         for db_map, items in db_map_data.items():
             for item in items:
                 if get_class_id(item) == self.current_class_id.get(db_map):
@@ -713,13 +694,6 @@ class TabularViewMixin:
                     self.refresh_table_view(self.ui.frozen_table)
                     self.make_pivot_headers()
                     return
-
-    def receive_data_updated(self, db_map_data):
-        if not self.pivot_table_model:
-            return
-        self.refresh_table_view(self.ui.pivot_table)
-        self.refresh_table_view(self.ui.frozen_table)
-        self.make_pivot_headers()
 
     def receive_alternatives_added_or_removed(self, db_map_data, action):
         if self.current_input_type not in (self._PARAMETER_VALUE, self._INDEX_EXPANSION):
@@ -736,7 +710,6 @@ class TabularViewMixin:
     def receive_classes_removed(self, db_map_data):
         if not self.pivot_table_model:
             return
-        items = db_map_data.get(self.pivot_db_map, set())
         for db_map, items in db_map_data.items():
             for item in items:
                 if item["id"] == self.current_class_id.get(db_map):
@@ -773,7 +746,11 @@ class TabularViewMixin:
     def receive_alternatives_updated(self, db_map_data):
         """Reacts to object classes updated event."""
         super().receive_alternatives_updated(db_map_data)
-        self.receive_data_updated(db_map_data)
+        if not self.pivot_table_model:
+            return
+        self.refresh_table_view(self.ui.pivot_table)
+        self.refresh_table_view(self.ui.frozen_table)
+        self.make_pivot_headers()
 
     def receive_object_classes_updated(self, db_map_data):
         """Reacts to object classes updated event."""

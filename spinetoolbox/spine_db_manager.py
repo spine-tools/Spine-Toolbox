@@ -1480,7 +1480,7 @@ class SpineDBManager(QObject):
                     value = next(iter(indexed_values.values()))
                 item = {"id": id_, "value": value}
                 items.append(item)
-            self.undo_stack[db_map].push(UpdateCheckedParameterValuesCommand(self, db_map, items))
+            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, items, "parameter_value"))
 
     def update_parameter_value_lists(self, db_map_data):
         """Updates parameter_value lists in db.

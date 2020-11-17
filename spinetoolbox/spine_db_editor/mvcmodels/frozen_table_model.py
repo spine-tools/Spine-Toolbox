@@ -30,7 +30,6 @@ class FrozenTableModel(QAbstractItemModel):
         super().__init__()
         self._parent = parent
         self.db_mngr = parent.db_mngr
-        self.db_map = parent.pivot_db_map
         if headers is None:
             headers = list()
         if data is None:
@@ -88,8 +87,9 @@ class FrozenTableModel(QAbstractItemModel):
                 item = self.db_mngr.get_item(db_map, "alternative", id_)
                 name = item.get("name")
             elif index_id == "index":
+                _, index = header_id
                 item = {}
-                name = str(header_id)
+                name = str(index)
             elif index_id == "database":
                 item = {}
                 name = header_id.codename
