@@ -401,7 +401,7 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(shortcut)
         self.actionSettings.setText(QCoreApplication.translate("MainWindow", u"Settings...", None))
 #if QT_CONFIG(shortcut)
-        self.actionSettings.setShortcut(QCoreApplication.translate("MainWindow", u"F2", None))
+        self.actionSettings.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+,", None))
 #endif // QT_CONFIG(shortcut)
         self.actionItem_Toolbar.setText(QCoreApplication.translate("MainWindow", u"Item Toolbar", None))
         self.actionAdd_Item_Toolbar.setText(QCoreApplication.translate("MainWindow", u"Add Item Toolbar", None))

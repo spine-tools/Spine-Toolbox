@@ -1,13 +1,14 @@
 {
     "name": "Python Tool Specification",
-    "description": "Python Tool Specification for unit tests.",
     "tooltype": "python",
-    "execute_in_work": true,
     "includes": [
         "script.py"
     ],
+    "description": "Python Tool Specification for unit tests.",
     "inputfiles": [],
     "inputfiles_opt": [],
     "outputfiles": [],
-    "cmdline_args": ""
+    "cmdline_args": [],
+    "execute_in_work": true,
+    "includes_main_path": "C:/Users/dsdennis/spine/toolbox/tests/test_resources"
 }
