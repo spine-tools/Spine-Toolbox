@@ -636,8 +636,11 @@ class SpineDBEditorBase(QMainWindow):
     def show_user_guide(self, checked=False):
         """Opens Spine Toolbox documentation Spine db editor page in browser."""
         doc_url = f"{ONLINE_DOCUMENTATION_URL}/spine_db_editor/index.html"
+        online_docs = "https://spine-toolbox.readthedocs.io/en/release-0.5/spine_db_editor/index.html"
         if not open_url(doc_url):
-            self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
+            self.msg_warning.emit("Unable to find local Spine Database Editor guide. Opening online docs...")
+            if not open_url(online_docs):
+                self.msg_warning.emit("Unable to open readthedocs.org. Please check Internet connection.")
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
