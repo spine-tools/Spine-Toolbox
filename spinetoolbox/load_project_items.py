@@ -35,7 +35,8 @@ def load_project_items(toolbox):
     factories = dict()
     item_root = pathlib.Path(__file__).parent / "project_items"
     for child in item_root.iterdir():
-        if child.is_dir() and child.joinpath("__init__.py").exists():
+        if (child.is_dir() and child.joinpath("__init__.py").exists()) or \
+                (child.is_dir() and child.joinpath("__init__.pyc").exists()):
             spec = importlib.util.find_spec(f"spinetoolbox.project_items.{child.stem}")
             m = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(m)
@@ -58,7 +59,8 @@ def load_item_specification_factories():
     factories = dict()
     item_root = pathlib.Path(__file__).parent / "project_items"
     for child in item_root.iterdir():
-        if child.is_dir() and child.joinpath("specification_factory.py").exists():
+        if (child.is_dir() and child.joinpath("specification_factory.py").exists()) or \
+                (child.is_dir() and child.joinpath("specification_factory.pyc").exists()):
             spec = importlib.util.find_spec(f"spinetoolbox.project_items.{child.stem}.specification_factory")
             m = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(m)
@@ -78,7 +80,8 @@ def load_executable_items():
     classes = dict()
     item_root = pathlib.Path(__file__).parent / "project_items"
     for child in item_root.iterdir():
-        if child.is_dir() and child.joinpath("executable_item.py").exists():
+        if (child.is_dir() and child.joinpath("executable_item.py").exists()) or \
+                (child.is_dir() and child.joinpath("executable_item.pyc").exists()):
             spec = importlib.util.find_spec(f"spinetoolbox.project_items.{child.stem}.executable_item")
             m = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(m)

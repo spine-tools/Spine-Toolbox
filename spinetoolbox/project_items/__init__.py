@@ -15,3 +15,13 @@ Standard project item plugins.
 :author: A.Soininen (VTT)
 :date:   27.9.2019
 """
+
+from .combiner import *
+from .data_connection import *
+from .data_store import *
+from .exporter import *
+from .gimlet import *
+from .importer import *
+from .shared import *
+from .tool import *
+from .view import *

@@ -50,29 +50,18 @@ def main(argv):
     tk86t_dll = os.path.join(python_dir, "DLLs", "tk86t.dll")
     # Path to built documentation (No need for sources)
     doc_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build"))
-    # Paths to files that should be included (Changelog, readme, licence files)
+    # Paths to files that should be included as is (changelog, readme, licence files, alembic version files)
     changelog_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "CHANGELOG.md"))
     readme_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "README.md"))
     copying_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING"))
     copying_lesser_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING.LESSER"))
     alembic_version_files = alembic_files(python_dir)
     # Most dependencies are automatically detected but some need to be manually included.
-    # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
-    # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
     build_exe_options = {
         "packages": ["packaging", "pkg_resources", "spine_engine"],
-        "excludes": ["scipy.spatial.cKDTree"],
+        "excludes": [],
         "includes": [
             "atexit",
-            "asyncio.base_futures",
-            "asyncio.base_subprocess",
-            "asyncio.base_tasks",
-            "asyncio.compat",
-            "asyncio.constants",
-            "asyncio.proactor_events",
-            "asyncio.selector_events",
-            "asyncio.windows_utils",
-            "idna.idnadata",
             "pygments.lexers.markup",
             "pygments.lexers.python",
             "pygments.lexers.shell",
@@ -81,22 +70,16 @@ def main(argv):
             "qtconsole.client",
             "sqlalchemy.sql.default_comparator",
             "sqlalchemy.ext.baked",
-            "numpy.core._methods",
-            "matplotlib.backends.backend_tkagg",
-            "scipy._distributor_init",
-            "scipy.sparse.csgraph._validation",
-            "scipy.spatial.ckdtree",
-            "pymysql",
-            "tabulator.loaders.local",
-            "tabulator.parsers.csv",
             "ijson.compat",
-            "ijson.utils",
             "ijson.backends.__init__",
             "ijson.backends.python",
             "ijson.backends.yajl",
             "ijson.backends.yajl2",
             "ijson.backends.yajl2_c",
-            "ijson.backends.yajl2_cffi"
+            "ijson.backends.yajl2_cffi",
+            "spinetoolbox.project_item_specification_factory",
+            "spinetoolbox.project_items",
+            "spinetoolbox.project_items.tool.specification_factory",
         ],
         "include_files": [
             (doc_path, "docs/"),
@@ -108,12 +91,11 @@ def main(argv):
             copying_lesser_file,
         ]
         + alembic_version_files,
-        "include_msvcr": True,
-        "build_exe": "./build/spinetoolbox/"
+        "include_msvcr": True
     }
     # Windows specific options
     if os.name == "nt":  # Windows specific options
-        base = "Win32GUI"  # set this to "Win32GUI" to not show console, "Console" shows console
+        base = "Console"  # set this to "Win32GUI" to not show console, "Console" shows console
         # Set Windows .msi installer default install path to C:\SpineToolbox-version
         systemdrive = os.environ['SYSTEMDRIVE']
         # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
@@ -140,6 +122,8 @@ def main(argv):
 def alembic_files(python_dir):
     """Returns a list of tuples of files in python/Lib/site-packages/spinedb_api/alembic/versions.
     First item in tuple is the source file. Second item is the relative destination path to the install directory.
+    We are including these .py files into 'include_files' list because adding them to the 'includes' list
+    would require us to give the whole explicit file name.
     """
     dest_dir = os.path.join("lib", "spinedb_api", "alembic", "versions")
     p = os.path.join(python_dir, "Lib", "site-packages", "spinedb_api", "alembic", "versions")
