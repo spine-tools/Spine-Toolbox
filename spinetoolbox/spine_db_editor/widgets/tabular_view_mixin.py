@@ -381,12 +381,15 @@ class TabularViewMixin:
         Returns:
             dict: Key is a tuple object_id, ..., index, while value is None.
         """
+
+        def _indexes(value):
+            if value is None:
+                return []
+            db_map, id_ = value
+            return self.db_mngr.get_value_indexes(db_map, "parameter_value", id_)
+
         data = self.load_parameter_value_data()
-        return {
-            key[:-3] + (index,) + key[-3:]: (db_map, id_)
-            for key, (db_map, id_) in data.items()
-            for index in self.db_mngr.get_value_indexes(db_map, "parameter_value", id_)
-        }
+        return {key[:-3] + (index,) + key[-3:]: value for key, value in data.items() for index in _indexes(value)}
 
     def get_pivot_preferences(self):
         """Returns saved pivot preferences.

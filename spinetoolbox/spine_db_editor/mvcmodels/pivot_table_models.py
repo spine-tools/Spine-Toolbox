@@ -731,15 +731,16 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         top_left_headers += [TopLeftDatabaseHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
-            pivot = self._default_pivot()
+            pivot = self._default_pivot(data)
         super().reset_model(data, list(self.top_left_headers), *pivot)
 
-    def _default_pivot(self):
-        names = list(self.top_left_headers)
-        rows = names[:-1]
-        columns = [names[-1]]
-        frozen = []
-        frozen_value = ()
+    def _default_pivot(self, data):
+        header_names = list(self.top_left_headers)
+        rows = header_names[:-3]
+        columns = [header_names[-3]]
+        frozen = header_names[-2:]
+        key = next(iter(data), [None, None])
+        frozen_value = key[-2:]
         return rows, columns, frozen, frozen_value
 
     def _data(self, index, role):
@@ -969,7 +970,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         ]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
-            pivot = self._default_pivot()
+            pivot = self._default_pivot(data)
         super().reset_model(data, list(self.top_left_headers), *pivot)
         pivot_rows = pivot[0]
         try:
@@ -1035,14 +1036,16 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         }
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
-            pivot = self._default_pivot()
+            pivot = self._default_pivot(data)
         super().reset_model(data, list(self.top_left_headers), *pivot)
 
-    def _default_pivot(self):
-        rows = list(self.top_left_headers)
+    def _default_pivot(self, data):
+        header_names = list(self.top_left_headers)
+        rows = header_names[:-1]
         columns = []
-        frozen = []
-        frozen_value = ()
+        frozen = [header_names[-1]]
+        key = next(iter(data), [None])
+        frozen_value = [key[-1]]
         return rows, columns, frozen, frozen_value
 
     def _data(self, index, role):
