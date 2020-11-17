@@ -35,6 +35,8 @@ from spinetoolbox.widgets.plot_widget import PlotWidget
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.pivot_table_models import ParameterValuePivotTableModel
 
+db = Mock()
+
 
 def _make_pivot_proxy_model():
     """Returns a prefilled PivotTableModel."""
@@ -45,8 +47,8 @@ def _make_pivot_proxy_model():
     db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
     db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
     with patch.object(SpineDBEditor, "restore_ui"), patch.object(SpineDBEditor, "show"):
-        data_store_widget = SpineDBEditor(db_mngr, mock_db_map)
-    data_store_widget.create_header_widget = lambda *args, **kwargs: None
+        spine_db_editor = SpineDBEditor(db_mngr, mock_db_map)
+    spine_db_editor.create_header_widget = lambda *args, **kwargs: None
     simple_map = Map(["a", "b"], [-1.1, -2.2])
     nested_map = Map(
         ["a", "b"],
@@ -74,7 +76,7 @@ def _make_pivot_proxy_model():
             ),
         ],
     )
-    data_store_widget.load_parameter_value_data = lambda: {
+    data = {
         ('1', 'int_col', 'base_alternative'): '-3',
         ('2', 'int_col', 'base_alternative'): '-1',
         ('3', 'int_col', 'base_alternative'): '2',
@@ -100,13 +102,15 @@ def _make_pivot_proxy_model():
         ("2", "map_col", "base_alternative"): to_database(nested_map),
         ("3", "map_col", "base_alternative"): to_database(nested_map_with_time_series),
     }
-    data_store_widget.pivot_table_model = model = ParameterValuePivotTableModel(data_store_widget)
-    object_class_names = {"object": 1}
-    model.call_reset_model(object_class_names, pivot=(['object'], ['parameter', 'alternative'], [], ()))
+    data = {tuple((db, k) for k in key) + (db,): (db, value) for key, value in data.items()}
+    spine_db_editor.load_parameter_value_data = lambda: data
+    spine_db_editor.pivot_table_model = model = ParameterValuePivotTableModel(spine_db_editor)
+    object_class_names = {"object": {db: 1}}
+    model.call_reset_model(object_class_names, pivot=(['object'], ['parameter', 'alternative'], ['database'], (db,)))
     model.start_fetching()
-    data_store_widget.pivot_table_model = model
-    data_store_widget.pivot_table_proxy.setSourceModel(model)
-    return data_store_widget.pivot_table_proxy
+    spine_db_editor.pivot_table_model = model
+    spine_db_editor.pivot_table_proxy.setSourceModel(model)
+    return spine_db_editor.pivot_table_proxy
 
 
 class _MockParameterModel(QAbstractTableModel):
@@ -185,7 +189,7 @@ class TestPlotting(unittest.TestCase):
 
     def test_plot_pivot_column_with_row_filtering(self):
         model = _make_pivot_proxy_model()
-        model.set_filter("object", {"1", "3"})
+        model.set_filter("object", {(db, "1"), (db, "3")})
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 2, support)
         self.assertEqual(plot_widget.plot_type, float)
@@ -195,7 +199,7 @@ class TestPlotting(unittest.TestCase):
 
     def test_plot_pivot_column_with_column_filtering(self):
         model = _make_pivot_proxy_model()
-        model.set_filter("parameter", {"int_col"})
+        model.set_filter("parameter", {(db, "int_col")})
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 1, support)
         self.assertEqual(plot_widget.plot_type, float)
@@ -231,7 +235,7 @@ class TestPlotting(unittest.TestCase):
     def test_plot_pivot_column_when_x_column_hidden(self):
         model = _make_pivot_proxy_model()
         model.sourceModel().set_plot_x_column(1, True)
-        model.set_filter("parameter", {"int_col"})
+        model.set_filter("parameter", {(db, "int_col")})
         support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 1, support)
         self.assertEqual(plot_widget.plot_type, float)

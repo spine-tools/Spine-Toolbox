@@ -49,7 +49,7 @@ class TabularViewMixin:
         # current state of ui
         self.current = None  # Current QModelIndex selected in one of the entity tree views
         self.current_class_type = None
-        self.current_class_id = None
+        self.current_class_id = {}  # Mapping from db_map to class_id
         self.current_class_name = None
         self.current_input_type = self._PARAMETER_VALUE
         self.filter_menus = {}
@@ -698,7 +698,7 @@ class TabularViewMixin:
     def receive_alternatives_added_or_removed(self, db_map_data, action):
         if self.current_input_type not in (self._PARAMETER_VALUE, self._INDEX_EXPANSION):
             return
-        if self.current_class_id is None:
+        if not self.current_class_id:
             return
         if self.current_class_type is None:
             return
