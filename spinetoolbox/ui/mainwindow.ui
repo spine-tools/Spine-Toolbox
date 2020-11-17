@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -624,7 +624,7 @@
     <string>Settings...</string>
    </property>
    <property name="shortcut">
-    <string>F1</string>
+    <string>F2</string>
    </property>
   </action>
   <action name="actionItem_Toolbar">
@@ -687,7 +687,7 @@
     <string>User guide</string>
    </property>
    <property name="shortcut">
-    <string>F2</string>
+    <string>F1</string>
    </property>
   </action>
   <action name="actionRestore_Dock_Widgets">
