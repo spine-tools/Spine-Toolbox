@@ -490,7 +490,8 @@ class TopLeftHeaderItem:
         return self._model.db_map
 
     def _get_header_data_from_db(self, item_type, header_id, field_name, role):
-        item = self.db_mngr.get_item(self.db_map, item_type, header_id)
+        db_map, id_ = header_id
+        item = self.db_mngr.get_item(db_map, item_type, id_)
         if role in (Qt.DisplayRole, Qt.EditRole):
             return item.get(field_name)
         if role == Qt.ToolTipRole:
@@ -588,7 +589,7 @@ class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
 
 
 class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
-    """A top left header for parameter index."""
+    """A top left header for alternative."""
 
     @property
     def header_type(self):
@@ -616,6 +617,21 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
             data.append(item)
         self.db_mngr.add_alternatives({self.db_map: data})
         return True
+
+
+class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
+    """A top left header for database."""
+
+    @property
+    def header_type(self):
+        return "database"
+
+    @property
+    def name(self):
+        return "database"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return header_id.codename
 
 
 class ParameterValuePivotTableModel(PivotTableModelBase):
@@ -708,6 +724,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         top_left_headers += [TopLeftParameterHeaderItem(self)]
         top_left_headers += [TopLeftAlternativeHeaderItem(self)]
+        top_left_headers += [TopLeftDatabaseHeaderItem(self)]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
             pivot = self._default_pivot()
@@ -728,7 +745,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             return None
         if data[0][0] is None:
             return None
-        return self.db_mngr.get_value(self.db_map, "parameter_value", data[0][0], role)
+        db_map, id_ = data[0][0]
+        return self.db_mngr.get_value(db_map, "parameter_value", id_, role)
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
         return self._batch_set_parameter_value_data(row_map, column_map, data, values)
@@ -894,6 +912,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             self._index_top_left_header,
             TopLeftParameterHeaderItem(self),
             TopLeftAlternativeHeaderItem(self),
+            TopLeftDatabaseHeaderItem(self),
         ]
         self.top_left_headers = {h.name: h for h in top_left_headers}
         if pivot is None:
