@@ -393,25 +393,35 @@ class TabularViewMixin:
         """Updates current class (type and id) and reloads pivot table for it."""
         if current is not None:
             self.current = current
-        self.clear_pivot_table()
-        if self.current is None:
+        item = self._get_current_class_item()
+        if item is None:
+            self.current_class_id = {}
+            self.clear_pivot_table()
             return
-        if self._is_class_index(self.current):
-            item = self.current.model().item_from_index(self.current)
-            class_id = item.db_map_ids
-            if self.current_class_id == class_id:
-                return
-            self.current_class_type = item.item_type
-            self.current_class_id = class_id
-            self.current_class_name = item.display_data
-            self.do_reload_pivot_table()
+        class_id = item.db_map_ids
+        if self.current_class_id == class_id:
+            return
+        self.clear_pivot_table()
+        self.current_class_type = item.item_type
+        self.current_class_id = class_id
+        self.current_class_name = item.display_data
+        self.do_reload_pivot_table()
+
+    def _get_current_class_item(self):
+        if self.current is None:
+            return None
+        item = self.current.model().item_from_index(self.current)
+        while item.item_type != "root":
+            if item.item_type in ("object_class", "relationship_class"):
+                return item
+            item = item.parent_item
 
     @busy_effect
     @Slot("QAction")
     def do_reload_pivot_table(self, action=None):
         """Reloads pivot table.
         """
-        if self.current_class_id is None:
+        if not self.current_class_id:
             return
         qApp.processEvents()  # pylint: disable=undefined-variable
         if action is None:
