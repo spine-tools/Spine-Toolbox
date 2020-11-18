@@ -69,6 +69,10 @@ class PivotModel:
 
     def add_to_model(self, data):
         self._data.update(data)
+        if not any(self.frozen_value):
+            key = next(iter(data), [None, None])
+            frozen_value = key[-2:]
+            self.frozen_value = frozen_value
         self.index_values = dict(zip(self.index_ids, zip(*self._data.keys())))
         old_row_count = len(self._row_data_header)
         old_column_count = len(self._column_data_header)
