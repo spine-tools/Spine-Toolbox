@@ -104,6 +104,14 @@ class AgedUndoCommand(QUndoCommand):
             parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
         super().__init__(parent=parent)
+        self._age = None
+
+    def redo(self):
+        super().redo()
+        self._age = time.time()
+
+    def undo(self):
+        super().undo()
         self._age = time.time()
 
     @property

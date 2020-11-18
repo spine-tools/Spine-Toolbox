@@ -167,7 +167,7 @@ class SpineDBEditorBase(QMainWindow):
         undo_ages = {db_map: age for db_map, age in undo_ages.items() if age is not None}
         redo_ages = {db_map: age for db_map, age in redo_ages.items() if age is not None}
         new_undo_action = self.db_mngr.undo_action[max(undo_ages, key=undo_ages.get, default=self.first_db_map)]
-        new_redo_action = self.db_mngr.redo_action[min(redo_ages, key=redo_ages.get, default=self.first_db_map)]
+        new_redo_action = self.db_mngr.redo_action[max(redo_ages, key=redo_ages.get, default=self.first_db_map)]
         if new_undo_action != self.undo_action:
             self.ui.menuEdit.insertAction(self.undo_action, new_undo_action)
             self.ui.menuEdit.removeAction(self.undo_action)
