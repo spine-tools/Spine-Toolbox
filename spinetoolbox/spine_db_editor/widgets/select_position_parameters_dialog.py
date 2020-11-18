@@ -44,7 +44,7 @@ class SelectPositionParametersDialog(QDialog):
         self._table_widget.horizontalHeader().setStretchLastSection(True)
         self._table_widget.verticalHeader().hide()
         self._table_widget.verticalHeader().setDefaultSectionSize(parent.default_row_height)
-        self._delegate = ParameterNameDelegate(self, parent.db_mngr, parent.graph_db_map)
+        self._delegate = ParameterNameDelegate(self, parent.db_mngr, *parent.db_maps)
         self._table_widget.setItemDelegate(self._delegate)
         layout.addWidget(self._table_widget)
         layout.addWidget(button_box)
@@ -65,10 +65,10 @@ class SelectPositionParametersDialog(QDialog):
 class ParameterNameDelegate(QStyledItemDelegate):
     """A delegate for the database name."""
 
-    def __init__(self, parent, db_mngr, db_map):
+    def __init__(self, parent, db_mngr, *db_maps):
         super().__init__(parent)
         self.db_mngr = db_mngr
-        self.db_map = db_map
+        self.db_maps = db_maps
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -93,7 +93,11 @@ class ParameterNameDelegate(QStyledItemDelegate):
         editor = SearchBarEditor(self.parent(), parent)
         editor.set_data(
             index.data(Qt.DisplayRole),
-            [x["parameter_name"] for x in self.db_mngr.get_items(self.db_map, "parameter_definition")],
+            {
+                x["parameter_name"]
+                for db_map in self.db_maps
+                for x in self.db_mngr.get_items(db_map, "parameter_definition")
+            },
         )
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
