@@ -143,7 +143,7 @@ class MultiDBTreeItem(TreeItem):
         id_ = self.take_db_map(db_map)
         if id_ is None:
             return None
-        other = type(self)({db_map: id_})
+        other = type(self)(model=self.model, db_map_id={db_map: id_})
         other_children = []
         for child in self.children:
             other_child = child.deep_take_db_map(db_map)
@@ -294,6 +294,7 @@ class MultiDBTreeItem(TreeItem):
                 continue
             if not child.is_valid():
                 self.remove_children(row, 1)
+                display_ids.pop(row)
                 continue
             while not child.display_id:
                 # Split child until it recovers a valid display id
@@ -304,6 +305,7 @@ class MultiDBTreeItem(TreeItem):
                 # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1)
+                display_ids.pop(row)
         self._deep_refresh_children()
         self._merge_children(new_children)
 
