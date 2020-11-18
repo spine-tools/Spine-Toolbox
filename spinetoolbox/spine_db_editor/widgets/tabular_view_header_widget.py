@@ -57,11 +57,11 @@ class TabularViewHeaderWidget(QFrame):
         layout.setContentsMargins(self._H_MARGIN, 0, self._H_MARGIN, 0)
         if area == "rows":
             h_alignment = Qt.AlignLeft
-            self.layout().insertSpacing(1, self._SPACING)
+            layout.insertSpacing(1, self._SPACING)
             button.setArrowType(Qt.DownArrow)
         elif area == "columns":
             h_alignment = Qt.AlignRight
-            self.layout().insertSpacing(0, self._SPACING)
+            layout.insertSpacing(0, self._SPACING)
             button.setArrowType(Qt.RightArrow)
         elif area == "frozen":
             h_alignment = Qt.AlignHCenter
@@ -78,6 +78,8 @@ class TabularViewHeaderWidget(QFrame):
             "<p>Drag-and-drop it onto another header to pivot the table, "
             "or onto the Frozen table to freeze this dimension.</p>"
         )
+        self.adjustSize()
+        self.setMinimumWidth(self.size().width())
 
     @property
     def identifier(self):

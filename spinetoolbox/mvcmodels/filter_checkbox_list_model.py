@@ -22,6 +22,11 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
 class SimpleFilterCheckboxListModel(QAbstractListModel):
+    _SELECT_ALL_STR = '(Select all)'
+    _SELECT_ALL_FILTERED_STR = '(Select all filtered)'
+    _EMPTY_STR = '(Empty)'
+    _ADD_TO_SELECTION_STR = 'Add current selection to filter'
+
     def __init__(self, parent, show_empty=True):
         """Init class.
 
@@ -41,20 +46,17 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._all_selected = True
         self._empty_selected = True
         self._add_to_selection = False
-        self._select_all_str = '(Select All)'
-        self._empty_str = '(Empty)'
-        self._add_to_selection_str = 'Add current selection to filter'
-        self._action_rows = [self._select_all_str]
+        self._action_rows = [self._SELECT_ALL_STR]
         if show_empty:
-            self._action_rows.append(self._empty_str)
+            self._action_rows.append(self._EMPTY_STR)
 
     @property
     def _show_empty(self):
-        return self._empty_str in self._action_rows
+        return self._EMPTY_STR in self._action_rows
 
     @property
     def _show_add_to_selection(self):
-        return self._add_to_selection_str in self._action_rows
+        return self._ADD_TO_SELECTION_STR in self._action_rows
 
     def reset_selection(self):
         self._selected = self._data_set.copy()
@@ -175,7 +177,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
 
     def set_filter(self, filter_expression):
         if filter_expression and (isinstance(filter_expression, str) and not filter_expression.isspace()):
-            self._select_all_str = '(Select all filtered)'
+            self._action_rows[0] = self._SELECT_ALL_STR
             self._filter_expression = filter_expression
             self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
             self._selected_filtered = set(self._data[i] for i in self._filter_index)
@@ -183,7 +185,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self.beginResetModel()
             self._is_filtered = True
             if not self._show_add_to_selection:
-                self._action_rows.append(self._add_to_selection_str)
+                self._action_rows.append(self._ADD_TO_SELECTION_STR)
             self._all_selected = True
             self.endResetModel()
         else:
@@ -237,10 +239,10 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         if not self._is_filtered:
             return
         self.beginResetModel()
-        self._select_all_str = '(Select All)'
+        self._action_rows[0] = self._SELECT_ALL_STR
         self._filter_expression = ""
         if self._show_add_to_selection:
-            self._action_rows.remove(self._add_to_selection_str)
+            self._action_rows.remove(self._ADD_TO_SELECTION_STR)
         self._filter_index = self._base_filter_index
         self._is_filtered = self._is_base_filtered
         self._selected_filtered = set()
@@ -353,7 +355,7 @@ class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
 
     def data(self, index, role=Qt.DisplayRole):
         data = super().data(index, role=role)
-        if role == Qt.DisplayRole and data not in (self._select_all_str, self._empty_str, self._add_to_selection_str):
+        if role == Qt.DisplayRole and data not in self._action_rows:
             return self.data_to_value(data)
         return data
 

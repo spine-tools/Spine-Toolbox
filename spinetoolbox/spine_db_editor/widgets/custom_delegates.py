@@ -73,7 +73,9 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
     def createEditor(self, parent, option, index):
         if self._is_relationship_index(index):
             return super().createEditor(parent, option, index)
-        return CustomLineEditor(parent)
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data(Qt.EditRole))
+        return editor
 
 
 class ParameterPivotTableDelegate(QStyledItemDelegate):
@@ -109,7 +111,9 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
                 return editor
             self.parameter_value_editor_requested.emit(index.model().mapToSource(index))
             return None
-        return CustomLineEditor(parent)
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data(Qt.EditRole))
+        return editor
 
 
 class ParameterValueElementDelegate(QStyledItemDelegate):

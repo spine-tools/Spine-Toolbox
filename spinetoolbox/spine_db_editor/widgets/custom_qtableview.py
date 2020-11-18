@@ -17,7 +17,7 @@ Custom QTableView classes that support copy-paste and the like.
 """
 
 from PySide2.QtCore import Qt, Signal, Slot
-from PySide2.QtWidgets import QAction, QTableView, QAbstractItemView, QMenu
+from PySide2.QtWidgets import QAction, QTableView, QMenu
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
 from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints, PivotTablePlottingHints
