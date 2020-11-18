@@ -50,6 +50,12 @@ class CustomQGraphicsView(QGraphicsView):
     def zoom_factor(self):
         return self.transform().m11()  # The [1, 1] element contains the x scaling factor
 
+    def reset_zoom(self):
+        """Resets zoom to the default factor."""
+        self.scene().center_items()
+        self._update_zoom_limits()
+        self._zoom(self._items_fitting_zoom)
+
     def keyPressEvent(self, event):
         """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
         Send event downstream to QGraphicsItems if pressed key is not handled here.
@@ -211,17 +217,6 @@ class CustomQGraphicsView(QGraphicsView):
         self.gentle_zoom(self._zoom_factor_base ** -self._angle)
         self._set_preferred_scene_rect()
 
-    def reset_zoom(self):
-        """Resets zoom to the default factor."""
-        self.scene().center_items()
-        self._update_zoom_limits()
-        self._zoom(self._items_fitting_zoom)
-        extent = ProjectItemIcon.ITEM_EXTENT
-        factor = extent / self.mapFromScene(QRectF(0, 0, extent, 0)).boundingRect().width()
-        if factor < 1:
-            self._zoom(factor)
-        self._set_preferred_scene_rect()
-
     def gentle_zoom(self, factor, zoom_focus=None):
         """
         Perform a zoom by a given factor.
@@ -302,6 +297,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def set_project_item_model(self, model):
         """Set project item model."""
         self._project_item_model = model
+
+    def reset_zoom(self):
+        super().reset_zoom()
+        extent = ProjectItemIcon.ITEM_EXTENT
+        factor = extent / self.mapFromScene(QRectF(0, 0, extent, 0)).boundingRect().width()
+        if factor < 1:
+            self._zoom(factor)
+        self._set_preferred_scene_rect()
 
     def remove_icon(self, icon):
         """Removes icon and all connected links from scene."""

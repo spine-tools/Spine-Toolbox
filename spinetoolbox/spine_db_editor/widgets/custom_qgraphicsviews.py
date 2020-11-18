@@ -169,7 +169,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.exec_(e.globalPos())
 
     def _compute_min_zoom(self):
-        return self.zoom_factor * self._items_fitting_zoom
+        return 0.5 * self.zoom_factor * self._items_fitting_zoom
 
     def _use_smooth_zoom(self):
         return self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false") == "true"
