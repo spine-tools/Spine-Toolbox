@@ -482,7 +482,10 @@ class TabularViewMixin:
             index = self.frozen_table_model.index(0, column)
             widget = self.create_header_widget(index.data(Qt.DisplayRole), "frozen", with_menu=False)
             self.ui.frozen_table.setIndexWidget(index, widget)
-            self.ui.frozen_table.horizontalHeader().resizeSection(column, widget.size().width())
+            column_width = self.ui.frozen_table.horizontalHeader().sectionSize(column)
+            header_width = widget.size().width()
+            width = max(column_width, header_width)
+            self.ui.frozen_table.horizontalHeader().resizeSection(column, width)
 
     def create_filter_menu(self, identifier):
         """Returns a filter menu for given given object_class identifier.
@@ -560,6 +563,7 @@ class TabularViewMixin:
             if frozen:
                 frozen_values = self.find_frozen_values(frozen)
                 self.frozen_table_model.reset_model(frozen_values, frozen)
+                self.ui.frozen_table.resizeColumnsToContents()
                 self.make_frozen_headers()
             else:
                 self.frozen_table_model.clear_model()
@@ -615,12 +619,13 @@ class TabularViewMixin:
         frozen_value = self.pivot_table_model.model.frozen_value
         frozen_values = self.find_frozen_values(frozen)
         self.frozen_table_model.reset_model(frozen_values, frozen)
+        self.ui.frozen_table.resizeColumnsToContents()
         self.make_frozen_headers()
         if frozen_value in frozen_values:
             # update selected row
             ind = frozen_values.index(frozen_value)
             self.ui.frozen_table.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
-            self.ui.frozen_table.selectRow(ind)
+            self.ui.frozen_table.selectRow(ind + 1)
             self.ui.frozen_table.selectionModel().blockSignals(False)
         else:
             # frozen value not found, remove selection
