@@ -581,46 +581,65 @@ class GraphViewMixin:
 
     @Slot(bool)
     def save_positions(self, checked=False):
-        parameter_names = (self._pos_x_parameter, self._pos_y_parameter)
-        if not all(parameter_names):
+        if not self._pos_x_parameter or not self._pos_y_parameter:
             msg = "You haven't selected the position parameters. Please go to Graph -> Select position parameters"
             self.msg.emit(msg)
             return
         obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
         rel_items = [item for item in self.selected_items if isinstance(item, RelationshipItem)]
-        db_map_data = dict()
-        data = db_map_data[self.graph_db_map] = dict()
-        data["object_parameters"] = [
-            (item.entity_class_name, parameter_name) for item in obj_items for parameter_name in parameter_names
-        ]
-        data["relationship_parameters"] = [
-            (item.entity_class_name, parameter_name) for item in rel_items for parameter_name in parameter_names
-        ]
-        data["object_parameter_values"] = [
-            (item.entity_class_name, item.entity_name, self._pos_x_parameter, item.pos().x()) for item in obj_items
-        ] + [(item.entity_class_name, item.entity_name, self._pos_y_parameter, item.pos().y()) for item in obj_items]
-        data["relationship_parameter_values"] = [
-            (item.entity_class_name, item.object_name_list.split(","), self._pos_x_parameter, item.pos().x())
-            for item in rel_items
-        ] + [
-            (item.entity_class_name, item.object_name_list.split(","), self._pos_y_parameter, item.pos().y())
-            for item in rel_items
-        ]
+        db_map_class_obj_items = {}
+        db_map_class_rel_items = {}
+        for item in obj_items:
+            db_map_class_obj_items.setdefault(item.db_map, {}).setdefault(item.entity_class_name, []).append(item)
+        for item in rel_items:
+            db_map_class_rel_items.setdefault(item.db_map, {}).setdefault(item.entity_class_name, []).append(item)
+        db_map_data = {}
+        for db_map, class_obj_items in db_map_class_obj_items.items():
+            data = db_map_data.setdefault(db_map, {})
+            for class_name, obj_items in class_obj_items.items():
+                data["object_parameters"] = [
+                    (class_name, self._pos_x_parameter),
+                    (class_name, self._pos_y_parameter),
+                ]
+                data["object_parameter_values"] = [
+                    (class_name, item.entity_name, self._pos_x_parameter, item.pos().x()) for item in obj_items
+                ] + [(class_name, item.entity_name, self._pos_y_parameter, item.pos().y()) for item in obj_items]
+        for db_map, class_rel_items in db_map_class_rel_items.items():
+            data = db_map_data.setdefault(db_map, {})
+            for class_name, rel_items in class_rel_items.items():
+                data["relationship_parameters"] = [
+                    (class_name, self._pos_x_parameter),
+                    (class_name, self._pos_y_parameter),
+                ]
+                data["relationship_parameter_values"] = [
+                    (class_name, item.object_name_list.split(","), self._pos_x_parameter, item.pos().x())
+                    for item in rel_items
+                ] + [
+                    (class_name, item.object_name_list.split(","), self._pos_y_parameter, item.pos().y())
+                    for item in rel_items
+                ]
         self.db_mngr.import_data(db_map_data)
 
     @Slot(bool)
     def clear_saved_positions(self, checked=False):
-        entity_ids = {x.entity_id for x in self.selected_items}
-        value_ids_to_remove = [
-            p["id"]
-            for parameter_name in (self._pos_x_parameter, self._pos_y_parameter)
-            for p in self.db_mngr.get_items_by_field(
-                self.graph_db_map, "parameter_value", "parameter_name", parameter_name
-            )
-            if p["entity_id"] in entity_ids
-        ]
-        if value_ids_to_remove:
-            self.db_mngr.remove_items({self.graph_db_map: {"parameter_value": value_ids_to_remove}})
+        if not self.selected_items:
+            return
+        db_map_ids = {}
+        for item in self.selected_items:
+            db_map_ids.setdefault(item.db_map, set()).add(item.id_)
+        db_map_typed_data = {}
+        for db_map, ids in db_map_ids.items():
+            db_map_typed_data[db_map] = {
+                "parameter_value": set(
+                    pv["id"]
+                    for parameter_name in (self._pos_x_parameter, self._pos_y_parameter)
+                    for pv in self.db_mngr.get_items_by_field(
+                        db_map, "parameter_value", "parameter_name", parameter_name
+                    )
+                    if pv["entity_id"] in ids
+                )
+            }
+        self.db_mngr.remove_items(db_map_typed_data)
         self.build_graph()
 
     @Slot(bool)
@@ -697,28 +716,30 @@ class GraphViewMixin:
 
     def _populate_menu_add_parameter_heat_map(self):
         """Populates the menu 'Add parameter heat map' with parameters for currently shown items in the graph."""
-        return
-        entity_class_ids = {x.entity_class_id for x in self.scene.items() if isinstance(x, EntityItem)}
-        parameters = self.db_mngr.find_cascading_parameter_data(
-            {self.graph_db_map: entity_class_ids}, "parameter_definition"
-        )[self.graph_db_map]
-        parameters_by_class_id = {}
-        for parameter in parameters:
-            parameters_by_class_id.setdefault(parameter["entity_class_id"], []).append(parameter)
-        value_ids = {
-            (val["parameter_id"], val["entity_id"]): val["id"]
-            for val in self.db_mngr.find_cascading_parameter_values_by_definition(
-                {self.graph_db_map: {x["id"] for x in parameters}}
-            )[self.graph_db_map]
-        }
+        db_map_class_ids = {}
+        for x in self.scene.items():
+            if isinstance(x, EntityItem):
+                db_map_class_ids.setdefault(x.db_map, set()).add(x.entity_class_id)
+        db_map_parameters = self.db_mngr.find_cascading_parameter_data(db_map_class_ids, "parameter_definition")
+        db_map_class_parameters = {}
+        parameter_value_ids = {}
+        for db_map, parameters in db_map_parameters.items():
+            for p in parameters:
+                db_map_class_parameters.setdefault((db_map, p["entity_class_id"]), []).append(p)
+            parameter_value_ids = {
+                (db_map, pv["parameter_id"], pv["entity_id"]): pv["id"]
+                for pv in self.db_mngr.find_cascading_parameter_values_by_definition(
+                    {db_map: {x["id"] for x in parameters}}
+                )[db_map]
+            }
         self._point_value_tuples_per_parameter_name.clear()
         for item in self.scene.items():
             if not isinstance(item, EntityItem):
                 continue
-            for parameter in parameters_by_class_id.get(item.entity_class_id, ()):
-                value_id = value_ids.get((parameter["id"], item.entity_id))
+            for parameter in db_map_class_parameters.get((item.db_map, item.entity_class_id), ()):
+                pv_id = parameter_value_ids.get((item.db_map, parameter["id"], item.id_))
                 try:
-                    value = float(self.db_mngr.get_value(self.graph_db_map, "parameter_value", value_id))
+                    value = float(self.db_mngr.get_value(item.db_map, "parameter_value", pv_id))
                     pos = item.pos()
                     self._point_value_tuples_per_parameter_name.setdefault(parameter["parameter_name"], []).append(
                         (pos.x(), -pos.y(), value)

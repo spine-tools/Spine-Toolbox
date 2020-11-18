@@ -54,7 +54,7 @@ def make_figure_graphics_item(scene, z=0, static=True):
     canvas = FigureCanvas(figure)
     if static:
         proxy_widget = scene.addWidget(canvas)
-        proxy_widget.setAcceptedMouseButtons(0)
+        proxy_widget.setAcceptedMouseButtons(Qt.NoButton)
     else:
         proxy_widget = scene.addWidget(canvas, Qt.Window)
     proxy_widget.setZValue(z)
