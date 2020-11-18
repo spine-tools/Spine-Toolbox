@@ -406,44 +406,40 @@ class SpineDBManager(QObject):
         if refreshed_db_maps:
             self.session_refreshed.emit(refreshed_db_maps)
 
-    def commit_session(self, *db_maps, rollback_if_no_msg=False, cookie=None):
+    def commit_session(self, *db_maps, cookie=None):
         """
         Commits the current session.
 
         Args:
             *db_maps: database maps to commit
-            rollback_if_no_msg (bool): if True, the commit will be rolled back if no commit message is provided
             cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
         """
         error_log = {}
         committed_db_maps = set()
-        rolled_db_maps = set()
-        for db_map in db_maps:
-            if self.undo_stack[db_map].isClean() and not db_map.has_pending_changes():
-                continue
-            commit_msg = self._get_commit_msg(db_map)
+        changed_db_maps = [
+            db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
+        ]
+        if not changed_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in changed_db_maps])
+        commit_msg = self._get_commit_msg(db_names)
+        if not commit_msg:
+            return
+        for db_map in changed_db_maps:
             try:
-                if commit_msg:
-                    db_map.commit_session(commit_msg)
-                    committed_db_maps.add(db_map)
-                    self.undo_stack[db_map].setClean()
-                elif rollback_if_no_msg:
-                    db_map.rollback_session()
-                    rolled_db_maps.add(db_map)
-                    self._cache.pop(db_map, None)
-                    self.undo_stack[db_map].setClean()
+                db_map.commit_session(commit_msg)
+                committed_db_maps.add(db_map)
+                self.undo_stack[db_map].setClean()
             except SpineDBAPIError as e:
                 error_log[db_map] = e.msg
         if any(error_log.values()):
             self.error_msg(error_log)
         if committed_db_maps:
             self.session_committed.emit(committed_db_maps, cookie)
-        if rolled_db_maps:
-            self.session_rolled_back.emit(rolled_db_maps)
 
     @staticmethod
-    def _get_commit_msg(db_map):
-        dialog = CommitDialog(qApp.activeWindow(), db_map.codename)  # pylint: disable=undefined-variable
+    def _get_commit_msg(db_names):
+        dialog = CommitDialog(qApp.activeWindow(), db_names)  # pylint: disable=undefined-variable
         answer = dialog.exec_()
         if answer == QDialog.Accepted:
             return dialog.commit_msg
