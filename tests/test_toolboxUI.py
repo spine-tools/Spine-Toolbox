@@ -577,9 +577,9 @@ class TestToolboxUI(unittest.TestCase):
             self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
-        ) as mock_update_recent_project:
+        ):
             self.toolbox.open_project(project_dir)
         # Tool spec model must be empty at this point
         self.assertEqual(0, self.toolbox.specification_model.rowCount())

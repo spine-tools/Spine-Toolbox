@@ -166,7 +166,7 @@ class TestFilterCheckboxListModel(unittest.TestCase):
         self.model = SimpleFilterCheckboxListModel(None, show_empty=False)
         self.model.set_list(self.data)
         self.assertEqual(self.model.rowCount(), len(self.data) + 1)
-        self.assertEqual(self.model.data(self.model.index(0, 0)), "(Select All)")
+        self.assertEqual(self.model.data(self.model.index(0, 0)), "(Select all)")
         self.assertEqual(self.model.data(self.model.index(0, 0), Qt.CheckStateRole), Qt.Checked)
         for index, expected in enumerate(self.data):
             model_index = self.model.index(index + 1, 0)
