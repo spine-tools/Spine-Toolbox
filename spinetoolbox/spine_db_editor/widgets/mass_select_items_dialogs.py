@@ -47,6 +47,10 @@ class MassSelectItemsDialog(QDialog):
         "alternative",
         "scenario",
         "scenario_alternative",
+        "feature",
+        "tool",
+        "tool_feature",
+        "tool_feature_method",
     )
     _COLUMN_COUNT = 2
 
