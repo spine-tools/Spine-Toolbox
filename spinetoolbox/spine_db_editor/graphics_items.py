@@ -72,12 +72,11 @@ class EntityItem(QGraphicsPixmapItem):
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): Preferred extent
-            entity_id (int): The entity id
+            entity_id (tuple): db_map, entity id
         """
         super().__init__()
         self._spine_db_editor = spine_db_editor
         self.db_mngr = spine_db_editor.db_mngr
-        self.db_map = spine_db_editor.graph_db_map
         self.entity_id = entity_id
         self.arc_items = list()
         self._extent = extent
@@ -97,6 +96,10 @@ class EntityItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.ArrowCursor)
+        self.setToolTip(self._make_tool_tip())
+
+    def _make_tool_tip(self):
+        raise NotImplementedError()
 
     @property
     def entity_type(self):
@@ -104,7 +107,7 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["name"]
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.id_)["name"]
 
     @property
     def entity_class_type(self):
@@ -112,11 +115,19 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_class_id(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["class_id"]
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.id_)["class_id"]
 
     @property
     def entity_class_name(self):
         return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
+
+    @property
+    def db_map(self):
+        return self.entity_id[0]
+
+    @property
+    def id_(self):
+        return self.entity_id[1]
 
     @property
     def first_db_map(self):
@@ -135,10 +146,12 @@ class EntityItem(QGraphicsPixmapItem):
         return (self.db_map,)
 
     def db_map_data(self, _db_map):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)
+        # FIXME?
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.id_)
 
     def db_map_id(self, _db_map):
-        return self.entity_id
+        # FIXME?
+        return self.id_
 
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
@@ -302,7 +315,6 @@ class RelationshipItem(EntityItem):
             entity_id (int): object id
         """
         super().__init__(spine_db_editor, x, y, extent, entity_id=entity_id)
-        self.setToolTip(self._make_tool_tip())
 
     @property
     def entity_type(self):
@@ -314,21 +326,21 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_name_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.id_)["object_name_list"]
 
     @property
     def object_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_id_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.id_)["object_id_list"]
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["class_name"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.id_)["class_name"]
 
     @property
     def db_representation(self):
         return dict(
             class_id=self.entity_class_id,
-            id=self.entity_id,
+            id=self.id_,
             object_id_list=self.object_id_list,
             object_name_list=self.object_name_list,
         )
@@ -336,7 +348,8 @@ class RelationshipItem(EntityItem):
     def _make_tool_tip(self):
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{self.object_name_list.replace(",", self.db_mngr._GROUP_SEP)}</p></html>"""
+            f"""{self.object_name_list.replace(",", self.db_mngr._GROUP_SEP)}<br>"""
+            f"""@{self.db_map.codename}</p></html>"""
         )
 
     def _init_bg(self):
@@ -363,7 +376,7 @@ class ObjectItem(EntityItem):
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
-            entity_id (int): object id
+            entity_id (tuple): db_map, object id
         """
         super().__init__(spine_db_editor, x, y, extent, entity_id=entity_id)
         self._add_relationships_menu = None
@@ -371,8 +384,6 @@ class ObjectItem(EntityItem):
         self.label_item = ObjectLabelItem(self)
         self.setZValue(0.5)
         self.update_name(self.entity_name)
-        description = self.db_mngr.get_item(self.db_map, "object", self.entity_id).get("description")
-        self.update_description(description)
 
     @property
     def entity_type(self):
@@ -380,7 +391,7 @@ class ObjectItem(EntityItem):
 
     @property
     def db_representation(self):
-        return dict(class_id=self.entity_class_id, id=self.entity_id, name=self.entity_name)
+        return dict(class_id=self.entity_class_id, id=self.id_, name=self.entity_name)
 
     def shape(self):
         path = super().shape()
@@ -391,10 +402,8 @@ class ObjectItem(EntityItem):
         """Refreshes the name."""
         self.label_item.setPlainText(name)
 
-    def update_description(self, description):
-        if not description:
-            description = "No description"
-        self.setToolTip(f"<html>{description}</html>")
+    def _make_tool_tip(self):
+        return f"<html><p style='text-align:center;'>{self.entity_name}<br>@{self.db_map.codename}</html>"
 
     def block_move_by(self, dx, dy):
         super().block_move_by(dx, dy)
@@ -526,8 +535,8 @@ class ArcItem(QGraphicsPathItem):
 class CrossHairsItem(RelationshipItem):
     """Creates new relationships directly in the graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent):
-        super().__init__(spine_db_editor, x, y, 0.8 * extent)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setZValue(2)
         self._current_icon = None
