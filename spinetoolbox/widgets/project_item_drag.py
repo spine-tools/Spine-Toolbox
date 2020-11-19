@@ -16,9 +16,9 @@ Classes for custom QListView.
 :date:   14.11.2018
 """
 
-from PySide2.QtWidgets import QListView
+from PySide2.QtWidgets import QListView, QListWidget
 from PySide2.QtCore import Qt, QSize, Signal, Slot, QMimeData, QModelIndex
-from PySide2.QtGui import QDrag, QResizeEvent
+from PySide2.QtGui import QDrag, QResizeEvent, QIcon
 from PySide2.QtWidgets import QMenu, QToolButton, QApplication
 from .custom_qwidgets import CustomWidgetAction
 from ..config import ICON_BACKGROUND
@@ -77,21 +77,21 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         self._list_view = ProjectItemDragListView()
         self._list_view.doubleClicked.connect(self._toolbox.edit_specification)
         self._list_view.context_menu_requested.connect(self._toolbox.show_specification_context_menu)
-        self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self._list_widget = CreateNewSpecListWidget(item_type)
+        self._list_widget.itemClicked.connect(
+            lambda _, item_type=item_type: self._toolbox.show_specification_form(item_type)
+        )
         menu = QMenu(self)
         widget_action = CustomWidgetAction(menu)
         widget_action.setDefaultWidget(self._list_view)
         menu.addAction(widget_action)
-        menu.addSeparator()
-        menu.addAction(
-            icon,
-            f"Create new {item_type} Specification...",
-            lambda checked=False, item_type=item_type: self._toolbox.show_specification_form(
-                item_type, specification=None
-            ),
-        )
+        widget_action = CustomWidgetAction(menu)
+        widget_action.setDefaultWidget(self._list_widget)
+        menu.addAction(widget_action)
+        menu.setStyleSheet(f"QMenu{{background: {ICON_BACKGROUND};}}")
         self.setMenu(menu)
         self.setPopupMode(QToolButton.MenuButtonPopup)
+        self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self._toolbox.specification_model_changed.connect(self._update_spec_model)
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
         self._list_view.drag_about_to_start.connect(menu.hide)
@@ -105,12 +105,16 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
     def _update_spec_model(self):
         model = self._toolbox.filtered_spec_factory_models.get(self.item_type)
         self._list_view.setModel(model)
-        self._resize_list_view()
-        model.rowsInserted.connect(lambda *args: self._resize_list_view())
-        model.rowsRemoved.connect(lambda *args: self._resize_list_view())
+        self._resize()
+        model.rowsInserted.connect(lambda *args: self._resize())
+        model.rowsRemoved.connect(lambda *args: self._resize())
 
-    def _resize_list_view(self):
-        self._list_view._resize_to_contents()
+    def _resize(self):
+        self._list_view._set_preferred_heigth()
+        self._list_widget._set_preferred_heigth()
+        width = max(self._list_view._get_preferred_width(), self._list_widget._get_preferred_width())
+        self._list_view.setFixedWidth(width)
+        self._list_widget.setFixedWidth(width)
         event = QResizeEvent(QSize(), self.menu().size())
         QApplication.sendEvent(self.menu(), event)
 
@@ -130,6 +134,36 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
             self.mime_data.setText(mime_data_text)
 
 
+_VIEW_STYLE_SHEET = "QListView{background: transparent; border: 1px solid gray;} QListView::item{padding: 5px;}"
+_VIEW_HOVER_STYLE_SHEET_ADDENDUM = (
+    "QListView::item:hover{background: white; padding-left: -1px; border: 1px solid lightGray; border-radius: 1px}"
+)
+
+
+class CreateNewSpecListWidget(QListWidget):
+    def __init__(self, item_type):
+        super().__init__(None)
+        self.setStyleSheet(_VIEW_STYLE_SHEET + _VIEW_HOVER_STYLE_SHEET_ADDENDUM)
+        self.setResizeMode(QListView.Adjust)
+        self.addItem(f"Create new {item_type} Specification...")
+        item = self.item(0)
+        item.setIcon(QIcon(":/icons/wrench_plus.svg"))
+        item.setFlags(Qt.ItemIsEnabled)
+
+    def paintEvent(self, event):
+        self.setCurrentIndex(QModelIndex())
+        super().paintEvent(event)
+
+    def _set_preferred_heigth(self):
+        item = self.item(0)
+        rect = self.visualItemRect(item)
+        height = rect.height() + 2 * self.frameWidth()
+        self.setFixedHeight(height)
+
+    def _get_preferred_width(self):
+        return self.sizeHintForColumn(0) + 2 * self.frameWidth()
+
+
 class ProjectItemDragListView(ProjectItemDragMixin, QListView):
 
     context_menu_requested = Signal("QModelIndex", "QPoint")
@@ -137,14 +171,8 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
     def __init__(self):
         super().__init__(None)
         self._hover = True
-        self._main_style_sheet = (
-            f"QListView{{background: {ICON_BACKGROUND}; padding: 3px; border: 1px solid gray;}}"
-            "QListView::item{padding: 3px;}"
-        )
-        self._hover_addendum = (
-            "QListView::item:hover{background: white; padding-left: -1px; "
-            "border: 1px solid lightGray; border-radius: 1px}"
-        )
+        self._main_style_sheet = _VIEW_STYLE_SHEET
+        self._hover_addendum = _VIEW_HOVER_STYLE_SHEET_ADDENDUM
         self.setStyleSheet(self._main_style_sheet + self._hover_addendum)
         self.setSelectionRectVisible(False)
         self.setResizeMode(QListView.Adjust)
@@ -196,12 +224,13 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
             self.mime_data = QMimeData()
             self.mime_data.setText(mime_data_text)
 
-    @Slot()
-    def _resize_to_contents(self):
+    def _set_preferred_heigth(self):
         model = self.model()
         if not model:
             self.setFixedHeight(0)
             return
-        row_height = self.visualRect(model.index(0, 0)).height()
-        height = row_height * model.rowCount() + 2 * self.frameWidth()
+        height = self.visualRect(model.index(0, 0)).height() * model.rowCount() + 2 * self.frameWidth()
         self.setFixedHeight(height)
+
+    def _get_preferred_width(self):
+        return self.sizeHintForColumn(0) + 2 * self.frameWidth()
