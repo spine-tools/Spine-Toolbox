@@ -31,9 +31,9 @@ class TestSpineDatapackageWidget(unittest.TestCase):
 
     def test_closeEvent(self):
         with TemporaryDirectory() as temp_dir:
-            mock_data_connection = mock.MagicMock()
-            mock_data_connection.data_dir = temp_dir
-            widget = SpineDatapackageWidget(mock_data_connection)
+            mock_datapackage = mock.MagicMock()
+            mock_datapackage.base_path = temp_dir
+            widget = SpineDatapackageWidget(mock_datapackage)
             widget.qsettings = mock.NonCallableMagicMock()
             widget.closeEvent()
             qsettings_save_calls = widget.qsettings.setValue.call_args_list
