@@ -190,7 +190,6 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
-        self.menuFile.addAction(self.actionInfer_datapackage)
         self.menuFile.addAction(self.actionSave_datapackage)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionSave_All)

@@ -56,7 +56,6 @@ from .widgets.custom_qwidgets import ZoomWidgetAction
 from .widgets.spine_console_widget import SpineConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
-from .widgets.spine_datapackage_widget import SpineDatapackageWidget
 from .project import SpineToolboxProject
 from .config import (
     STATUSBAR_SS,
@@ -297,7 +296,9 @@ class ToolboxUI(QMainWindow):
         """
         p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
         getting_started_anchor = (
-            "<a style='color:#99CCFF;' title='" + p + "' href='https://spine-toolbox.readthedocs.io/en/latest/getting_started.html'>Getting Started</a>"
+            "<a style='color:#99CCFF;' title='"
+            + p
+            + "' href='https://spine-toolbox.readthedocs.io/en/latest/getting_started.html'>Getting Started</a>"
         )
         welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
             getting_started_anchor
@@ -1871,7 +1872,3 @@ class ToolboxUI(QMainWindow):
 
     def project_item_icon(self, item_type):
         return self.item_factories[item_type].make_icon(self)
-
-    @staticmethod
-    def create_spine_datapackage_form(dc):
-        return SpineDatapackageWidget(dc)

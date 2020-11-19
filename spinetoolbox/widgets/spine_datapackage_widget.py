@@ -43,18 +43,16 @@ class SpineDatapackageWidget(QMainWindow):
     msg = Signal(str)
     msg_error = Signal(str)
 
-    def __init__(self, data_connection):
+    def __init__(self, datapackage):
         """Initialize class.
 
         Args:
-            data_connection (DataConnection): Data Connection associated to this widget
+            datapackage (CustomPackage): Data package associated to this widget
         """
         from ..ui.spine_datapackage_form import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)
-        self._data_connection = data_connection
-        self._datapackage_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
-        self.datapackage = CustomPackage(base_path=self._data_connection.data_dir, unsafe=True)
+        self.datapackage = datapackage
         self.selected_resource_index = None
         self.resources_model = DatapackageResourcesModel(self, self.datapackage)
         self.fields_model = DatapackageFieldsModel(self, self.datapackage)
@@ -67,7 +65,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.notification_stack = NotificationStack(self)
         self._foreign_keys_context_menu = QMenu(self)
         self._file_watcher = QFileSystemWatcher(self)
-        self._file_watcher.addPath(self._data_connection.data_dir)
+        self._file_watcher.addPath(self.datapackage.base_path)
         self._changed_source_indexes = set()
         self.undo_group = QUndoGroup(self)
         self.undo_stacks = {}
@@ -94,15 +92,25 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_foreign_keys.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.connect_signals()
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle(
-            "{0} [{1}][*] - Spine datapackage manager".format(
-                self._data_connection.name, self._data_connection.data_dir
-            )
-        )
+        self.setWindowTitle("{0}[*] - Spine datapackage manager".format(self.datapackage.base_path))
+        self.load_datapackage()
 
     @property
     def undo_stack(self):
         return self.undo_group.activeStack()
+
+    @property
+    def datapackage_path(self):
+        return os.path.join(self.datapackage.base_path, "datapackage.json")
+
+    def load_datapackage(self):
+        self._file_watcher.addPaths(self.datapackage.sources)
+        self.append_save_resource_actions()
+        self.resources_model.refresh_model()
+        first_index = self.resources_model.index(0, 0)
+        if not first_index.isValid():
+            return
+        self.ui.tableView_resources.selectionModel().setCurrentIndex(first_index, QItemSelectionModel.Select)
 
     def add_menu_actions(self):
         """Add extra menu actions."""
@@ -127,7 +135,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.msg_error.connect(self.add_error_message)
         self._file_watcher.directoryChanged.connect(self._handle_source_dir_changed)
         self._file_watcher.fileChanged.connect(self._handle_source_file_changed)
-        self.ui.actionInfer_datapackage.triggered.connect(self.load_datapackage)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         self.ui.actionClose.triggered.connect(self.close)
@@ -157,7 +164,6 @@ class SpineDatapackageWidget(QMainWindow):
             self.setWindowModified(dirty)
         except RuntimeError:
             return
-        dirty |= not os.path.exists(self._datapackage_path)
         self.ui.actionSave_datapackage.setEnabled(dirty)
         self.ui.actionSave_All.setEnabled(dirty)
         for idx, action in enumerate(self._save_resource_actions):
@@ -179,37 +185,12 @@ class SpineDatapackageWidget(QMainWindow):
             stack.cleanChanged.connect(self.update_window_modified)
         return self.undo_stacks[resource_index]
 
-    def showEvent(self, e):
-        """Called when the form shows. Init datapackage
-        (either from existing datapackage.json or by inferring a new one from sources)
-        and update ui."""
-        super().showEvent(e)
-        if os.path.isfile(self._datapackage_path):
-            self.load_datapackage()
-
-    def load_datapackage(self):
-        self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
-        if not self.datapackage.resources:
-            self.msg_error.emit(
-                "No resources found. Please add some CSV files to <b>{0}</b>. ".format(self._data_connection.data_dir)
-            )
-            return
-        self.ui.actionSave_All.setEnabled(True)
-        self.datapackage.update_descriptor(os.path.join(self._data_connection.data_dir, "datapackage.json"))
-        self._file_watcher.addPaths(self.datapackage.sources)
-        self.append_save_resource_actions()
-        self.resources_model.refresh_model()
-        first_index = self.resources_model.index(0, 0)
-        if not first_index.isValid():
-            return
-        self.ui.tableView_resources.selectionModel().setCurrentIndex(first_index, QItemSelectionModel.Select)
-
     @Slot(str)
     def _handle_source_dir_changed(self, _path):
         if not self.datapackage.resources:
             self.load_datapackage()
             return
-        self.datapackage.difference_infer(os.path.join(self._data_connection.data_dir, '*.csv'))
+        self.datapackage.difference_infer(os.path.join(self.datapackage.base_path, '*.csv'))
         self._file_watcher.addPaths(self.datapackage.sources)
         self.append_save_resource_actions()
         self.resources_model.refresh_model()
@@ -264,8 +245,7 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot(bool)
     def save_all(self, _=False):
         resource_paths = {k: r.source for k, r in enumerate(self.datapackage.resources) if self.is_resource_dirty(k)}
-        datapackage_path = self._datapackage_path
-        all_paths = list(resource_paths.values()) + [datapackage_path]
+        all_paths = list(resource_paths.values()) + [self.datapackage_path]
         if not self.get_permission(*all_paths):
             return
         for k, path in resource_paths.items():
@@ -274,7 +254,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot(bool)
     def save_datapackage(self, _=False):
-        if self.datapackage.save(self._datapackage_path):
+        if self.datapackage.save(self.datapackage_path):
             self.msg.emit("'datapackage.json' succesfully saved")
             return
         self.msg_error.emit("Failed to save 'datapackage.json'")
@@ -282,8 +262,7 @@ class SpineDatapackageWidget(QMainWindow):
     def save_resource(self, resource_index):
         resource = self.datapackage.resources[resource_index]
         filepath = resource.source
-        datapackage_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
-        if not self.get_permission(filepath, datapackage_path):
+        if not self.get_permission(filepath, self.datapackage_path):
             return
         self._save_resource(resource_index, filepath)
         self.save_datapackage()
@@ -306,7 +285,7 @@ class SpineDatapackageWidget(QMainWindow):
             stack.setClean()
 
     def get_permission(self, *filepaths):
-        start_dir = self._data_connection.data_dir
+        start_dir = self.datapackage.base_path
         filepaths = [os.path.relpath(path, start_dir) for path in filepaths if os.path.isfile(path)]
         if not filepaths:
             return True
