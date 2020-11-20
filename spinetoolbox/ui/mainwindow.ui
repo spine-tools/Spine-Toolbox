@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -179,6 +179,11 @@
     <property name="title">
      <string>Edit</string>
     </property>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+    <addaction name="actionDuplicate"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemove"/>
     <addaction name="actionRemove_all"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -719,7 +724,7 @@
     <string>Remove all</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all items project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all items from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionExport_project_to_GraphML">
@@ -801,6 +806,41 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Upgrade old (.proj) Spine Toolbox project into a new style directory based project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionRemove">
+   <property name="text">
+    <string>Remove</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove selected project item(s).</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="actionOpen_project_directory">
+   <property name="text">
+    <string>Open project directory...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open project directory in file browser.</string>
+   </property>
+  </action>
+  <action name="actionOpen_item_directory">
+   <property name="text">
+    <string>Open item directory...</string>
+   </property>
+   <property name="toolTip">
+    <string>Open item directory in file browser.</string>
+   </property>
+  </action>
+  <action name="actionRename_item">
+   <property name="text">
+    <string>Rename...</string>
+   </property>
+   <property name="toolTip">
+    <string>Rename project item.</string>
    </property>
   </action>
  </widget>

@@ -92,30 +92,6 @@ class TestLeafProjectTreeItem(unittest.TestCase):
         self.assertIsNone(leaf.parent())
         self._destroy_toolbox(toolbox)
 
-    def test_LeafProjectTreeItem_rename(self):
-        """Tests renaming a leaf project tree item and its project item."""
-        expected_name = "ABC"
-        expected_short_name = "abc"
-        toolbox = create_toolboxui_with_project()
-        project_item_dict = {"View": {"type": "View", "description": "", "x": 0, "y": 0}}
-        toolbox.project().add_project_items(project_item_dict)
-        index = toolbox.project_item_model.find_item("View")
-        leaf = toolbox.project_item_model.item(index)
-        leaf.rename(expected_name)
-        cmd = toolbox.undo_stack.command(toolbox.undo_stack.index() - 1)
-        self.assertFalse(cmd.isObsolete())
-        # Check name
-        self.assertEqual(expected_name, leaf.name)
-        self.assertEqual(expected_short_name, leaf.short_name)
-        self.assertEqual(expected_name, leaf.project_item.name)
-        self.assertEqual(expected_short_name, leaf.project_item.short_name)
-        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
-        dag_with_new_node_name = toolbox.project().dag_handler.dag_with_node(expected_name)
-        self.assertIsInstance(dag_with_new_node_name, DiGraph)
-        dag_with_old_node_name = toolbox.project().dag_handler.dag_with_node("View")
-        self.assertIsNone(dag_with_old_node_name)
-        self._destroy_toolbox(toolbox)
-
     @staticmethod
     def _category_item():
         """Set up toolbox."""

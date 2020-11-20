@@ -22,13 +22,15 @@ import logging
 import json
 import pathlib
 import numpy as np
-from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, Qt, Signal, Slot, QSettings, QUrl
+from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, QModelIndex, QPoint, Qt, Signal, Slot, QSettings, QUrl
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
     QErrorMessage,
     QFileDialog,
+    QInputDialog,
+    QMenu,
     QMessageBox,
     QCheckBox,
     QDockWidget,
@@ -41,16 +43,9 @@ from .graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
-from .mvcmodels.project_item_factory_models import (
-    ProjectItemSpecFactoryModel,
-    FilteredSpecFactoryModel,
-)
+from .mvcmodels.project_item_factory_models import ProjectItemSpecFactoryModel, FilteredSpecFactoryModel
 from .widgets.about_widget import AboutWidget
-from .widgets.custom_menus import (
-    ProjectItemModelContextMenu,
-    LinkContextMenu,
-    RecentProjectsPopupMenu,
-)
+from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
 from .widgets.settings_widget import SettingsWidget
 from .widgets.custom_qwidgets import ZoomWidgetAction
 from .widgets.spine_console_widget import SpineConsoleWidget
@@ -81,7 +76,12 @@ from .helpers import (
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
-from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, UpdateSpecificationCommand
+from .project_commands import (
+    AddSpecificationCommand,
+    RemoveSpecificationCommand,
+    RenameProjectItemCommand,
+    UpdateSpecificationCommand,
+)
 from .configuration_assistants import spine_opt
 
 
@@ -139,7 +139,6 @@ class ToolboxUI(QMainWindow):
         # Widget and form references
         self.settings_form = None
         self.specification_context_menu = None
-        self.project_item_context_menu = None
         self.link_context_menu = None
         self.process_output_context_menu = None
         self.add_project_item_form = None
@@ -209,6 +208,10 @@ class ToolboxUI(QMainWindow):
         self.ui.actionCopy.triggered.connect(self.project_item_to_clipboard)
         self.ui.actionPaste.triggered.connect(self.project_item_from_clipboard)
         self.ui.actionDuplicate.triggered.connect(self.duplicate_project_item)
+        self.ui.actionOpen_project_directory.triggered.connect(self._open_project_directory)
+        self.ui.actionOpen_item_directory.triggered.connect(self._open_project_item_directory)
+        self.ui.actionRename_item.triggered.connect(self._rename_project_item)
+        self.ui.actionRemove.triggered.connect(self._remove_item)
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
@@ -1085,7 +1088,7 @@ class ToolboxUI(QMainWindow):
             return
         self._project.remove_all_items()
 
-    @Slot("QUrl")
+    @Slot(QUrl)
     def open_anchor(self, qurl):
         """Open file explorer in the directory given in qurl.
 
@@ -1100,7 +1103,7 @@ class ToolboxUI(QMainWindow):
         if not res:
             self.msg_error.emit("Opening path {} failed".format(path))
 
-    @Slot("QModelIndex", "QPoint")
+    @Slot(QModelIndex, QPoint)
     def show_specification_context_menu(self, ind, global_pos):
         """Context menu for item specifications.
 
@@ -1119,7 +1122,7 @@ class ToolboxUI(QMainWindow):
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
 
-    @Slot("QModelIndex")
+    @Slot(QModelIndex)
     def edit_specification(self, index):
         """Open the tool specification widget for editing an existing tool specification.
 
@@ -1133,7 +1136,7 @@ class ToolboxUI(QMainWindow):
         self.show_specification_form(specification.item_type, specification)
 
     @busy_effect
-    @Slot("QModelIndex")
+    @Slot(QModelIndex)
     def open_specification_file(self, index):
         """Open the specification definition file in the default (.json) text-editor.
 
@@ -1405,7 +1408,7 @@ class ToolboxUI(QMainWindow):
         if not res:
             self.msg_error.emit(f"Unable to open URL <b>{index_url}</b>")
 
-    @Slot("QPoint")
+    @Slot(QPoint)
     def show_item_context_menu(self, pos):
         """Context menu for project items listed in the project QTreeView.
 
@@ -1416,45 +1419,26 @@ class ToolboxUI(QMainWindow):
         global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
         self.show_project_item_context_menu(global_pos, ind)
 
-    @Slot("QPoint", str)
-    def show_item_image_context_menu(self, pos, name):
-        """Context menu for project item images on the QGraphicsView.
-
-        Args:
-            pos (QPoint): Mouse position
-            name (str): The name of the concerned item
-        """
-        ind = self.project_item_model.find_item(name)
-        self.show_project_item_context_menu(pos, ind)
-
-    def show_project_item_context_menu(self, pos, ind):
+    def show_project_item_context_menu(self, pos, index_or_name):
         """Create and show project item context menu.
 
         Args:
             pos (QPoint): Mouse position
-            ind (QModelIndex): Index of concerned item
+            index_or_name (QModelIndex or str): Index or name of concerned item
         """
-        if not self.project():
-            return
-        if not ind.isValid():
+        index = self.project_item_model.find_item(index_or_name) if isinstance(index_or_name, str) else index_or_name
+        if not index.isValid():
             # Clicked on a blank area, show the project item model context menu
-            self.project_item_context_menu = ProjectItemModelContextMenu(self, pos)
-            action = self.project_item_context_menu.get_action()
-            if action == "Open project directory...":
-                file_url = "file:///" + self._project.project_dir
-                self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
-            elif action == "Export project to GraphML":
-                self.project().export_graphs()
-            else:  # No option selected
-                pass
+            menu = QMenu(self)
+            menu.addAction(self.ui.actionOpen_project_directory)
+            menu.addSeparator()
+            menu.addAction(self.ui.actionExport_project_to_GraphML)
         else:
             # Clicked on an item, show the custom context menu for that item
-            item = self.project_item_model.item(ind)
-            self.project_item_context_menu = item.custom_context_menu(self, pos)
-            action = self.project_item_context_menu.get_action()
-            item.apply_context_menu_action(self, action)
-        self.project_item_context_menu.deleteLater()
-        self.project_item_context_menu = None
+            item = self.project_item_model.item(index)
+            menu = item.custom_context_menu(self)
+        menu.exec_(pos)
+        menu.deleteLater()
 
     def show_link_context_menu(self, pos, link):
         """Context menu for connection links.
@@ -1805,37 +1789,11 @@ class ToolboxUI(QMainWindow):
 
     def _item_edit_actions(self):
         """Creates project item edit actions (copy, paste, duplicate) and adds them to proper places."""
-
-        def prepend_to_edit_menu(text, shortcut, slot):
-            action = QAction(text, self.ui.graphicsView)
-            action.setShortcuts(shortcut)
+        actions = [self.ui.actionCopy, self.ui.actionPaste, self.ui.actionPaste, self.ui.actionRemove]
+        for action in actions:
             action.setShortcutContext(Qt.WidgetShortcut)
-            action.triggered.connect(slot)
-            self._project_item_actions.append(action)
-            self.ui.graphicsView.addAction(action)
-            self.ui.menuEdit.insertAction(self.ui.menuEdit.actions()[0], action)
-            return action
-
-        self.ui.menuEdit.insertSeparator(self.ui.menuEdit.actions()[0])
-        duplicate_action = prepend_to_edit_menu(
-            "Duplicate", [QKeySequence(Qt.CTRL + Qt.Key_D)], lambda checked: self.duplicate_project_item()
-        )
-        paste_action = prepend_to_edit_menu(
-            "Paste", QKeySequence.Paste, lambda checked: self.project_item_from_clipboard()
-        )
-        copy_action = prepend_to_edit_menu("Copy", QKeySequence.Copy, lambda checked: self.project_item_to_clipboard())
-
-        def mirror_action_to_project_tree_view(action_to_duplicate):
-            action = QAction(action_to_duplicate.text(), self.ui.treeView_project)
-            action.setShortcuts([action_to_duplicate.shortcut()])
-            action.setShortcutContext(Qt.WidgetShortcut)
-            action.triggered.connect(action_to_duplicate.trigger)
-            self._project_item_actions.append(action)
             self.ui.treeView_project.addAction(action)
-
-        mirror_action_to_project_tree_view(copy_action)
-        mirror_action_to_project_tree_view(paste_action)
-        mirror_action_to_project_tree_view(duplicate_action)
+            self.ui.graphicsView.addAction(action)
 
     @Slot()
     def _scroll_event_log_to_end(self):
@@ -1872,3 +1830,81 @@ class ToolboxUI(QMainWindow):
 
     def project_item_icon(self, item_type):
         return self.item_factories[item_type].make_icon(self)
+
+    @Slot(bool)
+    def _open_project_directory(self, _):
+        """Opens project's root directory in system's file browser."""
+        if self._project is None:
+            return
+        file_url = "file:///" + self._project.project_dir
+        self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
+
+    @Slot(bool)
+    def _open_project_item_directory(self, _):
+        """Opens project item's directory in system's file browser."""
+        selection_model = self.ui.treeView_project.selectionModel()
+        current = selection_model.currentIndex()
+        if not current.isValid():
+            return
+        item = self.project_item_model.item(current)
+        item.project_item.open_directory()
+
+    @Slot(bool)
+    def _remove_item(self, _):
+        """Removes selected project items."""
+        selection_model = self.ui.treeView_project.selectionModel()
+        for index in selection_model.selection().indexes():
+            item = self.project_item_model.item(index)
+            self._project.remove_item(item.project_item.name)
+
+    @Slot(bool)
+    def _rename_project_item(self, _):
+        """Renames current project item."""
+        selection_model = self.ui.treeView_project.selectionModel()
+        current = selection_model.currentIndex()
+        if not current.isValid():
+            return
+        item = self.project_item_model.item(current)
+        answer = QInputDialog.getText(
+            self, "Rename Item", "New name:", text=item.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+        )
+        if not answer[1]:
+            return
+        new_name = answer[0]
+        self.undo_stack.push(RenameProjectItemCommand(self.project_item_model, item, new_name))
+
+    def item_category_context_menu(self):
+        """
+        Creates a context menu for project item categories.
+
+        Returns:
+            QMenu: category context menu
+        """
+        menu = QMenu(self)
+        menu.addAction(self.ui.actionOpen_project_directory)
+        return menu
+
+    def project_item_context_menu(self, additional_actions):
+        """
+        Creates a context menu for project items.
+
+        Args:
+            additional_actions (list of QAction): actions to be prepended to the menu
+
+        Returns:
+            QMenu: project item context menu
+        """
+        menu = QMenu(self)
+        if additional_actions:
+            for action in additional_actions:
+                menu.addAction(action)
+            menu.addSeparator()
+        menu.addAction(self.ui.actionCopy)
+        menu.addAction(self.ui.actionPaste)
+        menu.addAction(self.ui.actionDuplicate)
+        menu.addAction(self.ui.actionOpen_item_directory)
+        menu.addSeparator()
+        menu.addAction(self.ui.actionRemove)
+        menu.addSeparator()
+        menu.addAction(self.ui.actionRename_item)
+        return menu

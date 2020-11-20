@@ -256,36 +256,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         self.scene().clearSelection()
         self.setSelected(True)
-        self._toolbox.show_item_image_context_menu(event.screenPos(), self.name())
-
-    def keyPressEvent(self, event):
-        """Handles deleting and rotating the selected
-        item when dedicated keys are pressed.
-
-        Args:
-            event (QKeyEvent): Key event
-        """
-        if event.key() == Qt.Key_Delete and self.isSelected():
-            self._toolbox.project().remove_item(self.name())
-            event.accept()
-        elif event.key() == Qt.Key_R and self.isSelected():
-            # TODO:
-            # 1. Change name item text direction when rotating
-            # 2. Save rotation into project file
-            rect = self.mapToScene(self.boundingRect()).boundingRect()
-            center = rect.center()
-            t = QTransform()
-            t.translate(center.x(), center.y())
-            t.rotate(90)
-            t.translate(-center.x(), -center.y())
-            self.setPos(t.map(self.pos()))
-            self.setRotation(self.rotation() + 90)
-            links = set(lnk for conn in self.connectors.values() for lnk in conn.links)
-            for link in links:
-                link.update_geometry()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
+        self._toolbox.show_project_item_context_menu(event.screenPos(), self.name())
 
     def itemChange(self, change, value):
         """

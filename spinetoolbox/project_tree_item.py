@@ -17,12 +17,8 @@ Project Tree items.
 """
 
 import logging
-from PySide2.QtCore import Qt, QUrl
-from PySide2.QtWidgets import QInputDialog
+from PySide2.QtCore import Qt
 from spinetoolbox.metaobject import MetaObject
-from spinetoolbox.widgets.custom_menus import ProjectItemContextMenu
-from .widgets.custom_menus import CategoryProjectItemContextMenu
-from .project_commands import RenameProjectItemCommand
 
 
 class BaseProjectTreeItem(MetaObject):
@@ -98,20 +94,14 @@ class BaseProjectTreeItem(MetaObject):
         child._parent = None
         return True
 
-    def custom_context_menu(self, parent, pos):
+    def custom_context_menu(self, toolbox):
         """Returns the context menu for this item. Implement in subclasses as needed.
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            pos (QPoint): Position on screen
-        """
-        raise NotImplementedError()
-
-    def apply_context_menu_action(self, parent, action):
-        """Applies given action from context menu. Implement in subclasses as needed.
 
         Args:
-            parent (QWidget): The widget that is controlling the menu
-            action (str): The selected action
+            toolbox (QWidget): The widget that is controlling the menu
+
+        Returns:
+            QMenu: context menu
         """
         raise NotImplementedError()
 
@@ -138,11 +128,7 @@ class RootProjectTreeItem(BaseProjectTreeItem):
         logging.error("You can only add a category item as a child of the root item")
         return False
 
-    def custom_context_menu(self, parent, pos):
-        """See base class."""
-        raise NotImplementedError()
-
-    def apply_context_menu_action(self, parent, action):
+    def custom_context_menu(self, parent):
         """See base class."""
         raise NotImplementedError()
 
@@ -169,27 +155,16 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
         child_item._parent = self
         return True
 
-    def custom_context_menu(self, parent, pos):
+    def custom_context_menu(self, toolbox):
         """Returns the context menu for this item.
 
         Args:
-            parent (QWidget): The widget that is controlling the menu
-            pos (QPoint): Position on screen
-        """
-        return CategoryProjectItemContextMenu(parent, pos)
+            toolbox (ToolboxUI): Toolbox main window
 
-    def apply_context_menu_action(self, parent, action):
-        """Applies given action from context menu.
-
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            action (str): The selected action
+        Returns:
+            QMenu: context menu
         """
-        if action == "Open project directory...":
-            file_url = "file:///" + parent._project.project_dir
-            parent.open_anchor(QUrl(file_url, QUrl.TolerantMode))
-        else:  # No option selected
-            pass
+        return toolbox.item_category_context_menu()
 
 
 class LeafProjectTreeItem(BaseProjectTreeItem):
@@ -223,54 +198,13 @@ class LeafProjectTreeItem(BaseProjectTreeItem):
         """Returns the item flags."""
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
-    def custom_context_menu(self, parent, pos):
+    def custom_context_menu(self, toolbox):
         """Returns the context menu for this item.
 
         Args:
-            parent (QWidget): The widget that is controlling the menu
-            pos (QPoint): Position on screen
-        """
-        return ProjectItemContextMenu(parent, pos)
-
-    def apply_context_menu_action(self, parent, action):
-        """Applies given action from context menu.
-
-        Args:
-            parent (QWidget): The widget that is controlling the menu
-            action (str): The selected action
-        """
-        if action == "Copy":
-            self._toolbox.project_item_to_clipboard()
-        elif action == "Paste":
-            self._toolbox.project_item_from_clipboard()
-        elif action == "Duplicate":
-            self._toolbox.duplicate_project_item()
-        elif action == "Open directory...":
-            self.project_item.open_directory()
-        elif action == "Rename":
-            # noinspection PyCallByClass
-            answer = QInputDialog.getText(
-                self._toolbox,
-                "Rename Item",
-                "New name:",
-                text=self.name,
-                flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint,
-            )
-            if not answer[1]:
-                pass
-            else:
-                new_name = answer[0]
-                self.rename(new_name)
-        elif action == "Remove item":
-            self._project_item._project.remove_item(self.name, check_dialog=True)
-
-    def rename(self, new_name):
-        """Renames this item.
-
-        Args:
-            new_name(str): New name
+            toolbox (ToolboxUI): Toolbox main window
 
         Returns:
-            bool: True if renaming was successful, False if renaming failed
+            QMenu: context menu
         """
-        self._toolbox.undo_stack.push(RenameProjectItemCommand(self._toolbox.project_item_model, self, new_name))
+        return toolbox.project_item_context_menu(self._project_item.actions())

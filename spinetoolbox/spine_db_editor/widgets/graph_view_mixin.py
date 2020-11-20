@@ -597,10 +597,7 @@ class GraphViewMixin:
         for db_map, class_obj_items in db_map_class_obj_items.items():
             data = db_map_data.setdefault(db_map, {})
             for class_name, obj_items in class_obj_items.items():
-                data["object_parameters"] = [
-                    (class_name, self._pos_x_parameter),
-                    (class_name, self._pos_y_parameter),
-                ]
+                data["object_parameters"] = [(class_name, self._pos_x_parameter), (class_name, self._pos_y_parameter)]
                 data["object_parameter_values"] = [
                     (class_name, item.entity_name, self._pos_x_parameter, item.pos().x()) for item in obj_items
                 ] + [(class_name, item.entity_name, self._pos_y_parameter, item.pos().y()) for item in obj_items]

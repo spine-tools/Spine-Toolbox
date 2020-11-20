@@ -57,6 +57,7 @@ class ProjectItem(MetaObject):
         self._icon = None
         self._sigs = None
         self._active = False
+        self._actions = list()
         self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
         self.item_executed.connect(self.handle_execution_successful)
         # Make project directory for this Item
@@ -317,6 +318,15 @@ class ProjectItem(MetaObject):
         """prefix for default item name"""
         raise NotImplementedError()
 
+    def actions(self):
+        """
+        Item specific actions.
+
+        Returns:
+            list of QAction: item's actions
+        """
+        return self._actions
+
     def rename(self, new_name):
         """
         Renames this item.
@@ -360,6 +370,8 @@ class ProjectItem(MetaObject):
         """Tears down this item. Called both before closing the app and when removing the item from the project.
         Implement in subclasses to eg close all QMainWindows opened by this item.
         """
+        for action in self._actions:
+            action.deleteLater()
 
     def set_up(self):
         """Sets up this item. Called when adding the item to the project.

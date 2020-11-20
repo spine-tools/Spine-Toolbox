@@ -83,34 +83,6 @@ class ProjectItemContextMenu(CustomContextMenu):
         self.add_action("Remove item")
 
 
-class CategoryProjectItemContextMenu(CustomContextMenu):
-    """Context menu for category project items in the QTreeView."""
-
-    def __init__(self, parent, position):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (ToolboxUI)
-            position (QPoint): Position on screen
-        """
-        super().__init__(parent, position)
-        self.add_action("Open project directory...")
-
-
-class ProjectItemModelContextMenu(CustomContextMenu):
-    """Context menu for project item model in the QTreeView."""
-
-    def __init__(self, parent, position):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (ToolboxUI)
-            position (QPoint): Position on screen
-        """
-        super().__init__(parent, position)
-        self.add_action("Open project directory...")
-        self.addSeparator()
-        self.add_action("Export project to GraphML")
-
-
 class LinkContextMenu(CustomContextMenu):
     """Context menu class for connection links."""
 
