@@ -3,7 +3,12 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.5.0-beta.0] - 2020-09-14
+## [0.5.0-beta.1] - 2020-11-20
+
+### Added
+- Includes tools/python.exe for running Python Tools for systems that do not have a Python installation
+
+## [0.5.0-beta.0] - 2020-11-16
 
 ### Added
 - Now it's possible to export graphs as PDF files from the *Graph* menu in the Data Store form.

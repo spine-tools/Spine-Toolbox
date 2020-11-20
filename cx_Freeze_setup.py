@@ -14,7 +14,7 @@ cx-Freeze setup file for Spine Toolbox.
 
 Tested on Python3.7-64bit. cx_Freeze 6.3.
 
-To make a Spine Toolbox installation bundle please follow the next steps:
+To make a Spine Toolbox installation bundle, follow the next steps:
 
 On Windows:
 
@@ -42,7 +42,7 @@ with open("spinetoolbox/version.py") as fp:
 
 def main(argv):
     """Main of cx_Freeze_setup.py."""
-    python_dir = os.path.dirname(sys.executable)
+    python_dir, python_exe = os.path.split(sys.executable)
     os.environ['TCL_LIBRARY'] = os.path.join(python_dir, "tcl", "tcl8.6")
     os.environ['TK_LIBRARY'] = os.path.join(python_dir, "tcl", "tk8.6")
     # tcl86t.dll and tk86t.dll are required by tkinter, which in turn is required by matplotlib
@@ -56,6 +56,8 @@ def main(argv):
     copying_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING"))
     copying_lesser_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING.LESSER"))
     alembic_version_files = alembic_files(python_dir)
+    pyvenv_cfg = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "build_utils", "pyvenv.cfg"))
+    path_pth = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "build_utils", "path.pth"))
     # Most dependencies are automatically detected but some need to be manually included.
     build_exe_options = {
         "packages": ["packaging", "pkg_resources", "spine_engine"],
@@ -89,6 +91,9 @@ def main(argv):
             readme_file,
             copying_file,
             copying_lesser_file,
+            (sys.executable, os.path.join("tools/", python_exe)),
+            pyvenv_cfg,
+            path_pth,
         ]
         + alembic_version_files,
         "include_msvcr": True

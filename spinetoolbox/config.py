@@ -59,6 +59,7 @@ def _executable(name):
         return name + ".exe"
     return name
 
+
 # GAMS
 GAMS_EXECUTABLE = _executable("gams")
 GAMSIDE_EXECUTABLE = _executable("gamside")
@@ -67,7 +68,10 @@ GAMSIDE_EXECUTABLE = _executable("gamside")
 JULIA_EXECUTABLE = _executable("julia")
 
 # Python
-PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
+if _frozen:
+    PYTHON_EXECUTABLE = os.path.join(_program_root, "Tools", "python.exe")
+else:
+    PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
 
 # Jupyter kernel constants
 JUPYTER_KERNEL_TIME_TO_DEAD = 8.0
