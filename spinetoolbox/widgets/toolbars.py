@@ -32,7 +32,7 @@ class MainToolBar(QToolBar):
         Args:
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
+        super().__init__("Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         self._toolbox = parent
         self.project_item_list_view = ProjectItemDragListView(self)
         self.project_item_spec_list_view = ProjectItemDragListView(self)
