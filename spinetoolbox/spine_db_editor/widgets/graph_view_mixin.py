@@ -567,7 +567,7 @@ class GraphViewMixin:
         db_map_typed_data = {self.graph_db_map: {}}
         for item in self.selected_items:
             id_ = item.entity_id
-            db_map_typed_data[self.graph_db_map].setdefault(item.entity_type, []).add(id_)
+            db_map_typed_data[self.graph_db_map].setdefault(item.entity_type, set()).add(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     @Slot(bool)
