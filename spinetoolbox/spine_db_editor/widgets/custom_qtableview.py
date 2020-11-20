@@ -196,15 +196,14 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         db_map_typed_data = dict()
         model = self.model()
         for row in sorted(rows, reverse=True):
-            try:
-                db_map = model.sub_model_at_row(row).db_map
-            except AttributeError:
+            db_map = model.sub_model_at_row(row).db_map
+            if db_map is None:
                 # It's an empty model, just remove the row
                 _, sub_row = model._row_map[row]
                 model.empty_model.removeRow(sub_row)
-            else:
-                id_ = model.item_at_row(row)
-                db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
+                continue
+            id_ = model.item_at_row(row)
+            db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
         model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
 
