@@ -17,7 +17,7 @@ Contains the GraphViewMixin class.
 """
 import itertools
 from PySide2.QtCore import Signal, Slot, QRectF, QTimer
-from PySide2.QtWidgets import QGraphicsTextItem, QActionGroup
+from PySide2.QtWidgets import QGraphicsTextItem
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
 from spinedb_api import from_database
@@ -92,6 +92,7 @@ class GraphViewMixin:
         super().init_models()
         self.scene = CustomGraphicsScene(self)
         self.ui.graphicsView.setScene(self.scene)
+        self.scene.selectionChanged.connect(self._handle_scene_selection_changed)
 
     def connect_signals(self):
         """Connects signals."""
@@ -118,7 +119,6 @@ class GraphViewMixin:
         self.zoom_widget_action.reset_pressed.connect(self.ui.graphicsView.reset_zoom)
         self.rotate_widget_action.clockwise_pressed.connect(self.ui.graphicsView.rotate_clockwise)
         self.rotate_widget_action.anticlockwise_pressed.connect(self.ui.graphicsView.rotate_anticlockwise)
-        self.scene.selectionChanged.connect(self._handle_scene_selection_changed)
 
     @Slot()
     def _handle_scene_selection_changed(self):
@@ -132,7 +132,7 @@ class GraphViewMixin:
         self.graph_selection_changed.emit({"object": selected_objs, "relationship": selected_rels})
 
     @Slot(bool)
-    def set_show_cascading_relationships(self, checked):
+    def set_show_cascading_relationships(self, checked=False):
         self.ui.actionShow_cascading_relationships.setChecked(checked)
         self._show_cascading_relationships = checked
         self.build_graph()
@@ -240,10 +240,11 @@ class GraphViewMixin:
         if not removed_items:
             return
         self.removed_items.extend(removed_items)
-        self.scene.selectionChanged.disconnect(self._handle_scene_selection_changed)
+        scene = self.scene
+        self.scene = None
         for item in removed_items:
             item.set_all_visible(False)
-        self.scene.selectionChanged.connect(self._handle_scene_selection_changed)
+        self.scene = scene
 
     def refresh_icons(self, db_map_data):
         """Runs when entity classes are updated in the db. Refreshes icons of entities in graph.
@@ -558,7 +559,7 @@ class GraphViewMixin:
         self.show_edit_objects_form(obj_items)
         self.show_edit_relationships_form(rel_items)
 
-    def remove_entity_graph_items(self, checked=False):
+    def remove_entity_graph_items(self):
         """Removes all selected items in the graph."""
         if not self.selected_items:
             return
@@ -707,7 +708,6 @@ class GraphViewMixin:
     def _begin_add_relationships(self):
         self._relationships_being_added = True
 
-    @Slot()
     def _end_add_relationships(self):
         self._relationships_being_added = False
 
