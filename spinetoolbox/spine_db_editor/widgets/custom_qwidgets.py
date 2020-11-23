@@ -110,11 +110,11 @@ class OpenFileButton(QToolButton):
 
     @Slot(bool)
     def open_file(self, checked=False):
-        open_url(self.file_path)
+        open_url("file:///" + os.path.join(self.dir_name, self.file_path))
 
     @Slot(bool)
     def open_containing_folder(self, checked=False):
-        open_url(self.dir_name)
+        open_url("file:///" + self.dir_name)
 
 
 class OpenSQLiteFileButton(OpenFileButton):
