@@ -277,18 +277,31 @@ class ProjectItemIcon(QGraphicsRectItem):
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
+        elif change == QGraphicsItem.ItemSelectedChange:
+            if value:
+                self._add_override_documents()
+            else:
+                self._remove_override_documents()
         return super().itemChange(change, value)
+
+    def _add_override_documents(self):
+        """Add event log and process output documents to the list of override documents
+        in the respective browser.
+        """
+        self._toolbox.add_override_event_log_document(self.execution_icon._log_document)
+        self._toolbox.add_override_process_output_document(self.execution_icon._process_document)
+
+    def _remove_override_documents(self):
+        """Remove event log and process output documents to the list of override documents
+        in the respective browser.
+        """
+        self._toolbox.remove_override_event_log_document(self.execution_icon._log_document)
+        self._toolbox.remove_override_process_output_document(self.execution_icon._process_document)
 
     def select_item(self):
         """Update GUI to show the details of the selected item."""
         ind = self._toolbox.project_item_model.find_item(self.name())
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
-
-    def activate_item(self):
-        """Update GUI to show the details of the selected item."""
-        item = self._toolbox.project_item_model.get_item(self.name()).project_item
-        item.activate()
-        self._toolbox.activate_item_tab(item)
 
 
 class ConnectorButton(QGraphicsRectItem):
@@ -415,51 +428,16 @@ class ExecutionIcon(QGraphicsEllipseItem):
         parent_rect = parent.rect()
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
         self.setPen(Qt.NoPen)
+        self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
         self._log_document = SignedTextDocument()
         self._process_document = SignedTextDocument()
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
 
     def sign_documents(self, name):
         self._log_document.author = name
         self._process_document.author = name
-
-    def paint(self, painter, option, widget=None):
-        """Highlights if selected."""
-        palette = qApp.palette()  # pylint: disable=undefined-variable
-        if option.state & (QStyle.State_Selected):
-            self.setBrush(palette.highlight())
-            option.state &= ~QStyle.State_Selected
-        else:
-            self.setBrush(palette.window())
-        super().paint(painter, option, widget)
-
-    def itemChange(self, change, value):
-        """
-        Adds or removes override documents depending on whether or not the item is selected.
-        """
-        if change == QGraphicsItem.ItemSelectedHasChanged:
-            if value:
-                self._add_override_documents()
-                self._parent.activate_item()
-            else:
-                self._remove_override_documents()
-        return super().itemChange(change, value)
-
-    def _add_override_documents(self):
-        """Add event log and process output documents to the list of override documents
-        in the respective browser.
-        """
-        self._parent._toolbox.add_override_event_log_document(self._log_document)
-        self._parent._toolbox.add_override_process_output_document(self._process_document)
-
-    def _remove_override_documents(self):
-        """Remove event log and process output documents to the list of override documents
-        in the respective browser.
-        """
-        self._parent._toolbox.remove_override_event_log_document(self._log_document)
-        self._parent._toolbox.remove_override_process_output_document(self._process_document)
 
     def _repaint(self, text, color):
         self._text_item.prepareGeometryChange()
