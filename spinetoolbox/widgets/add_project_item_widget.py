@@ -55,10 +55,10 @@ class AddProjectItemWidget(QWidget):
                 self.ui.comboBox_specification.setCurrentText(spec)
                 prefix = spec
             else:
-                prefix = class_.default_name_prefix()
+                prefix = class_.item_type()
                 self.ui.comboBox_specification.setCurrentIndex(-1)
         else:
-            prefix = class_.default_name_prefix()
+            prefix = class_.item_type()
             self.ui.comboBox_specification.setEnabled(False)
         self.name = toolbox.propose_item_name(prefix)
         self.ui.lineEdit_name.setText(self.name)

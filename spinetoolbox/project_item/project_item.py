@@ -313,11 +313,6 @@ class ProjectItem(MetaObject):
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def default_name_prefix():
-        """prefix for default item name"""
-        raise NotImplementedError()
-
     def actions(self):
         """
         Item specific actions.
