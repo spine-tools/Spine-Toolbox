@@ -43,10 +43,13 @@
      <string>File</string>
     </property>
     <addaction name="actionLoad_file"/>
+    <addaction name="actionSwitch_connector"/>
+    <addaction name="separator"/>
     <addaction name="export_mappings_action"/>
     <addaction name="import_mappings_action"/>
     <addaction name="separator"/>
     <addaction name="close_action"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="edit_menu">
     <property name="title">
@@ -606,6 +609,14 @@
   <action name="actionLoad_file">
    <property name="text">
     <string>Load file...</string>
+   </property>
+  </action>
+  <action name="actionSwitch_connector">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Switch connector...</string>
    </property>
   </action>
  </widget>

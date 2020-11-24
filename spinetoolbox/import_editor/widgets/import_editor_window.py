@@ -18,6 +18,7 @@ Contains ImportPreviewWindow class.
 
 import os
 import json
+import fnmatch
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QGuiApplication, QKeySequence
 from PySide2.QtWidgets import (
@@ -27,7 +28,6 @@ from PySide2.QtWidgets import (
     QDialogButtonBox,
     QDockWidget,
     QUndoStack,
-    QMessageBox,
     QDialogButtonBox,
     QDialog,
     QVBoxLayout,
@@ -115,6 +115,7 @@ class ImportEditorWindow(QMainWindow):
         self.connection_failed.connect(self.show_error)
         self.specification_updated.connect(self._add_or_update_specification)
         self._ui.actionLoad_file.triggered.connect(self._show_open_file_dialog)
+        self._ui.actionSwitch_connector.triggered.connect(self._switch_connector)
         if filepath:
             self.start_ui(filepath)
 
@@ -136,37 +137,45 @@ class ImportEditorWindow(QMainWindow):
             self._connection_manager.close_connection()
         self.start_ui(filepath)
 
+    @Slot(bool)
+    def _switch_connector(self, _=False):
+        filepath = self._connection_manager.source
+        if self._specification:
+            self._specification.mapping.pop("source_type", None)
+        self._memoized_connectors.pop(filepath, None)
+        self.start_ui(filepath)
+
+    def _get_connector_from_mapping(self, filepath):
+        if not self._specification:
+            return None
+        mapping = self._specification.mapping
+        source_type = mapping.get("source_type")
+        if source_type is None:
+            return None
+        connector = _CONNECTOR_NAME_TO_CLASS[source_type]
+        file_extensions = connector.FILE_EXTENSIONS.split(";;")
+        if not any(fnmatch.fnmatch(filepath, ext) for ext in file_extensions):
+            return None
+        return connector
+
     def start_ui(self, filepath):
         """
         Args:
             filepath (str): Importee path
         """
-        if filepath is None:
-            filter_ = ";;".join([conn.FILE_EXTENSIONS for conn in _CONNECTOR_NAME_TO_CLASS.values()])
-            key = f"selectInputDataFileFor{self._specification.name if self._specification else None}"
-            filepath, _ = get_open_file_name_in_last_dir(
-                self._toolbox.qsettings(),
-                key,
-                self,
-                "Select an input data file to define the specification",
-                APPLICATION_PATH,
-                filter_=filter_,
-            )
-            if not filepath:
-                return
-        mapping = self._specification.mapping if self._specification else {}
-        # Try and get connector from mapping
-        source_type = mapping.get("source_type", None)
-        if source_type is not None:
-            connector = _CONNECTOR_NAME_TO_CLASS[source_type]
-        else:
+        connector = self._get_connector_from_mapping(filepath)
+        if connector is None:
             # Ask user
             connector = self._get_connector(filepath)
             if not connector:
+                if not self.isVisible():
+                    self.close()
                 return
+        self._ui.actionSwitch_connector.setEnabled(True)
         connector_settings = {"gams_directory": _gams_system_directory(self._toolbox)}
         self._connection_manager = ConnectionManager(connector, connector_settings)
         self._connection_manager.source = filepath
+        mapping = self._specification.mapping if self._specification else {}
         self._editor = ImportEditor(self._ui, self._ui_error, self._undo_stack, self._connection_manager, mapping)
         self._connection_manager.connection_failed.connect(self.connection_failed.emit)
         self._connection_manager.error.connect(self.show_error)
@@ -206,21 +215,11 @@ class ImportEditorWindow(QMainWindow):
         connector_list_wg = QListWidget()
         connector_list_wg.addItems(connector_names)
         # Set current item in `connector_list_wg` based on file extension
-        basename = os.path.basename(filepath)
-        _filename, file_extension = os.path.splitext(filepath)
-        file_extension = file_extension.lower()
-        if file_extension.startswith(".xls"):
-            row = connector_list.index(ExcelConnector)
-        elif file_extension in (".csv", ".dat", ".txt"):
-            row = connector_list.index(CSVConnector)
-        elif file_extension == ".gdx":
-            row = connector_list.index(GdxConnector)
-        elif basename == "datapackage.json":
-            row = connector_list.index(DataPackageConnector)
-        elif file_extension == ".json":
-            row = connector_list.index(JSONConnector)
-        else:
-            row = None
+        row = None
+        for k, conn in enumerate(connector_list):
+            file_extensions = conn.FILE_EXTENSIONS.split(";;")
+            if any(fnmatch.fnmatch(filepath, ext) for ext in file_extensions):
+                row = k
         if row is not None:
             connector_list_wg.setCurrentRow(row)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -232,10 +231,11 @@ class ImportEditorWindow(QMainWindow):
         _dirname, filename = os.path.split(filepath)
         dialog.setWindowTitle("Select connector for '{}'".format(filename))
         answer = dialog.exec_()
-        if answer:
-            row = connector_list_wg.currentIndex().row()
-            connector = self._memoized_connectors[filepath] = connector_list[row]
-            return connector
+        if not answer:
+            return None
+        row = connector_list_wg.currentIndex().row()
+        connector = self._memoized_connectors[filepath] = connector_list[row]
+        return connector
 
     @Slot(dict)
     def _add_or_update_specification(self, definition):
