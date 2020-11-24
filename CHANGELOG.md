@@ -43,7 +43,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   values instead of replacing them by the default value. Further, there is a new option to replace None values by
   the default value and another option to replace Nones by not-a-numbers or skip exporting them.
 - The numerical indicator on the upper left corner of project items no longer indicates the execution order for
-  each individual item because the exact order is not know before the Execute button is actually clicked.
+  each individual item because the exact order is not known before the Execute button is actually clicked.
   The number still indicates the execution order but may show the same numbers for items in different parallel
   branches.
 - Project.json file format has been upgraded to version 2. Version 1 project.json files are upgraded to version 2
