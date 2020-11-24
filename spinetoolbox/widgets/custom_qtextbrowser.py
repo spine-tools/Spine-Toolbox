@@ -36,6 +36,7 @@ class CustomQTextBrowser(QTextBrowser):
         """
         super().__init__(parent=parent)
         self._original_document = SignedTextDocument()
+        self.setDocument(self._original_document)
         self._max_blocks = 2000
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
