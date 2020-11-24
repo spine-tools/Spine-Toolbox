@@ -36,35 +36,26 @@ class CustomQTextBrowser(QTextBrowser):
         """
         super().__init__(parent=parent)
         self._original_document = SignedTextDocument()
-        self._override_documents = []
-        self.add_override_document(self._original_document)
         self._max_blocks = 2000
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
         self.anchorClicked.connect(self._open_external_link)
 
-    def add_override_document(self, document):
+    def set_override_document(self, document):
         """
-        Adds the given document to the list of override documents and sets it
-        as the current document.
+        Sets the given document as the current document.
 
         Args:
             document (QTextDocument)
         """
-        self._override_documents.append(document)
         self.setDocument(document)
         self._scroll_to_bottom()
 
-    def remove_override_document(self, document):
+    def restore_original_document(self):
         """
-        Removes the given document to the list of override documents and sets
-        the last document in the list as the current document.
-
-        Args:
-            document (QTextDocument)
+        Restores the original document
         """
-        self._override_documents.remove(document)
-        self.setDocument(self._override_documents[-1])
+        self.setDocument(self._original_document)
         self._scroll_to_bottom()
 
     def _scroll_to_bottom(self):

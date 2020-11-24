@@ -277,26 +277,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
-        elif change == QGraphicsItem.ItemSelectedChange:
-            if value:
-                self._add_override_documents()
-            else:
-                self._remove_override_documents()
         return super().itemChange(change, value)
-
-    def _add_override_documents(self):
-        """Add event log and process output documents to the list of override documents
-        in the respective browser.
-        """
-        self._toolbox.add_override_event_log_document(self.execution_icon._log_document)
-        self._toolbox.add_override_process_output_document(self.execution_icon._process_document)
-
-    def _remove_override_documents(self):
-        """Remove event log and process output documents to the list of override documents
-        in the respective browser.
-        """
-        self._toolbox.remove_override_event_log_document(self.execution_icon._log_document)
-        self._toolbox.remove_override_process_output_document(self.execution_icon._process_document)
 
     def select_item(self):
         """Update GUI to show the details of the selected item."""

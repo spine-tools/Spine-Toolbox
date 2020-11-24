@@ -852,10 +852,15 @@ class ToolboxUI(QMainWindow):
         self.active_project_item = new_active_project_item
         if self.active_project_item:
             # Activate new active project item
+            execution_icon = self.active_project_item.get_icon().execution_icon
+            self.set_override_event_log_document(execution_icon._log_document)
+            self.set_override_process_output_document(execution_icon._process_document)
             self.active_project_item.activate()
             self.activate_item_tab(self.active_project_item)
         else:
             self.activate_no_selection_tab()
+            self.restore_original_event_log_document()
+            self.restore_original_process_output_document()
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
@@ -1316,20 +1321,20 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    def add_override_event_log_document(self, document):
-        self.ui.textBrowser_eventlog.add_override_document(document)
+    def set_override_event_log_document(self, document):
+        self.ui.textBrowser_eventlog.set_override_document(document)
         self._update_event_log_title()
 
-    def remove_override_event_log_document(self, document):
-        self.ui.textBrowser_eventlog.remove_override_document(document)
+    def restore_original_event_log_document(self):
+        self.ui.textBrowser_eventlog.restore_original_document()
         self._update_event_log_title()
 
-    def add_override_process_output_document(self, document):
-        self.ui.textBrowser_process_output.add_override_document(document)
+    def set_override_process_output_document(self, document):
+        self.ui.textBrowser_process_output.set_override_document(document)
         self._update_process_log_title()
 
-    def remove_override_process_output_document(self, document):
-        self.ui.textBrowser_process_output.remove_override_document(document)
+    def restore_original_process_output_document(self):
+        self.ui.textBrowser_process_output.restore_original_document()
         self._update_process_log_title()
 
     def _update_event_log_title(self):
