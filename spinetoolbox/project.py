@@ -425,10 +425,10 @@ class SpineToolboxProject(MetaObject):
             execution_permits (Sequence(dict))
         """
         self._execution_stopped = False
-        if self._settings.value("appSettings/useExperimentalEngine", defaultValue="false") == "false":
-            self._execute_dags_normal(dags, execution_permits)
-        else:
+        if self._settings.value("appSettings/useExperimentalEngine", defaultValue="true") == "true":
             self._execute_dags_experimental(dags, execution_permits)
+        else:
+            self._execute_dags_normal(dags, execution_permits)
 
     def _execute_dags_normal(self, dags, execution_permits_list):
         self._dag_execution_list = list(dags)

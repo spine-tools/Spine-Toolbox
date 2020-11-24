@@ -461,7 +461,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))  # tri-state
         datetime = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
-        use_experimental_engine = self._qsettings.value("appSettings/useExperimentalEngine", defaultValue="false")
+        use_experimental_engine = self._qsettings.value("appSettings/useExperimentalEngine", defaultValue="true")
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
