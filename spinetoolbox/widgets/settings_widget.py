@@ -25,7 +25,7 @@ from ..graphics_items import Link
 from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
 from spinetoolbox.widgets.notification import Notification
 from spinetoolbox.helpers import select_python_interpreter, select_julia_executable, select_julia_project, \
-    file_is_valid, dir_is_valid
+    file_is_valid, dir_is_valid, resolve_julia_executable_from_path, resolve_python_executable_from_path
 
 
 class SettingsWidgetBase(QWidget):
@@ -510,6 +510,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.radioButton_use_python_interpreter.setChecked(True)
         self.toggle_julia_execution_mode()
+        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable_from_path())
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
         ind = self.ui.comboBox_julia_kernel.findText(julia_kernel)
@@ -522,6 +523,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.radioButton_use_python_interpreter.setChecked(True)
         self.toggle_python_execution_mode()
+        self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_executable_from_path())
         self.ui.lineEdit_python_path.setText(python_path)
         ind = self.ui.comboBox_python_kernel.findText(python_kernel)
         if ind == -1:
