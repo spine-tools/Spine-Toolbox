@@ -306,16 +306,10 @@ class ToolboxUI(QMainWindow):
         """Initializes project at application start-up. Opens the last project that was open
         when app was closed (if enabled in Settings) or starts the app without a project.
         """
-        p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
-        if os.path.exists(p):  # First try to open local gettings started guide, if it does not exist, open it online
-            getting_started_anchor = (
-                "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
-            )
-        else:
-            getting_started_anchor = (
-                "<a style='color:#99CCFF;' title='" + p +
-                "' href='https://spine-toolbox.readthedocs.io/en/release-0.5/getting_started.html'>Getting Started</a>"
-            )
+        url_online = 'https://spine-toolbox.readthedocs.io/en/release-0.5/getting_started.html'
+        getting_started_anchor = (
+                "<a style='color:#99CCFF;' title='" + url_online + "' href=" + url_online + ">Getting Started</a>"
+        )
         welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
             getting_started_anchor
         )
@@ -1348,29 +1342,17 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def show_user_guide(self):
-        """Open Spine Toolbox User Guide index page. First tries
-        to open the local docs but if they are missing, opens
-        the docs from readthedocs.org."""
-        doc_index_path = os.path.join(DOCUMENTATION_PATH, "index.html")
-        local_docs = "file:///" + doc_index_path
-        online_docs = "https://spine-toolbox.readthedocs.io/en/release-0.5/"
+        """Opens the online Spine Toolbox User Guide index page in browser."""
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        if not open_url(local_docs):
-            self.msg_warning.emit("Unable to find local User Guide. Opening online docs...")
-            if not open_url(online_docs):
-                self.msg_warning.emit("Unable to open readthedocs.org. Please check Internet connection.")
+        if not open_url("https://spine-toolbox.readthedocs.io/en/release-0.5/"):
+            self.msg_warning.emit("Unable to open readthedocs.io. Please check Internet connection.")
 
     @Slot()
     def show_getting_started_guide(self):
-        """Open Spine Toolbox Getting Started HTML page in browser."""
-        getting_started_path = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
-        local_docs = "file:///" + getting_started_path
-        online_docs = "https://spine-toolbox.readthedocs.io/en/release-0.5/getting_started.html"
+        """Opens the online Spine Toolbox Getting Started guide in browser."""
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        if not open_url(local_docs):
-            self.msg_warning.emit("Unable to find local Getting Started guide. Opening online docs...")
-            if not open_url(online_docs):
-                self.msg_warning.emit("Unable to open readthedocs.org. Please check Internet connection.")
+        if not open_url("https://spine-toolbox.readthedocs.io/en/release-0.5/getting_started.html"):
+            self.msg_warning.emit("Unable to open readthedocs.io. Please check Internet connection.")
 
     @Slot("QPoint")
     def show_item_context_menu(self, pos):
