@@ -1006,10 +1006,32 @@ def resolve_python_interpreter(python_path):
         path = python_path
     else:
         if not getattr(sys, "frozen", False):
-            path = sys.executable  # If not frozen, return the one that is currently used
+            path = sys.executable  # Use current Python
         else:
-            path = PYTHON_EXECUTABLE  # If frozen, return the one in path
+            # We are frozen
+            p = resolve_python_executable_from_path()
+            if p != "":
+                path = p  # Use Python from PATH
+            else:
+                path = PYTHON_EXECUTABLE  # Use embedded <app_install_dir>/Tools/python.exe
     return path
+
+
+def resolve_python_executable_from_path():
+    """[Windows only] Returns full path to Python executable in user's PATH env variable.
+    If not found, returns an empty string.
+
+    Note: This looks for python.exe so this is Windows only.
+    Update needed to PYTHON_EXECUTABLE to make this os independent.
+    """
+    p = ""
+    executable_paths = os.get_exec_path()
+    for path in executable_paths:
+        if "python" in path.casefold():
+            python_candidate = os.path.join(path, "python.exe")
+            if os.path.isfile(python_candidate):
+                p = python_candidate
+    return p
 
 
 def resolve_julia_executable_from_path():

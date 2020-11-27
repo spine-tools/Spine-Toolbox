@@ -30,6 +30,8 @@ from spinetoolbox.helpers import (
     select_julia_project,
     file_is_valid,
     dir_is_valid,
+    resolve_julia_executable_from_path,
+    resolve_python_executable_from_path,
 )
 
 
@@ -307,7 +309,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Catches the selected Python kernel name when the editor is closed."""
         previous_python_kernel = self.ui.comboBox_python_kernel.currentText()
         self.ui.comboBox_python_kernel.clear()
-        python_kernel_cb_items = ["Select Python kernel..."] + [*find_python_kernels().keys()]
+        python_kernel_cb_items = ["Select Python kernel spec..."] + [*find_python_kernels().keys()]
         self.ui.comboBox_python_kernel.addItems(python_kernel_cb_items)
         if ret_code != 1:  # Editor closed with something else than clicking Ok.
             # Set previous kernel selected in Python kernel combobox if it still exists
@@ -320,7 +322,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         new_kernel = self._kernel_editor.selected_kernel
         index = self.ui.comboBox_python_kernel.findText(new_kernel)
         if index == -1:  # New kernel not found, should be quite exceptional
-            notification = Notification(self, f"Python kernel {new_kernel} not found")
+            notification = Notification(self, f"Python kernel spec {new_kernel} not found")
             notification.show()
             self.ui.comboBox_python_kernel.setCurrentIndex(0)
         else:
@@ -341,7 +343,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Catches the selected Julia kernel name when the editor is closed."""
         previous_julia_kernel = self.ui.comboBox_julia_kernel.currentText()
         self.ui.comboBox_julia_kernel.clear()
-        julia_kernel_cb_items = ["Select Julia kernel..."] + [*find_julia_kernels().keys()]
+        julia_kernel_cb_items = ["Select Julia kernel spec..."] + [*find_julia_kernels().keys()]
         self.ui.comboBox_julia_kernel.addItems(julia_kernel_cb_items)
         if ret_code != 1:  # Editor closed with something else than clicking Ok.
             # Set previous kernel selected in combobox if it still exists
@@ -354,7 +356,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         new_kernel = self._kernel_editor.selected_kernel
         index = self.ui.comboBox_julia_kernel.findText(new_kernel)
         if index == -1:
-            notification = Notification(self, f"Julia kernel {new_kernel} not found")
+            notification = Notification(self, f"Julia kernel spec {new_kernel} not found")
             notification.show()
             self.ui.comboBox_julia_kernel.setCurrentIndex(0)
         else:
@@ -509,15 +511,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.update_bg_color()
         self.ui.lineEdit_gams_path.setText(gams_path)
         # Add Python and Julia kernels to comboBoxes
-        julia_kernel_cb_items = ["Select Julia kernel..."] + [*find_julia_kernels().keys()]  # Unpack to list literal
-        self.ui.comboBox_julia_kernel.addItems(julia_kernel_cb_items)
-        python_kernel_cb_items = ["Select Python kernel..."] + [*find_python_kernels().keys()]
-        self.ui.comboBox_python_kernel.addItems(python_kernel_cb_items)
+        julia_k_cb_items = ["Select Julia kernel spec..."] + [*find_julia_kernels().keys()]  # Unpack to list literal
+        self.ui.comboBox_julia_kernel.addItems(julia_k_cb_items)
+        python_k_cb_items = ["Select Python kernel spec..."] + [*find_python_kernels().keys()]
+        self.ui.comboBox_python_kernel.addItems(python_k_cb_items)
         if use_embedded_julia == 2:
             self.ui.radioButton_use_julia_console.setChecked(True)
         else:
             self.ui.radioButton_use_python_interpreter.setChecked(True)
         self.toggle_julia_execution_mode()
+        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable_from_path())
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
         ind = self.ui.comboBox_julia_kernel.findText(julia_kernel)
@@ -530,6 +533,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.radioButton_use_python_interpreter.setChecked(True)
         self.toggle_python_execution_mode()
+        self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_executable_from_path())
         self.ui.lineEdit_python_path.setText(python_path)
         ind = self.ui.comboBox_python_kernel.findText(python_kernel)
         if ind == -1:
