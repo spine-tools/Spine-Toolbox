@@ -3,6 +3,21 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.5.0-beta.3] - 2020-11-27
+
+### Changed
+- Use only the online User Guide on read-the-docs
+- [win-x64] Use Python in PATH if available, if not available use python in /tools/ dir
+- Clearing the line edits for Julia executable and Python Interpreter (in Settings->Tools) shows
+  the full paths to their respective files as placeholder text.
+
+## [0.5.0-beta.2] - 2020-11-24
+
+### Fixed
+- Removed spinetoolbox.project_items.__init__.py imports, because they were messing with namespaces
+- Signal disconnection issue in Graph View
+- Bugs in removing objects and object classes in Spine db Editor's Graph View
+
 ## [0.5.0-beta.1] - 2020-11-20
 
 ### Added
