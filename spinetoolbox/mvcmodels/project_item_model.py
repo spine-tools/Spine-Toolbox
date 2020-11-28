@@ -120,15 +120,14 @@ class ProjectItemModel(QAbstractItemModel):
         item = index.internalPointer()
         if role == Qt.DisplayRole:
             return item.name
-        elif role == Qt.DecorationRole:
+        if role == Qt.DecorationRole:
             if not hasattr(item, "project_item"):
                 # item is a CategoryProjectTreeItem or root
                 return None
-            else:
-                # item is a LeafProjectTreeItem
-                icon_path = item.project_item.get_icon().icon_file
-                return QIcon(icon_path)
-        elif role == Qt.FontRole:
+            # item is a LeafProjectTreeItem
+            icon_path = item.project_item.get_icon().icon_file
+            return QIcon(icon_path)
+        if role == Qt.FontRole:
             if not hasattr(item, "project_item"):
                 bold_font = QFont()
                 bold_font.setBold(True)
@@ -356,3 +355,10 @@ class ProjectItemModel(QAbstractItemModel):
             bool: True if short name is taken, False if it is available.
         """
         return short_name in set(item.short_name for item in self.items())
+
+    def leaf_indexes(self):
+        """Yields leaf indexes."""
+        for row in range(self.rowCount()):
+            category_index = self.index(row, 0)
+            for inner_row in range(self.rowCount(category_index)):
+                yield self.index(inner_row, 0, category_index)

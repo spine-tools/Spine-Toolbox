@@ -180,7 +180,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
             mock_settings_value.side_effect = _mock_settings_value_side_effect
             self.toolbox.project().execute_project()
-        self.assertTrue(view_executable.execute_forward_called)
+        self.assertTrue(view_executable.execute_called)
 
     def test_execute_project_with_two_dags(self):
         item1, item1_executable = self._make_item(self.add_dc)
@@ -188,8 +188,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
             mock_settings_value.side_effect = _mock_settings_value_side_effect
             self.toolbox.project().execute_project()
-        self.assertTrue(item1_executable.execute_forward_called)
-        self.assertTrue(item2_executable.execute_forward_called)
+        self.assertTrue(item1_executable.execute_called)
+        self.assertTrue(item2_executable.execute_called)
 
     def test_execute_selected_dag(self):
         item1, item1_executable = self._make_item(self.add_dc)
@@ -198,8 +198,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
             mock_settings_value.side_effect = _mock_settings_value_side_effect
             self.toolbox.project().execute_selected()
-        self.assertFalse(item1_executable.execute_forward_called)
-        self.assertTrue(item2_executable.execute_forward_called)
+        self.assertFalse(item1_executable.execute_called)
+        self.assertTrue(item2_executable.execute_called)
 
     def test_change_name(self):
         """Tests renaming a project."""
@@ -225,9 +225,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
             mock_settings_value.side_effect = _mock_settings_value_side_effect
             self.toolbox.project().execute_selected()
-        self.assertFalse(data_store_executable.execute_forward_called)
-        self.assertTrue(data_connection_executable.execute_forward_called)
-        self.assertFalse(view_executable.execute_forward_called)
+        self.assertFalse(data_store_executable.execute_called)
+        self.assertTrue(data_connection_executable.execute_called)
+        self.assertFalse(view_executable.execute_called)
 
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
@@ -273,14 +273,14 @@ class TestSpineToolboxProject(unittest.TestCase):
 class _MockExecutableItem(ExecutableItemBase):
     def __init__(self, name, logger):
         super().__init__(name, logger)
-        self.execute_forward_called = False
+        self.execute_called = False
 
     @staticmethod
     def item_type():
         return "Mock item"
 
-    def _execute_forward(self, resources):
-        self.execute_forward_called = True
+    def execute(self, _forward_resources, _backward_resources):
+        self.execute_called = True
         return True
 
 

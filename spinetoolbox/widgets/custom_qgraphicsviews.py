@@ -330,26 +330,28 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._toolbox.undo_stack.push(AddLinkCommand(self, src_connector, dst_connector))
         self.notify_destination_items(src_connector, dst_connector)
 
-    def make_link(self, src_connector, dst_connector):
+    def make_link(self, src_connector, dst_connector, resource_filters=None):
         """Returns a Link between given connectors.
 
         Args:
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
+            resource_filters (dict, optional)
 
         Returns:
             Link
         """
-        return Link(self._toolbox, src_connector, dst_connector)
+        return Link(self._toolbox, src_connector, dst_connector, resource_filters)
 
-    def do_add_link(self, src_connector, dst_connector):
+    def do_add_link(self, src_connector, dst_connector, resource_filters):
         """Makes a Link between given source and destination connectors and adds it to the project.
 
         Args:
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
+            resource_filters (dict)
         """
-        link = self.make_link(src_connector, dst_connector)
+        link = self.make_link(src_connector, dst_connector, resource_filters)
         self._add_link(link)
 
     def _add_link(self, link):
@@ -414,7 +416,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         .. code-block::
 
             [
-                {"from": ["DC1", "right"], "to": ["Tool1", "left"]},
+                {"from": ["DC1", "right"], "to": ["Tool1", "left"]}, "resource_filters": {}
                 ...
             ]
 
@@ -438,7 +440,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_connector = src_item.get_icon().conn_button(src_anchor)
             dst_item = self._project_item_model.item(dst_ind).project_item
             dst_connector = dst_item.get_icon().conn_button(dst_anchor)
-            self.do_add_link(src_connector, dst_connector)
+            resource_filters = conn.get("resource_filters")
+            self.do_add_link(src_connector, dst_connector, resource_filters)
 
     def notify_destination_items(self, src_connector, dst_connector):
         """Notify destination items that they have been connected to a source item."""

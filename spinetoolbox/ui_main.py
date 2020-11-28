@@ -51,6 +51,7 @@ from .widgets.custom_qwidgets import ZoomWidgetAction
 from .widgets.spine_console_widget import SpineConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
+from .widgets.link_properties_widget import LinkPropertiesWidget
 from .project import SpineToolboxProject
 from .config import (
     STATUSBAR_SS,
@@ -116,8 +117,7 @@ class ToolboxUI(QMainWindow):
         self.ui.graphicsView.set_ui(self)
         self.key_press_filter = ChildCyclingKeyPressFilter()
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
-        self._project_item_actions = list()
-        self._item_edit_actions()
+        self._create_item_edit_actions()
         # Set style sheets
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
@@ -136,6 +136,8 @@ class ToolboxUI(QMainWindow):
         self.filtered_spec_factory_models = {}
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
+        self.active_link = None
+        self.link_properties_widget = LinkPropertiesWidget(self)
         # Widget and form references
         self.settings_form = None
         self.specification_context_menu = None
@@ -143,7 +145,6 @@ class ToolboxUI(QMainWindow):
         self.process_output_context_menu = None
         self.add_project_item_form = None
         self.specification_form = None
-        self.placing_item = ""
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
@@ -828,39 +829,51 @@ class ToolboxUI(QMainWindow):
         """
         inds = self.ui.treeView_project.selectedIndexes()
         proj_items = [self.project_item_model.item(i).project_item for i in inds]
-        # NOTE: Category items are not selectable anymore
         # Sync selection with the scene
-        if proj_items:
-            scene = self.ui.graphicsView.scene()
-            scene.sync_selection = False  # This tells the scene not to sync back
-            scene.clearSelection()
-            for item in proj_items:
-                item.get_icon().setSelected(True)
-            scene.sync_selection = True
-        # Refresh active item if needed
+        proj_item_names = {i.name for i in proj_items}
+        scene = self.ui.graphicsView.scene()
+        scene.sync_selection = False  # This tells the scene not to sync back
+        for icon in scene.project_item_icons():
+            icon.setSelected(icon.name() in proj_item_names)
+        scene.sync_selection = True
         if len(proj_items) == 1:
             new_active_project_item = proj_items[0]
         else:
             new_active_project_item = None
+        self._set_active_project_item(new_active_project_item)
+
+    def _set_active_project_item(self, new_active_project_item):
+        """
+        Args:
+            new_active_project_item (ProjectItemBase or NoneType)
+        """
         if self.active_project_item and self.active_project_item != new_active_project_item:
             # Deactivate old active project item
-            ret = self.active_project_item.deactivate()
-            if not ret:
+            if not self.active_project_item.deactivate():
                 self.msg_error.emit(
                     "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
                 )
         self.active_project_item = new_active_project_item
         if self.active_project_item:
             # Activate new active project item
-            execution_icon = self.active_project_item.get_icon().execution_icon
-            self.set_override_event_log_document(execution_icon._log_document)
-            self.set_override_process_output_document(execution_icon._process_document)
-            self.active_project_item.activate()
-            self.activate_item_tab(self.active_project_item)
+            self.activate_item_tab()
         else:
             self.activate_no_selection_tab()
-            self.restore_original_event_log_document()
-            self.restore_original_process_output_document()
+
+    def _set_active_link(self, new_active_link):
+        """
+        Args:
+            new_active_link (Link or NoneType)
+        """
+        if self.active_link and self.active_link != new_active_link:
+            self.active_link.resource_filter_model.deleteLater()
+            self.active_link.resource_filter_model = None
+        self.active_link = new_active_link
+        if self.active_link:
+            # Activate new active project item
+            self.activate_link_tab()
+        else:
+            self.activate_no_selection_tab()
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
@@ -869,21 +882,31 @@ class ToolboxUI(QMainWindow):
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
         self.ui.dockWidget_item.setWindowTitle("Properties")
+        self.restore_original_event_log_document()
+        self.restore_original_process_output_document()
 
-    def activate_item_tab(self, item):
-        """Shows project item properties tab according to item type.
-        Note: Does not work if a category item is given as argument.
-
-        Args:
-            item (ProjectItem): Instance of a project item
-        """
+    def activate_item_tab(self):
+        """Shows active project item properties tab according to item type."""
+        self.active_project_item.activate()
         # Find tab index according to item type
         for i in range(self.ui.tabWidget_item_properties.count()):
-            if self.ui.tabWidget_item_properties.tabText(i) == item.item_type():
+            if self.ui.tabWidget_item_properties.tabText(i) == self.active_project_item.item_type():
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
         # Set QDockWidget title to selected item's type
-        self.ui.dockWidget_item.setWindowTitle(item.item_type() + " Properties")
+        self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
+        execution_icon = self.active_project_item.get_icon().execution_icon
+        self.set_override_event_log_document(execution_icon._log_document)
+        self.set_override_process_output_document(execution_icon._process_document)
+
+    def activate_link_tab(self):
+        """Shows link properties tab."""
+        for i in range(self.ui.tabWidget_item_properties.count()):
+            if self.ui.tabWidget_item_properties.tabText(i) == "Link properties":
+                self.ui.tabWidget_item_properties.setCurrentIndex(i)
+                break
+        self.ui.dockWidget_item.setWindowTitle("Link properties")
+        self.link_properties_widget.activate(self.active_link)
 
     @Slot()
     def import_specification(self):
@@ -1792,7 +1815,7 @@ class ToolboxUI(QMainWindow):
             name = self.propose_item_name(prefix)
         return name
 
-    def _item_edit_actions(self):
+    def _create_item_edit_actions(self):
         """Creates project item edit actions (copy, paste, duplicate) and adds them to proper places."""
         actions = [self.ui.actionCopy, self.ui.actionPaste, self.ui.actionPaste, self.ui.actionRemove]
         for action in actions:

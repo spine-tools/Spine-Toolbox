@@ -17,6 +17,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, sin, cos, pi
+from itertools import product
 from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation, QParallelAnimationGroup
 from PySide2.QtWidgets import (
     QGraphicsItem,
@@ -38,15 +39,16 @@ from PySide2.QtGui import (
     QPainterPath,
     QLinearGradient,
     QTextCursor,
-    QTransform,
     QPalette,
     QTextBlockFormat,
     QFont,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
+from spinedb_api.filters.filter_stacks import filter_config
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.helpers import format_log_message, format_process_message, add_message_to_document
 from spinetoolbox.widgets.custom_qtextbrowser import SignedTextDocument
+from spinetoolbox.project_commands import ToggleFilterValueCommand
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -802,15 +804,18 @@ class LinkBase(QGraphicsPathItem):
 
 
 class Link(LinkBase):
-    def __init__(self, toolbox, src_connector, dst_connector):
+    def __init__(self, toolbox, src_connector, dst_connector, resource_filters=None):
         """A graphics item to represent the connection between two project items.
 
         Args:
             toolbox (ToolboxUI): main UI class instance
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
+            resource_filters (dict,optional): Mapping resource labels to filter types to list of values
         """
         super().__init__(toolbox)
+        if resource_filters is None:
+            resource_filters = {}
         self.src_connector = src_connector  # QGraphicsRectItem
         self.dst_connector = dst_connector
         self.src_icon = src_connector._parent
@@ -830,6 +835,60 @@ class Link(LinkBase):
         self.update_geometry()
         self._color = QColor(255, 255, 0, 204)
         self._exec_color = None
+        self._upstream_resources = []
+        self.resource_filters = resource_filters
+        self.resource_filter_model = None
+
+    @property
+    def name(self):
+        return f"from {self.src_icon.name()} to {self.dst_icon.name()}"
+
+    @property
+    def upstream_resources(self):
+        return self._upstream_resources
+
+    def to_dict(self):
+        src_connector = self.src_connector
+        src_anchor = src_connector.position
+        src_name = src_connector.parent_name()
+        dst_connector = self.dst_connector
+        dst_anchor = dst_connector.position
+        dst_name = dst_connector.parent_name()
+        d = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
+        resource_filters = {}
+        for resource, filters in self.resource_filters.items():
+            for filter_type, values in filters.items():
+                if not values:
+                    continue
+                resource_filters.setdefault(resource, {})[filter_type] = values
+        if resource_filters:
+            d["resource_filters"] = resource_filters
+        return d
+
+    def _do_handle_dag_changed(self, upstream_resources):
+        self._upstream_resources = upstream_resources
+
+    def toggle_filter_value(self, resource, filter_type, value):
+        cmd = ToggleFilterValueCommand(self, resource, filter_type, value)
+        self._toolbox.undo_stack.push(cmd)
+
+    def _do_toggle_filter_value(self, resource, filter_type, value):
+        try:
+            self.resource_filters.get(resource, {}).get(filter_type, []).remove(value)
+        except ValueError:
+            self.resource_filters.setdefault(resource, {}).setdefault(filter_type, []).append(value)
+        if self.resource_filter_model:
+            self.resource_filter_model.refresh_filter(resource, filter_type, value)
+
+    def filter_stacks(self):
+        def filter_configs(filters):
+            for filter_type, values in filters.items():
+                yield [filter_config(filter_type, value) for value in values]
+
+        return {
+            (resource, self.dst_icon.name()): list(product(*filter_configs(filters)))
+            for resource, filters in self.resource_filters.items()
+        }
 
     def make_execution_animation(self, skipped):
         """Returns an animation to play when execution 'passes' through this link.

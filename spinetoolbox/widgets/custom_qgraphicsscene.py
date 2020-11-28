@@ -20,7 +20,7 @@ import math
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
-from spinetoolbox.graphics_items import ProjectItemIcon
+from spinetoolbox.graphics_items import ProjectItemIcon, Link
 from .project_item_drag import ProjectItemDragMixin
 from ..graphics_items import LinkDrawer
 
@@ -119,21 +119,32 @@ class DesignGraphicsScene(CustomGraphicsScene):
         """Connect scene signals."""
         self.selectionChanged.connect(self.handle_selection_changed)
 
+    def project_item_icons(self):
+        return [item for item in self.items() if isinstance(item, ProjectItemIcon)]
+
     @Slot()
     def handle_selection_changed(self):
-        """Synchronize selection with the project tree."""
+        """Synchronizes selection with the project tree."""
         if not self.sync_selection:
             return
-        selected_items = [item for item in self.selectedItems() if isinstance(item, ProjectItemIcon)]
-        selected_inds = [self._toolbox.project_item_model.find_item(item.name()) for item in selected_items]
-        self._toolbox.ui.treeView_project.clearSelection()
-        for ind in selected_inds:
-            self._toolbox.ui.treeView_project.selectionModel().select(ind, QItemSelectionModel.Select)
+        selected_item_names = [item.name() for item in self.selectedItems() if isinstance(item, ProjectItemIcon)]
+        for ind in self._toolbox.project_item_model.leaf_indexes():
+            item_name = self._toolbox.project_item_model.item(ind).name
+            cmd = QItemSelectionModel.Select if item_name in selected_item_names else QItemSelectionModel.Deselect
+            self._toolbox.ui.treeView_project.selectionModel().select(ind, cmd)
+        selected_inds = [self._toolbox.project_item_model.find_item(name) for name in selected_item_names]
         # Make last item selected the current index in project tree view
-        if bool(selected_inds):
+        if selected_inds:
             self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(
                 selected_inds[-1], QItemSelectionModel.NoUpdate
             )
+            return
+        links = [item for item in self.selectedItems() if isinstance(item, Link)]
+        if len(links) == 1:
+            new_active_link = links[0]
+        else:
+            new_active_link = None
+        self._toolbox._set_active_link(new_active_link)
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.

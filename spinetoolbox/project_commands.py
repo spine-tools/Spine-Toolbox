@@ -280,13 +280,37 @@ class RemoveLinkCommand(SpineToolboxCommand):
         super().__init__()
         self.graphics_view = graphics_view
         self.link = link
-        self.setText(f"remove link from {link.src_connector.parent_name()} to {link.dst_connector.parent_name()}")
+        self.setText(f"remove link {link.name}")
 
     def redo(self):
         self.graphics_view.do_remove_link(self.link)
 
     def undo(self):
         self.graphics_view._add_link(self.link)
+
+
+class ToggleFilterValueCommand(SpineToolboxCommand):
+    def __init__(self, link, resource, filter_type, value):
+        """Command to toggle filter value.
+
+        Args:
+            link (Link): the link
+            resource (str)
+            filter_type (str)
+            value (str)
+        """
+        super().__init__()
+        self.link = link
+        self.resource = resource
+        self.filter_type = filter_type
+        self.value = value
+        self.setText(f"Change {filter_type} for {resource} at {link.name}")
+
+    def redo(self):
+        self.link._do_toggle_filter_value(self.resource, self.filter_type, self.value)
+
+    def undo(self):
+        self.redo()
 
 
 class AddSpecificationCommand(SpineToolboxCommand):

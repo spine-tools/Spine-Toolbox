@@ -156,20 +156,6 @@ class SpineToolboxProject(MetaObject):
             msg += "cleared"
         self._logger.msg.emit(msg)
 
-    @staticmethod
-    def get_connections(links):
-        connections = list()
-        for link in links:
-            src_connector = link.src_connector
-            src_anchor = src_connector.position
-            src_name = src_connector.parent_name()
-            dst_connector = link.dst_connector
-            dst_anchor = dst_connector.position
-            dst_name = dst_connector.parent_name()
-            conn = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
-            connections.append(conn)
-        return connections
-
     def save(self, spec_paths):
         """Collects project information and objects
         into a dictionary and writes it to a JSON file.
@@ -186,7 +172,7 @@ class SpineToolboxProject(MetaObject):
         project_dict["description"] = self.description
         project_dict["specifications"] = spec_paths
         # Compute connections directly from Links on scene
-        project_dict["connections"] = self.get_connections(self._toolbox.ui.graphicsView.links())
+        project_dict["connections"] = [link.to_dict() for link in self._toolbox.ui.graphicsView.links()]
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._project_item_model.root().children():
@@ -553,10 +539,15 @@ class SpineToolboxProject(MetaObject):
             spec = project_item.specification()
             if spec is not None:
                 specifications.setdefault(project_item.item_type(), list()).append(spec.to_dict())
+        filter_stacks = {}
+        for item in project_items.values():
+            for link in item.get_icon().outgoing_links():
+                filter_stacks.update(link.filter_stacks())
         data = {
             "items": items,
             "specifications": specifications,
             "node_successors": node_successors,
+            "filter_stacks": filter_stacks,
             "execution_permits": execution_permits,
             "settings": settings,
             "project_dir": self.project_dir,

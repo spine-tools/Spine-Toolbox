@@ -199,9 +199,19 @@ class ProjectItem(MetaObject):
         else:
             self.get_icon().rank_icon.set_rank("X")
 
+    @property
+    def executable_class(self):
+        raise NotImplementedError()
+
     def execution_item(self):
         """Creates project item's execution counterpart."""
-        raise NotImplementedError()
+        if self._specification is None:
+            specifications = {}
+        else:
+            specifications = {self.item_type(): {self._specification.name: self._specification}}
+        return self.executable_class.from_dict(
+            self.item_dict(), self.name, self._project.project_dir, self._project.settings, specifications, self._logger
+        )
 
     @Slot(object, object)
     def handle_execution_successful(self, execution_direction, engine_state):
@@ -246,6 +256,8 @@ class ProjectItem(MetaObject):
         self.clear_notifications()
         self.set_rank(rank)
         self._do_handle_dag_changed(upstream_resources, downstream_resources)
+        for link in self._icon.incoming_links():
+            link._do_handle_dag_changed(upstream_resources)
 
     def _do_handle_dag_changed(self, upstream_resources, downstream_resources):
         """
