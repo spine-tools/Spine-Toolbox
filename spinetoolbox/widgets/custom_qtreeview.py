@@ -225,9 +225,3 @@ class CustomTreeView(QTreeView):
         super().keyPressEvent(event)
         if event.key() == Qt.Key_Delete:
             self.del_key_pressed.emit()
-
-
-class DragTreeView(QTreeView):
-    def dragEnterEvent(self, event):
-        super().dragEnterEvent(event)
-        event.accept()

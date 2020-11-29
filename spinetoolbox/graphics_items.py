@@ -48,7 +48,7 @@ from spinedb_api.filters.filter_stacks import filter_config
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.helpers import format_log_message, format_process_message, add_message_to_document
 from spinetoolbox.widgets.custom_qtextbrowser import SignedTextDocument
-from spinetoolbox.project_commands import ToggleFilterValueCommand
+from spinetoolbox.project_commands import ToggleFilterValuesCommand
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -868,22 +868,27 @@ class Link(LinkBase):
     def _do_handle_dag_changed(self, upstream_resources):
         self._upstream_resources = upstream_resources
 
-    def toggle_filter_value(self, resource, filter_type, value):
-        cmd = ToggleFilterValueCommand(self, resource, filter_type, value)
+    def toggle_filter_values(self, resource, filter_type, *values):
+        cmd = ToggleFilterValuesCommand(self, resource, filter_type, values)
         self._toolbox.undo_stack.push(cmd)
 
-    def _do_toggle_filter_value(self, resource, filter_type, value):
-        try:
-            self.resource_filters.get(resource, {}).get(filter_type, []).remove(value)
-        except ValueError:
-            self.resource_filters.setdefault(resource, {}).setdefault(filter_type, []).append(value)
+    def _do_toggle_filter_values(self, resource, filter_type, values):
+        current = self.resource_filters.setdefault(resource, {}).setdefault(filter_type, [])
+        for value in values:
+            if value in current:
+                current.remove(value)
+            else:
+                current.append(value)
         if self.resource_filter_model:
-            self.resource_filter_model.refresh_filter(resource, filter_type, value)
+            self.resource_filter_model.refresh_filter(resource, filter_type, values)
 
     def filter_stacks(self):
         def filter_configs(filters):
             for filter_type, values in filters.items():
-                yield [filter_config(filter_type, value) for value in values]
+                if values:
+                    yield [filter_config(filter_type, value) for value in values]
+                else:
+                    yield [{}]
 
         return {
             (resource, self.dst_icon.name()): list(product(*filter_configs(filters)))

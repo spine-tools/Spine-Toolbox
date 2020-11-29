@@ -276,38 +276,3 @@ class ActionToolbarWidget(QWidget):
         painter = QPainter(self)
         self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
         super().paintEvent(event)
-
-
-class LinkFilterLabel(QLabel):
-
-    _drag_start_pos = None
-    _mime_data = None
-    _filter_type = None
-
-    def set_filter_type(self, filter_type):
-        self._filter_type = filter_type
-
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        if event.button() == Qt.LeftButton:
-            self._drag_start_pos = event.pos()
-
-    def mouseMoveEvent(self, event):
-        """Start dragging action if needed"""
-        super().mouseMoveEvent(event)
-        if not event.buttons() & Qt.LeftButton:
-            return
-        if not self._drag_start_pos:
-            return
-        if (event.pos() - self._drag_start_pos).manhattanLength() < qApp.startDragDistance():
-            return
-        mime_data = QMimeData()
-        mime_data.setText(self._filter_type)
-        pixmap = QPixmap(self.size())
-        self.render(pixmap)
-        drag = QDrag(self)
-        drag.setPixmap(pixmap)
-        drag.setMimeData(mime_data)
-        drag.setHotSpot(event.pos())
-        self._drag_start_pos = None
-        drag.exec_()

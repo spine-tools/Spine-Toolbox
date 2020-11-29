@@ -25,6 +25,7 @@ from spinetoolbox.helpers import busy_effect
 
 
 class ResourceFilterModel(QStandardItemModel):
+
     _SELECT_ALL = "Select all"
 
     def __init__(self, link, parent=None):
@@ -35,151 +36,7 @@ class ResourceFilterModel(QStandardItemModel):
         """
         super().__init__(parent)
         self._link = link
-        self._resources = {}
-        self._block_updates = False
-        self._setup_filter_methods = {
-            SCENARIO_FILTER_TYPE: self._setup_scenario_filter,
-            TOOL_FILTER_TYPE: self._setup_tool_filter,
-        }
-
-    @busy_effect
-    def build_tree(self):
-        """Builds the tree. Top level items are resource labels. Their children are filter types (scenario or tool).
-        The children of filter type items are filter values (available scenario or tool names),
-        that the user can check/uncheck to customize the filter.
-        """
-        self._resources.clear()
-        resource_items = []
-        for resource in self._link.upstream_resources:
-            if resource.type_ != "database":
-                continue
-            resource_item = QStandardItem(resource.label)
-            resource_items.append(resource_item)
-            self._resources[resource.label] = resource
-            filter_values = self._link.resource_filters.get(resource.label, {})
-            for filter_type in filter_values:
-                self._setup_filter(resource_item, filter_type)
-        self.invisibleRootItem().appendRows(resource_items)
-
-    def _is_leaf_index(self, index):
-        """Whether or not the given index is a leaf.
-
-        Args:
-            QModelIndex
-
-        Returns:
-            bool
-        """
-        return index.parent().isValid() and self.rowCount(index) == 0
-
-    @staticmethod
-    def _get_resource_and_filter_type(index):
-        """Returns the resource label and filter type corresponding to given leaf index.
-
-        Args:
-            QModelIndex
-
-        Returns:
-            tuple(str,str)
-        """
-        filter_index = index.parent()
-        resource_index = filter_index.parent()
-        filter_type = filter_index.data(Qt.UserRole + 1)
-        resource = resource_index.data()
-        return resource, filter_type
-
-    def flags(self, index):  # pylint: disable=no-self-use
-        flags = Qt.ItemIsEnabled
-        if not index.parent().isValid():
-            return flags | Qt.ItemIsDropEnabled
-        return flags
-
-    def data(self, index, role=Qt.DisplayRole):
-        if role != Qt.CheckStateRole:
-            return super().data(index, role=role)
-        if not self._is_leaf_index(index):
-            return None
-        resource, filter_type = self._get_resource_and_filter_type(index)
-        if index.data() in self._link.resource_filters.get(resource, {}).get(filter_type, []):
-            return Qt.Checked
-        return Qt.Unchecked
-
-    @Slot("QModelIndex")
-    def _handle_index_clicked(self, index):
-        """Toggles the checked state of the index if it's a leaf.
-        This calls a method in the underlying Link object which in turn pushes a command to the undo stack...
-
-        Args:
-            QModelIndex
-        """
-        if not self._is_leaf_index(index):
-            return
-        resource, filter_type = self._get_resource_and_filter_type(index)
-        self._link.toggle_filter_value(resource, filter_type, index.data())
-
-    def refresh_filter(self, resource, filter_type, value):
-        """Notifies changes in the model. Called by the underlying Link once changes are successfully done.
-
-        Args:
-            resource (str): resource label
-            filter_type (str): filter type
-            value (str): value that changes
-        """
-        self.layoutChanged.emit()
-        # TODO: Try something better
-
-    @property
-    def resource_labels_iterator(self):
-        """Yields resource labels in the model.
-
-        Returns:
-            Iterator
-        """
-        for row in range(self.invisibleRootItem().rowCount()):
-            yield self.invisibleRootItem().child(row).text()
-
-    def _filter_types_iterator(self, parent):
-        """Yields filter types under given resource index.
-
-        Args:
-            parent (QModelIndex)
-
-        Returns:
-            Iterator
-        """
-        for row in range(self.rowCount(parent)):
-            yield self.index(row, 0, parent).data()
-
-    def canDropMimeData(self, data, drop_action, row, column, parent):
-        filter_type = data.text()
-        return (
-            row == column == -1
-            and parent.data() in set(self.resource_labels_iterator)
-            and filter_type in self._setup_filter_methods
-            and filter_type not in set(self._filter_types_iterator(parent))
-        )
-
-    def dropMimeData(self, data, drop_action, row, column, parent):
-        filter_type = data.text()
-        resource_item = self.itemFromIndex(parent)
-        if filter_type in set(self._filter_types_iterator(parent)):
-            return False
-        self._setup_filter(resource_item, filter_type)
-        return True
-
-    def _setup_filter(self, resource_item, filter_type):
-        """Creates a child for given resource item with given filter type.
-
-        Args:
-            resource_item (QStandardItem)
-            filter_type (str)
-        """
-        filter_text = {SCENARIO_FILTER_TYPE: "Scenario filter", TOOL_FILTER_TYPE: "Tool filter"}[filter_type]
-        filter_item = QStandardItem(filter_text)
-        filter_item.setData(filter_type, role=Qt.UserRole + 1)
-        resource_item.appendRow(filter_item)
-        resource = self._resources[resource_item.text()]
-        self._setup_filter_methods[filter_type](filter_item, resource)
+        self._all_resource_filter_values = {}
 
     @staticmethod
     def _get_active_scenarios(resource):
@@ -210,34 +67,109 @@ class ResourceFilterModel(QStandardItemModel):
             yield tool.name
         db_map.connection.close()
 
-    def _setup_scenario_filter(self, filter_item, resource):
-        """Creates children for given scenario filter item with active scenarios available from given resource.
+    @busy_effect
+    def build_tree(self):
+        """Builds the tree. Top level items are resource labels. Their children are filter types (scenario or tool).
+        The children of filter type items are filter values (available scenario or tool names),
+        that the user can check/uncheck to customize the filter.
+        """
+        resource_items = []
+        for resource in self._link.upstream_resources:
+            if resource.type_ != "database":
+                continue
+            resource_item = QStandardItem(resource.label)
+            resource_items.append(resource_item)
+            filter_items = []
+            for filter_type in (SCENARIO_FILTER_TYPE, TOOL_FILTER_TYPE):
+                filter_text = {SCENARIO_FILTER_TYPE: "Scenario filter", TOOL_FILTER_TYPE: "Tool filter"}[filter_type]
+                filter_item = QStandardItem(filter_text)
+                filter_item.setData(filter_type, role=Qt.UserRole + 1)
+                filter_items.append(filter_item)
+                value_iterator = {SCENARIO_FILTER_TYPE: self._get_active_scenarios, TOOL_FILTER_TYPE: self._get_tools}[
+                    filter_type
+                ](resource)
+                all_values = self._all_resource_filter_values.setdefault(resource.label, {})[filter_type] = list(
+                    value_iterator
+                )
+                select_all_item = QStandardItem(self._SELECT_ALL)
+                value_items = [select_all_item]
+                for value in all_values:
+                    value_item = QStandardItem(value)
+                    value_items.append(value_item)
+                filter_item.appendRows(value_items)
+            resource_item.appendRows(filter_items)
+        self.invisibleRootItem().appendRows(resource_items)
+
+    def flags(self, index):  # pylint: disable=no-self-use
+        return Qt.ItemIsEnabled
+
+    def _is_leaf_index(self, index):
+        """Returns whether or not the given index is a leaf.
 
         Args:
-            filter_item (QStandardItem)
-            resource (ProjectItemResource)
-        """
-        # FIXME
-        # select_all_item = QStandardItem(self._SELECT_ALL)
-        # scenario_items = [select_all_item]
-        scenario_items = []
-        for scenario in self._get_active_scenarios(resource):
-            scenario_item = QStandardItem(scenario)
-            scenario_items.append(scenario_item)
-        filter_item.appendRows(scenario_items)
+            QModelIndex
 
-    def _setup_tool_filter(self, filter_item, resource):
-        """Creates children for given tool filter item with tools available from given resource.
+        Returns:
+            bool
+        """
+        return index.parent().isValid() and self.rowCount(index) == 0
+
+    @staticmethod
+    def _get_resource_and_filter_type(index):
+        """Returns the resource label and filter type corresponding to given leaf index.
 
         Args:
-            filter_item (QStandardItem)
-            resource (ProjectItemResource)
+            QModelIndex
+
+        Returns:
+            tuple(str,str)
         """
-        # FIXME
-        # select_all_item = QStandardItem(self._SELECT_ALL)
-        # tool_items = [select_all_item]
-        tool_items = []
-        for tool in self._get_tools(resource):
-            tool_item = QStandardItem(tool)
-            tool_items.append(tool_item)
-        filter_item.appendRows(tool_items)
+        filter_index = index.parent()
+        resource_index = filter_index.parent()
+        filter_type = filter_index.data(Qt.UserRole + 1)
+        resource = resource_index.data()
+        return resource, filter_type
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role != Qt.CheckStateRole:
+            return super().data(index, role=role)
+        if not self._is_leaf_index(index):
+            return None
+        resource, filter_type = self._get_resource_and_filter_type(index)
+        values = self._link.resource_filters.get(resource, {}).get(filter_type, [])
+        if index.data(Qt.DisplayRole) == self._SELECT_ALL:
+            all_values = self._all_resource_filter_values.get(resource, {}).get(filter_type, [])
+            return Qt.Checked if len(values) == len(all_values) > 0 else Qt.Unchecked
+        return Qt.Checked if index.data() in values else Qt.Unchecked
+
+    @Slot("QModelIndex")
+    def _handle_index_clicked(self, index):
+        """Toggles the checked state of the index if it's a leaf.
+        This calls a method in the underlying Link object which in turn pushes a command to the undo stack...
+
+        Args:
+            QModelIndex
+        """
+        if not self._is_leaf_index(index):
+            return
+        resource, filter_type = self._get_resource_and_filter_type(index)
+        if index.data() == self._SELECT_ALL:
+            values = self._link.resource_filters.get(resource, {}).get(filter_type, [])
+            if index.data(Qt.CheckStateRole) == Qt.Unchecked:
+                all_values = self._all_resource_filter_values.get(resource, {}).get(filter_type, [])
+                self._link.toggle_filter_values(resource, filter_type, *(set(all_values) - set(values)))
+            else:
+                self._link.toggle_filter_values(resource, filter_type, *values)
+            return
+        self._link.toggle_filter_values(resource, filter_type, index.data())
+
+    def refresh_filter(self, resource, filter_type, value):
+        """Notifies changes in the model. Called by the underlying Link once changes are successfully done.
+
+        Args:
+            resource (str): resource label
+            filter_type (str): filter type
+            value (str): value that changes
+        """
+        self.layoutChanged.emit()
+        # TODO: Try something better?

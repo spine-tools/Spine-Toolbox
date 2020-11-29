@@ -17,8 +17,6 @@ Link properties widget.
 """
 
 from PySide2.QtWidgets import QWidget
-from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
 
 
@@ -37,8 +35,6 @@ class LinkPropertiesWidget(QWidget):
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.ui.label_scenario_filter.set_filter_type(SCENARIO_FILTER_TYPE)
-        self.ui.label_tool_filter.set_filter_type(TOOL_FILTER_TYPE)
         toolbox.ui.tabWidget_item_properties.addTab(self, "Link properties")
 
     def activate(self, link):
