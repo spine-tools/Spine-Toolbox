@@ -956,11 +956,6 @@ class Link(LinkBase):
         self.setSelected(True)
         self._toolbox.show_link_context_menu(e.screenPos(), self)
 
-    def keyPressEvent(self, event):
-        """Removes this link if delete is pressed."""
-        if event.key() == Qt.Key_Delete and self.isSelected():
-            self._toolbox.ui.graphicsView.remove_link(self)
-
     def paint(self, painter, option, widget):
         """Sets a dashed pen if selected."""
         if option.state & QStyle.State_Selected:

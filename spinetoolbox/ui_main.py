@@ -1879,7 +1879,8 @@ class ToolboxUI(QMainWindow):
 
     @Slot(bool)
     def _remove_item(self, _):
-        """Removes selected project items."""
+        """Removes selected project items and links."""
+        self.ui.graphicsView.remove_selected_links()
         selection_model = self.ui.treeView_project.selectionModel()
         for index in selection_model.selection().indexes():
             item = self.project_item_model.item(index)

@@ -399,6 +399,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.remove_graph_edge(src_name, dst_name)
 
+    def remove_selected_links(self):
+        for item in self.scene().selectedItems():
+            if isinstance(item, Link):
+                self.remove_link(item)
+
     def take_link(self, link):
         """Remove link, then start drawing another one from the same source connector."""
         self.remove_link(link)
