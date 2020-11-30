@@ -47,15 +47,14 @@ class SettingsWidgetBase(QWidget):
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         self.setStyleSheet(SETTINGS_SS)
-        self.ui.pushButton_ok.setDefault(True)
         self._mouse_press_pos = None
         self._mouse_release_pos = None
         self._mouse_move_pos = None
 
     def connect_signals(self):
         """Connect signals."""
-        self.ui.pushButton_ok.clicked.connect(self.save_and_close)
-        self.ui.pushButton_cancel.clicked.connect(self.update_ui_and_close)
+        self.ui.buttonBox.accepted.connect(self.save_and_close)
+        self.ui.buttonBox.rejected.connect(self.update_ui_and_close)
 
     def keyPressEvent(self, e):
         """Close settings form when escape key is pressed.

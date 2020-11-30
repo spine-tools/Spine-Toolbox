@@ -70,7 +70,7 @@ class Ui_SettingsForm(object):
         __qlistwidgetitem2 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem2.setIcon(icon2);
         icon3 = QIcon()
-        icon3.addFile(u":/icons/eye.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/icons/database.svg", QSize(), QIcon.Normal, QIcon.Off)
         __qlistwidgetitem3 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem3.setIcon(icon3);
         self.listWidget.setObjectName(u"listWidget")
@@ -172,7 +172,6 @@ class Ui_SettingsForm(object):
         self.lineEdit_work_dir = QLineEdit(self.groupBox_general)
         self.lineEdit_work_dir.setObjectName(u"lineEdit_work_dir")
         self.lineEdit_work_dir.setMinimumSize(QSize(0, 20))
-        self.lineEdit_work_dir.setMaximumSize(QSize(16777215, 20))
         self.lineEdit_work_dir.setClearButtonEnabled(True)
 
         self.horizontalLayout_6.addWidget(self.lineEdit_work_dir)
@@ -184,7 +183,6 @@ class Ui_SettingsForm(object):
         sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
         self.toolButton_browse_work.setSizePolicy(sizePolicy4)
-        self.toolButton_browse_work.setMaximumSize(QSize(22, 22))
         icon4 = QIcon()
         icon4.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_browse_work.setIcon(icon4)
@@ -219,7 +217,7 @@ class Ui_SettingsForm(object):
         self.label = QLabel(self.groupBox_general)
         self.label.setObjectName(u"label")
         font = QFont()
-        font.setPointSize(7)
+        font.setPointSize(10)
         self.label.setFont(font)
 
         self.gridLayout.addWidget(self.label, 6, 0, 1, 1)
@@ -259,7 +257,6 @@ class Ui_SettingsForm(object):
 
         self.toolButton_bg_color = QToolButton(self.groupBox_general)
         self.toolButton_bg_color.setObjectName(u"toolButton_bg_color")
-        self.toolButton_bg_color.setMaximumSize(QSize(22, 22))
         self.toolButton_bg_color.setIconSize(QSize(16, 16))
 
         self.horizontalLayout_4.addWidget(self.toolButton_bg_color)
@@ -372,14 +369,12 @@ class Ui_SettingsForm(object):
         self.lineEdit_gams_path = QLineEdit(self.groupBox_gams)
         self.lineEdit_gams_path.setObjectName(u"lineEdit_gams_path")
         self.lineEdit_gams_path.setMinimumSize(QSize(0, 20))
-        self.lineEdit_gams_path.setMaximumSize(QSize(16777215, 20))
         self.lineEdit_gams_path.setClearButtonEnabled(True)
 
         self.gridLayout_4.addWidget(self.lineEdit_gams_path, 2, 0, 1, 1)
 
         self.toolButton_browse_gams = QToolButton(self.groupBox_gams)
         self.toolButton_browse_gams.setObjectName(u"toolButton_browse_gams")
-        self.toolButton_browse_gams.setMaximumSize(QSize(22, 22))
         self.toolButton_browse_gams.setIcon(icon4)
 
         self.gridLayout_4.addWidget(self.toolButton_browse_gams, 2, 1, 1, 1)
@@ -394,7 +389,6 @@ class Ui_SettingsForm(object):
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.toolButton_browse_julia_project = QToolButton(self.groupBox_julia)
         self.toolButton_browse_julia_project.setObjectName(u"toolButton_browse_julia_project")
-        self.toolButton_browse_julia_project.setMaximumSize(QSize(22, 22))
         self.toolButton_browse_julia_project.setIcon(icon4)
 
         self.gridLayout_5.addWidget(self.toolButton_browse_julia_project, 4, 1, 1, 1)
@@ -402,7 +396,6 @@ class Ui_SettingsForm(object):
         self.lineEdit_julia_path = QLineEdit(self.groupBox_julia)
         self.lineEdit_julia_path.setObjectName(u"lineEdit_julia_path")
         self.lineEdit_julia_path.setMinimumSize(QSize(0, 20))
-        self.lineEdit_julia_path.setMaximumSize(QSize(16777215, 20))
         self.lineEdit_julia_path.setClearButtonEnabled(True)
 
         self.gridLayout_5.addWidget(self.lineEdit_julia_path, 3, 0, 1, 1)
@@ -421,7 +414,6 @@ class Ui_SettingsForm(object):
         self.lineEdit_julia_project_path = QLineEdit(self.groupBox_julia)
         self.lineEdit_julia_project_path.setObjectName(u"lineEdit_julia_project_path")
         self.lineEdit_julia_project_path.setMinimumSize(QSize(0, 20))
-        self.lineEdit_julia_project_path.setMaximumSize(QSize(16777215, 20))
         self.lineEdit_julia_project_path.setClearButtonEnabled(True)
 
         self.gridLayout_5.addWidget(self.lineEdit_julia_project_path, 4, 0, 1, 1)
@@ -433,14 +425,12 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
         self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
-        self.toolButton_browse_julia.setMaximumSize(QSize(22, 22))
         self.toolButton_browse_julia.setIcon(icon4)
 
         self.gridLayout_5.addWidget(self.toolButton_browse_julia, 3, 1, 1, 1)
 
         self.pushButton_open_kernel_editor_julia = QPushButton(self.groupBox_julia)
         self.pushButton_open_kernel_editor_julia.setObjectName(u"pushButton_open_kernel_editor_julia")
-        self.pushButton_open_kernel_editor_julia.setMaximumSize(QSize(16777215, 24))
 
         self.gridLayout_5.addWidget(self.pushButton_open_kernel_editor_julia, 7, 1, 1, 1)
 
@@ -460,14 +450,12 @@ class Ui_SettingsForm(object):
         self.lineEdit_python_path = QLineEdit(self.groupBox_python)
         self.lineEdit_python_path.setObjectName(u"lineEdit_python_path")
         self.lineEdit_python_path.setMinimumSize(QSize(0, 20))
-        self.lineEdit_python_path.setMaximumSize(QSize(16777215, 20))
         self.lineEdit_python_path.setClearButtonEnabled(True)
 
         self.gridLayout_2.addWidget(self.lineEdit_python_path, 1, 0, 1, 1)
 
         self.toolButton_browse_python = QToolButton(self.groupBox_python)
         self.toolButton_browse_python.setObjectName(u"toolButton_browse_python")
-        self.toolButton_browse_python.setMaximumSize(QSize(22, 22))
         self.toolButton_browse_python.setIcon(icon4)
 
         self.gridLayout_2.addWidget(self.toolButton_browse_python, 1, 1, 1, 1)
@@ -486,7 +474,6 @@ class Ui_SettingsForm(object):
         self.pushButton_open_kernel_editor_python = QPushButton(self.groupBox_python)
         self.pushButton_open_kernel_editor_python.setObjectName(u"pushButton_open_kernel_editor_python")
         self.pushButton_open_kernel_editor_python.setMinimumSize(QSize(0, 0))
-        self.pushButton_open_kernel_editor_python.setMaximumSize(QSize(16777215, 24))
 
         self.gridLayout_2.addWidget(self.pushButton_open_kernel_editor_python, 3, 1, 1, 1)
 
@@ -558,34 +545,13 @@ class Ui_SettingsForm(object):
         self.verticalLayout_7.addLayout(self.horizontalLayout_2)
 
         self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(-1, 9, -1, 18)
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalLayout.setContentsMargins(9, 9, 9, 9)
+        self.buttonBox = QDialogButtonBox(SettingsForm)
+        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
 
-        self.horizontalLayout.addItem(self.horizontalSpacer_2)
-
-        self.pushButton_ok = QPushButton(SettingsForm)
-        self.pushButton_ok.setObjectName(u"pushButton_ok")
-        self.pushButton_ok.setMinimumSize(QSize(75, 23))
-        self.pushButton_ok.setMaximumSize(QSize(75, 23))
-
-        self.horizontalLayout.addWidget(self.pushButton_ok)
-
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout.addItem(self.horizontalSpacer)
-
-        self.pushButton_cancel = QPushButton(SettingsForm)
-        self.pushButton_cancel.setObjectName(u"pushButton_cancel")
-        self.pushButton_cancel.setMinimumSize(QSize(75, 23))
-        self.pushButton_cancel.setMaximumSize(QSize(75, 23))
-
-        self.horizontalLayout.addWidget(self.pushButton_cancel)
-
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        self.horizontalLayout.addItem(self.horizontalSpacer_3)
+        self.horizontalLayout.addWidget(self.buttonBox)
 
 
         self.verticalLayout_7.addLayout(self.horizontalLayout)
@@ -628,9 +594,7 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.checkBox_relationship_items_follow, self.checkBox_smooth_entity_graph_zoom)
         QWidget.setTabOrder(self.checkBox_smooth_entity_graph_zoom, self.checkBox_smooth_entity_graph_rotation)
         QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_show_cascading_relationships)
-        QWidget.setTabOrder(self.checkBox_show_cascading_relationships, self.pushButton_ok)
-        QWidget.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
-        QWidget.setTabOrder(self.pushButton_cancel, self.listWidget)
+        QWidget.setTabOrder(self.checkBox_show_cascading_relationships, self.listWidget)
 
         self.retranslateUi(SettingsForm)
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
@@ -719,8 +683,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QCoreApplication.translate("SettingsForm", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None))
+"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
         self.textEdit_project_description.setPlaceholderText("")
         self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
         self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
@@ -802,13 +766,5 @@ class Ui_SettingsForm(object):
         self.checkBox_show_cascading_relationships.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_show_cascading_relationships.setText(QCoreApplication.translate("SettingsForm", u"Show cascading relationships by default in Entity graph", None))
-#if QT_CONFIG(tooltip)
-        self.pushButton_ok.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Saves changes and closes the window</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.pushButton_ok.setText(QCoreApplication.translate("SettingsForm", u"Ok", None))
-#if QT_CONFIG(tooltip)
-        self.pushButton_cancel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Closes the window without saving changes</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.pushButton_cancel.setText(QCoreApplication.translate("SettingsForm", u"Cancel", None))
     # retranslateUi
 

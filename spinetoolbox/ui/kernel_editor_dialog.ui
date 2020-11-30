@@ -30,7 +30,6 @@
     <widget class="QLabel" name="label">
      <property name="font">
       <font>
-       <pointsize>7</pointsize>
        <italic>true</italic>
        <strikeout>false</strikeout>
       </font>
@@ -52,11 +51,6 @@
       <bool>false</bool>
      </property>
      <widget class="QTableView" name="tableView_kernel_list">
-      <property name="font">
-       <font>
-        <pointsize>8</pointsize>
-       </font>
-      </property>
       <property name="contextMenuPolicy">
        <enum>Qt::CustomContextMenu</enum>
       </property>
@@ -116,7 +110,7 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>7</pointsize>
+            <pointsize>9</pointsize>
             <weight>50</weight>
             <italic>false</italic>
             <bold>false</bold>
@@ -375,7 +369,7 @@
           </property>
           <property name="font">
            <font>
-            <pointsize>7</pointsize>
+            <pointsize>9</pointsize>
             <underline>true</underline>
            </font>
           </property>

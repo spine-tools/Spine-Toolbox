@@ -12,6 +12,7 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>database.svg</file>
     <file>minus.svg</file>
     <file>plus.svg</file>
     <file>book.svg</file>
@@ -19,7 +20,6 @@
     <file>home.svg</file>
     <file>desktop.svg</file>
     <file>folder-plus.svg</file>
-    <file>eye.svg</file>
     <file>sliders-h.svg</file>
     <file>tools.svg</file>
     <file>project-diagram.svg</file>

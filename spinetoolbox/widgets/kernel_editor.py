@@ -737,13 +737,13 @@ class KernelEditor(QDialog):
         retval = self.is_ijulia_installed(julia, project)
         if retval == 0:  # Julia is not configured correctly
             return
-        elif retval == 1:  # IJulia is installed
+        if retval == 1:  # IJulia is installed
             if self.ui.checkBox_rebuild_ijulia.isChecked():
                 self.start_ijulia_rebuild_process(julia, project)
             else:
                 self.start_ijulia_installkernel_process(julia, project, kernel_name)
             return
-        elif retval == 2:  # IJulia is not installed
+        if retval == 2:  # IJulia is not installed
             message = (
                 f"Julia project <br><br><b>{project}</b><br><br>is missing the <b>IJulia</b> package, "
                 f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
@@ -756,7 +756,6 @@ class KernelEditor(QDialog):
             if answer == QMessageBox.Cancel:
                 return
             self.start_ijulia_install_process(julia, project)
-            return
 
     @busy_effect
     def is_ijulia_installed(self, program, project):

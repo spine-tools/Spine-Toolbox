@@ -192,7 +192,7 @@
         </property>
         <property name="icon">
          <iconset resource="resources/resources_icons.qrc">
-          <normaloff>:/icons/eye.svg</normaloff>:/icons/eye.svg</iconset>
+          <normaloff>:/icons/database.svg</normaloff>:/icons/database.svg</iconset>
         </property>
        </item>
       </widget>
@@ -332,12 +332,6 @@
                   <height>20</height>
                  </size>
                 </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>20</height>
-                 </size>
-                </property>
                 <property name="toolTip">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
@@ -356,12 +350,6 @@
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>22</width>
-                  <height>22</height>
-                 </size>
                 </property>
                 <property name="toolTip">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Work directory with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -424,7 +412,7 @@
              <widget class="QLabel" name="label">
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>10</pointsize>
                </font>
               </property>
               <property name="text">
@@ -436,7 +424,7 @@
              <widget class="QLabel" name="label_7">
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>10</pointsize>
                </font>
               </property>
               <property name="text">
@@ -492,12 +480,6 @@
               </item>
               <item>
                <widget class="QToolButton" name="toolButton_bg_color">
-                <property name="maximumSize">
-                 <size>
-                  <width>22</width>
-                  <height>22</height>
-                 </size>
-                </property>
                 <property name="toolTip">
                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick solid background color&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
@@ -531,7 +513,7 @@
              <widget class="QLabel" name="label_4">
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>10</pointsize>
                </font>
               </property>
               <property name="text">
@@ -598,7 +580,7 @@
              <widget class="QLabel" name="label_2">
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>10</pointsize>
                </font>
               </property>
               <property name="text">
@@ -644,7 +626,7 @@
              <widget class="QLabel" name="label_3">
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>10</pointsize>
                </font>
               </property>
               <property name="text">
@@ -676,8 +658,8 @@
                <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="acceptRichText">
                <bool>false</bool>
@@ -720,7 +702,7 @@ p, li { white-space: pre-wrap; }
              <widget class="QLabel" name="label_11">
               <property name="font">
                <font>
-                <pointsize>7</pointsize>
+                <pointsize>10</pointsize>
                </font>
               </property>
               <property name="text">
@@ -733,12 +715,6 @@ p, li { white-space: pre-wrap; }
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
                 <height>20</height>
                </size>
               </property>
@@ -755,12 +731,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="2" column="1">
              <widget class="QToolButton" name="toolButton_browse_gams">
-              <property name="maximumSize">
-               <size>
-                <width>22</width>
-                <height>22</height>
-               </size>
-              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS executable using a file browser (eg. gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -784,12 +754,6 @@ p, li { white-space: pre-wrap; }
             </property>
             <item row="4" column="1">
              <widget class="QToolButton" name="toolButton_browse_julia_project">
-              <property name="maximumSize">
-               <size>
-                <width>22</width>
-                <height>22</height>
-               </size>
-              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia project using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -807,12 +771,6 @@ p, li { white-space: pre-wrap; }
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
                 <height>20</height>
                </size>
               </property>
@@ -855,12 +813,6 @@ p, li { white-space: pre-wrap; }
                 <height>20</height>
                </size>
               </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>20</height>
-               </size>
-              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -887,12 +839,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="3" column="1">
              <widget class="QToolButton" name="toolButton_browse_julia">
-              <property name="maximumSize">
-               <size>
-                <width>22</width>
-                <height>22</height>
-               </size>
-              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia executable using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -904,12 +850,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="7" column="1">
              <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>24</height>
-               </size>
-              </property>
               <property name="text">
                <string>Kernel editor</string>
               </property>
@@ -948,12 +888,6 @@ p, li { white-space: pre-wrap; }
                 <height>20</height>
                </size>
               </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>20</height>
-               </size>
-              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -967,12 +901,6 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="1" column="1">
              <widget class="QToolButton" name="toolButton_browse_python">
-              <property name="maximumSize">
-               <size>
-                <width>22</width>
-                <height>22</height>
-               </size>
-              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -1008,12 +936,6 @@ p, li { white-space: pre-wrap; }
                <size>
                 <width>0</width>
                 <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>24</height>
                </size>
               </property>
               <property name="toolTip">
@@ -1140,97 +1062,24 @@ p, li { white-space: pre-wrap; }
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="spacing">
-      <number>0</number>
+     <property name="leftMargin">
+      <number>9</number>
      </property>
      <property name="topMargin">
       <number>9</number>
      </property>
+     <property name="rightMargin">
+      <number>9</number>
+     </property>
      <property name="bottomMargin">
-      <number>18</number>
+      <number>9</number>
      </property>
      <item>
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_ok">
-       <property name="minimumSize">
-        <size>
-         <width>75</width>
-         <height>23</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>75</width>
-         <height>23</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Saves changes and closes the window&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Ok</string>
+      <widget class="QDialogButtonBox" name="buttonBox">
+       <property name="standardButtons">
+        <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
        </property>
       </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_cancel">
-       <property name="minimumSize">
-        <size>
-         <width>75</width>
-         <height>23</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>75</width>
-         <height>23</height>
-        </size>
-       </property>
-       <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Closes the window without saving changes&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-       </property>
-       <property name="text">
-        <string>Cancel</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>
@@ -1283,8 +1132,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_smooth_entity_graph_zoom</tabstop>
   <tabstop>checkBox_smooth_entity_graph_rotation</tabstop>
   <tabstop>checkBox_show_cascading_relationships</tabstop>
-  <tabstop>pushButton_ok</tabstop>
-  <tabstop>pushButton_cancel</tabstop>
   <tabstop>listWidget</tabstop>
  </tabstops>
  <resources>
