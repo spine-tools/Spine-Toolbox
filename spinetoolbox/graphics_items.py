@@ -452,7 +452,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
         QToolTip.hideText()
 
 
-class ExclamationIcon(QGraphicsSvgItem):
+class ExclamationIcon(QGraphicsTextItem):
     def __init__(self, parent):
         """An icon to notify that a ProjectItem is missing some configuration.
 
@@ -462,19 +462,12 @@ class ExclamationIcon(QGraphicsSvgItem):
         super().__init__(parent)
         self._parent = parent
         self._notifications = list()
-        self.renderer = QSvgRenderer()
-        self.colorizer = QGraphicsColorizeEffect()
-        self.colorizer.setColor(QColor("red"))
-        # Load SVG
-        loading_ok = self.renderer.load(":/icons/item_icons/exclamation-circle.svg")
-        if not loading_ok:
-            return
-        size = self.renderer.defaultSize()
-        self.setSharedRenderer(self.renderer)
-        dim_max = max(size.width(), size.height())
-        rect_w = parent.rect().width()  # Parent rect width
-        self.setScale(0.2 * rect_w / dim_max)
-        self.setGraphicsEffect(self.colorizer)
+        font = QFont('Font Awesome 5 Free Solid')
+        self.setFont(font)
+        self.setDefaultTextColor(QColor("red"))
+        self.setPlainText("\uf06a")
+        doc = self.document()
+        doc.setDocumentMargin(0)
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
@@ -596,16 +589,16 @@ class LinkBase(QGraphicsPathItem):
         self.prepareGeometryChange()
         qsettings = self._toolbox.qsettings()
         curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
-        self.do_update_geometry(curved_links)
+        guide_path = self._make_guide_path(curved_links)
+        self.do_update_geometry(guide_path)
 
-    def do_update_geometry(self, curved_links):
+    def do_update_geometry(self, guide_path):
         """Sets the path for this item.
 
         Args:
-            curved_links (bool): Whether the path should follow a curvy line or a straight line
+            guide_path (QPainterPath)
         """
         ellipse_path = self._make_ellipse_path()
-        guide_path = self._make_guide_path(curved_links)
         connecting_path = self._make_connecting_path(guide_path)
         arrow_path = self._make_arrow_path(guide_path)
         path = ellipse_path + connecting_path + arrow_path
@@ -786,6 +779,34 @@ class LinkBase(QGraphicsPathItem):
         return atan2(-line.dy(), line.dx())
 
 
+class FilterIcon(QGraphicsEllipseItem):
+    def __init__(self, x, y, w, h, parent):
+        """An icon to show that a Link has filters."""
+        super().__init__(x, y, w, h, parent)
+        self._parent = parent
+        color = QColor("slateblue")
+        pen = self.pen()
+        pen.setBrush(color)
+        self.setPen(pen)
+        self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
+        self._text_item = QGraphicsTextItem(self)
+        font = QFont('Font Awesome 5 Free Solid')
+        self._text_item.setFont(font)
+        self._text_item.setPos(0, 0)
+        self._text_item.setPlainText("\uf0b0")
+        self._text_item.setDefaultTextColor(color)
+        self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setCursor(Qt.PointingHandCursor)
+
+    def itemChange(self, change, value):
+        """Selects the parent item instead of this."""
+        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
+            self._parent.setSelected(True)
+            return not value
+        return super().itemChange(change, value)
+
+
 class Link(LinkBase):
     def __init__(self, toolbox, src_connector, dst_connector, resource_filters=None):
         """A graphics item to represent the connection between two project items.
@@ -803,7 +824,8 @@ class Link(LinkBase):
         self.dst_connector = dst_connector
         self.src_icon = src_connector._parent
         self.dst_icon = dst_connector._parent
-        # Path parameters
+        self._filter_icon_extent = 4 * self.magic_number
+        self._filter_icon = FilterIcon(0, 0, self._filter_icon_extent, self._filter_icon_extent, self)
         self.setToolTip(
             "<html><p>Connection from <b>{0}</b>'s output "
             "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name())
@@ -838,15 +860,19 @@ class Link(LinkBase):
         dst_anchor = dst_connector.position
         dst_name = dst_connector.parent_name()
         d = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
+        resource_filters = self._compile_resource_filters()
+        if resource_filters:
+            d["resource_filters"] = resource_filters
+        return d
+
+    def _compile_resource_filters(self):
         resource_filters = {}
         for resource, filters in self.resource_filters.items():
             for filter_type, values in filters.items():
                 if not values:
                     continue
                 resource_filters.setdefault(resource, {})[filter_type] = values
-        if resource_filters:
-            d["resource_filters"] = resource_filters
-        return d
+        return resource_filters
 
     def _do_handle_dag_changed(self, upstream_resources):
         self._upstream_resources = upstream_resources
@@ -864,6 +890,7 @@ class Link(LinkBase):
                 current.append(value)
         if self.resource_filter_model:
             self.resource_filter_model.refresh_filter(resource, filter_type, values)
+        self.update()
 
     def filter_stacks(self):
         def filter_configs(filters):
@@ -877,6 +904,12 @@ class Link(LinkBase):
             (resource, self.dst_icon.name()): list(product(*filter_configs(filters)))
             for resource, filters in self.resource_filters.items()
         }
+
+    def do_update_geometry(self, guide_path):
+        """See base class."""
+        super().do_update_geometry(guide_path)
+        center = guide_path.pointAtPercent(0.5)
+        self._filter_icon.setPos(center - 0.5 * QPointF(self._filter_icon_extent, self._filter_icon_extent))
 
     def make_execution_animation(self, skipped):
         """Returns an animation to play when execution 'passes' through this link.
@@ -946,6 +979,7 @@ class Link(LinkBase):
             self.setPen(self.selected_pen)
         else:
             self.setPen(self.normal_pen)
+        self._filter_icon.setVisible(bool(self._compile_resource_filters()))
         super().paint(painter, option, widget)
 
     def itemChange(self, change, value):
