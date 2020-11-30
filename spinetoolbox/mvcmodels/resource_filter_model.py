@@ -163,13 +163,12 @@ class ResourceFilterModel(QStandardItemModel):
             return
         self._link.toggle_filter_values(resource, filter_type, index.data())
 
-    def refresh_filter(self, resource, filter_type, value):
+    def refresh_filter(self, resource, filter_type, values):
         """Notifies changes in the model. Called by the underlying Link once changes are successfully done.
 
         Args:
             resource (str): resource label
             filter_type (str): filter type
-            value (str): value that changes
+            values (Iterable): values that change
         """
         self.layoutChanged.emit()
-        # TODO: Try something better?

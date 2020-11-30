@@ -138,13 +138,16 @@ class DesignGraphicsScene(CustomGraphicsScene):
             self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(
                 selected_inds[-1], QItemSelectionModel.NoUpdate
             )
-            return
+        if len(selected_inds) == 1:
+            new_active_project_item = self._toolbox.project_item_model.item(selected_inds[0]).project_item
+        else:
+            new_active_project_item = None
         links = [item for item in self.selectedItems() if isinstance(item, Link)]
         if len(links) == 1:
             new_active_link = links[0]
         else:
             new_active_link = None
-        self._toolbox._set_active_link(new_active_link)
+        self._toolbox.refresh_active_elements(new_active_project_item, new_active_link)
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.

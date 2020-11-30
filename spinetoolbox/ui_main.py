@@ -823,9 +823,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(QItemSelection, QItemSelection)
     def item_selection_changed(self, selected, deselected):
-        """Synchronize selection with scene. Check if only one item is selected and make it the
-        active item: disconnect signals of previous active item, connect signals of current active item
-        and show correct properties tab for the latter.
+        """Synchronizes selection with scene. The scene handles item/link de/activation.
         """
         inds = self.ui.treeView_project.selectedIndexes()
         proj_items = [self.project_item_model.item(i).project_item for i in inds]
@@ -836,11 +834,16 @@ class ToolboxUI(QMainWindow):
         for icon in scene.project_item_icons():
             icon.setSelected(icon.name() in proj_item_names)
         scene.sync_selection = True
-        if len(proj_items) == 1:
-            new_active_project_item = proj_items[0]
-        else:
-            new_active_project_item = None
+
+    def refresh_active_elements(self, new_active_project_item, new_active_link):
         self._set_active_project_item(new_active_project_item)
+        self._set_active_link(new_active_link)
+        if self.active_project_item:
+            self.activate_item_tab()
+        elif self.active_link:
+            self.activate_link_tab()
+        else:
+            self.activate_no_selection_tab()
 
     def _set_active_project_item(self, new_active_project_item):
         """
@@ -854,11 +857,6 @@ class ToolboxUI(QMainWindow):
                     "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
                 )
         self.active_project_item = new_active_project_item
-        if self.active_project_item:
-            # Activate new active project item
-            self.activate_item_tab()
-        else:
-            self.activate_no_selection_tab()
 
     def _set_active_link(self, new_active_link):
         """
@@ -869,11 +867,6 @@ class ToolboxUI(QMainWindow):
             self.active_link.resource_filter_model.deleteLater()
             self.active_link.resource_filter_model = None
         self.active_link = new_active_link
-        if self.active_link:
-            # Activate new active project item
-            self.activate_link_tab()
-        else:
-            self.activate_no_selection_tab()
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
