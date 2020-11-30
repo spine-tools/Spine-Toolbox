@@ -82,7 +82,6 @@ class SpineEngineWorker(QObject):
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"
-        self._stop_requested = False
         self._executing_items = []
         self._project_items = project_items
         self.sucessful_executions = []
@@ -102,7 +101,7 @@ class SpineEngineWorker(QObject):
         return RemoteSpineEngineManager(engine_server_address, engine_data)
 
     def stop_engine(self):
-        self._stop_requested = True
+        self._engine_mngr.stop_engine()
 
     def engine_final_state(self):
         return self._engine_final_state
@@ -119,8 +118,6 @@ class SpineEngineWorker(QObject):
         """Does the work and emits finished when done."""
         self._engine_mngr.run_engine()
         while True:
-            if self._stop_requested:
-                self._engine_mngr.stop_engine()
             event_type, data = self._engine_mngr.get_engine_event()
             self._process_event(event_type, data)
             if event_type == "dag_exec_finished":
