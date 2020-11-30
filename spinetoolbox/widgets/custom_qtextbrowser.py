@@ -23,7 +23,9 @@ from spinetoolbox.helpers import add_message_to_document
 
 
 class SignedTextDocument(QTextDocument):
-    author = ""
+    def __init__(self, owner=""):
+        super().__init__()
+        self.owner = owner
 
 
 class CustomQTextBrowser(QTextBrowser):

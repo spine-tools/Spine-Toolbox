@@ -46,8 +46,6 @@ from PySide2.QtGui import (
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinedb_api.filters.filter_stacks import filter_config
 from spinetoolbox.project_commands import MoveIconCommand
-from spinetoolbox.helpers import format_log_message, format_process_message, add_message_to_document
-from spinetoolbox.widgets.custom_qtextbrowser import SignedTextDocument
 from spinetoolbox.project_commands import ToggleFilterValuesCommand
 
 
@@ -97,7 +95,6 @@ class ProjectItemIcon(QGraphicsRectItem):
     def update(self, name, x, y):
         self.update_name_item(name)
         self.moveBy(x, y)
-        self.execution_icon.sign_documents(name)
 
     def activate(self):
         """Adds items to scene and setup graphics effect.
@@ -412,15 +409,9 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
         self.setPen(Qt.NoPen)
         self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
-        self._log_document = SignedTextDocument()
-        self._process_document = SignedTextDocument()
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
-
-    def sign_documents(self, name):
-        self._log_document.author = name
-        self._process_document.author = name
 
     def _repaint(self, text, color):
         self._text_item.prepareGeometryChange()
@@ -450,14 +441,6 @@ class ExecutionIcon(QGraphicsEllipseItem):
         else:
             self._execution_state = "failed"
             self._repaint(self._CROSS, QColor("red"))
-
-    def add_log_message(self, msg_type, msg_text):
-        message = format_log_message(msg_type, msg_text)
-        add_message_to_document(self._log_document, message)
-
-    def add_process_message(self, msg_type, msg_text):
-        message = format_process_message(msg_type, msg_text)
-        add_message_to_document(self._process_document, message)
 
     def hoverEnterEvent(self, event):
         tip = (

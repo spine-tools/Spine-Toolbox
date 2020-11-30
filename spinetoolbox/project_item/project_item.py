@@ -18,9 +18,12 @@ Contains base classes for project items and item factories.
 import os
 import logging
 from PySide2.QtCore import Signal, Slot
+from PySide2.QtWidgets import QWidget
 from spinetoolbox.helpers import create_dir, rename_dir, open_url
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.project_commands import SetItemSpecificationCommand
+from spinetoolbox.widgets.custom_qtextbrowser import SignedTextDocument
+from spinetoolbox.helpers import format_log_message, format_process_message, add_message_to_document
 from spine_engine.utils.helpers import shorten
 
 
@@ -64,6 +67,10 @@ class ProjectItem(MetaObject):
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
         self.undo_specification = None
+        self._log_document = SignedTextDocument(name)
+        self._process_document = SignedTextDocument(name)
+        self.julia_console = QWidget()
+        self.python_console = QWidget()
 
     def create_data_dir(self):
         try:
@@ -408,6 +415,14 @@ class ProjectItem(MetaObject):
             f"<b>{source_item.item_type()}</b> and a <b>{self.item_type()}</b> has not been "
             "implemented yet."
         )
+
+    def add_log_message(self, msg_type, msg_text):
+        message = format_log_message(msg_type, msg_text)
+        add_message_to_document(self._log_document, message)
+
+    def add_process_message(self, msg_type, msg_text):
+        message = format_process_message(msg_type, msg_text)
+        add_message_to_document(self._process_document, message)
 
     @staticmethod
     def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):

@@ -152,7 +152,7 @@ class ToolboxUI(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         # Make julia REPL
         self.julia_console = SpineConsoleWidget(self, "Julia Console")
-        self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_console)
+        self.ui.dockWidgetContents_julia_console.layout().addWidget(self.julia_console)
         # Make Python REPL
         self.python_console = SpineConsoleWidget(self, "Python Console")
         self.ui.dockWidgetContents_python_console.layout().addWidget(self.python_console)
@@ -884,6 +884,8 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidget_item.setWindowTitle("Properties")
         self.restore_original_event_log_document()
         self.restore_original_process_output_document()
+        self.restore_original_python_console()
+        self.restore_original_julia_console()
 
     def activate_item_tab(self):
         """Shows active project item properties tab according to item type."""
@@ -895,9 +897,10 @@ class ToolboxUI(QMainWindow):
                 break
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
-        execution_icon = self.active_project_item.get_icon().execution_icon
-        self.set_override_event_log_document(execution_icon._log_document)
-        self.set_override_process_output_document(execution_icon._process_document)
+        self.set_override_event_log_document(self.active_project_item._log_document)
+        self.set_override_process_output_document(self.active_project_item._process_document)
+        self.set_override_python_console(self.active_project_item.python_console)
+        self.set_override_julia_console(self.active_project_item.julia_console)
 
     def activate_link_tab(self):
         """Shows link properties tab."""
@@ -1247,7 +1250,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_console.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_console.toggleViewAction())
         undo_action = self.undo_stack.createUndoAction(self)
         redo_action = self.undo_stack.createRedoAction(self)
         undo_action.setShortcuts(QKeySequence.Undo)
@@ -1348,13 +1351,13 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.set_override_document(document)
         self._update_event_log_title()
 
-    def restore_original_event_log_document(self):
-        self.ui.textBrowser_eventlog.restore_original_document()
-        self._update_event_log_title()
-
     def set_override_process_output_document(self, document):
         self.ui.textBrowser_process_output.set_override_document(document)
         self._update_process_log_title()
+
+    def restore_original_event_log_document(self):
+        self.ui.textBrowser_eventlog.restore_original_document()
+        self._update_event_log_title()
 
     def restore_original_process_output_document(self):
         self.ui.textBrowser_process_output.restore_original_document()
@@ -1362,17 +1365,45 @@ class ToolboxUI(QMainWindow):
 
     def _update_event_log_title(self):
         new_title = "Event Log"
-        author = self.ui.textBrowser_eventlog.document().author
-        if author:
-            new_title = f"{new_title} --{author}"
+        owner = self.ui.textBrowser_eventlog.document().owner
+        if owner:
+            new_title = f"{new_title} --{owner}"
         self.ui.dockWidget_eventlog.setWindowTitle(new_title)
 
     def _update_process_log_title(self):
         new_title = "Process Log"
-        author = self.ui.textBrowser_process_output.document().author
-        if author:
-            new_title = f"{new_title} --{author}"
+        owner = self.ui.textBrowser_process_output.document().owner
+        if owner:
+            new_title = f"{new_title} --{owner}"
         self.ui.dockWidget_process_output.setWindowTitle(new_title)
+
+    @staticmethod
+    def _set_override_console(widget, console):
+        if not isinstance(console, SpineConsoleWidget):
+            return
+        layout = widget.layout()
+        for i in range(layout.count()):
+            layout.itemAt(i).widget().hide()
+        layout.addWidget(console)
+        console.show()
+        new_title = console.name()
+        if console.owner:
+            new_title = f"{new_title} --{console.owner}"
+        widget.parent().setWindowTitle(new_title)
+
+    def set_override_python_console(self, console):
+        dockwidget = self.ui.dockWidgetContents_python_console
+        self._set_override_console(dockwidget, console)
+
+    def set_override_julia_console(self, console):
+        widget = self.ui.dockWidgetContents_julia_console
+        self._set_override_console(widget, console)
+
+    def restore_original_python_console(self):
+        self.set_override_python_console(self.python_console)
+
+    def restore_original_julia_console(self):
+        self.set_override_julia_console(self.julia_console)
 
     def show_add_project_item_form(self, item_type, x=0, y=0, spec=""):
         """Show add project item widget."""

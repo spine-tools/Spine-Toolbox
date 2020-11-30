@@ -50,12 +50,12 @@ def _handle_node_execution_finished(item, direction, state, success, skipped):
 
 @Slot(object, str, str)
 def _handle_log_message_arrived(item, msg_type, msg_text):
-    item.get_icon().execution_icon.add_log_message(msg_type, msg_text)
+    item.add_log_message(msg_type, msg_text)
 
 
 @Slot(object, str, str)
 def _handle_process_message_arrived(item, msg_type, msg_text):
-    item.get_icon().execution_icon.add_process_message(msg_type, msg_text)
+    item.add_process_message(msg_type, msg_text)
 
 
 class SpineEngineWorker(QObject):
@@ -158,9 +158,7 @@ class SpineEngineWorker(QObject):
         item = self._project_items[msg["author"]]
         language = msg["language"].capitalize()
         if msg["type"] == "kernel_started":
-            console = {"julia": self._toolbox.julia_console, "python": self._toolbox.python_console}.get(
-                msg["language"]
-            )
+            console = {"julia": item.julia_console, "python": item.python_console}.get(msg["language"])
             if console is not None:
                 console.connect_to_kernel(msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":

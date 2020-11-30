@@ -34,15 +34,17 @@ class SpineConsoleWidget(RichJupyterWidget):
     ready_to_execute = Signal()
     execution_failed = Signal(int)
 
-    def __init__(self, toolbox, name):
+    def __init__(self, toolbox, name, owner=""):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Console name, e.g. 'Python Console'
+            owner (str): The name of the project item that 'owns' the console, empty if it's the toolbox 'main' console
         """
         super().__init__(parent=toolbox)
         self._toolbox = toolbox
         self._name = name
+        self.owner = owner
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
         self.kernel_name = None
         self.kernel_manager = None

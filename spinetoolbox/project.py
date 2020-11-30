@@ -18,6 +18,7 @@ Spine Toolbox project class.
 
 import os
 import json
+import logging
 from PySide2.QtCore import Slot, Signal, QTimer
 from PySide2.QtWidgets import QMessageBox
 from spine_engine import SpineEngine, SpineEngineState
@@ -230,11 +231,12 @@ class SpineToolboxProject(MetaObject):
                 return {}
             try:
                 project_item = factory.make_item(item_name, item_dict, self._toolbox, self, self._logger)
-            except TypeError:
+            except TypeError as error:
                 self._logger.msg_error.emit(
                     f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     "This is most likely caused by an outdated project file."
                 )
+                logging.debug(error)
                 continue
             except KeyError as error:
                 self._logger.msg_error.emit(
@@ -242,6 +244,7 @@ class SpineToolboxProject(MetaObject):
                     f"This is most likely caused by an outdated or corrupted project file "
                     f"(missing JSON key: {str(error)})."
                 )
+                logging.debug(error)
                 continue
             project_items_by_category.setdefault(project_item.item_category(), list()).append(project_item)
         project_tree_items = {}
