@@ -65,7 +65,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
         super().__init__(parent)
         self._toolbox = toolbox
         self.item_shadow = None
-        self.sync_selection = True
         # Set background attributes
         settings = toolbox.qsettings()
         self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
@@ -125,13 +124,13 @@ class DesignGraphicsScene(CustomGraphicsScene):
     @Slot()
     def handle_selection_changed(self):
         """Synchronizes selection with the project tree."""
-        if not self.sync_selection:
-            return
         selected_item_names = [item.name() for item in self.selectedItems() if isinstance(item, ProjectItemIcon)]
+        self._toolbox.sync_item_selection_with_scene = False
         for ind in self._toolbox.project_item_model.leaf_indexes():
             item_name = self._toolbox.project_item_model.item(ind).name
             cmd = QItemSelectionModel.Select if item_name in selected_item_names else QItemSelectionModel.Deselect
             self._toolbox.ui.treeView_project.selectionModel().select(ind, cmd)
+        self._toolbox.sync_item_selection_with_scene = True
         selected_inds = [self._toolbox.project_item_model.find_item(name) for name in selected_item_names]
         # Make last item selected the current index in project tree view
         if selected_inds:

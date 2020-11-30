@@ -137,6 +137,7 @@ class ToolboxUI(QMainWindow):
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.active_link = None
+        self.sync_item_selection_with_scene = True
         self.link_properties_widget = LinkPropertiesWidget(self)
         # Widget and form references
         self.settings_form = None
@@ -825,15 +826,14 @@ class ToolboxUI(QMainWindow):
     def item_selection_changed(self, selected, deselected):
         """Synchronizes selection with scene. The scene handles item/link de/activation.
         """
+        if not self.sync_item_selection_with_scene:
+            return
         inds = self.ui.treeView_project.selectedIndexes()
         proj_items = [self.project_item_model.item(i).project_item for i in inds]
-        # Sync selection with the scene
         proj_item_names = {i.name for i in proj_items}
         scene = self.ui.graphicsView.scene()
-        scene.sync_selection = False  # This tells the scene not to sync back
         for icon in scene.project_item_icons():
             icon.setSelected(icon.name() in proj_item_names)
-        scene.sync_selection = True
 
     def refresh_active_elements(self, new_active_project_item, new_active_link):
         self._set_active_project_item(new_active_project_item)
