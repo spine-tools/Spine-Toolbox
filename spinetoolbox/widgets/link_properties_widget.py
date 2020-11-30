@@ -45,8 +45,8 @@ class LinkPropertiesWidget(QWidget):
             link (Link)
         """
         link.resource_filter_model = ResourceFilterModel(link, self)
+        link.resource_filter_model.tree_built.connect(self.ui.treeView_resources.expandAll)
         link.resource_filter_model.build_tree()
         self.ui.treeView_resources.setModel(link.resource_filter_model)
-        self.ui.treeView_resources.expandAll()
         self.ui.treeView_resources.clicked.connect(link.resource_filter_model._handle_index_clicked)
         self.ui.label_link_name.setText(link.name)

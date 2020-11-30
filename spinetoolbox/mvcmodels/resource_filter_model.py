@@ -16,7 +16,7 @@ Contains ResourceFilterModel.
 :date:   26.11.2020
 """
 
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QThread, QObject
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from spinedb_api import DatabaseMapping
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
@@ -26,6 +26,7 @@ from spinetoolbox.helpers import busy_effect
 
 class ResourceFilterModel(QStandardItemModel):
 
+    tree_built = Signal()
     _SELECT_ALL = "Select all"
 
     def __init__(self, link, parent=None):
@@ -37,35 +38,8 @@ class ResourceFilterModel(QStandardItemModel):
         super().__init__(parent)
         self._link = link
         self._all_resource_filter_values = {}
-
-    @staticmethod
-    def _get_active_scenarios(resource):
-        """Queries given resource for active scenarios and yields their names.
-
-        Args:
-            resource (ProjectItemResource)
-        Returns:
-            Iterator(str): scenario names
-        """
-        db_map = DatabaseMapping(resource.url)
-        # pylint: disable=singleton-comparison
-        for scenario in db_map.query(db_map.scenario_sq).filter(db_map.scenario_sq.c.active == True):
-            yield scenario.name
-        db_map.connection.close()
-
-    @staticmethod
-    def _get_tools(resource):
-        """Queries given resource for tools and yields their names.
-
-        Args:
-            resource (ProjectItemResource)
-        Returns:
-            Iterator(str): scenario names
-        """
-        db_map = DatabaseMapping(resource.url)
-        for tool in db_map.query(db_map.tool_sq):
-            yield tool.name
-        db_map.connection.close()
+        self._worker = _Worker([r for r in link.upstream_resources if r.type_ == "database"])
+        self._worker.finished.connect(self._do_build_tree)
 
     @busy_effect
     def build_tree(self):
@@ -73,32 +47,31 @@ class ResourceFilterModel(QStandardItemModel):
         The children of filter type items are filter values (available scenario or tool names),
         that the user can check/uncheck to customize the filter.
         """
+        self._worker.start()
+
+    @Slot(dict)
+    def _do_build_tree(self, resource_filter_values):
+        self._all_resource_filter_values = resource_filter_values
         resource_items = []
-        for resource in self._link.upstream_resources:
-            if resource.type_ != "database":
-                continue
-            resource_item = QStandardItem(resource.label)
+        for resource, filters in resource_filter_values.items():
+            resource_item = QStandardItem(resource)
             resource_items.append(resource_item)
             filter_items = []
-            for filter_type in (SCENARIO_FILTER_TYPE, TOOL_FILTER_TYPE):
+            for filter_type, values in filters.items():
                 filter_text = {SCENARIO_FILTER_TYPE: "Scenario filter", TOOL_FILTER_TYPE: "Tool filter"}[filter_type]
                 filter_item = QStandardItem(filter_text)
                 filter_item.setData(filter_type, role=Qt.UserRole + 1)
                 filter_items.append(filter_item)
-                value_iterator = {SCENARIO_FILTER_TYPE: self._get_active_scenarios, TOOL_FILTER_TYPE: self._get_tools}[
-                    filter_type
-                ](resource)
-                all_values = self._all_resource_filter_values.setdefault(resource.label, {})[filter_type] = list(
-                    value_iterator
-                )
                 select_all_item = QStandardItem(self._SELECT_ALL)
                 value_items = [select_all_item]
-                for value in all_values:
+                for value in values:
                     value_item = QStandardItem(value)
                     value_items.append(value_item)
                 filter_item.appendRows(value_items)
             resource_item.appendRows(filter_items)
         self.invisibleRootItem().appendRows(resource_items)
+        self._worker.tear_down()
+        self.tree_built.emit()
 
     def flags(self, index):  # pylint: disable=no-self-use
         return Qt.ItemIsEnabled
@@ -172,3 +145,34 @@ class ResourceFilterModel(QStandardItemModel):
             values (Iterable): values that change
         """
         self.layoutChanged.emit()
+
+
+class _Worker(QObject):
+
+    finished = Signal(dict)
+
+    def __init__(self, resources):
+        super().__init__()
+        self._resources = resources
+        self._thread = QThread()
+        self.moveToThread(self._thread)
+        self._thread.started.connect(self.do_work)
+
+    def start(self):
+        self._thread.start()
+
+    def do_work(self):
+        resource_filter_values = {}
+        for resource in self._resources:
+            db_map = DatabaseMapping(resource.url)
+            # pylint: disable=singleton-comparison
+            scenarios = [x.name for x in db_map.query(db_map.scenario_sq).filter(db_map.scenario_sq.c.active == True)]
+            tools = [x.name for x in db_map.query(db_map.tool_sq)]
+            db_map.connection.close()
+            resource_filter_values[resource.label] = {SCENARIO_FILTER_TYPE: scenarios, TOOL_FILTER_TYPE: tools}
+        self.finished.emit(resource_filter_values)
+
+    def tear_down(self):
+        self._thread.quit()
+        self._thread.wait()
+        self.deleteLater()
