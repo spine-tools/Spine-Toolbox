@@ -864,8 +864,7 @@ class ToolboxUI(QMainWindow):
             new_active_link (Link or NoneType)
         """
         if self.active_link and self.active_link != new_active_link:
-            self.active_link.resource_filter_model.deleteLater()
-            self.active_link.resource_filter_model = None
+            self.link_properties_widget.deactivate(self.active_link)
         self.active_link = new_active_link
 
     def activate_no_selection_tab(self):

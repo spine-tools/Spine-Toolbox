@@ -38,8 +38,7 @@ class LinkPropertiesWidget(QWidget):
         toolbox.ui.tabWidget_item_properties.addTab(self, "Link properties")
 
     def activate(self, link):
-        """
-        Activates the widget for the given link, so that user actions are reflected in the link's filter configuration.
+        """Hooks the widget to given link, so that user actions are reflected in the link's filter configuration.
 
         Args:
             link (Link)
@@ -50,3 +49,13 @@ class LinkPropertiesWidget(QWidget):
         self.ui.treeView_resources.setModel(link.resource_filter_model)
         self.ui.treeView_resources.clicked.connect(link.resource_filter_model._handle_index_clicked)
         self.ui.label_link_name.setText(link.name)
+
+    def deactivate(self, link):
+        """Releases the widget from given link.
+
+        Args:
+            link (Link)
+        """
+        self.ui.treeView_resources.setModel(None)
+        link.resource_filter_model.deleteLater()
+        link.resource_filter_model = None
