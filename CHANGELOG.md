@@ -9,15 +9,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Support for Experimental Spine Engine. This can be enabled in app Settings->General tab. Experimental 
   engine provides the latest in-development features (e.g. parallel/multicore processing, etc.).
 - New project item: Data Transformer. Can be used to configure Spine database filters for successor items.
-  Currently it supports renaming entity classes.
+  Currently, it supports renaming entity classes.
 - Support for version 3 Spine Toolbox projects and an automatic upgrade of version 2 projects to version 3.
 - Support for version 4 Spine Toolbox projects.
 - Support for version 5 Spine Toolbox projects.
+- Support for version 6 Spine Toolbox projects.
 - Support to create sysimages for Julia tools.
 - New requirement: jill, for installing Julia.
 - The SpineOpt configuration assistant has been moved from File->Configuration assistants,
   to File->Settings->Tools->Julia, and renamed to SpineOpt Installer.
 - New wizard to install Julia, accessible from File->Settings->Tools->Julia.
+- New Exporter project item, a general-purpose tabular data exporter. The old .gdx exporter has been
+  renamed to GdxExporter.
 
 
 ### Changed

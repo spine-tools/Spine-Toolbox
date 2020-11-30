@@ -34,6 +34,7 @@ class TestLoadProjectItems(unittest.TestCase):
             "Data Transformer": "Manipulators",
             "Data Store": "Data Stores",
             "Importer": "Importers",
+            "Exporter": "Exporters",
             "GdxExporter": "Exporters",
             "Tool": "Tools",
             "View": "Views",

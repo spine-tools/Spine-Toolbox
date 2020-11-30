@@ -1220,7 +1220,7 @@ class ToolboxUI(QMainWindow):
         """Open the tool specification widget for editing an existing tool specification.
 
         Args:
-            index (QModelIndex): Index of the item (from double-click or contex menu signal)
+            index (QModelIndex): Index of the item (from double-click or context menu signal)
             item (ProjectItem, optional)
         """
         if not index.isValid():

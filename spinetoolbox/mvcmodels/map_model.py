@@ -23,6 +23,7 @@ from PySide2.QtGui import QColor, QFont
 from spinedb_api import (
     Array,
     convert_leaf_maps_to_specialized_containers,
+    convert_map_to_table,
     DateTime,
     Duration,
     IndexedValue,
@@ -66,8 +67,7 @@ class MapModel(QAbstractTableModel):
             map_value (Map): a map
         """
         super().__init__()
-        rows = _as_rows(map_value)
-        self._rows = _make_square(rows)
+        self._rows = convert_map_to_table(map_value)
         self._BOLD = QFont()
         self._BOLD.setBold(True)
         self._EMTPY_COLOR = QColor(255, 240, 240)
@@ -315,8 +315,7 @@ class MapModel(QAbstractTableModel):
     def reset(self, map_value):
         """Resets the model to given map_value."""
         self.beginResetModel()
-        rows = _as_rows(map_value)
-        self._rows = _make_square(rows)
+        self._rows = convert_map_to_table(map_value)
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
@@ -407,31 +406,6 @@ class MapModel(QAbstractTableModel):
         """Returns the Map."""
         tree = _rows_to_dict(self._rows)
         return _reconstruct_map(tree)
-
-
-def _as_rows(map_value, row_this_far=None):
-    """Converts given Map into list of rows recursively."""
-    if row_this_far is None:
-        row_this_far = list()
-    rows = list()
-    for index, value in zip(map_value.indexes, map_value.values):
-        if not isinstance(value, Map):
-            rows.append(row_this_far + [index, value])
-        else:
-            rows += _as_rows(value, row_this_far + [index])
-    return rows
-
-
-def _make_square(rows):
-    """Makes a list of rows a 2D table by appending None to the row ends."""
-    max_length = 0
-    for row in rows:
-        max_length = max(max_length, len(row))
-    equal_length_rows = list()
-    for row in rows:
-        equal_length_row = row + (max_length - len(row)) * [None]
-        equal_length_rows.append(equal_length_row)
-    return equal_length_rows
 
 
 def _rows_to_dict(rows):
