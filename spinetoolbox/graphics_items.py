@@ -584,11 +584,12 @@ class LinkBase(QGraphicsPathItem):
     def moveBy(self, _dx, _dy):
         """Does nothing. This item is not moved the regular way, but follows the ConnectorButtons it connects."""
 
-    def update_geometry(self):
+    def update_geometry(self, curved_links=None):
         """Updates geometry."""
         self.prepareGeometryChange()
-        qsettings = self._toolbox.qsettings()
-        curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
+        if curved_links is None:
+            qsettings = self._toolbox.qsettings()
+            curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
         guide_path = self._make_guide_path(curved_links)
         self.do_update_geometry(guide_path)
 

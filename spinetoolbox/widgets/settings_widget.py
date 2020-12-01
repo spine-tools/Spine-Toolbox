@@ -412,7 +412,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def update_links_geometry(self, checked=False):
         for item in self._toolbox.ui.graphicsView.items():
             if isinstance(item, Link):
-                item.do_update_geometry(checked)
+                item.update_geometry(curved_links=checked)
 
     @Slot(bool)
     def toggle_julia_execution_mode(self, checked=False):
