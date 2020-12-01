@@ -109,6 +109,7 @@ class OpenProjectDialog(QDialog):
         self.ui.comboBox_current_path.customContextMenuRequested.connect(self.show_context_menu)
         self.validator.changed.connect(self.validator_state_changed)
         self.ui.treeView_file_system.clicked.connect(self.set_selected_path)
+        self.ui.treeView_file_system.doubleClicked.connect(self.open_project)
         self.ui.treeView_file_system.selectionModel().currentChanged.connect(self.current_changed)
         self.go_root_action.triggered.connect(self.go_root)
         self.go_home_action.triggered.connect(self.go_home)
@@ -247,6 +248,17 @@ class OpenProjectDialog(QDialog):
         self.ui.treeView_file_system.setCurrentIndex(desktop_index)
         self.ui.treeView_file_system.expand(desktop_index)
         self.ui.treeView_file_system.scrollTo(desktop_index, hint=QAbstractItemView.PositionAtTop)
+
+    @Slot("QModelIndex")
+    def open_project(self, index):
+        """Opens project if index contains a valid Spine Toolbox project.
+
+        Args:
+            index (QModelIndex): The index which was double clicked
+        """
+        if not index.isValid():
+            return
+        self.done(QDialog.Accepted)
 
     def done(self, r):
         """Checks that selected path exists and is a valid
