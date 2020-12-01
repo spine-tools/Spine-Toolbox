@@ -22,7 +22,6 @@ import shutil
 from tempfile import TemporaryDirectory
 from unittest import mock
 from unittest.mock import MagicMock
-from PySide2.QtWidgets import QWidget
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
 

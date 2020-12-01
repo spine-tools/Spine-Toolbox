@@ -791,7 +791,9 @@ class TestToolboxUI(unittest.TestCase):
             (QPoint): Center point of the Link in graphics view viewport coordinates.
         """
         # Make sure the boundingRect's center point is *on* the link
-        link.do_update_geometry(curved_links=False)
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = "false"
+            link.update_geometry()
         # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
         # Get project item icon rectangle
         qrectf = link.boundingRect()  # Returns a rectangle in item coordinate system
