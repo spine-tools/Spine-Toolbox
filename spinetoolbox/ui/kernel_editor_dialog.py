@@ -32,18 +32,8 @@ class Ui_Dialog(object):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
         Dialog.resize(824, 625)
-        self.verticalLayout = QVBoxLayout(Dialog)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.label = QLabel(Dialog)
-        self.label.setObjectName(u"label")
-        font = QFont()
-        font.setItalic(True)
-        font.setStrikeOut(False)
-        self.label.setFont(font)
-        self.label.setAlignment(Qt.AlignCenter)
-
-        self.verticalLayout.addWidget(self.label)
-
+        self.gridLayout = QGridLayout(Dialog)
+        self.gridLayout.setObjectName(u"gridLayout")
         self.splitter = QSplitter(Dialog)
         self.splitter.setObjectName(u"splitter")
         self.splitter.setOrientation(Qt.Vertical)
@@ -65,69 +55,24 @@ class Ui_Dialog(object):
         self.stackedWidget.setObjectName(u"stackedWidget")
         self.stackedWidgetPage1 = QWidget()
         self.stackedWidgetPage1.setObjectName(u"stackedWidgetPage1")
-        self.gridLayout = QGridLayout(self.stackedWidgetPage1)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.label_python_cmd = QLabel(self.stackedWidgetPage1)
-        self.label_python_cmd.setObjectName(u"label_python_cmd")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.gridLayout_2 = QGridLayout(self.stackedWidgetPage1)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.label_8 = QLabel(self.stackedWidgetPage1)
+        self.label_8.setObjectName(u"label_8")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_python_cmd.sizePolicy().hasHeightForWidth())
-        self.label_python_cmd.setSizePolicy(sizePolicy)
-        self.label_python_cmd.setMinimumSize(QSize(0, 26))
-        self.label_python_cmd.setMaximumSize(QSize(16777215, 26))
-        font1 = QFont()
-        font1.setPointSize(9)
-        font1.setBold(False)
-        font1.setItalic(False)
-        font1.setUnderline(True)
-        font1.setWeight(50)
-        self.label_python_cmd.setFont(font1)
-        self.label_python_cmd.setToolTipDuration(-1)
-        self.label_python_cmd.setStyleSheet(u"color: rgb(0, 0, 255);")
-        self.label_python_cmd.setTextFormat(Qt.AutoText)
-        self.label_python_cmd.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+        sizePolicy.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
+        self.label_8.setSizePolicy(sizePolicy)
+        self.label_8.setMinimumSize(QSize(0, 26))
+        self.label_8.setMaximumSize(QSize(16777215, 26))
 
-        self.gridLayout.addWidget(self.label_python_cmd, 4, 0, 1, 1)
-
-        self.pushButton_make_python_kernel = QPushButton(self.stackedWidgetPage1)
-        self.pushButton_make_python_kernel.setObjectName(u"pushButton_make_python_kernel")
-
-        self.gridLayout.addWidget(self.pushButton_make_python_kernel, 5, 0, 1, 1)
-
-        self.label_5 = QLabel(self.stackedWidgetPage1)
-        self.label_5.setObjectName(u"label_5")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
-        self.label_5.setSizePolicy(sizePolicy1)
-        self.label_5.setMinimumSize(QSize(0, 26))
-        self.label_5.setMaximumSize(QSize(16777215, 26))
-
-        self.gridLayout.addWidget(self.label_5, 3, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.label_8, 0, 0, 1, 2)
 
         self.label_3 = QLabel(self.stackedWidgetPage1)
         self.label_3.setObjectName(u"label_3")
 
-        self.gridLayout.addWidget(self.label_3, 1, 0, 1, 1)
-
-        self.lineEdit_python_kernel_name = QLineEdit(self.stackedWidgetPage1)
-        self.lineEdit_python_kernel_name.setObjectName(u"lineEdit_python_kernel_name")
-        self.lineEdit_python_kernel_name.setClearButtonEnabled(True)
-
-        self.gridLayout.addWidget(self.lineEdit_python_kernel_name, 2, 1, 1, 1)
-
-        self.label_2 = QLabel(self.stackedWidgetPage1)
-        self.label_2.setObjectName(u"label_2")
-
-        self.gridLayout.addWidget(self.label_2, 2, 0, 1, 1)
-
-        self.lineEdit_python_kernel_display_name = QLineEdit(self.stackedWidgetPage1)
-        self.lineEdit_python_kernel_display_name.setObjectName(u"lineEdit_python_kernel_display_name")
-        self.lineEdit_python_kernel_display_name.setClearButtonEnabled(True)
-
-        self.gridLayout.addWidget(self.lineEdit_python_kernel_display_name, 3, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.label_3, 1, 0, 1, 1)
 
         self.lineEdit_python_interpreter = QLineEdit(self.stackedWidgetPage1)
         self.lineEdit_python_interpreter.setObjectName(u"lineEdit_python_interpreter")
@@ -137,16 +82,7 @@ class Ui_Dialog(object):
         self.lineEdit_python_interpreter.setReadOnly(False)
         self.lineEdit_python_interpreter.setClearButtonEnabled(True)
 
-        self.gridLayout.addWidget(self.lineEdit_python_interpreter, 1, 1, 1, 1)
-
-        self.label_8 = QLabel(self.stackedWidgetPage1)
-        self.label_8.setObjectName(u"label_8")
-        sizePolicy1.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
-        self.label_8.setSizePolicy(sizePolicy1)
-        self.label_8.setMinimumSize(QSize(0, 26))
-        self.label_8.setMaximumSize(QSize(16777215, 26))
-
-        self.gridLayout.addWidget(self.label_8, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.lineEdit_python_interpreter, 1, 1, 1, 1)
 
         self.toolButton_select_python = QToolButton(self.stackedWidgetPage1)
         self.toolButton_select_python.setObjectName(u"toolButton_select_python")
@@ -154,23 +90,87 @@ class Ui_Dialog(object):
         icon.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.toolButton_select_python.setIcon(icon)
 
-        self.gridLayout.addWidget(self.toolButton_select_python, 1, 2, 1, 1)
+        self.gridLayout_2.addWidget(self.toolButton_select_python, 1, 2, 1, 1)
+
+        self.label_2 = QLabel(self.stackedWidgetPage1)
+        self.label_2.setObjectName(u"label_2")
+
+        self.gridLayout_2.addWidget(self.label_2, 2, 0, 1, 1)
+
+        self.lineEdit_python_kernel_name = QLineEdit(self.stackedWidgetPage1)
+        self.lineEdit_python_kernel_name.setObjectName(u"lineEdit_python_kernel_name")
+        self.lineEdit_python_kernel_name.setClearButtonEnabled(True)
+
+        self.gridLayout_2.addWidget(self.lineEdit_python_kernel_name, 2, 1, 1, 1)
+
+        self.label_5 = QLabel(self.stackedWidgetPage1)
+        self.label_5.setObjectName(u"label_5")
+        sizePolicy.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
+        self.label_5.setSizePolicy(sizePolicy)
+        self.label_5.setMinimumSize(QSize(0, 26))
+        self.label_5.setMaximumSize(QSize(16777215, 26))
+
+        self.gridLayout_2.addWidget(self.label_5, 3, 0, 1, 1)
+
+        self.lineEdit_python_kernel_display_name = QLineEdit(self.stackedWidgetPage1)
+        self.lineEdit_python_kernel_display_name.setObjectName(u"lineEdit_python_kernel_display_name")
+        self.lineEdit_python_kernel_display_name.setClearButtonEnabled(True)
+
+        self.gridLayout_2.addWidget(self.lineEdit_python_kernel_display_name, 3, 1, 1, 1)
+
+        self.label_python_cmd = QLabel(self.stackedWidgetPage1)
+        self.label_python_cmd.setObjectName(u"label_python_cmd")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.label_python_cmd.sizePolicy().hasHeightForWidth())
+        self.label_python_cmd.setSizePolicy(sizePolicy1)
+        self.label_python_cmd.setMinimumSize(QSize(0, 26))
+        self.label_python_cmd.setMaximumSize(QSize(16777215, 26))
+        font = QFont()
+        font.setPointSize(9)
+        font.setBold(False)
+        font.setItalic(False)
+        font.setUnderline(True)
+        font.setWeight(50)
+        self.label_python_cmd.setFont(font)
+        self.label_python_cmd.setToolTipDuration(-1)
+        self.label_python_cmd.setStyleSheet(u"color: rgb(0, 0, 255);")
+        self.label_python_cmd.setTextFormat(Qt.AutoText)
+        self.label_python_cmd.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
+
+        self.gridLayout_2.addWidget(self.label_python_cmd, 4, 0, 1, 1)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.pushButton_make_python_kernel = QPushButton(self.stackedWidgetPage1)
+        self.pushButton_make_python_kernel.setObjectName(u"pushButton_make_python_kernel")
+
+        self.horizontalLayout.addWidget(self.pushButton_make_python_kernel)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+
+        self.gridLayout_2.addLayout(self.horizontalLayout, 5, 0, 1, 2)
 
         self.stackedWidget.addWidget(self.stackedWidgetPage1)
         self.stackedWidgetPage2 = QWidget()
         self.stackedWidgetPage2.setObjectName(u"stackedWidgetPage2")
         self.gridLayout_3 = QGridLayout(self.stackedWidgetPage2)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.toolButton_select_julia_project = QToolButton(self.stackedWidgetPage2)
-        self.toolButton_select_julia_project.setObjectName(u"toolButton_select_julia_project")
-        self.toolButton_select_julia_project.setIcon(icon)
+        self.label_4 = QLabel(self.stackedWidgetPage2)
+        self.label_4.setObjectName(u"label_4")
+        self.label_4.setMinimumSize(QSize(0, 26))
+        self.label_4.setMaximumSize(QSize(16777215, 26))
 
-        self.gridLayout_3.addWidget(self.toolButton_select_julia_project, 3, 2, 1, 1)
+        self.gridLayout_3.addWidget(self.label_4, 0, 0, 1, 2)
 
-        self.pushButton_make_julia_kernel = QPushButton(self.stackedWidgetPage2)
-        self.pushButton_make_julia_kernel.setObjectName(u"pushButton_make_julia_kernel")
+        self.label_6 = QLabel(self.stackedWidgetPage2)
+        self.label_6.setObjectName(u"label_6")
 
-        self.gridLayout_3.addWidget(self.pushButton_make_julia_kernel, 7, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.label_6, 1, 0, 1, 1)
 
         self.lineEdit_julia_executable = QLineEdit(self.stackedWidgetPage2)
         self.lineEdit_julia_executable.setObjectName(u"lineEdit_julia_executable")
@@ -181,47 +181,11 @@ class Ui_Dialog(object):
 
         self.gridLayout_3.addWidget(self.lineEdit_julia_executable, 1, 1, 1, 1)
 
-        self.label_9 = QLabel(self.stackedWidgetPage2)
-        self.label_9.setObjectName(u"label_9")
+        self.toolButton_select_julia = QToolButton(self.stackedWidgetPage2)
+        self.toolButton_select_julia.setObjectName(u"toolButton_select_julia")
+        self.toolButton_select_julia.setIcon(icon)
 
-        self.gridLayout_3.addWidget(self.label_9, 3, 0, 1, 1)
-
-        self.label_4 = QLabel(self.stackedWidgetPage2)
-        self.label_4.setObjectName(u"label_4")
-        self.label_4.setMinimumSize(QSize(0, 26))
-        self.label_4.setMaximumSize(QSize(16777215, 26))
-
-        self.gridLayout_3.addWidget(self.label_4, 0, 0, 1, 1)
-
-        self.lineEdit_julia_project = QLineEdit(self.stackedWidgetPage2)
-        self.lineEdit_julia_project.setObjectName(u"lineEdit_julia_project")
-        self.lineEdit_julia_project.setClearButtonEnabled(True)
-
-        self.gridLayout_3.addWidget(self.lineEdit_julia_project, 3, 1, 1, 1)
-
-        self.label_julia_cmd = QLabel(self.stackedWidgetPage2)
-        self.label_julia_cmd.setObjectName(u"label_julia_cmd")
-        self.label_julia_cmd.setMinimumSize(QSize(0, 26))
-        self.label_julia_cmd.setMaximumSize(QSize(16777215, 26))
-        font2 = QFont()
-        font2.setPointSize(9)
-        font2.setUnderline(True)
-        self.label_julia_cmd.setFont(font2)
-        self.label_julia_cmd.setMouseTracking(True)
-        self.label_julia_cmd.setStyleSheet(u"color: rgb(0, 0, 255);")
-
-        self.gridLayout_3.addWidget(self.label_julia_cmd, 6, 0, 1, 1)
-
-        self.lineEdit_julia_kernel_name = QLineEdit(self.stackedWidgetPage2)
-        self.lineEdit_julia_kernel_name.setObjectName(u"lineEdit_julia_kernel_name")
-        self.lineEdit_julia_kernel_name.setClearButtonEnabled(True)
-
-        self.gridLayout_3.addWidget(self.lineEdit_julia_kernel_name, 2, 1, 1, 1)
-
-        self.label_6 = QLabel(self.stackedWidgetPage2)
-        self.label_6.setObjectName(u"label_6")
-
-        self.gridLayout_3.addWidget(self.label_6, 1, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.toolButton_select_julia, 1, 2, 1, 1)
 
         self.label_7 = QLabel(self.stackedWidgetPage2)
         self.label_7.setObjectName(u"label_7")
@@ -230,11 +194,28 @@ class Ui_Dialog(object):
 
         self.gridLayout_3.addWidget(self.label_7, 2, 0, 1, 1)
 
-        self.toolButton_select_julia = QToolButton(self.stackedWidgetPage2)
-        self.toolButton_select_julia.setObjectName(u"toolButton_select_julia")
-        self.toolButton_select_julia.setIcon(icon)
+        self.lineEdit_julia_kernel_name = QLineEdit(self.stackedWidgetPage2)
+        self.lineEdit_julia_kernel_name.setObjectName(u"lineEdit_julia_kernel_name")
+        self.lineEdit_julia_kernel_name.setClearButtonEnabled(True)
 
-        self.gridLayout_3.addWidget(self.toolButton_select_julia, 1, 2, 1, 1)
+        self.gridLayout_3.addWidget(self.lineEdit_julia_kernel_name, 2, 1, 1, 1)
+
+        self.label_9 = QLabel(self.stackedWidgetPage2)
+        self.label_9.setObjectName(u"label_9")
+
+        self.gridLayout_3.addWidget(self.label_9, 3, 0, 1, 1)
+
+        self.lineEdit_julia_project = QLineEdit(self.stackedWidgetPage2)
+        self.lineEdit_julia_project.setObjectName(u"lineEdit_julia_project")
+        self.lineEdit_julia_project.setClearButtonEnabled(True)
+
+        self.gridLayout_3.addWidget(self.lineEdit_julia_project, 3, 1, 1, 1)
+
+        self.toolButton_select_julia_project = QToolButton(self.stackedWidgetPage2)
+        self.toolButton_select_julia_project.setObjectName(u"toolButton_select_julia_project")
+        self.toolButton_select_julia_project.setIcon(icon)
+
+        self.gridLayout_3.addWidget(self.toolButton_select_julia_project, 3, 2, 1, 1)
 
         self.checkBox_rebuild_ijulia = QCheckBox(self.stackedWidgetPage2)
         self.checkBox_rebuild_ijulia.setObjectName(u"checkBox_rebuild_ijulia")
@@ -242,12 +223,39 @@ class Ui_Dialog(object):
         self.checkBox_rebuild_ijulia.setMaximumSize(QSize(16777215, 26))
         self.checkBox_rebuild_ijulia.setChecked(True)
 
-        self.gridLayout_3.addWidget(self.checkBox_rebuild_ijulia, 5, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.checkBox_rebuild_ijulia, 4, 0, 1, 1)
+
+        self.label_julia_cmd = QLabel(self.stackedWidgetPage2)
+        self.label_julia_cmd.setObjectName(u"label_julia_cmd")
+        self.label_julia_cmd.setMinimumSize(QSize(0, 26))
+        self.label_julia_cmd.setMaximumSize(QSize(16777215, 26))
+        font1 = QFont()
+        font1.setPointSize(9)
+        font1.setUnderline(True)
+        self.label_julia_cmd.setFont(font1)
+        self.label_julia_cmd.setMouseTracking(True)
+        self.label_julia_cmd.setStyleSheet(u"color: rgb(0, 0, 255);")
+
+        self.gridLayout_3.addWidget(self.label_julia_cmd, 5, 0, 1, 1)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.pushButton_make_julia_kernel = QPushButton(self.stackedWidgetPage2)
+        self.pushButton_make_julia_kernel.setObjectName(u"pushButton_make_julia_kernel")
+
+        self.horizontalLayout_2.addWidget(self.pushButton_make_julia_kernel)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
+
+
+        self.gridLayout_3.addLayout(self.horizontalLayout_2, 6, 0, 1, 2)
 
         self.stackedWidget.addWidget(self.stackedWidgetPage2)
         self.splitter.addWidget(self.stackedWidget)
 
-        self.verticalLayout.addWidget(self.splitter)
+        self.gridLayout.addWidget(self.splitter, 1, 0, 1, 1)
 
         self.textBrowser_process = QTextBrowser(Dialog)
         self.textBrowser_process.setObjectName(u"textBrowser_process")
@@ -258,7 +266,7 @@ class Ui_Dialog(object):
         self.textBrowser_process.setSizePolicy(sizePolicy2)
         self.textBrowser_process.setMaximumSize(QSize(16777215, 120))
 
-        self.verticalLayout.addWidget(self.textBrowser_process)
+        self.gridLayout.addWidget(self.textBrowser_process, 2, 0, 1, 1)
 
         self.buttonBox = QDialogButtonBox(Dialog)
         self.buttonBox.setObjectName(u"buttonBox")
@@ -266,9 +274,18 @@ class Ui_Dialog(object):
         self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(False)
 
-        self.verticalLayout.addWidget(self.buttonBox)
+        self.gridLayout.addWidget(self.buttonBox, 3, 0, 1, 1)
 
-        self.verticalLayout.setStretch(1, 1)
+        self.label = QLabel(Dialog)
+        self.label.setObjectName(u"label")
+        font2 = QFont()
+        font2.setItalic(True)
+        font2.setStrikeOut(False)
+        self.label.setFont(font2)
+        self.label.setAlignment(Qt.AlignCenter)
+
+        self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+
         QWidget.setTabOrder(self.tableView_kernel_list, self.lineEdit_python_interpreter)
         QWidget.setTabOrder(self.lineEdit_python_interpreter, self.toolButton_select_python)
         QWidget.setTabOrder(self.toolButton_select_python, self.lineEdit_python_kernel_name)
@@ -280,6 +297,8 @@ class Ui_Dialog(object):
         QWidget.setTabOrder(self.lineEdit_julia_kernel_name, self.lineEdit_julia_project)
         QWidget.setTabOrder(self.lineEdit_julia_project, self.toolButton_select_julia_project)
         QWidget.setTabOrder(self.toolButton_select_julia_project, self.checkBox_rebuild_ijulia)
+        QWidget.setTabOrder(self.checkBox_rebuild_ijulia, self.pushButton_make_julia_kernel)
+        QWidget.setTabOrder(self.pushButton_make_julia_kernel, self.textBrowser_process)
 
         self.retranslateUi(Dialog)
         self.buttonBox.accepted.connect(Dialog.accept)
@@ -292,55 +311,55 @@ class Ui_Dialog(object):
     # setupUi
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Kernel editor", None))
-        self.label.setText(QCoreApplication.translate("Dialog", u"Kernel list", None))
-        self.label_python_cmd.setText(QCoreApplication.translate("Dialog", u"Command", None))
-#if QT_CONFIG(tooltip)
-        self.pushButton_make_python_kernel.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Creates a new Python kernel according to selections</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.pushButton_make_python_kernel.setText(QCoreApplication.translate("Dialog", u"Make kernel", None))
-        self.label_5.setText(QCoreApplication.translate("Dialog", u"Display name", None))
+        Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Kernel specification editor", None))
+        self.label_8.setText(QCoreApplication.translate("Dialog", u"Make new Python kernel specs", None))
         self.label_3.setText(QCoreApplication.translate("Dialog", u"Interpeter", None))
-#if QT_CONFIG(tooltip)
-        self.lineEdit_python_kernel_name.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>New kernel name. e.g. Python-3.7</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.lineEdit_python_kernel_name.setPlaceholderText(QCoreApplication.translate("Dialog", u"Type kernel name here...", None))
-        self.label_2.setText(QCoreApplication.translate("Dialog", u"Name", None))
-#if QT_CONFIG(tooltip)
-        self.lineEdit_python_kernel_display_name.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Kernel display name. e.g. Python-3.7_spinetoolbox</p><p>Leave blank to use default (kernel name + &quot;_spinetoolbox&quot;)</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.lineEdit_python_kernel_display_name.setPlaceholderText(QCoreApplication.translate("Dialog", u"Type kernel display name here...", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_python_interpreter.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Python interpreter for the new kernel. </p><p>Use the browse button to select a different Python.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_python_interpreter.setPlaceholderText(QCoreApplication.translate("Dialog", u"Python interpreter for the new kernel", None))
-        self.label_8.setText(QCoreApplication.translate("Dialog", u"Make Python kernel", None))
-        self.toolButton_select_julia_project.setText("")
+        self.label_2.setText(QCoreApplication.translate("Dialog", u"Name", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_make_julia_kernel.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Creates a new Julia kernel according to selections</p></body></html>", None))
+        self.lineEdit_python_kernel_name.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>New kernel name. e.g. Python-3.7</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_make_julia_kernel.setText(QCoreApplication.translate("Dialog", u"Make kernel", None))
+        self.lineEdit_python_kernel_name.setPlaceholderText(QCoreApplication.translate("Dialog", u"Type kernel name here...", None))
+        self.label_5.setText(QCoreApplication.translate("Dialog", u"Display name", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_python_kernel_display_name.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Kernel display name. e.g. Python-3.7_spinetoolbox</p><p>Leave blank to use default (kernel name + &quot;_spinetoolbox&quot;)</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_python_kernel_display_name.setPlaceholderText(QCoreApplication.translate("Dialog", u"Type kernel display name here...", None))
+        self.label_python_cmd.setText(QCoreApplication.translate("Dialog", u"Command", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_make_python_kernel.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Creates a new Python kernel according to selections</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_make_python_kernel.setText(QCoreApplication.translate("Dialog", u"Make kernel specification", None))
+        self.label_4.setText(QCoreApplication.translate("Dialog", u"Make new Julia kernel specs", None))
+        self.label_6.setText(QCoreApplication.translate("Dialog", u"Executable", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_julia_executable.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Julia executable for the new kernel.</p><p>Use the browse button to select different Julia.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_julia_executable.setPlaceholderText(QCoreApplication.translate("Dialog", u"Julia executable for the new kernel", None))
-        self.label_9.setText(QCoreApplication.translate("Dialog", u"Project", None))
-        self.label_4.setText(QCoreApplication.translate("Dialog", u"Make Julia kernel", None))
-#if QT_CONFIG(tooltip)
-        self.lineEdit_julia_project.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Julia project for the new kernel</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.lineEdit_julia_project.setPlaceholderText(QCoreApplication.translate("Dialog", u"@.", None))
-        self.label_julia_cmd.setText(QCoreApplication.translate("Dialog", u"Command", None))
+        self.label_7.setText(QCoreApplication.translate("Dialog", u"Display name", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_julia_kernel_name.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Julia kernel display name. Julia version will be appended to the name automatically.</p><p>The kernel name will be stripped of whitespace and uncapitalized automatically.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_julia_kernel_name.setText("")
         self.lineEdit_julia_kernel_name.setPlaceholderText(QCoreApplication.translate("Dialog", u"Type kernel display name here...", None))
-        self.label_6.setText(QCoreApplication.translate("Dialog", u"Executable", None))
-        self.label_7.setText(QCoreApplication.translate("Dialog", u"Display name", None))
+        self.label_9.setText(QCoreApplication.translate("Dialog", u"Project", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_julia_project.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Julia project for the new kernel</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_julia_project.setPlaceholderText(QCoreApplication.translate("Dialog", u"@.", None))
+        self.toolButton_select_julia_project.setText("")
 #if QT_CONFIG(tooltip)
         self.checkBox_rebuild_ijulia.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Rebuilds IJulia before installing kernel</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_rebuild_ijulia.setText(QCoreApplication.translate("Dialog", u"Rebuild IJulia", None))
+        self.label_julia_cmd.setText(QCoreApplication.translate("Dialog", u"Command", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_make_julia_kernel.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Creates a new Julia kernel according to selections</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_make_julia_kernel.setText(QCoreApplication.translate("Dialog", u"Make kernel specification", None))
+        self.label.setText(QCoreApplication.translate("Dialog", u"Kernel specifications", None))
     # retranslateUi
 

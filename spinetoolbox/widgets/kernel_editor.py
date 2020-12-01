@@ -84,16 +84,16 @@ class KernelEditor(QDialog):
         self.populate_kernel_model()
         if python_or_julia == "python":
             self.ui.stackedWidget.setCurrentIndex(0)
-            self.setWindowTitle("Python Kernel Editor")
-            self.ui.label.setText("Available Python kernels")
+            self.setWindowTitle("Python Kernel Specification Editor")
+            self.ui.label.setText("Available Python kernel specs")
             if python == "":
                 python = resolve_python_interpreter(python)
             self.ui.lineEdit_python_interpreter.setText(python)
             self.update_python_cmd_tooltip()
         else:
             self.ui.stackedWidget.setCurrentIndex(1)
-            self.setWindowTitle("Julia Kernel Editor")
-            self.ui.label.setText("Available Julia kernels")
+            self.setWindowTitle("Julia Kernel Specification Editor")
+            self.ui.label.setText("Available Julia kernel specs")
             if julia == "":
                 julia = resolve_julia_executable_from_path()
             self.ui.lineEdit_julia_executable.setText(julia)

@@ -51,9 +51,9 @@ class Ui_SettingsForm(object):
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setSpacing(6)
+        self.horizontalLayout_2.setSpacing(7)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(9, 9, 9, 9)
+        self.horizontalLayout_2.setContentsMargins(11, 11, 11, 11)
         self.listWidget = QListWidget(SettingsForm)
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Normal, QIcon.Off)
@@ -121,6 +121,7 @@ class Ui_SettingsForm(object):
         self.groupBox_general.setAutoFillBackground(False)
         self.groupBox_general.setFlat(False)
         self.gridLayout = QGridLayout(self.groupBox_general)
+        self.gridLayout.setSpacing(6)
         self.gridLayout.setObjectName(u"gridLayout")
         self.checkBox_datetime = QCheckBox(self.groupBox_general)
         self.checkBox_datetime.setObjectName(u"checkBox_datetime")
@@ -308,6 +309,7 @@ class Ui_SettingsForm(object):
         self.groupBox_project.setSizePolicy(sizePolicy3)
         self.groupBox_project.setMinimumSize(QSize(250, 150))
         self.verticalLayout_2 = QVBoxLayout(self.groupBox_project)
+        self.verticalLayout_2.setSpacing(6)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.label_2 = QLabel(self.groupBox_project)
         self.label_2.setObjectName(u"label_2")
@@ -402,6 +404,11 @@ class Ui_SettingsForm(object):
 
         self.comboBox_julia_kernel = CustomQComboBox(self.groupBox_julia)
         self.comboBox_julia_kernel.setObjectName(u"comboBox_julia_kernel")
+        sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.comboBox_julia_kernel.sizePolicy().hasHeightForWidth())
+        self.comboBox_julia_kernel.setSizePolicy(sizePolicy6)
 
         self.gridLayout_5.addWidget(self.comboBox_julia_kernel, 7, 0, 1, 1)
 
@@ -431,6 +438,8 @@ class Ui_SettingsForm(object):
 
         self.pushButton_open_kernel_editor_julia = QPushButton(self.groupBox_julia)
         self.pushButton_open_kernel_editor_julia.setObjectName(u"pushButton_open_kernel_editor_julia")
+        sizePolicy5.setHeightForWidth(self.pushButton_open_kernel_editor_julia.sizePolicy().hasHeightForWidth())
+        self.pushButton_open_kernel_editor_julia.setSizePolicy(sizePolicy5)
 
         self.gridLayout_5.addWidget(self.pushButton_open_kernel_editor_julia, 7, 1, 1, 1)
 
@@ -439,9 +448,13 @@ class Ui_SettingsForm(object):
 
         self.groupBox_python = QGroupBox(self.ExternalTools)
         self.groupBox_python.setObjectName(u"groupBox_python")
+        sizePolicy2.setHeightForWidth(self.groupBox_python.sizePolicy().hasHeightForWidth())
+        self.groupBox_python.setSizePolicy(sizePolicy2)
         self.groupBox_python.setMinimumSize(QSize(0, 95))
         self.gridLayout_2 = QGridLayout(self.groupBox_python)
+        self.gridLayout_2.setSpacing(6)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(-1, -1, -1, 11)
         self.radioButton_use_python_interpreter = QRadioButton(self.groupBox_python)
         self.radioButton_use_python_interpreter.setObjectName(u"radioButton_use_python_interpreter")
 
@@ -467,12 +480,16 @@ class Ui_SettingsForm(object):
 
         self.comboBox_python_kernel = CustomQComboBox(self.groupBox_python)
         self.comboBox_python_kernel.setObjectName(u"comboBox_python_kernel")
+        sizePolicy6.setHeightForWidth(self.comboBox_python_kernel.sizePolicy().hasHeightForWidth())
+        self.comboBox_python_kernel.setSizePolicy(sizePolicy6)
         self.comboBox_python_kernel.setSizeAdjustPolicy(QComboBox.AdjustToContents)
 
         self.gridLayout_2.addWidget(self.comboBox_python_kernel, 3, 0, 1, 1)
 
         self.pushButton_open_kernel_editor_python = QPushButton(self.groupBox_python)
         self.pushButton_open_kernel_editor_python.setObjectName(u"pushButton_open_kernel_editor_python")
+        sizePolicy5.setHeightForWidth(self.pushButton_open_kernel_editor_python.sizePolicy().hasHeightForWidth())
+        self.pushButton_open_kernel_editor_python.setSizePolicy(sizePolicy5)
         self.pushButton_open_kernel_editor_python.setMinimumSize(QSize(0, 0))
 
         self.gridLayout_2.addWidget(self.pushButton_open_kernel_editor_python, 3, 1, 1, 1)
@@ -480,9 +497,9 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_8.addWidget(self.groupBox_python)
 
-        self.verticalSpacer_8 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_2 = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.verticalLayout_8.addItem(self.verticalSpacer_8)
+        self.verticalLayout_8.addItem(self.verticalSpacer_2)
 
         self.stackedWidget.addWidget(self.ExternalTools)
         self.SpineDBEditor = QWidget()
@@ -491,11 +508,11 @@ class Ui_SettingsForm(object):
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
         self.groupBox_data_store = QGroupBox(self.SpineDBEditor)
         self.groupBox_data_store.setObjectName(u"groupBox_data_store")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        sizePolicy6.setHorizontalStretch(0)
-        sizePolicy6.setVerticalStretch(0)
-        sizePolicy6.setHeightForWidth(self.groupBox_data_store.sizePolicy().hasHeightForWidth())
-        self.groupBox_data_store.setSizePolicy(sizePolicy6)
+        sizePolicy7 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        sizePolicy7.setHorizontalStretch(0)
+        sizePolicy7.setVerticalStretch(0)
+        sizePolicy7.setHeightForWidth(self.groupBox_data_store.sizePolicy().hasHeightForWidth())
+        self.groupBox_data_store.setSizePolicy(sizePolicy7)
         self.verticalLayout_4 = QVBoxLayout(self.groupBox_data_store)
         self.verticalLayout_4.setSpacing(6)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
@@ -546,7 +563,7 @@ class Ui_SettingsForm(object):
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(9, 9, 9, 9)
+        self.horizontalLayout.setContentsMargins(11, 11, 11, 11)
         self.buttonBox = QDialogButtonBox(SettingsForm)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
@@ -683,8 +700,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QCoreApplication.translate("SettingsForm", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
+"</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None))
         self.textEdit_project_description.setPlaceholderText("")
         self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
         self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
@@ -723,7 +740,7 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia executable using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_open_kernel_editor_julia.setText(QCoreApplication.translate("SettingsForm", u"Kernel editor", None))
+        self.pushButton_open_kernel_editor_julia.setText(QCoreApplication.translate("SettingsForm", u"Kernel spec editor", None))
         self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python", None))
 #if QT_CONFIG(tooltip)
         self.radioButton_use_python_interpreter.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When selected, Python Tools and scripts are executed in a separate process in terminal. Select the python interpreter you want to use into the line edit below.</p></body></html>", None))
@@ -746,7 +763,7 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.pushButton_open_kernel_editor_python.setToolTip(QCoreApplication.translate("SettingsForm", u"Open kernel editor", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_open_kernel_editor_python.setText(QCoreApplication.translate("SettingsForm", u"Kernel editor", None))
+        self.pushButton_open_kernel_editor_python.setText(QCoreApplication.translate("SettingsForm", u"Kernel spec editor", None))
         self.groupBox_data_store.setTitle(QCoreApplication.translate("SettingsForm", u"Spine database editor", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Does not commit session and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Commits session and does not show message box</p><p><br/></p></body></html>", None))

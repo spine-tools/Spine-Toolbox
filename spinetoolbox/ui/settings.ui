@@ -77,19 +77,19 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <property name="spacing">
-      <number>6</number>
+      <number>7</number>
      </property>
      <property name="leftMargin">
-      <number>9</number>
+      <number>11</number>
      </property>
      <property name="topMargin">
-      <number>9</number>
+      <number>11</number>
      </property>
      <property name="rightMargin">
-      <number>9</number>
+      <number>11</number>
      </property>
      <property name="bottomMargin">
-      <number>9</number>
+      <number>11</number>
      </property>
      <item>
       <widget class="QListWidget" name="listWidget">
@@ -240,6 +240,9 @@
             <bool>false</bool>
            </property>
            <layout class="QGridLayout" name="gridLayout">
+            <property name="spacing">
+             <number>6</number>
+            </property>
             <item row="3" column="0">
              <widget class="QCheckBox" name="checkBox_datetime">
               <property name="toolTip">
@@ -576,6 +579,9 @@
             <string>Project</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_2">
+            <property name="spacing">
+             <number>6</number>
+            </property>
             <item>
              <widget class="QLabel" name="label_2">
               <property name="font">
@@ -658,8 +664,8 @@
                <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="acceptRichText">
                <bool>false</bool>
@@ -787,6 +793,12 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="7" column="0">
              <widget class="CustomQComboBox" name="comboBox_julia_kernel">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel for the embedded Julia Console.&lt;/p&gt;&lt;p&gt;Only valid Julia kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -850,8 +862,14 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="7" column="1">
              <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="text">
-               <string>Kernel editor</string>
+               <string>Kernel spec editor</string>
               </property>
              </widget>
             </item>
@@ -860,6 +878,12 @@ p, li { white-space: pre-wrap; }
          </item>
          <item>
           <widget class="QGroupBox" name="groupBox_python">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -869,7 +893,13 @@ p, li { white-space: pre-wrap; }
            <property name="title">
             <string>Python</string>
            </property>
-           <layout class="QGridLayout" name="gridLayout_2">
+           <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0">
+            <property name="bottomMargin">
+             <number>11</number>
+            </property>
+            <property name="spacing">
+             <number>6</number>
+            </property>
             <item row="0" column="0">
              <widget class="QRadioButton" name="radioButton_use_python_interpreter">
               <property name="toolTip">
@@ -922,6 +952,12 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="3" column="0">
              <widget class="CustomQComboBox" name="comboBox_python_kernel">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel for the embedded Python Console.&lt;/p&gt;&lt;p&gt;Only valid Python kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -932,6 +968,12 @@ p, li { white-space: pre-wrap; }
             </item>
             <item row="3" column="1">
              <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -942,7 +984,7 @@ p, li { white-space: pre-wrap; }
                <string>Open kernel editor</string>
               </property>
               <property name="text">
-               <string>Kernel editor</string>
+               <string>Kernel spec editor</string>
               </property>
              </widget>
             </item>
@@ -950,14 +992,14 @@ p, li { white-space: pre-wrap; }
           </widget>
          </item>
          <item>
-          <spacer name="verticalSpacer_8">
+          <spacer name="verticalSpacer_2">
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>20</width>
-             <height>40</height>
+             <width>0</width>
+             <height>0</height>
             </size>
            </property>
           </spacer>
@@ -1063,16 +1105,16 @@ p, li { white-space: pre-wrap; }
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <property name="leftMargin">
-      <number>9</number>
+      <number>11</number>
      </property>
      <property name="topMargin">
-      <number>9</number>
+      <number>11</number>
      </property>
      <property name="rightMargin">
-      <number>9</number>
+      <number>11</number>
      </property>
      <property name="bottomMargin">
-      <number>9</number>
+      <number>11</number>
      </property>
      <item>
       <widget class="QDialogButtonBox" name="buttonBox">
