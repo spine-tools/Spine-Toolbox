@@ -132,11 +132,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
             self._toolbox.ui.treeView_project.selectionModel().select(ind, cmd)
         self._toolbox.sync_item_selection_with_scene = True
         selected_inds = [self._toolbox.project_item_model.find_item(name) for name in selected_item_names]
-        # Make last item selected the current index in project tree view
-        if selected_inds:
-            self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(
-                selected_inds[-1], QItemSelectionModel.NoUpdate
-            )
         if len(selected_inds) == 1:
             new_active_project_item = self._toolbox.project_item_model.item(selected_inds[0]).project_item
         else:
