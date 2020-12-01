@@ -780,14 +780,12 @@ class LinkBase(QGraphicsPathItem):
 
 
 class FilterIcon(QGraphicsEllipseItem):
+    """An icon to show that a Link has filters."""
+
     def __init__(self, x, y, w, h, parent):
-        """An icon to show that a Link has filters."""
         super().__init__(x, y, w, h, parent)
         self._parent = parent
         color = QColor("slateblue")
-        pen = self.pen()
-        pen.setBrush(color)
-        self.setPen(pen)
         self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
         self._text_item = QGraphicsTextItem(self)
         font = QFont('Font Awesome 5 Free Solid')
@@ -824,15 +822,16 @@ class Link(LinkBase):
         self.dst_connector = dst_connector
         self.src_icon = src_connector._parent
         self.dst_icon = dst_connector._parent
+        self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
+        self.normal_pen = QPen(Qt.black, 0.5)
         self._filter_icon_extent = 4 * self.magic_number
         self._filter_icon = FilterIcon(0, 0, self._filter_icon_extent, self._filter_icon_extent, self)
+        self._filter_icon.setPen(self.normal_pen)
         self.setToolTip(
             "<html><p>Connection from <b>{0}</b>'s output "
             "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name())
         )
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
-        self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
-        self.normal_pen = QPen(Qt.black, 0.5)
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
@@ -974,12 +973,14 @@ class Link(LinkBase):
 
     def paint(self, painter, option, widget):
         """Sets a dashed pen if selected."""
+        self._filter_icon.setVisible(bool(self._compile_resource_filters()))
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self.setPen(self.selected_pen)
+            self._filter_icon.setPen(self.selected_pen)
         else:
             self.setPen(self.normal_pen)
-        self._filter_icon.setVisible(bool(self._compile_resource_filters()))
+            self._filter_icon.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
     def itemChange(self, change, value):
