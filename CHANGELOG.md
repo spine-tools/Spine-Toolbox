@@ -11,57 +11,53 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New project item: Data Transformer. Can be used to configure Spine database filters for successor items.
   Currently it supports renaming entity classes.
 - Support for version 3 Spine Toolbox projects and an automatic upgrade of version 2 projects to version 3.
-- Python and Julia Kernel Editor. Provides the means to make new kernels for Python Console and Julia 
-  Console without leaving Spine Toolbox. Kernel Editor can be found in Settings->Tools tab.
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
   Project Items are now in a separate package called spine_items, which is upgraded at Spine 
   Toolbox's startup. 
-- User's now need to explicitly choose a kernel for the Python Console and the Julia Console. They are 
-  not chosen (nor created) automatically anymore. The kernels can be selected in the drop-down menus 
-  on application Settings->Tools window.
-- The Importer item now applies the same mapping to all input files.
-  If the user needs to apply different mappings, they need to create different Importers.
-  The specification can be shared using the json file.
+- Importer item now applies the same mapping to all input files. If the user needs to apply different 
+  mappings, they need to create different Importers. The specification can be shared using the json file.
 
 ### Deprecated
-- CustomQtKernelManager class
-
 ### Removed
-- python_repl_widget.py
-- julia_repl_widget.py
-
 ### Fixed
-
 ### Security
 
-## [0.5.0-beta.0] - 2020-09-14
+## [0.5.0-final.0] - 2020-12-xx
 
 ### Added
-- Now it's possible to export graphs as PDF files from the *Graph* menu in the Data Store form.
-- Now it's possible to prune entire classes from the graph view. The option is available both from the *Graph* menu and
+- Exporting graphs as PDF files from the *Graph* menu in the Data Store form.
+- Pruning entire classes from the graph view. The option is available both from the *Graph* menu and
   from *Entity Graph* context menus. Also, pruned items can be restored gradually.
 - A new Input type *Indexed parameter expansion* is now available in Data Store view's Pivot table.
   In this Input type the indexes, e.g. time stamps of time series get expanded as a new dimension in the table.
 - Import editor now has a new Source type: Table name. It can be used e.g. to pick an Excel sheet's
   or GAMS domain's name as the object class name.
-- It is now possible to execute a project from the command line without opening the Toolbox GUI.
+- Import editor now supports multidimensional maps. The number of dimensions can be set using the 
+  *Map dimensions* spin box in mappings options.
+- Executing a project from the command line without opening the Toolbox GUI (i.e. headless execution).
   The headless execution is enabled by the new command line option ``--execute-only``.
 - Toolbox now supports scenarios and alternatives. They can be accessed via Data store view's new Alternative tree.
 - New Project Item: Gimlet. Can be used to run any command as part of the workflow 
   with or without a shell. Supported shells at the moment are cmd and powershell for 
   Windows and bash for other OS's.
+- Python and Julia Kernel spec Editor. Provides the means to make new kernel specs for Python Console and Julia 
+  Console without leaving Spine Toolbox. Kernel (spec) Editor can be found in Settings->Tools tab.
+- [win-x64] Includes Tools/python.exe for running Python Tools for systems that do not have a Python installation.
+  Also, pyvenv.cfg and path.pth files for configuring the included python.exe.
+
+### Fixed
+- Signal disconnection issue in Graph View
+- Bugs in removing objects and object classes in Spine db editor's Graph View
 
 ### Changed
-- The graph view behavior has changed. Now selecting objects in the object tree not only shows those objects but also 
-  all the cascading relationships. One can still go back to the previous behaviour in Settings.
-- Moving object items in the graph view also causes relationship icons to follow. This behaviour can be disabled in the
-  Settings form.
-- Required PySide2 version is now 5.14. The version is checked at startup.
-- Import editor now supports multidimensional maps. The number of dimensions can be set using the 
-  *Map dimensions* spin box in mappings options.
 - Data Store Form is now called 'Spine database editor'
+- Spine db editor Graph View behavior. Now selecting objects in the object tree not only shows those objects but also 
+  all the cascading relationships. One can still go back to the previous behavior in Settings.
+- Moving object items in the graph view also causes relationship icons to follow. This behavior can be disabled in the
+  Settings.
+- Required PySide2 version is now 5.14. The version is checked at startup.
 - Indexed parameter handling has been overhauled in Exporter allowing parameters to share indexing domains.
   **Note**: Due to numerous changes in the backend, Exporters in old project files will not load properly
   and need to be re-configured.
@@ -74,9 +70,27 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   branches.
 - Project.json file format has been upgraded to version 2. Version 1 project.json files are upgraded to version 2
   automatically when a project is opened.
-- Default Python interpreter is now sys.executable i.e. the one that was used in launching the app.
-  Previously the default was the Python in user's PATH. This affects the Python used by Python Tool 
-  specifications and the PyCall used by SpineOpt.jl configuration assistant.
+- Default Python interpreter is now {sys.executable} i.e. the one that was used in launching the app.
+  This affects the Python used by Python Tool specifications and the PyCall used by SpineOpt.jl configuration 
+  assistant.
+- [win-x64] Default Python interpreter is the Python in user's PATH if available. If Python is not defined in
+  user's PATH, the default Python interpreter is the <app_install_dir>/Tools/python.exe.
+- User's now need to explicitly choose the kernel specs for the Python Console and the Julia Console. They are 
+  not chosen (nor created) automatically anymore. The kernel specs can be selected in the drop-down menus 
+  in application Settings->Tools.
+- Database revision handling has been improved. Id est, the app does not offer to upgrade databases 
+  that are more recent than the current version of Spine Toolbox can handle.
+- Links to User Guide and Getting Started documents open only the online versions. The docs have been 
+  published on readthedocs.org.
+- Clearing the line edits for Julia executable and Python Interpreter (in Settings->Tools) shows
+  the full paths to their respective files as placeholder text.
+
+### Deprecated
+- CustomQtKernelManager class
+
+### Removed
+- python_repl_widget.py
+- julia_repl_widget.py
 
 ## [0.4.0-final.0] - 2020-04-03
 
