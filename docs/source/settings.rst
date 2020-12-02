@@ -78,7 +78,7 @@ Tools settings
 .. image:: img/settings_tools.png
    :align: center
 
-- **GAMS executable** Path to GAMS executable you wish to use to execute *Exporter* project items and
+- **GAMS executable** Path to GAMS executable you wish to use to execute *GdxExporter* project items and
   *Tool* project items that use a GAMS Tool specification. Leave this empty to use the system GAMS
   (i.e. GAMS set up in your system PATH variable).
 

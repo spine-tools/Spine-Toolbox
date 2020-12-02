@@ -143,9 +143,9 @@ def add_importer(project, name, x=0, y=0):
     return
 
 
-def add_exporter(project, name, x=0, y=0):
-    """Helper function to add an exporter to given project."""
-    item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "settings_packs": None}}
+def add_gdx_exporter(project, name, x=0, y=0):
+    """Helper function to add an gdx exporter to given project."""
+    item = {name: {"type": "GdxExporter", "description": "", "x": x, "y": y, "settings_packs": None}}
     with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
     return

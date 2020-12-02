@@ -42,7 +42,7 @@ class TestKernelEditor(unittest.TestCase):
         # Make Python Kernel Editor
         ke = KernelEditor(sw, python="", julia="", python_or_julia="python", current_kernel="")
         self.assertIsInstance(ke, KernelEditor)
-        self.assertEqual(ke.windowTitle(), "Python Kernel Editor")
+        self.assertEqual(ke.windowTitle(), "Python Kernel Specification Editor")
         # Make Julia Kernel Editor
         ke = KernelEditor(sw, python="", julia="", python_or_julia="julia", current_kernel="")
-        self.assertEqual(ke.windowTitle(), "Julia Kernel Editor")
+        self.assertEqual(ke.windowTitle(), "Julia Kernel Specification Editor")

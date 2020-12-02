@@ -31,7 +31,7 @@ from .mock_helpers import (
     add_tool,
     add_view,
     add_importer,
-    add_exporter,
+    add_gdx_exporter,
 )
 
 
@@ -129,7 +129,7 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_six_items(self):
         """Test that adding multiple items works as expected.
-        Six items are added in order DS, DC, Tool, View, Importer, Exporter."""
+        Six items are added in order DS, DC, Tool, View, Importer, GdxExporter."""
         p = self.toolbox.project()
         # Add items
         ds_name = "DS"
@@ -137,13 +137,13 @@ class TestSpineToolboxProject(unittest.TestCase):
         tool_name = "Tool"
         view_name = "View"
         imp_name = "Importer"
-        exp_name = "Exporter"
+        exp_name = "GdxExporter"
         add_ds(p, ds_name)
         add_dc(p, dc_name)
         add_tool(p, tool_name)
         add_view(p, view_name)
         add_importer(p, imp_name)
-        add_exporter(p, exp_name)
+        add_gdx_exporter(p, exp_name)
         # Check that the items are found from project item model
         ds = self.toolbox.project_item_model.get_item(ds_name)
         self.assertEqual(ds_name, ds.name)
@@ -155,8 +155,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(view_name, view.name)
         importer = self.toolbox.project_item_model.get_item(imp_name)
         self.assertEqual(imp_name, importer.name)
-        exporter = self.toolbox.project_item_model.get_item(exp_name)
-        self.assertEqual(exp_name, exporter.name)
+        gdx_exporter = self.toolbox.project_item_model.get_item(exp_name)
+        self.assertEqual(exp_name, gdx_exporter.name)
         # DAG handler should now have six graphs, each with one item
         dag_hndlr = self.toolbox.project().dag_handler
         n_dags = len(dag_hndlr.dags())

@@ -38,7 +38,7 @@ class TestLoadProjectItems(unittest.TestCase):
             "Data Transformer": "Manipulators",
             "Data Store": "Data Stores",
             "Importer": "Importers",
-            "Exporter": "Exporters",
+            "GdxExporter": "Exporters",
             "Tool": "Tools",
             "View": "Views",
             "Combiner": "Manipulators",
@@ -73,7 +73,7 @@ class TestLoadProjectItems(unittest.TestCase):
 
     def test_load_executable_items(self):
         item_classes = load_executable_items()
-        item_types = ("Data Connection", "Data Store", "Importer", "Exporter", "Tool", "View")
+        item_types = ("Data Connection", "Data Store", "Importer", "GdxExporter", "Tool", "View")
         for item_type in item_types:
             self.assertIn(item_type, item_classes)
         for item_class in item_classes.values():
