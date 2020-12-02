@@ -44,6 +44,7 @@ from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import ProjectItemSpecFactoryModel, FilteredSpecFactoryModel
+from .mvcmodels.filter_log_model import FilterLogModel
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
 from .widgets.settings_widget import SettingsWidget
@@ -118,11 +119,15 @@ class ToolboxUI(QMainWindow):
         self.key_press_filter = ChildCyclingKeyPressFilter()
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._create_item_edit_actions()
+        self.ui.treeView_eventlog.setModel(FilterLogModel(self))
+        self.ui.treeView_eventlog.hide()
+        self.ui.treeView_processlog.setModel(FilterLogModel(self))
+        self.ui.treeView_processlog.hide()
         # Set style sheets
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
         self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
-        self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
+        self.ui.textBrowser_processlog.setStyleSheet(TEXTBROWSER_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
@@ -225,6 +230,11 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
         # Undo stack
         self.undo_stack.cleanChanged.connect(self.update_window_modified)
+        # Log views
+        self.ui.treeView_eventlog.selectionModel().currentChanged.connect(self._set_override_event_log_document)
+        self.ui.treeView_eventlog.model().layoutChanged.connect(self.ui.treeView_eventlog.show)
+        self.ui.treeView_processlog.selectionModel().currentChanged.connect(self._set_override_process_log_document)
+        self.ui.treeView_processlog.model().layoutChanged.connect(self.ui.treeView_processlog.show)
 
     @Slot(bool)
     def update_window_modified(self, clean):
@@ -395,7 +405,7 @@ class ToolboxUI(QMainWindow):
         self.save_project()
         # Clear text browsers
         self.ui.textBrowser_eventlog.clear()
-        self.ui.textBrowser_process_output.clear()
+        self.ui.textBrowser_processlog.clear()
         self.msg.emit("New project <b>{0}</b> is now open".format(self._project.name))
 
     @Slot()
@@ -448,7 +458,7 @@ class ToolboxUI(QMainWindow):
         # Clear text browsers
         if clear_logs:
             self.ui.textBrowser_eventlog.clear()
-            self.ui.textBrowser_process_output.clear()
+            self.ui.textBrowser_processlog.clear()
         # Check if project dictionary needs to be upgraded
         project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
         if not project_info:
@@ -875,7 +885,7 @@ class ToolboxUI(QMainWindow):
                 break
         self.ui.dockWidget_item.setWindowTitle("Properties")
         self.restore_original_event_log_document()
-        self.restore_original_process_output_document()
+        self.restore_original_process_log_document()
         self.restore_original_python_console()
         self.restore_original_julia_console()
 
@@ -889,8 +899,8 @@ class ToolboxUI(QMainWindow):
                 break
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
-        self.set_override_event_log_document(self.active_project_item._log_document)
-        self.set_override_process_output_document(self.active_project_item._process_document)
+        self.override_event_log()
+        self.override_process_output()
         self.set_override_python_console(self.active_project_item.python_console)
         self.set_override_julia_console(self.active_project_item.julia_console)
 
@@ -1323,7 +1333,7 @@ class ToolboxUI(QMainWindow):
             msg (str): String written to QTextBrowser
         """
         message = format_process_message("msg", msg)
-        self.ui.textBrowser_process_output.append(message)
+        self.ui.textBrowser_processlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
 
@@ -1335,25 +1345,43 @@ class ToolboxUI(QMainWindow):
             msg (str): String written to QTextBrowser
         """
         message = format_process_message("msg_error", msg)
-        self.ui.textBrowser_process_output.append(message)
+        self.ui.textBrowser_processlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    def set_override_event_log_document(self, document):
+    def override_event_log(self):
+        document = self.active_project_item.event_document
         self.ui.textBrowser_eventlog.set_override_document(document)
         self._update_event_log_title()
+        self.ui.treeView_eventlog.model().reset_model(self.active_project_item.filter_event_documents)
+        self.ui.treeView_eventlog.setVisible(bool(self.active_project_item.filter_event_documents))
 
-    def set_override_process_output_document(self, document):
-        self.ui.textBrowser_process_output.set_override_document(document)
+    @Slot(QModelIndex)
+    def _set_override_event_log_document(self, index):
+        doc = index.model().get_document(index.data())
+        self.ui.textBrowser_eventlog.set_override_document(doc)
+
+    def override_process_output(self):
+        document = self.active_project_item.process_document
+        self.ui.textBrowser_processlog.set_override_document(document)
         self._update_process_log_title()
+        self.ui.treeView_processlog.model().reset_model(self.active_project_item.filter_process_documents)
+        self.ui.treeView_processlog.setVisible(bool(self.active_project_item.filter_process_documents))
+
+    @Slot(QModelIndex)
+    def _set_override_process_log_document(self, index):
+        doc = index.model().get_document(index.data())
+        self.ui.textBrowser_processlog.set_override_document(doc)
 
     def restore_original_event_log_document(self):
         self.ui.textBrowser_eventlog.restore_original_document()
         self._update_event_log_title()
+        self.ui.treeView_eventlog.hide()
 
-    def restore_original_process_output_document(self):
-        self.ui.textBrowser_process_output.restore_original_document()
+    def restore_original_process_log_document(self):
+        self.ui.textBrowser_processlog.restore_original_document()
         self._update_process_log_title()
+        self.ui.treeView_processlog.hide()
 
     def _update_event_log_title(self):
         new_title = "Event Log"
@@ -1364,7 +1392,7 @@ class ToolboxUI(QMainWindow):
 
     def _update_process_log_title(self):
         new_title = "Process Log"
-        owner = self.ui.textBrowser_process_output.document().owner
+        owner = self.ui.textBrowser_processlog.document().owner
         if owner:
             new_title = f"{new_title} --{owner}"
         self.ui.dockWidget_process_output.setWindowTitle(new_title)

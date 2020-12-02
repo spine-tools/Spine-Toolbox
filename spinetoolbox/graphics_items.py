@@ -795,15 +795,13 @@ class FilterIcon(QGraphicsEllipseItem):
         self._text_item.setPlainText("\uf0b0")
         self._text_item.setDefaultTextColor(color)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setCursor(Qt.PointingHandCursor)
 
-    def itemChange(self, change, value):
-        """Selects the parent item instead of this."""
-        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
+    def mousePressEvent(self, event):
+        """Selects the parent item if not already selected."""
+        if not self._parent.isSelected():
             self._parent.setSelected(True)
-            return not value
-        return super().itemChange(change, value)
 
 
 class Link(LinkBase):

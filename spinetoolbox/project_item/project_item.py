@@ -67,8 +67,10 @@ class ProjectItem(MetaObject):
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
         self.undo_specification = None
-        self._log_document = SignedTextDocument(name)
+        self._event_document = SignedTextDocument(name)
         self._process_document = SignedTextDocument(name)
+        self._filter_event_documents = {}
+        self._filter_process_documents = {}
         self.julia_console = QWidget()
         self.python_console = QWidget()
 
@@ -87,6 +89,22 @@ class ProjectItem(MetaObject):
     def item_category():
         """Item's category."""
         raise NotImplementedError()
+
+    @property
+    def event_document(self):
+        return self._event_document
+
+    @property
+    def process_document(self):
+        return self._process_document
+
+    @property
+    def filter_event_documents(self):
+        return self._filter_event_documents
+
+    @property
+    def filter_process_documents(self):
+        return self._filter_process_documents
 
     # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
@@ -416,13 +434,29 @@ class ProjectItem(MetaObject):
             "implemented yet."
         )
 
-    def add_log_message(self, msg_type, msg_text):
+    def add_log_message(self, filter_id, msg_type, msg_text):
+        if filter_id:
+            if filter_id not in self._filter_event_documents:
+                self._filter_event_documents[filter_id] = SignedTextDocument(self.name)
+                if self._active:
+                    self._project._toolbox.ui.treeView_eventlog.model().layoutChanged.emit()
+            document = self._filter_event_documents[filter_id]
+        else:
+            document = self._log_document
         message = format_log_message(msg_type, msg_text)
-        add_message_to_document(self._log_document, message)
+        add_message_to_document(document, message)
 
-    def add_process_message(self, msg_type, msg_text):
+    def add_process_message(self, filter_id, msg_type, msg_text):
+        if filter_id:
+            if filter_id not in self._filter_process_documents:
+                self._filter_process_documents[filter_id] = SignedTextDocument(self.name)
+                if self._active:
+                    self._project._toolbox.ui.treeView_processlog.model().layoutChanged.emit()
+            document = self._filter_process_documents[filter_id]
+        else:
+            document = self._process_document
         message = format_process_message(msg_type, msg_text)
-        add_message_to_document(self._process_document, message)
+        add_message_to_document(document, message)
 
     @staticmethod
     def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
