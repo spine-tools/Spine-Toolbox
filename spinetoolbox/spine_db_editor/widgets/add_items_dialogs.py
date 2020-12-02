@@ -393,14 +393,13 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
             return
-        header = self.model.horizontal_header_labels()
         top = top_left.row()
         left = top_left.column()
         bottom = bottom_right.row()
         right = bottom_right.column()
         for row in range(top, bottom + 1):
             for column in range(left, right + 1):
-                if header[column] == 'relationship_class name':
+                if column >= self.number_of_dimensions:
                     break
             else:
                 col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
