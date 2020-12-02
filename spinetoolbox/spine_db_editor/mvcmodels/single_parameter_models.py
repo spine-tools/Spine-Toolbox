@@ -232,6 +232,12 @@ class SingleParameterModel(MinimalTableModel):
         """Update items in db. Required by batch_set_data"""
         raise NotImplementedError()
 
+    def set_filter_parameter_ids(self, parameter_ids):
+        if self._filter_parameter_ids == parameter_ids:
+            return False
+        self._filter_parameter_ids = parameter_ids
+        return True
+
     def _filter_accepts_row(self, row):
         return self._parameter_filter_accepts_row(row) and self._auto_filter_accepts_row(row)
 
@@ -332,12 +338,27 @@ class SingleParameterValueMixin(ValidateValueInListForUpdateMixin, ConvertToDBMi
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._filter_entity_ids = dict()
-        self._filter_alternative_ids = dict()
+        self._filter_db_map_class_entity_ids = dict()
+        self._filter_alternative_ids = set()
+        self._filter_entity_ids = set()
 
     @property
     def item_type(self):
         return "parameter_value"
+
+    def set_filter_entity_ids(self, db_map_class_entity_ids):
+        if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:
+            return False
+        self._filter_db_map_class_entity_ids = db_map_class_entity_ids
+        self._filter_entity_ids = db_map_class_entity_ids.get((self.db_map, self.entity_class_id), set())
+        return True
+
+    def set_filter_alternative_ids(self, db_map_alternative_ids):
+        alternative_ids = db_map_alternative_ids.get(self.db_map, set())
+        if self._filter_alternative_ids == alternative_ids:
+            return False
+        self._filter_alternative_ids = alternative_ids
+        return True
 
     def _filter_accepts_row(self, row):
         """Reimplemented to also account for the entity filter."""
@@ -350,18 +371,18 @@ class SingleParameterValueMixin(ValidateValueInListForUpdateMixin, ConvertToDBMi
 
     def _entity_filter_accepts_row(self, row):
         """Returns the result of the entity filter."""
-        if not self._filter_entity_ids:
+        if not self._filter_db_map_class_entity_ids:
             return True
         entity_id_key = {"object_class": "object_id", "relationship_class": "relationship_id"}[self.entity_class_type]
         entity_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[entity_id_key]
-        return entity_id in self._filter_entity_ids.get((self.db_map, self.entity_class_id), set())
+        return entity_id in self._filter_entity_ids
 
     def _alternative_filter_accepts_row(self, row):
         """Returns the result of the alternative filter."""
         if not self._filter_alternative_ids:
             return True
         alt_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])["alternative_id"]
-        return alt_id in self._filter_alternative_ids.get(self.db_map, set())
+        return alt_id in self._filter_alternative_ids
 
     def update_items_in_db(self, items):
         """Update items in db.

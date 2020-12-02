@@ -425,8 +425,7 @@ class ItemTreeView(CopyTreeView):
 
 
 class ToolFeatureTreeView(ItemTreeView):
-    """Custom QTreeView class for tools and features in SpineDBEditor.
-    """
+    """Custom QTreeView class for tools and features in SpineDBEditor."""
 
     def connect_spine_db_editor(self, spine_db_editor):
         """see base class"""

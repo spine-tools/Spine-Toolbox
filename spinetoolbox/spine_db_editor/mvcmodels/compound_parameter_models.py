@@ -253,20 +253,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         return [m for m in self.single_models if self.filter_accepts_model(m)]
 
-    @staticmethod
-    def _settattr_if_different(obj, attr, val):
-        """Sets the given attribute of the given object to the given value if it's different
-        from the one currently stored. Used for updating filters.
-
-        Returns:
-            bool: True if the attributed was set, False otherwise
-        """
-        curr = getattr(obj, attr)
-        if curr != val:
-            setattr(obj, attr, val)
-            return True
-        return False
-
     def _invalidate_filter(self):
         """Sets the filter invalid."""
         self._filter_valid = False
@@ -280,12 +266,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_valid = True
 
     def set_filter_class_ids(self, class_ids):
-        if self._settattr_if_different(self, "_filter_class_ids", class_ids):
+        if class_ids != self._filter_class_ids:
+            self._filter_class_ids = class_ids
             self._invalidate_filter()
 
     def set_filter_parameter_ids(self, parameter_ids):
         for model in self.single_models:
-            if self._settattr_if_different(model, "_filter_parameter_ids", parameter_ids):
+            if model.set_filter_parameter_ids(parameter_ids):
                 self._invalidate_filter()
 
     @Slot(str, dict)
@@ -423,7 +410,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 self._do_update_data_in_filter_menus(db_map, class_items)
         self._emit_data_changed_for_column("parameter_name")
         # NOTE: parameter_definition names aren't refreshed unless we emit dataChanged,
-        # whereas entity and class names don't need it. Why?
+        # whereas entity and class names are. Why?
 
     def receive_parameter_data_removed(self, db_map_data):
         """Runs when either parameter definitions or values are removed from the dbs.
@@ -572,12 +559,12 @@ class CompoundParameterValueMixin:
 
     def set_filter_entity_ids(self, entity_ids):
         for model in self.single_models:
-            if self._settattr_if_different(model, "_filter_entity_ids", entity_ids):
+            if model.set_filter_entity_ids(entity_ids):
                 self._invalidate_filter()
 
     def set_filter_alternative_ids(self, alternative_ids):
         for model in self.single_models:
-            if self._settattr_if_different(model, "_filter_alternative_ids", alternative_ids):
+            if model.set_filter_alternative_ids(alternative_ids):
                 self._invalidate_filter()
 
     def receive_alternatives_updated(self, db_map_data):
