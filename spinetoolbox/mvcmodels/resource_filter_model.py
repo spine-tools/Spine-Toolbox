@@ -29,17 +29,18 @@ class ResourceFilterModel(QStandardItemModel):
     tree_built = Signal()
     _SELECT_ALL = "Select all"
 
-    def __init__(self, link, parent=None):
+    def __init__(self, link, parent):
         """
         Args:
             link (Link)
-            parent (QObject,optional)
+            parent (QObject)
         """
         super().__init__(parent)
         self._link = link
         self._all_resource_filter_values = {}
-        self._worker = _Worker([r for r in link.upstream_resources if r.type_ == "database"])
+        self._worker = _Worker([r for r in link.upstream_resources if r.type_ == "database"], parent)
         self._worker.finished.connect(self._do_build_tree)
+        self.destroyed.connect(lambda obj=None: self._worker.tear_down())
 
     @busy_effect
     def build_tree(self):
@@ -151,10 +152,10 @@ class _Worker(QObject):
 
     finished = Signal(dict)
 
-    def __init__(self, resources):
+    def __init__(self, resources, parent):
         super().__init__()
         self._resources = resources
-        self._thread = QThread()
+        self._thread = QThread(parent)
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
 
