@@ -678,35 +678,35 @@ class SpineToolboxProject(MetaObject):
     def _do_notify_changes_in_dag(self, dag):
         self._dags_about_to_be_notified.remove(dag)
         node_successors = self.dag_handler.node_successors(dag)
+        items = {item.name: item.project_item for item in self._project_item_model.items()}
         if not node_successors:
             # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
             for node in dag.nodes():
-                ind = self._project_item_model.find_item(node)
-                project_item = self._project_item_model.item(ind).project_item
-                project_item.invalidate_workflow(edges)
+                item = items[node].invalidate_workflow(edges)
             return
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)
         ranks = _ranks(node_successors)
-        # Memoize resources, so we don't call multiple times the same function
+        # Collect resources
         resources_for_direct_successors = {}
         resources_for_direct_predecessors = {}
-        for item_name, child_names in node_successors.items():
-            item = self._project_item_model.get_item(item_name).project_item
-            upstream_resources = []
-            downstream_resources = []
-            for parent_name in node_predecessors.get(item_name, set()):
-                parent_item = self._project_item_model.get_item(parent_name).project_item
-                if parent_item not in resources_for_direct_successors:
-                    resources_for_direct_successors[parent_item] = parent_item.resources_for_direct_successors()
-                upstream_resources += resources_for_direct_successors[parent_item]
-            for child_name in child_names:
-                child_item = self._project_item_model.get_item(child_name).project_item
-                if child_item not in resources_for_direct_predecessors:
-                    resources_for_direct_predecessors[child_item] = child_item.resources_for_direct_predecessors()
-                downstream_resources += resources_for_direct_predecessors[child_item]
+        for item_name in node_successors.keys() | node_predecessors.keys():
+            item = items[item_name]
+            resources_for_direct_successors[item_name] = item.resources_for_direct_successors()
+            resources_for_direct_predecessors[item_name] = item.resources_for_direct_predecessors()
+        # Handle changes
+        for item_name in node_successors.keys() | node_predecessors.keys():
+            item = items[item_name]
+            upstream_resources = [
+                r for pred in node_predecessors.get(item_name, set()) for r in resources_for_direct_successors[pred]
+            ]
+            downstream_resources = [
+                r for succ in node_successors.get(item_name, set()) for r in resources_for_direct_predecessors[succ]
+            ]
             item.handle_dag_changed(ranks[item_name], upstream_resources, downstream_resources)
+            for link in item.get_icon().outgoing_links():
+                link.handle_dag_changed(resources_for_direct_successors[item_name])
 
     def notify_changes_in_all_dags(self):
         """Notifies all items of changes in all dags in the project."""
