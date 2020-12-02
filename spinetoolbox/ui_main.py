@@ -860,22 +860,30 @@ class ToolboxUI(QMainWindow):
         Args:
             new_active_project_item (ProjectItemBase or NoneType)
         """
-        if self.active_project_item and self.active_project_item != new_active_project_item:
+        if self.active_project_item == new_active_project_item:
+            return
+        if self.active_project_item:
             # Deactivate old active project item
             if not self.active_project_item.deactivate():
                 self.msg_error.emit(
                     "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
                 )
         self.active_project_item = new_active_project_item
+        if self.active_project_item:
+            self.active_project_item.activate()
 
     def _set_active_link(self, new_active_link):
         """
         Args:
             new_active_link (Link or NoneType)
         """
-        if self.active_link and self.active_link != new_active_link:
+        if self.active_link == new_active_link:
+            return
+        if self.active_link:
             self.link_properties_widget.deactivate(self.active_link)
         self.active_link = new_active_link
+        if self.active_link:
+            self.link_properties_widget.activate(self.active_link)
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
@@ -891,7 +899,6 @@ class ToolboxUI(QMainWindow):
 
     def activate_item_tab(self):
         """Shows active project item properties tab according to item type."""
-        self.active_project_item.activate()
         # Find tab index according to item type
         for i in range(self.ui.tabWidget_item_properties.count()):
             if self.ui.tabWidget_item_properties.tabText(i) == self.active_project_item.item_type():
@@ -911,7 +918,6 @@ class ToolboxUI(QMainWindow):
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
         self.ui.dockWidget_item.setWindowTitle("Link properties")
-        self.link_properties_widget.activate(self.active_link)
 
     @Slot()
     def import_specification(self):

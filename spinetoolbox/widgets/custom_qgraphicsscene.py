@@ -136,6 +136,11 @@ class DesignGraphicsScene(CustomGraphicsScene):
             new_active_project_item = self._toolbox.project_item_model.item(selected_inds[0]).project_item
         else:
             new_active_project_item = None
+        # Make last item selected the current index in project tree view
+        if selected_inds:
+            self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(
+                selected_inds[-1], QItemSelectionModel.NoUpdate
+            )
         links = [item for item in self.selectedItems() if isinstance(item, Link)]
         if len(links) == 1:
             new_active_link = links[0]

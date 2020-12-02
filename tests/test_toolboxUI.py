@@ -289,10 +289,9 @@ class TestToolboxUI(unittest.TestCase):
         tv.scrollTo(ds2_ind)
         ds2_rect = tv.visualRect(ds2_ind)
         QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.ControlModifier, ds2_rect.center())
-        # Both items should be selected and current item should be DS2
+        # Both items should be selected, but we don't know which one is current as QGraphicsScene.selecteItems() is not sorted
         self.assertTrue(tv_sm.isSelected(ds1_ind))
         self.assertTrue(tv_sm.isSelected(ds2_ind))
-        self.assertEqual(tv_sm.currentIndex(), ds2_ind)
         self.assertEqual(2, len(tv_sm.selectedIndexes()))
         # There should also be 2 items selected in the Design View
         n_selected_items_in_design_view = len(self.toolbox.ui.graphicsView.scene().selectedItems())
