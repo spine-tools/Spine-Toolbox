@@ -209,6 +209,8 @@ class ToolFeatureModel(TreeModelBase):
         return mime
 
     def canDropMimeData(self, data, drop_action, row, column, parent):
+        if not parent.isValid():
+            return False
         if not data.hasText():
             return False
         try:

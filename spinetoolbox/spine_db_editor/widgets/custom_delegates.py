@@ -426,9 +426,7 @@ class ToolFeatureDelegate(QStyledItemDelegate):
             names = model.get_all_feature_names(item.db_map)
             if not names:
                 model._parent.error_box.emit(
-                    "Error",
-                    "There isn't any parameter definitions with an associated "
-                    "parameter value list to create features.",
+                    "Error", "There aren't any listed parameter definitions to create features from. "
                 )
                 return None
             return names

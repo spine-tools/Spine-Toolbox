@@ -470,6 +470,17 @@ class ToolFeatureTreeView(ItemTreeView):
     def update_actions_visibility(self, item):
         """See base class."""
 
+    def dragMoveEvent(self, event):
+        super().dragMoveEvent(event)
+        index = self.indexAt(event.pos())
+        item = self.model().item_from_index(index)
+        if item and item.item_type == "tool":
+            self.expand(index)
+
+    def dragEnterEvent(self, event):
+        super().dragEnterEvent(event)
+        event.accept()
+
 
 class AlternativeScenarioTreeView(ItemTreeView):
     """Custom QTreeView class for the alternative scenario tree in SpineDBEditor."""
@@ -563,6 +574,17 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def update_actions_visibility(self, item):
         """See base class."""
+
+    def dragMoveEvent(self, event):
+        super().dragMoveEvent(event)
+        index = self.indexAt(event.pos())
+        item = self.model().item_from_index(index)
+        if item and item.item_type == "scenario":
+            self.expand(index)
+
+    def dragEnterEvent(self, event):
+        super().dragEnterEvent(event)
+        event.accept()
 
 
 class ParameterValueListTreeView(ItemTreeView):
