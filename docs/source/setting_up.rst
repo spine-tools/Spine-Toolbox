@@ -22,7 +22,7 @@ This section describes how to set up Python, Julia, GAMS, and SpineOpt.jl for Sp
 Executing Python or Julia Tools requires that Python or Julia are installed on your system. You can
 download Python from `<https://www.python.org/downloads/>`_ and Julia from
 `<https://julialang.org/downloads/>`_. In addition, you need an installation of GAMS to execute
-GAMS Tools and Exporter project items. GAMS can be downloaded from `<https://www.gams.com/download/>`_.
+GAMS Tools and GdxExporter project items. GAMS can be downloaded from `<https://www.gams.com/download/>`_.
 
 Setting up Python
 *****************
@@ -242,7 +242,7 @@ When you see the these messages in the Event Log, the Julia Console is ready to 
 Setting up GAMS
 ***************
 
-Executing a GAMS Tool project item or executing an Exporter project item requires a GAMS installation on
+Executing a GAMS Tool project item or executing an GdxExporter project item requires a GAMS installation on
 your system.
 
 .. note::

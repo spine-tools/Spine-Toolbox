@@ -166,7 +166,7 @@ The table below lists the resources each project item type provides during execu
 +-----------------+-------+-------------------------+----------------------------+
 | Data Store      | [#]_  | Database URL            | Database URL               |
 +-----------------+-------+-------------------------+----------------------------+
-| Exporter        |       | n/a                     | File URLs                  |
+| GdxExporter     |       | n/a                     | File URLs                  |
 +-----------------+-------+-------------------------+----------------------------+
 | Gimlet          |       | n/a                     | Resources from predecessor |
 +-----------------+-------+-------------------------+----------------------------+
@@ -193,7 +193,7 @@ The table below lists the resources that might be used by each item type during 
 +-----------------+-------+---------------------------+------------------------+
 | Data Store      |       | n/a                       | n/a                    |
 +-----------------+-------+---------------------------+------------------------+
-| Exporter        |       | Database URL              | n/a                    |
+| GdxExporter     |       | Database URL              | n/a                    |
 +-----------------+-------+---------------------------+------------------------+
 | Gimlet          | [#]_  | File URLs, database URLs  | Database URLs          |
 +-----------------+-------+---------------------------+------------------------+
@@ -266,7 +266,7 @@ Basically, these are the arguments that are provided to each executable's ``__in
 +                 +-------+--------------------------+
 |                 |       | Data files               |
 +-----------------+-------+--------------------------+
-| Exporter        |       | Export settings          |
+| GdxExporter     |       | Export settings          |
 +                 +-------+--------------------------+
 |                 |       | Output directory         |
 +                 +-------+--------------------------+

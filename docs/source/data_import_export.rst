@@ -77,8 +77,8 @@ Exporting to GAMS
 .. note::
    The bitness (32 or 64bit) of GAMS has to match the bitness of the Python interpreter.
 
-Databases can be exported to GAMS :literal:`.gdx` files by the *Exporter* project item.
-When a project is executed, *Exporter* writes its output files to its data folder
+Databases can be exported to GAMS :literal:`.gdx` files by the *GdxExporter* project item.
+When a project is executed, *GdxExporter* writes its output files to its data folder
 and forwards file paths to project items downstream.
 If a *Tool* is to use such a file, remember to add the file as one of the *Tool specification*'s input files!
 
@@ -106,14 +106,14 @@ The parameters of the objects of that class will be exported as GAMS scalars.
 
 Some GAMS models need their data to be in a specific order in the :literal:`.gdx`.
 This is not directly supported by the database.
-Rather, user has to specify the desired exporting order using the *Exporter* item's settings.
+Rather, user has to specify the desired exporting order using the *GdxExporter* item's settings.
 
-Exporter Project Item
-~~~~~~~~~~~~~~~~~~~~~
+GdxExporter Project Item
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-The image below shows the settings tab of *Exporter* with two *Data Sources* connected to it.
+The image below shows the settings tab of *GdxExporter* with two *Data Sources* connected to it.
 
-.. image:: img/exporter_properties.png
+.. image:: img/gdx_exporter_properties.png
    :align: center
 
 For each connected *Data Store* a box with the database's URL and export file name field is shown on the tab.

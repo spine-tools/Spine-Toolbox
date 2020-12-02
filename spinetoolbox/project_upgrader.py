@@ -95,9 +95,12 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v1_to_v2(project_dict, self._toolbox.item_factories)
                 v += 1
                 self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
-            # Example on what to do when version 3 comes
             elif v == 2:
                 project_dict = self.upgrade_v2_to_v3(project_dict, project_dir, self._toolbox.item_factories)
+                v += 1
+                self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
+            elif v == 3:
+                project_dict = self.upgrade_v3_to_v4(project_dict, project_dir, self._toolbox.item_factories)
                 v += 1
                 self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -105,6 +108,27 @@ class ProjectUpgrader:
     @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
+
+    def upgrade_v3_to_v4(self, old, project_dir, factories):
+        """Upgrades version 3 project dictionary to version 4.
+
+        Changes:
+            1. Rename "Exporter" item type to "GdxExporter"
+
+        Args:
+            old (dict): Version 2 project dictionary
+            project_dir (str): Path to current project directory
+            factories (dict): Mapping of item type to item factory
+
+        Returns:
+            dict: Version 4 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 4
+        for name, item_dict in new["items"].items():
+            if item_dict["type"] == "Exporter":
+                item_dict["type"] = "GdxExporter"
+        return new
 
     def upgrade_v2_to_v3(self, old, project_dir, factories):
         """Upgrades version 2 project dictionary to version 3.
@@ -139,6 +163,9 @@ class ProjectUpgrader:
         project["specifications"]["Importer"] = importer_specs = []
         for item_name, old_item_dict in old["items"].items():
             item_type = old_item_dict["type"]
+            if item_type == "Exporter":
+                # Factories don't contain 'Exporter' anymore.
+                item_type = "GdxExporter"
             new["items"][item_name] = factories[item_type].item_class().upgrade_v2_to_v3(item_name, old_item_dict, self)
             if item_type == "Importer":
                 mappings = old_item_dict.get("mappings")
@@ -440,14 +467,14 @@ class ProjectUpgrader:
     def is_valid(self, v, p):
         """Checks given project dict if it is valid for given version."""
         if v == 1:
-            is_valid = self.is_valid_v1(p)
-        elif v == 2:
-            is_valid = self.is_valid_v2(p)
-        elif v == 3:
-            is_valid = self.is_valid_v3(p)
-        else:
-            raise NotImplementedError(f"No validity check available for version {v}")
-        return is_valid
+            return self.is_valid_v1(p)
+        if v == 2:
+            return self.is_valid_v2(p)
+        if v == 3:
+            return self.is_valid_v3(p)
+        if v == 4:
+            return self.is_valid_v4(p)
+        raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
         """Checks that the given project JSON dictionary contains
@@ -551,7 +578,7 @@ class ProjectUpgrader:
             p (dict): Project information JSON
 
         Returns:
-            bool: True if project is a valid version 2 project, False if it is not
+            bool: True if project is a valid version 3 project, False if it is not
         """
         if "project" not in p:
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
@@ -574,6 +601,52 @@ class ProjectUpgrader:
                 return False
         # Check types in project dict
         if not project["version"] == 3:
+            self._toolbox.msg_error.emit("Invalid project version:'{0}'".format(project["version"]))
+            return False
+        if not isinstance(project["name"], str) or not isinstance(project["description"], str):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'name' and 'description' must be strings.")
+            return False
+        if not isinstance(project["specifications"], dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'specifications' must be a dict.")
+            return False
+        if not isinstance(project["connections"], list):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'connections' must be a list.")
+            return False
+        return True
+
+    def is_valid_v4(self, p):
+        """Checks that the given project JSON dictionary contains
+        a valid version 4 Spine Toolbox project. Valid meaning, that
+        it contains all required keys and values are of the correct
+        type.
+
+        Args:
+            p (dict): Project information JSON
+
+        Returns:
+            bool: True if project is a valid version 4 project, False if it is not
+        """
+        if "project" not in p:
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")
+            return False
+        if "items" not in p:
+            self._toolbox.msg_error.emit("Invalid project.json file. Key 'items' not found.")
+            return False
+        required_project_keys = ["version", "name", "description", "specifications", "connections"]
+        project = p["project"]
+        items = p["items"]
+        if not isinstance(project, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'project' must be a dict.")
+            return False
+        if not isinstance(items, dict):
+            self._toolbox.msg_error.emit("Invalid project.json file. 'items' must be a dict.")
+            return False
+        for req_key in required_project_keys:
+            if req_key not in project:
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
+                return False
+        # Check types in project dict
+        if not project["version"] == 4:
             self._toolbox.msg_error.emit("Invalid project version:'{0}'".format(project["version"]))
             return False
         if not isinstance(project["name"], str) or not isinstance(project["description"], str):

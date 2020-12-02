@@ -36,8 +36,8 @@ Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine T
   vertices and edges. In Spine Toolbox, we use project items as vertices and connections as edges to
   build a DAG that represents a data processing chain (workflow).
 - **Edge** Graph theory term. See *Connection*
-- **Exporter** is a project item that allows exporting a Spine data structure from a Data Store into a
-  file which can be used as an input file in a Tool.
+- **GdxExporter** is a project item that allows exporting a Spine data structure from a Data Store into a
+  .gdx file which can be used as an input file in a Tool.
 - **Importer** is a project item that can be used to import data from e.g. an Excel file, transform it
   to Spine data structure, and into a Data Store.
 - **Node** Graph theory term. See *Project item*.
