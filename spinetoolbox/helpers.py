@@ -1052,3 +1052,11 @@ def resolve_julia_executable_from_path():
             if os.path.isfile(julia_candidate):
                 p = julia_candidate
     return p
+
+
+class QuietLogger:
+    def __getattr__(self, _):
+        return self
+
+    def __call__(self, *args, **kwargs):
+        pass

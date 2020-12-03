@@ -19,7 +19,7 @@ import os
 import logging
 from PySide2.QtCore import Signal, Slot
 from PySide2.QtWidgets import QWidget
-from spinetoolbox.helpers import create_dir, rename_dir, open_url
+from spinetoolbox.helpers import create_dir, rename_dir, open_url, QuietLogger
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.project_commands import SetItemSpecificationCommand
 from spinetoolbox.widgets.custom_qtextbrowser import SignedTextDocument
@@ -228,14 +228,15 @@ class ProjectItem(MetaObject):
     def executable_class(self):
         raise NotImplementedError()
 
-    def execution_item(self):
+    def execution_item(self, silent=True):
         """Creates project item's execution counterpart."""
         if self._specification is None:
             specifications = {}
         else:
             specifications = {self.item_type(): {self._specification.name: self._specification}}
+        logger = QuietLogger() if silent else self._logger
         return self.executable_class.from_dict(
-            self.item_dict(), self.name, self._project.project_dir, self._project.settings, specifications, self._logger
+            self.item_dict(), self.name, self._project.project_dir, self._project.settings, specifications, logger
         )
 
     @Slot(object, object)
