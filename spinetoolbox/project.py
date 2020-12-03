@@ -489,7 +489,10 @@ class SpineToolboxProject(MetaObject):
         node_successors = self._get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
-        items = [self._project_item_model.get_item(name).project_item.execution_item() for name in node_successors]
+        items = [
+            self._project_item_model.get_item(name).project_item.execution_item(silent=False)
+            for name in node_successors
+        ]
         self.engine = SpineEngine(items, node_successors, execution_permits)
         # connect exec_started and exec_finished signals
         self.connect_subscriber_signals()
