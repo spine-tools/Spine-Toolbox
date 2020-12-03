@@ -48,7 +48,7 @@ if not _skip_project_items_upgrade and upgrade_project_items():
     # Not even importlib.reload(site) or importlib.invalidate_caches() are sufficient,
     # because of .pyc files.
     python = sys.executable
-    os.execl(python, python, *sys.argv, "--skip-project-items-upgrade")
+    os.execl(python, '"' + python + '"', *sys.argv, "--skip-project-items-upgrade")
 
 from .ui_main import ToolboxUI
 from .version import __version__
