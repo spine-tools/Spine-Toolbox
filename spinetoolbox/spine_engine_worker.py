@@ -74,7 +74,7 @@ class SpineEngineWorker(QObject):
             engine_data (dict): engine data
             dag (DirectedGraphHandler)
             dag_identifier (str)
-            project_items (list(ProjectItemBase))
+            project_items (dict): mapping from project item name to :class:`ProjectItem`
         """
         super().__init__()
         self._toolbox = toolbox
