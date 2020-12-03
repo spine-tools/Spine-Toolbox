@@ -41,7 +41,6 @@ class TestLoadProjectItems(unittest.TestCase):
             "GdxExporter": "Exporters",
             "Tool": "Tools",
             "View": "Views",
-            "Combiner": "Manipulators",
             "Gimlet": "Tools",
         }
         self.assertEqual(categories, expected_categories)

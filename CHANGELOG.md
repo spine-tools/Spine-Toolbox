@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Importer item now applies the same mapping to all input files. If the user needs to apply different 
   mappings, they need to create different Importers. The specification can be shared using the json file.
 - Exporter is now called GdxExporter.
+- Combiner no longer exists. The same functionality is now achieved by just connecting one Data Store to another.
 
 ### Deprecated
 ### Removed

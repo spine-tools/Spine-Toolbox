@@ -23,7 +23,7 @@ import os
 REQUIRED_SPINE_ENGINE_VERSION = "0.8.9"
 REQUIRED_SPINEDB_API_VERSION = "0.9.9"
 PREFERRED_SPINE_ITEMS_VERSION = "0.3.2"
-LATEST_PROJECT_VERSION = 4
+LATEST_PROJECT_VERSION = 5
 
 # Invalid characters for directory names
 # NOTE: "." is actually valid in a directory name but this is

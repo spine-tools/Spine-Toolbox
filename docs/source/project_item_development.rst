@@ -160,8 +160,6 @@ The table below lists the resources each project item type provides during execu
 +-----------------+-------+-------------------------+----------------------------+
 | Item            | Notes | Provides to predecessor | Provides to successor      |
 +=================+=======+=========================+============================+
-| Combiner        |       | n/a                     | n/a                        |
-+-----------------+-------+-------------------------+----------------------------+
 | Data Connection | [#]_  | n/a                     | File URLs                  |
 +-----------------+-------+-------------------------+----------------------------+
 | Data Store      | [#]_  | Database URL            | Database URL               |
@@ -187,8 +185,6 @@ The table below lists the resources that might be used by each item type during 
 +-----------------+-------+---------------------------+------------------------+
 | Item            | Notes | Accepts from predecessor  | Accepts from successor |
 +=================+=======+===========================+========================+
-| Combiner        | [#]_  | Database URL              | Database URL           |
-+-----------------+-------+---------------------------+------------------------+
 | Data Connection |       | n/a                       | n/a                    |
 +-----------------+-------+---------------------------+------------------------+
 | Data Store      |       | n/a                       | n/a                    |
@@ -204,7 +200,6 @@ The table below lists the resources that might be used by each item type during 
 | View            |       | Database URLs             | n/a                    |
 +-----------------+-------+---------------------------+------------------------+
 
-.. [#] Combiner requires a database URL from its successor for writing the output data.
 .. [#] Gimlet's resources can be passed to the command as command line arguments but are otherwise ignored.
 .. [#] Importer requires a database URL from its successor for writing the mapped data.
    This can be provided by a Data Store.
@@ -248,10 +243,6 @@ Basically, these are the arguments that are provided to each executable's ``__in
 +-----------------+-------+--------------------------+
 | Item            | Notes | Properties               |
 +=================+=======+==========================+
-| Combiner        |       | Log directory            |
-+                 +-------+--------------------------+
-|                 | [#]_  | Cancel on error flag     |
-+-----------------+-------+--------------------------+
 | Data Connection | [#]_  | File references          |
 +                 +-------+--------------------------+
 |                 | [#]_  | Data files               |

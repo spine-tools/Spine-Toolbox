@@ -107,6 +107,71 @@ class ProjectUpgrader:
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
+    def upgrade_v4_to_v5(self, old, project_dir, factories):
+        """Upgrades version 4 project dictionary to version 5.
+
+        Changes:
+            1. Get rid of "Combiner" items.
+
+        Args:
+            old (dict): Version 4 project dictionary
+            project_dir (str): Path to current project directory
+            factories (dict): Mapping of item type to item factory
+
+        Returns:
+            dict: Version 5 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 5
+        combiners = []
+        for name, item_dict in new["items"].items():
+            if item_dict["type"] == "Combiner":
+                combiners.append(name)
+        for combiner in combiners:
+            del new["items"][combiner]
+        conns_to_item = {}
+        conns_from_item = {}
+        for conn in new["project"]["connections"]:
+            from_name, _ = conn["from"]
+            to_name, _ = conn["to"]
+            conns_to_item.setdefault(to_name, []).append(conn)
+            conns_from_item.setdefault(from_name, []).append(conn)
+        conns_to_remove = []
+        conns_to_add = []
+        combiners_copy = combiners.copy()
+        while combiners:
+            combiner = combiners.pop()
+            conns_to = conns_to_item.get(combiner, [])
+            conns_from = conns_from_item.get(combiner, [])
+            for conn_to in conns_to:
+                conns_to_remove.append(conn_to)
+                from_name, from_anchor = conn_to["from"]
+                resource_filters = conn_to.get("resource_filters", {})
+                for conn_from in conns_from:
+                    conns_to_remove.append(conn_from)
+                    to_name, to_anchor = conn_from["to"]
+                    more_resource_filters = conn_from.get("resource_filters", {})
+                    new_conn = {"from": [from_name, from_anchor], "to": [to_name, to_anchor]}
+                    for resource, filters in more_resource_filters.items():
+                        for filter_type, values in filters.items():
+                            existing_values = resource_filters.setdefault(resource, {}).setdefault(filter_type, [])
+                            for value in values:
+                                if value not in existing_values:
+                                    existing_values.append(value)
+                    if resource_filters:
+                        new_conn["resource_filters"] = resource_filters
+                    if not set((from_name, to_name)).intersection(combiners_copy):
+                        conns_to_add.append(new_conn)
+                    conns_to_item.setdefault(to_name, []).append(new_conn)
+                    conns_from_item.setdefault(from_name, []).append(new_conn)
+        new["project"]["connections"] += conns_to_add
+        for conn in conns_to_remove:
+            try:
+                new["project"]["connections"].remove(conn)
+            except ValueError:
+                pass
+        return new
+
     def upgrade_v3_to_v4(self, old, project_dir, factories):
         """Upgrades version 3 project dictionary to version 4.
 
@@ -466,8 +531,8 @@ class ProjectUpgrader:
         """Checks given project dict if it is valid for given version."""
         if v == 1:
             return self.is_valid_v1(p)
-        if v in (2, 3, 4):
-            return self.is_valid_v2_to_4(p, v)
+        if v in (2, 3, 4, 5):
+            return self.is_valid_v2_to_5(p, v)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -516,9 +581,9 @@ class ProjectUpgrader:
             return False
         return True
 
-    def is_valid_v2_to_4(self, p, v):
+    def is_valid_v2_to_5(self, p, v):
         """Checks that the given project JSON dictionary contains
-        a valid version 2 to 4 Spine Toolbox project. Valid meaning, that
+        a valid version 2 to 5 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct
         type.
 
