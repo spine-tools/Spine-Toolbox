@@ -84,6 +84,8 @@ class OpenProjectDialog(QDialog):
             self.ui.comboBox_current_path.setCurrentIndex(-1)
         self.file_model.directoryLoaded.connect(self.expand_and_resize)
         # Start browsing to start index immediately when dialog is shown
+        self.start_path = self.file_model.filePath(start_index)
+        self.starting_up = True
         self.ui.treeView_file_system.setCurrentIndex(start_index)
         self.connect_signals()
 
@@ -121,16 +123,20 @@ class OpenProjectDialog(QDialog):
         """Expands, resizes, and scrolls the tree view to the current directory
         when the file model has finished loading the path. Slot for the file
         model's directoryLoaded signal. The directoryLoaded signal is emitted only
-        if the directory has not been cached already.
+        if the directory has not been cached already. Note, that this is
+        only used when the open project dialog is opened
 
         Args:
              p (str): Directory that has been loaded
         """
-        current_index = self.ui.treeView_file_system.currentIndex()
-        self.ui.treeView_file_system.expand(current_index)
-        self.ui.treeView_file_system.scrollTo(current_index, hint=QAbstractItemView.PositionAtTop)
-        self.ui.treeView_file_system.resizeColumnToContents(0)
-        self.set_selected_path(current_index)
+        if self.starting_up:
+            current_index = self.ui.treeView_file_system.currentIndex()
+            self.ui.treeView_file_system.scrollTo(current_index, hint=QAbstractItemView.PositionAtTop)
+            self.ui.treeView_file_system.expand(current_index)
+            if p == self.start_path:
+                self.ui.treeView_file_system.resizeColumnToContents(0)
+                self.set_selected_path(current_index)
+                self.starting_up = False
 
     @Slot()
     def validator_state_changed(self):
