@@ -73,7 +73,7 @@ from .helpers import (
     ChildCyclingKeyPressFilter,
     open_url,
     busy_effect,
-    format_log_message,
+    format_event_message,
     format_process_message,
 )
 from .project_upgrader import ProjectUpgrader
@@ -1290,7 +1290,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg, self.show_datetime)
+        message = format_event_message("msg", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1302,7 +1302,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_success", msg, self.show_datetime)
+        message = format_event_message("msg_success", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1314,7 +1314,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg, self.show_datetime)
+        message = format_event_message("msg_error", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1326,7 +1326,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_warning", msg, self.show_datetime)
+        message = format_event_message("msg_warning", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()

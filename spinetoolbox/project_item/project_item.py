@@ -23,7 +23,7 @@ from spinetoolbox.helpers import create_dir, rename_dir, open_url
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.project_commands import SetItemSpecificationCommand
 from spinetoolbox.widgets.custom_qtextbrowser import SignedTextDocument
-from spinetoolbox.helpers import format_log_message, format_process_message, add_message_to_document
+from spinetoolbox.helpers import format_event_message, format_process_message, add_message_to_document
 from spine_engine.utils.helpers import shorten
 
 
@@ -440,8 +440,8 @@ class ProjectItem(MetaObject):
                     self._project._toolbox.ui.treeView_eventlog.model().layoutChanged.emit()
             document = self._filter_event_documents[filter_id]
         else:
-            document = self._log_document
-        message = format_log_message(msg_type, msg_text)
+            document = self._event_document
+        message = format_event_message(msg_type, msg_text)
         add_message_to_document(document, message)
 
     def add_process_message(self, filter_id, msg_type, msg_text):

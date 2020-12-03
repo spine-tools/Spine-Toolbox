@@ -942,7 +942,7 @@ class KernelEditor(QDialog):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg)
+        message = format_event_message("msg", msg)
         self.ui.textBrowser_process.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -954,7 +954,7 @@ class KernelEditor(QDialog):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_success", msg)
+        message = format_event_message("msg_success", msg)
         self.ui.textBrowser_process.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -966,7 +966,7 @@ class KernelEditor(QDialog):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg)
+        message = format_event_message("msg_error", msg)
         self.ui.textBrowser_process.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -978,7 +978,7 @@ class KernelEditor(QDialog):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_warning", msg)
+        message = format_event_message("msg_warning", msg)
         self.ui.textBrowser_process.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1074,9 +1074,9 @@ def find_unknown_kernels():
     return remains2
 
 
-def format_log_message(msg_type, message, show_datetime=True):
+def format_event_message(msg_type, message, show_datetime=True):
     """Formats message for the kernel editor text browser.
-    This is a copy of helpers.format_log_message() but the colors
+    This is a copy of helpers.format_event_message() but the colors
     have been edited for a text browser with a white background.
     """
     color = {"msg": "black", "msg_success": "#00b300", "msg_error": "#ff3300", "msg_warning": "#ccad00"}[msg_type]

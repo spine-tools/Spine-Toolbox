@@ -64,7 +64,7 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     register_matplotlib_converters()
 
 
-def format_log_message(msg_type, message, show_datetime=True):
+def format_event_message(msg_type, message, show_datetime=True):
     color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
