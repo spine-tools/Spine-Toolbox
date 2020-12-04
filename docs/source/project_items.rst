@@ -1,8 +1,6 @@
 .. Project items documentation
    Created 19.8.2019
 
-.. |combiner| image:: ../../spinetoolbox/ui/resources/project_item_icons/blender.svg
-   :width: 16
 .. |data_connection| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-alt.svg
    :width: 16
 .. |data_store| image:: ../../spinetoolbox/ui/resources/project_item_icons/database.svg
@@ -91,11 +89,6 @@ View |view|
 A View item is meant for inspecting data from multiple sources using the
 :ref:`Spine db editor <Spine db editor>`.
 Note that the data is opened in read-only mode so modifications are not possible from the View item.
-
-Combiner |combiner|
-===================
-
-A Combiner item can be used to combine two or more databases into one.
 
 Importer |importer|
 ===================

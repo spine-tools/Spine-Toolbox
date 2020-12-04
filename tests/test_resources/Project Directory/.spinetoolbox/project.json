@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 4,
+        "version": 5,
         "name": "UnitTest Project",
         "description": "Project for unit tests.",
         "specifications": {
