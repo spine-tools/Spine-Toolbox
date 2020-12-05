@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains FilterLogModel.
+Contains FilterExecutionModel.
 
 :author: M. Marin (KTH)
 :date:   26.11.2020
@@ -19,13 +19,13 @@ Contains FilterLogModel.
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 
 
-class FilterLogModel(QAbstractItemModel):
+class FilterExecutionModel(QAbstractItemModel):
 
-    _filter_log_documents = {}
+    _filter_execution_documents = {}
 
-    def reset_model(self, filter_log_documents):
+    def reset_model(self, filter_execution_documents):
         self.beginResetModel()
-        self._filter_log_documents = filter_log_documents
+        self._filter_execution_documents = filter_execution_documents
         self.endResetModel()
 
     def index(self, row, column, parent=QModelIndex()):
@@ -40,7 +40,7 @@ class FilterLogModel(QAbstractItemModel):
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
             return 0
-        return len(self._filter_log_documents)
+        return len(self._filter_execution_documents)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if section == 0 and orientation == Qt.Horizontal and role == Qt.DisplayRole:
@@ -48,7 +48,8 @@ class FilterLogModel(QAbstractItemModel):
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            return list(self._filter_log_documents.keys())[index.row()]
+            return list(self._filter_execution_documents.keys())[index.row()]
 
-    def get_document(self, filter_id):
-        return self._filter_log_documents[filter_id]
+    def get_documents(self, filter_id):
+        docs = self._filter_execution_documents[filter_id]
+        return docs["event_log"], docs["process_log"]

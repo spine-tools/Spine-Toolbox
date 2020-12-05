@@ -69,8 +69,7 @@ class ProjectItem(MetaObject):
         self.undo_specification = None
         self._event_document = SignedTextDocument(name)
         self._process_document = SignedTextDocument(name)
-        self._filter_event_documents = {}
-        self._filter_process_documents = {}
+        self._filter_execution_documents = {}
         self.julia_console = QWidget()
         self.python_console = QWidget()
 
@@ -99,12 +98,8 @@ class ProjectItem(MetaObject):
         return self._process_document
 
     @property
-    def filter_event_documents(self):
-        return self._filter_event_documents
-
-    @property
-    def filter_process_documents(self):
-        return self._filter_process_documents
+    def filter_execution_documents(self):
+        return self._filter_execution_documents
 
     # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
@@ -433,13 +428,19 @@ class ProjectItem(MetaObject):
             "implemented yet."
         )
 
+    def _create_filter_execution_documents(self, filter_id):
+        if filter_id not in self._filter_execution_documents:
+            self._filter_execution_documents[filter_id] = {
+                "event_log": SignedTextDocument(self.name),
+                "process_log": SignedTextDocument(self.name),
+            }
+            if self._active:
+                self._project._toolbox.ui.listView_executions.model().layoutChanged.emit()
+
     def add_log_message(self, filter_id, msg_type, msg_text):
         if filter_id:
-            if filter_id not in self._filter_event_documents:
-                self._filter_event_documents[filter_id] = SignedTextDocument(self.name)
-                if self._active:
-                    self._project._toolbox.ui.treeView_eventlog.model().layoutChanged.emit()
-            document = self._filter_event_documents[filter_id]
+            self._create_filter_execution_documents(filter_id)
+            document = self._filter_execution_documents[filter_id]["event_log"]
         else:
             document = self._event_document
         message = format_event_message(msg_type, msg_text)
@@ -447,11 +448,8 @@ class ProjectItem(MetaObject):
 
     def add_process_message(self, filter_id, msg_type, msg_text):
         if filter_id:
-            if filter_id not in self._filter_process_documents:
-                self._filter_process_documents[filter_id] = SignedTextDocument(self.name)
-                if self._active:
-                    self._project._toolbox.ui.treeView_processlog.model().layoutChanged.emit()
-            document = self._filter_process_documents[filter_id]
+            self._create_filter_execution_documents(filter_id)
+            document = self._filter_execution_documents[filter_id]["process_log"]
         else:
             document = self._process_document
         message = format_process_message(msg_type, msg_text)
