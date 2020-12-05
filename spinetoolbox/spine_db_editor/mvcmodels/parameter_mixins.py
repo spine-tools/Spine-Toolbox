@@ -510,7 +510,7 @@ class ValidateValueInListMixin(ConvertToDBMixin):
                 f"Invalid value '{value}' for parameter '{param_def['parameter_name']}', "
                 f"valid values are {', '.join(value_list)}"
             )
-            item["has_valid_value"] = False
+            item["has_valid_value_from_list"] = False
             return item, [msg]
         return item, err
 

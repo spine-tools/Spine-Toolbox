@@ -408,7 +408,7 @@ class SingleParameterValueMixin(ValidateValueInListForUpdateMixin, ConvertToDBMi
 
     def _check_item(self, item):
         """Checks if a db item is good to be updated."""
-        return tuple(item.keys()) != ("id",) and item.pop("has_valid_value", True)
+        return tuple(item.keys()) != ("id",) and item.pop("has_valid_value_from_list", True)
 
 
 class SingleObjectParameterDefinitionModel(
