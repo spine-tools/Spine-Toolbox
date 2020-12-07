@@ -16,8 +16,8 @@ Link properties widget.
 :date:   27.11.2020
 """
 
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
-from ..mvcmodels.resource_filter_model import ResourceFilterModel
 
 
 class LinkPropertiesWidget(QWidget):
@@ -36,26 +36,28 @@ class LinkPropertiesWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         toolbox.ui.tabWidget_item_properties.addTab(self, "Link properties")
+        self.ui.treeView_resources.clicked.connect(self._handle_index_clicked)
 
-    def activate(self, link):
+    def set_link(self, link):
         """Hooks the widget to given link, so that user actions are reflected in the link's filter configuration.
 
         Args:
             link (Link)
         """
-        link.resource_filter_model = ResourceFilterModel(link, self)
-        link.resource_filter_model.tree_built.connect(self.ui.treeView_resources.expandAll)
-        link.resource_filter_model.build_tree()
+        link.refresh_resource_filter_model()
         self.ui.treeView_resources.setModel(link.resource_filter_model)
-        self.ui.treeView_resources.clicked.connect(link.resource_filter_model._handle_index_clicked)
+        qApp.processEvents()
+        self.ui.treeView_resources.expandAll()
         self.ui.label_link_name.setText(link.name)
 
-    def deactivate(self, link):
-        """Releases the widget from given link.
+    def unset_link(self):
+        """Releases the widget from any links.
 
         Args:
             link (Link)
         """
         self.ui.treeView_resources.setModel(None)
-        link.resource_filter_model.deleteLater()
-        link.resource_filter_model = None
+
+    @Slot("QModelIndex")
+    def _handle_index_clicked(self, index):
+        self.ui.treeView_resources.model().toggle_checked_state(index)

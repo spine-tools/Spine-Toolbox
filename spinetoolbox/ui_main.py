@@ -876,10 +876,10 @@ class ToolboxUI(QMainWindow):
         if self.active_link == new_active_link:
             return
         if self.active_link:
-            self.link_properties_widget.deactivate(self.active_link)
+            self.link_properties_widget.unset_link()
         self.active_link = new_active_link
         if self.active_link:
-            self.link_properties_widget.activate(self.active_link)
+            self.link_properties_widget.set_link(self.active_link)
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""

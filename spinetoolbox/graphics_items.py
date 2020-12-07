@@ -47,6 +47,7 @@ from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinedb_api.filters.tools import filter_config
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.project_commands import ToggleFilterValuesCommand
+from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -841,17 +842,49 @@ class Link(LinkBase):
         self.update_geometry()
         self._color = QColor(255, 255, 0, 204)
         self._exec_color = None
-        self._upstream_resources = []
+        self._db_resources = dict()
         self.resource_filters = resource_filters
-        self.resource_filter_model = None
+        self.resource_filter_model = ResourceFilterModel(self)
+        self.db_mngr = toolbox.project().db_mngr
+        self.db_mngr.scenarios_added.connect(self.resource_filter_model.add_scenarios)
+        self.db_mngr.tools_added.connect(self.resource_filter_model.add_tools)
+        self.db_mngr.scenarios_updated.connect(lambda _: self.resource_filter_model.refresh_model())
+        self.db_mngr.tools_updated.connect(lambda _: self.resource_filter_model.refresh_model())
+        self.db_mngr.scenarios_removed.connect(self.resource_filter_model.remove_scenarios)
+        self.db_mngr.tools_removed.connect(self.resource_filter_model.remove_tools)
+        self._unfetched_db_resources = set()
+        self._obsolete_db_resources = set()
+
+    def handle_dag_changed(self, upstream_resources):
+        db_resources = {r.url: r for r in upstream_resources if r.type_ == "database"}
+        unfetched_urls = db_resources.keys() - self._db_resources.keys()
+        obsolete_urls = self._db_resources.keys() - db_resources.keys()
+        self._unfetched_db_resources = {db_resources[url] for url in unfetched_urls}
+        self._obsolete_db_resources = {self._db_resources[url] for url in obsolete_urls}
+        self._db_resources = db_resources
+
+    def refresh_resource_filter_model(self):
+        unfetched_db_maps = {r: self.db_mngr.get_db_map(r.url, self._toolbox) for r in self._unfetched_db_resources}
+        if unfetched_db_maps:
+            self.resource_filter_model.add_resources(unfetched_db_maps)
+            db_map_scenarios = {db_map: self.db_mngr.get_scenarios(db_map) for db_map in unfetched_db_maps.values()}
+            db_map_tools = {db_map: self.db_mngr.get_tools(db_map) for db_map in unfetched_db_maps.values()}
+            self.db_mngr.cache_items("scenario", db_map_scenarios)
+            self.db_mngr.cache_items("tool", db_map_tools)
+            self.resource_filter_model.add_scenarios(db_map_scenarios)
+            self.resource_filter_model.add_tools(db_map_tools)
+            self._unfetched_db_resources.clear()
+        obsolete_db_maps = {self.db_mngr.get_db_map(r.url, self._toolbox) for r in self._obsolete_db_resources}
+        if obsolete_db_maps:
+            self.resource_filter_model.remove_resources(obsolete_db_maps)
+            self._obsolete_db_resources.clear()
+
+    def receive_scenarios_fetched(self, db_map_data):
+        self.resource_filter_model.add_scenarios(db_map_data)
 
     @property
     def name(self):
         return f"from {self.src_icon.name()} to {self.dst_icon.name()}"
-
-    @property
-    def upstream_resources(self):
-        return self._upstream_resources
 
     def to_dict(self):
         src_connector = self.src_connector
@@ -875,9 +908,6 @@ class Link(LinkBase):
                 resource_filters.setdefault(resource, {})[filter_type] = values
         return resource_filters
 
-    def _do_handle_dag_changed(self, upstream_resources):
-        self._upstream_resources = upstream_resources
-
     def toggle_filter_values(self, resource, filter_type, *values):
         cmd = ToggleFilterValuesCommand(self, resource, filter_type, values)
         self._toolbox.undo_stack.push(cmd)
@@ -889,14 +919,17 @@ class Link(LinkBase):
                 current.remove(value)
             else:
                 current.append(value)
-        if self.resource_filter_model:
-            self.resource_filter_model.refresh_filter(resource, filter_type, values)
+        if self == self._toolbox.active_link:
+            self.resource_filter_model.refresh_model()
         self.update()
 
     def filter_stacks(self):
         def filter_configs(filters):
             for filter_type, values in filters.items():
-                yield [filter_config(filter_type, value) for value in values]
+                if values:
+                    yield [filter_config(filter_type, value) for value in values]
+                else:
+                    yield [{}]
 
         return {
             (resource, self.dst_icon.name()): list(product(*filter_configs(filters)))
