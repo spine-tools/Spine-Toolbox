@@ -896,10 +896,7 @@ class Link(LinkBase):
     def filter_stacks(self):
         def filter_configs(filters):
             for filter_type, values in filters.items():
-                if values:
-                    yield [filter_config(filter_type, value) for value in values]
-                else:
-                    yield [{}]
+                yield [filter_config(filter_type, value) for value in values]
 
         return {
             (resource, self.dst_icon.name()): list(product(*filter_configs(filters)))
