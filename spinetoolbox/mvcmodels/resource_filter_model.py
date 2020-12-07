@@ -42,7 +42,6 @@ class ResourceFilterModel(QStandardItemModel):
         """
         super().__init__()
         self._link = link
-        self._all_resource_filter_values = {}
         self._root_items = {}
 
     def _add_leaves(self, db_map, filter_item, items, filter_type, item_type):

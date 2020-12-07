@@ -45,6 +45,8 @@ from PySide2.QtGui import (
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinedb_api.filters.tools import filter_config
+from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
+from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.project_commands import ToggleFilterValuesCommand
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
@@ -924,16 +926,22 @@ class Link(LinkBase):
         self.update()
 
     def filter_stacks(self):
-        def filter_configs(filters):
-            for filter_type, values in filters.items():
-                if values:
-                    yield [filter_config(filter_type, value) for value in values]
+        def filter_configs(db_map, filters):
+            for filter_type, ids in filters.items():
+                if ids:
+                    get_items = {
+                        SCENARIO_FILTER_TYPE: self.db_mngr.get_scenarios,
+                        TOOL_FILTER_TYPE: self.db_mngr.get_tools,
+                    }[filter_type]
+                    items = {x["id"]: x["name"] for x in get_items(db_map)}
+                    yield [filter_config(filter_type, items[id_]) for id_ in ids]
                 else:
                     yield [{}]
 
+        db_maps = {r.label: self.db_mngr.get_db_map(url, self._toolbox) for url, r in self._db_resources.items()}
         return {
-            (resource, self.dst_icon.name()): list(product(*filter_configs(filters)))
-            for resource, filters in self.resource_filters.items()
+            (resource_label, self.dst_icon.name()): list(product(*filter_configs(db_maps[resource_label], filters)))
+            for resource_label, filters in self.resource_filters.items()
         }
 
     def do_update_geometry(self, guide_path):
