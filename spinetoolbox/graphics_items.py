@@ -875,7 +875,7 @@ class Link(LinkBase):
                 resource_filters.setdefault(resource, {})[filter_type] = values
         return resource_filters
 
-    def handle_dag_changed(self, upstream_resources):
+    def _do_handle_dag_changed(self, upstream_resources):
         self._upstream_resources = upstream_resources
 
     def toggle_filter_values(self, resource, filter_type, *values):

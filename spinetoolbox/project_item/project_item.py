@@ -281,6 +281,8 @@ class ProjectItem(MetaObject):
         self.clear_notifications()
         self.set_rank(rank)
         self._do_handle_dag_changed(upstream_resources, downstream_resources)
+        for link in self._icon.incoming_links():
+            link._do_handle_dag_changed(upstream_resources)
 
     def _do_handle_dag_changed(self, upstream_resources, downstream_resources):
         """
