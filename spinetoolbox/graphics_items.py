@@ -44,7 +44,7 @@ from PySide2.QtGui import (
     QFont,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from spinedb_api.filters.filter_stacks import filter_config
+from spinedb_api.filters.tools import filter_config
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.project_commands import ToggleFilterValuesCommand
 
