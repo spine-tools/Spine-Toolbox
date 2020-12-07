@@ -229,8 +229,8 @@ class ToolboxUI(QMainWindow):
         # Undo stack
         self.undo_stack.cleanChanged.connect(self.update_window_modified)
         # Log views
-        self.ui.listView_executions.selectionModel().currentChanged.connect(self._handle_execution_changed)
-        self.ui.listView_executions.model().layoutChanged.connect(self._handle_executions_added)
+        self.ui.listView_executions.selectionModel().currentChanged.connect(self._select_execution)
+        self.ui.listView_executions.model().layoutChanged.connect(self._refresh_execution_list)
 
     @Slot(bool)
     def update_window_modified(self, clean):
@@ -892,6 +892,7 @@ class ToolboxUI(QMainWindow):
         self.restore_original_process_log_document()
         self.restore_original_python_console()
         self.restore_original_julia_console()
+        self.ui.dockWidget_executions.hide()
 
     def activate_item_tab(self):
         """Shows active project item properties tab according to item type."""
@@ -903,10 +904,10 @@ class ToolboxUI(QMainWindow):
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
         self.override_event_log()
-        self.override_process_output()
-        self.update_execution_list()
-        self.set_override_python_console(self.active_project_item.python_console)
-        self.set_override_julia_console(self.active_project_item.julia_console)
+        self.override_process_log()
+        self.override_python_console()
+        self.override_julia_console()
+        self.override_execution_list()
 
     def activate_link_tab(self):
         """Shows link properties tab."""
@@ -1353,51 +1354,53 @@ class ToolboxUI(QMainWindow):
         QApplication.processEvents()
 
     def override_event_log(self):
+        """Sets the log document of the active project item in Event Log and updates title."""
         document = self.active_project_item.event_document
         self.ui.textBrowser_eventlog.set_override_document(document)
         self._update_event_log_title()
 
-    def override_process_output(self):
+    def override_process_log(self):
+        """Sets the log document of the active project item in Process Log and updates title."""
         document = self.active_project_item.process_document
         self.ui.textBrowser_processlog.set_override_document(document)
         self._update_process_log_title()
 
-    def update_execution_list(self):
-        self.ui.listView_executions.model().reset_model(self.active_project_item.filter_execution_documents)
-        self.ui.dockWidget_executions.setVisible(bool(self.active_project_item.filter_execution_documents))
-        self.ui.dockWidget_executions.setWindowTitle(f"Executions --{self.active_project_item.name}")
+    def override_python_console(self):
+        """Sets the python console of the active project item in Python Console and updates title."""
+        console = self.active_project_item.python_console
+        dockwidget = self.ui.dockWidgetContents_python_console
+        self._set_override_console(dockwidget, console)
 
-    @Slot()
-    def _handle_executions_added(self):
-        self.ui.dockWidget_executions.show()
-        if not self.ui.listView_executions.currentIndex().isValid():
-            index = self.ui.listView_executions.model().index(0, 0)
-            self.ui.listView_executions.setCurrentIndex(index)
-
-    @Slot(QModelIndex)
-    def _handle_execution_changed(self, index):
-        event_log_doc, process_log_doc = index.model().get_documents(index.data())
-        self.ui.textBrowser_eventlog.set_override_document(event_log_doc)
-        self.ui.textBrowser_processlog.set_override_document(process_log_doc)
+    def override_julia_console(self):
+        """Sets the julia console of the active project item in Julia Console and updates title."""
+        console = self.active_project_item.julia_console
+        widget = self.ui.dockWidgetContents_julia_console
+        self._set_override_console(widget, console)
 
     def restore_original_event_log_document(self):
+        """Sets the Event Log document back to the original."""
         self.ui.textBrowser_eventlog.restore_original_document()
         self._update_event_log_title()
-        self.ui.dockWidget_executions.hide()
 
     def restore_original_process_log_document(self):
+        """Sets the Process Log document back to the original."""
         self.ui.textBrowser_processlog.restore_original_document()
         self._update_process_log_title()
-        self.ui.dockWidget_executions.hide()
 
-    def _update_executions_title(self):
-        new_title = "Event Log"
-        owner = self.ui.textBrowser_eventlog.document().owner
-        if owner:
-            new_title = f"{new_title} --{owner}"
-        self.ui.dockWidget_eventlog.setWindowTitle(new_title)
+    def restore_original_python_console(self):
+        """Sets the Python Console back to the original."""
+        console = self.python_console
+        widget = self.ui.dockWidgetContents_python_console
+        self._set_override_console(widget, console)
+
+    def restore_original_julia_console(self):
+        """Sets the Julia Console back to the original."""
+        console = self.julia_console
+        widget = self.ui.dockWidgetContents_julia_console
+        self._set_override_console(widget, console)
 
     def _update_event_log_title(self):
+        """Updates Event Log title."""
         new_title = "Event Log"
         owner = self.ui.textBrowser_eventlog.document().owner
         if owner:
@@ -1405,6 +1408,7 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidget_eventlog.setWindowTitle(new_title)
 
     def _update_process_log_title(self):
+        """Updates Event Log title."""
         new_title = "Process Log"
         owner = self.ui.textBrowser_processlog.document().owner
         if owner:
@@ -1413,7 +1417,7 @@ class ToolboxUI(QMainWindow):
 
     @staticmethod
     def _set_override_console(widget, console):
-        if not isinstance(console, SpineConsoleWidget):
+        if console is None:
             return
         layout = widget.layout()
         for i in range(layout.count()):
@@ -1425,19 +1429,39 @@ class ToolboxUI(QMainWindow):
             new_title = f"{new_title} --{console.owner}"
         widget.parent().setWindowTitle(new_title)
 
-    def set_override_python_console(self, console):
-        dockwidget = self.ui.dockWidgetContents_python_console
-        self._set_override_console(dockwidget, console)
+    def override_execution_list(self):
+        """Displays executions of the active project item in Executions and updates title."""
+        self.ui.listView_executions.model().reset_model(self.active_project_item)
+        self.ui.dockWidget_executions.setVisible(
+            bool(self.active_project_item.filter_execution_documents or self.active_project_item.filter_consoles)
+        )
+        self.ui.dockWidget_executions.setWindowTitle(f"Executions --{self.active_project_item.name}")
+        current = self.ui.listView_executions.currentIndex()
+        self._select_execution(current, None)
 
-    def set_override_julia_console(self, console):
-        widget = self.ui.dockWidgetContents_julia_console
-        self._set_override_console(widget, console)
+    @Slot()
+    def _refresh_execution_list(self):
+        """Refreshes Executions as the active project item starts new executions."""
+        self.ui.dockWidget_executions.show()
+        if not self.ui.listView_executions.currentIndex().isValid():
+            index = self.ui.listView_executions.model().index(0, 0)
+            self.ui.listView_executions.setCurrentIndex(index)
+        else:
+            current = self.ui.listView_executions.currentIndex()
+            self._select_execution(current, None)
 
-    def restore_original_python_console(self):
-        self.set_override_python_console(self.python_console)
-
-    def restore_original_julia_console(self):
-        self.set_override_julia_console(self.julia_console)
+    @Slot(QModelIndex, QModelIndex)
+    def _select_execution(self, current, _previous):
+        """Sets the log documents of the selected execution in Event and Process Log,
+        and any consoles in Python and Julia Console."""
+        if not current.data():
+            return
+        event_log_doc, process_log_doc = current.model().get_documents(current.data())
+        python_console, julia_console = current.model().get_consoles(current.data())
+        self.ui.textBrowser_eventlog.set_override_document(event_log_doc)
+        self.ui.textBrowser_processlog.set_override_document(process_log_doc)
+        self._set_override_console(self.ui.dockWidgetContents_python_console, python_console)
+        self._set_override_console(self.ui.dockWidgetContents_julia_console, julia_console)
 
     def show_add_project_item_form(self, item_type, x=0, y=0, spec=""):
         """Show add project item widget."""

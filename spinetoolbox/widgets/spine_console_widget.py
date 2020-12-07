@@ -55,9 +55,9 @@ class SpineConsoleWidget(RichJupyterWidget):
         self._copy_input_action.setEnabled(False)
         self.copy_available.connect(self._copy_input_action.setEnabled)
         self.start_console_action = QAction("Start", self)
-        self.start_console_action.triggered.connect(self.start_menu_action)
+        self.start_console_action.triggered.connect(self.start_console)
         self.restart_console_action = QAction("Restart", self)
-        self.restart_console_action.triggered.connect(self.restart_menu_action)
+        self.restart_console_action.triggered.connect(self.restart_console)
         # Set logging level for jupyter loggers
         traitlets_logger = logging.getLogger("traitlets")
         asyncio_logger = logging.getLogger("asyncio")
@@ -69,12 +69,12 @@ class SpineConsoleWidget(RichJupyterWidget):
         return self._name
 
     @Slot(bool)
-    def start_menu_action(self, checked=False):
+    def start_console(self, checked=False):
         """Starts chosen Python/Julia kernel if available and not already running.
         Context menu start action handler."""
         if self._name == "Python Console":
             k_name = self._toolbox.qsettings().value("appSettings/pythonKernel", defaultValue="")
-        else:
+        elif self._name == "Julia Console":
             k_name = self._toolbox.qsettings().value("appSettings/juliaKernel", defaultValue="")
         if k_name == "":
             self._toolbox.msg_error.emit(
@@ -87,7 +87,7 @@ class SpineConsoleWidget(RichJupyterWidget):
         self.wake_up(k_name)
 
     @Slot(bool)
-    def restart_menu_action(self, checked=False):
+    def restart_console(self, checked=False):
         """Restarts chosen Python/Julia kernel. Starts a new kernel if it
         is not running or if chosen kernel has been changed in Settings.
         Context menu restart action handler."""
@@ -124,6 +124,7 @@ class SpineConsoleWidget(RichJupyterWidget):
         ready_to_execute or execution_failed signal must be emitted
         as a consequence of calling this method.
         """
+        # FIXME: Will become obsolete after removing the regular engine and the execution_managers module
         if self._name == "Python Console":
             if not k_name:
                 k_name = self._toolbox.qsettings().value("appSettings/pythonKernel", defaultValue="")

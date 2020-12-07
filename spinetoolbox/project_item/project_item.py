@@ -18,7 +18,6 @@ Contains base classes for project items and item factories.
 import os
 import logging
 from PySide2.QtCore import Signal, Slot
-from PySide2.QtWidgets import QWidget
 from spinetoolbox.helpers import create_dir, rename_dir, open_url, QuietLogger
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.project_commands import SetItemSpecificationCommand
@@ -70,8 +69,9 @@ class ProjectItem(MetaObject):
         self._event_document = SignedTextDocument(name)
         self._process_document = SignedTextDocument(name)
         self._filter_execution_documents = {}
-        self.julia_console = QWidget()
-        self.python_console = QWidget()
+        self.julia_console = None
+        self.python_console = None
+        self._filter_consoles = {}
 
     def create_data_dir(self):
         try:
@@ -100,6 +100,10 @@ class ProjectItem(MetaObject):
     @property
     def filter_execution_documents(self):
         return self._filter_execution_documents
+
+    @property
+    def filter_consoles(self):
+        return self._filter_consoles
 
     # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
@@ -429,6 +433,11 @@ class ProjectItem(MetaObject):
         )
 
     def _create_filter_execution_documents(self, filter_id):
+        """Creates a pair of event and process log documents for a filter execution.
+
+        Args:
+            filter_id (str): filter identifier
+        """
         if filter_id not in self._filter_execution_documents:
             self._filter_execution_documents[filter_id] = {
                 "event_log": SignedTextDocument(self.name),
@@ -437,7 +446,14 @@ class ProjectItem(MetaObject):
             if self._active:
                 self._project._toolbox.ui.listView_executions.model().layoutChanged.emit()
 
-    def add_log_message(self, filter_id, msg_type, msg_text):
+    def add_event_message(self, filter_id, msg_type, msg_text):
+        """Adds a message to the event log document.
+
+        Args:
+            filter_id (str): filter identifier
+            msg_type (str): message type
+            msg_text (str): message text
+        """
         if filter_id:
             self._create_filter_execution_documents(filter_id)
             document = self._filter_execution_documents[filter_id]["event_log"]
@@ -447,6 +463,13 @@ class ProjectItem(MetaObject):
         add_message_to_document(document, message)
 
     def add_process_message(self, filter_id, msg_type, msg_text):
+        """Adds a message to the process log document.
+
+        Args:
+            filter_id (str): filter identifier
+            msg_type (str): message type
+            msg_text (str): message text
+        """
         if filter_id:
             self._create_filter_execution_documents(filter_id)
             document = self._filter_execution_documents[filter_id]["process_log"]

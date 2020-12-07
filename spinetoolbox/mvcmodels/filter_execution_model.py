@@ -21,11 +21,13 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 
 class FilterExecutionModel(QAbstractItemModel):
 
-    _filter_execution_documents = {}
+    _item = None
 
-    def reset_model(self, filter_execution_documents):
+    def reset_model(self, item):
+        if item == self._item:
+            return
         self.beginResetModel()
-        self._filter_execution_documents = filter_execution_documents
+        self._item = item
         self.endResetModel()
 
     def index(self, row, column, parent=QModelIndex()):
@@ -38,18 +40,24 @@ class FilterExecutionModel(QAbstractItemModel):
         return 1
 
     def rowCount(self, parent=QModelIndex()):
-        if parent.isValid():
+        if parent.isValid() or self._item is None:
             return 0
-        return len(self._filter_execution_documents)
+        return len(self._item.filter_execution_documents)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if section == 0 and orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return "Execution filters"
 
     def data(self, index, role=Qt.DisplayRole):
+        if self._item is None:
+            return None
         if role == Qt.DisplayRole:
-            return list(self._filter_execution_documents.keys())[index.row()]
+            return list(self._item.filter_execution_documents.keys())[index.row()]
 
     def get_documents(self, filter_id):
-        docs = self._filter_execution_documents[filter_id]
+        docs = self._item.filter_execution_documents[filter_id]
         return docs["event_log"], docs["process_log"]
+
+    def get_consoles(self, filter_id):
+        consoles = self._item.filter_consoles.get(filter_id, {})
+        return consoles.get("python"), consoles.get("julia")

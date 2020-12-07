@@ -49,8 +49,8 @@ def _handle_node_execution_finished(item, direction, state, success, skipped):
 
 
 @Slot(object, str, str)
-def _handle_log_message_arrived(item, filter_id, msg_type, msg_text):
-    item.add_log_message(filter_id, msg_type, msg_text)
+def _handle_event_message_arrived(item, filter_id, msg_type, msg_text):
+    item.add_event_message(filter_id, msg_type, msg_text)
 
 
 @Slot(object, str, str)
@@ -64,7 +64,7 @@ class SpineEngineWorker(QObject):
     _dag_execution_started = Signal(list)
     _node_execution_started = Signal(object, object)
     _node_execution_finished = Signal(object, object, object, bool, bool)
-    _log_message_arrived = Signal(object, str, str, str)
+    _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
 
     def __init__(self, toolbox, engine_data, dag, dag_identifier, project_items):
@@ -91,7 +91,7 @@ class SpineEngineWorker(QObject):
         self._dag_execution_started.connect(_handle_dag_execution_started)
         self._node_execution_started.connect(_handle_node_execution_started)
         self._node_execution_finished.connect(_handle_node_execution_finished)
-        self._log_message_arrived.connect(_handle_log_message_arrived)
+        self._event_message_arrived.connect(_handle_event_message_arrived)
         self._process_message_arrived.connect(_handle_process_message_arrived)
 
     def _make_engine_manager(self, engine_data):
@@ -129,7 +129,7 @@ class SpineEngineWorker(QObject):
         handler = {
             "exec_started": self._handle_node_execution_started,
             "exec_finished": self._handle_node_execution_finished,
-            "log_msg": self._handle_log_msg,
+            "event_msg": self._handle_event_msg,
             "process_msg": self._handle_process_msg,
             "standard_execution_msg": self._handle_standard_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
@@ -142,11 +142,13 @@ class SpineEngineWorker(QObject):
         item = self._project_items[msg["item_name"]]
         if msg["type"] == "execution_failed_to_start":
             msg_text = f"Program <b>{msg['program']}</b> failed to start: {msg['error']}"
-            self._log_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_started":
-            self._log_message_arrived.emit(item, msg["filter_id"], "msg", f"\tStarting program <b>{msg['program']}</b>")
-            self._log_message_arrived.emit(item, msg["filter_id"], "msg", f"\tArguments: <b>{msg['args']}</b>")
-            self._log_message_arrived.emit(
+            self._event_message_arrived.emit(
+                item, msg["filter_id"], "msg", f"\tStarting program <b>{msg['program']}</b>"
+            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg", f"\tArguments: <b>{msg['args']}</b>")
+            self._event_message_arrived.emit(
                 item,
                 msg["filter_id"],
                 "msg_warning",
@@ -157,23 +159,25 @@ class SpineEngineWorker(QObject):
         item = self._project_items[msg["item_name"]]
         language = msg["language"].capitalize()
         if msg["type"] == "kernel_started":
-            console = {"julia": item.julia_console, "python": item.python_console}.get(msg["language"])
-            if console is not None:
-                console.connect_to_kernel(msg["kernel_name"], msg["connection_file"])
+            start_console = {"julia": item.start_julia_console, "python": item.start_python_console}.get(
+                msg["language"]
+            )
+            if start_console is not None:
+                start_console(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
                 f"\tUnable to find specification for {language} kernel <b>{msg['kernel_name']}</b>. "
                 f"Go to Settings->Tools to select a valid {language} kernel."
             )
-            self._log_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
             msg_text = f"\tExecution on {language} kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
-            self._log_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_started":
-            self._log_message_arrived.emit(
+            self._event_message_arrived.emit(
                 item, msg["filter_id"], "msg", f"\tStarting program on {language} kernel <b>{msg['kernel_name']}</b>"
             )
-            self._log_message_arrived.emit(
+            self._event_message_arrived.emit(
                 item, msg["filter_id"], "msg_warning", f"See {language} Console for messages."
             )
 
@@ -184,12 +188,12 @@ class SpineEngineWorker(QObject):
         item = self._project_items[item_name]
         self._process_message_arrived.emit(item, filter_id, msg_type, msg_text)
 
-    def _handle_log_msg(self, data):
-        self._do_handle_log_msg(**data)
+    def _handle_event_msg(self, data):
+        self._do_handle_event_msg(**data)
 
-    def _do_handle_log_msg(self, item_name, filter_id, msg_type, msg_text):
+    def _do_handle_event_msg(self, item_name, filter_id, msg_type, msg_text):
         item = self._project_items[item_name]
-        self._log_message_arrived.emit(item, filter_id, msg_type, msg_text)
+        self._event_message_arrived.emit(item, filter_id, msg_type, msg_text)
 
     def _handle_node_execution_started(self, data):
         self._do_handle_node_execution_started(**data)
