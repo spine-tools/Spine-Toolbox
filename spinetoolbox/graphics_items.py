@@ -844,29 +844,29 @@ class Link(LinkBase):
         self.update_geometry()
         self._color = QColor(255, 255, 0, 204)
         self._exec_color = None
-        self._db_resources = dict()
         self.resource_filters = resource_filters
         self.resource_filter_model = ResourceFilterModel(self)
         self.db_mngr = toolbox.project().db_mngr
+        self._fetched_db_resources = dict()
+        self._unfetched_db_resources = dict()
+        self._obsolete_db_urls = set()
         self.db_mngr.scenarios_added.connect(self.resource_filter_model.add_scenarios)
         self.db_mngr.tools_added.connect(self.resource_filter_model.add_tools)
         self.db_mngr.scenarios_updated.connect(lambda _: self.resource_filter_model.refresh_model())
         self.db_mngr.tools_updated.connect(lambda _: self.resource_filter_model.refresh_model())
         self.db_mngr.scenarios_removed.connect(self.resource_filter_model.remove_scenarios)
         self.db_mngr.tools_removed.connect(self.resource_filter_model.remove_tools)
-        self._unfetched_db_resources = set()
-        self._obsolete_db_resources = set()
 
     def handle_dag_changed(self, upstream_resources):
         db_resources = {r.url: r for r in upstream_resources if r.type_ == "database"}
-        unfetched_urls = db_resources.keys() - self._db_resources.keys()
-        obsolete_urls = self._db_resources.keys() - db_resources.keys()
-        self._unfetched_db_resources = {db_resources[url] for url in unfetched_urls}
-        self._obsolete_db_resources = {self._db_resources[url] for url in obsolete_urls}
-        self._db_resources = db_resources
+        unfetched_urls = db_resources.keys() - self._fetched_db_resources.keys()
+        self._unfetched_db_resources = {url: db_resources[url] for url in unfetched_urls}
+        self._obsolete_db_urls = self._fetched_db_resources.keys() - db_resources.keys()
 
     def refresh_resource_filter_model(self):
-        unfetched_db_maps = {r: self.db_mngr.get_db_map(r.url, self._toolbox) for r in self._unfetched_db_resources}
+        unfetched_db_maps = {
+            r: self.db_mngr.get_db_map(url, self._toolbox) for url, r in self._unfetched_db_resources.items()
+        }
         if unfetched_db_maps:
             self.resource_filter_model.add_resources(unfetched_db_maps)
             db_map_scenarios = {db_map: self.db_mngr.get_scenarios(db_map) for db_map in unfetched_db_maps.values()}
@@ -875,11 +875,14 @@ class Link(LinkBase):
             self.db_mngr.cache_items("tool", db_map_tools)
             self.resource_filter_model.add_scenarios(db_map_scenarios)
             self.resource_filter_model.add_tools(db_map_tools)
+            self._fetched_db_resources.update(self._unfetched_db_resources)
             self._unfetched_db_resources.clear()
-        obsolete_db_maps = {self.db_mngr.get_db_map(r.url, self._toolbox) for r in self._obsolete_db_resources}
+        obsolete_db_maps = {self.db_mngr.get_db_map(url, self._toolbox) for url in self._obsolete_db_urls}
         if obsolete_db_maps:
             self.resource_filter_model.remove_resources(obsolete_db_maps)
-            self._obsolete_db_resources.clear()
+            for url in self._obsolete_db_urls:
+                del self._fetched_db_resources[url]
+            self._obsolete_db_urls.clear()
 
     def receive_scenarios_fetched(self, db_map_data):
         self.resource_filter_model.add_scenarios(db_map_data)
@@ -938,11 +941,17 @@ class Link(LinkBase):
                 else:
                     yield [{}]
 
-        db_maps = {r.label: self.db_mngr.get_db_map(url, self._toolbox) for url, r in self._db_resources.items()}
+        db_maps = {label: self.db_mngr.get_db_map(url, self._toolbox) for label, url in self._db_resource_label_url()}
         return {
             (resource_label, self.dst_icon.name()): list(product(*filter_configs(db_maps[resource_label], filters)))
             for resource_label, filters in self.resource_filters.items()
         }
+
+    def _db_resource_label_url(self):
+        for url, r in self._fetched_db_resources.items():
+            yield r.label, url
+        for url, r in self._unfetched_db_resources.items():
+            yield r.label, url
 
     def do_update_geometry(self, guide_path):
         """See base class."""
