@@ -258,11 +258,17 @@ class OpenProjectDialog(QDialog):
     @Slot("QModelIndex")
     def open_project(self, index):
         """Opens project if index contains a valid Spine Toolbox project.
+        Slot for the mouse doubleClicked signal. Prevents showing the
+        'Not a valid spine toolbox project' notification if user just wants
+        to collapse a directory.
 
         Args:
-            index (QModelIndex): The index which was double clicked
+            index (QModelIndex): File model index which was double clicked
         """
         if not index.isValid():
+            return
+        possible_project_json_file = os.path.join(self.selection(), ".spinetoolbox", "project.json")
+        if not os.path.isfile(possible_project_json_file):
             return
         self.done(QDialog.Accepted)
 

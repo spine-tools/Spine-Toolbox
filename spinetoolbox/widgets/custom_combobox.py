@@ -46,36 +46,38 @@ class OpenProjectDialogComboBox(QComboBox):
         Args:
             e (QKeyEvent): Received key press event.
         """
+        parent = self.parent()
         if e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
-            state = self.ui.comboBox_current_path.validator().state
-            fm_current_index = self.ui.treeView_file_system.currentIndex()
+            state = self.validator().state
+            fm_current_index = parent.ui.treeView_file_system.currentIndex()
             if state == QValidator.Intermediate:
                 # Remove path from qsettings
-                self.remove_directory_from_recents(os.path.abspath(self.selection()), self._toolbox.qsettings())
+                # This is done because pressing enter adds an entry to combobox drop-down list automatically
+                # and we don't want to clog it with irrelevant paths
+                parent.remove_directory_from_recents(os.path.abspath(parent.selection()), parent._toolbox.qsettings())
                 # Remove path from combobox as well
-                cb_index = self.ui.comboBox_current_path.findText(os.path.abspath(self.selection()))
+                cb_index = self.findText(os.path.abspath(parent.selection()))
                 if cb_index == -1:
                     pass
-                    # logging.error("{0} not found in combobox")
                 else:
-                    self.ui.comboBox_current_path.removeItem(cb_index)
-                notification = Notification(self, "Path does not exist")
+                    self.removeItem(cb_index)
+                notification = Notification(parent, "Path does not exist")
                 notification.show()
             elif state == QValidator.Acceptable:
-                p = self.ui.comboBox_current_path.currentText()
-                fm_index = self.file_model.index(p)
+                p = self.currentText()
+                fm_index = parent.file_model.index(p)
                 if not fm_current_index == fm_index:
-                    self.ui.treeView_file_system.collapseAll()
-                    self.ui.treeView_file_system.setCurrentIndex(fm_index)
-                    self.ui.treeView_file_system.expand(fm_index)
-                    self.ui.treeView_file_system.scrollTo(fm_index, hint=QAbstractItemView.PositionAtTop)
+                    parent.ui.treeView_file_system.collapseAll()
+                    parent.ui.treeView_file_system.setCurrentIndex(fm_index)
+                    parent.ui.treeView_file_system.expand(fm_index)
+                    parent.ui.treeView_file_system.scrollTo(fm_index, hint=QAbstractItemView.PositionAtTop)
                 else:
-                    project_json_fp = os.path.abspath(os.path.join(self.selection(), ".spinetoolbox", "project.json"))
+                    project_json_fp = os.path.abspath(os.path.join(parent.selection(), ".spinetoolbox", "project.json"))
                     if os.path.isfile(project_json_fp):
-                        self.done(QDialog.Accepted)
+                        parent.done(QDialog.Accepted)
             else:
                 # INVALID (or None). Happens if Enter key is pressed and the combobox text has not been edited yet.
                 pass
             e.accept()
         else:
-            super().keyPressEvent(self.ui.comboBox_current_path, e)
+            super().keyPressEvent(e)
