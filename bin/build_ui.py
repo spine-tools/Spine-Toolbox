@@ -48,7 +48,7 @@ def build_ui(input_path, output_path, force):
 def build_qrc(input_path, output_path, force):
     """Converts given .qrc file to .py."""
     print("Building " + os.path.basename(output_path))
-    status = os.system(f"pyside2-rcc -o {output_path} {input_path}")
+    status = os.system(f"pyside2-rcc -o \"{output_path}\" \"{input_path}\"")
     if status != 0:
         print("Stop. Build failed.")
         exit(1)
