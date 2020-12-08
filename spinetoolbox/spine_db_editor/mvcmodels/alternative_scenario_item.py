@@ -126,7 +126,7 @@ class ScenarioActiveItem(NonLazyTreeItem):
             return "active: " + active
         return super().data(column, role)
 
-    def set_data(self, column, value, role):
+    def set_data(self, column, value, role=Qt.EditRole):
         if role == Qt.EditRole and column == 0:
             active = {"yes": True, "no": False}.get(value)
             if active is None:
@@ -158,10 +158,7 @@ class ScenarioAlternativeRootItem(RootItem):
 
     @property
     def alternative_id_list(self):
-        alternative_id_list = self.parent_item.item_data.get("alternative_id_list")
-        if not alternative_id_list:
-            return []
-        return [int(id_) for id_ in alternative_id_list.split(",")]
+        return self.db_mngr.get_scenario_alternative_id_list(self.db_map, self.parent_item.id)
 
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDropEnabled

@@ -119,6 +119,7 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
         self.setWindowTitle("Mass remove items")
 
     def accept(self):
+        super().accept()
         db_map_typed_data = {
             db_map: {
                 item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type)}
@@ -129,7 +130,6 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
             if check_box.isChecked()
         }
         self.db_mngr.remove_items(db_map_typed_data)
-        super().accept()
 
 
 class MassExportItemsDialog(MassSelectItemsDialog):

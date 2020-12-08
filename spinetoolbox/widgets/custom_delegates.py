@@ -91,10 +91,15 @@ class CheckBoxDelegate(QStyledItemDelegate):
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
         checkbox_style_option = QStyleOptionButton()
+        checkbox_style_option.rect = self.get_checkbox_rect(option)
         if (index.flags() & Qt.ItemIsEditable) > 0:
             checkbox_style_option.state |= QStyle.State_Enabled
         else:
             checkbox_style_option.state |= QStyle.State_ReadOnly
+        self._do_paint(painter, checkbox_style_option, index)
+
+    @staticmethod
+    def _do_paint(painter, checkbox_style_option, index):
         checked = index.data()
         if checked is None:
             checkbox_style_option.state |= QStyle.State_NoChange
@@ -102,7 +107,6 @@ class CheckBoxDelegate(QStyledItemDelegate):
             checkbox_style_option.state |= QStyle.State_On
         else:
             checkbox_style_option.state |= QStyle.State_Off
-        checkbox_style_option.rect = self.get_checkbox_rect(option)
         # noinspection PyArgumentList
         QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_style_option, painter)
 
@@ -136,6 +140,20 @@ class CheckBoxDelegate(QStyledItemDelegate):
                 option.rect.x() + checkbox_rect.width() / 2, option.rect.y() + checkbox_rect.height() / 2
             )
         return QRect(checkbox_anchor, checkbox_rect.size())
+
+
+class RankDelegate(CheckBoxDelegate):
+    """A delegate that places a fully functioning QCheckBox.
+    """
+
+    @staticmethod
+    def _do_paint(painter, checkbox_style_option, index):
+        checkbox_style_option.state |= QStyle.State_Off
+        QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_style_option, painter)
+        rank = index.data()
+        if not rank:
+            return
+        painter.drawText(checkbox_style_option.rect, Qt.AlignCenter, str(rank))
 
 
 class ForeignKeysDelegate(QStyledItemDelegate):

@@ -21,6 +21,11 @@ from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
 from ...config import PIVOT_TABLE_HEADER_COLOR
+from ..widgets.custom_delegates import (
+    RelationshipPivotTableDelegate,
+    ParameterPivotTableDelegate,
+    ScenarioAlternativeTableDelegate,
+)
 
 
 class PivotTableModelBase(QAbstractTableModel):
@@ -85,13 +90,16 @@ class PivotTableModelBase(QAbstractTableModel):
         self._data_column_count += count
         self.endInsertColumns()
 
-    def call_reset_model(self, object_class_ids, pivot=None):
+    def call_reset_model(self, pivot=None):
         """
 
         Args:
-            object_class_names (dict): mapping disambiguated class names to ids
             pivot (tuple, optional): list of rows, list of columns, list of frozen indexes, frozen value
         """
+        raise NotImplementedError()
+
+    @staticmethod
+    def make_delegate(parent):
         raise NotImplementedError()
 
     def reset_model(self, data, index_ids, rows=(), columns=(), frozen=(), frozen_value=()):
@@ -464,6 +472,27 @@ class PivotTableModelBase(QAbstractTableModel):
     def receive_data_added_or_removed(self, db_map_data, action):
         {"add": self.add_to_model, "remove": self.remove_from_model}[action](db_map_data)
 
+    def receive_objects_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        return False
+
+    def receive_relationships_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        return False
+
+    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        return False
+
+    def receive_alternatives_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        return False
+
+    def receive_parameter_values_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        return False
+
+    def receive_scenarios_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        return False
+
+    def receive_scenarios_updated(self, db_map_data):  # pylint: disable=no-self-use
+        return False
+
 
 class TopLeftHeaderItem:
     """Base class for all 'top left pivot headers'.
@@ -612,6 +641,34 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
         return True
 
 
+class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
+    """A top left header for scenario."""
+
+    @property
+    def header_type(self):
+        return "scenario"
+
+    @property
+    def name(self):
+        return "scenario"
+
+    def header_data(self, header_id, role=Qt.DisplayRole):  # pylint: disable=no-self-use
+        return self._get_header_data_from_db("scenario", header_id, "name", role)
+
+    def update_data(self, db_map_data):
+        if not db_map_data:
+            return False
+        self.db_mngr.update_scenarios(db_map_data)
+        return True
+
+    def add_data(self, names):
+        if not names:
+            return False
+        db_map_data = {db_map: [{"name": name} for name in names] for db_map in self.model._parent.db_maps}
+        self.db_mngr.add_scenarios(db_map_data)
+        return True
+
+
 class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
     """A top left header for database."""
 
@@ -726,8 +783,9 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             header_names.append(self._header_name(top_left_id, header_id))
         return self.db_mngr._GROUP_SEP.join(header_names)
 
-    def call_reset_model(self, object_class_ids, pivot=None):
+    def call_reset_model(self, pivot=None):
         """See base class."""
+        object_class_ids = self._parent.current_object_class_ids
         self._object_class_count = len(object_class_ids)
         data = self._parent.load_parameter_value_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
@@ -738,6 +796,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         if pivot is None:
             pivot = self._default_pivot(data)
         super().reset_model(data, list(self.top_left_headers), *pivot)
+
+    @staticmethod
+    def make_delegate(parent):
+        return ParameterPivotTableDelegate(parent)
 
     def _default_pivot(self, data):
         header_names = list(self.top_left_headers)
@@ -931,6 +993,12 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         self.receive_data_added_or_removed(data, action)
         return True
 
+    def receive_alternatives_added_or_removed(self, db_map_data, action):
+        db_map_alternative_ids = {db_map: [(db_map, a["id"]) for a in items] for db_map, items in db_map_data.items()}
+        data = self._parent.load_empty_parameter_value_data(db_map_alternative_ids=db_map_alternative_ids)
+        self.receive_data_added_or_removed(data, action)
+        return True
+
     def receive_parameter_values_added_or_removed(self, db_map_data, action):
         db_map_parameter_values = {
             db_map: [
@@ -961,8 +1029,9 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         super().__init__(parent)
         self._index_top_left_header = None
 
-    def call_reset_model(self, object_class_ids, pivot=None):
+    def call_reset_model(self, pivot=None):
         """See base class."""
+        object_class_ids = self._parent.current_object_class_ids
         self._object_class_count = len(object_class_ids)
         data = self._parent.load_expanded_parameter_value_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
@@ -1032,8 +1101,9 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "relationship"
 
-    def call_reset_model(self, object_class_ids, pivot=None):
+    def call_reset_model(self, pivot=None):
         """See base class."""
+        object_class_ids = self._parent.current_object_class_ids
         data = self._parent.load_relationship_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         top_left_headers += [TopLeftDatabaseHeaderItem(self)]
@@ -1044,6 +1114,10 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         if pivot is None:
             pivot = self._default_pivot(data)
         super().reset_model(data, list(self.top_left_headers), *pivot)
+
+    @staticmethod
+    def make_delegate(parent):
+        return RelationshipPivotTableDelegate(parent)
 
     def _default_pivot(self, data):
         header_names = list(self.top_left_headers)
@@ -1060,11 +1134,6 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         if not data:
             return None
         return bool(data[0][0])
-
-    def _text_alignment_data(self, index):
-        if self.index_in_data(index):
-            return Qt.AlignHCenter
-        return None
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
         return self._batch_set_relationship_data(row_map, column_map, data, values)
@@ -1110,8 +1179,6 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         return True
 
     def receive_relationships_added_or_removed(self, db_map_data, action):
-        if self._parent.current_class_type != "relationship_class":
-            return False
         db_map_relationships = {
             db_map: [x for x in items if x["class_id"] == self._parent.current_class_id.get(db_map)]
             for db_map, items in db_map_data.items()
@@ -1122,12 +1189,101 @@ class RelationshipPivotTableModel(PivotTableModelBase):
         self.update_model(data)
         return True
 
-    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        """Returns False, this model does not hold parameter data."""
-        return False
 
-    def receive_parameter_values_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        """Returns False, this model does not hold parameter data."""
+class ScenarioAlternativePivotTableModel(PivotTableModelBase):
+    """A model for the pivot table in scenario alternative input type."""
+
+    @property
+    def item_type(self):
+        return "scenario_alternative"
+
+    def call_reset_model(self, pivot=None):
+        """See base class."""
+        data = self._parent.load_scenario_alternative_data()
+        top_left_headers = [
+            TopLeftScenarioHeaderItem(self),
+            TopLeftAlternativeHeaderItem(self),
+            TopLeftDatabaseHeaderItem(self),
+        ]
+        self.top_left_headers = {h.name: h for h in top_left_headers}
+        if pivot is None:
+            pivot = self._default_pivot(data)
+        super().reset_model(data, list(self.top_left_headers), *pivot)
+
+    @staticmethod
+    def make_delegate(parent):
+        return ScenarioAlternativeTableDelegate(parent)
+
+    def _default_pivot(self, data):
+        header_names = list(self.top_left_headers)
+        rows = [header_names[0]]
+        columns = [header_names[1]]
+        frozen = [header_names[-1]]
+        key = next(iter(data), [None])
+        frozen_value = [key[-1]]
+        return rows, columns, frozen, frozen_value
+
+    def _data(self, index, role):
+        row, column = self.map_to_pivot(index)
+        data = self.model.get_pivoted_data([row], [column])
+        if not data:
+            return None
+        if data[0][0] is None:
+            return False
+        return data[0][0]
+
+    def _do_batch_set_inner_data(self, row_map, column_map, data, values):
+        return self._batch_set_scenario_alternative_data(row_map, column_map, data, values)
+
+    def _batch_set_scenario_alternative_data(self, row_map, column_map, data, values):
+        to_add = {}
+        to_remove = {}
+        for i, row in enumerate(row_map):
+            for j, column in enumerate(column_map):
+                header_ids = list(self._header_ids(row, column))
+                db_map = header_ids.pop()
+                scen_id, alt_id = [id_ for _, id_ in header_ids]
+                if data[i][j] is None and values[row, column]:
+                    to_add.setdefault((db_map, scen_id), []).append(alt_id)
+                elif data[i][j] is not None and not values[row, column]:
+                    to_remove.setdefault((db_map, scen_id), []).append(alt_id)
+        if not to_add and not to_remove:
+            return False
+        db_map_items = {}
+        for (db_map, scen_id), alt_ids_to_add in to_add.items():
+            alt_ids_to_remove = to_remove.pop((db_map, scen_id), [])
+            alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
+            alternative_id_list = alternative_id_list + alt_ids_to_add
+            alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alt_ids_to_remove]
+            db_item = {
+                "id": scen_id,
+                "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
+            }
+            db_map_items.setdefault(db_map, []).append(db_item)
+        for (db_map, scen_id), alt_ids_to_remove in to_remove.items():
+            alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
+            alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alt_ids_to_remove]
+            db_item = {
+                "id": scen_id,
+                "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
+            }
+            db_map_items.setdefault(db_map, []).append(db_item)
+        self.db_mngr.set_scenario_alternatives(db_map_items)
+        return True
+
+    def receive_scenarios_updated(self, db_map_data):
+        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
+        self.update_model(data)
+        return True
+
+    def receive_alternatives_added_or_removed(self, db_map_data, action):
+        data = self._parent.load_scenario_alternative_data(db_map_alternatives=db_map_data)
+        self.receive_data_added_or_removed(data, action)
+        return True
+
+    def receive_scenarios_added_or_removed(self, db_map_data, action):
+        data = self._parent.load_scenario_alternative_data(db_map_scenarios=db_map_data)
+        self.receive_data_added_or_removed(data, action)
         return False
 
 

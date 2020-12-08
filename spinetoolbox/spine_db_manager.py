@@ -881,6 +881,12 @@ class SpineDBManager(QObject):
             return item["split_value_list"]
         return [self.format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
 
+    def get_scenario_alternative_id_list(self, db_map, scen_id):
+        alternative_id_list = self.get_item(db_map, "scenario", scen_id).get("alternative_id_list")
+        if alternative_id_list is None:
+            return []
+        return [int(id_) for id_ in alternative_id_list.split(",")]
+
     @staticmethod
     def get_db_items(query, key=lambda x: x["id"]):
         return sorted((x._asdict() for x in query), key=key)

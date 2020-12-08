@@ -17,7 +17,7 @@ Unit tests for the plotting module.
 """
 
 import unittest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock, PropertyMock, patch
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication, QAction
 from spinedb_api import DateTime, from_database, Map, TimeSeries, TimeSeriesVariableResolution, to_database
@@ -105,8 +105,11 @@ def _make_pivot_proxy_model():
     data = {tuple((db, k) for k in key) + (db,): (db, value) for key, value in data.items()}
     spine_db_editor.load_parameter_value_data = lambda: data
     spine_db_editor.pivot_table_model = model = ParameterValuePivotTableModel(spine_db_editor)
-    object_class_names = {"object": {db: 1}}
-    model.call_reset_model(object_class_names, pivot=(['object'], ['parameter', 'alternative'], ['database'], (db,)))
+    with patch.object(
+        SpineDBEditor, "current_object_class_ids", new_callable=PropertyMock,
+    ) as mock_current_object_class_ids:
+        mock_current_object_class_ids.return_value = {"object": {db: 1}}
+        model.call_reset_model(pivot=(['object'], ['parameter', 'alternative'], ['database'], (db,)))
     model.start_fetching()
     spine_db_editor.pivot_table_model = model
     spine_db_editor.pivot_table_proxy.setSourceModel(model)

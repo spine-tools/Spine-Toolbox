@@ -23,7 +23,7 @@ from PySide2.QtGui import QIcon, QFontMetrics
 from spinedb_api import to_database
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
-from ...widgets.custom_delegates import CheckBoxDelegate
+from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
@@ -72,6 +72,58 @@ class RelationshipPivotTableDelegate(CheckBoxDelegate):
 
     def createEditor(self, parent, option, index):
         if self._is_relationship_index(index):
+            return super().createEditor(parent, option, index)
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data(Qt.EditRole))
+        return editor
+
+
+class ScenarioAlternativeTableDelegate(RankDelegate):
+
+    data_committed = Signal(QModelIndex, object)
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (SpineDBEditor)
+        """
+        super().__init__(parent)
+        self.data_committed.connect(parent._set_model_data)
+
+    @staticmethod
+    def _is_scenario_alternative_index(index):
+        """
+        Checks whether or not the given index corresponds to a scenario alternative,
+        in which case we need to use the rank delegate.
+
+        Returns:
+            bool
+        """
+        return index.model().sourceModel().index_in_data(index)
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        if self._is_scenario_alternative_index(index):
+            super().setModelData(editor, model, index)
+            return
+        self.data_committed.emit(index, editor.data())
+
+    def setEditorData(self, editor, index):
+        """Do nothing. We're setting editor data right away in createEditor."""
+
+    def paint(self, painter, option, index):
+        if self._is_scenario_alternative_index(index):
+            super().paint(painter, option, index)
+        else:
+            QStyledItemDelegate.paint(self, painter, option, index)
+
+    def editorEvent(self, event, model, option, index):
+        if self._is_scenario_alternative_index(index):
+            return super().editorEvent(event, model, option, index)
+        return QStyledItemDelegate.editorEvent(self, event, model, option, index)
+
+    def createEditor(self, parent, option, index):
+        if self._is_scenario_alternative_index(index):
             return super().createEditor(parent, option, index)
         editor = CustomLineEditor(parent)
         editor.set_data(index.data(Qt.EditRole))

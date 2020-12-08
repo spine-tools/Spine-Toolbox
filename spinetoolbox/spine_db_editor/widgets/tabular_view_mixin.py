@@ -19,7 +19,7 @@ Contains TabularViewMixin class.
 from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
-from PySide2.QtWidgets import QActionGroup, QMenu
+from PySide2.QtWidgets import QActionGroup
 from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...helpers import fix_name_ambiguity, busy_effect
@@ -28,9 +28,9 @@ from ..mvcmodels.pivot_table_models import (
     ParameterValuePivotTableModel,
     RelationshipPivotTableModel,
     IndexExpansionPivotTableModel,
+    ScenarioAlternativePivotTableModel,
 )
 from ..mvcmodels.frozen_table_model import FrozenTableModel
-from .custom_delegates import RelationshipPivotTableDelegate, ParameterPivotTableDelegate
 
 
 class TabularViewMixin:
@@ -39,6 +39,7 @@ class TabularViewMixin:
     _PARAMETER_VALUE = "Parameter value"
     _INDEX_EXPANSION = "Index expansion"
     _RELATIONSHIP = "Relationship"
+    _SCENARIO_ALTERNATIVE = "Scenario alternative"
 
     _PARAMETER = "parameter"
     _ALTERNATIVE = "alternative"
@@ -66,11 +67,15 @@ class TabularViewMixin:
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
 
     def populate_input_type_action_group(self):
-        menu = QMenu("Input type", self)
-        self.ui.menuPivot_table.addMenu(menu)
+        menu = self.ui.menuPivot_table
         actions = {
             input_type: self.input_type_action_group.addAction(input_type)
-            for input_type in [self._PARAMETER_VALUE, self._INDEX_EXPANSION, self._RELATIONSHIP]
+            for input_type in [
+                self._PARAMETER_VALUE,
+                self._INDEX_EXPANSION,
+                self._RELATIONSHIP,
+                self._SCENARIO_ALTERNATIVE,
+            ]
         }
         for action in actions.values():
             action.setCheckable(True)
@@ -123,6 +128,10 @@ class TabularViewMixin:
         relationship_class = self.db_mngr.get_item(db_map, "relationship_class", class_id)
         return fix_name_ambiguity(relationship_class["object_class_name_list"].split(","))
 
+    @property
+    def current_object_class_ids(self):
+        return dict(zip(self.current_object_class_name_list, self.current_object_class_id_list))
+
     @staticmethod
     def _is_class_index(index):
         """Returns whether or not the given tree index is a class index.
@@ -158,8 +167,13 @@ class TabularViewMixin:
         self._handle_entity_tree_current_changed(current)
 
     def _handle_entity_tree_current_changed(self, current):
-        if self.ui.dockWidget_pivot_table.isVisible():
+        if self.ui.dockWidget_pivot_table.isVisible() and self.current_input_type != self._SCENARIO_ALTERNATIVE:
             self.reload_pivot_table(current=current)
+
+    @staticmethod
+    def _make_get_id(action):
+        """Returns a function to compute the db_map-id tuple of an item."""
+        return {"add": lambda db_map, x: (db_map, x["id"]), "remove": lambda db_map, x: None}[action]
 
     def _get_db_map_entities(self, class_id=None, class_type=None):
         """Returns a dict mapping db maps to a list of dict entity items in the current class.
@@ -188,7 +202,7 @@ class TabularViewMixin:
             db_map_class_objects (dict)
 
         Returns:
-            dict: Key is object id tuple, value is None.
+            dict: Key is db_map-object_id tuple, value is None.
         """
         if db_map_class_objects is None:
             db_map_class_objects = dict()
@@ -196,17 +210,22 @@ class TabularViewMixin:
             return {}
         data = {}
         for db_map in self.db_maps:
-            object_id_sets = []
+            object_id_lists = []
+            all_given_ids = set()
             for db_map_class_id in self.current_object_class_id_list:
                 class_id = db_map_class_id.get(db_map)
-                objects = db_map_class_objects.get(db_map, {}).get(class_id)
-                if objects is None:
-                    objects = self.db_mngr.get_items_by_field(db_map, "object", "class_id", class_id)
-                id_set = {item["id"]: None for item in objects}
-                object_id_sets.append(list(id_set.keys()))
+                objects = self.db_mngr.get_items_by_field(db_map, "object", "class_id", class_id)
+                ids = {item["id"]: None for item in objects}
+                given_objects = db_map_class_objects.get(db_map, {}).get(class_id)
+                if given_objects is not None:
+                    given_ids = {item["id"]: None for item in given_objects}
+                    ids.update(given_ids)
+                    all_given_ids.update(given_ids.keys())
+                object_id_lists.append(list(ids.keys()))
             db_map_data = {
                 tuple((db_map, id_) for id_ in objects_ids) + (db_map,): None
-                for objects_ids in product(*object_id_sets)
+                for objects_ids in product(*object_id_lists)
+                if not all_given_ids or all_given_ids.intersection(objects_ids)
             }
             data.update(db_map_data)
         return data
@@ -214,14 +233,17 @@ class TabularViewMixin:
     def load_full_relationship_data(self, db_map_relationships=None, action="add"):
         """Returns a dict of relationships in the current class.
 
+        Args:
+            db_map_relationships (dict)
+
         Returns:
-            dict: Key is object id tuple, value is relationship id.
+            dict: Key is db_map-object id tuple, value is relationship id.
         """
         if self.current_class_type == "object_class":
             return {}
         if db_map_relationships is None:
             db_map_relationships = self._get_db_map_entities()
-        get_id = {"add": lambda db_map, x: (db_map, x["id"]), "remove": lambda db_map, x: None}[action]
+        get_id = self._make_get_id(action)
         return {
             tuple((db_map, int(id_)) for id_ in rel["object_id_list"].split(',')) + (db_map,): get_id(db_map, rel)
             for db_map, relationships in db_map_relationships.items()
@@ -236,6 +258,34 @@ class TabularViewMixin:
         """
         data = self.load_empty_relationship_data()
         data.update(self.load_full_relationship_data())
+        return data
+
+    def load_scenario_alternative_data(self, db_map_scenarios=None, db_map_alternatives=None):
+        """Returns a dict containing all scenario alternatives.
+
+        Returns:
+            dict: Key is db_map-id tuple, value is None or rank.
+        """
+        if db_map_scenarios is None:
+            db_map_scenarios = {db_map: self.db_mngr.get_items(db_map, "scenario") for db_map in self.db_maps}
+        if db_map_alternatives is None:
+            db_map_alternatives = {db_map: self.db_mngr.get_items(db_map, "alternative") for db_map in self.db_maps}
+        data = {}
+        for db_map in self.db_maps:
+            scenario_alternative_ranks = {
+                x["id"]: {
+                    alt_id: k + 1
+                    for k, alt_id in enumerate(self.db_mngr.get_scenario_alternative_id_list(db_map, x["id"]))
+                }
+                for x in db_map_scenarios.get(db_map, [])
+            }
+            alternative_ids = [x["id"] for x in db_map_alternatives.get(db_map, [])]
+            db_map_data = {
+                ((db_map, scen_id), (db_map, alt_id), db_map): alternative_ranks.get(alt_id)
+                for scen_id, alternative_ranks in scenario_alternative_ranks.items()
+                for alt_id in alternative_ids
+            }
+            data.update(db_map_data)
         return data
 
     def _get_parameter_value_or_def_ids(self, item_type):
@@ -272,7 +322,8 @@ class TabularViewMixin:
     def load_empty_parameter_value_data(
         self, db_map_entities=None, db_map_parameter_ids=None, db_map_alternative_ids=None
     ):
-        """Returns a dict containing all possible combinations of entities and parameters for the current class.
+        """Returns a dict containing all possible combinations of entities and parameters for the current class
+        in all db_maps.
 
         Args:
             db_map_entities (dict, optional): if given, only load data for these db maps and entities
@@ -329,7 +380,7 @@ class TabularViewMixin:
         """
         if db_map_parameter_values is None:
             db_map_parameter_values = self._get_db_map_parameter_values_or_defs("parameter_value")
-        get_id = {"add": lambda db_map, x: (db_map, x["id"]), "remove": lambda db_map, x: None}[action]
+        get_id = self._make_get_id(action)
         if self.current_class_type == "object_class":
             return {
                 ((db_map, x["object_id"]), (db_map, x["parameter_id"]), (db_map, x["alternative_id"]), db_map): get_id(
@@ -421,33 +472,34 @@ class TabularViewMixin:
     def do_reload_pivot_table(self, action=None):
         """Reloads pivot table.
         """
-        if not self.current_class_id:
-            return
         qApp.processEvents()  # pylint: disable=undefined-variable
         if action is None:
             action = self.input_type_action_group.checkedAction()
         self.current_input_type = action.text()
+        if not self._can_build_pivot_table():
+            return
         self.pivot_table_model = {
             self._PARAMETER_VALUE: ParameterValuePivotTableModel,
             self._RELATIONSHIP: RelationshipPivotTableModel,
             self._INDEX_EXPANSION: IndexExpansionPivotTableModel,
+            self._SCENARIO_ALTERNATIVE: ScenarioAlternativePivotTableModel,
         }[self.current_input_type](self)
         self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
-        delegate = {
-            self._PARAMETER_VALUE: ParameterPivotTableDelegate,
-            self._RELATIONSHIP: RelationshipPivotTableDelegate,
-            self._INDEX_EXPANSION: ParameterPivotTableDelegate,
-        }[self.current_input_type](self)
+        delegate = self.pivot_table_model.make_delegate(self)
         self.ui.pivot_table.setItemDelegate(delegate)
         self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
-        if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship_class":
-            return
         pivot = self.get_pivot_preferences()
         self.wipe_out_filter_menus()
-        object_class_ids = dict(zip(self.current_object_class_name_list, self.current_object_class_id_list))
-        self.pivot_table_model.call_reset_model(object_class_ids, pivot)
+        self.pivot_table_model.call_reset_model(pivot)
         self.pivot_table_proxy.clear_filter()
         self.reload_frozen_table()
+
+    def _can_build_pivot_table(self):
+        if self.current_input_type != self._SCENARIO_ALTERNATIVE and not self.current_class_id:
+            return False
+        if self.current_input_type == self._RELATIONSHIP and self.current_class_type != "relationship_class":
+            return False
+        return True
 
     def clear_pivot_table(self):
         self.wipe_out_filter_menus()
@@ -693,10 +745,22 @@ class TabularViewMixin:
         if self.pivot_table_model.receive_parameter_definitions_added_or_removed(db_map_data, action):
             self.update_filter_menus(action)
 
+    def receive_alternatives_added_or_removed(self, db_map_data, action):
+        if not self.pivot_table_model:
+            return
+        if self.pivot_table_model.receive_alternatives_added_or_removed(db_map_data, action):
+            self.update_filter_menus(action)
+
     def receive_parameter_values_added_or_removed(self, db_map_data, action):
         if not self.pivot_table_model:
             return
         if self.pivot_table_model.receive_parameter_values_added_or_removed(db_map_data, action):
+            self.update_filter_menus(action)
+
+    def receive_scenarios_added_or_removed(self, db_map_data, action):
+        if not self.pivot_table_model:
+            return
+        if self.pivot_table_model.receive_scenarios_added_or_removed(db_map_data, action):
             self.update_filter_menus(action)
 
     def receive_db_map_data_updated(self, db_map_data, get_class_id):
@@ -709,18 +773,6 @@ class TabularViewMixin:
                     self.refresh_table_view(self.ui.frozen_table)
                     self.make_pivot_headers()
                     return
-
-    def receive_alternatives_added_or_removed(self, db_map_data, action):
-        if self.current_input_type not in (self._PARAMETER_VALUE, self._INDEX_EXPANSION):
-            return
-        if not self.current_class_id:
-            return
-        if self.current_class_type is None:
-            return
-        db_map_alternative_ids = {db_map: [a["id"] for a in items] for db_map, items in db_map_data.items()}
-        data = self.load_empty_parameter_value_data(db_map_alternative_ids=db_map_alternative_ids)
-        if self.pivot_table_model is not None:
-            self.pivot_table_model.receive_data_added_or_removed(data, action)
 
     def receive_classes_removed(self, db_map_data):
         if not self.pivot_table_model:
@@ -737,6 +789,11 @@ class TabularViewMixin:
         """Reacts to alternatives added event."""
         super().receive_alternatives_added(db_map_data)
         self.receive_alternatives_added_or_removed(db_map_data, action="add")
+
+    def receive_scenarios_added(self, db_map_data):
+        """Reacts to scenarios added event."""
+        super().receive_scenarios_added(db_map_data)
+        self.receive_scenarios_added_or_removed(db_map_data, action="add")
 
     def receive_objects_added(self, db_map_data):
         """Reacts to objects added event."""
@@ -759,7 +816,7 @@ class TabularViewMixin:
         self.receive_parameter_values_added_or_removed(db_map_data, action="add")
 
     def receive_alternatives_updated(self, db_map_data):
-        """Reacts to object classes updated event."""
+        """Reacts to alternatives updated event."""
         super().receive_alternatives_updated(db_map_data)
         if not self.pivot_table_model:
             return
@@ -801,10 +858,19 @@ class TabularViewMixin:
             db_map_data, get_class_id=lambda x: x.get("object_class_id") or x.get("relationship_class_id")
         )
 
+    def receive_scenarios_updated(self, db_map_data):
+        super().receive_scenarios_updated(db_map_data)
+        self.pivot_table_model.receive_scenarios_updated(db_map_data)
+
     def receive_alternatives_removed(self, db_map_data):
-        """Reacts to object classes removed event."""
+        """Reacts to alternatives removed event."""
         super().receive_alternatives_removed(db_map_data)
         self.receive_alternatives_added_or_removed(db_map_data, action="remove")
+
+    def receive_scenarios_removed(self, db_map_data):
+        """Reacts to scenarios removed event."""
+        super().receive_scenarios_removed(db_map_data)
+        self.receive_scenarios_added_or_removed(db_map_data, action="remove")
 
     def receive_object_classes_removed(self, db_map_data):
         """Reacts to object classes removed event."""

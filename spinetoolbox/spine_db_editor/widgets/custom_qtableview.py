@@ -298,6 +298,8 @@ class PivotTableView(CopyPasteTableView):
     _REMOVE_OBJECT = "Remove selected objects"
     _REMOVE_RELATIONSHIP = "Remove selected relationships"
     _REMOVE_PARAMETER = "Remove selected parameter definitions"
+    _REMOVE_ALTERNATIVE = "Remove selected alternatives"
+    _REMOVE_SCENARIO = "Remove selected scenarios"
 
     def __init__(self, parent=None):
         """Initialize the class."""
@@ -307,6 +309,8 @@ class PivotTableView(CopyPasteTableView):
         self._selected_value_indexes = list()
         self._selected_entity_indexes = list()
         self._selected_parameter_indexes = list()
+        self._selected_alternative_indexes = list()
+        self._selected_scenario_indexes = list()
         self.open_in_editor_action = None
         self.plot_action = None
         self._plot_in_window_menu = None
@@ -314,6 +318,8 @@ class PivotTableView(CopyPasteTableView):
         self.remove_objects_action = None
         self.remove_relationships_action = None
         self.remove_parameters_action = None
+        self.remove_alternatives_action = None
+        self.remove_scenarios_action = None
 
     @property
     def source_model(self):
@@ -346,13 +352,18 @@ class PivotTableView(CopyPasteTableView):
         self.remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
         self.remove_relationships_action = self._menu.addAction(self._REMOVE_RELATIONSHIP, self.remove_relationships)
         self.remove_parameters_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
+        self.remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
+        self.remove_scenarios_action = self._menu.addAction(self._REMOVE_SCENARIO, self.remove_scenarios)
 
     def remove_selected(self):
         self._find_selected_indexes()
         self.remove_values()
-        self.remove_relationships()
+        if self._can_remove_relationships():
+            self.remove_relationships()
         self.remove_objects()
         self.remove_parameters()
+        self.remove_alternatives()
+        self.remove_scenarios()
 
     def remove_values(self):
         row_mask = set()
@@ -379,8 +390,6 @@ class PivotTableView(CopyPasteTableView):
         self.db_mngr.remove_items(db_map_typed_data)
 
     def remove_relationships(self):
-        if self.model().sourceModel().item_type != "parameter_value":
-            return
         db_map_relationship_lookup = {
             db_map: {rel["object_id_list"]: rel["id"] for rel in rels}
             for db_map, rels in self._spine_db_editor._get_db_map_entities().items()
@@ -399,6 +408,20 @@ class PivotTableView(CopyPasteTableView):
         for index in self._selected_parameter_indexes:
             db_map, id_ = self.source_model._header_id(index)
             db_map_typed_data.setdefault(db_map, {}).setdefault("parameter_definition", set()).add(id_)
+        self.db_mngr.remove_items(db_map_typed_data)
+
+    def remove_alternatives(self):
+        db_map_typed_data = {}
+        for index in self._selected_alternative_indexes:
+            db_map, id_ = self.source_model._header_id(index)
+            db_map_typed_data.setdefault(db_map, {}).setdefault("alternative", set()).add(id_)
+        self.db_mngr.remove_items(db_map_typed_data)
+
+    def remove_scenarios(self):
+        db_map_typed_data = {}
+        for index in self._selected_scenario_indexes:
+            db_map, id_ = self.source_model._header_id(index)
+            db_map_typed_data.setdefault(db_map, {}).setdefault("scenario", set()).add(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
     def open_in_editor(self):
@@ -431,7 +454,6 @@ class PivotTableView(CopyPasteTableView):
         """
         self._find_selected_indexes()
         self._update_actions_availability()
-        self._update_actions_text()
         pos = event.globalPos()
         self._menu.move(pos)
         _prepare_plot_in_window_menu(self._plot_in_window_menu)
@@ -442,6 +464,8 @@ class PivotTableView(CopyPasteTableView):
         self._selected_value_indexes = list()
         self._selected_entity_indexes = list()
         self._selected_parameter_indexes = list()
+        self._selected_alternative_indexes = list()
+        self._selected_scenario_indexes = list()
         for index in indexes:
             if self.source_model.index_in_data(index):
                 self._selected_value_indexes.append(index)
@@ -452,6 +476,10 @@ class PivotTableView(CopyPasteTableView):
                     self._selected_parameter_indexes.append(index)
                 elif header_type == "object":
                     self._selected_entity_indexes.append(index)
+                elif header_type == "alternative":
+                    self._selected_alternative_indexes.append(index)
+                elif header_type == "scenario":
+                    self._selected_scenario_indexes.append(index)
 
     def _update_actions_availability(self):
         self.open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
@@ -459,26 +487,17 @@ class PivotTableView(CopyPasteTableView):
         self.remove_values_action.setEnabled(bool(self._selected_value_indexes))
         self.remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
         self.remove_relationships_action.setEnabled(
-            bool(self._selected_entity_indexes) and self.model().sourceModel().item_type != "relationship"
+            bool(self._selected_entity_indexes) and self._can_remove_relationships()
         )
         self.remove_parameters_action.setEnabled(bool(self._selected_parameter_indexes))
+        self.remove_alternatives_action.setEnabled(bool(self._selected_alternative_indexes))
+        self.remove_scenarios_action.setEnabled(bool(self._selected_scenario_indexes))
 
-    def _update_actions_text(self):
-        self.remove_objects_action.setText(self._REMOVE_OBJECT)
-        self.remove_relationships_action.setText(self._REMOVE_RELATIONSHIP)
-        self.remove_parameters_action.setText(self._REMOVE_PARAMETER)
-        if len(self._selected_entity_indexes) == 1:
-            index = self._selected_entity_indexes[0]
-            object_name = self.source_model.header_name(index)
-            self.remove_objects_action.setText("Remove object: {}".format(object_name))
-            if self.remove_relationships_action.isEnabled():
-                object_names = self.source_model.object_names(index)
-                relationship_name = self.db_mngr._GROUP_SEP.join(object_names)
-                self.remove_relationships_action.setText("Remove relationship: {}".format(relationship_name))
-        if len(self._selected_parameter_indexes) == 1:
-            index = self._selected_parameter_indexes[0]
-            parameter_name = self.source_model.header_name(index)
-            self.remove_parameters_action.setText("Remove parameter_definition: {}".format(parameter_name))
+    def _can_remove_relationships(self):
+        return (
+            self.model().sourceModel().item_type == "parameter_value"
+            and self._spine_db_editor.current_class_type == "relationship_class"
+        )
 
     @Slot(QAction)
     def _plot_in_window(self, action):
