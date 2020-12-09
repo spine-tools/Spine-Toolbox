@@ -80,6 +80,7 @@ class EntityTreeView(CopyTreeView):
         self.expanded.connect(self._resize_first_column_to_contents)
         self.collapsed.connect(self._resize_first_column_to_contents)
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+        self._menu.aboutToShow.connect(self._spine_db_editor._handle_menu_edit_about_to_show)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
@@ -374,8 +375,7 @@ class RelationshipTreeView(EntityTreeView):
 
 
 class ItemTreeView(CopyTreeView):
-    """Custom QTreeView class for parameter_value_list in SpineDBEditor.
-    """
+    """Base class for all non-entity tree views."""
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -387,6 +387,7 @@ class ItemTreeView(CopyTreeView):
         """Connects signals."""
         self.expanded.connect(self._resize_first_column_to_contents)
         self.collapsed.connect(self._resize_first_column_to_contents)
+        self._menu.aboutToShow.connect(self._spine_db_editor._handle_menu_edit_about_to_show)
 
     @Slot("QModelIndex")
     def _resize_first_column_to_contents(self, _index=None):

@@ -46,7 +46,7 @@ class ResourceFilterModel(QStandardItemModel):
 
     def _add_leaves(self, db_map, filter_item, items, filter_type, item_type):
         value_items = []
-        if not filter_item.rowCount():
+        if not filter_item.rowCount() and items:
             select_all_item = FilterValueItem(self._SELECT_ALL)
             select_all_item._db_map = db_map
             select_all_item._item_type = item_type

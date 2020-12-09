@@ -297,6 +297,7 @@ class EntityItem(QGraphicsPixmapItem):
             self.scene().clearSelection()
         self.setSelected(True)
         self._spine_db_editor._handle_menu_graph_about_to_show()
+        self._spine_db_editor._handle_menu_edit_about_to_show()
         menu = self._make_menu()
         menu.popup(e.screenPos())
 

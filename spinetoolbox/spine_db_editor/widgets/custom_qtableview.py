@@ -129,6 +129,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction("Filter excluding", self.filter_excluding_selection)
         self._menu.addSeparator()
         self._menu.addAction(self._spine_db_editor.ui.actionRemove_selected)
+        self._menu.aboutToShow.connect(self._spine_db_editor._handle_menu_edit_about_to_show)
 
     def contextMenuEvent(self, event):
         """Shows context menu.
