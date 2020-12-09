@@ -422,20 +422,6 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
         shutil.copyfile(src, dst)
 
 
-def fix_name_ambiguity(input_list, offset=0):
-    """Modify repeated entries in name list by appending an increasing integer."""
-    result = []
-    ocurrences = {}
-    for item in input_list:
-        n_ocurrences = input_list.count(item)
-        if n_ocurrences > 1:
-            ocurrence = ocurrences.get(item, 1)
-            ocurrences[item] = ocurrence + 1
-            item += str(offset + ocurrence)
-        result.append(item)
-    return result
-
-
 def tuple_itemgetter(itemgetter_func, num_indexes):
     """Change output of itemgetter to always be a tuple even for one index"""
     return (lambda item: (itemgetter_func(item),)) if num_indexes == 1 else itemgetter_func

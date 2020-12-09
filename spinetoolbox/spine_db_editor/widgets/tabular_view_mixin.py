@@ -20,9 +20,10 @@ from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
 from PySide2.QtWidgets import QActionGroup
+from spinedb_api.helpers import fix_name_ambiguity
 from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from ...helpers import fix_name_ambiguity, busy_effect
+from ...helpers import busy_effect
 from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ParameterValuePivotTableModel,
