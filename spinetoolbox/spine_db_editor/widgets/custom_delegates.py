@@ -409,10 +409,13 @@ class ParameterNameDelegate(ParameterDelegate):
             return None
         editor = SearchBarEditor(self.parent(), parent)
         entity_class_id = index.model().get_entity_class_id(index, db_map)
-        parameter_definitions = self.db_mngr.get_items_by_field(
-            db_map, "parameter_definition", "entity_class_id", entity_class_id
-        )
-        name_list = [x["parameter_name"] for x in parameter_definitions]
+        if entity_class_id is not None:
+            parameter_definitions = self.db_mngr.get_items_by_field(
+                db_map, "parameter_definition", "entity_class_id", entity_class_id
+            )
+        else:
+            parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition")
+        name_list = list({x["parameter_name"]: None for x in parameter_definitions})
         editor.set_data(index.data(Qt.EditRole), name_list)
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
@@ -428,7 +431,11 @@ class ObjectNameDelegate(ParameterDelegate):
             return None
         editor = SearchBarEditor(self.parent(), parent)
         object_class_id = index.model().get_entity_class_id(index, db_map)
-        name_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", object_class_id)]
+        if object_class_id is not None:
+            objects = self.db_mngr.get_items_by_field(db_map, "object", "class_id", object_class_id)
+        else:
+            objects = self.db_mngr.get_items(db_map, "object")
+        name_list = list({x["name"]: None for x in objects})
         editor.set_data(index.data(Qt.EditRole), name_list)
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor

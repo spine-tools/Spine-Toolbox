@@ -20,11 +20,15 @@ from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
-    ConvertToDBMixin,
     FillInParameterNameMixin,
     FillInValueListIdMixin,
     MakeParameterTagMixin,
+    MakeRelationshipOnTheFlyMixin,
     ValidateValueInListForUpdateMixin,
+    FillInAlternativeIdMixin,
+    FillInParameterDefinitionIdsMixin,
+    FillInEntityIdsMixin,
+    ImposeEntityClassIdMixin,
 )
 from ...mvcmodels.shared import PARSED_ROLE
 
@@ -59,33 +63,31 @@ class SingleParameterModel(MinimalTableModel):
         raise NotImplementedError()
 
     @property
+    def entity_class_name_field(self):
+        return {"object_class": "object_class_name", "relationship_class": "relationship_class_name",}[
+            self.entity_class_type
+        ]
+
+    @property
+    def entity_class_name(self):
+        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
+
+    @property
+    def entity_class_id_key(self):
+        return {"object_class": "object_class_id", "relationship_class": "relationship_class_id"}[
+            self.entity_class_type
+        ]
+
+    @property
     def json_fields(self):
         return {"parameter_definition": ["default_value"], "parameter_value": ["value"]}[self.item_type]
 
     @property
     def fixed_fields(self):
         return {
-            "object_class": {
-                "parameter_definition": ["object_class_name", "database"],
-                "parameter_value": [
-                    "object_class_name",
-                    "object_name",
-                    "parameter_name",
-                    "alternative_name",
-                    "database",
-                ],
-            },
-            "relationship_class": {
-                "parameter_definition": ["relationship_class_name", "object_class_name_list", "database"],
-                "parameter_value": [
-                    "relationship_class_name",
-                    "object_name_list",
-                    "parameter_name",
-                    "alternative_name",
-                    "database",
-                ],
-            },
-        }[self.entity_class_type][self.item_type]
+            "object_class": ["object_class_name", "database"],
+            "relationship_class": ["relationship_class_name", "object_class_name_list", "database"],
+        }[self.entity_class_type]
 
     @property
     def group_fields(self):
@@ -206,11 +208,8 @@ class SingleParameterModel(MinimalTableModel):
                 data = data.replace(",", self.db_mngr._GROUP_SEP)
             return data
         # Decoration role
-        entity_class_name_field = {
-            "object_class": "object_class_name",
-            "relationship_class": "relationship_class_name",
-        }[self.entity_class_type]
-        if role == Qt.DecorationRole and field == entity_class_name_field:
+
+        if role == Qt.DecorationRole and field == self.entity_class_name_field:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
         return super().data(index, role)
 
@@ -333,7 +332,13 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
             self.db_mngr.error_msg({self.db_map: error_log})
 
 
-class SingleParameterValueMixin(ValidateValueInListForUpdateMixin, ConvertToDBMixin):
+class SingleParameterValueMixin(
+    ValidateValueInListForUpdateMixin,
+    FillInAlternativeIdMixin,
+    ImposeEntityClassIdMixin,
+    FillInParameterDefinitionIdsMixin,
+    FillInEntityIdsMixin,
+):
     """A parameter_value model for a single entity_class."""
 
     def __init__(self, *args, **kwargs):
@@ -345,6 +350,23 @@ class SingleParameterValueMixin(ValidateValueInListForUpdateMixin, ConvertToDBMi
     @property
     def item_type(self):
         return "parameter_value"
+
+    @property
+    def entity_type(self):
+        """Either 'object' or "relationship'."""
+        raise NotImplementedError()
+
+    @property
+    def entity_id_key(self):
+        return {"object": "object_id", "relationship": "relationship_id"}[self.entity_type]
+
+    @property
+    def entity_name_key(self):
+        return {"object": "object_name", "relationship": "object_name_list"}[self.entity_type]
+
+    @property
+    def entity_name_key_in_cache(self):
+        return {"object": "name", "relationship": "object_name_list"}[self.entity_type]
 
     def set_filter_entity_ids(self, db_map_class_entity_ids):
         if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:
@@ -396,11 +418,13 @@ class SingleParameterValueMixin(ValidateValueInListForUpdateMixin, ConvertToDBMi
         db_map_data[self.db_map] = items
         self.build_lookup_dictionary(db_map_data)
         for item in items:
-            param_val, err = self._convert_to_db(item, self.db_map)
-            if self._check_item(param_val):
+            param_val, convert_errors = self._convert_to_db(item, self.db_map)
+            param_val, check_errors = self._check_item(param_val)
+            if param_val:
                 param_vals.append(param_val)
-            if err:
-                error_log += err
+            errors = convert_errors + check_errors
+            if errors:
+                error_log += errors
         if param_vals:
             self.db_mngr.update_parameter_values({self.db_map: param_vals})
         if error_log:
@@ -408,7 +432,30 @@ class SingleParameterValueMixin(ValidateValueInListForUpdateMixin, ConvertToDBMi
 
     def _check_item(self, item):
         """Checks if a db item is good to be updated."""
-        return tuple(item.keys()) != ("id",) and item.pop("has_valid_value_from_list", True)
+        item = item.copy()
+        id_ = item.get("id")
+        has_valid_value_from_list = item.pop("has_valid_value_from_list", True)
+        if not all([id_, has_valid_value_from_list, len(item) > 1]):
+            return None, []
+        existing_items = {
+            (x["entity_class_id"], x["entity_id"], x["parameter_id"], x["alternative_id"]): (
+                x.get("object_name") or x.get("object_name_list"),
+                x["parameter_name"],
+                x["alternative_name"],
+            )
+            for x in self.db_mngr.get_items(self.db_map, "parameter_value")
+            if x["id"] != id_
+        }
+        existing = self.db_mngr.get_item(self.db_map, "parameter_value", id_).copy()
+        entity_class_id = item.get("entity_class_id") or existing["entity_class_id"]
+        entity_id = item.get("entity_id") or existing["entity_id"]
+        parameter_id = item.get("parameter_definition_id") or existing["parameter_id"]
+        alternative_id = item.get("alternative_id") or existing["alternative_id"]
+        dupe = existing_items.get((entity_class_id, entity_id, parameter_id, alternative_id))
+        if dupe is not None:
+            entity_name, parameter_name, alternative_name = dupe
+            return None, [f"The '{alternative_name}' value of '{parameter_name}' for '{entity_name}' is already set"]
+        return item, []
 
 
 class SingleObjectParameterDefinitionModel(
@@ -426,8 +473,41 @@ class SingleRelationshipParameterDefinitionModel(
 class SingleObjectParameterValueModel(SingleObjectParameterMixin, SingleParameterValueMixin, SingleParameterModel):
     """An object parameter_value model for a single object_class."""
 
+    @property
+    def entity_type(self):
+        return "object"
+
 
 class SingleRelationshipParameterValueModel(
-    SingleRelationshipParameterMixin, SingleParameterValueMixin, SingleParameterModel
+    SingleRelationshipParameterMixin, MakeRelationshipOnTheFlyMixin, SingleParameterValueMixin, SingleParameterModel
 ):
     """A relationship parameter_value model for a single relationship_class."""
+
+    @property
+    def entity_type(self):
+        return "relationship"
+
+    def update_items_in_db(self, items):
+        """Update items in db.
+
+        Args:
+            item (list): dictionary-items
+        """
+        for item in items:
+            item["relationship_class_name"] = self.entity_class_name
+        db_map_data = {self.db_map: items}
+        self.build_lookup_dictionaries(db_map_data)
+        db_map_relationships = dict()
+        db_map_error_log = dict()
+        for db_map, data in db_map_data.items():
+            for item in data:
+                relationship, err = self._make_relationship_on_the_fly(item, db_map)
+                if relationship:
+                    db_map_relationships.setdefault(db_map, []).append(relationship)
+                if err:
+                    db_map_error_log.setdefault(db_map, []).extend(err)
+        if any(db_map_relationships.values()):
+            self.db_mngr.add_relationships(db_map_relationships)
+        if db_map_error_log:
+            self.db_mngr.error_msg(db_map_error_log)
+        super().update_items_in_db(items)

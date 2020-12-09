@@ -296,7 +296,7 @@ class EmptyParameterValueModel(
         has_valid_value_from_list = item.pop("has_valid_value_from_list", True)
         if not all([entity_class_id, entity_id, parameter_id, alternative_id, has_valid_value_from_list]):
             return None, []
-        existing = {
+        existing_items = {
             (x["entity_class_id"], x["entity_id"], x["parameter_id"], x["alternative_id"]): (
                 x.get("object_name") or x.get("object_name_list"),
                 x["parameter_name"],
@@ -304,7 +304,7 @@ class EmptyParameterValueModel(
             )
             for x in self.db_mngr.get_items(db_map, "parameter_value")
         }
-        dupe = existing.get((entity_class_id, entity_id, parameter_id, alternative_id))
+        dupe = existing_items.get((entity_class_id, entity_id, parameter_id, alternative_id))
         if dupe is not None:
             entity_name, parameter_name, alternative_name = dupe
             return None, [f"The '{alternative_name}' value of '{parameter_name}' for '{entity_name}' is already set"]
@@ -342,7 +342,9 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
         Args:
             rows (set): add data from these rows
         """
-        super().add_items_to_db(rows)  # This will also complete the relationship_class name
+        # Call the super method to add whatever is ready.
+        # This will fill the relationship_class_name as a side effect
+        super().add_items_to_db(rows)
         # Now we try to add relationships
         db_map_data = self._make_db_map_data(rows)
         self.build_lookup_dictionaries(db_map_data)
@@ -357,6 +359,7 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
                     db_map_error_log.setdefault(db_map, []).extend(err)
         if any(db_map_relationships.values()):
             self.db_mngr.add_relationships(db_map_relationships)
+            # Something might have become ready after adding the relationship(s), so we do one more pass
             super().add_items_to_db(rows)
         if db_map_error_log:
             self.db_mngr.error_msg(db_map_error_log)

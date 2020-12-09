@@ -92,7 +92,7 @@ class FillInAlternativeIdMixin(ConvertToDBMixin):
         alt_name = item.pop("alternative_name", None)
         alt = self._db_map_alt_lookup.get(db_map, {}).get(alt_name)
         if not alt:
-            return item, [f"Unknown alternative name {alt_name}"] if alt_name else []
+            return item, err + [f"Unknown alternative name {alt_name}"] if alt_name else err
         item["alternative_id"] = alt["id"]
         return item, err
 
@@ -299,9 +299,9 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
             dict: the db item
             list: error log
         """
-        item, err = super()._convert_to_db(item, db_map)
-        self._fill_in_entity_class_id(item, db_map)
-        return item, err
+        item, err1 = super()._convert_to_db(item, db_map)
+        err2 = self._fill_in_entity_class_id(item, db_map)
+        return item, err1 + err2
 
 
 class FillInEntityIdsMixin(ConvertToDBMixin):
@@ -394,7 +394,11 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
         self._db_map_param_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                items = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", name)
+                items = [
+                    x
+                    for x in self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", name)
+                    if self.entity_class_id_key in x
+                ]
                 if items:
                     self._db_map_param_lookup.setdefault(db_map, {})[name] = items
 
@@ -433,7 +437,7 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
 
 
 class InferEntityClassIdMixin(ConvertToDBMixin):
-    """Infers object_class ids."""
+    """Infers entity class ids."""
 
     def _convert_to_db(self, item, db_map):
         """Returns a db item (id-based) from the given model item (name-based).
@@ -466,7 +470,12 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
         entity_ids = item.pop("entity_ids", {})
         parameter_ids = item.pop("parameter_ids", {})
         if self.entity_class_id_key not in item:
-            entity_class_ids = {*entity_ids.keys(), *parameter_ids.keys()}
+            if not entity_ids:
+                entity_class_ids = set(parameter_ids.keys())
+            elif not parameter_ids:
+                entity_class_ids = set(entity_ids.keys())
+            else:
+                entity_class_ids = entity_ids.keys() & parameter_ids.keys()
             if len(entity_class_ids) != 1:
                 # entity_class id not in the item and not inferrable, good bye
                 return ["Unable to infer entity_class."]
@@ -481,6 +490,45 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
         parameter_definition_id = parameter_ids.get(entity_class_id)
         if entity_id:
             item[self.entity_id_key] = entity_id
+        if parameter_definition_id:
+            item["parameter_definition_id"] = parameter_definition_id
+        return []
+
+
+class ImposeEntityClassIdMixin(ConvertToDBMixin):
+    """Imposes entity class ids."""
+
+    def _convert_to_db(self, item, db_map):
+        """Returns a db item (id-based) from the given model item (name-based).
+
+        Args:
+            item (dict): the model item
+            db_map (DiffDatabaseMapping): the database where the resulting item belongs
+
+        Returns:
+            dict: the db item
+            list: error log
+        """
+        item, err1 = super()._convert_to_db(item, db_map)
+        err2 = self._impose_entity_class_id(item, db_map)
+        return item, err1 + err2
+
+    def _impose_entity_class_id(self, item, db_map):
+        """Imposes the entity_class id from the model, to pick the correct entity id and parameter_definition id.
+
+        Args:
+            item (dict): the db item
+            db_map (DiffDatabaseMapping): the database where the given item belongs
+
+        Returns:
+            list: error log
+        """
+        entity_ids = item.pop("entity_ids", {})
+        parameter_ids = item.pop("parameter_ids", {})
+        entity_id = entity_ids.get(self.entity_class_id)
+        parameter_definition_id = parameter_ids.get(self.entity_class_id)
+        if entity_id:
+            item["entity_id"] = entity_id
         if parameter_definition_id:
             item["parameter_definition_id"] = parameter_definition_id
         return []
@@ -502,16 +550,18 @@ class ValidateValueInListMixin(ConvertToDBMixin):
         """
         item, err = super()._convert_to_db(item, db_map)
         value = item.get("value")
+        if value is None:
+            return item, err
         param_def_id = self._get_parameter_definition_id(db_map, item)
         param_def = self.db_mngr.get_item(db_map, "parameter_definition", param_def_id)
         value_list = self.db_mngr.get_parameter_value_list(db_map, param_def.get("value_list_id"), role=Qt.EditRole)
         if value_list and value not in value_list:
+            item["has_valid_value_from_list"] = False
             msg = (
                 f"Invalid value '{value}' for parameter '{param_def['parameter_name']}', "
                 f"valid values are {', '.join(value_list)}"
             )
-            item["has_valid_value_from_list"] = False
-            return item, [msg]
+            return item, err + [msg]
         return item, err
 
     def _get_parameter_definition_id(self, db_map, item):
