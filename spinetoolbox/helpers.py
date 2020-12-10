@@ -188,8 +188,11 @@ def rename_dir(old_dir, new_dir, logger):
     return True
 
 
-def open_url(url):
-    return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+def open_url(url, logger=None):
+    result = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+    if logger is not None:
+        logger.msg_error.emit(f"Unable to open URL <b>{url}</b>")
+    return result
 
 
 def set_taskbar_icon():

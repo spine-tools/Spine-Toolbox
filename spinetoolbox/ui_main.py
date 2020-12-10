@@ -141,6 +141,7 @@ class ToolboxUI(QMainWindow):
         self.active_link = None
         self.sync_item_selection_with_scene = True
         self.link_properties_widget = LinkPropertiesWidget(self)
+        self._saved_specification = None
         # Widget and form references
         self.settings_form = None
         self.specification_context_menu = None
@@ -947,10 +948,14 @@ class ToolboxUI(QMainWindow):
             create_dir(specs_type_dir)
         except OSError:
             self._logger.msg_error.emit("Creating directory {0} failed".format(specs_type_dir))
+            specs_type_dir = specs_dir
         candidate_def_file_path = os.path.join(specs_type_dir, shorten(specification.name) + ".json")
         if not os.path.exists(candidate_def_file_path):
             specification.definition_file_path = candidate_def_file_path
             return specification.save()
+        return self._prompt_to_save_specification_file(specification, candidate_def_file_path)
+
+    def _prompt_to_save_specification_file(self, specification, candidate_def_file_path):
         answer = QFileDialog.getSaveFileName(
             self, f"Save {specification.item_type} specification", candidate_def_file_path, "JSON (*.json)"
         )
@@ -961,9 +966,11 @@ class ToolboxUI(QMainWindow):
 
     def _emit_specification_saved(self, specification):
         path = specification.definition_file_path
+        self._saved_specification = specification
         self.msg_success.emit(
             f"Specification <b>{specification.name}</b> successfully saved as "
-            f"<a style='color:#99CCFF;' href='file:///{path}'>{path}</a>"
+            f"<a style='color:#99CCFF;' href='file:///{path}'>{path}</a> "
+            f"<a style='color:white;' href='change_spec_file'><b>[change]</b></a>"
         )
 
     def add_specification(self, specification):
@@ -1130,15 +1137,21 @@ class ToolboxUI(QMainWindow):
         """Open file explorer in the directory given in qurl.
 
         Args:
-            qurl (QUrl): Directory path or a file to open
+            qurl (QUrl): The url to open
         """
-        if qurl.url() == "#":  # This is a Tip so do not try to open the URL
+        url = qurl.url()
+        if url == "#":  # This is a Tip so do not try to open the URL
             return
-        path = qurl.toLocalFile()  # Path to result folder
+        if url == "change_spec_file":
+            if self._prompt_to_save_specification_file(
+                self._saved_specification, self._saved_specification.definition_file_path
+            ):
+                self._emit_specification_saved(self._saved_specification)
+            return
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(qurl)
         if not res:
-            self.msg_error.emit("Opening path {} failed".format(path))
+            self.msg_error.emit(f"Unable to open <b>{url}</b>")
 
     @Slot(QModelIndex, QPoint)
     def show_specification_context_menu(self, ind, global_pos):
@@ -1195,13 +1208,11 @@ class ToolboxUI(QMainWindow):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = open_url(tool_specification_url)
         if not res:
-            logging.error("Failed to open editor for %s", tool_specification_url)
             self.msg_error.emit(
                 "Unable to open specification file {0}. Make sure that <b>.json</b> "
                 "files are associated with a text editor. For example on Windows "
                 "10, go to Control Panel -> Default Programs to do this.".format(file_path)
             )
-        return
 
     @Slot()
     def export_as_graphml(self):
@@ -1511,19 +1522,14 @@ class ToolboxUI(QMainWindow):
         # index_url = "file:///" + doc_index_path
         index_url = "https://spine-toolbox.readthedocs.io/en/latest/"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = open_url(index_url)
-        if not res:
-            # logging.error("Failed to open editor for %s", index_url)
-            self.msg_error.emit(f"Unable to open URL <b>{index_url}</b>")
+        open_url(index_url, self)
 
     @Slot()
     def show_getting_started_guide(self):
         """Open Spine Toolbox Getting Started HTML page in browser."""
         index_url = "https://spine-toolbox.readthedocs.io/en/latest/getting_started.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = open_url(index_url)
-        if not res:
-            self.msg_error.emit(f"Unable to open URL <b>{index_url}</b>")
+        open_url(index_url, self)
 
     @Slot(QPoint)
     def show_item_context_menu(self, pos):
@@ -1953,8 +1959,7 @@ class ToolboxUI(QMainWindow):
         """Opens project's root directory in system's file browser."""
         if self._project is None:
             return
-        file_url = "file:///" + self._project.project_dir
-        self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
+        open_url("file:///" + self._project.project_dir, self)
 
     @Slot(bool)
     def _open_project_item_directory(self, _):

@@ -42,7 +42,6 @@ class CustomQTextBrowser(QTextBrowser):
         self._max_blocks = 2000
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
-        self.anchorClicked.connect(self._open_external_link)
 
     def set_override_document(self, document):
         """
@@ -109,8 +108,3 @@ class CustomQTextBrowser(QTextBrowser):
     @max_blocks.setter
     def max_blocks(self, new_max):
         self._max_blocks = new_max if new_max > 0 else 2000
-
-    # pylint: disable=no-self-use
-    @Slot("QUrl")
-    def _open_external_link(self, link):
-        QDesktopServices.openUrl(link)
