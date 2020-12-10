@@ -909,10 +909,10 @@ class SpineDBEditorBase(QMainWindow):
         Args:
             event (QCloseEvent): Closing event
         """
+        if not self.db_mngr.unregister_listener(self, *self.db_maps):
+            event.ignore()
+            return
         for db_map in self.db_maps:
-            if not self.db_mngr.unregister_listener(self, db_map):
-                event.ignore()
-                return
             self.db_mngr.unset_logger_for_db_map(db_map)
         # Save UI form state
         self.save_window_state()

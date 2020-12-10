@@ -335,26 +335,68 @@ class SpineDBManager(QObject):
             stack.indexChanged.connect(ds_form.update_undo_redo_actions)
             stack.cleanChanged.connect(ds_form.update_commit_enabled)
 
-    def unregister_listener(self, ds_form, db_map):
+    def unregister_listener(self, ds_form, *db_maps):
         """Unregisters given ds_form from given db_map signals.
+        If any of the db_maps becomes an orphan and is dirty, prompts user to commit or rollback.
 
         Args:
             ds_form (SpineDBEditor)
-            db_map (DiffDatabaseMapping)
+            db_maps (DiffDatabaseMapping)
         """
-        listeners = self.signaller.db_map_listeners(db_map) - {ds_form}
-        if not listeners:
-            if not self.ok_to_close(db_map):
+        is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
+        is_orphan = lambda db_map: not self.signaller.db_map_listeners(db_map) - {ds_form}
+        dirty_orphan_db_maps = [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
+        if dirty_orphan_db_maps:
+            answer = self._prompt_to_commit_changes()
+            if answer == QMessageBox.Cancel:
                 return False
-            self.close_session(db_map.db_url)
-        self.signaller.remove_db_map_listener(db_map, ds_form)
-        self.undo_stack[db_map].indexChanged.disconnect(ds_form.update_undo_redo_actions)
-        self.undo_stack[db_map].cleanChanged.disconnect(ds_form.update_commit_enabled)
-        if not self.signaller.db_map_listeners(db_map):
-            del self.undo_stack[db_map]
-            del self.undo_action[db_map]
-            del self.redo_action[db_map]
+            if answer == QMessageBox.Save:
+                if not self.commit_session(*dirty_orphan_db_maps):
+                    return False
+            elif answer == QMessageBox.Discard:
+                if not self.rollback_session(*dirty_orphan_db_maps, ask_confirmation=False):
+                    return False
+        for db_map in db_maps:
+            self.signaller.remove_db_map_listener(db_map, ds_form)
+            self.undo_stack[db_map].indexChanged.disconnect(ds_form.update_undo_redo_actions)
+            self.undo_stack[db_map].cleanChanged.disconnect(ds_form.update_commit_enabled)
+            if not self.signaller.db_map_listeners(db_map):
+                del self.undo_stack[db_map]
+                del self.undo_action[db_map]
+                del self.redo_action[db_map]
         return True
+
+    def _prompt_to_commit_changes(self):
+        """Prompts the user to commit or rollback changes to 'dirty' db maps.
+
+        Returns:
+            bool: True to commit, False to rollback, None to do nothing
+        """
+        commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
+        if commit_at_exit == 0:
+            # Don't commit session and don't show message box
+            return QMessageBox.Discard
+        if commit_at_exit == 1:  # Default
+            # Show message box
+            msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Commit Pending Changes")
+            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
+            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msg.button(QMessageBox.Save).setText("Commit And Close ")
+            msg.button(QMessageBox.Discard).setText("Discard Changes And Close")
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
+                # Save preference
+                preference = "2" if answer == QMessageBox.Save else "0"
+                self.qsettings.setValue("appSettings/commitAtExit", preference)
+            return answer
+        if commit_at_exit == 2:
+            # Commit session and don't show message box
+            return QMessageBox.Save
 
     def set_logger_for_db_map(self, logger, db_map):
         if db_map.codename is not None:
@@ -420,11 +462,11 @@ class SpineDBManager(QObject):
             db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
         ]
         if not changed_db_maps:
-            return
+            return True
         db_names = ", ".join([db_map.codename for db_map in changed_db_maps])
         commit_msg = self._get_commit_msg(db_names)
         if not commit_msg:
-            return
+            return False
         for db_map in changed_db_maps:
             try:
                 db_map.commit_session(commit_msg)
@@ -436,6 +478,7 @@ class SpineDBManager(QObject):
             self.error_msg(error_log)
         if committed_db_maps:
             self.session_committed.emit(committed_db_maps, cookie)
+        return True
 
     @staticmethod
     def _get_commit_msg(db_names):
@@ -444,14 +487,18 @@ class SpineDBManager(QObject):
         if answer == QDialog.Accepted:
             return dialog.commit_msg
 
-    def rollback_session(self, *db_maps):
+    def rollback_session(self, *db_maps, ask_confirmation=True):
         error_log = {}
         rolled_db_maps = set()
-        for db_map in db_maps:
-            if self.undo_stack[db_map].isClean() and not db_map.has_pending_changes():
-                continue
-            if not self._get_rollback_confirmation(db_map):
-                continue
+        changed_db_maps = [
+            db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
+        ]
+        if not changed_db_maps:
+            return True
+        db_names = ", ".join([db_map.codename for db_map in changed_db_maps])
+        if ask_confirmation and not self._get_rollback_confirmation(db_names):
+            return False
+        for db_map in changed_db_maps:
             try:
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
@@ -463,12 +510,13 @@ class SpineDBManager(QObject):
             self.error_msg(error_log)
         if rolled_db_maps:
             self.session_rolled_back.emit(rolled_db_maps)
+        return True
 
     @staticmethod
-    def _get_rollback_confirmation(db_map):
+    def _get_rollback_confirmation(db_names):
         message_box = QMessageBox(
             QMessageBox.Question,
-            f"Rollback changes in {db_map.codename}",
+            f"Rollback changes in {db_names}",
             "Are you sure? All your changes since the last commit will be reverted and removed from the undo/redo stack.",
             QMessageBox.Ok | QMessageBox.Cancel,
             parent=qApp.activeWindow(),  # pylint: disable=undefined-variable
@@ -476,68 +524,6 @@ class SpineDBManager(QObject):
         message_box.button(QMessageBox.Ok).setText("Rollback")
         answer = message_box.exec_()
         return answer == QMessageBox.Ok
-
-    def _commit_db_map_session(self, db_map):
-        commit_msg = self._get_commit_msg(db_map)
-        if not commit_msg:
-            return False
-        try:
-            db_map.commit_session(commit_msg)
-            cookie = None
-            self.session_committed.emit({db_map}, cookie)
-            return True
-        except SpineDBAPIError as e:
-            self.error_msg({db_map: e.msg})
-            return False
-
-    def _rollback_db_map_session(self, db_map):
-        try:
-            db_map.rollback_session()
-            return True
-        except SpineDBAPIError as e:
-            self.error_msg({db_map: e.msg})
-            return False
-
-    def ok_to_close(self, db_map):
-        """Prompts the user to commit or rollback changes to given database map.
-
-        Returns:
-            bool: True if successfully committed or rolled back, False otherwise
-        """
-        if self.undo_stack[db_map].isClean() and not db_map.has_pending_changes():
-            return True
-        commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
-        if commit_at_exit == 0:
-            # Don't commit session and don't show message box
-            return self._rollback_db_map_session(db_map)
-        if commit_at_exit == 1:  # Default
-            # Show message box
-            msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Commit Pending Changes")
-            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
-            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            msg.button(QMessageBox.Save).setText("Commit And Close ")
-            msg.button(QMessageBox.Discard).setText("Discard Changes And Close")
-            chkbox = QCheckBox()
-            chkbox.setText("Do not ask me again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()
-            if answer == QMessageBox.Cancel:
-                return False
-            chk = chkbox.checkState()
-            if chk == 2:
-                # Save preference
-                preference = "2" if answer == QMessageBox.Save else "0"
-                self.qsettings.setValue("appSettings/commitAtExit", preference)
-            if answer == QMessageBox.Save:
-                return self._commit_db_map_session(db_map)
-            return self._rollback_db_map_session(db_map)
-        if commit_at_exit == 2:
-            # Commit session and don't show message box
-            return self._commit_db_map_session(db_map)
-        self.qsettings.setValue("appSettings/commitAtExit", "1")
-        return True
 
     def connect_signals(self):
         """Connects signals."""
