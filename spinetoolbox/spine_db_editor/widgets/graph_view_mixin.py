@@ -82,6 +82,10 @@ class GraphViewMixin:
         self.ui.graphicsView.connect_spine_db_editor(self)
         self.setup_widget_actions()
 
+    @property
+    def entity_items(self):
+        return [x for x in self.scene.items() if isinstance(x, EntityItem) and x not in self.removed_items]
+
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
         super().add_menu_actions()
@@ -714,9 +718,8 @@ class GraphViewMixin:
     def _populate_menu_add_parameter_heat_map(self):
         """Populates the menu 'Add parameter heat map' with parameters for currently shown items in the graph."""
         db_map_class_ids = {}
-        for x in self.scene.items():
-            if isinstance(x, EntityItem):
-                db_map_class_ids.setdefault(x.db_map, set()).add(x.entity_class_id)
+        for item in self.entity_items:
+            db_map_class_ids.setdefault(item.db_map, set()).add(item.entity_class_id)
         db_map_parameters = self.db_mngr.find_cascading_parameter_data(db_map_class_ids, "parameter_definition")
         db_map_class_parameters = {}
         parameter_value_ids = {}
@@ -730,9 +733,7 @@ class GraphViewMixin:
                 )[db_map]
             }
         self._point_value_tuples_per_parameter_name.clear()
-        for item in self.scene.items():
-            if not isinstance(item, EntityItem):
-                continue
+        for item in self.entity_items:
             for parameter in db_map_class_parameters.get((item.db_map, item.entity_class_id), ()):
                 pv_id = parameter_value_ids.get((item.db_map, parameter["id"], item.id_))
                 try:

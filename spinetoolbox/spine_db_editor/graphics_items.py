@@ -433,7 +433,9 @@ class ObjectItem(EntityItem):
             menu (QMenu)
         """
         self._relationship_class_per_action.clear()
-        object_class_ids_in_graph = {x.entity_class_id for x in self.scene().items() if isinstance(x, ObjectItem)}
+        object_class_ids_in_graph = {
+            x.entity_class_id for x in self._spine_db_editor.entity_items if isinstance(x, ObjectItem)
+        }
         db_map_object_class_ids = {self.db_map: {self.entity_class_id}}
         for rel_cls in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).get(self.db_map, []):
             object_class_id_list = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
