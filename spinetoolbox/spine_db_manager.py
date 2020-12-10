@@ -361,6 +361,7 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].indexChanged.disconnect(ds_form.update_undo_redo_actions)
             self.undo_stack[db_map].cleanChanged.disconnect(ds_form.update_commit_enabled)
             if not self.signaller.db_map_listeners(db_map):
+                self.close_session(db_map.db_url)
                 del self.undo_stack[db_map]
                 del self.undo_action[db_map]
                 del self.redo_action[db_map]
