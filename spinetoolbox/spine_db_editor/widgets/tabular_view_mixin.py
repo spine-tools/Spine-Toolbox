@@ -49,7 +49,7 @@ class TabularViewMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # current state of ui
-        self.current = None  # Current QModelIndex selected in one of the entity tree views
+        self.current_class_item = None  # Current QModelIndex selected in one of the entity tree views
         self.current_class_type = None
         self.current_class_id = {}  # Mapping from db_map to class_id
         self.current_class_name = None
@@ -167,9 +167,9 @@ class TabularViewMixin:
         current = self.ui.treeView_relationship.currentIndex()
         self._handle_entity_tree_current_changed(current)
 
-    def _handle_entity_tree_current_changed(self, current):
+    def _handle_entity_tree_current_changed(self, current_index):
         if self.ui.dockWidget_pivot_table.isVisible() and self.current_input_type != self._SCENARIO_ALTERNATIVE:
-            self.reload_pivot_table(current=current)
+            self.reload_pivot_table(current_index=current_index)
 
     @staticmethod
     def _make_get_id(action):
@@ -441,32 +441,30 @@ class TabularViewMixin:
             return (rows, columns, frozen, frozen_value)
         return None
 
-    def reload_pivot_table(self, current=None):
+    def reload_pivot_table(self, current_index=None):
         """Updates current class (type and id) and reloads pivot table for it."""
-        if current is not None:
-            self.current = current
-        item = self._get_current_class_item()
-        if item is None:
+        if current_index is not None:
+            self.current_class_item = self._get_current_class_item(current_index)
+        if self.current_class_item is None:
             self.current_class_id = {}
             self.clear_pivot_table()
             return
-        class_id = item.db_map_ids
+        class_id = self.current_class_item.db_map_ids
         if self.current_class_id == class_id:
             return
         self.clear_pivot_table()
-        self.current_class_type = item.item_type
+        self.current_class_type = self.current_class_item.item_type
         self.current_class_id = class_id
-        self.current_class_name = item.display_data
+        self.current_class_name = self.current_class_item.display_data
         self.do_reload_pivot_table()
 
-    def _get_current_class_item(self):
-        if self.current is None:
-            return None
-        item = self.current.model().item_from_index(self.current)
+    def _get_current_class_item(self, current_index):
+        item = current_index.model().item_from_index(current_index)
         while item.item_type != "root":
             if item.item_type in ("object_class", "relationship_class"):
                 return item
             item = item.parent_item
+        return None
 
     @busy_effect
     @Slot("QAction")
