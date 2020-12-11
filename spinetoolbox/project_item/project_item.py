@@ -479,26 +479,6 @@ class ProjectItem(MetaObject):
         add_message_to_document(document, message)
 
     @staticmethod
-    def upgrade_from_no_version_to_version_1(item_name, old_item_dict, old_project_dir):
-        """
-        Upgrades item's dictionary from no version to version 1.
-
-        Subclasses should reimplement this method if their JSON format changed between no version
-        and version 1 .proj files.
-
-        Args:
-            item_name (str): item's name
-            old_item_dict (dict): no version item dictionary
-            old_project_dir (str): path to the previous project dir. We use old project directory
-                here since the new project directory may be empty at this point and the directories
-                for the new project items have not been created yet.
-
-        Returns:
-            version 1 item dictionary
-        """
-        return old_item_dict
-
-    @staticmethod
     def upgrade_v1_to_v2(item_name, item_dict):
         """
         Upgrades item's dictionary from v1 to v2.
@@ -508,7 +488,6 @@ class ProjectItem(MetaObject):
         Args:
             item_name (str): item's name
             item_dict (dict): Version 1 item dictionary
-            project_upgrader (ProjectUpgrader)
 
         Returns:
             dict: Version 2 item dictionary
@@ -524,9 +503,10 @@ class ProjectItem(MetaObject):
 
         Args:
             item_name (str): item's name
-            item_dict (dict): Version 1 item dictionary
+            item_dict (dict): Version 2 item dictionary
+            project_upgrader (ProjectUpgrader): Project upgrader class instance
 
         Returns:
-            dict: Version 2 item dictionary
+            dict: Version 3 item dictionary
         """
         return item_dict

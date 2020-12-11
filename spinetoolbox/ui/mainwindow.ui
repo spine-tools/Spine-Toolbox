@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>860</width>
-    <height>602</height>
+    <height>700</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -157,7 +157,6 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="separator"/>
-    <addaction name="actionUpgrade_project"/>
     <addaction name="actionExport_project_to_GraphML"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
@@ -837,10 +836,6 @@
    </property>
   </action>
   <action name="actionUpgrade_project">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/level-up-alt.svg</normaloff>:/icons/menu_icons/level-up-alt.svg</iconset>
-   </property>
    <property name="text">
     <string>Upgrade project</string>
    </property>
