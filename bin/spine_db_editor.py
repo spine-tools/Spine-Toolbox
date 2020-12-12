@@ -10,6 +10,7 @@ from spinetoolbox.logger_interface import LoggerInterface
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.helpers import pyside2_version_check
 from spinetoolbox.spinedb_api_version_check import spinedb_api_version_check
+from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 
 # Check for spinedb_api version before we try to import possibly non-existent stuff below.
 if not spinedb_api_version_check():
@@ -51,8 +52,8 @@ def main(argv):
     settings = QSettings("SpineProject", "Spine Toolbox")
     logger = SimpleLogger()
     db_mngr = SpineDBManager(settings, logger, None)
-    if not db_mngr.show_spine_db_editor({url: None for url in urls}, logger, create=True):
-        return 3
+    editor = MultiSpineDBEditor(db_mngr, {url: None for url in urls}, create=True)
+    editor.show()
     return_code = app.exec_()
     return return_code
 

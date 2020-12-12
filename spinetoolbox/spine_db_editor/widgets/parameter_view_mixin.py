@@ -41,19 +41,11 @@ class ParameterViewMixin:
         self.filter_tag_ids = dict()
         self.tag_filter_class_ids = {}
         self.filter_parameter_ids = {}
-        self.parameter_tag_model = ParameterTagModel(self, self.db_mngr, *self.db_maps)
-        self.ui.treeView_parameter_tag.setModel(self.parameter_tag_model)
-        self.ui.treeView_parameter_tag.connect_spine_db_editor(self)
-        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *self.db_maps)
-        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(
-            self, self.db_mngr, *self.db_maps
-        )
-        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(
-            self, self.db_mngr, *self.db_maps
-        )
-        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
-            self, self.db_mngr, *self.db_maps
-        )
+        self.parameter_tag_model = ParameterTagModel(self, self.db_mngr)
+        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr)
+        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr)
+        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr)
+        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self, self.db_mngr)
         self._parameter_models = (
             self.object_parameter_value_model,
             self.relationship_parameter_value_model,
@@ -74,6 +66,8 @@ class ParameterViewMixin:
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
             view.connect_spine_db_editor(self)
+        self.ui.treeView_parameter_tag.setModel(self.parameter_tag_model)
+        self.ui.treeView_parameter_tag.connect_spine_db_editor(self)
 
     def add_menu_actions(self):
         """Adds toggle view actions to View menu."""
@@ -101,6 +95,11 @@ class ParameterViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
+        self.parameter_tag_model.db_maps = self.db_maps
+        self.object_parameter_value_model.db_maps = self.db_maps
+        self.relationship_parameter_value_model.db_maps = self.db_maps
+        self.object_parameter_definition_model.db_maps = self.db_maps
+        self.relationship_parameter_definition_model.db_maps = self.db_maps
         self.parameter_tag_model.build_tree()
         for item in self.parameter_tag_model.visit_all():
             index = self.parameter_tag_model.index_from_item(item)
@@ -282,12 +281,14 @@ class ParameterViewMixin:
         """Restores UI state from previous session."""
         super().restore_ui()
         self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
         header_states = (
             self.qsettings.value("objParDefHeaderState"),
             self.qsettings.value("objParValHeaderState"),
             self.qsettings.value("relParDefHeaderState"),
             self.qsettings.value("relParValHeaderState"),
         )
+        self.qsettings.endGroup()
         self.qsettings.endGroup()
         views = (
             self.ui.tableView_object_parameter_definition.horizontalHeader(),
@@ -307,6 +308,7 @@ class ParameterViewMixin:
         """Saves window state parameters (size, position, state) via QSettings."""
         super().save_window_state()
         self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
         h = self.ui.tableView_object_parameter_definition.horizontalHeader()
         self.qsettings.setValue("objParDefHeaderState", h.saveState())
         h = self.ui.tableView_object_parameter_value.horizontalHeader()
@@ -315,6 +317,7 @@ class ParameterViewMixin:
         self.qsettings.setValue("relParDefHeaderState", h.saveState())
         h = self.ui.tableView_relationship_parameter_value.horizontalHeader()
         self.qsettings.setValue("relParValHeaderState", h.saveState())
+        self.qsettings.endGroup()
         self.qsettings.endGroup()
 
     def receive_alternatives_updated(self, db_map_data):

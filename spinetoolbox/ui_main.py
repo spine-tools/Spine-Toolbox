@@ -39,6 +39,7 @@ from PySide2.QtWidgets import (
 )
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from spine_engine.utils.helpers import shorten
+from .spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from .graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items

@@ -52,11 +52,11 @@ class TreeViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *self.db_maps)
-        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *self.db_maps)
-        self.tool_feature_model = ToolFeatureModel(self, self.db_mngr, *self.db_maps)
-        self.alternative_scenario_model = AlternativeScenarioModel(self, self.db_mngr, *self.db_maps)
-        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *self.db_maps)
+        self.object_tree_model = ObjectTreeModel(self, self.db_mngr)
+        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr)
+        self.tool_feature_model = ToolFeatureModel(self, self.db_mngr)
+        self.alternative_scenario_model = AlternativeScenarioModel(self, self.db_mngr)
+        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr)
         # Set models
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
@@ -95,7 +95,16 @@ class TreeViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
-        for view in (self.ui.treeView_tool_feature, self.ui.treeView_alternative_scenario):
+        self.object_tree_model.db_maps = self.db_maps
+        self.relationship_tree_model.db_maps = self.db_maps
+        self.tool_feature_model.db_maps = self.db_maps
+        self.alternative_scenario_model.db_maps = self.db_maps
+        self.parameter_value_list_model.db_maps = self.db_maps
+        for view in (
+            self.ui.treeView_tool_feature,
+            self.ui.treeView_alternative_scenario,
+            self.ui.treeView_parameter_value_list,
+        ):
             view.model().build_tree()
             for item in view.model().visit_all():
                 index = view.model().index_from_item(item)

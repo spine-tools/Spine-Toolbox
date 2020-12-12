@@ -17,12 +17,16 @@ Contains the SpineDBEditor class.
 """
 
 import os
-import time  # just to measure loading time and sqlalchemy ORM performance
 import json
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMenu, QMessageBox
-from PySide2.QtCore import Qt, Signal, Slot, QPoint
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from sqlalchemy.engine.url import URL, make_url
+from sqlalchemy.engine.url import URL
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QErrorMessage,
+    QDockWidget,
+    QMessageBox,
+)
+from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication
 from spinedb_api import (
     import_data,
     export_data,
@@ -35,28 +39,25 @@ from spinedb_api import (
 )
 from spine_engine.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spine_engine.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
-from ...config import MAINWINDOW_SS, APPLICATION_PATH, ONLINE_DOCUMENTATION_URL
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
-from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel, CustomInputDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .db_session_history_dialog import DBSessionHistoryDialog
+from .url_toolbar import UrlToolBar
 from ...widgets.notification import NotificationStack
 from ...helpers import (
-    ensure_window_is_on_screen,
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
     format_string_list,
     focused_widget_has_callable,
     call_on_focused_widget,
     busy_effect,
-    open_url,
 )
 from ...widgets.parameter_value_editor import ParameterValueEditor
-from ...widgets.settings_widget import SpineDBEditorSettingsWidget
 from ...spine_db_parcel import SpineDBParcel
+from ...config import MAINWINDOW_SS, APPLICATION_PATH
 
 
 class SpineDBEditorBase(QMainWindow):
@@ -66,33 +67,33 @@ class SpineDBEditorBase(QMainWindow):
     link_msg = Signal(str, "QVariant")
     msg_error = Signal(str)
     error_box = Signal(str, str)
+    dirty_changed = Signal(bool)
+    file_exported = Signal(str)
+    sqlite_file_exported = Signal(str)
 
-    def __init__(self, db_mngr, *db_maps):
+    def __init__(self, db_mngr):
         """Initializes form.
 
         Args:
             db_mngr (SpineDBManager): The manager to use
-            *db_maps (DiffDatabaseMapping): The db map to visualize.
         """
         super().__init__(flags=Qt.Window)
         from ..ui.spine_db_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_mngr = db_mngr
-        self.db_maps = db_maps
-        self.db_maps_by_codename = {db_map.codename: db_map for db_map in db_maps}
-        self.db_urls = [db_map.db_url for db_map in self.db_maps]
-        self.db_url = self.db_urls[0]
-        self.db_mngr.register_listener(self, *self.db_maps)
-        self.db_mngr.set_logger_for_db_map(self, self.first_db_map)  # FIXME
+        self.db_maps = []
+        self.db_urls = []
+        self.db_url = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.ui.menubar.hide()
         self.takeCentralWidget()
-        self.setWindowIcon(QIcon(":/symbols/app.ico"))
+        self.url_toolbar = UrlToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.qsettings = self.db_mngr.qsettings
-        self.settings_form = SpineDBEditorSettingsWidget(self.db_mngr)
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
@@ -102,37 +103,86 @@ class SpineDBEditorBase(QMainWindow):
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
-        self.settings_group = "spineDBEditor"
-        self.undo_action = None
-        self.redo_action = None
+        self.settings_group = None
+        self.undo_action = self.ui.actionUndo_placeholder
+        self.redo_action = self.ui.actionRedo_placeholder
         self.template_file_path = None
-        db_names = ", ".join([f"{db_map.codename}" for db_map in self.db_maps])
-        self.setWindowTitle(f"{db_names}[*] - Spine database editor")
         self.update_commit_enabled()
+
+    @property
+    def settings_subgroup(self):
+        return ";".join(self.db_urls)
+
+    @property
+    def db_names(self):
+        return ", ".join([f"{db_map.codename}" for db_map in self.db_maps])
 
     @property
     def first_db_map(self):
         return self.db_maps[0]
 
-    def _make_db_menu(self):
-        if len(self.db_maps) <= 1:
-            return None
-        menu = QMenu("Database", self)
-        actions = [menu.addAction(db_map.codename) for db_map in self.db_maps]
-        for action in actions:
-            action.setCheckable(True)
-        return menu
+    @property
+    def db_url_codenames(self):
+        return {db_map.db_url: db_map.codename for db_map in self.db_maps}
+
+    def load_db_urls(self, db_url_codenames, create=False, update_history=True):
+        if not db_url_codenames:
+            return
+        if not self.tear_down():
+            return
+        self.db_maps = [
+            self.db_mngr.get_db_map(url, codename=codename, create=create) for url, codename in db_url_codenames.items()
+        ]
+        if not all(self.db_maps):
+            return
+        self.db_urls = [db_map.db_url for db_map in self.db_maps]
+        self.url_toolbar.set_current_urls(self.db_urls)
+        self.db_url = self.db_urls[0]
+        self.db_mngr.register_listener(self, *self.db_maps)
+        self.db_mngr.set_logger_for_db_map(self, self.first_db_map)  # FIXME
+        self.init_models()
+        self.init_add_undo_redo_actions()
+        self.fetch_db_maps()
+        self.restore_ui()
+        if update_history:
+            self.url_toolbar.add_urls_to_history(self.db_urls)
+
+    def init_add_undo_redo_actions(self):
+        new_undo_action = self.db_mngr.undo_action[self.first_db_map]
+        new_redo_action = self.db_mngr.redo_action[self.first_db_map]
+        self._replace_undo_redo_actions(new_undo_action, new_redo_action)
+
+    def fetch_db_maps(self, *db_maps):
+        if not db_maps:
+            db_maps = self.db_maps
+        fetcher = self.db_mngr.get_fetcher(self)
+        fetcher.fetch(db_maps)
+        self.setWindowTitle(f"{self.db_names}")
+
+    @Slot(bool)
+    def load_previous_urls(self, _=False):
+        urls = self.url_toolbar.get_previous_urls()
+        self.load_db_urls({url: None for url in urls}, update_history=False)
+
+    @Slot(bool)
+    def load_next_urls(self, _=False):
+        urls = self.url_toolbar.get_next_urls()
+        self.load_db_urls({url: None for url in urls}, update_history=False)
+
+    @Slot(bool)
+    def load_sqlite_url(self, _=False):
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_open_file_name_in_last_dir(
+            self.qsettings, "loadSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)",
+        )
+        self.qsettings.endGroup()
+        url = "sqlite:///" + file_path
+        self.load_db_urls({url: None})
 
     def add_menu_actions(self):
         """Adds actions to View and Edit menu."""
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
-        before = self.ui.menuEdit.actions()[0]
-        self.undo_action = self.db_mngr.undo_action[self.first_db_map]
-        self.redo_action = self.db_mngr.redo_action[self.first_db_map]
-        self.ui.menuEdit.insertAction(before, self.undo_action)
-        self.ui.menuEdit.insertAction(before, self.redo_action)
-        self.ui.menuEdit.insertSeparator(before)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -144,9 +194,7 @@ class SpineDBEditorBase(QMainWindow):
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
-        self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.actionView_history.triggered.connect(self.show_history_dialog)
-        self.ui.actionSettings.triggered.connect(self.settings_form.show)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
         self.ui.actionImport.triggered.connect(self.import_file)
@@ -157,8 +205,6 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRemove_selected.triggered.connect(self.remove_selected)
         self.ui.actionEdit_selected.triggered.connect(self.edit_selected)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
-        self.ui.dockWidget_exports.visibilityChanged.connect(self._handle_exports_visibility_changed)
-        self.ui.actionUser_guide.triggered.connect(self.show_user_guide)
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
@@ -168,6 +214,9 @@ class SpineDBEditorBase(QMainWindow):
         redo_ages = {db_map: age for db_map, age in redo_ages.items() if age is not None}
         new_undo_action = self.db_mngr.undo_action[max(undo_ages, key=undo_ages.get, default=self.first_db_map)]
         new_redo_action = self.db_mngr.redo_action[max(redo_ages, key=redo_ages.get, default=self.first_db_map)]
+        self._replace_undo_redo_actions(new_undo_action, new_redo_action)
+
+    def _replace_undo_redo_actions(self, new_undo_action, new_redo_action):
         if new_undo_action != self.undo_action:
             self.ui.menuEdit.insertAction(self.undo_action, new_undo_action)
             self.ui.menuEdit.removeAction(self.undo_action)
@@ -185,6 +234,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRollback.setEnabled(dirty)
         self.ui.actionView_history.setEnabled(dirty)
         self.setWindowModified(dirty)
+        self.dirty_changed.emit(dirty)
 
     @Slot(bool)
     def show_history_dialog(self, checked=False):
@@ -436,64 +486,15 @@ class SpineDBEditorBase(QMainWindow):
     def export_to_sqlite(self, file_path, data_for_export):
         """Exports given data into SQLite file."""
         url = URL("sqlite", database=file_path)
-        db_map = DiffDatabaseMapping(url, _create_engine=create_new_spine_database)
+        create_new_spine_database(url)
+        db_map = DiffDatabaseMapping(url)
         import_data(db_map, **data_for_export)
         try:
             db_map.commit_session("Export initial data from Spine Toolbox.")
         except SpineDBAPIError as err:
             self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}")
         else:
-            self._insert_open_sqlite_file_button(file_path)
-
-    def _open_sqlite_url(self, url, codename):
-        """Opens sqlite url."""
-        self.db_mngr.show_spine_db_editor({url: codename}, None)
-
-    def _add_sqlite_url_to_project(self, url):
-        """Adds sqlite url to project."""
-        project = self.db_mngr._project
-        if not project:
-            return
-        icon_path = project._toolbox.item_factories["Data Store"].icon()
-        data_stores = project._project_item_model.items(category_name="Data Stores")
-        data_stores = [x.project_item for x in data_stores]
-        named_data_stores = {x.name: x for x in data_stores}
-        data_store_names = list(named_data_stores)
-        name = CustomInputDialog.get_item(
-            self,
-            "Add SQLite file to Project",
-            "<p>Select a Data Store from the list to be the recipient:</p>",
-            data_store_names,
-            icons={name: QIcon(icon_path) for name in data_store_names},
-            editable_text="Add new Data Store...",
-        )
-        if name is None:
-            return
-        data_store = named_data_stores.get(name)
-        database = make_url(url).database
-        url_as_dict = {"dialect": "sqlite", "database": database}
-        if not data_store:
-            data_store_dict = {name: {"type": "Data Store", "description": "", "x": 0, "y": 0, "url": url_as_dict}}
-            project.add_project_items(data_store_dict)
-            action = "added"
-        elif data_store.update_url(**url_as_dict):
-            action = "updated"
-        else:
-            self.msg.emit(f"Data Store <i>{name}</i> is already set to use url {url}")
-            return
-        link = "<a href='#'>undo</a>"
-        stack = project._toolbox.undo_stack
-        index = stack.index()
-        open_link = lambda _, stack=stack, index=index: self._undo_add_sqlite_url_to_project(_, stack, index)
-        self.link_msg.emit(f"Data Store <i>{name}</i> successfully {action}.<br>{link}", open_link)
-
-    @Slot("str")
-    def _undo_add_sqlite_url_to_project(self, _, stack, index):
-        if not stack.canUndo() or stack.index() != index:
-            self.msg.emit(f"Already undone.")
-            return
-        stack.undo()
-        self.msg.emit(f"Successfully undone.")
+            self.sqlite_file_exported.emit(file_path)
 
     def export_to_json(self, file_path, data_for_export):
         """Exports given data into JSON file."""
@@ -516,7 +517,7 @@ class SpineDBEditorBase(QMainWindow):
         )
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(json_data)
-        self._insert_open_file_button(file_path)
+        self.file_exported.emit(file_path)
 
     @busy_effect
     def export_to_excel(self, file_path, data_for_export):
@@ -535,43 +536,7 @@ class SpineDBEditorBase(QMainWindow):
         except OSError:
             self.msg_error.emit(f"[OSError] Unable to export file <b>{file_name}</b>.")
         else:
-            self._insert_open_file_button(file_path)
-
-    def _insert_open_file_button(self, file_path):
-        button = OpenFileButton(file_path, self)
-        self._insert_button_to_exports_widget(button)
-
-    def _insert_open_sqlite_file_button(self, file_path):
-        button = OpenSQLiteFileButton(file_path, self)
-        self._insert_button_to_exports_widget(button)
-
-    def _insert_button_to_exports_widget(self, button):
-        """
-        Inserts given button to the 'beginning' of the status bar and decorates the thing with a shooting label.
-        """
-        duplicates = [
-            x
-            for x in self.ui.dockWidget_exports.findChildren(OpenFileButton)
-            if os.path.samefile(x.file_path, button.file_path)
-        ]
-        for dup in duplicates:
-            self.ui.horizontalLayout_exports.removeWidget(dup)
-        self.ui.horizontalLayout_exports.insertWidget(0, button)
-        self.ui.dockWidget_exports.show()
-        destination = QPoint(16, 0) + button.mapTo(self, QPoint(0, 0))
-        label = ShootingLabel(destination - QPoint(0, 64), destination, self)
-        pixmap = QIcon(":/icons/file-download.svg").pixmap(32, 32)
-        label.setPixmap(pixmap)
-        label.show()
-
-    @Slot(bool)
-    def _handle_exports_visibility_changed(self, visible):
-        """Remove all buttons when exports dock is closed."""
-        if visible:
-            return
-        for button in self.ui.dockWidget_exports.findChildren(OpenFileButton):
-            self.ui.horizontalLayout_exports.removeWidget(button)
-            button.hide()
+            self.file_exported.emit(file_path)
 
     @staticmethod
     def _parse_db_map_metadata(db_map_metadata):
@@ -620,7 +585,7 @@ class SpineDBEditorBase(QMainWindow):
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
         self.init_models()
-        self.db_mngr.fetch_db_maps_for_listener(self, *db_maps)
+        self.fetch_db_maps(*db_maps)
 
     @Slot(bool)
     def refresh_session(self, checked=False):
@@ -675,13 +640,6 @@ class SpineDBEditorBase(QMainWindow):
         """
         editor = ParameterValueEditor(index, parent=self)
         editor.show()
-
-    @Slot(bool)
-    def show_user_guide(self, checked=False):
-        """Opens Spine Toolbox documentation Spine db editor page in browser."""
-        doc_url = f"{ONLINE_DOCUMENTATION_URL}/spine_db_editor/index.html"
-        if not open_url(doc_url):
-            self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
@@ -872,36 +830,29 @@ class SpineDBEditorBase(QMainWindow):
     def restore_ui(self):
         """Restore UI state from previous session."""
         self.qsettings.beginGroup(self.settings_group)
-        window_size = self.qsettings.value("windowSize")
-        window_pos = self.qsettings.value("windowPosition")
+        self.qsettings.beginGroup(self.settings_subgroup)
         window_state = self.qsettings.value("windowState")
-        window_maximized = self.qsettings.value("windowMaximized", defaultValue='false')
-        n_screens = self.qsettings.value("n_screens", defaultValue=1)
         self.qsettings.endGroup()
-        original_size = self.size()
-        if window_size:
-            self.resize(window_size)
-        if window_pos:
-            self.move(window_pos)
+        self.qsettings.endGroup()
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
-        if len(QGuiApplication.screens()) < int(n_screens):
-            # There are less screens available now than on previous application startup
-            self.move(0, 0)  # Move this widget to primary screen position (0,0)
-        ensure_window_is_on_screen(self, original_size)
-        if window_maximized == 'true':
-            self.setWindowState(Qt.WindowMaximized)
-        # noinspection PyArgumentList
 
     def save_window_state(self):
         """Save window state parameters (size, position, state) via QSettings."""
         self.qsettings.beginGroup(self.settings_group)
-        self.qsettings.setValue("windowSize", self.size())
-        self.qsettings.setValue("windowPosition", self.pos())
+        self.qsettings.beginGroup(self.settings_subgroup)
         self.qsettings.setValue("windowState", self.saveState(version=1))
-        self.qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
-        self.qsettings.setValue("n_screens", len(QGuiApplication.screens()))
         self.qsettings.endGroup()
+        self.qsettings.endGroup()
+
+    def tear_down(self):
+        if not self.db_mngr.unregister_listener(self, *self.db_maps):
+            return False
+        for db_map in self.db_maps:
+            self.db_mngr.unset_logger_for_db_map(db_map)
+        # Save UI form state
+        self.save_window_state()
+        return True
 
     def closeEvent(self, event):
         """Handle close window.
@@ -909,14 +860,10 @@ class SpineDBEditorBase(QMainWindow):
         Args:
             event (QCloseEvent): Closing event
         """
-        if not self.db_mngr.unregister_listener(self, *self.db_maps):
+        if not self.tear_down():
             event.ignore()
             return
-        for db_map in self.db_maps:
-            self.db_mngr.unset_logger_for_db_map(db_map)
-        # Save UI form state
-        self.save_window_state()
-        QMainWindow.closeEvent(self, event)
+        super().closeEvent(event)
 
     def _focused_widget_has_callable(self, callable_name):
         """Returns True if the currently focused widget or one of its ancestors has the given callable."""
@@ -930,24 +877,19 @@ class SpineDBEditorBase(QMainWindow):
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
 
-    def __init__(self, db_mngr, *db_urls):
+    def __init__(self, db_mngr, db_url_codenames=None, create=False):
         """Initializes everything.
 
         Args:
             db_mngr (SpineDBManager): The manager to use
-            *db_urls (tuple): Database url, codename.
+            db_url_codenames (dict): mapping url to codename.
         """
-        tic = time.process_time()
-        super().__init__(db_mngr, *db_urls)
+        super().__init__(db_mngr)
         self._size = None
-        self.init_models()
-        self.add_menu_actions()
         self.connect_signals()
+        self.add_menu_actions()
         self.apply_stacked_style()
-        self.restore_ui()
-        toc = time.process_time()
-        self.msg.emit("Spine database editor opened in {0:.2f} seconds".format(toc - tic))
-        self.db_mngr.fetch_db_maps_for_listener(self, *self.db_maps)
+        self.load_db_urls(db_url_codenames, create=create)
 
     def connect_signals(self):
         super().connect_signals()

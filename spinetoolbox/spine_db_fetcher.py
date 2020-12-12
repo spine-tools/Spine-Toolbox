@@ -25,7 +25,7 @@ class SpineDBFetcher(QObject):
     so contents can be processed in that thread without affecting the UI."""
 
     finished = Signal(object)
-    _ready_to_finish = Signal()
+    _fetch_completed = Signal()
     _alternatives_fetched = Signal(object)
     _scenarios_fetched = Signal(object)
     _scenarios_alternatives_fetched = Signal(object)
@@ -62,7 +62,7 @@ class SpineDBFetcher(QObject):
 
     def connect_signals(self):
         """Connects signals."""
-        self._ready_to_finish.connect(self._emit_finished_signal)
+        self._fetch_completed.connect(self._emit_finished)
         self._alternatives_fetched.connect(self._receive_alternatives_fetched)
         self._scenarios_fetched.connect(self._receive_scenarios_fetched)
         self._scenarios_alternatives_fetched.connect(self._receive_scenarios_alternatives_fetched)
@@ -120,7 +120,7 @@ class SpineDBFetcher(QObject):
         self._tool_features_fetched.emit(tool_features)
         tool_feature_methods = {x: self._db_mngr.get_tool_feature_methods(x) for x in db_maps}
         self._tool_feature_methods_fetched.emit(tool_feature_methods)
-        self._ready_to_finish.emit()
+        self._fetch_completed.emit()
 
     def clean_up(self):
         self._listener.silenced = False
@@ -216,5 +216,5 @@ class SpineDBFetcher(QObject):
         self._listener.receive_tool_feature_methods_fetched(db_map_data)
 
     @Slot()
-    def _emit_finished_signal(self):
+    def _emit_finished(self):
         self.finished.emit(self)

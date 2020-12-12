@@ -145,14 +145,6 @@ class EntityItem(QGraphicsPixmapItem):
     def db_maps(self):
         return (self.db_map,)
 
-    def db_map_data(self, _db_map):
-        # FIXME?
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.id_)
-
-    def db_map_id(self, _db_map):
-        # FIXME?
-        return self.id_
-
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
 

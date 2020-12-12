@@ -69,9 +69,9 @@ class LazyFilterWidget(FilterWidgetBase):
 class OpenFileButton(QToolButton):
     """A button to open files or show them in the folder."""
 
-    def __init__(self, file_path, ds_form):
+    def __init__(self, file_path, db_editor):
         super().__init__()
-        self.ds_form = ds_form
+        self.db_editor = db_editor
         self.file_path = file_path
         self.dir_name, self.file_name = os.path.split(file_path)
         self.setText(self.file_name)
@@ -100,7 +100,7 @@ class OpenFileButton(QToolButton):
             }
             """
         )
-        menu = QMenu(ds_form)
+        menu = QMenu(db_editor)
         self.setMenu(menu)
         open_file_action = menu.addAction("Open")
         open_containing_folder_action = menu.addAction("Open containing folder")
@@ -120,21 +120,14 @@ class OpenFileButton(QToolButton):
 class OpenSQLiteFileButton(OpenFileButton):
     """A button to open sqlite files, show them in the folder, or add them to the project."""
 
-    def __init__(self, file_path, ds_form):
-        super().__init__(file_path, ds_form)
+    def __init__(self, file_path, db_editor):
+        super().__init__(file_path, db_editor)
         self.url = URL("sqlite", database=self.file_path)
-        self.menu().addSeparator()
-        add_to_project_action = self.menu().addAction("Add to project")
-        add_to_project_action.triggered.connect(self.add_to_project)
 
     @Slot(bool)
     def open_file(self, checked=False):
         codename = os.path.splitext(self.file_name)[0]
-        self.ds_form._open_sqlite_url(self.url, codename)
-
-    @Slot(bool)
-    def add_to_project(self, checked=False):
-        self.ds_form._add_sqlite_url_to_project(self.url)
+        self.db_editor._open_sqlite_url(self.url, codename)
 
 
 class ShootingLabel(QLabel):
@@ -162,72 +155,3 @@ class ShootingLabel(QLabel):
     def show(self):
         self.anim.start(QVariantAnimation.DeleteWhenStopped)
         super().show()
-
-
-class CustomInputDialog(QDialog):
-    def __init__(self, parent, title):
-        super().__init__(parent)
-        self.setWindowTitle(title)
-        self._new_item = None
-        self._editable_text = ""
-        self._accepted_item = None
-        self._list_wg = QListWidget()
-        self._list_wg.itemDoubleClicked.connect(self._handle_item_double_clicked)
-        self._list_wg.itemChanged.connect(self._handle_item_changed)
-
-    def accept(self, item=None):
-        if item is None:
-            item = self._list_wg.currentItem()
-        if item is self._new_item and item.text() == self._editable_text:
-            self._list_wg.editItem(item)
-            return
-        self._accepted_item = item
-        self.done(QDialog.Accepted)
-
-    def reject(self):
-        self.done(QDialog.Rejected)
-
-    @Slot("QListWidgetItem")
-    def _handle_item_double_clicked(self, item):
-        self.accept(item)
-
-    @Slot("QListWidgetItem")
-    def _handle_item_changed(self, item):
-        if item is self._new_item and item.text() != self._editable_text:
-            item.setForeground(qApp.palette().text())  # pylint: disable=undefined-variable
-            self._new_item = None
-
-    @classmethod
-    def get_item(cls, parent, title, label, items, icons=None, editable_text=""):
-        if icons is None:
-            icons = {}
-        dialog = cls(parent, title)
-        layout = QVBoxLayout(dialog)
-        label = QLabel(label)
-        label.setWordWrap(True)
-        if editable_text:
-            dialog._editable_text = editable_text
-            items.append(dialog._editable_text)
-        dialog._list_wg.addItems(items)
-        for item in dialog._list_wg.findItems("*", Qt.MatchWildcard):
-            icon = icons.get(item.text())
-            if icon is not None:
-                item.setData(Qt.DecorationRole, icon)
-        if editable_text:
-            dialog._new_item = dialog._list_wg.item(dialog._list_wg.count() - 1)
-            dialog._new_item.setFlags(dialog._new_item.flags() | Qt.ItemIsEditable)
-            foreground = qApp.palette().text()  # pylint: disable=undefined-variable
-            color = foreground.color()
-            color.setAlpha(128)
-            foreground.setColor(color)
-            dialog._new_item.setForeground(foreground)
-        button_box = QDialogButtonBox()
-        button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        layout.addWidget(label)
-        layout.addWidget(dialog._list_wg)
-        layout.addWidget(button_box)
-        button_box.accepted.connect(dialog.accept)
-        button_box.rejected.connect(dialog.close)
-        if dialog.exec_() == QDialog.Rejected:
-            return None
-        return dialog._accepted_item.text()

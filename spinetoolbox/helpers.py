@@ -34,7 +34,6 @@ from PySide2.QtGui import (
     QImageReader,
     QPixmap,
     QPainter,
-    QColor,
     QIcon,
     QIconEngine,
     QFont,
@@ -45,6 +44,7 @@ from PySide2.QtGui import (
     QPen,
     QKeySequence,
     QTextCursor,
+    QPalette,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
@@ -648,7 +648,7 @@ class IconManager:
 class CharIconEngine(QIconEngine):
     """Specialization of QIconEngine used to draw font-based icons."""
 
-    def __init__(self, char, color):
+    def __init__(self, char, color=None):
         super().__init__()
         self.char = char
         self.color = color
@@ -659,7 +659,14 @@ class CharIconEngine(QIconEngine):
         size = 0.875 * round(rect.height())
         self.font.setPixelSize(size)
         painter.setFont(self.font)
-        painter.setPen(QColor(self.color))
+        if self.color:
+            color = self.color
+        else:
+            palette = QPalette(QApplication.palette())
+            if mode == QIcon.Disabled:
+                palette.setCurrentColorGroup(QPalette.Disabled)
+            color = palette.buttonText().color()
+        painter.setPen(color)
         painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, self.char)
         painter.restore()
 

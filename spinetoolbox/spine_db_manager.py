@@ -39,7 +39,6 @@ from spinedb_api import (
     TimePattern,
     Map,
 )
-from .spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from .helpers import IconManager, busy_effect, format_string_list
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
@@ -145,7 +144,6 @@ class SpineDBManager(QObject):
         self._db_specific_loggers = dict()
         self._db_maps = {}
         self._cache = {}
-        self._db_editors = {}
         self.qsettings = settings
         self.undo_stack = {}
         self.undo_action = {}
@@ -169,17 +167,8 @@ class SpineDBManager(QObject):
         Returns:
             DiffDatabaseMapping: a database map or None if not found
         """
+        url = str(url)
         return self._db_maps.get(url)
-
-    @property
-    def db_editors(self):
-        return set(self._db_editors.values())
-
-    def open_db_maps(self, url):
-        for db_editor in self.db_editors:
-            for db_url, db_map in zip(db_editor.db_urls, db_editor.db_maps):
-                if url == db_url:
-                    yield db_map
 
     def create_new_spine_database(self, url):
         if url in set(url for db_editor in self.db_editors for url in db_editor.db_urls):
@@ -228,38 +217,12 @@ class SpineDBManager(QObject):
                 db_map.connection.close()
         self._db_specific_loggers.clear()
 
-    def show_spine_db_editor(self, db_url_codenames, logger, create=False):
-        """Creates a new SpineDBEditor and shows it.
-
-        Args:
-            db_url_codenames (dict): Mapping db urls to codenames.
-            logger (LoggingInterface): Where to log SpineDBAPIError
-        """
-        key = tuple(db_url_codenames.keys())
-        db_editor = self._db_editors.get(key)
-        if db_editor is None:
-            db_maps = [
-                self.get_db_map(url, logger, codename=codename, create=create)
-                for url, codename in db_url_codenames.items()
-            ]
-            if not all(db_maps):
-                return False
-            self._db_editors[key] = db_editor = SpineDBEditor(self, *db_maps)
-            db_editor.destroyed.connect(lambda: self._db_editors.pop(key))
-            db_editor.show()
-        else:
-            if db_editor.windowState() & Qt.WindowMinimized:
-                db_editor.setWindowState(db_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-            db_editor.activateWindow()
-        return True
-
-    def get_db_map(self, url, logger, codename=None, upgrade=False, create=False):
+    def get_db_map(self, url, codename=None, upgrade=False, create=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
         Args:
             url (str, URL)
-            logger (LoggingInterface): Where to log SpineDBAPIError
             upgrade (bool, optional)
             codename (str, NoneType, optional)
 
@@ -287,9 +250,9 @@ class SpineDBManager(QObject):
             ret = msg.exec_()  # Show message box
             if ret == QMessageBox.Cancel:
                 return None
-            return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)
+            return self.get_db_map(url, codename=codename, upgrade=True, create=create)
         except SpineDBAPIError as err:
-            logger.msg_error.emit(err.msg)
+            self._general_logger.msg_error.emit(err.msg)
             return None
 
     @busy_effect
@@ -322,44 +285,49 @@ class SpineDBManager(QObject):
         redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
         return db_map
 
-    def register_listener(self, ds_form, *db_maps):
-        """Register given ds_form as listener for all given db_map's signals.
+    def register_listener(self, db_editor, *db_maps):
+        """Register given db_editor as listener for all given db_map's signals.
 
         Args:
-            ds_form (SpineDBEditor)
+            db_editor (SpineDBEditor)
             db_maps (DiffDatabaseMapping)
         """
         for db_map in db_maps:
-            self.signaller.add_db_map_listener(db_map, ds_form)
+            self.signaller.add_db_map_listener(db_map, db_editor)
             stack = self.undo_stack[db_map]
-            stack.indexChanged.connect(ds_form.update_undo_redo_actions)
-            stack.cleanChanged.connect(ds_form.update_commit_enabled)
+            stack.indexChanged.connect(db_editor.update_undo_redo_actions)
+            stack.cleanChanged.connect(db_editor.update_commit_enabled)
 
-    def unregister_listener(self, ds_form, *db_maps):
-        """Unregisters given ds_form from given db_map signals.
+    def unregister_listener(self, db_editor, *db_maps):
+        """Unregisters given db_editor from given db_map signals.
         If any of the db_maps becomes an orphan and is dirty, prompts user to commit or rollback.
 
         Args:
-            ds_form (SpineDBEditor)
+            db_editor (SpineDBEditor)
             db_maps (DiffDatabaseMapping)
         """
         is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        is_orphan = lambda db_map: not self.signaller.db_map_listeners(db_map) - {ds_form}
+        is_orphan = lambda db_map: not self.signaller.db_map_listeners(db_map) - {db_editor}
         dirty_orphan_db_maps = [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
         if dirty_orphan_db_maps:
             answer = self._prompt_to_commit_changes()
             if answer == QMessageBox.Cancel:
                 return False
+            db_names = ", ".join([db_map.codename for db_map in dirty_orphan_db_maps])
             if answer == QMessageBox.Save:
-                if not self.commit_session(*dirty_orphan_db_maps):
-                    return False
-            elif answer == QMessageBox.Discard:
-                if not self.rollback_session(*dirty_orphan_db_maps, ask_confirmation=False):
+                commit_msg = self._get_commit_msg(db_names)
+                if not commit_msg:
                     return False
         for db_map in db_maps:
-            self.signaller.remove_db_map_listener(db_map, ds_form)
-            self.undo_stack[db_map].indexChanged.disconnect(ds_form.update_undo_redo_actions)
-            self.undo_stack[db_map].cleanChanged.disconnect(ds_form.update_commit_enabled)
+            self.signaller.remove_db_map_listener(db_map, db_editor)
+            self.undo_stack[db_map].indexChanged.disconnect(db_editor.update_undo_redo_actions)
+            self.undo_stack[db_map].cleanChanged.disconnect(db_editor.update_commit_enabled)
+        if dirty_orphan_db_maps:
+            if answer == QMessageBox.Save:
+                self._do_commit_session(dirty_orphan_db_maps, commit_msg)
+            else:
+                self._do_rollback_session(dirty_orphan_db_maps)
+        for db_map in db_maps:
             if not self.signaller.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
                 del self.undo_stack[db_map]
@@ -407,17 +375,16 @@ class SpineDBManager(QObject):
         if db_map.codename in self._db_specific_loggers:
             del self._db_specific_loggers[db_map.codename]
 
-    def fetch_db_maps_for_listener(self, listener, *db_maps):
+    def get_fetcher(self, listener):
         """Fetches given db_map for given listener.
 
         Args:
             listener (SpineDBEditor)
-            *db_maps: database maps to fetch
         """
         fetcher = SpineDBFetcher(self, listener)
         fetcher.finished.connect(self._clean_up_fetcher)
         self._fetchers.append(fetcher)
-        fetcher.fetch(db_maps)
+        return fetcher
 
     @Slot(object)
     def _clean_up_fetcher(self, fetcher):
@@ -457,18 +424,21 @@ class SpineDBManager(QObject):
             *db_maps: database maps to commit
             cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
         """
-        error_log = {}
-        committed_db_maps = set()
-        changed_db_maps = [
+        dirty_db_maps = [
             db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
         ]
-        if not changed_db_maps:
-            return True
-        db_names = ", ".join([db_map.codename for db_map in changed_db_maps])
+        if not dirty_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
         commit_msg = self._get_commit_msg(db_names)
         if not commit_msg:
-            return False
-        for db_map in changed_db_maps:
+            return
+        self._do_commit_session(dirty_db_maps, cookie)
+
+    def _do_commit_session(self, dirty_db_maps, commit_msg, cookie=None):
+        error_log = {}
+        committed_db_maps = set()
+        for db_map in dirty_db_maps:
             try:
                 db_map.commit_session(commit_msg)
                 committed_db_maps.add(db_map)
@@ -479,7 +449,6 @@ class SpineDBManager(QObject):
             self.error_msg(error_log)
         if committed_db_maps:
             self.session_committed.emit(committed_db_maps, cookie)
-        return True
 
     @staticmethod
     def _get_commit_msg(db_names):
@@ -488,18 +457,21 @@ class SpineDBManager(QObject):
         if answer == QDialog.Accepted:
             return dialog.commit_msg
 
-    def rollback_session(self, *db_maps, ask_confirmation=True):
-        error_log = {}
-        rolled_db_maps = set()
-        changed_db_maps = [
+    def rollback_session(self, *db_maps):
+        dirty_db_maps = [
             db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
         ]
-        if not changed_db_maps:
-            return True
-        db_names = ", ".join([db_map.codename for db_map in changed_db_maps])
-        if ask_confirmation and not self._get_rollback_confirmation(db_names):
-            return False
-        for db_map in changed_db_maps:
+        if not dirty_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        if not self._get_rollback_confirmation(db_names):
+            return
+        self._do_rollback_session(dirty_db_maps)
+
+    def _do_rollback_session(self, dirty_db_maps):
+        error_log = {}
+        rolled_db_maps = set()
+        for db_map in dirty_db_maps:
             try:
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
@@ -511,7 +483,6 @@ class SpineDBManager(QObject):
             self.error_msg(error_log)
         if rolled_db_maps:
             self.session_rolled_back.emit(rolled_db_maps)
-        return True
 
     @staticmethod
     def _get_rollback_confirmation(db_names):
