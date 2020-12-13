@@ -479,7 +479,8 @@ class ToolFeatureTreeView(ItemTreeView):
 
     def dragEnterEvent(self, event):
         super().dragEnterEvent(event)
-        event.accept()
+        if event.source() is self:
+            event.accept()
 
 
 class AlternativeScenarioTreeView(ItemTreeView):
@@ -584,7 +585,8 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def dragEnterEvent(self, event):
         super().dragEnterEvent(event)
-        event.accept()
+        if event.source() is self:
+            event.accept()
 
 
 class ParameterValueListTreeView(ItemTreeView):

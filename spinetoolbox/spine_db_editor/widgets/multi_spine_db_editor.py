@@ -18,8 +18,8 @@ Contains the MultiSpineDBEditor class.
 
 import os
 from PySide2.QtWidgets import QMainWindow, QTabWidget, QToolBar, QWidget, QSizePolicy
-from PySide2.QtCore import Qt, Slot, QPoint, QSize
-from PySide2.QtGui import QGuiApplication, QIcon, QCursor
+from PySide2.QtCore import Qt, Slot, QPoint, QSize, QMimeData
+from PySide2.QtGui import QGuiApplication, QIcon, QCursor, QDrag, QPixmap
 from .tab_bar_plus import TabBarPlus
 from .spine_db_editor import SpineDBEditor
 from .custom_qwidgets import ShootingLabel, OpenFileButton, OpenSQLiteFileButton
@@ -109,6 +109,19 @@ class _FileOpenToolBar(QToolBar):
             self.removeAction(action)
 
 
+class _SpineDBEditorDrag(QDrag):
+    def __init__(self, source):
+        super().__init__(source)
+        self.targetChanged.connect(self._handle_target_changed)
+        self.tab_bar = None
+
+    @Slot("QObject")
+    def _handle_target_changed(self, new_target):
+        if isinstance(new_target, TabBarPlus):
+            self.tab_bar = new_target
+            self.cancel()
+
+
 class MultiSpineDBEditor(QMainWindow):
     def __init__(self, db_mngr, db_url_codenames, create=False):
         super().__init__(flags=Qt.Window)
@@ -136,39 +149,36 @@ class MultiSpineDBEditor(QMainWindow):
         self.tab_bar.plus_clicked.connect(self._add_new_tab)
 
     def detach(self, index, delta):
-        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        drag = _SpineDBEditorDrag(self)
+        drag.setMimeData(QMimeData())
+        pixmap = QPixmap(self.size())
+        self.tab_bar._hide_all_but_index(index)
+        self.render(pixmap)
+        self.tab_bar._show_all()
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(delta)
+        drag.setDragCursor(QCursor(Qt.ArrowCursor).pixmap(), Qt.MoveAction)
         db_editor = self.tab_widget.widget(index)
         text = self.tab_widget.tabText(index)
         self.tab_widget.remove_disconnect_tab(index)
-        other = MultiSpineDBEditor(self.db_mngr, None)
-        other.tab_widget.addTab(db_editor, text)
-        other.show()
-        other.move(QCursor.pos() - delta)
-        other.tab_bar.restart_dragging(0)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+        if not self.tab_widget.count():
+            self.close()
+        drag.exec_(Qt.MoveAction)
+        qApp.restoreOverrideCursor()
+        if drag.target() is None:
+            if drag.tab_bar is None:
+                other = MultiSpineDBEditor(self.db_mngr, None)
+                other.tab_widget.addTab(db_editor, text)
+                other.show()
+                other.move(QCursor.pos() - delta)
+                return
+            other = drag.tab_bar.multi_db_editor
+            other.reattach(drag.tab_bar.drag_index, db_editor, text)
 
-    def find_reattach_target(self, global_pos):
-        other = next(
-            iter(w for w in qApp.topLevelWidgets() if isinstance(w, MultiSpineDBEditor) and w is not self), None,
-        )
-        if other is None:
-            return None
-        pos = other.tab_bar.mapFromGlobal(global_pos)
-        if not other.tab_bar.geometry().contains(pos):
-            return None
-        index = other.tab_bar.tabAt(pos)
-        if index == -1:
-            index = other.tab_bar.count()
-        return other, index
-
-    def reattach(self, other, index):
-        db_editor = self.tab_widget.widget(0)
-        text = self.tab_widget.tabText(0)
-        self.tab_widget.remove_disconnect_tab(0)
-        self.close()
-        other.tab_widget.insertTab(index, db_editor, text)
-        other.tab_widget.setCurrentIndex(index)
-        other.tab_bar.restart_dragging(index)
+    def reattach(self, index, db_editor, text):
+        self.tab_widget.insertTab(index, db_editor, text)
+        self.tab_widget.setCurrentIndex(index)
+        self.tab_bar.restart_dragging()
 
     def connect_editor_signals(self, index):
         self.tab_widget.connect_tab(index)

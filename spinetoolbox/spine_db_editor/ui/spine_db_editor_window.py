@@ -223,7 +223,7 @@ class Ui_MainWindow(object):
         self.treeView_alternative_scenario = AlternativeScenarioTreeView(self.dockWidgetContents_15)
         self.treeView_alternative_scenario.setObjectName(u"treeView_alternative_scenario")
         self.treeView_alternative_scenario.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.treeView_alternative_scenario.setAcceptDrops(True)
+        self.treeView_alternative_scenario.setAcceptDrops(False)
         self.treeView_alternative_scenario.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.treeView_alternative_scenario.setDragEnabled(True)
         self.treeView_alternative_scenario.setDragDropMode(QAbstractItemView.InternalMove)

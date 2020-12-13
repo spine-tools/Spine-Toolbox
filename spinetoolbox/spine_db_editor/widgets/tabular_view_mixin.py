@@ -859,6 +859,8 @@ class TabularViewMixin:
 
     def receive_scenarios_updated(self, db_map_data):
         super().receive_scenarios_updated(db_map_data)
+        if not self.pivot_table_model:
+            return
         self.pivot_table_model.receive_scenarios_updated(db_map_data)
 
     def receive_alternatives_removed(self, db_map_data):

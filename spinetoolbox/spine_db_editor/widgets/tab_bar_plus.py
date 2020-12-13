@@ -15,9 +15,9 @@ Classes for custom context menus and pop-up menus.
 :author: M. Marin (KTH)
 :date:   13.5.2020
 """
-from PySide2.QtWidgets import QTabBar, QToolButton, QStyleOptionTab, QStyle, QStylePainter, QApplication, QWidget
+from PySide2.QtWidgets import QTabBar, QToolButton, QApplication, QWidget
 from PySide2.QtCore import Signal, Qt, QEvent, QPoint
-from PySide2.QtGui import QIcon, QMouseEvent, QCursor
+from PySide2.QtGui import QIcon, QMouseEvent
 from spinetoolbox.helpers import CharIconEngine
 
 
@@ -26,9 +26,9 @@ class TabBarPlus(QTabBar):
 
     plus_clicked = Signal()
 
-    def __init__(self, spine_db_editor):
+    def __init__(self, multi_db_editor):
         super().__init__()
-        self._spine_db_editor = spine_db_editor
+        self._multi_db_editor = multi_db_editor
         self._plus_button = QToolButton(self)
         self._plus_button.setIcon(QIcon(CharIconEngine("\uf067")))
         self._plus_button.clicked.connect(lambda _=False: self.plus_clicked.emit())
@@ -37,25 +37,30 @@ class TabBarPlus(QTabBar):
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setElideMode(Qt.ElideLeft)
-        self._delta = None
         self._pressed_index = None
-        self._drag_dist = None
-        self._drag_index = None
+        self.drag_index = None
+        self.setAcceptDrops(True)
+        self.setStyleSheet("QTabBar::tab:disabled { width: 0; height: 0; margin: 0; padding: 0; border: none; }")
 
-    def paintEvent(self, event):
-        if self._drag_dist is None:
-            super().paintEvent(event)
-            return
-        p = QStylePainter(self)
-        tab = QStyleOptionTab()
-        self.initStyleOption(tab, 0)
-        y = tab.rect.top()
-        tab.rect.moveCenter(self._drag_dist)
-        tab.rect.moveTop(y)
-        tab.rect.moveLeft(max(0, tab.rect.left()))
-        tab.rect.moveRight(min(self.width(), tab.rect.right()))
-        p.drawControl(QStyle.CE_TabBarTab, tab)
-        p.end()
+    @property
+    def multi_db_editor(self):
+        return self._multi_db_editor
+
+    def dragEnterEvent(self, event):
+        super().dragEnterEvent(event)
+        if isinstance(event.source(), type(self._multi_db_editor)):
+            self.drag_index = self.tabAt(event.pos())
+            if self.drag_index == -1:
+                self.drag_index = self.count()
+            event.accept()
+
+    def restart_dragging(self):
+        # FIXME: make sure we always release the mouse?
+        self.grabMouse()
+        press_pos = self.tabRect(self.drag_index).center()
+        press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+        QApplication.sendEvent(self, press_event)
+        self._plus_button.hide()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -76,57 +81,44 @@ class TabBarPlus(QTabBar):
         top = self.geometry().top() + 1
         self._plus_button.move(left, top)
 
-    def restart_dragging(self, index):
-        # FIXME: make sure we always release the mouse?
-        self._drag_index = index
-        self.grabMouse()
-        press_pos = self.tabRect(index).center()
-        press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
-        QApplication.sendEvent(self, press_event)
-        self._delta = QCursor.pos() - self._spine_db_editor.pos()
+    def _hide_all_but_index(self, index):
         self._plus_button.hide()
-        if self.count() == 1:
-            self._drag_dist = self.mapFromGlobal(QCursor.pos())
+        for k in range(self.count()):
+            self.setTabEnabled(k, k == index)
+            self.tabButton(k, QTabBar.RightSide).setVisible(k == index)
+
+    def _show_all(self):
+        self._plus_button.show()
+        for k in range(self.count()):
+            self.setTabEnabled(k, True)
+            self.tabButton(k, QTabBar.RightSide).setVisible(True)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
-        self._delta = event.globalPos() - self._spine_db_editor.pos()
         self._pressed_index = self.tabAt(event.pos())
 
     def mouseMoveEvent(self, event):
         self._plus_button.hide()
-        if self.count() == 1:
-            self._drag_dist = event.pos()
-            if self._delta:
-                self._spine_db_editor.raise_()
-                self._spine_db_editor.move(event.globalPos() - self._delta)
-            target = self._spine_db_editor.find_reattach_target(event.globalPos())
-            if target is not None:
-                self._send_release_event(event.pos())
-                self._spine_db_editor.reattach(*target)
-            return
-        if self.count() > 1 and not self.geometry().contains(event.pos()):
+        if self.count() == 1 or self.count() > 1 and not self.geometry().contains(event.pos()):
             self._send_release_event(event.pos())
             hotspot_x = event.pos().x()
             hotspot_y = self.height() / 2
             hotspot = QPoint(hotspot_x, hotspot_y)
-            delta = self.mapToGlobal(hotspot) - self._spine_db_editor.pos()
-            self._spine_db_editor.detach(self._pressed_index, delta)
+            self._multi_db_editor.detach(self._pressed_index, hotspot)
             return
         super().mouseMoveEvent(event)
 
     def _send_release_event(self, pos):
-        self._drag_index = None
+        self.drag_index = None
         release_event = QMouseEvent(QEvent.MouseButtonRelease, pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
         QApplication.sendEvent(self, release_event)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         self._plus_button.show()
-        self._drag_dist = None
         self.update()
         if QWidget.mouseGrabber() is self:
             self.releaseMouse()
-        if self._drag_index is not None:
-            self._spine_db_editor.connect_editor_signals(self._drag_index)
-            self._drag_index = None
+        if self.drag_index is not None:
+            self._multi_db_editor.connect_editor_signals(self.drag_index)
+            self.drag_index = None
