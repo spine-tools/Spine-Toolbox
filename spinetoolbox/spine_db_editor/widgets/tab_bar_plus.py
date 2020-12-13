@@ -16,7 +16,7 @@ Classes for custom context menus and pop-up menus.
 :date:   13.5.2020
 """
 from PySide2.QtWidgets import QTabBar, QToolButton, QStyleOptionTab, QStyle, QStylePainter, QApplication, QWidget
-from PySide2.QtCore import Signal, Qt, QEvent
+from PySide2.QtCore import Signal, Qt, QEvent, QPoint
 from PySide2.QtGui import QIcon, QMouseEvent, QCursor
 from spinetoolbox.helpers import CharIconEngine
 
@@ -38,20 +38,19 @@ class TabBarPlus(QTabBar):
         self.setMovable(True)
         self.setElideMode(Qt.ElideLeft)
         self._delta = None
-        self._press_pos = None
-        self._move_pos = None
-        self._detach_index = None
-        self._reattach_target = None
+        self._pressed_index = None
+        self._drag_dist = None
+        self._drag_index = None
 
     def paintEvent(self, event):
-        if self._move_pos is None:
+        if self._drag_dist is None:
             super().paintEvent(event)
             return
         p = QStylePainter(self)
         tab = QStyleOptionTab()
         self.initStyleOption(tab, 0)
         y = tab.rect.top()
-        tab.rect.moveCenter(self._move_pos)
+        tab.rect.moveCenter(self._drag_dist)
         tab.rect.moveTop(y)
         tab.rect.moveLeft(max(0, tab.rect.left()))
         tab.rect.moveRight(min(self.width(), tab.rect.right()))
@@ -79,51 +78,55 @@ class TabBarPlus(QTabBar):
 
     def restart_dragging(self, index):
         # FIXME: make sure we always release the mouse?
+        self._drag_index = index
         self.grabMouse()
         press_pos = self.tabRect(index).center()
-        move_pos = self.mapFromGlobal(QCursor.pos())
         press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
-        move_event = QMouseEvent(QEvent.MouseMove, move_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
         QApplication.sendEvent(self, press_event)
-        QApplication.sendEvent(self, move_event)
+        self._delta = QCursor.pos() - self._spine_db_editor.pos()
+        self._plus_button.hide()
+        if self.count() == 1:
+            self._drag_dist = self.mapFromGlobal(QCursor.pos())
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         self._delta = event.globalPos() - self._spine_db_editor.pos()
-        self._press_pos = event.pos()
+        self._pressed_index = self.tabAt(event.pos())
 
     def mouseMoveEvent(self, event):
         self._plus_button.hide()
-        if self.count() == 1 and self._delta:
-            self._move_pos = event.pos()
-            self._spine_db_editor.raise_()
-            self._spine_db_editor.move(event.globalPos() - self._delta)
+        if self.count() == 1:
+            self._drag_dist = event.pos()
+            if self._delta:
+                self._spine_db_editor.raise_()
+                self._spine_db_editor.move(event.globalPos() - self._delta)
             target = self._spine_db_editor.find_reattach_target(event.globalPos())
             if target is not None:
-                self._reattach_target = target
                 self._send_release_event(event.pos())
+                self._spine_db_editor.reattach(*target)
             return
         if self.count() > 1 and not self.geometry().contains(event.pos()):
-            self._detach_index = self.tabAt(self._press_pos)
             self._send_release_event(event.pos())
+            hotspot_x = event.pos().x()
+            hotspot_y = self.height() / 2
+            hotspot = QPoint(hotspot_x, hotspot_y)
+            delta = self.mapToGlobal(hotspot) - self._spine_db_editor.pos()
+            self._spine_db_editor.detach(self._pressed_index, delta)
             return
         super().mouseMoveEvent(event)
 
     def _send_release_event(self, pos):
+        self._drag_index = None
         release_event = QMouseEvent(QEvent.MouseButtonRelease, pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
         QApplication.sendEvent(self, release_event)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         self._plus_button.show()
-        self._move_pos = None
+        self._drag_dist = None
         self.update()
         if QWidget.mouseGrabber() is self:
             self.releaseMouse()
-        if self._detach_index is not None:
-            self._spine_db_editor.detach(self._detach_index)
-            self._detach_index = None
-            return
-        if self._reattach_target is not None:
-            self._spine_db_editor.reattach(*self._reattach_target)
-            self._reattach_target = None
+        if self._drag_index is not None:
+            self._spine_db_editor.connect_editor_signals(self._drag_index)
+            self._drag_index = None

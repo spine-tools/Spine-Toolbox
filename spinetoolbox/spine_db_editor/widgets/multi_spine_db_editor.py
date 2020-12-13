@@ -31,38 +31,45 @@ from ...widgets.settings_widget import SpineDBEditorSettingsWidget
 class _DBEditorTabWidget(QTabWidget):
     _slots = {}
 
-    def addTab(self, db_editor, text):
-        super().addTab(db_editor, text)
+    def add_connect_tab(self, db_editor, text):
+        self.addTab(db_editor, text)
         self._connect_editor_signals(db_editor)
 
-    def insertTab(self, index, db_editor, text):
-        super().insertTab(index, db_editor, text)
+    def insert_connect_tab(self, index, db_editor, text):
+        self.insertTab(index, db_editor, text)
         self._connect_editor_signals(db_editor)
 
-    def removeTab(self, index):
+    def remove_disconnect_tab(self, index):
         self._disconnect_editor_signals(index)
-        super().removeTab(index)
+        self.removeTab(index)
+
+    def connect_tab(self, index):
+        db_editor = self.widget(index)
+        self._connect_editor_signals(db_editor)
 
     def _connect_editor_signals(self, db_editor):
-        db_editor.file_exported.connect(self.parent()._insert_file_open_button)
-        db_editor.sqlite_file_exported.connect(self.parent()._insert_sqlite_file_open_button)
-        db_editor.ui.actionUser_guide.triggered.connect(self.parent().show_user_guide)
-        db_editor.ui.actionSettings.triggered.connect(self.parent().settings_form.show)
         s1 = lambda title, db_editor=db_editor: self._handle_window_title_changed(db_editor, title)
         s2 = lambda dirty, db_editor=db_editor: self._handle_dirty_changed(db_editor, dirty)
         db_editor.windowTitleChanged.connect(s1)
         db_editor.dirty_changed.connect(s2)
+        db_editor.file_exported.connect(self.parent()._insert_file_open_button)
+        db_editor.sqlite_file_exported.connect(self.parent()._insert_sqlite_file_open_button)
+        db_editor.ui.actionUser_guide.triggered.connect(self.parent().show_user_guide)
+        db_editor.ui.actionSettings.triggered.connect(self.parent().settings_form.show)
         self._slots[db_editor] = (s1, s2)
 
     def _disconnect_editor_signals(self, index):
         db_editor = self.widget(index)
+        slots = self._slots.pop(db_editor, None)
+        if slots is None:
+            return
+        s1, s2 = slots
+        db_editor.windowTitleChanged.disconnect(s1)
+        db_editor.dirty_changed.disconnect(s2)
         db_editor.file_exported.disconnect(self.parent()._insert_file_open_button)
         db_editor.sqlite_file_exported.disconnect(self.parent()._insert_sqlite_file_open_button)
         db_editor.ui.actionUser_guide.triggered.disconnect(self.parent().show_user_guide)
         db_editor.ui.actionSettings.triggered.disconnect(self.parent().settings_form.show)
-        s1, s2 = self._slots.pop(db_editor)
-        db_editor.windowTitleChanged.disconnect(s1)
-        db_editor.dirty_changed.disconnect(s2)
 
     def _handle_window_title_changed(self, db_editor, title):
         for k in range(self.count()):
@@ -103,10 +110,9 @@ class _FileOpenToolBar(QToolBar):
 
 
 class MultiSpineDBEditor(QMainWindow):
-    def __init__(self, db_mngr, db_url_codenames, create=False, detaching=False):
+    def __init__(self, db_mngr, db_url_codenames, create=False):
         super().__init__(flags=Qt.Window)
         self.db_mngr = db_mngr
-        self._detaching = detaching
         self.qsettings = self.db_mngr.qsettings
         self.settings_group = "spineDBEditor"
         self.restore_ui()
@@ -125,26 +131,21 @@ class MultiSpineDBEditor(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setStyleSheet(MAINWINDOW_SS)
 
-    def showEvent(self, event):
-        super().showEvent(event)
-        if not self._detaching:
-            return
-        self.tab_bar.restart_dragging(0)
-
     def connect_signals(self):
         self.tab_widget.tabCloseRequested.connect(self._close_tab)
         self.tab_bar.plus_clicked.connect(self._add_new_tab)
 
-    def detach(self, index):
+    def detach(self, index, delta):
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         db_editor = self.tab_widget.widget(index)
         text = self.tab_widget.tabText(index)
-        self.tab_widget.removeTab(index)
-        other = MultiSpineDBEditor(self.db_mngr, None, detaching=True)
+        self.tab_widget.remove_disconnect_tab(index)
+        other = MultiSpineDBEditor(self.db_mngr, None)
         other.tab_widget.addTab(db_editor, text)
-        titlebar_height = self.geometry().y() - self.frameGeometry().y()
-        y = QCursor.pos().y() - titlebar_height - self.tab_bar.height() / 2
-        other.move(self.pos().x(), y)
         other.show()
+        other.move(QCursor.pos() - delta)
+        other.tab_bar.restart_dragging(0)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
 
     def find_reattach_target(self, global_pos):
         other = next(
@@ -163,18 +164,21 @@ class MultiSpineDBEditor(QMainWindow):
     def reattach(self, other, index):
         db_editor = self.tab_widget.widget(0)
         text = self.tab_widget.tabText(0)
-        self.tab_widget.removeTab(0)
+        self.tab_widget.remove_disconnect_tab(0)
+        self.close()
         other.tab_widget.insertTab(index, db_editor, text)
         other.tab_widget.setCurrentIndex(index)
         other.tab_bar.restart_dragging(index)
-        self.close()
+
+    def connect_editor_signals(self, index):
+        self.tab_widget.connect_tab(index)
 
     @Slot()
     def _add_new_tab(self, db_url_codenames=()):
         if db_url_codenames is None:
             return
         db_editor = SpineDBEditor(self.db_mngr)
-        self.tab_widget.addTab(db_editor, "New Tab")
+        self.tab_widget.add_connect_tab(db_editor, "New Tab")
         db_editor.load_db_urls(db_url_codenames, create=True)
         self.tab_widget.setCurrentIndex(self.tab_widget.count() - 1)
 
