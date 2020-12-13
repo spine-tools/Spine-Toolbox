@@ -152,7 +152,7 @@ class MultiSpineDBEditor(QMainWindow):
         drag = _SpineDBEditorDrag(self)
         drag.setMimeData(QMimeData())
         pixmap = QPixmap(self.size())
-        self.tab_bar._hide_all_but_index(index)
+        self.tab_bar._show_only_index(index)
         self.render(pixmap)
         self.tab_bar._show_all()
         drag.setPixmap(pixmap)
@@ -173,9 +173,10 @@ class MultiSpineDBEditor(QMainWindow):
                 other.move(QCursor.pos() - delta)
                 return
             other = drag.tab_bar.multi_db_editor
-            other.reattach(drag.tab_bar.drag_index, db_editor, text)
+            other.reattach(db_editor, text)
 
-    def reattach(self, index, db_editor, text):
+    def reattach(self, db_editor, text):
+        index = self.tab_bar.drag_index
         self.tab_widget.insertTab(index, db_editor, text)
         self.tab_widget.setCurrentIndex(index)
         self.tab_bar.restart_dragging()

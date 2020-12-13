@@ -37,7 +37,6 @@ class TabBarPlus(QTabBar):
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setElideMode(Qt.ElideLeft)
-        self._pressed_index = None
         self.drag_index = None
         self.setAcceptDrops(True)
         self.setStyleSheet("QTabBar::tab:disabled { width: 0; height: 0; margin: 0; padding: 0; border: none; }")
@@ -55,12 +54,11 @@ class TabBarPlus(QTabBar):
             event.accept()
 
     def restart_dragging(self):
-        # FIXME: make sure we always release the mouse?
-        self.grabMouse()
         press_pos = self.tabRect(self.drag_index).center()
         press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
         QApplication.sendEvent(self, press_event)
         self._plus_button.hide()
+        qApp.installEventFilter(self)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -81,7 +79,7 @@ class TabBarPlus(QTabBar):
         top = self.geometry().top() + 1
         self._plus_button.move(left, top)
 
-    def _hide_all_but_index(self, index):
+    def _show_only_index(self, index):
         self._plus_button.hide()
         for k in range(self.count()):
             self.setTabEnabled(k, k == index)
@@ -93,9 +91,12 @@ class TabBarPlus(QTabBar):
             self.setTabEnabled(k, True)
             self.tabButton(k, QTabBar.RightSide).setVisible(True)
 
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        self._pressed_index = self.tabAt(event.pos())
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonRelease:
+            self.mouseReleaseEvent(event)
+        elif event.type() == QEvent.MouseMove:
+            self.mouseMoveEvent(event)
+        return False
 
     def mouseMoveEvent(self, event):
         self._plus_button.hide()
@@ -104,7 +105,10 @@ class TabBarPlus(QTabBar):
             hotspot_x = event.pos().x()
             hotspot_y = self.height() / 2
             hotspot = QPoint(hotspot_x, hotspot_y)
-            self._multi_db_editor.detach(self._pressed_index, hotspot)
+            index = self.tabAt(hotspot)
+            if index == -1:
+                index = self.count() - 1
+            self._multi_db_editor.detach(index, hotspot)
             return
         super().mouseMoveEvent(event)
 
@@ -117,8 +121,7 @@ class TabBarPlus(QTabBar):
         super().mouseReleaseEvent(event)
         self._plus_button.show()
         self.update()
-        if QWidget.mouseGrabber() is self:
-            self.releaseMouse()
+        qApp.removeEventFilter(self)
         if self.drag_index is not None:
             self._multi_db_editor.connect_editor_signals(self.drag_index)
             self.drag_index = None
