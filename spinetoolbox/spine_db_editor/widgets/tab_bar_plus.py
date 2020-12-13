@@ -15,7 +15,7 @@ Classes for custom context menus and pop-up menus.
 :author: M. Marin (KTH)
 :date:   13.5.2020
 """
-from PySide2.QtWidgets import QTabBar, QToolButton, QApplication, QWidget
+from PySide2.QtWidgets import QTabBar, QToolButton, QApplication
 from PySide2.QtCore import Signal, Qt, QEvent, QPoint
 from PySide2.QtGui import QIcon, QMouseEvent
 from spinetoolbox.helpers import CharIconEngine
@@ -57,8 +57,8 @@ class TabBarPlus(QTabBar):
         press_pos = self.tabRect(self.drag_index).center()
         press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
         QApplication.sendEvent(self, press_event)
-        self._plus_button.hide()
-        qApp.installEventFilter(self)
+        QApplication.processEvents()
+        self.grabMouse()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -91,13 +91,6 @@ class TabBarPlus(QTabBar):
             self.setTabEnabled(k, True)
             self.tabButton(k, QTabBar.RightSide).setVisible(True)
 
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.MouseButtonRelease:
-            self.mouseReleaseEvent(event)
-        elif event.type() == QEvent.MouseMove:
-            self.mouseMoveEvent(event)
-        return False
-
     def mouseMoveEvent(self, event):
         self._plus_button.hide()
         if self.count() == 1 or self.count() > 1 and not self.geometry().contains(event.pos()):
@@ -121,7 +114,7 @@ class TabBarPlus(QTabBar):
         super().mouseReleaseEvent(event)
         self._plus_button.show()
         self.update()
-        qApp.removeEventFilter(self)
+        self.releaseMouse()
         if self.drag_index is not None:
             self._multi_db_editor.connect_editor_signals(self.drag_index)
             self.drag_index = None
