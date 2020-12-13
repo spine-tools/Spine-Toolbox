@@ -284,4 +284,8 @@ class MultiSpineDBEditor(QMainWindow):
 
     @staticmethod
     def get_all_spine_db_editors():
-        return [w for w in qApp.topLevelWidgets() if isinstance(w, SpineDBEditor)]
+        for w in qApp.topLevelWidgets():
+            if not isinstance(w, MultiSpineDBEditor):
+                continue
+            for k in range(w.tab_widget.count()):
+                yield w.tab_widget.widget(k)
