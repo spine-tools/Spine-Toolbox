@@ -3,7 +3,7 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.5.0-final.0] - 2020-12-xx
+## [0.5.0-final.0] - 2020-12-14
 
 ### Added
 - Exporting graphs as PDF files from the *Graph* menu in the Data Store form.
