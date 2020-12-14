@@ -33,21 +33,21 @@ class _DBEditorTabWidget(QTabWidget):
 
     def add_connect_tab(self, db_editor, text):
         self.addTab(db_editor, text)
-        self._connect_editor_signals(db_editor)
+        self.connect_editor_signals(db_editor)
 
     def insert_connect_tab(self, index, db_editor, text):
         self.insertTab(index, db_editor, text)
-        self._connect_editor_signals(db_editor)
+        self.connect_editor_signals(db_editor)
 
     def remove_disconnect_tab(self, index):
-        self._disconnect_editor_signals(index)
+        self.disconnect_editor_signals(index)
         self.removeTab(index)
 
     def connect_tab(self, index):
         db_editor = self.widget(index)
-        self._connect_editor_signals(db_editor)
+        self.connect_editor_signals(db_editor)
 
-    def _connect_editor_signals(self, db_editor):
+    def connect_editor_signals(self, db_editor):
         s1 = lambda title, db_editor=db_editor: self._handle_window_title_changed(db_editor, title)
         s2 = lambda dirty, db_editor=db_editor: self._handle_dirty_changed(db_editor, dirty)
         db_editor.windowTitleChanged.connect(s1)
@@ -58,7 +58,7 @@ class _DBEditorTabWidget(QTabWidget):
         db_editor.ui.actionSettings.triggered.connect(self.parent().settings_form.show)
         self._slots[db_editor] = (s1, s2)
 
-    def _disconnect_editor_signals(self, index):
+    def disconnect_editor_signals(self, index):
         db_editor = self.widget(index)
         slots = self._slots.pop(db_editor, None)
         if slots is None:
@@ -113,12 +113,12 @@ class _SpineDBEditorDrag(QDrag):
     def __init__(self, source):
         super().__init__(source)
         self.targetChanged.connect(self._handle_target_changed)
-        self.tab_bar = None
+        self.drop_target = None
 
     @Slot("QObject")
     def _handle_target_changed(self, new_target):
         if isinstance(new_target, TabBarPlus):
-            self.tab_bar = new_target
+            self.drop_target = new_target.multi_db_editor
             self.cancel()
 
 
@@ -144,9 +144,16 @@ class MultiSpineDBEditor(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setStyleSheet(MAINWINDOW_SS)
 
+    def _frame_height(self):
+        return self.frameGeometry().height() - self.geometry().height()
+
     def connect_signals(self):
         self.tab_widget.tabCloseRequested.connect(self._close_tab)
         self.tab_bar.plus_clicked.connect(self._add_new_tab)
+
+    def eventFilter(self, watched, event):
+        qApp.restoreOverrideCursor()
+        return False
 
     def detach(self, index, delta):
         drag = _SpineDBEditorDrag(self)
@@ -162,18 +169,25 @@ class MultiSpineDBEditor(QMainWindow):
         text = self.tab_widget.tabText(index)
         self.tab_widget.remove_disconnect_tab(index)
         if not self.tab_widget.count():
-            self.close()
+            self.hide()
+        qApp.installEventFilter(self)
         drag.exec_(Qt.MoveAction)
+        qApp.removeEventFilter(self)
         qApp.restoreOverrideCursor()
-        if drag.target() is None:
-            if drag.tab_bar is None:
-                other = MultiSpineDBEditor(self.db_mngr, None)
-                other.tab_widget.add_connect_tab(db_editor, text)
-                other.show()
-                other.move(QCursor.pos() - delta)
-                return
-            other = drag.tab_bar.multi_db_editor
-            other.reattach(db_editor, text)
+        if drag.drop_target is None:
+            if not self.tab_widget.count():
+                drop_target = self
+            else:
+                drop_target = MultiSpineDBEditor(self.db_mngr, None)
+            drop_target.tab_widget.add_connect_tab(db_editor, text)
+            drop_target.show()
+            qApp.processEvents()
+            delta += QPoint(0, self._frame_height())
+            drop_target.move(QCursor.pos() - delta)
+            return
+        if not self.tab_widget.count():
+            self.close()
+        drag.drop_target.reattach(db_editor, text)
 
     def reattach(self, db_editor, text):
         index = self.tab_bar.drag_index
