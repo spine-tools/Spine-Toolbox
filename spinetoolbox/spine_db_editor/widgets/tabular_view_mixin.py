@@ -780,7 +780,7 @@ class TabularViewMixin:
             for item in items:
                 if item["id"] == self.current_class_id.get(db_map):
                     self.current_class_type = None
-                    self.current_class_id = None
+                    self.current_class_id = {}
                     self.clear_pivot_table()
                     return
 

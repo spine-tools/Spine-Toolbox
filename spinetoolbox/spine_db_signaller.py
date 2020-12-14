@@ -101,6 +101,7 @@ class SpineDBSignaller(QObject):
         self.db_mngr.session_refreshed.connect(self.receive_session_refreshed)
         self.db_mngr.session_committed.connect(self.receive_session_committed)
         self.db_mngr.session_rolled_back.connect(self.receive_session_rolled_back)
+        self.db_mngr.error_msg.connect(self.receive_error_msg)
 
     @staticmethod
     def _shared_db_map_data(db_map_data, db_maps):
@@ -441,3 +442,10 @@ class SpineDBSignaller(QObject):
             shared_db_maps = listener_db_maps.intersection(db_maps)
             if shared_db_maps:
                 listener.receive_session_rolled_back(shared_db_maps)
+
+    @Slot(object)
+    def receive_error_msg(self, db_map_error_log):
+        for listener, db_maps in self.listeners.items():
+            shared_db_map_error_log = self._shared_db_map_data(db_map_error_log, db_maps)
+            if shared_db_map_error_log:
+                listener.receive_error_msg(shared_db_map_error_log)

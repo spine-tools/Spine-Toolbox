@@ -123,8 +123,7 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def _get_ids_from_feat_name(self, feature_name):
         ids = self.model.get_feature_data(self.db_map, feature_name)
         if ids is None:
-            self.model._parent.error_box.emit(
-                "Error",
+            self.model._parent.msg_error.emit(
                 f"<p>Invalid feature '{feature_name}'. </p>"
                 "<p>Please enter a valid combination of entity class/parameter definition.</p>",
             )
@@ -315,8 +314,7 @@ class ToolFeatureMethodLeafItem(LastGrayMixin, LeafItem):
     def _get_method_index(self, parameter_value_list_id, method):
         method_index = self.model.get_method_index(self.tool_feature_item.db_map, parameter_value_list_id, method)
         if method_index is None:
-            self.model._parent.error_box.emit(
-                "Error",
+            self.model._parent.msg_error.emit(
                 f"<p>Invalid method '{method}'. </p>"
                 f"<p>Please enter a valid method for feature '{self.tool_feature_item.name}'.</p>",
             )

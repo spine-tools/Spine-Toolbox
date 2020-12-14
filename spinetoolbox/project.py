@@ -81,7 +81,7 @@ class SpineToolboxProject(MetaObject):
         self._embedded_python_console = embedded_python_console
         self._dags_about_to_be_notified = set()
         self.dag_handler = DirectedGraphHandler()
-        self.db_mngr = SpineDBManager(settings, logger, self)
+        self.db_mngr = SpineDBManager(settings, self)
         self.engine = None
         self._engine_workers = []
         self._execution_stopped = True

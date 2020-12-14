@@ -329,7 +329,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         if param_defs:
             self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
         if error_log:
-            self.db_mngr.error_msg({self.db_map: error_log})
+            self.db_mngr.error_msg.emit({self.db_map: error_log})
 
 
 class SingleParameterValueMixin(
@@ -428,7 +428,7 @@ class SingleParameterValueMixin(
         if param_vals:
             self.db_mngr.update_parameter_values({self.db_map: param_vals})
         if error_log:
-            self.db_mngr.error_msg({self.db_map: error_log})
+            self.db_mngr.error_msg.emit({self.db_map: error_log})
 
     def _check_item(self, item):
         """Checks if a db item is good to be updated."""
@@ -509,5 +509,5 @@ class SingleRelationshipParameterValueModel(
         if any(db_map_relationships.values()):
             self.db_mngr.add_relationships(db_map_relationships)
         if db_map_error_log:
-            self.db_mngr.error_msg(db_map_error_log)
+            self.db_mngr.error_msg.emit(db_map_error_log)
         super().update_items_in_db(items)

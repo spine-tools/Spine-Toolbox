@@ -39,7 +39,7 @@ from spinedb_api import (
     TimePattern,
     Map,
 )
-from .helpers import IconManager, busy_effect, format_string_list
+from .helpers import IconManager, busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_commands import (
@@ -67,7 +67,7 @@ class SpineDBManager(QObject):
     TODO: Expand description, how it works, the cache, the signals, etc.
     """
 
-    database_created = Signal(object)
+    error_msg = Signal(object)
     session_refreshed = Signal(set)
     session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
@@ -130,18 +130,15 @@ class SpineDBManager(QObject):
 
     _GROUP_SEP = " \u01C0 "
 
-    def __init__(self, settings, logger, project):
+    def __init__(self, settings, project):
         """Initializes the instance.
 
         Args:
             settings (QSettings): Toolbox settings
-            logger (LoggingInterface): a general, non-database-specific logger
             project (SpineToolboxProject)
         """
         super().__init__(project)
         self._project = project
-        self._general_logger = logger
-        self._db_specific_loggers = dict()
         self._db_maps = {}
         self._cache = {}
         self.qsettings = settings
@@ -170,13 +167,15 @@ class SpineDBManager(QObject):
         url = str(url)
         return self._db_maps.get(url)
 
-    def create_new_spine_database(self, url):
-        if url in set(url for db_editor in self.db_editors for url in db_editor.db_urls):
-            message = (
-                f"The db at <b>{url}</b> is open in a Spine db editor. "
-                "Please close all Spine db editors using this url and try again."
-            )
-            self._general_logger.error_box.emit("Error", message)
+    def is_url_available(self, url, logger):
+        if str(url) in self._db_maps:
+            message = f"The db at <b>{url}</b> is in use. Please close all applications using this url and try again."
+            logger.msg_error.emit(message)
+            return False
+        return True
+
+    def create_new_spine_database(self, url, logger):
+        if not self.is_url_available(url, logger):
             return
         try:
             if not is_empty(url):
@@ -191,11 +190,9 @@ class SpineDBManager(QObject):
                 if ret != QMessageBox.AcceptRole:
                     return
             do_create_new_spine_database(url)
-            self._general_logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
+            logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
         except SpineDBAPIError as e:
-            self._general_logger.msg_error.emit(f"Unable to create new Spine db at '{url}': {e}.")
-        else:
-            self.database_created.emit(url)
+            logger.msg_error.emit(f"Unable to create new Spine db at '{url}': {e}.")
 
     def close_session(self, url):
         """Pops any db map on the given url and closes its connection.
@@ -207,17 +204,14 @@ class SpineDBManager(QObject):
         if db_map is None:
             return
         db_map.connection.close()
-        if db_map.codename in self._db_specific_loggers:
-            del self._db_specific_loggers[db_map.codename]
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
         for db_map in self._db_maps.values():
             if not db_map.connection.closed:
                 db_map.connection.close()
-        self._db_specific_loggers.clear()
 
-    def get_db_map(self, url, codename=None, upgrade=False, create=False):
+    def get_db_map(self, url, logger, codename=None, upgrade=False, create=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
@@ -250,9 +244,9 @@ class SpineDBManager(QObject):
             ret = msg.exec_()  # Show message box
             if ret == QMessageBox.Cancel:
                 return None
-            return self.get_db_map(url, codename=codename, upgrade=True, create=create)
+            return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)
         except SpineDBAPIError as err:
-            self._general_logger.msg_error.emit(err.msg)
+            logger.msg_error.emit(err.msg)
             return None
 
     @busy_effect
@@ -367,14 +361,6 @@ class SpineDBManager(QObject):
             # Commit session and don't show message box
             return QMessageBox.Save
 
-    def set_logger_for_db_map(self, logger, db_map):
-        if db_map.codename is not None:
-            self._db_specific_loggers[db_map.codename] = logger
-
-    def unset_logger_for_db_map(self, db_map):
-        if db_map.codename in self._db_specific_loggers:
-            del self._db_specific_loggers[db_map.codename]
-
     def get_fetcher(self, listener):
         """Fetches given db_map for given listener.
 
@@ -436,7 +422,7 @@ class SpineDBManager(QObject):
         self._do_commit_session(dirty_db_maps, cookie)
 
     def _do_commit_session(self, dirty_db_maps, commit_msg, cookie=None):
-        error_log = {}
+        db_map_error_log = {}
         committed_db_maps = set()
         for db_map in dirty_db_maps:
             try:
@@ -444,9 +430,9 @@ class SpineDBManager(QObject):
                 committed_db_maps.add(db_map)
                 self.undo_stack[db_map].setClean()
             except SpineDBAPIError as e:
-                error_log[db_map] = e.msg
-        if any(error_log.values()):
-            self.error_msg(error_log)
+                db_map_error_log[db_map] = e.msg
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
         if committed_db_maps:
             self.session_committed.emit(committed_db_maps, cookie)
 
@@ -469,7 +455,7 @@ class SpineDBManager(QObject):
         self._do_rollback_session(dirty_db_maps)
 
     def _do_rollback_session(self, dirty_db_maps):
-        error_log = {}
+        db_map_error_log = {}
         rolled_db_maps = set()
         for db_map in dirty_db_maps:
             try:
@@ -478,9 +464,9 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].clear()
                 del self._cache[db_map]
             except SpineDBAPIError as e:
-                error_log[db_map] = e.msg
-        if any(error_log.values()):
-            self.error_msg(error_log)
+                db_map_error_log[db_map] = e.msg
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
         if rolled_db_maps:
             self.session_rolled_back.emit(rolled_db_maps)
 
@@ -552,19 +538,6 @@ class SpineDBManager(QObject):
         self._parameter_definition_tags_added.connect(self._refresh_parameter_definitions_by_tag)
         self._parameter_definition_tags_removed.connect(self._refresh_parameter_definitions_by_tag)
         qApp.aboutToQuit.connect(self._stop_fetchers)  # pylint: disable=undefined-variable
-
-    def error_msg(self, db_map_error_log):
-        db_msgs = []
-        for db_map, error_log in db_map_error_log.items():
-            if isinstance(error_log, str):
-                error_log = [error_log]
-            db_msg = "From " + db_map.codename + ":" + format_string_list(error_log)
-            db_msgs.append(db_msg)
-        for db_map in db_map_error_log:
-            logger = self._db_specific_loggers.get(db_map.codename)
-            if logger is not None:
-                msg = format_string_list(db_msgs)
-                logger.error_box.emit("Error", msg)
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -1126,13 +1099,13 @@ class SpineDBManager(QObject):
                 to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
-        error_log = dict()
+        db_map_error_log = dict()
         for db_map, data in db_map_data.items():
             try:
                 data_for_import = get_data_for_import(db_map, **data)
             except (TypeError, ValueError) as err:
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
-                error_log.setdefault(db_map, []).append(msg)
+                db_map_error_log.setdefault(db_map, []).append(msg)
                 continue
             import_command = AgedUndoCommand()
             import_command.setText(command_text)
@@ -1141,7 +1114,7 @@ class SpineDBManager(QObject):
             # because we *need* to call redo() on the children one by one so the data gets in gradually
             self.undo_stack[db_map].push(import_command)
             for item_type, (to_add, to_update, import_error_log) in data_for_import:
-                error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
+                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_add:
                     add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
                     add_cmd.redo()
@@ -1154,8 +1127,8 @@ class SpineDBManager(QObject):
                 # Nothing imported. Set the command obsolete and call undo() on the stack to removed it
                 import_command.setObsolete(True)
                 self.undo_stack[db_map].undo()
-        if any(error_log.values()):
-            self.error_msg(error_log)
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
 
     @busy_effect
     def add_or_update_items(self, db_map_data, method_name, get_method_name, signal_name):
@@ -1168,7 +1141,7 @@ class SpineDBManager(QObject):
             signal_name (str) : signal attribute of SpineDBManager to emit if successful
         """
         db_map_data_out = dict()
-        error_log = dict()
+        db_map_error_log = dict()
         for db_map, items in db_map_data.items():
             result = getattr(db_map, method_name)(*items)
             if isinstance(result, tuple):
@@ -1176,12 +1149,12 @@ class SpineDBManager(QObject):
             else:
                 ids, errors = result, ()
             if errors:
-                error_log[db_map] = errors
+                db_map_error_log[db_map] = errors
             if not ids:
                 continue
             db_map_data_out[db_map] = getattr(self, get_method_name)(db_map, ids=ids)
-        if any(error_log.values()):
-            self.error_msg(error_log)
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
         if any(db_map_data_out.values()):
             getattr(self, signal_name).emit(db_map_data_out)
 
@@ -1570,15 +1543,15 @@ class SpineDBManager(QObject):
         Args:
             db_map_typed_ids (dict): lists of items to remove, keyed by item type (str), keyed by DiffDatabaseMapping
         """
-        error_log = dict()
+        db_map_error_log = dict()
         for db_map, ids_per_type in db_map_typed_ids.items():
             try:
                 db_map.remove_items(**ids_per_type)
             except SpineDBAPIError as err:
-                error_log[db_map] = [err]
+                db_map_error_log[db_map] = [err]
                 continue
-        if any(error_log.values()):
-            self.error_msg(error_log)
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
         self.uncache_items(db_map_typed_ids)
 
     def _pop_item(self, db_map, item_type, id_):

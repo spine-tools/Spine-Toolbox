@@ -66,7 +66,6 @@ class SpineDBEditorBase(QMainWindow):
     msg = Signal(str)
     link_msg = Signal(str, "QVariant")
     msg_error = Signal(str)
-    error_box = Signal(str, str)
     dirty_changed = Signal(bool)
     file_exported = Signal(str)
     sqlite_file_exported = Signal(str)
@@ -130,16 +129,17 @@ class SpineDBEditorBase(QMainWindow):
             return
         if not self.tear_down():
             return
-        self.db_maps = [
-            self.db_mngr.get_db_map(url, codename=codename, create=create) for url, codename in db_url_codenames.items()
-        ]
-        if not all(self.db_maps):
+        self.db_maps = []
+        for url, codename in db_url_codenames.items():
+            db_map = self.db_mngr.get_db_map(url, self, codename=codename, create=create)
+            if db_map is not None:
+                self.db_maps.append(db_map)
+        if not self.db_maps:
             return
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.url_toolbar.set_current_urls(self.db_urls)
         self.db_url = self.db_urls[0]
         self.db_mngr.register_listener(self, *self.db_maps)
-        self.db_mngr.set_logger_for_db_map(self, self.first_db_map)  # FIXME
         self.init_models()
         self.init_add_undo_redo_actions()
         self.fetch_db_maps()
@@ -190,7 +190,6 @@ class SpineDBEditorBase(QMainWindow):
         self.msg.connect(self.add_message)
         self.link_msg.connect(self.add_link_msg)
         self.msg_error.connect(self.err_msg.showMessage)
-        self.error_box.connect(lambda title, msg: self.err_msg.showMessage(msg))
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
@@ -369,7 +368,7 @@ class SpineDBEditorBase(QMainWindow):
             raise err  # NOTE: This is so the programmer gets to see the traceback
         if errors:
             msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
-            self.error_box.emit("Parse error", msg)
+            self.msg_error.emit(msg)
         self.import_data(mapped_data)
         self.msg.emit(f"File {filename} successfully imported.")
 
@@ -486,6 +485,8 @@ class SpineDBEditorBase(QMainWindow):
     def export_to_sqlite(self, file_path, data_for_export):
         """Exports given data into SQLite file."""
         url = URL("sqlite", database=file_path)
+        if not self.db_mngr.is_url_available(url, self):
+            return
         create_new_spine_database(url)
         db_map = DiffDatabaseMapping(url)
         import_data(db_map, **data_for_export)
@@ -640,6 +641,15 @@ class SpineDBEditorBase(QMainWindow):
         """
         editor = ParameterValueEditor(index, parent=self)
         editor.show()
+
+    def receive_error_msg(self, db_map_error_log):
+        msgs = []
+        for db_map, error_log in db_map_error_log.items():
+            if isinstance(error_log, str):
+                error_log = [error_log]
+            msg = "From " + db_map.codename + ":" + format_string_list(error_log)
+            msgs.append(msg)
+        self.msg_error.emit(format_string_list(msgs))
 
     def notify_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
@@ -848,8 +858,6 @@ class SpineDBEditorBase(QMainWindow):
     def tear_down(self):
         if not self.db_mngr.unregister_listener(self, *self.db_maps):
             return False
-        for db_map in self.db_maps:
-            self.db_mngr.unset_logger_for_db_map(db_map)
         # Save UI form state
         self.save_window_state()
         return True

@@ -168,7 +168,7 @@ class MultiSpineDBEditor(QMainWindow):
         if drag.target() is None:
             if drag.tab_bar is None:
                 other = MultiSpineDBEditor(self.db_mngr, None)
-                other.tab_widget.addTab(db_editor, text)
+                other.tab_widget.add_connect_tab(db_editor, text)
                 other.show()
                 other.move(QCursor.pos() - delta)
                 return

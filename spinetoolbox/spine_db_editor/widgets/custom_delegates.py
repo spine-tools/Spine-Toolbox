@@ -484,9 +484,7 @@ class ToolFeatureDelegate(QStyledItemDelegate):
         if item.item_type == "feature":
             names = model.get_all_feature_names(item.db_map)
             if not names:
-                model._parent.error_box.emit(
-                    "Error", "There aren't any listed parameter definitions to create features from. "
-                )
+                model._parent.msg_error.emit("There aren't any listed parameter definitions to create features from. ")
                 return None
             return names
         if item.item_type == "tool_feature required":

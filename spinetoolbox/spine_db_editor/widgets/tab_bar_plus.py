@@ -116,5 +116,8 @@ class TabBarPlus(QTabBar):
         self.update()
         self.releaseMouse()
         if self.drag_index is not None:
-            self._multi_db_editor.connect_editor_signals(self.drag_index)
+            index = self.tabAt(event.pos())
+            if index == -1:
+                index = self.count() - 1
+            self._multi_db_editor.connect_editor_signals(index)
             self.drag_index = None
