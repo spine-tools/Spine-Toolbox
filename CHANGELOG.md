@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New project item: Data Transformer. Can be used to configure Spine database filters for successor items.
   Currently it supports renaming entity classes.
 - Support for version 3 Spine Toolbox projects and an automatic upgrade of version 2 projects to version 3.
+- Support for version 4 Spine Toolbox projects.
+- Support for version 5 Spine Toolbox projects.
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
@@ -19,10 +21,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Importer item now applies the same mapping to all input files. If the user needs to apply different 
   mappings, they need to create different Importers. The specification can be shared using the json file.
 - Exporter is now called GdxExporter.
-- Combiner no longer exists. The same functionality is now achieved by just connecting one Data Store to another.
 
 ### Deprecated
+
 ### Removed
+- Combiner project item. The same functionality can be achieved by connecting a Data Store to another Data Store.
+- Upgrade support for original (.proj file based) Spine Toolbox projects.
+
 ### Fixed
 ### Security
 

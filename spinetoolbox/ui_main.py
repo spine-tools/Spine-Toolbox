@@ -201,7 +201,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
-        self.ui.actionUpgrade_project.triggered.connect(self.upgrade_project)
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.close)
@@ -420,10 +419,25 @@ class ToolboxUI(QMainWindow):
             bool: True when opening the project succeeded, False otherwise
         """
         if not load_dir:
-            dialog = OpenProjectDialog(self)
-            if not dialog.exec():
-                return False
-            load_dir = dialog.selection()
+            custom_open_dialog = self.qsettings().value("appSettings/customOpenProjectDialog", defaultValue="true")
+            if custom_open_dialog == "true":
+                dialog = OpenProjectDialog(self)
+                if not dialog.exec():
+                    return False
+                load_dir = dialog.selection()
+            else:
+                recents = self.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+                if not recents:
+                    start_dir = ""
+                else:
+                    start_dir = str(recents).split("\n")[0]
+                load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir = start_dir)
+                if not load_dir:
+                    return False  # Cancelled
+                if not os.path.isfile(os.path.join(load_dir, ".spinetoolbox", PROJECT_FILENAME)):
+                    self.msg_warning.emit(f"Opening project failed. <b>{load_dir}</b> is not a Spine Toolbox project.")
+                    return False
+                # TODO: Save load_dir parent directory to "appSettings/recentProjectStorages"
         load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", PROJECT_FILENAME))
         try:
             with open(load_path, "r") as fh:
@@ -584,74 +598,6 @@ class ToolboxUI(QMainWindow):
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
         self.undo_stack.setClean()
-
-    @Slot(bool)
-    def upgrade_project(self, checked=False):
-        """Upgrades an old style project (.proj file) to a new directory based Spine Toolbox project.
-        Note that this method can be removed when we no longer want to support upgrading .proj projects.
-        Project upgrading should happen later automatically when opening a project.
-        """
-        msg = (
-            "This option upgrades your legacy Spine Toolbox projects from .proj files to "
-            "<br/>Spine Toolbox project <b>directories</b>."
-            "<br/><br/>Next, you will be presented two file dialogs:"
-            "<br/><b>1.</b>From the first dialog, select a project you<br/> want "
-            "to upgrade by selecting a <i>.proj</i> <b>file</b>"
-            "<br/><b>2.</b>From the second dialog, select a <b>directory</b> "
-            "for the upgraded project."
-            "<br/><br/>Project item data will be copied to the new project directory."
-            "<br/><br/><b>P.S.</b> You only need to do this once per project."
-        )
-        QMessageBox.information(self, "Project upgrade wizard", msg)
-        # noinspection PyCallByClass
-        answer = QFileDialog.getOpenFileName(
-            self, "Select an old project (.proj file) to upgrade", _program_root, "Project file (*.proj)"
-        )
-        if not answer[0]:
-            return
-        fp = answer[0]
-        upgrader = ProjectUpgrader(self)
-        proj_dir = upgrader.get_project_directory()  # New project directory
-        if not proj_dir:
-            self.msg.emit("Project upgrade canceled")
-            return
-        proj_info = upgrader.open_proj_json(fp)
-        if not proj_info:
-            return
-        old_project_dir = os.path.normpath(os.path.join(os.path.dirname(fp), fp[:-5]))
-        if not os.path.isdir(old_project_dir):
-            self.msg_error.emit("Project upgrade failed")
-            self.msg_warning.emit("Project directory <b>{0}</b> does not exist".format(old_project_dir))
-            return
-        # Upgrade project info dict to latest version
-        project_dict_v1 = upgrader.upgrade_to_v1(proj_info, old_project_dir)
-        # Make version 1 project.json file to new project directory.
-        # Needs to be done so that upgrade() is able to make a backup and force save project.json
-        # version 2 file.
-        spinetoolbox_dir = os.path.abspath(os.path.join(proj_dir, ".spinetoolbox"))
-        try:
-            create_dir(spinetoolbox_dir)
-        except OSError:
-            self.msg_error.emit("Creating directory {0} failed".format(spinetoolbox_dir))
-            return
-        project_json_path = os.path.join(spinetoolbox_dir, PROJECT_FILENAME)
-        with open(project_json_path, "w") as project_json_fp:
-            json.dump(project_dict_v1, project_json_fp, indent=4)
-        # Upgrade to latest version
-        upgraded_project_dict = upgrader.upgrade(project_dict_v1, proj_dir)
-        # Copy project item data from old project to new project directory
-        if not upgrader.copy_data(fp, proj_dir):
-            self.msg_warning.emit(
-                "Copying data to project <b>{0}</b> failed. "
-                "Please copy project item directories to directory <b>{1}</b> manually.".format(
-                    proj_dir, os.path.join(proj_dir, ".spinetoolbox", "items")
-                )
-            )
-        # Open the upgraded project
-        if not self.restore_project(upgraded_project_dict, proj_dir, clear_logs=False):
-            return
-        # Save project to finish the upgrade process
-        self.save_project()
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
