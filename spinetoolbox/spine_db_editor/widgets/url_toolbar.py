@@ -68,16 +68,31 @@ class UrlToolBar(QToolBar):
         self._go_forward_action.setEnabled(self._history_index < len(self._history) - 1)
 
     def add_urls_to_history(self, db_urls):
+        """Adds url to history.
+
+        Args:
+            db_urls (list of str)
+        """
         self._history_index += 1
         self._update_history_actions_availability()
         self._history[self._history_index :] = [db_urls]
 
     def get_previous_urls(self):
+        """Returns previous urls in history.
+
+        Returns:
+            list of str
+        """
         self._history_index -= 1
         self._update_history_actions_availability()
         return self._history[self._history_index]
 
     def get_next_urls(self):
+        """Returns next urls in history.
+
+        Returns:
+            list of str
+        """
         self._history_index += 1
         self._update_history_actions_availability()
         return self._history[self._history_index]

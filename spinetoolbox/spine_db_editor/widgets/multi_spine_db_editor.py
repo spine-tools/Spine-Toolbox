@@ -142,6 +142,13 @@ class MultiSpineDBEditor(QMainWindow):
         self.tab_bar.plus_clicked.connect(self._add_new_tab)
 
     def detach(self, index, hot_spot, offset):
+        """Detaches the tab at given index into another MultiSpineDBEditor window and starts dragging it.
+
+        Args:
+            index (int)
+            hot_spot (QPoint)
+            offset (int)
+        """
         if self._detaching:
             return
         self._detaching = True
@@ -159,6 +166,12 @@ class MultiSpineDBEditor(QMainWindow):
         self._detaching = False
 
     def start_drag(self, hot_spot, offset=0):
+        """Starts dragging a detached tab.
+
+        Args:
+            hot_spot (QPoint): The anchor point of the drag in widget coordinates.
+            offset (int, optional): Horizontal offset of the tab in the bar.
+        """
         self.setStyleSheet(f"QTabWidget::tab-bar {{left: {offset}px;}}")
         self._hot_spot = hot_spot
         self.grabMouse()
@@ -169,6 +182,9 @@ class MultiSpineDBEditor(QMainWindow):
         return self.frameGeometry().height() - self.geometry().height()
 
     def timerEvent(self, event):
+        """Performs the drag, i.e., moves the window with the mouse cursor.
+        It also checks for drop targets.
+        """
         self.move(QCursor.pos() - self._hot_spot - QPoint(0, self._frame_height()))
         for other in self._others:
             index = other.tab_bar.index_under_mouse()
@@ -181,6 +197,7 @@ class MultiSpineDBEditor(QMainWindow):
                 break
 
     def mouseReleaseEvent(self, event):
+        """Stops the drag. This only happens when the dettached tab is not reattached to another window."""
         super().mouseReleaseEvent(event)
         if self._hot_spot:
             self.setStyleSheet("")
@@ -195,18 +212,36 @@ class MultiSpineDBEditor(QMainWindow):
             self.tab_widget.connect_tab(index)
 
     def reattach(self, index, db_editor, text):
+        """Reattaches a tab that has been dragged over this window's tab bar.
+
+        Args:
+            index (int): Index in the tab bar where the drag has been dropped.
+            db_editor (SpineDBEditor): The widget in the drag
+            text (str): The title of the tab.
+        """
         self.tab_widget.insertTab(index, db_editor, text)
         self.tab_widget.setCurrentIndex(index)
-        self.tab_bar.restart_dragging(index)
+        self.tab_bar.start_dragging(index)
 
     @Slot()
     def _add_new_tab(self, db_url_codenames=()):
+        """Creates a new SpineDBEditor with given urls and adds it at the end of the tab bar.
+
+        Args:
+            db_url_codenames (dict): Mapping str url to str codename
+        """
         db_editor = SpineDBEditor(self.db_mngr)
         self.tab_widget.add_connect_tab(db_editor, "New Tab")
         db_editor.load_db_urls(db_url_codenames, create=True)
         self.tab_widget.setCurrentIndex(self.tab_widget.count() - 1)
 
     def insert_new_tab(self, index, db_url_codenames):
+        """Creates a new SpineDBEditor with given urls and inserts it at the given index.
+
+        Args:
+            index (int)
+            db_url_codenames (dict): Mapping str url to str codename
+        """
         db_editor = SpineDBEditor(self.db_mngr)
         self.tab_widget.insert_connect_tab(index, db_editor, "New Tab")
         db_editor.load_db_urls(db_url_codenames, create=True)
@@ -214,6 +249,11 @@ class MultiSpineDBEditor(QMainWindow):
 
     @Slot(int)
     def _close_tab(self, index):
+        """Closes the tab at index.
+
+        Args:
+            index (int)
+        """
         self.tab_widget.widget(index).close()
         self.tab_widget.removeTab(index)
         if not self.tab_widget.count():
@@ -262,8 +302,10 @@ class MultiSpineDBEditor(QMainWindow):
         super().closeEvent(event)
 
     def _insert_statusbar_button(self, button):
-        """
-        Inserts given button to the 'beginning' of the status bar and decorates the thing with a shooting label.
+        """Inserts given button to the 'beginning' of the status bar and decorates the thing with a shooting label.
+
+        Args:
+            button (OpenFileButton)
         """
         duplicates = [
             x
@@ -296,13 +338,18 @@ class MultiSpineDBEditor(QMainWindow):
 
     @Slot(bool)
     def show_user_guide(self, checked=False):
-        """Opens Spine Toolbox documentation Spine db editor page in browser."""
+        """Opens Spine db editor documentation page in browser."""
         doc_url = f"{ONLINE_DOCUMENTATION_URL}/spine_db_editor/index.html"
         if not open_url(doc_url):
             self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
 
     @staticmethod
     def get_all_multi_spine_db_editors():
+        """Yields all instances of MultiSpineDBEditor currently open.
+
+        Returns:
+            Generator
+        """
         for window in qApp.topLevelWindows():
             widget = QWidget.find(window.winId())
             if isinstance(widget, MultiSpineDBEditor):
@@ -310,6 +357,11 @@ class MultiSpineDBEditor(QMainWindow):
 
     @staticmethod
     def get_all_spine_db_editors():
+        """Yields all instances of SpineDBEditor currently open.
+
+        Returns:
+            Generator
+        """
         for w in MultiSpineDBEditor.get_all_multi_spine_db_editors():
             for k in range(w.tab_widget.count()):
                 yield w.tab_widget.widget(k)

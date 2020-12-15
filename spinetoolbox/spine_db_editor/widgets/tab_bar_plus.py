@@ -42,6 +42,7 @@ class TabBarPlus(QTabBar):
         self._hot_spot_y = None
 
     def resizeEvent(self, event):
+        """Sets the dimension of the plus button. Also, makes the tab bar as wide as the parent."""
         super().resizeEvent(event)
         self.setFixedWidth(self.parent().width())
         self.setMinimumHeight(self.height())
@@ -55,18 +56,20 @@ class TabBarPlus(QTabBar):
         self._move_plus_button()
 
     def _move_plus_button(self):
-        """Moves the plus button to the correct location."""
+        """Places the plus button at the right of the last tab."""
         left = sum([self.tabRect(i).width() for i in range(self.count())])
         top = self.geometry().top() + 1
         self._plus_button.move(left, top)
 
     def mousePressEvent(self, event):
+        """Registers the position of the press, in case we need to detach the tab."""
         super().mousePressEvent(event)
         tab_rect = self.tabRect(self.tabAt(event.pos()))
         self._tab_hot_spot_x = event.pos().x() - tab_rect.x()
         self._hot_spot_y = event.pos().y() - tab_rect.y()
 
     def mouseMoveEvent(self, event):
+        """Detaches a tab either if the user moves it beyond the limits of the tab bar, or if it's the only one."""
         self._plus_button.hide()
         if self.count() == 1 or self.count() > 1 and not self.geometry().contains(event.pos()):
             self._send_release_event(event.pos())
@@ -80,13 +83,17 @@ class TabBarPlus(QTabBar):
         super().mouseMoveEvent(event)
 
     def _send_release_event(self, pos):
+        """Sends a mouse release event at given position in local coordinates. Called just before detaching a tab.
+
+        Args:
+            pos (QPoint)
+        """
         self.drag_index = None
         release_event = QMouseEvent(QEvent.MouseButtonRelease, pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
         QApplication.sendEvent(self, release_event)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        self.setStyleSheet("")
         self._plus_button.show()
         self.update()
         self.releaseMouse()
@@ -94,7 +101,12 @@ class TabBarPlus(QTabBar):
             # Pass it to parent
             event.ignore()
 
-    def restart_dragging(self, index):
+    def start_dragging(self, index):
+        """Stars dragging the given index. This happens when a detached tab is reattached to this bar.
+
+        Args:
+            index (int)
+        """
         self.drag_index = index
         press_pos = self.tabRect(self.drag_index).center()
         press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
@@ -107,12 +119,15 @@ class TabBarPlus(QTabBar):
         self.grabMouse()
 
     def index_under_mouse(self):
+        """Returns the index under the mouse cursor, or None if the cursor isn't over the tab bar.
+        Used to check for drop targets.
+
+        Returns:
+            int or NoneType
+        """
         pos = self.mapFromGlobal(QCursor.pos())
         if not self.geometry().contains(pos):
             return None
-        return self.index_at(pos)
-
-    def index_at(self, pos):
         index = self.tabAt(pos)
         if index == -1:
             index = self.count()
