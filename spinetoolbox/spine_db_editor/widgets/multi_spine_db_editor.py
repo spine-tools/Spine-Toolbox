@@ -183,7 +183,7 @@ class MultiSpineDBEditor(QMainWindow):
 
     def timerEvent(self, event):
         """Performs the drag, i.e., moves the window with the mouse cursor.
-        It also checks for drop targets.
+        As soon as the mouse hovers the tab bar of another MultiSpineDBEditor, reattaches it.
         """
         self.move(QCursor.pos() - self._hot_spot - QPoint(0, self._frame_height()))
         for other in self._others:
@@ -197,7 +197,7 @@ class MultiSpineDBEditor(QMainWindow):
                 break
 
     def mouseReleaseEvent(self, event):
-        """Stops the drag. This only happens when the dettached tab is not reattached to another window."""
+        """Stops the drag. This only happens when the detached tab is not reattached to another window."""
         super().mouseReleaseEvent(event)
         if self._hot_spot:
             self.setStyleSheet("")
@@ -215,8 +215,8 @@ class MultiSpineDBEditor(QMainWindow):
         """Reattaches a tab that has been dragged over this window's tab bar.
 
         Args:
-            index (int): Index in the tab bar where the drag has been dropped.
-            db_editor (SpineDBEditor): The widget in the drag
+            index (int): Index in this widget's tab bar where the detached tab has been dragged.
+            db_editor (SpineDBEditor): The widget in the tab being dragged.
             text (str): The title of the tab.
         """
         self.tab_widget.insertTab(index, db_editor, text)
