@@ -103,8 +103,9 @@ class TabBarPlus(QTabBar):
         QApplication.sendEvent(self, press_event)
         QApplication.processEvents()
         move_pos = self.mapFromGlobal(QCursor.pos())
-        move_event = QMouseEvent(QEvent.MouseMove, move_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
-        QApplication.sendEvent(self, move_event)
+        if self.geometry().contains(move_pos):
+            move_event = QMouseEvent(QEvent.MouseMove, move_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+            QApplication.sendEvent(self, move_event)
         self.grabMouse()
 
     def index_under_mouse(self):
