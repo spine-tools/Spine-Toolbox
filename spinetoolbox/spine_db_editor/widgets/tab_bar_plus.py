@@ -17,7 +17,7 @@ Classes for custom context menus and pop-up menus.
 """
 from PySide2.QtWidgets import QTabBar, QToolButton, QApplication
 from PySide2.QtCore import Signal, Qt, QEvent, QPoint
-from PySide2.QtGui import QIcon, QMouseEvent
+from PySide2.QtGui import QIcon, QMouseEvent, QCursor
 from spinetoolbox.helpers import CharIconEngine
 
 
@@ -38,27 +38,8 @@ class TabBarPlus(QTabBar):
         self.setMovable(True)
         self.setElideMode(Qt.ElideLeft)
         self.drag_index = None
-        self.setAcceptDrops(True)
-        self.setStyleSheet("QTabBar::tab:disabled { width: 0; height: 0; margin: 0; padding: 0; border: none; }")
-
-    @property
-    def multi_db_editor(self):
-        return self._multi_db_editor
-
-    def dragEnterEvent(self, event):
-        super().dragEnterEvent(event)
-        if isinstance(event.source(), type(self._multi_db_editor)):
-            self.drag_index = self.tabAt(event.pos())
-            if self.drag_index == -1:
-                self.drag_index = self.count()
-            event.accept()
-
-    def restart_dragging(self):
-        press_pos = self.tabRect(self.drag_index).center()
-        press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
-        QApplication.sendEvent(self, press_event)
-        QApplication.processEvents()
-        self.grabMouse()
+        self._tab_hot_spot_x = None
+        self._hot_spot_y = None
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -79,29 +60,24 @@ class TabBarPlus(QTabBar):
         top = self.geometry().top() + 1
         self._plus_button.move(left, top)
 
-    def _show_only_index(self, index):
-        self._plus_button.hide()
-        for k in range(self.count()):
-            self.setTabEnabled(k, k == index)
-            self.tabButton(k, QTabBar.RightSide).setVisible(k == index)
-
-    def _show_all(self):
-        self._plus_button.show()
-        for k in range(self.count()):
-            self.setTabEnabled(k, True)
-            self.tabButton(k, QTabBar.RightSide).setVisible(True)
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        tab_rect = self.tabRect(self.tabAt(event.pos()))
+        if tab_rect.isEmpty():
+            return
+        self._tab_hot_spot_x = event.pos().x() - tab_rect.x()
+        self._hot_spot_y = event.pos().y() - tab_rect.y()
 
     def mouseMoveEvent(self, event):
         self._plus_button.hide()
         if self.count() == 1 or self.count() > 1 and not self.geometry().contains(event.pos()):
             self._send_release_event(event.pos())
-            hotspot_x = event.pos().x()
-            hotspot_y = self.height() / 2
-            hotspot = QPoint(hotspot_x, hotspot_y)
-            index = self.tabAt(hotspot)
+            hot_spot_x = event.pos().x()
+            hot_spot = QPoint(hot_spot_x, self._hot_spot_y)
+            index = self.tabAt(hot_spot)
             if index == -1:
                 index = self.count() - 1
-            self._multi_db_editor.detach(index, hotspot)
+            self._multi_db_editor.detach(index, hot_spot, hot_spot_x - self._tab_hot_spot_x)
             return
         super().mouseMoveEvent(event)
 
@@ -112,12 +88,33 @@ class TabBarPlus(QTabBar):
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
+        self.setStyleSheet("")
         self._plus_button.show()
         self.update()
         self.releaseMouse()
         if self.drag_index is not None:
-            index = self.tabAt(event.pos())
-            if index == -1:
-                index = self.count() - 1
-            self._multi_db_editor.connect_editor_signals(index)
-            self.drag_index = None
+            # Pass it to parent
+            event.ignore()
+
+    def restart_dragging(self, index):
+        self.drag_index = index
+        press_pos = self.tabRect(self.drag_index).center()
+        press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+        QApplication.sendEvent(self, press_event)
+        QApplication.processEvents()
+        move_pos = self.mapFromGlobal(QCursor.pos())
+        move_event = QMouseEvent(QEvent.MouseMove, move_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+        QApplication.sendEvent(self, move_event)
+        self.grabMouse()
+
+    def index_under_mouse(self):
+        pos = self.mapFromGlobal(QCursor.pos())
+        if not self.geometry().contains(pos):
+            return None
+        return self.index_at(pos)
+
+    def index_at(self, pos):
+        index = self.tabAt(pos)
+        if index == -1:
+            index = self.count()
+        return index
