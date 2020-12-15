@@ -24,6 +24,7 @@ from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
 from .test_SpineDBEditorUpdate import TestSpineDBEditorUpdateMixin
@@ -280,17 +281,17 @@ class TestSpineDBEditor(
         ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
-            self.db_mngr = SpineDBManager(mock_settings, None, None)
+            self.db_mngr = SpineDBManager(mock_settings, None)
             self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
             def DiffDBMapping_side_effect(url, codename=None, upgrade=False, create=False):
                 mock_db_map = mock.MagicMock()
+                mock_db_map.db_url = url
                 mock_db_map.codename = codename
                 return mock_db_map
 
             mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
-            self.db_mngr.show_spine_db_editor({"mock_url": "mock_db"}, None)
-            self.spine_db_editor = self.db_mngr._db_editors[("mock_url",)]
+            self.spine_db_editor = SpineDBEditor(self.db_mngr, {"mock_url": "mock_db"})
             self.mock_db_map = self.spine_db_editor.first_db_map
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
 

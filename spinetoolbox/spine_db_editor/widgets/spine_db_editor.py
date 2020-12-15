@@ -102,7 +102,7 @@ class SpineDBEditorBase(QMainWindow):
         self.default_row_height = 1.2 * fm.lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
-        self.settings_group = None
+        self.settings_group = "spineDBEditor"
         self.undo_action = self.ui.actionUndo_placeholder
         self.redo_action = self.ui.actionRedo_placeholder
         self.template_file_path = None

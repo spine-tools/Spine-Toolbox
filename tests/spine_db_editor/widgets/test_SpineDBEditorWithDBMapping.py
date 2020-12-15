@@ -18,14 +18,13 @@ Unit tests for SpineDBEditor classes.
 
 import unittest
 from unittest import mock
-from pathlib import Path
-import tempfile
 import logging
 import sys
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinedb_api import create_new_spine_database, import_data
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from spinedb_api import create_new_spine_database
 
 
 class TestSpineDBEditorWithDBMapping(unittest.TestCase):
@@ -50,13 +49,12 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
-            self.db_mngr = SpineDBManager(mock_settings, None, None)
+            self.db_mngr = SpineDBManager(mock_settings, None)
             # TODO: Use a temp file?
             url = "sqlite:///test.sqlite"
             create_new_spine_database(url)
             self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
-            self.db_mngr.show_spine_db_editor({url: "db"}, None)
-            self.spine_db_editor = next(iter(self.db_mngr.db_editors))
+            self.spine_db_editor = SpineDBEditor(self.db_mngr, {url: "db"})
             self.db_map = self.spine_db_editor.first_db_map
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
 

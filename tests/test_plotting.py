@@ -42,7 +42,7 @@ def _make_pivot_proxy_model():
     """Returns a prefilled PivotTableModel."""
     db_mngr = MagicMock()
     db_mngr.get_value.side_effect = lambda db_map, item_type, id_, role: from_database(id_)
-    mock_db_map = Mock()
+    mock_db_map = MagicMock()
     mock_db_map.codename = "codename"
     db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
     db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
