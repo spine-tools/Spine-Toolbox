@@ -176,6 +176,8 @@ class SpineDBEditorBase(QMainWindow):
             self.qsettings, "loadSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)",
         )
         self.qsettings.endGroup()
+        if not file_path:
+            return
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None})
 
@@ -1046,7 +1048,4 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.graphicsView.reset_zoom()
 
     def _get_base_dir(self):
-        project = self.db_mngr.parent()
-        if project is None:
-            return APPLICATION_PATH
-        return project.project_dir
+        return APPLICATION_PATH

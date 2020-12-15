@@ -27,7 +27,6 @@ from spinetoolbox.helpers import create_dir, inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
-from .spine_db_manager import SpineDBManager
 from .subscribers import NodeExecStartedSubscriber, NodeExecFinishedSubscriber, LoggingSubscriber
 from .project_commands import (
     SetProjectNameCommand,
@@ -81,7 +80,6 @@ class SpineToolboxProject(MetaObject):
         self._embedded_python_console = embedded_python_console
         self._dags_about_to_be_notified = set()
         self.dag_handler = DirectedGraphHandler()
-        self.db_mngr = SpineDBManager(settings, self)
         self.engine = None
         self._engine_workers = []
         self._execution_stopped = True

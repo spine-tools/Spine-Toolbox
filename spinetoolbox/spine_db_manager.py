@@ -130,15 +130,14 @@ class SpineDBManager(QObject):
 
     _GROUP_SEP = " \u01C0 "
 
-    def __init__(self, settings, project):
+    def __init__(self, settings, parent):
         """Initializes the instance.
 
         Args:
             settings (QSettings): Toolbox settings
-            project (SpineToolboxProject)
+            parent (QObject)
         """
-        super().__init__(project)
-        self._project = project
+        super().__init__(parent)
         self._db_maps = {}
         self._cache = {}
         self.qsettings = settings

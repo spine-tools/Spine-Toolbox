@@ -13,6 +13,7 @@
   </qresource>
   <qresource prefix="/icons">
     <file>database.svg</file>
+    <file>database-edit.svg</file>
     <file>minus.svg</file>
     <file>plus.svg</file>
     <file>book.svg</file>

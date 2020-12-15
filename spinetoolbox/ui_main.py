@@ -39,7 +39,6 @@ from PySide2.QtWidgets import (
 )
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from spine_engine.utils.helpers import shorten
-from .spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from .graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_item_specification_factories, load_project_items
@@ -55,6 +54,8 @@ from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .project import SpineToolboxProject
+from .spine_db_manager import SpineDBManager
+from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .config import (
     STATUSBAR_SS,
     TEXTBROWSER_SS,
@@ -143,6 +144,8 @@ class ToolboxUI(QMainWindow):
         self.sync_item_selection_with_scene = True
         self.link_properties_widget = LinkPropertiesWidget(self)
         self._saved_specification = None
+        # DB manager
+        self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
         self.settings_form = None
         self.specification_context_menu = None
@@ -202,6 +205,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
+        self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
@@ -431,7 +435,7 @@ class ToolboxUI(QMainWindow):
                     start_dir = ""
                 else:
                     start_dir = str(recents).split("\n")[0]
-                load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir = start_dir)
+                load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir=start_dir)
                 if not load_dir:
                     return False  # Cancelled
                 if not os.path.isfile(os.path.join(load_dir, ".spinetoolbox", PROJECT_FILENAME)):
@@ -1168,6 +1172,11 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("Please open or create a project first")
             return
         self.project().export_graphs()
+
+    @Slot(bool)
+    def new_db_editor(self):
+        editor = MultiSpineDBEditor(self.db_mngr, {})
+        editor.show()
 
     @Slot()
     def _handle_zoom_minus_pressed(self):

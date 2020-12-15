@@ -846,7 +846,7 @@ class Link(LinkBase):
         self._exec_color = None
         self.resource_filters = resource_filters
         self.resource_filter_model = ResourceFilterModel(self)
-        self.db_mngr = toolbox.project().db_mngr
+        self.db_mngr = toolbox.db_mngr
         self._fetched_db_resources = dict()
         self._unfetched_db_resources = dict()
         self._obsolete_db_urls = set()

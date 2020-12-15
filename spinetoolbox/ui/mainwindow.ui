@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>26</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -158,6 +158,8 @@
     <addaction name="actionSave_As"/>
     <addaction name="separator"/>
     <addaction name="actionExport_project_to_GraphML"/>
+    <addaction name="separator"/>
+    <addaction name="actionNew_DB_editor"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
     <addaction name="menuTool_configuration_assistants"/>
@@ -876,6 +878,15 @@
    </property>
    <property name="toolTip">
     <string>Rename project item.</string>
+   </property>
+  </action>
+  <action name="actionNew_DB_editor">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/database-edit.svg</normaloff>:/icons/database-edit.svg</iconset>
+   </property>
+   <property name="text">
+    <string>New DB editor</string>
    </property>
   </action>
  </widget>
