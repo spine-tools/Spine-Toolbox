@@ -170,16 +170,28 @@ class SpineDBEditorBase(QMainWindow):
         self.load_db_urls({url: None for url in urls}, update_history=False)
 
     @Slot(bool)
-    def load_sqlite_url(self, _=False):
+    def open_db_file(self, _=False):
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_open_file_name_in_last_dir(
-            self.qsettings, "loadSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)",
+            self.qsettings, "openSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)",
         )
         self.qsettings.endGroup()
         if not file_path:
             return
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None})
+
+    @Slot(bool)
+    def create_db_file(self, _=False):
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_save_file_name_in_last_dir(
+            self.qsettings, "createSQLiteUrl", self, "Create SQLite file", self._get_base_dir(), "SQLite (*.sqlite)",
+        )
+        self.qsettings.endGroup()
+        if not file_path:
+            return
+        url = "sqlite:///" + file_path
+        self.load_db_urls({url: None}, create=True)
 
     def add_menu_actions(self):
         """Adds actions to View and Edit menu."""
