@@ -16,8 +16,8 @@ Classes for custom context menus and pop-up menus.
 :date:   13.5.2020
 """
 from PySide2.QtWidgets import QToolBar, QLineEdit, QMenu
-from PySide2.QtGui import QIcon
-from PySide2.QtCore import QSize
+from PySide2.QtGui import QIcon, QKeySequence
+from PySide2.QtCore import QSize, Qt
 from spinetoolbox.helpers import CharIconEngine
 
 
@@ -32,14 +32,15 @@ class UrlToolBar(QToolBar):
         self._go_forward_action = self.addAction(
             QIcon(CharIconEngine("\uf061")), "Go forward", db_editor.load_next_urls
         )
-        self.addAction(QIcon(CharIconEngine("\uf021")), "Reload", db_editor.refresh_session)
+        self.reload_action = self.addAction(QIcon(CharIconEngine("\uf021")), "Reload", db_editor.refresh_session)
+        self.reload_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_R))
         self._go_back_action.setEnabled(False)
         self._go_forward_action.setEnabled(False)
         self._line_edit = QLineEdit(self)
         self._line_edit.returnPressed.connect(self._handle_line_edit_return_pressed)
         self.addWidget(self._line_edit)
-        self.addAction(QIcon(CharIconEngine("\uf15b")), "New db file...", db_editor.create_db_file)
-        self.addAction(QIcon(CharIconEngine("\uf07c")), "Open db file...", db_editor.open_db_file)
+        self.addAction(QIcon(CharIconEngine("\uf15b")), "New database file...", db_editor.create_db_file)
+        self.addAction(QIcon(CharIconEngine("\uf07c")), "Open database file...", db_editor.open_db_file)
         self.addSeparator()
         self._add_menu()
         self.setMovable(False)
@@ -60,6 +61,7 @@ class UrlToolBar(QToolBar):
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)
         menu_button.setPopupMode(menu_button.InstantPopup)
+        menu_button.setToolTip("<p>Customize and control Spine DB Editor</p>")
 
     def _update_history_actions_availability(self):
         self._go_back_action.setEnabled(self._history_index > 0)

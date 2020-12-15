@@ -665,6 +665,8 @@ class CharIconEngine(QIconEngine):
             palette = QPalette(QApplication.palette())
             if mode == QIcon.Disabled:
                 palette.setCurrentColorGroup(QPalette.Disabled)
+            elif mode == QIcon.Active:
+                palette.setCurrentColorGroup(QPalette.Active)
             color = palette.buttonText().color()
         painter.setPen(color)
         painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, self.char)

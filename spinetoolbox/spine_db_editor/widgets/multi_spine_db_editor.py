@@ -201,12 +201,16 @@ class MultiSpineDBEditor(QMainWindow):
 
     @Slot()
     def _add_new_tab(self, db_url_codenames=()):
-        if db_url_codenames is None:
-            return
         db_editor = SpineDBEditor(self.db_mngr)
         self.tab_widget.add_connect_tab(db_editor, "New Tab")
         db_editor.load_db_urls(db_url_codenames, create=True)
         self.tab_widget.setCurrentIndex(self.tab_widget.count() - 1)
+
+    def insert_new_tab(self, index, db_url_codenames):
+        db_editor = SpineDBEditor(self.db_mngr)
+        self.tab_widget.insert_connect_tab(index, db_editor, "New Tab")
+        db_editor.load_db_urls(db_url_codenames, create=True)
+        self.tab_widget.setCurrentIndex(index)
 
     @Slot(int)
     def _close_tab(self, index):

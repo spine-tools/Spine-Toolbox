@@ -15,7 +15,7 @@ Classes for custom context menus and pop-up menus.
 :author: M. Marin (KTH)
 :date:   13.5.2020
 """
-from PySide2.QtWidgets import QTabBar, QToolButton, QApplication
+from PySide2.QtWidgets import QTabBar, QToolButton, QApplication, QMenu
 from PySide2.QtCore import Signal, Qt, QEvent, QPoint
 from PySide2.QtGui import QIcon, QMouseEvent, QCursor
 from spinetoolbox.helpers import CharIconEngine
@@ -119,3 +119,18 @@ class TabBarPlus(QTabBar):
         if index == -1:
             index = self.count()
         return index
+
+    def contextMenuEvent(self, event):
+        index = self.tabAt(event.pos())
+        db_editor = self._multi_db_editor.tab_widget.widget(index)
+        reload_action = db_editor.url_toolbar.reload_action
+        menu = QMenu(self)
+        menu.addAction(reload_action)
+        db_url_codenames = db_editor.db_url_codenames
+        menu.addAction(
+            "Duplicate",
+            lambda _=False, index=index + 1, db_url_codenames=db_url_codenames: self._multi_db_editor.insert_new_tab(
+                index, db_url_codenames
+            ),
+        )
+        menu.popup(event.globalPos())
