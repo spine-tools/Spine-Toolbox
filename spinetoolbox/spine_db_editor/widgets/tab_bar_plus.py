@@ -126,6 +126,7 @@ class TabBarPlus(QTabBar):
         menu.addAction(reload_action)
         db_url_codenames = db_editor.db_url_codenames
         menu.addAction(
+            QIcon(CharIconEngine("\uf24d")),
             "Duplicate",
             lambda _=False, index=index + 1, db_url_codenames=db_url_codenames: self._multi_db_editor.insert_new_tab(
                 index, db_url_codenames
