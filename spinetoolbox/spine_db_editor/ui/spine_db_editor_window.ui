@@ -871,8 +871,8 @@
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="actionUndo_placeholder"/>
-    <addaction name="actionRedo_placeholder"/>
+    <addaction name="actionUndo"/>
+    <addaction name="actionRedo"/>
     <addaction name="separator"/>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
@@ -1331,12 +1331,20 @@
     <string>Relationship</string>
    </property>
   </action>
-  <action name="actionUndo_placeholder">
+  <action name="actionUndo">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/undo.svg</normaloff>:/icons/menu_icons/undo.svg</iconset>
+   </property>
    <property name="text">
     <string>Undo</string>
    </property>
   </action>
-  <action name="actionRedo_placeholder">
+  <action name="actionRedo">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/redo.svg</normaloff>:/icons/menu_icons/redo.svg</iconset>
+   </property>
    <property name="text">
     <string>Redo</string>
    </property>

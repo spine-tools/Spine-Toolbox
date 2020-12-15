@@ -26,7 +26,7 @@ from PySide2.QtWidgets import (
     QMessageBox,
 )
 from PySide2.QtCore import Qt, Signal, Slot
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence
 from spinedb_api import (
     import_data,
     export_data,
@@ -103,8 +103,10 @@ class SpineDBEditorBase(QMainWindow):
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
         self.settings_group = "spineDBEditor"
-        self.undo_action = self.ui.actionUndo_placeholder
-        self.redo_action = self.ui.actionRedo_placeholder
+        self.undo_action = None
+        self.redo_action = None
+        self.ui.actionUndo.setShortcuts(QKeySequence.Undo)
+        self.ui.actionRedo.setShortcuts(QKeySequence.Redo)
         self.template_file_path = None
         self.update_commit_enabled()
 
@@ -231,12 +233,14 @@ class SpineDBEditorBase(QMainWindow):
 
     def _replace_undo_redo_actions(self, new_undo_action, new_redo_action):
         if new_undo_action != self.undo_action:
-            self.ui.menuEdit.insertAction(self.undo_action, new_undo_action)
-            self.ui.menuEdit.removeAction(self.undo_action)
+            if self.undo_action:
+                self.ui.actionUndo.triggered.disconnect(self.undo_action.triggered)
+            self.ui.actionUndo.triggered.connect(new_undo_action.triggered)
             self.undo_action = new_undo_action
         if new_redo_action != self.redo_action:
-            self.ui.menuEdit.insertAction(self.redo_action, new_redo_action)
-            self.ui.menuEdit.removeAction(self.redo_action)
+            if self.redo_action:
+                self.ui.actionRedo.triggered.disconnect(self.redo_action.triggered)
+            self.ui.actionRedo.triggered.connect(new_redo_action.triggered)
             self.redo_action = new_redo_action
 
     @Slot(bool)

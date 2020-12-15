@@ -18,7 +18,7 @@ The SpineDBManager class
 
 from PySide2.QtCore import Qt, QObject, Signal, Slot
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox
-from PySide2.QtGui import QKeySequence, QIcon, QFontMetrics, QFont
+from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (
     is_empty,
     create_new_spine_database,
@@ -270,12 +270,8 @@ class SpineDBManager(QObject):
             return db_map
         db_map = self._db_maps[url] = DiffDatabaseMapping(url, codename=codename, upgrade=upgrade, create=create)
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
-        undo_action = self.undo_action[db_map] = stack.createUndoAction(self)
-        redo_action = self.redo_action[db_map] = stack.createRedoAction(self)
-        undo_action.setShortcuts(QKeySequence.Undo)
-        redo_action.setShortcuts(QKeySequence.Redo)
-        undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
-        redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
+        self.undo_action[db_map] = stack.createUndoAction(self)
+        self.redo_action[db_map] = stack.createRedoAction(self)
         return db_map
 
     def register_listener(self, db_editor, *db_maps):
