@@ -63,8 +63,6 @@ class TabBarPlus(QTabBar):
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         tab_rect = self.tabRect(self.tabAt(event.pos()))
-        if tab_rect.isEmpty():
-            return
         self._tab_hot_spot_x = event.pos().x() - tab_rect.x()
         self._hot_spot_y = event.pos().y() - tab_rect.y()
 

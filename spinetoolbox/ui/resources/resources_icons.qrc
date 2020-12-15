@@ -13,6 +13,8 @@
   </qresource>
   <qresource prefix="/icons">
     <file>database.svg</file>
+    <file>menu_icons/eye.svg</file>
+    <file>menu_icons/user.svg</file>
     <file>database-edit.svg</file>
     <file>minus.svg</file>
     <file>plus.svg</file>
@@ -56,6 +58,7 @@
     <file>menu_icons/file-import.svg</file>
     <file>menu_icons/database-import.svg</file>
     <file>menu_icons/database-export.svg</file>
+    <file>menu_icons/edit.svg</file>
     <file>menu_icons/folder-open-solid.svg</file>
     <file>menu_icons/paste.svg</file>
     <file>menu_icons/sync.svg</file>

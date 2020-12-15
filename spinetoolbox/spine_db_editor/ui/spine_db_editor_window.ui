@@ -862,6 +862,10 @@
     <property name="title">
      <string>Session</string>
     </property>
+    <property name="icon">
+     <iconset resource="../../ui/resources/resources_icons.qrc">
+      <normaloff>:/icons/menu_icons/user.svg</normaloff>:/icons/menu_icons/user.svg</iconset>
+    </property>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
     <addaction name="separator"/>
@@ -870,6 +874,10 @@
    <widget class="QMenu" name="menuEdit">
     <property name="title">
      <string>Edit</string>
+    </property>
+    <property name="icon">
+     <iconset resource="../../ui/resources/resources_icons.qrc">
+      <normaloff>:/icons/menu_icons/edit.svg</normaloff>:/icons/menu_icons/edit.svg</iconset>
     </property>
     <addaction name="actionUndo"/>
     <addaction name="actionRedo"/>
@@ -892,6 +900,10 @@
     <property name="title">
      <string>File</string>
     </property>
+    <property name="icon">
+     <iconset resource="../../ui/resources/resources_icons.qrc">
+      <normaloff>:/icons/menu_icons/file.svg</normaloff>:/icons/menu_icons/file.svg</iconset>
+    </property>
     <addaction name="actionImport"/>
     <addaction name="actionExport"/>
     <addaction name="actionExport_session"/>
@@ -900,6 +912,10 @@
     <property name="title">
      <string>View</string>
     </property>
+    <property name="icon">
+     <iconset resource="../../ui/resources/resources_icons.qrc">
+      <normaloff>:/icons/menu_icons/eye.svg</normaloff>:/icons/menu_icons/eye.svg</iconset>
+    </property>
     <addaction name="actionStacked_style"/>
     <addaction name="actionPivot_style"/>
     <addaction name="actionGraph_style"/>
@@ -907,6 +923,10 @@
    <widget class="QMenu" name="menuGraph">
     <property name="title">
      <string>Graph</string>
+    </property>
+    <property name="icon">
+     <iconset resource="../../ui/resources/resources_icons.qrc">
+      <normaloff>:/icons/project-diagram.svg</normaloff>:/icons/project-diagram.svg</iconset>
     </property>
     <property name="toolTipsVisible">
      <bool>true</bool>
@@ -943,6 +963,10 @@
    <widget class="QMenu" name="menuPivot_table">
     <property name="title">
      <string>Pivot table</string>
+    </property>
+    <property name="icon">
+     <iconset resource="../../ui/resources/resources_icons.qrc">
+      <normaloff>:/icons/menu_icons/pivot-table.svg</normaloff>:/icons/menu_icons/pivot-table.svg</iconset>
     </property>
    </widget>
    <addaction name="menuFile"/>

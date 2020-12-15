@@ -48,12 +48,12 @@ class UrlToolBar(QToolBar):
 
     def _add_menu(self):
         menu = QMenu(self)
-        menu.addMenu(self._db_editor.ui.menuFile)
         menu.addMenu(self._db_editor.ui.menuSession)
+        menu.addMenu(self._db_editor.ui.menuFile)
         menu.addMenu(self._db_editor.ui.menuEdit)
         menu.addMenu(self._db_editor.ui.menuView)
-        menu.addMenu(self._db_editor.ui.menuGraph)
         menu.addMenu(self._db_editor.ui.menuPivot_table)
+        menu.addMenu(self._db_editor.ui.menuGraph)
         menu.addSeparator()
         menu.addAction(self._db_editor.ui.actionUser_guide)
         menu.addAction(self._db_editor.ui.actionSettings)

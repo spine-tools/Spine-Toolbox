@@ -107,8 +107,8 @@ class SpineDBEditorBase(QMainWindow):
         self.redo_action = None
         self.ui.actionUndo.setShortcuts(QKeySequence.Undo)
         self.ui.actionRedo.setShortcuts(QKeySequence.Redo)
-        self.template_file_path = None
         self.update_commit_enabled()
+        self.setContextMenuPolicy(Qt.NoContextMenu)
 
     @property
     def settings_subgroup(self):
