@@ -1734,7 +1734,10 @@ class ToolboxUI(QMainWindow):
             name = item_icon.name()
             index = self.project_item_model.find_item(name)
             project_item = self.project_item_model.item(index).project_item
-            items_dict[name] = project_item.item_dict()
+            item_dict = dict(project_item.item_dict())
+            item_dict["original_data_dir"] = project_item.data_dir
+            item_dict["original_db_url"] = item_dict.get("url")
+            items_dict[name] = item_dict
         return items_dict
 
     def _deserialized_item_position_shifts(self, item_dicts):

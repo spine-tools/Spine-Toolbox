@@ -223,6 +223,10 @@ class SpineToolboxProject(MetaObject):
                 )
                 logging.debug(error)
                 continue
+            original_data_dir = item_dict.get("original_data_dir")
+            original_db_url = item_dict.get("original_db_url")
+            if original_data_dir is not None and original_db_url is not None:
+                project_item.copy_local_data(original_data_dir, original_db_url)
             project_items_by_category.setdefault(project_item.item_category(), list()).append(project_item)
         project_tree_items = {}
         for category, project_items in project_items_by_category.items():
