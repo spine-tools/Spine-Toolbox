@@ -2,8 +2,11 @@
 
 name: Unittest-Runner
 
-# This workflow runs every time a new commit is pushed to the repository
-on: push
+# Run workflow at 20:00 on every day-of-week from Monday through Friday.
+on:
+  schedule:
+    # * is a special character in YAML so the string must be quoted
+    - cron:  '0 20 * * 1-5'
 
 jobs:
   build:
