@@ -26,9 +26,13 @@ class TabBarPlus(QTabBar):
 
     plus_clicked = Signal()
 
-    def __init__(self, multi_db_editor):
-        super().__init__()
-        self._multi_db_editor = multi_db_editor
+    def __init__(self, parent):
+        """
+        Args:
+            parent (MultiSpineDBEditor)
+        """
+        super().__init__(parent)
+        self._parent = parent
         self._plus_button = QToolButton(self)
         self._plus_button.setIcon(QIcon(CharIconEngine("\uf067")))
         self._plus_button.clicked.connect(lambda _=False: self.plus_clicked.emit())
@@ -71,14 +75,19 @@ class TabBarPlus(QTabBar):
     def mouseMoveEvent(self, event):
         """Detaches a tab either if the user moves it beyond the limits of the tab bar, or if it's the only one."""
         self._plus_button.hide()
-        if self.count() == 1 or self.count() > 1 and not self.geometry().contains(event.pos()):
+        if self.count() == 1:
+            self._send_release_event(event.pos())
+            hot_spot = QPoint(event.pos().x(), self._hot_spot_y)
+            self._parent.start_drag(hot_spot)
+            return
+        if self.count() > 1 and not self.geometry().contains(event.pos()):
             self._send_release_event(event.pos())
             hot_spot_x = event.pos().x()
-            hot_spot = QPoint(hot_spot_x, self._hot_spot_y)
+            hot_spot = QPoint(event.pos().x(), self._hot_spot_y)
             index = self.tabAt(hot_spot)
             if index == -1:
                 index = self.count() - 1
-            self._multi_db_editor.detach(index, hot_spot, hot_spot_x - self._tab_hot_spot_x)
+            self._parent.detach(index, hot_spot, hot_spot_x - self._tab_hot_spot_x)
             return
         super().mouseMoveEvent(event)
 
@@ -135,15 +144,35 @@ class TabBarPlus(QTabBar):
 
     def contextMenuEvent(self, event):
         index = self.tabAt(event.pos())
-        db_editor = self._multi_db_editor.tab_widget.widget(index)
-        reload_action = db_editor.url_toolbar.reload_action
+        if self.tabButton(index, QTabBar.RightSide).underMouse():
+            return
+
+        db_editor = self._parent.tab_widget.widget(index)
+        if db_editor is None:
+            return
         menu = QMenu(self)
-        menu.addAction(reload_action)
+        others = self._parent.others()
+        if others:
+            move_tab_menu = menu.addMenu("Move tab to another window")
+            move_tab_to_new_window = move_tab_menu.addAction(
+                "New window", lambda _=False, index=index: self._parent.move_tab(index, None)
+            )
+            for other in others:
+                move_tab_menu.addAction(
+                    other.name(), lambda _=False, index=index, other=other: self._parent.move_tab(index, other)
+                )
+        else:
+            move_tab_to_new_window = menu.addAction(
+                "Move tab to new window", lambda _=False, index=index: self._parent.move_tab(index, None)
+            )
+        move_tab_to_new_window.setEnabled(self.count() > 1)
+        menu.addSeparator()
+        menu.addAction(db_editor.url_toolbar.reload_action)
         db_url_codenames = db_editor.db_url_codenames
         menu.addAction(
             QIcon(CharIconEngine("\uf24d")),
             "Duplicate",
-            lambda _=False, index=index + 1, db_url_codenames=db_url_codenames: self._multi_db_editor.insert_new_tab(
+            lambda _=False, index=index + 1, db_url_codenames=db_url_codenames: self._parent.insert_new_tab(
                 index, db_url_codenames
             ),
         )

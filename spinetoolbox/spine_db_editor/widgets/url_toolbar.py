@@ -37,6 +37,7 @@ class UrlToolBar(QToolBar):
         self._go_back_action.setEnabled(False)
         self._go_forward_action.setEnabled(False)
         self._line_edit = QLineEdit(self)
+        self._line_edit.setPlaceholderText("Type the URL of a Spine DB")
         self._line_edit.returnPressed.connect(self._handle_line_edit_return_pressed)
         self.addWidget(self._line_edit)
         self.addAction(QIcon(CharIconEngine("\uf15b")), "New database file...", db_editor.create_db_file)

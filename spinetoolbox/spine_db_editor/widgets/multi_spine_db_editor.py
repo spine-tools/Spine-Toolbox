@@ -133,7 +133,6 @@ class MultiSpineDBEditor(QMainWindow):
         self.connect_signals()
         self.setWindowTitle("Spine DB Editor")
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self._detaching = False
         self._timer_id = None
         self._others = None
 
@@ -141,7 +140,32 @@ class MultiSpineDBEditor(QMainWindow):
         self.tab_widget.tabCloseRequested.connect(self._close_tab)
         self.tab_bar.plus_clicked.connect(self._add_new_tab)
 
-    def detach(self, index, hot_spot, offset):
+    def name(self):
+        name = self.tab_widget.tabText(self.tab_widget.currentIndex())
+        other_tab_count = self.tab_widget.count() - 1
+        if other_tab_count > 0:
+            name += f" and {other_tab_count} other tab"
+            if other_tab_count > 1:
+                name += "s"
+        return name
+
+    def _take_tab(self, index):
+        db_editor = self.tab_widget.widget(index)
+        text = self.tab_widget.tabText(index)
+        self.tab_widget.remove_disconnect_tab(index)
+        if not self.tab_widget.count():
+            self.close()
+        return db_editor, text
+
+    def move_tab(self, index, other=None):
+        if other is None:
+            other = MultiSpineDBEditor(self.db_mngr, None)
+            other.show()
+        other.tab_widget.add_connect_tab(*self._take_tab(index))
+        other.raise_()
+        other.tab_bar.setCurrentIndex(other.tab_bar.count() - 1)
+
+    def detach(self, index, hot_spot, offset=0):
         """Detaches the tab at given index into another MultiSpineDBEditor window and starts dragging it.
 
         Args:
@@ -149,21 +173,10 @@ class MultiSpineDBEditor(QMainWindow):
             hot_spot (QPoint)
             offset (int)
         """
-        if self._detaching:
-            return
-        self._detaching = True
-        if self.tab_bar.count() == 1:
-            self.start_drag(hot_spot)
-            self._detaching = False
-            return
-        db_editor = self.tab_widget.widget(index)
-        text = self.tab_widget.tabText(index)
-        self.tab_widget.remove_disconnect_tab(index)
         other = MultiSpineDBEditor(self.db_mngr, None)
-        other.tab_widget.addTab(db_editor, text)
+        other.tab_widget.addTab(*self._take_tab(index))
         other.show()
         other.start_drag(hot_spot, offset)
-        self._detaching = False
 
     def start_drag(self, hot_spot, offset=0):
         """Starts dragging a detached tab.
@@ -175,8 +188,11 @@ class MultiSpineDBEditor(QMainWindow):
         self.setStyleSheet(f"QTabWidget::tab-bar {{left: {offset}px;}}")
         self._hot_spot = hot_spot
         self.grabMouse()
-        self._others = [w for w in self.get_all_multi_spine_db_editors() if w is not self]
+        self._others = self.others()
         self._timer_id = self.startTimer(20)
+
+    def others(self):
+        return [w for w in self.get_all_multi_spine_db_editors() if w is not self]
 
     def _frame_height(self):
         return self.frameGeometry().height() - self.geometry().height()
