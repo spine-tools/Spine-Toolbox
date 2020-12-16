@@ -362,3 +362,10 @@ class ProjectItemModel(QAbstractItemModel):
             category_index = self.index(row, 0)
             for inner_row in range(self.rowCount(category_index)):
                 yield self.index(inner_row, 0, category_index)
+
+    def remove_leaves(self):
+        self.beginResetModel()
+        for row in range(self.rowCount()):
+            category_index = self.index(row, 0)
+            category_index.internalPointer().children().clear()
+        self.endResetModel()

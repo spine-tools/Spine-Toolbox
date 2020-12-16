@@ -28,6 +28,12 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         self._undo_specs = dict()
         self._icons = icons
 
+    def clear(self):
+        self.beginResetModel()
+        self._specs = list()
+        self._undo_specs = dict()
+        self.endResetModel()
+
     def rowCount(self, parent=None):
         """Returns the number of specs in the model.
 

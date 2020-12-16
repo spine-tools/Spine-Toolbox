@@ -73,7 +73,7 @@ class TabBarPlus(QTabBar):
         self._hot_spot_y = event.pos().y() - tab_rect.y()
 
     def mouseMoveEvent(self, event):
-        """Detaches a tab either if the user moves it beyond the limits of the tab bar, or if it's the only one."""
+        """Detaches a tab either if the user moves beyond the limits of the tab bar, or if it's the only one."""
         self._plus_button.hide()
         if self.count() == 1:
             self._send_release_event(event.pos())
@@ -142,11 +142,27 @@ class TabBarPlus(QTabBar):
             index = self.count()
         return index
 
+    def _show_plus_button_context_menu(self, global_pos):
+        toolbox = self._parent.db_mngr.parent()
+        if toolbox is None:
+            return
+        ds_urls = {ds.name: ds.project_item.sql_alchemy_url() for ds in toolbox.project_item_model.items("Data Stores")}
+        if not ds_urls:
+            return
+        menu = QMenu(self)
+        for name, url in ds_urls.items():
+            action = menu.addAction(name, lambda name=name, url=url: self._parent.add_new_tab({url: name}))
+            action.setEnabled(bool(url))
+        menu.popup(global_pos)
+        menu.aboutToHide.connect(menu.deleteLater)
+
     def contextMenuEvent(self, event):
         index = self.tabAt(event.pos())
+        if self._plus_button.underMouse():
+            self._show_plus_button_context_menu(event.globalPos())
+            return
         if self.tabButton(index, QTabBar.RightSide).underMouse():
             return
-
         db_editor = self._parent.tab_widget.widget(index)
         if db_editor is None:
             return
@@ -177,3 +193,5 @@ class TabBarPlus(QTabBar):
             ),
         )
         menu.popup(event.globalPos())
+        menu.aboutToHide.connect(menu.deleteLater)
+        event.accept()

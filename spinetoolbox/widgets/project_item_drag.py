@@ -92,7 +92,11 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         self.setMenu(menu)
         self.setPopupMode(QToolButton.MenuButtonPopup)
         self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        self._toolbox.specification_model_changed.connect(self._update_spec_model)
+        self._resize()
+        model = self._toolbox.filtered_spec_factory_models.get(self.item_type)
+        self._list_view.setModel(model)
+        model.rowsInserted.connect(lambda *args: self._resize())
+        model.rowsRemoved.connect(lambda *args: self._resize())
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
         self._list_view.drag_about_to_start.connect(menu.hide)
 
@@ -100,14 +104,6 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         super().setIconSize(size)
         if self._list_view:
             self._list_view.setIconSize(size)
-
-    @Slot()
-    def _update_spec_model(self):
-        model = self._toolbox.filtered_spec_factory_models.get(self.item_type)
-        self._list_view.setModel(model)
-        self._resize()
-        model.rowsInserted.connect(lambda *args: self._resize())
-        model.rowsRemoved.connect(lambda *args: self._resize())
 
     def _resize(self):
         self._list_view._set_preferred_heigth()

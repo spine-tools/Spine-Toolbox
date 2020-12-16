@@ -17,7 +17,7 @@ Classes for custom context menus and pop-up menus.
 """
 from PySide2.QtWidgets import QToolBar, QLineEdit, QMenu
 from PySide2.QtGui import QIcon, QKeySequence
-from PySide2.QtCore import QSize, Qt
+from PySide2.QtCore import QSize, Qt, Slot
 from spinetoolbox.helpers import CharIconEngine
 
 
@@ -40,14 +40,64 @@ class UrlToolBar(QToolBar):
         self._line_edit.setPlaceholderText("Type the URL of a Spine DB")
         self._line_edit.returnPressed.connect(self._handle_line_edit_return_pressed)
         self.addWidget(self._line_edit)
-        self.addAction(QIcon(CharIconEngine("\uf15b")), "New database file...", db_editor.create_db_file)
-        self.addAction(QIcon(CharIconEngine("\uf07c")), "Open database file...", db_editor.open_db_file)
+        self.addAction(QIcon(CharIconEngine("\uf15b")), "<p>New database file...</p>", db_editor.create_db_file)
+        self.addAction(QIcon(CharIconEngine("\uf07c")), "<p>Open database file...</p>", db_editor.open_db_file)
+        self._open_ds_url_menu = self._add_open_ds_url_menu()
+        self._ds_urls = {}
         self.addSeparator()
-        self._add_menu()
+        self._add_main_menu()
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 
-    def _add_menu(self):
+    def _add_open_ds_url_menu(self):
+        toolbox = self._db_editor.toolbox
+        if toolbox is None:
+            return None
+        menu = QMenu(self)
+        menu_action = self.addAction(QIcon(CharIconEngine("\uf1c0")), "")
+        menu_action.setMenu(menu)
+        menu_button = self.widgetForAction(menu_action)
+        menu_button.setPopupMode(menu_button.InstantPopup)
+        menu_button.setToolTip("<p>Open URL from DS in project...</p>")
+        menu.aboutToShow.connect(self._update_open_ds_url_menu)
+        menu.triggered.connect(self._open_ds_url)
+        slot = lambda *args: self._update_ds_url_menu_enabled()
+        self._connect_project_item_model_signals(slot)
+        self.destroyed.connect(lambda obj=None, slot=slot: self._disconnect_project_item_model_signals(slot))
+        return menu
+
+    def _update_ds_url_menu_enabled(self):
+        ds_items = self._db_editor.toolbox.project_item_model.items("Data Stores")
+        self._open_ds_url_menu.setEnabled(bool(ds_items))
+
+    def _connect_project_item_model_signals(self, slot):
+        project_item_model = self._db_editor.toolbox.project_item_model
+        project_item_model.modelReset.connect(slot)
+        project_item_model.rowsRemoved.connect(slot)
+        project_item_model.rowsInserted.connect(slot)
+
+    def _disconnect_project_item_model_signals(self, slot):
+        project_item_model = self._db_editor.toolbox.project_item_model
+        project_item_model.modelReset.disconnect(slot)
+        project_item_model.rowsRemoved.disconnect(slot)
+        project_item_model.rowsInserted.disconnect(slot)
+
+    @Slot()
+    def _update_open_ds_url_menu(self):
+        toolbox = self._db_editor.toolbox
+        self._open_ds_url_menu.clear()
+        ds_items = toolbox.project_item_model.items("Data Stores")
+        self._ds_urls = {ds.name: ds.project_item.sql_alchemy_url() for ds in ds_items}
+        for name, url in self._ds_urls.items():
+            action = self._open_ds_url_menu.addAction(name)
+            action.setEnabled(bool(url))
+
+    @Slot("QAction")
+    def _open_ds_url(self, action):
+        url = self._ds_urls[action.text()]
+        self._db_editor.load_db_urls({url: action.text()})
+
+    def _add_main_menu(self):
         menu = QMenu(self)
         menu.addMenu(self._db_editor.ui.menuSession)
         menu.addMenu(self._db_editor.ui.menuFile)
@@ -58,7 +108,7 @@ class UrlToolBar(QToolBar):
         menu.addSeparator()
         menu.addAction(self._db_editor.ui.actionUser_guide)
         menu.addAction(self._db_editor.ui.actionSettings)
-        menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "menu")
+        menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)
         menu_button.setPopupMode(menu_button.InstantPopup)
