@@ -17,7 +17,7 @@ The SpineDBManager class
 """
 
 from PySide2.QtCore import Qt, QObject, Signal, Slot
-from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox
+from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (
     is_empty,
@@ -53,6 +53,7 @@ from .spine_db_commands import (
 )
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
+from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 
 
 @busy_effect
@@ -1980,3 +1981,26 @@ class SpineDBManager(QObject):
                 item for item in self.get_items(db_map, "tool_feature") if item["feature_id"] in ids
             ]
         return db_map_cascading_data
+
+    @staticmethod
+    def get_all_multi_spine_db_editors():
+        """Yields all instances of MultiSpineDBEditor currently open.
+
+        Returns:
+            Generator
+        """
+        for window in qApp.topLevelWindows():
+            widget = QWidget.find(window.winId())
+            if isinstance(widget, MultiSpineDBEditor):
+                yield widget
+
+    @staticmethod
+    def get_all_spine_db_editors():
+        """Yields all instances of SpineDBEditor currently open.
+
+        Returns:
+            Generator
+        """
+        for w in SpineDBManager.get_all_multi_spine_db_editors():
+            for k in range(w.tab_widget.count()):
+                yield w.tab_widget.widget(k)

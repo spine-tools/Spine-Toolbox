@@ -132,11 +132,6 @@ class SpineDBEditorSettingsMixin:
         super().connect_signals()
         self.ui.checkBox_show_cascading_relationships.clicked.connect(self.set_show_cascading_relationships)
 
-    @Slot(bool)
-    def set_show_cascading_relationships(self, checked=False):
-        for db_editor in self._multi_db_editor.get_all_spine_db_editors():
-            db_editor.set_show_cascading_relationships(checked)
-
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
@@ -201,6 +196,11 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
         super().show()
         self.read_settings()
 
+    @Slot(bool)
+    def set_show_cascading_relationships(self, checked=False):
+        for db_editor in self._multi_db_editor.db_mngr.get_all_spine_db_editors():
+            db_editor.set_show_cascading_relationships(checked)
+
 
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     """A widget to change user's preferred settings."""
@@ -244,6 +244,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_use_julia_console.clicked.connect(self.toggle_julia_execution_mode)
         self.ui.radioButton_use_python_interpreter.clicked.connect(self.toggle_python_execution_mode)
         self.ui.radioButton_use_python_console.clicked.connect(self.toggle_python_execution_mode)
+
+    @Slot(bool)
+    def set_show_cascading_relationships(self, checked=False):
+        for db_editor in self._toolbox.db_mngr.get_all_spine_db_editors():
+            db_editor.set_show_cascading_relationships(checked)
 
     @Slot(bool)
     def browse_gams_path(self, checked=False):

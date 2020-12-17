@@ -192,7 +192,7 @@ class MultiSpineDBEditor(QMainWindow):
         self._timer_id = self.startTimer(1000 / 30)  # 30 fps
 
     def others(self):
-        return [w for w in self.get_all_multi_spine_db_editors() if w is not self]
+        return [w for w in self.db_mngr.get_all_multi_spine_db_editors() if w is not self]
 
     def _frame_height(self):
         return self.frameGeometry().height() - self.geometry().height()
@@ -358,26 +358,3 @@ class MultiSpineDBEditor(QMainWindow):
         doc_url = f"{ONLINE_DOCUMENTATION_URL}/spine_db_editor/index.html"
         if not open_url(doc_url):
             self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
-
-    @staticmethod
-    def get_all_multi_spine_db_editors():
-        """Yields all instances of MultiSpineDBEditor currently open.
-
-        Returns:
-            Generator
-        """
-        for window in qApp.topLevelWindows():
-            widget = QWidget.find(window.winId())
-            if isinstance(widget, MultiSpineDBEditor):
-                yield widget
-
-    @staticmethod
-    def get_all_spine_db_editors():
-        """Yields all instances of SpineDBEditor currently open.
-
-        Returns:
-            Generator
-        """
-        for w in MultiSpineDBEditor.get_all_multi_spine_db_editors():
-            for k in range(w.tab_widget.count()):
-                yield w.tab_widget.widget(k)
