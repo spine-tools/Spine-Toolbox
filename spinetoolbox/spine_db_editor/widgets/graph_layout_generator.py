@@ -58,8 +58,8 @@ class _State(enum.Enum):
 
 
 class ProgressBarWidget(QWidget):
-    def __init__(self, layout_generator, parent):
-        super().__init__(parent)
+    def __init__(self, layout_generator):
+        super().__init__()
         self.setAttribute(Qt.WA_DeleteOnClose)
         inner_widget = QWidget(self)
         layout = QHBoxLayout(self)
@@ -88,7 +88,6 @@ class ProgressBarWidget(QWidget):
         inner_layout.addWidget(progress_bar)
         inner_layout.addWidget(button_box)
         inner_layout.addStretch()
-        self.setFixedSize(parent.size())
         layout_generator.stopped.connect(self.close)
         layout_generator.progressed.connect(progress_bar.setValue)
         layout_generator.msg.connect(label.setText)
@@ -96,8 +95,8 @@ class ProgressBarWidget(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.fillRect(event.rect(), QColor(0, 0, 0, 96))
-        super().paintEvent(event)
         painter.end()
+        super().paintEvent(event)
 
 
 class GraphLayoutGenerator(QObject):
@@ -134,7 +133,8 @@ class GraphLayoutGenerator(QObject):
         self.finished.connect(self.clean_up)
 
     def show_progress_widget(self, parent):
-        widget = ProgressBarWidget(self, parent)
+        widget = ProgressBarWidget(self)
+        parent.layout().addWidget(widget)
         widget.show()
 
     def clean_up(self):

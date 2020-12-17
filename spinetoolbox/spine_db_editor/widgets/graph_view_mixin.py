@@ -16,8 +16,8 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 import itertools
-from PySide2.QtCore import Signal, Slot, QRectF, QTimer
-from PySide2.QtWidgets import QGraphicsTextItem
+from PySide2.QtCore import Signal, Slot, QRectF, QTimer, Qt
+from PySide2.QtWidgets import QLabel, QHBoxLayout, QWidget, QSizePolicy
 from PySide2.QtPrintSupport import QPrinter
 from PySide2.QtGui import QPainter
 from spinedb_api import from_database
@@ -54,6 +54,12 @@ class GraphViewMixin:
             self.qsettings.value("appSettings/showCascadingRelationships", defaultValue="false") == "true"
         )
         self.ui.actionShow_cascading_relationships.setChecked(self._show_cascading_relationships)
+        self._nothing_to_show_label = QLabel("Nothing to show")
+        self._nothing_to_show_label.setAlignment(Qt.AlignCenter)
+        self._nothing_to_show_label.setStyleSheet("QLabel{font-weight: bold; font-size:18px;}")
+        layout = QHBoxLayout(self.ui.graphicsView)
+        layout.addWidget(self._nothing_to_show_label)
+        self._nothing_to_show_label.hide()
         self._persistent = False
         self._pos_x_parameter = "x"
         self._pos_y_parameter = "y"
@@ -311,6 +317,7 @@ class GraphViewMixin:
         self._update_graph_data()
         layout_gen = self._make_layout_generator()
         self.layout_gens.append(layout_gen)
+        self._nothing_to_show_label.hide()
         layout_gen.show_progress_widget(self.ui.graphicsView)
         # NOTE: Connecting like below allows us to connect more than one layout finished to _complete_graph
         layout_gen.finished.connect(lambda x, y: self._complete_graph(x, y))  # pylint: disable=unnecessary-lambda
@@ -334,8 +341,7 @@ class GraphViewMixin:
         self.heat_map_items.clear()
         self.scene.clear()
         if not self._make_new_items(x, y):
-            self._blank_item = QGraphicsTextItem("Nothing to show.")
-            self.scene.addItem(self._blank_item)
+            self._nothing_to_show_label.show()
             self.ui.actionExport_graph_as_pdf.setEnabled(False)
         else:
             self._add_new_items()  # pylint: disable=no-value-for-parameter
