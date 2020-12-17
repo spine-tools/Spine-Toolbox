@@ -773,6 +773,15 @@ class TabularViewMixin:
                     self.make_pivot_headers()
                     return
 
+    def receive_classes_updated(self, db_map_data):
+        if not self.pivot_table_model:
+            return
+        for db_map, items in db_map_data.items():
+            for item in items:
+                if item["id"] == self.current_class_id.get(db_map):
+                    self.do_reload_pivot_table()
+                    return
+
     def receive_classes_removed(self, db_map_data):
         if not self.pivot_table_model:
             return
@@ -826,17 +835,17 @@ class TabularViewMixin:
     def receive_object_classes_updated(self, db_map_data):
         """Reacts to object classes updated event."""
         super().receive_object_classes_updated(db_map_data)
-        self.receive_db_map_data_updated(db_map_data, get_class_id=lambda x: x["id"])
+        self.receive_classes_updated(db_map_data)
+
+    def receive_relationship_classes_updated(self, db_map_data):
+        """Reacts to relationship classes updated event."""
+        super().receive_relationship_classes_updated(db_map_data)
+        self.receive_classes_updated(db_map_data)
 
     def receive_objects_updated(self, db_map_data):
         """Reacts to objects updated event."""
         super().receive_objects_updated(db_map_data)
         self.receive_db_map_data_updated(db_map_data, get_class_id=lambda x: x["class_id"])
-
-    def receive_relationship_classes_updated(self, db_map_data):
-        """Reacts to relationship classes updated event."""
-        super().receive_relationship_classes_updated(db_map_data)
-        self.receive_db_map_data_updated(db_map_data, get_class_id=lambda x: x["id"])
 
     def receive_relationships_updated(self, db_map_data):
         """Reacts to relationships updated event."""
@@ -878,15 +887,15 @@ class TabularViewMixin:
         super().receive_object_classes_removed(db_map_data)
         self.receive_classes_removed(db_map_data)
 
-    def receive_objects_removed(self, db_map_data):
-        """Reacts to objects removed event."""
-        super().receive_objects_removed(db_map_data)
-        self.receive_objects_added_or_removed(db_map_data, action="remove")
-
     def receive_relationship_classes_removed(self, db_map_data):
         """Reacts to relationship classes remove event."""
         super().receive_relationship_classes_removed(db_map_data)
         self.receive_classes_removed(db_map_data)
+
+    def receive_objects_removed(self, db_map_data):
+        """Reacts to objects removed event."""
+        super().receive_objects_removed(db_map_data)
+        self.receive_objects_added_or_removed(db_map_data, action="remove")
 
     def receive_relationships_removed(self, db_map_data):
         """Reacts to relationships removed event."""
