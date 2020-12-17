@@ -45,16 +45,8 @@ class TestSpineToolboxProject(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Runs once before any tests in this class."""
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
+        if not QApplication.instance():
+            QApplication()
 
     def setUp(self):
         """Makes a ToolboxUI instance and opens a project before each test."""

@@ -241,10 +241,7 @@ class ToolboxUI(QMainWindow):
     @Slot(bool)
     def update_window_modified(self, clean):
         """Updates window modified status and save actions depending on the state of the undo stack."""
-        try:
-            self.setWindowModified(not clean)
-        except RuntimeError as e:
-            raise e
+        self.setWindowModified(not clean)
         self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
