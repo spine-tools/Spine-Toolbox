@@ -18,9 +18,7 @@ Unit tests for SpineToolboxProject class.
 
 import unittest
 from unittest import mock
-import logging
-import sys
-from PySide2.QtCore import QVariantAnimation
+from PySide2.QtCore import QVariantAnimation, QEventLoop
 from PySide2.QtWidgets import QApplication
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from .mock_helpers import (
@@ -33,11 +31,6 @@ from .mock_helpers import (
     add_importer,
     add_gdx_exporter,
 )
-
-
-def _mock_settings_value_side_effect(key, defaultValue=""):
-    if key == "appSettings/useExperimentalEngine":
-        return "false"
 
 
 # noinspection PyUnusedLocal
@@ -167,19 +160,29 @@ class TestSpineToolboxProject(unittest.TestCase):
         exporter_graph = dag_hndlr.dag_with_node(exp_name)
         self.assertIsNotNone(exporter_graph)
 
+    def _wait_for_execution_finished(self):
+        loop = QEventLoop()
+        self.toolbox.project().project_execution_finished.connect(loop.quit)
+        loop.exec_()
+
     def test_execute_project_with_single_item(self):
         view, view_executable = self._make_item(self.add_view)
-        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
-            mock_settings_value.side_effect = _mock_settings_value_side_effect
+        with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
+            mock_make_item.return_value = view_executable
             self.toolbox.project().execute_project()
+            self._wait_for_execution_finished()
         self.assertTrue(view_executable.execute_called)
 
     def test_execute_project_with_two_dags(self):
         item1, item1_executable = self._make_item(self.add_dc)
         item2, item2_executable = self._make_item(self.add_view)
-        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
-            mock_settings_value.side_effect = _mock_settings_value_side_effect
+        with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
+            mock_make_item.side_effect = lambda name, *args: {
+                item1.name: item1_executable,
+                item2.name: item2_executable,
+            }[name]
             self.toolbox.project().execute_project()
+            self._wait_for_execution_finished()
         self.assertTrue(item1_executable.execute_called)
         self.assertTrue(item2_executable.execute_called)
 
@@ -187,9 +190,13 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1, item1_executable = self._make_item(self.add_dc)
         item2, item2_executable = self._make_item(self.add_view)
         self.toolbox.project().set_item_selected(item2)
-        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
-            mock_settings_value.side_effect = _mock_settings_value_side_effect
+        with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
+            mock_make_item.side_effect = lambda name, *args: {
+                item1.name: item1_executable,
+                item2.name: item2_executable,
+            }[name]
             self.toolbox.project().execute_selected()
+            self._wait_for_execution_finished()
         self.assertFalse(item1_executable.execute_called)
         self.assertTrue(item2_executable.execute_called)
 
@@ -214,9 +221,14 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.toolbox.project().dag_handler.add_graph_edge(data_store.name, data_connection.name)
         self.toolbox.project().dag_handler.add_graph_edge(data_connection.name, view.name)
         self.toolbox.project().set_item_selected(data_connection)
-        with mock.patch.object(self.toolbox.project()._settings, "value") as mock_settings_value:
-            mock_settings_value.side_effect = _mock_settings_value_side_effect
+        with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
+            mock_make_item.side_effect = lambda name, *args: {
+                data_store.name: data_store_executable,
+                data_connection.name: data_connection_executable,
+                view.name: view_executable,
+            }[name]
             self.toolbox.project().execute_selected()
+            self._wait_for_execution_finished()
         self.assertFalse(data_store_executable.execute_called)
         self.assertTrue(data_connection_executable.execute_called)
         self.assertFalse(view_executable.execute_called)

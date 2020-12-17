@@ -21,13 +21,11 @@ import json
 import logging
 from PySide2.QtCore import Slot, Signal, QTimer
 from PySide2.QtWidgets import QMessageBox
-from spine_engine import SpineEngine, SpineEngineState
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.helpers import create_dir, inverted, erase_dir
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
-from .subscribers import NodeExecStartedSubscriber, NodeExecFinishedSubscriber, LoggingSubscriber
 from .project_commands import (
     SetProjectNameCommand,
     SetProjectDescriptionCommand,
@@ -44,18 +42,11 @@ class SpineToolboxProject(MetaObject):
     dag_execution_finished = Signal()
     project_execution_about_to_start = Signal()
     """Emitted just before the entire project is executed."""
+    project_execution_finished = Signal()
+    """Emitted when the execution finishes, used in unit tests."""
 
     def __init__(
-        self,
-        toolbox,
-        name,
-        description,
-        p_dir,
-        project_item_model,
-        settings,
-        embedded_julia_console,
-        embedded_python_console,
-        logger,
+        self, toolbox, name, description, p_dir, project_item_model, settings, logger,
     ):
 
         """
@@ -67,8 +58,6 @@ class SpineToolboxProject(MetaObject):
             p_dir (str): Project directory
             project_item_model (ProjectItemModel): project item tree model
             settings (QSettings): Toolbox settings
-            embedded_julia_console (JuliaConsoleWidget): a Julia console widget for execution in the embedded console
-            embedded_python_console (PythonConsoleWidget): a Python console widget for execution in the embedded console
             logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
@@ -76,32 +65,22 @@ class SpineToolboxProject(MetaObject):
         self._project_item_model = project_item_model
         self._logger = logger
         self._settings = settings
-        self._embedded_julia_console = embedded_julia_console
-        self._embedded_python_console = embedded_python_console
         self._dags_about_to_be_notified = set()
         self.dag_handler = DirectedGraphHandler()
-        self.engine = None
         self._engine_workers = []
         self._execution_stopped = True
-        self._dag_execution_list = None
-        self._dag_execution_permits_list = None
-        self._dag_execution_index = None
         self.project_dir = None  # Full path to project directory
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
         self.specs_dir = None  # Full path to specs directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
         self._toolbox.undo_stack.clear()
-        self.start_subscriber = NodeExecStartedSubscriber()
-        self.finish_subscriber = NodeExecFinishedSubscriber()
-        self.log_subscriber = LoggingSubscriber(self._logger)
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit("Creating project directory structure in <b>{0}</b> failed".format(p_dir))
 
     def connect_signals(self):
         """Connect signals to slots."""
         self.dag_handler.dag_simulation_requested.connect(self.notify_changes_in_dag)
-        self.dag_execution_finished.connect(self.execute_next_dag)
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -412,31 +391,7 @@ class SpineToolboxProject(MetaObject):
             execution_permits (Sequence(dict))
         """
         self._execution_stopped = False
-        if self._settings.value("appSettings/useExperimentalEngine", defaultValue="true") == "true":
-            self._execute_dags_experimental(dags, execution_permits)
-        else:
-            self._execute_dags_normal(dags, execution_permits)
-
-    def _execute_dags_normal(self, dags, execution_permits_list):
-        self._dag_execution_list = list(dags)
-        self._dag_execution_permits_list = list(execution_permits_list)
-        self._dag_execution_index = 0
-        self.execute_next_dag()
-
-    @Slot()
-    def execute_next_dag(self):
-        """Executes next dag in the execution list."""
-        if self._execution_stopped:
-            return
-        try:
-            dag = self._dag_execution_list[self._dag_execution_index]
-            execution_permits = self._dag_execution_permits_list[self._dag_execution_index]
-        except IndexError:
-            return
-        dag_identifier = f"{self._dag_execution_index + 1}/{len(self._dag_execution_list)}"
-        self.execute_dag(dag, execution_permits, dag_identifier)
-        self._dag_execution_index += 1
-        self.dag_execution_finished.emit()
+        self._execute_dags(dags, execution_permits)
 
     def _get_node_successors(self, dag, dag_identifier):
         node_successors = self.dag_handler.node_successors(dag)
@@ -450,63 +405,6 @@ class SpineToolboxProject(MetaObject):
             )
             return None
         return node_successors
-
-    def connect_subscriber_signals(self):
-        # register subscribers to relevant events
-        self.engine.publisher.register('exec_started', self.start_subscriber)
-        self.engine.publisher.register('exec_finished', self.finish_subscriber)
-        self.engine.publisher.register('log_msg', self.log_subscriber)
-        self.start_subscriber.dag_node_execution_started.connect(self._toolbox.ui.graphicsView._start_animation)
-        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._stop_animation)
-        self.finish_subscriber.dag_node_execution_finished.connect(self._toolbox.ui.graphicsView._run_leave_animation)
-        self.finish_subscriber.dag_node_execution_finished.connect(self._handle_dag_node_execution_finished)
-
-    def disconnect_subscriber_signals(self):
-        self.start_subscriber.dag_node_execution_started.disconnect(self._toolbox.ui.graphicsView._start_animation)
-        self.finish_subscriber.dag_node_execution_finished.disconnect(self._toolbox.ui.graphicsView._stop_animation)
-        self.finish_subscriber.dag_node_execution_finished.disconnect(
-            self._toolbox.ui.graphicsView._run_leave_animation
-        )
-        self.finish_subscriber.dag_node_execution_finished.disconnect(self._handle_dag_node_execution_finished)
-        # unregister subscribers
-        self.engine.publisher.unregister('exec_started', self.start_subscriber)
-        self.engine.publisher.unregister('exec_finished', self.finish_subscriber)
-        self.engine.publisher.unregister('log_msg', self.log_subscriber)
-
-    def execute_dag(self, dag, execution_permits, dag_identifier):
-        """Executes given dag.
-
-        Args:
-            dag (DiGraph): Executed DAG
-            execution_permits (dict): Dictionary, where keys are node names in dag and value is a boolean
-            dag_identifier (str): Identifier number for printing purposes
-        """
-        if self.engine is not None:
-            self._logger.msg_error.emit("Execution already in progress.")
-            return
-        node_successors = self._get_node_successors(dag, dag_identifier)
-        if node_successors is None:
-            return
-        items = [
-            self._project_item_model.get_item(name).project_item.execution_item(silent=False)
-            for name in node_successors
-        ]
-        self.engine = SpineEngine(items, node_successors, execution_permits)
-        # connect exec_started and exec_finished signals
-        self.connect_subscriber_signals()
-        self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
-        self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
-        self.engine.run()
-        outcome = {
-            SpineEngineState.USER_STOPPED: "stopped by the user",
-            SpineEngineState.FAILED: "failed",
-            SpineEngineState.COMPLETED: "completed successfully",
-        }[self.engine.state()]
-        self._logger.msg.emit("<b>DAG {0} {1}</b>".format(dag_identifier, outcome))
-        # disconnect exec_started and exec_finished signals
-        self.disconnect_subscriber_signals()
-        self.engine = None
-        self.notify_changes_in_dag(dag)
 
     def _make_settings_dict(self):
         # XXX: We may want to introduce a new group "executionSettings", for more clarity
@@ -522,16 +420,16 @@ class SpineToolboxProject(MetaObject):
         self._settings.endGroup()
         return settings
 
-    def _execute_dags_experimental(self, dags, execution_permits_list):
+    def _execute_dags(self, dags, execution_permits_list):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
             return
         settings = self._make_settings_dict()
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
-            self._execute_dag_experimental(dag, execution_permits, dag_identifier, settings)
+            self._execute_dag(dag, execution_permits, dag_identifier, settings)
 
-    def _execute_dag_experimental(self, dag, execution_permits, dag_identifier, settings):
+    def _execute_dag(self, dag, execution_permits, dag_identifier, settings):
         node_successors = self._get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
@@ -585,6 +483,7 @@ class SpineToolboxProject(MetaObject):
                 item.handle_execution_successful(direction, state)
             finished_worker.clean_up()
         self._engine_workers.clear()
+        self.project_execution_finished.emit()
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
@@ -644,9 +543,6 @@ class SpineToolboxProject(MetaObject):
             return
         self._logger.msg.emit("Stopping...")
         self._execution_stopped = True
-        # Stop regular engine
-        if self.engine:
-            self.engine.stop()
         # Stop experimental engines
         for worker in self._engine_workers:
             worker.stop_engine()
@@ -729,26 +625,6 @@ class SpineToolboxProject(MetaObject):
     @property
     def settings(self):
         return self._settings
-
-    @Slot(str, object, object)
-    def _handle_dag_node_execution_finished(self, item_name, execution_direction, engine_state):
-        """Handles successful execution of a dag node.
-        Performs post successful execution actions in corresponding project item."""
-        item = self._project_item_model.get_item(item_name)
-        if item is None:
-            return
-        item.project_item.handle_execution_successful(execution_direction, engine_state)
-
-    def direct_successors(self, item):
-        """Returns a list of direct successor nodes for given project item."""
-        item_name = item.name
-        dags = self.dag_handler.dags()
-        for dag in dags:
-            successors = self.dag_handler.node_successors(dag)
-            items_successors = successors.get(item_name)
-            if items_successors is not None:
-                return [self._project_item_model.get_item(successor).project_item for successor in items_successors]
-        return []
 
     def _finish_project_item_construction(self, project_item):
         """

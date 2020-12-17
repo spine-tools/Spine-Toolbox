@@ -19,7 +19,7 @@ Contains SpineEngineWorker.
 import socket
 import json
 from PySide2.QtCore import Signal, Slot, QObject, QThread
-from spine_engine.spine_engine_experimental import SpineEngineExperimental
+from spine_engine.spine_engine import SpineEngine
 
 
 @Slot(list)
@@ -316,7 +316,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         self._engine_data = engine_data
 
     def run_engine(self):
-        self._engine = SpineEngineExperimental(**self._engine_data, debug=True)
+        self._engine = SpineEngine(**self._engine_data, debug=True)
 
     def get_engine_event(self):
         return self._engine.get_event()

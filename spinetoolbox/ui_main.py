@@ -383,15 +383,7 @@ class ToolboxUI(QMainWindow):
         self.project_item_model.remove_leaves()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self._project = SpineToolboxProject(
-            self,
-            name,
-            description,
-            location,
-            self.project_item_model,
-            settings=self._qsettings,
-            embedded_julia_console=self.julia_console,
-            embedded_python_console=self.python_console,
-            logger=self,
+            self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self,
         )
         self._project.connect_signals()
         self._connect_project_signals()
@@ -493,15 +485,7 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
         self._project = SpineToolboxProject(
-            self,
-            name,
-            desc,
-            project_dir,
-            self.project_item_model,
-            settings=self._qsettings,
-            embedded_julia_console=self.julia_console,
-            embedded_python_console=self.python_console,
-            logger=self,
+            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self,
         )
         self._connect_project_signals()
         self.update_window_title()
@@ -693,7 +677,7 @@ class ToolboxUI(QMainWindow):
         factory = self._item_specification_factories.get(item_type)
         if factory is None:
             return None
-        return factory.make_specification(definition, self._qsettings, self, self.julia_console, self.python_console)
+        return factory.make_specification(definition, self._qsettings, self)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

@@ -146,30 +146,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_6.addWidget(self.toolButton_browse_work)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout_6, 8, 0, 1, 1)
-
-        self.label = QLabel(self.groupBox_general)
-        self.label.setObjectName(u"label")
-        font = QFont()
-        font.setPointSize(10)
-        self.label.setFont(font)
-
-        self.gridLayout.addWidget(self.label, 7, 0, 1, 1)
-
-        self.checkBox_open_previous_project = QCheckBox(self.groupBox_general)
-        self.checkBox_open_previous_project.setObjectName(u"checkBox_open_previous_project")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())
-        self.checkBox_open_previous_project.setSizePolicy(sizePolicy5)
-
-        self.gridLayout.addWidget(self.checkBox_open_previous_project, 0, 0, 1, 1)
-
-        self.checkBox_use_curved_links = QCheckBox(self.groupBox_general)
-        self.checkBox_use_curved_links.setObjectName(u"checkBox_use_curved_links")
-
-        self.gridLayout.addWidget(self.checkBox_use_curved_links, 10, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout_6, 7, 0, 1, 1)
 
         self.verticalLayout_3 = QVBoxLayout()
         self.verticalLayout_3.setSpacing(0)
@@ -209,51 +186,52 @@ class Ui_SettingsForm(object):
         self.verticalLayout_3.addWidget(self.horizontalSlider_data_flow_animation_duration)
 
 
-        self.gridLayout.addLayout(self.verticalLayout_3, 15, 0, 1, 1)
-
-        self.checkBox_exit_prompt = QCheckBox(self.groupBox_general)
-        self.checkBox_exit_prompt.setObjectName(u"checkBox_exit_prompt")
-        self.checkBox_exit_prompt.setTristate(False)
-
-        self.gridLayout.addWidget(self.checkBox_exit_prompt, 1, 0, 1, 1)
-
-        self.label_7 = QLabel(self.groupBox_general)
-        self.label_7.setObjectName(u"label_7")
-        self.label_7.setFont(font)
-
-        self.gridLayout.addWidget(self.label_7, 12, 0, 1, 1)
-
-        self.checkBox_use_experimental_engine = QCheckBox(self.groupBox_general)
-        self.checkBox_use_experimental_engine.setObjectName(u"checkBox_use_experimental_engine")
-
-        self.gridLayout.addWidget(self.checkBox_use_experimental_engine, 5, 0, 1, 1)
-
-        self.checkBox_datetime = QCheckBox(self.groupBox_general)
-        self.checkBox_datetime.setObjectName(u"checkBox_datetime")
-
-        self.gridLayout.addWidget(self.checkBox_datetime, 3, 0, 1, 1)
-
-        self.checkBox_use_smooth_zoom = QCheckBox(self.groupBox_general)
-        self.checkBox_use_smooth_zoom.setObjectName(u"checkBox_use_smooth_zoom")
-
-        self.gridLayout.addWidget(self.checkBox_use_smooth_zoom, 9, 0, 1, 1)
+        self.gridLayout.addLayout(self.verticalLayout_3, 14, 0, 1, 1)
 
         self.checkBox_delete_data = QCheckBox(self.groupBox_general)
         self.checkBox_delete_data.setObjectName(u"checkBox_delete_data")
 
         self.gridLayout.addWidget(self.checkBox_delete_data, 4, 0, 1, 1)
 
-        self.checkBox_save_at_exit = QCheckBox(self.groupBox_general)
-        self.checkBox_save_at_exit.setObjectName(u"checkBox_save_at_exit")
-        self.checkBox_save_at_exit.setTristate(True)
+        self.label = QLabel(self.groupBox_general)
+        self.label.setObjectName(u"label")
+        font = QFont()
+        font.setPointSize(10)
+        self.label.setFont(font)
 
-        self.gridLayout.addWidget(self.checkBox_save_at_exit, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.label, 6, 0, 1, 1)
+
+        self.checkBox_datetime = QCheckBox(self.groupBox_general)
+        self.checkBox_datetime.setObjectName(u"checkBox_datetime")
+
+        self.gridLayout.addWidget(self.checkBox_datetime, 3, 0, 1, 1)
 
         self.label_4 = QLabel(self.groupBox_general)
         self.label_4.setObjectName(u"label_4")
         self.label_4.setFont(font)
 
-        self.gridLayout.addWidget(self.label_4, 14, 0, 1, 1)
+        self.gridLayout.addWidget(self.label_4, 13, 0, 1, 1)
+
+        self.checkBox_open_previous_project = QCheckBox(self.groupBox_general)
+        self.checkBox_open_previous_project.setObjectName(u"checkBox_open_previous_project")
+        sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())
+        self.checkBox_open_previous_project.setSizePolicy(sizePolicy5)
+
+        self.gridLayout.addWidget(self.checkBox_open_previous_project, 0, 0, 1, 1)
+
+        self.checkBox_use_curved_links = QCheckBox(self.groupBox_general)
+        self.checkBox_use_curved_links.setObjectName(u"checkBox_use_curved_links")
+
+        self.gridLayout.addWidget(self.checkBox_use_curved_links, 9, 0, 1, 1)
+
+        self.label_7 = QLabel(self.groupBox_general)
+        self.label_7.setObjectName(u"label_7")
+        self.label_7.setFont(font)
+
+        self.gridLayout.addWidget(self.label_7, 11, 0, 1, 1)
 
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
@@ -289,13 +267,30 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_4.addWidget(self.toolButton_bg_color)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout_4, 13, 0, 1, 1)
+        self.gridLayout.addLayout(self.horizontalLayout_4, 12, 0, 1, 1)
+
+        self.checkBox_exit_prompt = QCheckBox(self.groupBox_general)
+        self.checkBox_exit_prompt.setObjectName(u"checkBox_exit_prompt")
+        self.checkBox_exit_prompt.setTristate(False)
+
+        self.gridLayout.addWidget(self.checkBox_exit_prompt, 1, 0, 1, 1)
+
+        self.checkBox_save_at_exit = QCheckBox(self.groupBox_general)
+        self.checkBox_save_at_exit.setObjectName(u"checkBox_save_at_exit")
+        self.checkBox_save_at_exit.setTristate(True)
+
+        self.gridLayout.addWidget(self.checkBox_save_at_exit, 2, 0, 1, 1)
 
         self.checkBox_custom_open_project_dialog = QCheckBox(self.groupBox_general)
         self.checkBox_custom_open_project_dialog.setObjectName(u"checkBox_custom_open_project_dialog")
         self.checkBox_custom_open_project_dialog.setChecked(False)
 
-        self.gridLayout.addWidget(self.checkBox_custom_open_project_dialog, 6, 0, 1, 1)
+        self.gridLayout.addWidget(self.checkBox_custom_open_project_dialog, 5, 0, 1, 1)
+
+        self.checkBox_use_smooth_zoom = QCheckBox(self.groupBox_general)
+        self.checkBox_use_smooth_zoom.setObjectName(u"checkBox_use_smooth_zoom")
+
+        self.gridLayout.addWidget(self.checkBox_use_smooth_zoom, 8, 0, 1, 1)
 
 
         self.verticalLayout_6.addWidget(self.groupBox_general)
@@ -583,8 +578,7 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.checkBox_exit_prompt, self.checkBox_save_at_exit)
         QWidget.setTabOrder(self.checkBox_save_at_exit, self.checkBox_datetime)
         QWidget.setTabOrder(self.checkBox_datetime, self.checkBox_delete_data)
-        QWidget.setTabOrder(self.checkBox_delete_data, self.checkBox_use_experimental_engine)
-        QWidget.setTabOrder(self.checkBox_use_experimental_engine, self.checkBox_custom_open_project_dialog)
+        QWidget.setTabOrder(self.checkBox_delete_data, self.checkBox_custom_open_project_dialog)
         QWidget.setTabOrder(self.checkBox_custom_open_project_dialog, self.lineEdit_work_dir)
         QWidget.setTabOrder(self.lineEdit_work_dir, self.toolButton_browse_work)
         QWidget.setTabOrder(self.toolButton_browse_work, self.checkBox_use_smooth_zoom)
@@ -653,7 +647,18 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_work.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Work directory with file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
+        self.label_5.setText(QCoreApplication.translate("SettingsForm", u"Slow", None))
+        self.label_8.setText(QCoreApplication.translate("SettingsForm", u"Fast", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_delete_data.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_delete_data.setText(QCoreApplication.translate("SettingsForm", u"Delete data when project item is removed from project", None))
         self.label.setText(QCoreApplication.translate("SettingsForm", u"Work directory", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_datetime.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, date and time string is appended into Event Log messages</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_datetime.setText(QCoreApplication.translate("SettingsForm", u"Show date and time in Event Log messages", None))
+        self.label_4.setText(QCoreApplication.translate("SettingsForm", u"Data flow animation speed", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_open_previous_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, Application opens the project at startup that was open the last time the application was exited</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
@@ -662,31 +667,7 @@ class Ui_SettingsForm(object):
         self.checkBox_use_curved_links.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_use_curved_links.setText(QCoreApplication.translate("SettingsForm", u"Curved links", None))
-        self.label_5.setText(QCoreApplication.translate("SettingsForm", u"Slow", None))
-        self.label_8.setText(QCoreApplication.translate("SettingsForm", u"Fast", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_exit_prompt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, confirm exit prompt is shown. If unchecked, application exits without prompt.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_exit_prompt.setText(QCoreApplication.translate("SettingsForm", u"Show confirm exit prompt", None))
         self.label_7.setText(QCoreApplication.translate("SettingsForm", u"Design View background", None))
-        self.checkBox_use_experimental_engine.setText(QCoreApplication.translate("SettingsForm", u"Use experimental engine", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_datetime.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, date and time string is appended into Event Log messages</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_datetime.setText(QCoreApplication.translate("SettingsForm", u"Show date and time in Event Log messages", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_use_smooth_zoom.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_use_smooth_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth zoom", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_delete_data.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_delete_data.setText(QCoreApplication.translate("SettingsForm", u"Delete data when project item is removed from project", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_save_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Does not save project and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Saves project and does not show message box</p><p><br/></p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_save_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Save project at exit", None))
-        self.label_4.setText(QCoreApplication.translate("SettingsForm", u"Data flow animation speed", None))
         self.radioButton_bg_grid.setText(QCoreApplication.translate("SettingsForm", u"Grid", None))
         self.radioButton_bg_tree.setText(QCoreApplication.translate("SettingsForm", u"Tree of Life", None))
         self.radioButton_bg_solid.setText(QCoreApplication.translate("SettingsForm", u"Solid", None))
@@ -694,7 +675,19 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.toolButton_bg_color.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick solid background color</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.checkBox_exit_prompt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, confirm exit prompt is shown. If unchecked, application exits without prompt.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_exit_prompt.setText(QCoreApplication.translate("SettingsForm", u"Show confirm exit prompt", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_save_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Does not save project and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Saves project and does not show message box</p><p><br/></p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_save_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Save project at exit", None))
         self.checkBox_custom_open_project_dialog.setText(QCoreApplication.translate("SettingsForm", u"Custom open project dialog", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_use_smooth_zoom.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_use_smooth_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth zoom", None))
         self.groupBox_project.setTitle(QCoreApplication.translate("SettingsForm", u"Project", None))
         self.label_2.setText(QCoreApplication.translate("SettingsForm", u"Name", None))
 #if QT_CONFIG(tooltip)
@@ -708,8 +701,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QCoreApplication.translate("SettingsForm", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None))
+"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
         self.textEdit_project_description.setPlaceholderText("")
         self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
         self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))

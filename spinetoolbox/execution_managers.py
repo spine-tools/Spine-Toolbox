@@ -49,54 +49,6 @@ class ExecutionManager(QObject):
         raise NotImplementedError()
 
 
-class ConsoleExecutionManager(ExecutionManager):
-    """Class to manage tool instance execution using a SpineConsoleWidget."""
-
-    def __init__(self, console, commands, logger):
-        """Class constructor.
-
-        Args:
-            console (SpineConsoleWidget): Console widget where execution happens
-            commands (list): List of commands to execute in the console
-            logger (LoggerInterface): a logger instance
-        """
-        super().__init__(logger)
-        self._console = console
-        self._commands = commands
-        self._stopped = False
-
-    def start_execution(self, workdir=None):
-        """See base class."""
-        self._console.ready_to_execute.connect(self._start_execution)
-        self._console.execution_failed.connect(self.execution_finished)
-        self._console.wake_up()
-
-    @Slot()
-    def _start_execution(self):
-        """Starts execution."""
-        self._logger.msg_warning.emit(f"\tExecution started. See <b>{self._console.name()}</b> for messages.")
-        self._console.ready_to_execute.disconnect(self._start_execution)
-        self._console.ready_to_execute.connect(self._execute_next_command)
-        self._execute_next_command()
-
-    @Slot()
-    def _execute_next_command(self):
-        """Executes next command in the buffer."""
-        if self._stopped:
-            return
-        if self._commands:
-            command = self._commands.pop(0)
-            self._console.execute(command)
-        else:
-            self._stopped = True
-            self.execution_finished.emit(0)
-
-    def stop_execution(self):
-        """See base class."""
-        self._stopped = True
-        self._console.interrupt()
-
-
 class QProcessExecutionManager(ExecutionManager):
     """Class to manage tool instance execution using a PySide2 QProcess."""
 

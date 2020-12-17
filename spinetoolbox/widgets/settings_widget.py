@@ -459,7 +459,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))  # tri-state
         datetime = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
-        use_experimental_engine = self._qsettings.value("appSettings/useExperimentalEngine", defaultValue="true")
         custom_open_project_dialog = self._qsettings.value("appSettings/customOpenProjectDialog", defaultValue="true")
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
@@ -489,8 +488,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
         if delete_data == 2:
             self.ui.checkBox_delete_data.setCheckState(Qt.Checked)
-        if use_experimental_engine == "true":
-            self.ui.checkBox_use_experimental_engine.setCheckState(Qt.Checked)
         if custom_open_project_dialog == "true":
             self.ui.checkBox_custom_open_project_dialog.setCheckState(Qt.Checked)
         if smooth_zoom == "true":
@@ -569,8 +566,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/dateTime", datetime)
         delete_data = str(int(self.ui.checkBox_delete_data.checkState()))
         self._qsettings.setValue("appSettings/deleteData", delete_data)
-        use_experimental_engine = "true" if int(self.ui.checkBox_use_experimental_engine.checkState()) else "false"
-        self._qsettings.setValue("appSettings/useExperimentalEngine", use_experimental_engine)
         custom_open_project_dial = "true" if int(self.ui.checkBox_custom_open_project_dialog.checkState()) else "false"
         self._qsettings.setValue("appSettings/customOpenProjectDialog", custom_open_project_dial)
         smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"

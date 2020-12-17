@@ -18,21 +18,17 @@ Class for a custom RichJupyterWidget that can run Tool instances.
 
 import logging
 import os
-from PySide2.QtCore import Signal, Slot, Qt
+from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QAction, QApplication
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import NoSuchKernel
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
-from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 
 
 class SpineConsoleWidget(RichJupyterWidget):
     """Base class for all embedded console widgets that can run tool instances."""
-
-    ready_to_execute = Signal()
-    execution_failed = Signal(int)
 
     def __init__(self, toolbox, name, owner=""):
         """
@@ -119,54 +115,6 @@ class SpineConsoleWidget(RichJupyterWidget):
             # No kernel running in Python Console or Python kernel has been changed in Settings->Tools. Start kernel
             self.wake_up(k_name)
 
-    def wake_up(self, k_name=None):
-        """Wakes up the console in preparation for execution. Either
-        ready_to_execute or execution_failed signal must be emitted
-        as a consequence of calling this method.
-        """
-        # FIXME: Will become obsolete after removing the regular engine and the execution_managers module
-        if self._name == "Python Console":
-            if not k_name:
-                k_name = self._toolbox.qsettings().value("appSettings/pythonKernel", defaultValue="")
-                if not k_name:
-                    self._toolbox.msg_error.emit("No kernel selected. Go to Settings->Tools to select a Python kernel.")
-                    self.execution_failed.emit(-1)
-                    return
-            kernels = find_python_kernels()
-            try:
-                kernel_path = kernels[k_name]
-            except KeyError:
-                self._toolbox.msg_error.emit(
-                    f"Kernel {k_name} not found. Go to Settings->Tools " f"and select another Python kernel."
-                )
-                self.execution_failed.emit(-1)
-                return
-        elif self._name == "Julia Console":
-            if not k_name:
-                k_name = self._toolbox.qsettings().value("appSettings/juliaKernel", defaultValue="")
-                if not k_name:
-                    self._toolbox.msg_error.emit("No kernel selected. Go to Settings->Tools to select a Julia kernel.")
-                    self.execution_failed.emit(-1)
-                    return
-            kernels = find_julia_kernels()
-            try:
-                kernel_path = kernels[k_name]
-            except KeyError:
-                self._toolbox.msg_error.emit(
-                    f"Kernel {k_name} not found. Go to Settings->Tools and select another Julia kernel."
-                )
-                self.execution_failed.emit(-1)
-                return
-        else:
-            self._toolbox.msg_error.emit("Unknown Console")
-            self.execution_failed.emit(-1)
-            return
-        # Check if this kernel is already running
-        if self.kernel_manager and self.kernel_name == k_name:
-            self.ready_to_execute.emit()
-        else:
-            self.start_kernel(k_name, kernel_path)
-
     def start_kernel(self, k_name, k_path):
         """Starts a kernel manager and kernel client and attaches the client to Julia or Python Console.
 
@@ -225,17 +173,6 @@ class SpineConsoleWidget(RichJupyterWidget):
             super().dragEnterEvent(e)
 
     @Slot(dict)
-    def _handle_execute_reply(self, msg):
-        super()._handle_execute_reply(msg)
-        content = msg["content"]
-        if content["execution_count"] == 0:
-            return  # This is not in response to commands, this is just the kernel saying hello
-        if content["status"] != "ok":
-            self.execution_failed.emit(-1)
-        else:
-            self.ready_to_execute.emit()
-
-    @Slot(dict)
     def _handle_status(self, msg):
         """Handles status message."""
         super()._handle_status(msg)
@@ -249,13 +186,6 @@ class SpineConsoleWidget(RichJupyterWidget):
             self._kernel_starting = False
             self._toolbox.msg_success.emit(f"{self._name} ready for action")
             self._control.viewport().setCursor(self.normal_cursor)
-            self.ready_to_execute.emit()
-
-    @Slot(dict)
-    def _handle_error(self, msg):
-        """Handles error messages."""
-        super()._handle_error(msg)
-        self.execution_failed.emit(-1)
 
     def enterEvent(self, event):
         """Sets busy cursor during console (re)starts."""

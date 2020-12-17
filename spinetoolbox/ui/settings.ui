@@ -243,7 +243,7 @@
             <property name="spacing">
              <number>6</number>
             </property>
-            <item row="8" column="0">
+            <item row="7" column="0">
              <layout class="QHBoxLayout" name="horizontalLayout_6">
               <item>
                <widget class="QLineEdit" name="lineEdit_work_dir">
@@ -283,45 +283,7 @@
               </item>
              </layout>
             </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Work directory</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QCheckBox" name="checkBox_open_previous_project">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Application opens the project at startup that was open the last time the application was exited&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Open previous project at startup</string>
-              </property>
-             </widget>
-            </item>
-            <item row="10" column="0">
-             <widget class="QCheckBox" name="checkBox_use_curved_links">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Curved links</string>
-              </property>
-             </widget>
-            </item>
-            <item row="15" column="0">
+            <item row="14" column="0">
              <layout class="QVBoxLayout" name="verticalLayout_3">
               <property name="spacing">
                <number>0</number>
@@ -393,35 +355,25 @@
               </item>
              </layout>
             </item>
-            <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_exit_prompt">
+            <item row="4" column="0">
+             <widget class="QCheckBox" name="checkBox_delete_data">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, confirm exit prompt is shown. If unchecked, application exits without prompt.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Show confirm exit prompt</string>
-              </property>
-              <property name="tristate">
-               <bool>false</bool>
+               <string>Delete data when project item is removed from project</string>
               </property>
              </widget>
             </item>
-            <item row="12" column="0">
-             <widget class="QLabel" name="label_7">
+            <item row="6" column="0">
+             <widget class="QLabel" name="label">
               <property name="font">
                <font>
                 <pointsize>10</pointsize>
                </font>
               </property>
               <property name="text">
-               <string>Design View background</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QCheckBox" name="checkBox_use_experimental_engine">
-              <property name="text">
-               <string>Use experimental engine</string>
+               <string>Work directory</string>
               </property>
              </widget>
             </item>
@@ -435,40 +387,7 @@
               </property>
              </widget>
             </item>
-            <item row="9" column="0">
-             <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Smooth zoom</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QCheckBox" name="checkBox_delete_data">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Delete data when project item is removed from project</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_save_at_exit">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Does not save project and does not show message box&lt;/p&gt;&lt;p&gt;Partially checked: Shows message box (default)&lt;/p&gt;&lt;p&gt;Checked: Saves project and does not show message box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Save project at exit</string>
-              </property>
-              <property name="tristate">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="14" column="0">
+            <item row="13" column="0">
              <widget class="QLabel" name="label_4">
               <property name="font">
                <font>
@@ -480,7 +399,45 @@
               </property>
              </widget>
             </item>
-            <item row="13" column="0">
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="checkBox_open_previous_project">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Application opens the project at startup that was open the last time the application was exited&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Open previous project at startup</string>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="0">
+             <widget class="QCheckBox" name="checkBox_use_curved_links">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Curved links</string>
+              </property>
+             </widget>
+            </item>
+            <item row="11" column="0">
+             <widget class="QLabel" name="label_7">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Design View background</string>
+              </property>
+             </widget>
+            </item>
+            <item row="12" column="0">
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
                <widget class="QRadioButton" name="radioButton_bg_grid">
@@ -541,13 +498,49 @@
               </item>
              </layout>
             </item>
-            <item row="6" column="0">
+            <item row="1" column="0">
+             <widget class="QCheckBox" name="checkBox_exit_prompt">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, confirm exit prompt is shown. If unchecked, application exits without prompt.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Show confirm exit prompt</string>
+              </property>
+              <property name="tristate">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QCheckBox" name="checkBox_save_at_exit">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Does not save project and does not show message box&lt;/p&gt;&lt;p&gt;Partially checked: Shows message box (default)&lt;/p&gt;&lt;p&gt;Checked: Saves project and does not show message box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Save project at exit</string>
+              </property>
+              <property name="tristate">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
              <widget class="QCheckBox" name="checkBox_custom_open_project_dialog">
               <property name="text">
                <string>Custom open project dialog</string>
               </property>
               <property name="checked">
                <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Smooth zoom</string>
               </property>
              </widget>
             </item>
@@ -674,8 +667,8 @@
                <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="acceptRichText">
                <bool>false</bool>
@@ -1150,7 +1143,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_save_at_exit</tabstop>
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
-  <tabstop>checkBox_use_experimental_engine</tabstop>
   <tabstop>checkBox_custom_open_project_dialog</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
