@@ -416,7 +416,7 @@ class SpineDBManager(QObject):
         commit_msg = self._get_commit_msg(db_names)
         if not commit_msg:
             return
-        self._do_commit_session(dirty_db_maps, cookie)
+        self._do_commit_session(dirty_db_maps, commit_msg, cookie)
 
     def _do_commit_session(self, dirty_db_maps, commit_msg, cookie=None):
         db_map_error_log = {}
