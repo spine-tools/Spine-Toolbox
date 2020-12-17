@@ -391,7 +391,7 @@ class GraphViewMixin:
     def _update_graph_data(self):
         """Updates data for graph according to selection in trees."""
         object_ids, relationship_ids = self._get_selected_entity_ids()
-        relationship_ids.update(self.added_relationship_ids)
+        relationship_ids.date(self.added_relationship_ids)
         prunned_entity_ids = {id_ for ids in self.prunned_entity_ids.values() for id_ in ids}
         object_ids -= prunned_entity_ids
         relationship_ids -= prunned_entity_ids

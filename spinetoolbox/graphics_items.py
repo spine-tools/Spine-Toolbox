@@ -13,7 +13,7 @@
 Classes for drawing graphics items on QGraphicsScene.
 
 :authors: M. Marin (KTH), P. Savolainen (VTT)
-:date:   4.4.2018
+:date:    4.4.2018
 """
 
 from math import atan2, sin, cos, pi
@@ -53,14 +53,14 @@ from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 
 
 class ProjectItemIcon(QGraphicsRectItem):
+    """Base class for project item icons drawn in Design View."""
 
     ITEM_EXTENT = 64
 
     def __init__(self, toolbox, icon_file, icon_color, background_color):
-        """Base class for project item icons drawn in Design View.
-
+        """
         Args:
-            toolbox (ToolBoxUI): QMainWindow instance
+            toolbox (ToolboxUI): QMainWindow instance
             icon_file (str): Path to icon resource
             icon_color (QColor): Icon's color
             background_color (QColor): Background color
@@ -95,7 +95,15 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._setup(brush, icon_file, icon_color)
         self.activate()
 
-    def update(self, name, x, y):
+    def finalize(self, name, x, y):
+        """
+        Names the icon and moves it by given amount.
+
+        Args:
+            name (str): icon's name
+            x (int): horizontal offset
+            y (int): vertical offset
+        """
         self.update_name_item(name)
         self.moveBy(x, y)
 
@@ -151,11 +159,19 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.rank_icon.setPos(self.rect().topLeft())
 
     def name(self):
-        """Returns name of the item that is represented by this icon."""
+        """Returns name of the item that is represented by this icon.
+
+        Returns:
+            str: icon's name
+        """
         return self._name
 
     def update_name_item(self, new_name):
-        """Set a new text to name item. Used when a project item is renamed."""
+        """Set a new text to name item.
+
+        Args:
+            new_name (str): icon's name
+        """
         self._name = new_name
         self.name_item.setText(new_name)
         self.set_name_attributes()
@@ -175,16 +191,39 @@ class ProjectItemIcon(QGraphicsRectItem):
         )
 
     def conn_button(self, position="left"):
-        """Returns items connector button (QWidget)."""
+        """Returns item's connector button.
+
+        Args:
+            position (str): "left", "right" or "bottom"
+
+        Returns:
+            QWidget: connector button
+        """
         return self.connectors.get(position, self.connectors["left"])
 
     def outgoing_links(self):
+        """Collects outgoing links.
+
+        Returns:
+            list of LinkBase: outgoing links
+        """
         return [l for conn in self.connectors.values() for l in conn.outgoing_links()]
 
     def incoming_links(self):
+        """Collects incoming links.
+
+        Returns:
+            list of LinkBase: outgoing links
+        """
         return [l for conn in self.connectors.values() for l in conn.incoming_links()]
 
     def run_execution_leave_animation(self, skipped):
+        """
+        Starts the animation associated with execution leaving the icon.
+
+        Args:
+            skipped (bool): True if project item was not actually executed.
+        """
         animation_group = QParallelAnimationGroup(self._toolbox)
         for link in self.outgoing_links():
             animation_group.addAnimation(link.make_execution_animation(skipped))
@@ -288,17 +327,17 @@ class ProjectItemIcon(QGraphicsRectItem):
 
 
 class ConnectorButton(QGraphicsRectItem):
+    """Connector button graphics item. Used for Link drawing between project items."""
 
     # Regular and hover brushes
     brush = QBrush(QColor(255, 255, 255))  # Used in filling the item
     hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
 
     def __init__(self, parent, toolbox, position="left"):
-        """Connector button graphics item. Used for Link drawing between project items.
-
+        """
         Args:
             parent (QGraphicsItem): Project item bg rectangle
-            toolbox (ToolBoxUI): QMainWindow instance
+            toolbox (ToolboxUI): QMainWindow instance
             position (str): Either "top", "left", "bottom", or "right"
         """
         super().__init__(parent)
@@ -323,6 +362,10 @@ class ConnectorButton(QGraphicsRectItem):
         self.setRect(rect)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
+
+    @property
+    def parent(self):
+        return self._parent
 
     def outgoing_links(self):
         return [l for l in self.links if l.src_connector == self]
@@ -391,14 +434,14 @@ class ConnectorButton(QGraphicsRectItem):
 
 
 class ExecutionIcon(QGraphicsEllipseItem):
+    """An icon to show information about the item's execution."""
 
     _CHECK = "\uf00c"
     _CROSS = "\uf00d"
     _CLOCK = "\uf017"
 
     def __init__(self, parent):
-        """An icon to show information about the item's execution.
-
+        """
         Args:
             parent (ProjectItemIcon): the parent item
         """
@@ -456,9 +499,10 @@ class ExecutionIcon(QGraphicsEllipseItem):
 
 
 class ExclamationIcon(QGraphicsTextItem):
-    def __init__(self, parent):
-        """An icon to notify that a ProjectItem is missing some configuration.
+    """An icon to notify that a ProjectItem is missing some configuration."""
 
+    def __init__(self, parent):
+        """
         Args:
             parent (ProjectItemIcon): the parent item
         """
@@ -506,9 +550,10 @@ class ExclamationIcon(QGraphicsTextItem):
 
 
 class RankIcon(QGraphicsTextItem):
-    def __init__(self, parent):
-        """An icon to show the rank of a ProjectItem within its DAG
+    """An icon to show the rank of a ProjectItem within its DAG."""
 
+    def __init__(self, parent):
+        """
         Args:
             parent (ProjectItemIcon): the parent item
         """
@@ -550,8 +595,7 @@ class LinkBase(QGraphicsPathItem):
     """
 
     def __init__(self, toolbox):
-        """Initializes the instance.
-
+        """
         Args:
             toolbox (ToolboxUI): main UI class instance
         """
@@ -811,22 +855,23 @@ class FilterIcon(QGraphicsEllipseItem):
 
 
 class Link(LinkBase):
-    def __init__(self, toolbox, src_connector, dst_connector, resource_filters=None):
-        """A graphics item to represent the connection between two project items.
+    """A graphics item to represent the connection between two project items."""
 
+    def __init__(self, toolbox, src_connector, dst_connector, resource_filters=None):
+        """
         Args:
             toolbox (ToolboxUI): main UI class instance
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
-            resource_filters (dict,optional): Mapping resource labels to filter types to list of values
+            resource_filters (dict, optional): Mapping resource labels to filter types to list of values
         """
         super().__init__(toolbox)
         if resource_filters is None:
             resource_filters = {}
         self.src_connector = src_connector  # QGraphicsRectItem
         self.dst_connector = dst_connector
-        self.src_icon = src_connector._parent
-        self.dst_icon = dst_connector._parent
+        self.src_icon = src_connector.parent
+        self.dst_icon = dst_connector.parent
         self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
         self._filter_icon_extent = 4 * self.magic_number
@@ -978,7 +1023,7 @@ class Link(LinkBase):
         animation.finished.connect(animation.deleteLater)
         return animation
 
-    @Slot("QVariant")
+    @Slot(object)
     def _handle_execution_animation_value_changed(self, step):
         gradient = QLinearGradient(self.src_center, self.dst_center)
         delta = 8 * self.magic_number / QLineF(self.src_center, self.dst_center).length()
@@ -1020,7 +1065,7 @@ class Link(LinkBase):
         self.setSelected(True)
         self._toolbox.show_link_context_menu(e.screenPos(), self)
 
-    def paint(self, painter, option, widget):
+    def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
         self._filter_icon.setVisible(bool(self._compile_resource_filters()))
         if option.state & QStyle.State_Selected:
@@ -1055,8 +1100,7 @@ class LinkDrawer(LinkBase):
     """An item for drawing links between project items."""
 
     def __init__(self, toolbox):
-        """Init class.
-
+        """
         Args:
             toolbox (ToolboxUI): main UI class instance
         """

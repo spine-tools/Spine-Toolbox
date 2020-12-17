@@ -183,11 +183,13 @@ class ProjectUpgrader:
                 # Factories don't contain 'Exporter' anymore.
                 item_type = "GdxExporter"
             try:
-                new["items"][item_name] = factories[item_type].item_class().upgrade_v2_to_v3(item_name, old_item_dict, self)
+                new["items"][item_name] = (
+                    factories[item_type].item_class().upgrade_v2_to_v3(item_name, old_item_dict, self)
+                )
             except KeyError:
                 # This happens when a Combiner is encountered.
                 # Factories do not contain 'Combiner' anymore
-                if item_type  == "Combiner":
+                if item_type == "Combiner":
                     new["items"][item_name] = old_item_dict
                 else:
                     print(f"Some unknown item_type encountered: {item_type}")

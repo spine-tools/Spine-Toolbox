@@ -380,8 +380,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Returns
             Link, NoneType
         """
-        for replaced_link in link.src_connector._parent.outgoing_links():
-            if replaced_link.dst_connector._parent == link.dst_connector._parent:
+        for replaced_link in link.src_connector.parent.outgoing_links():
+            if replaced_link.dst_connector.parent == link.dst_connector.parent:
                 replaced_link.wipe_out()
                 return replaced_link
         return None

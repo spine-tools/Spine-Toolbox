@@ -18,7 +18,7 @@ Unit tests for ``spine_engine_worker`` module.
 import time
 import unittest
 from PySide2.QtCore import QObject, Slot
-from PySide2.QtWidgets import  QApplication
+from PySide2.QtWidgets import QApplication
 from spinetoolbox.dag_handler import DirectedGraphHandler
 from spinetoolbox.spine_engine_worker import SpineEngineWorker
 from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project

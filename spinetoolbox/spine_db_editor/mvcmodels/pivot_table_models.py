@@ -1255,18 +1255,12 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
             alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
             alternative_id_list = alternative_id_list + alt_ids_to_add
             alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alt_ids_to_remove]
-            db_item = {
-                "id": scen_id,
-                "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
-            }
+            db_item = {"id": scen_id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
             db_map_items.setdefault(db_map, []).append(db_item)
         for (db_map, scen_id), alt_ids_to_remove in to_remove.items():
             alternative_id_list = self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
             alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alt_ids_to_remove]
-            db_item = {
-                "id": scen_id,
-                "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
-            }
+            db_item = {"id": scen_id, "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list])}
             db_map_items.setdefault(db_map, []).append(db_item)
         self.db_mngr.set_scenario_alternatives(db_map_items)
         return True

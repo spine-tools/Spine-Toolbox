@@ -209,7 +209,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         y = pos.y()
         factory = self._toolbox.item_factories[item_type]
         self.item_shadow = factory.make_icon(self._toolbox)
-        self.item_shadow.update("", x, y)
+        self.item_shadow.finalize("", x, y)
         self._toolbox.show_add_project_item_form(item_type, x, y, spec=spec)
 
     def event(self, event):

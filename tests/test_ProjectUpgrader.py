@@ -243,9 +243,7 @@ class TestProjectUpgrader(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             with mock.patch(
                 "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save:
+            ) as mock_backup, mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save:
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
                 spec_file_path = os.path.join(project_dir, "tool_specs", "preprocessing_tool.json")

@@ -64,7 +64,7 @@ class SingleParameterModel(MinimalTableModel):
 
     @property
     def entity_class_name_field(self):
-        return {"object_class": "object_class_name", "relationship_class": "relationship_class_name",}[
+        return {"object_class": "object_class_name", "relationship_class": "relationship_class_name"}[
             self.entity_class_type
         ]
 

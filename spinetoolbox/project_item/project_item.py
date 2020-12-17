@@ -202,7 +202,7 @@ class ProjectItem(MetaObject):
             icon (ProjectItemIcon): item's icon
         """
         self._icon = icon
-        self._icon.update(self.name, self.x, self.y)
+        self._icon.finalize(self.name, self.x, self.y)
 
     def get_icon(self):
         """Returns the graphics item representing this item in the scene."""

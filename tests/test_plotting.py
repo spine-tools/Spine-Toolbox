@@ -106,7 +106,7 @@ def _make_pivot_proxy_model():
     spine_db_editor.load_parameter_value_data = lambda: data
     spine_db_editor.pivot_table_model = model = ParameterValuePivotTableModel(spine_db_editor)
     with patch.object(
-        SpineDBEditor, "current_object_class_ids", new_callable=PropertyMock,
+        SpineDBEditor, "current_object_class_ids", new_callable=PropertyMock
     ) as mock_current_object_class_ids:
         mock_current_object_class_ids.return_value = {"object": {db: 1}}
         model.call_reset_model(pivot=(['object'], ['parameter', 'alternative'], ['database'], (db,)))

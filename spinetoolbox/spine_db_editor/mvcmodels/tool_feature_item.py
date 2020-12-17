@@ -125,7 +125,7 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
         if ids is None:
             self.model._parent.msg_error.emit(
                 f"<p>Invalid feature '{feature_name}'. </p>"
-                "<p>Please enter a valid combination of entity class/parameter definition.</p>",
+                "<p>Please enter a valid combination of entity class/parameter definition.</p>"
             )
             return None
         return ids
@@ -316,7 +316,7 @@ class ToolFeatureMethodLeafItem(LastGrayMixin, LeafItem):
         if method_index is None:
             self.model._parent.msg_error.emit(
                 f"<p>Invalid method '{method}'. </p>"
-                f"<p>Please enter a valid method for feature '{self.tool_feature_item.name}'.</p>",
+                f"<p>Please enter a valid method for feature '{self.tool_feature_item.name}'.</p>"
             )
             return None
         return method_index

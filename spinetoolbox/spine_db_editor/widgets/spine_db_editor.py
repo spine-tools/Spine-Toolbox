@@ -174,7 +174,7 @@ class SpineDBEditorBase(QMainWindow):
     def open_db_file(self, _=False):
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_open_file_name_in_last_dir(
-            self.qsettings, "openSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)",
+            self.qsettings, "openSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
         )
         self.qsettings.endGroup()
         if not file_path:
@@ -186,7 +186,7 @@ class SpineDBEditorBase(QMainWindow):
     def create_db_file(self, _=False):
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_save_file_name_in_last_dir(
-            self.qsettings, "createSQLiteUrl", self, "Create SQLite file", self._get_base_dir(), "SQLite (*.sqlite)",
+            self.qsettings, "createSQLiteUrl", self, "Create SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
         )
         self.qsettings.endGroup()
         if not file_path:
