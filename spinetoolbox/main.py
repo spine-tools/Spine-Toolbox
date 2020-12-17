@@ -28,13 +28,14 @@ from .spinedb_api_version_check import spinedb_api_version_check
 # Check for spinedb_api version before we try to import possibly non-existent stuff below.
 if not spinedb_api_version_check():
     sys.exit(1)
-# Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
+
 from .spine_engine_version_check import spine_engine_version_check
 
 # Check for spine_engine version before we try to import possibly non-existent stuff below.
 if not spine_engine_version_check():
     sys.exit(1)
 
+# Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
 from . import resources_icons_rc  # pylint: disable=unused-import
 from .load_project_items import upgrade_project_items
 

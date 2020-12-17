@@ -102,7 +102,6 @@ class ToolboxUI(QMainWindow):
     information_box = Signal(str, str)
     error_box = Signal(str, str)
     # The rest of the msg_* signals should be moved to LoggerInterface in the long run.
-    specification_model_changed = Signal()
 
     def __init__(self):
         """Initializes application and main window."""
@@ -181,6 +180,8 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidget_executions.hide()
         self.parse_project_item_modules()
         self.parse_assistant_modules()
+        self.init_project_item_model()
+        self.init_specification_model()
         self.main_toolbar.setup()
         self.set_work_directory()
 
@@ -240,16 +241,15 @@ class ToolboxUI(QMainWindow):
     @Slot(bool)
     def update_window_modified(self, clean):
         """Updates window modified status and save actions depending on the state of the undo stack."""
-        try:
-            self.setWindowModified(not clean)
-        except RuntimeError as e:
-            raise e
+        self.setWindowModified(not clean)
         self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
         self._item_categories, self.item_factories = load_project_items(self)
         self._item_specification_factories = load_item_specification_factories()
+
+    def make_item_properties_uis(self):
         for item_type, factory in self.item_factories.items():
             self._item_properties_uis[item_type] = factory.make_properties_widget(self)
 
@@ -380,7 +380,7 @@ class ToolboxUI(QMainWindow):
         """
         self.undo_critical_commands()
         self.clear_ui()
-        self.init_project_item_model()
+        self.project_item_model.remove_leaves()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self._project = SpineToolboxProject(
             self,
@@ -395,7 +395,7 @@ class ToolboxUI(QMainWindow):
         )
         self._project.connect_signals()
         self._connect_project_signals()
-        self.init_specification_model(list())  # Start project with no specifications
+        self.populate_specification_model(list())  # Start project with no specifications
         self.update_window_title()
         self.ui.actionSave_As.setEnabled(True)
         self.ui.graphicsView.reset_zoom()
@@ -489,7 +489,7 @@ class ToolboxUI(QMainWindow):
         connections = project_info["project"]["connections"]
         project_items = project_info["items"]
         # Init project item model
-        self.init_project_item_model()
+        self.project_item_model.remove_leaves()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
         self._project = SpineToolboxProject(
@@ -513,7 +513,7 @@ class ToolboxUI(QMainWindow):
             for paths in spec_paths_per_type.values()
             for path in paths
         ]
-        self.init_specification_model(deserialized_paths)
+        self.populate_specification_model(deserialized_paths)
         # Populate project model with project items
         if not self._project.load(project_items):
             self.msg_error.emit("Loading project items failed")
@@ -604,8 +604,7 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.setClean()
 
     def init_project_item_model(self):
-        """Initializes project item model. Create root and category items and
-        add them to the model."""
+        """Initializes project item model. Create root and category items and add them to the model."""
         root_item = RootProjectTreeItem()
         self.project_item_model = ProjectItemModel(self, root=root_item)
         for category in CATEGORIES:
@@ -615,17 +614,22 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
 
-    def init_specification_model(self, specification_paths):
-        """Initializes Tool specification model.
-
-        Args:
-            specification_paths (list): List of tool definition file paths used in this project
-        """
+    def init_specification_model(self):
+        """Initializes specification model."""
+        self.filtered_spec_factory_models = {name: FilteredSpecFactoryModel(name) for name in self.item_factories}
+        self.make_item_properties_uis()  # TODO: Why we need to do this *before* calling factory.icon()?
         factory_icons = {name: QIcon(factory.icon()) for name, factory in self.item_factories.items()}
         self.specification_model = ProjectItemSpecFactoryModel(factory_icons)
-        self.filtered_spec_factory_models = {name: FilteredSpecFactoryModel(name) for name in self.item_factories}
         for model in self.filtered_spec_factory_models.values():
             model.setSourceModel(self.specification_model)
+
+    def populate_specification_model(self, specification_paths):
+        """Populates specification model.
+
+        Args:
+            specification_paths (list): List of specification file paths for the current project
+        """
+        self.specification_model.clear()
         n_specs = 0
         self.msg.emit("Loading specifications...")
         for path in specification_paths:
@@ -640,8 +644,6 @@ class ToolboxUI(QMainWindow):
             spec.definition_file_path = path
             # Insert tool into model
             self.specification_model.insertRow(spec)
-        # Set model to Tool project item combo box
-        self.specification_model_changed.emit()
         if n_specs == 0:
             self.msg_warning.emit("Project has no specifications")
 

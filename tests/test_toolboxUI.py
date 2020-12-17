@@ -61,6 +61,7 @@ class TestToolboxUI(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
+        self.toolbox.undo_stack.deleteLater()
         self.toolbox.deleteLater()
         self.toolbox = None
 
@@ -127,7 +128,7 @@ class TestToolboxUI(unittest.TestCase):
         signals are connected just once.
         """
         self.assertIsNone(self.toolbox.project())  # Make sure that there is no project open
-        self.toolbox.init_specification_model(list())
+        self.toolbox.init_specification_model()
         self.assertEqual(self.toolbox.specification_model.rowCount(), 0)
 
     def test_create_project(self):

@@ -78,8 +78,8 @@ class _DBEditorTabWidget(QTabWidget):
         s2 = lambda dirty, db_editor=db_editor: self._handle_dirty_changed(db_editor, dirty)
         db_editor.windowTitleChanged.connect(s1)
         db_editor.dirty_changed.connect(s2)
-        db_editor.file_exported.connect(self.parent()._insert_file_open_button)
-        db_editor.sqlite_file_exported.connect(self.parent()._insert_sqlite_file_open_button)
+        db_editor.file_exported.connect(self.parent().insert_file_open_button)
+        db_editor.sqlite_file_exported.connect(self.parent().insert_sqlite_file_open_button)
         db_editor.ui.actionUser_guide.triggered.connect(self.parent().show_user_guide)
         db_editor.ui.actionSettings.triggered.connect(self.parent().settings_form.show)
         self._slots[db_editor] = (s1, s2)
@@ -92,8 +92,8 @@ class _DBEditorTabWidget(QTabWidget):
         s1, s2 = slots
         db_editor.windowTitleChanged.disconnect(s1)
         db_editor.dirty_changed.disconnect(s2)
-        db_editor.file_exported.disconnect(self.parent()._insert_file_open_button)
-        db_editor.sqlite_file_exported.disconnect(self.parent()._insert_sqlite_file_open_button)
+        db_editor.file_exported.disconnect(self.parent().insert_file_open_button)
+        db_editor.sqlite_file_exported.disconnect(self.parent().insert_sqlite_file_open_button)
         db_editor.ui.actionUser_guide.triggered.disconnect(self.parent().show_user_guide)
         db_editor.ui.actionSettings.triggered.disconnect(self.parent().settings_form.show)
 
@@ -129,7 +129,7 @@ class MultiSpineDBEditor(QMainWindow):
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.settings_form = SpineDBEditorSettingsWidget(self)
         if db_url_codenames is not None:
-            self._add_new_tab(db_url_codenames)
+            self.add_new_tab(db_url_codenames)
         self.connect_signals()
         self.setWindowTitle("Spine DB Editor")
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -138,7 +138,7 @@ class MultiSpineDBEditor(QMainWindow):
 
     def connect_signals(self):
         self.tab_widget.tabCloseRequested.connect(self._close_tab)
-        self.tab_bar.plus_clicked.connect(self._add_new_tab)
+        self.tab_bar.plus_clicked.connect(self.add_new_tab)
 
     def name(self):
         name = self.tab_widget.tabText(self.tab_widget.currentIndex())
@@ -189,7 +189,7 @@ class MultiSpineDBEditor(QMainWindow):
         self._hot_spot = hot_spot
         self.grabMouse()
         self._others = self.others()
-        self._timer_id = self.startTimer(20)
+        self._timer_id = self.startTimer(1000 / 30)  # 30 fps
 
     def others(self):
         return [w for w in self.get_all_multi_spine_db_editors() if w is not self]
@@ -240,7 +240,7 @@ class MultiSpineDBEditor(QMainWindow):
         self.tab_bar.start_dragging(index)
 
     @Slot()
-    def _add_new_tab(self, db_url_codenames=()):
+    def add_new_tab(self, db_url_codenames=()):
         """Creates a new SpineDBEditor with given urls and adds it at the end of the tab bar.
 
         Args:
@@ -339,18 +339,18 @@ class MultiSpineDBEditor(QMainWindow):
         label.show()
 
     @Slot(str)
-    def _insert_sqlite_file_open_button(self, file_path):
+    def insert_sqlite_file_open_button(self, file_path):
         button = OpenSQLiteFileButton(file_path, self)
         self._insert_statusbar_button(button)
 
     @Slot(str)
-    def _insert_file_open_button(self, file_path):
+    def insert_file_open_button(self, file_path):
         button = OpenFileButton(file_path, self)
         self._insert_statusbar_button(button)
 
     def _open_sqlite_url(self, url, codename):
         """Opens sqlite url."""
-        self._add_new_tab({url: codename})
+        self.add_new_tab({url: codename})
 
     @Slot(bool)
     def show_user_guide(self, checked=False):

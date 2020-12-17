@@ -375,16 +375,17 @@ class SpineDBManager(QObject):
         Args:
             fetcher (SpineDBFetcher): the fetcher to clean up
         """
+        self._fetchers.remove(fetcher)
         fetcher.clean_up()
         fetcher.deleteLater()
-        self._fetchers.remove(fetcher)
 
     @Slot()
-    def _stop_fetchers(self):
+    def stop_fetchers(self):
         """
         Quits all fetchers and deletes them.
         """
         for fetcher in self._fetchers:
+            fetcher.finished.disconnect(self._clean_up_fetcher)
             fetcher.quit()
             fetcher.deleteLater()
         self._fetchers.clear()
@@ -532,7 +533,7 @@ class SpineDBManager(QObject):
         self._scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
         self._parameter_definition_tags_added.connect(self._refresh_parameter_definitions_by_tag)
         self._parameter_definition_tags_removed.connect(self._refresh_parameter_definitions_by_tag)
-        qApp.aboutToQuit.connect(self._stop_fetchers)  # pylint: disable=undefined-variable
+        qApp.aboutToQuit.connect(self.stop_fetchers)  # pylint: disable=undefined-variable
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.

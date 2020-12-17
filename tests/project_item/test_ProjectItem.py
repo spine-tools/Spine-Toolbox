@@ -19,10 +19,8 @@ Unit tests for ProjectItem base class.
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
-from spine_items.data_connection.data_connection_factory import DataConnectionFactory
 from spinetoolbox.project_item.project_item import ProjectItem
-import spine_items.resources_icons_rc  # pylint: disable=unused-import
-from ..mock_helpers import mock_finish_project_item_construction, create_mock_project, create_mock_toolbox
+from ..mock_helpers import create_toolboxui_with_project, clean_up_toolboxui_with_project
 
 
 class TestProjectItem(unittest.TestCase):
@@ -33,20 +31,18 @@ class TestProjectItem(unittest.TestCase):
 
     def setUp(self):
         """Set up."""
-        self.toolbox = create_mock_toolbox()
-        factory = DataConnectionFactory()
-        item_dict = {"type": "Data Connection", "description": "", "references": [], "x": 0, "y": 0}
-        self.project = create_mock_project()
-        self.data_connection = factory.make_item("DC", item_dict, self.toolbox, self.project, self.toolbox)
-        mock_finish_project_item_construction(factory, self.data_connection, self.toolbox)
+        self.toolbox = create_toolboxui_with_project()
+        self.project = self.toolbox.project()
 
     def tearDown(self):
         """Clean up."""
-        self.data_connection.file_system_watcher.removePath(self.data_connection.data_dir)
+        self.project = None
+        clean_up_toolboxui_with_project(self.toolbox)
 
     def test_notify_destination(self):
         item = ProjectItem("name", "description", 0.0, 0.0, self.project, self.toolbox)
         item.item_type = MagicMock(return_value="item_type")
+        self.toolbox.msg_warning = MagicMock()
         item.notify_destination(item)
         self.toolbox.msg_warning.emit.assert_called_with(
             "Link established."

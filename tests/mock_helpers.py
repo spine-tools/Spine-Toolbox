@@ -77,6 +77,7 @@ def clean_up_toolboxui_with_project(toolbox):
     project_dir = toolbox.project().project_dir
     if os.path.exists(project_dir):
         shutil.rmtree(project_dir)
+    toolbox.undo_stack.deleteLater()
     toolbox.deleteLater()
 
 
@@ -91,7 +92,6 @@ def qsettings_value_side_effect(key, defaultValue="0"):
         key (str): Key to read
         defaultValue (QVariant): Default value if key is missing
     """
-    # logging.debug("in qsettings_value_side_effect. key:{0}, defaultValue:{1}".format(key, defaultValue))
     if key == "appSettings/openPreviousProject":
         return "0"  # Do not open previos project when instantiating ToolboxUI
     return defaultValue
@@ -103,7 +103,6 @@ def add_ds(project, name, x=0, y=0):
     # This mocks create_dir in both project_item.py and in data_store.py
     with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
         project.add_project_items(item)
-    return
 
 
 def add_dc(project, name, x=0, y=0):
@@ -111,7 +110,6 @@ def add_dc(project, name, x=0, y=0):
     item = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
     with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
         project.add_project_items(item)
-    return
 
 
 def add_tool(project, name, tool_spec="", x=0, y=0):
@@ -121,7 +119,6 @@ def add_tool(project, name, tool_spec="", x=0, y=0):
     }
     with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
-    return
 
 
 def add_view(project, name, x=0, y=0):
@@ -129,7 +126,6 @@ def add_view(project, name, x=0, y=0):
     item = {name: {"type": "View", "description": "", "x": x, "y": y}}
     with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
-    return
 
 
 def add_importer(project, name, x=0, y=0):
@@ -140,7 +136,6 @@ def add_importer(project, name, x=0, y=0):
         "spine_items.importer.importer.create_dir"
     ) as mock_create_dir2:
         project.add_project_items(item)
-    return
 
 
 def add_gdx_exporter(project, name, x=0, y=0):
@@ -148,32 +143,3 @@ def add_gdx_exporter(project, name, x=0, y=0):
     item = {name: {"type": "GdxExporter", "description": "", "x": x, "y": y, "settings_packs": None}}
     with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
-    return
-
-
-def create_mock_toolbox():
-    mock_toolbox = MagicMock()
-    mock_toolbox.msg = MagicMock()
-    mock_toolbox.msg.attach_mock(MagicMock(), "emit")
-    mock_toolbox.msg_warning = MagicMock()
-    mock_toolbox.msg_warning.attach_mock(MagicMock(), "emit")
-    mock_toolbox.undo_stack.push.side_effect = lambda cmd: cmd.redo()
-    return mock_toolbox
-
-
-def create_mock_project():
-    mock_project = MagicMock()
-    with TemporaryDirectory() as items_dir:
-        mock_project.items_dir = items_dir
-    with TemporaryDirectory() as project_dir:
-        mock_project.project_dir = project_dir
-    return mock_project
-
-
-def mock_finish_project_item_construction(factory, project_item, mock_toolbox):
-    icon = factory.make_icon(mock_toolbox)
-    project_item.set_icon(icon)
-    properties_widget = factory.make_properties_widget(mock_toolbox)
-    project_item.set_properties_ui(properties_widget.ui)
-    project_item.create_data_dir()
-    project_item.set_up()

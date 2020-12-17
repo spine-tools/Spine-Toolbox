@@ -19,12 +19,7 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import (
-    QMainWindow,
-    QErrorMessage,
-    QDockWidget,
-    QMessageBox,
-)
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence
 from spinedb_api import (
@@ -109,6 +104,10 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRedo.setShortcuts(QKeySequence.Redo)
         self.update_commit_enabled()
         self.setContextMenuPolicy(Qt.NoContextMenu)
+
+    @property
+    def toolbox(self):
+        return self.db_mngr.parent()
 
     @property
     def settings_subgroup(self):
