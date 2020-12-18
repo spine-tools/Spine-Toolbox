@@ -21,10 +21,10 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication
+from spinedb_api import create_new_spine_database
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinedb_api import create_new_spine_database
 
 
 class TestSpineDBEditorWithDBMapping(unittest.TestCase):

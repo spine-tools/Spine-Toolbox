@@ -225,7 +225,7 @@ class MapModel(QAbstractTableModel):
         else:
             row_before = [None, None]
         inserted = list()
-        for i in range(count):
+        for _ in range(count):
             inserted.append(deepcopy(row_before))
         self._rows = self._rows[:row] + inserted + self._rows[row:]
         self.endInsertRows()

@@ -32,8 +32,8 @@ from PySide2.QtWidgets import (
     QLabel,
     QFrame,
 )
-from PySide2.QtCore import Qt, QTimer, Signal, Slot, QMimeData
-from PySide2.QtGui import QPainter, QFontMetrics, QDrag, QPixmap
+from PySide2.QtCore import QTimer, Signal, Slot
+from PySide2.QtGui import QPainter, QFontMetrics
 from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 
 

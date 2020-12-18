@@ -1989,7 +1989,7 @@ class SpineDBManager(QObject):
         Returns:
             Generator
         """
-        for window in qApp.topLevelWindows():
+        for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
             widget = QWidget.find(window.winId())
             if isinstance(widget, MultiSpineDBEditor):
                 yield widget

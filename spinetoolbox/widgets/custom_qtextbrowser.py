@@ -17,7 +17,7 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 """
 
 from PySide2.QtCore import Slot
-from PySide2.QtGui import QDesktopServices, QTextCursor, QTextDocument
+from PySide2.QtGui import QTextCursor, QTextDocument
 from PySide2.QtWidgets import QTextBrowser, QAction
 from spinetoolbox.helpers import add_message_to_document
 

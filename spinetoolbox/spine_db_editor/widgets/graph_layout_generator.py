@@ -36,12 +36,12 @@ def make_heat_map(x, y, values):
     yticks = np.linspace(min_y, max_y, tick_count)
     xv, yv = np.meshgrid(xticks, yticks)
     try:
-        import scipy.interpolate
+        import scipy.interpolate  # pylint: disable=import-outside-toplevel
 
         points = np.column_stack((x, y))
         heat_map = scipy.interpolate.griddata(points, values, (xv, yv), method="cubic")
     except ImportError:
-        import matplotlib.tri as tri
+        import matplotlib.tri as tri  # pylint: disable=import-outside-toplevel
 
         triang = tri.Triangulation(x, y)
         interpolator = tri.CubicTriInterpolator(triang, values)

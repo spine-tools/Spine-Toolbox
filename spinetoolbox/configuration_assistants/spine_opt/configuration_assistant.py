@@ -97,8 +97,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
             kernel_deats = KernelEditor.get_kernel_deats(find_python_kernels()[python_kernel_name])
             python_path = kernel_deats["exe"]
             return python_path
-        else:
-            return python_interpreter(self._toolbox.qsettings())
+        return python_interpreter(self._toolbox.qsettings())
 
     def check_kernel_is_ok(self, kernel_name, prgm):
         """Checks that kernel spec is valid for the configuration assistant to continue.
@@ -133,7 +132,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
             return False
         with open(kernel_json, "r") as fh:
             try:
-                kernel_dict = json.load(fh)
+                json.load(fh)
             except json.decoder.JSONDecodeError:
                 self._toolbox.msg_error.emit(f"Error reading file <b>{kernel_json}</b> file. Invalid JSON.")
                 return False

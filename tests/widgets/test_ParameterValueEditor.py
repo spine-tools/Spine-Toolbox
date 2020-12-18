@@ -60,7 +60,7 @@ class _MockParentModel(QAbstractTableModel):
     def get_set_data_delayed(self, index):
         return lambda value, index=index: self.setData(index, value)
 
-    def index_name(self, index):
+    def index_name(self, index):  # pylint: disable=no-self-use
         return "index_name"
 
 

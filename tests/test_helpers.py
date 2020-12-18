@@ -52,7 +52,7 @@ class TestHelpers(unittest.TestCase):
             self.assertTrue(rename_dir(str(old_dir), str(new_dir), logger))
             self.assertFalse(old_dir.exists())
             self.assertTrue(new_dir.exists())
-            files_in_new_dir = [path for path in new_dir.iterdir()]
+            files_in_new_dir = list(new_dir.iterdir())
             self.assertEqual(files_in_new_dir, [Path(new_dir, "file.fff")])
 
     def test_rename_dir_fails_if_target_exists(self):

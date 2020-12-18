@@ -18,12 +18,12 @@ Contains base classes for project items and item factories.
 import os
 import logging
 from PySide2.QtCore import Signal, Slot
-from spinetoolbox.helpers import create_dir, rename_dir, open_url, QuietLogger
-from spinetoolbox.metaobject import MetaObject
-from spinetoolbox.project_commands import SetItemSpecificationCommand
-from spinetoolbox.widgets.custom_qtextbrowser import SignedTextDocument
-from spinetoolbox.helpers import format_event_message, format_process_message, add_message_to_document
 from spine_engine.utils.helpers import shorten
+from ..helpers import create_dir, rename_dir, open_url, QuietLogger
+from ..metaobject import MetaObject
+from ..project_commands import SetItemSpecificationCommand
+from ..widgets.custom_qtextbrowser import SignedTextDocument
+from ..helpers import format_event_message, format_process_message, add_message_to_document
 
 
 class ProjectItem(MetaObject):

@@ -17,16 +17,7 @@ Custom QWidgets.
 """
 
 import os
-from PySide2.QtWidgets import (
-    QMenu,
-    QToolButton,
-    QLabel,
-    QGraphicsOpacityEffect,
-    QDialog,
-    QVBoxLayout,
-    QDialogButtonBox,
-    QListWidget,
-)
+from PySide2.QtWidgets import QMenu, QToolButton, QLabel, QGraphicsOpacityEffect
 from PySide2.QtCore import Slot, QVariantAnimation, QPointF, Qt
 from sqlalchemy.engine.url import URL
 from ...helpers import open_url

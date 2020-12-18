@@ -151,7 +151,7 @@ class _MockParameterModel(QAbstractTableModel):
         self._table[index.row()][index.column()] = value
         return True
 
-    def index_name(self, index):
+    def index_name(self, index):  # pylint: disable=no-self-use
         return "entity - parameter"
 
 

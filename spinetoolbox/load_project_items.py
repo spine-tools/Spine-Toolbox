@@ -25,17 +25,17 @@ import pkgutil
 import tempfile
 import zipfile
 from spine_engine.project_item.project_item_info import ProjectItemInfo
-from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
-from .config import PREFERRED_SPINE_ITEMS_VERSION
-from .version import __version__ as curr_toolbox_version
 from spine_engine.version import __version__ as curr_engine_version
 from spinedb_api.version import __version__ as curr_db_api_version
+from .config import PREFERRED_SPINE_ITEMS_VERSION
+from .version import __version__ as curr_toolbox_version
+from .project_item.project_item_factory import ProjectItemFactory
 
 
 def _spine_items_version_check():
     """Check if spine_items is the preferred version."""
     try:
-        import spine_items
+        import spine_items  # pylint: disable=import-outside-toplevel
     except ModuleNotFoundError:
         # Module not installed yet
         return False
@@ -114,7 +114,7 @@ UPGRADING PROJECT ITEMS...
         version_file_path = os.path.join(spine_items_path, "version.py")
         version = {}
         with open(version_file_path) as fp:
-            exec(fp.read(), version)
+            exec(fp.read(), version)  # pylint: disable=exec-used
         req_toolbox_version = version.get("REQUIRED_SPINE_TOOLBOX_VERSION", "0.5.2")
         req_engine_version = version.get("REQUIRED_SPINE_ENGINE_VERSION", "0.7.3")
         req_db_api_version = version.get("REQUIRED_SPINEDB_API_VERSION", "0.8.11")
@@ -134,7 +134,7 @@ UPGRADING PROJECT ITEMS...
             return False
         # Check if new items are already installed
         try:
-            import spine_items
+            import spine_items  # pylint: disable=import-outside-toplevel
 
             curr_items_version = spine_items.__version__
             new_items_version = version["__version__"]
@@ -159,7 +159,7 @@ def load_project_items(toolbox):
         tuple of dict: two dictionaries; first maps item type to its category
             while second maps item type to item factory
     """
-    import spine_items
+    import spine_items  # pylint: disable=import-outside-toplevel
 
     items_root = pathlib.Path(spine_items.__file__).parent
     categories = dict()
@@ -205,7 +205,7 @@ def load_item_specification_factories():
     Returns:
         dict: a map from item type to specification factory
     """
-    import spine_items
+    import spine_items  # pylint: disable=import-outside-toplevel
 
     items_root = pathlib.Path(spine_items.__file__).parent
     factories = dict()
@@ -227,7 +227,7 @@ def load_executable_items():
     Returns:
         dict: a map from item type to the executable item class
     """
-    import spine_items
+    import spine_items  # pylint: disable=import-outside-toplevel
 
     items_root = pathlib.Path(spine_items.__file__).parent
     classes = dict()

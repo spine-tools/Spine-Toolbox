@@ -1062,5 +1062,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 
-    def _get_base_dir(self):
+    @staticmethod
+    def _get_base_dir():
         return APPLICATION_PATH

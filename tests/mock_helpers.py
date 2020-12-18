@@ -19,9 +19,7 @@ Classes and functions that can be shared among unit test modules.
 import os
 import os.path
 import shutil
-from tempfile import TemporaryDirectory
 from unittest import mock
-from unittest.mock import MagicMock
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
 
@@ -37,32 +35,27 @@ def create_toolboxui():
 
 def create_project(toolbox):
     """Creates a project for the given ToolboxUI."""
-    with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+    with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
         "spinetoolbox.project.create_dir"
-    ) as mock_create_dir, mock.patch(
-        "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
-    ) as mock_upd_rec_projects, mock.patch(
+    ), mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
         "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
-    ) as mock_upd_recents:
+    ):
         project_dir = os.path.abspath(
             os.path.join(os.curdir, "tests", "test_resources", "This dir should not exist after tests")
         )
         toolbox.create_project("UnitTest Project", "Project for unit tests.", project_dir)
-    return
 
 
 def create_toolboxui_with_project():
     """Returns ToolboxUI with a project instance where
     QSettings among others has been mocked."""
-    with mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, mock.patch(
+    with mock.patch("spinetoolbox.project.create_dir"), mock.patch(
         "spinetoolbox.ui_main.ToolboxUI.save_project"
-    ) as mock_save_project, mock.patch(
-        "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
-    ) as mock_update_recents, mock.patch(
+    ), mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
         "spinetoolbox.ui_main.QSettings.value"
     ) as mock_qsettings_value, mock.patch(
         "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
-    ) as mock_upd_recents:
+    ):
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
         project_dir = os.path.abspath(
@@ -101,14 +94,14 @@ def add_ds(project, name, x=0, y=0):
     """Helper function to create a Data Store to given project with given name and coordinates."""
     item = {name: {"type": "Data Store", "description": "", "url": dict(), "x": x, "y": y}}
     # This mocks create_dir in both project_item.py and in data_store.py
-    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
 
 
 def add_dc(project, name, x=0, y=0):
     """Helper function to create a Data Connection to given project with given name and coordinates."""
     item = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
-    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
         project.add_project_items(item)
 
 
@@ -132,9 +125,9 @@ def add_importer(project, name, x=0, y=0):
     """Helper function to add an Importer View to given project."""
     item = {name: {"type": "Importer", "description": "", "mappings": None, "x": x, "y": y}}
     # This mocks create_dir in both project_item.py and in importer.py
-    with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir, mock.patch(
+    with mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
         "spine_items.importer.importer.create_dir"
-    ) as mock_create_dir2:
+    ):
         project.add_project_items(item)
 
 

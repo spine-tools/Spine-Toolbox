@@ -47,8 +47,8 @@ from PySide2.QtGui import (
     QPalette,
 )
 import spine_engine
-from .config import REQUIRED_SPINE_ENGINE_VERSION
 from spine_engine.config import PYTHON_EXECUTABLE, JULIA_EXECUTABLE
+from .config import REQUIRED_SPINE_ENGINE_VERSION
 
 
 if os.name == "nt":

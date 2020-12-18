@@ -552,7 +552,7 @@ def _label_nested_maps(map_, label):
     if map_ and not map_.is_nested():
         if isinstance(map_.values[0], (Array, TimeSeries)):
             labels = [label + " - " + str(index) for index in map_.indexes]
-            values = [value for value in map_.values]
+            values = list(map_.values)
             return values, labels
         return [map_], [label]
     values = list()

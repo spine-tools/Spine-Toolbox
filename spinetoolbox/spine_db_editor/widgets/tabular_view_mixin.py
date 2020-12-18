@@ -458,7 +458,8 @@ class TabularViewMixin:
         self.current_class_name = self.current_class_item.display_data
         self.do_reload_pivot_table()
 
-    def _get_current_class_item(self, current_index):
+    @staticmethod
+    def _get_current_class_item(current_index):
         item = current_index.model().item_from_index(current_index)
         while item.item_type != "root":
             if item.item_type in ("object_class", "relationship_class"):

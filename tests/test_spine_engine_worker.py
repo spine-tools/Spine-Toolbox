@@ -47,7 +47,7 @@ class TestSpineEngineWorker(unittest.TestCase):
             while not finished:
                 QApplication.processEvents()
                 if receiver.finished:
-                    self.assertEqual(receiver._outcome, "COMPLETED")
+                    self.assertEqual(receiver.outcome, "COMPLETED")
                     finished = True
                 elif time.process_time() - start > 10.0:
                     self.fail("Engine is taking too long to run.")
@@ -66,7 +66,7 @@ class _Receiver(QObject):
     @Slot()
     def _mark_worker_finished(self):
         self.finished = True
-        self._outcome = self._worker.engine_final_state()
+        self.outcome = self._worker.engine_final_state()
         self._worker.clean_up()
 
 

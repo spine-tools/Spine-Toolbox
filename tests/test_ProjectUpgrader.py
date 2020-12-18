@@ -26,8 +26,8 @@ from tempfile import TemporaryDirectory
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_upgrader import ProjectUpgrader
 from spinetoolbox.resources_icons_rc import qInitResources
-from .mock_helpers import create_toolboxui
 from spinetoolbox.config import LATEST_PROJECT_VERSION
+from .mock_helpers import create_toolboxui
 
 
 class TestProjectUpgrader(unittest.TestCase):

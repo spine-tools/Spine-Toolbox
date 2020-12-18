@@ -45,9 +45,7 @@ class SpineToolboxProject(MetaObject):
     project_execution_finished = Signal()
     """Emitted when the execution finishes, used in unit tests."""
 
-    def __init__(
-        self, toolbox, name, description, p_dir, project_item_model, settings, logger,
-    ):
+    def __init__(self, toolbox, name, description, p_dir, project_item_model, settings, logger):
 
         """
 

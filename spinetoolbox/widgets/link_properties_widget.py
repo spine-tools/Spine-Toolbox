@@ -46,7 +46,7 @@ class LinkPropertiesWidget(QWidget):
         """
         link.refresh_resource_filter_model()
         self.ui.treeView_resources.setModel(link.resource_filter_model)
-        qApp.processEvents()
+        qApp.processEvents()  # pylint: disable=undefined-variable
         self.ui.treeView_resources.expandAll()
         self.ui.label_link_name.setText(link.name)
 

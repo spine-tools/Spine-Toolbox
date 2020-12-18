@@ -23,7 +23,7 @@ import logging
 import os
 import sys
 from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel, QPointF, QMimeData
+from PySide2.QtCore import Qt, QPoint, QItemSelectionModel, QPointF, QMimeData
 from PySide2.QtTest import QTest
 from PySide2.QtGui import QDropEvent
 from spinetoolbox.graphics_items import ProjectItemIcon
@@ -150,13 +150,11 @@ class TestToolboxUI(unittest.TestCase):
             self.skipTest("Test project directory '{0}' does not exist".format(project_dir))
             return
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
-        ) as mock_create_dir, mock.patch(
-            "spinetoolbox.project_item.project_item.create_dir"
-        ) as mock_create_dir, mock.patch(
+        ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
-        ) as mock_upd_rec_projs:
+        ):
             self.toolbox.open_project(project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
@@ -604,7 +602,6 @@ class TestToolboxUI(unittest.TestCase):
         This test is done without a project so MUT only calls QSettings.value() once.
         This can probably be simplified but at least it does not edit user's Settings, while doing the test."""
         self.assertIsNone(self.toolbox.project())
-        settings = self.toolbox.qsettings()
         with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_1
             tasks = self.toolbox._tasks_before_exit()
@@ -646,7 +643,6 @@ class TestToolboxUI(unittest.TestCase):
         """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
         This test is done with a 'mock' project so MUT calls QSettings.value() twice."""
         self.toolbox._project = 1  # Just make sure project is not None
-        settings = self.toolbox.qsettings()
         with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_1
             tasks = self.toolbox._tasks_before_exit()
@@ -724,7 +720,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
             self.toolbox.ui.actionCopy.triggered.emit()
             self.toolbox.ui.actionPaste.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
@@ -737,7 +733,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        with mock.patch("spinetoolbox.project_item.project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
             self.toolbox.ui.actionDuplicate.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
@@ -814,35 +810,35 @@ class TestToolboxUI(unittest.TestCase):
     def _tasks_before_exit_scenario_2(key, defaultValue="2"):
         if key == "appSettings/showExitPrompt":
             return "2"
-        elif key == "appSettings/saveAtExit":
+        if key == "appSettings/saveAtExit":
             return "0"
 
     @staticmethod
     def _tasks_before_exit_scenario_3(key, defaultValue="2"):
         if key == "appSettings/showExitPrompt":
             return "0"
-        elif key == "appSettings/saveAtExit":
+        if key == "appSettings/saveAtExit":
             return "1"
 
     @staticmethod
     def _tasks_before_exit_scenario_4(key, defaultValue="2"):
         if key == "appSettings/showExitPrompt":
             return "2"
-        elif key == "appSettings/saveAtExit":
+        if key == "appSettings/saveAtExit":
             return "1"
 
     @staticmethod
     def _tasks_before_exit_scenario_5(key, defaultValue="2"):
         if key == "appSettings/showExitPrompt":
             return "0"
-        elif key == "appSettings/saveAtExit":
+        if key == "appSettings/saveAtExit":
             return "2"
 
     @staticmethod
     def _tasks_before_exit_scenario_6(key, defaultValue="2"):
         if key == "appSettings/showExitPrompt":
             return "2"
-        elif key == "appSettings/saveAtExit":
+        if key == "appSettings/saveAtExit":
             return "2"
 
 

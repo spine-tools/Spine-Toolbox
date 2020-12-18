@@ -22,7 +22,6 @@ import os
 import json
 import copy
 from PySide2.QtWidgets import QFileDialog, QMessageBox
-from spinetoolbox.helpers import create_dir, recursive_overwrite
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 
@@ -70,8 +69,7 @@ class ProjectUpgrader:
                 self._toolbox.msg_error.emit("Upgrading project failed")
                 return False
             return upgraded_dict
-        else:
-            return project_dict
+        return project_dict
 
     def upgrade_to_latest(self, v, project_dict, project_dir):
         """Upgrades the given project dictionary to the latest version.
@@ -223,7 +221,8 @@ class ProjectUpgrader:
                     importer_specs.append(serialize_path(spec_path, project_dir))
         return new
 
-    def upgrade_v3_to_v4(self, old):
+    @staticmethod
+    def upgrade_v3_to_v4(old):
         """Upgrades version 3 project dictionary to version 4.
 
         Changes:
@@ -242,7 +241,8 @@ class ProjectUpgrader:
                 item_dict["type"] = "GdxExporter"
         return new
 
-    def upgrade_v4_to_v5(self, old):
+    @staticmethod
+    def upgrade_v4_to_v5(old):
         """Upgrades version 4 project dictionary to version 5.
 
         Changes:

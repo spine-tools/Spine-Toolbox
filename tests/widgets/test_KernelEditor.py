@@ -35,7 +35,6 @@ class TestKernelEditor(unittest.TestCase):
 
     def tearDown(self):
         """Clean up."""
-        pass
 
     def test_make_kernel_editor(self):
         sw = SettingsWidget(self.toolbox)

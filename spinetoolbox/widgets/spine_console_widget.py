@@ -176,13 +176,12 @@ class SpineConsoleWidget(RichJupyterWidget):
     def _handle_status(self, msg):
         """Handles status message."""
         super()._handle_status(msg)
-        self.kernel_execution_state = msg["content"].get("execution_state", "")
-        if self.kernel_execution_state == "starting":
+        kernel_execution_state = msg["content"].get("execution_state", "")
+        if kernel_execution_state == "starting":
             # This msg does not show up when starting the Python Console but on Restart it does (strange)
-            # self._toolbox.msg.emit(f"*** Starting {self._name} ***")
             self._kernel_starting = True
             return
-        if self.kernel_execution_state == "idle" and self._kernel_starting:
+        if kernel_execution_state == "idle" and self._kernel_starting:
             self._kernel_starting = False
             self._toolbox.msg_success.emit(f"{self._name} ready for action")
             self._control.viewport().setCursor(self.normal_cursor)

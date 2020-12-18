@@ -115,7 +115,8 @@ class KernelEditor(QDialog):
         self.setStyleSheet(MAINWINDOW_SS)
 
     def connect_signals(self):
-        """Connect signals to slots."""
+        """Connects signals to slots."""
+        # pylint: disable=unnecessary-lambda
         self.ui.pushButton_make_python_kernel.clicked.connect(self.make_python_kernel)
         self.ui.pushButton_make_julia_kernel.clicked.connect(self.make_julia_kernel)
         self.ui.tableView_kernel_list.selectionModel().currentChanged.connect(self._check_kernel_is_ok)
@@ -163,7 +164,7 @@ class KernelEditor(QDialog):
 
     def update_python_cmd_tooltip(self):
         """Updates Python command (CustomQLabel) tooltip according to selections."""
-        int = self.ui.lineEdit_python_interpreter.text()
+        interpreter = self.ui.lineEdit_python_interpreter.text()
         kernel_name = self.ui.lineEdit_python_kernel_name.text()
         if kernel_name == "":
             kernel_name = "NA"
@@ -173,7 +174,13 @@ class KernelEditor(QDialog):
                 kernel_display_name = self.ui.lineEdit_python_kernel_display_name.placeholderText()
             else:
                 kernel_display_name = self.ui.lineEdit_python_kernel_display_name.text()
-        tip = int + " -m ipykernel install --user --name " + kernel_name + " --display-name " + kernel_display_name
+        tip = (
+            interpreter
+            + " -m ipykernel install --user --name "
+            + kernel_name
+            + " --display-name "
+            + kernel_display_name
+        )
         self.ui.label_python_cmd.setToolTip(tip)
 
     def update_julia_cmd_tooltip(self):
@@ -227,7 +234,7 @@ class KernelEditor(QDialog):
             return
         with open(kernel_json, "r") as fh:
             try:
-                kernel_dict = json.load(fh)
+                json.load(fh)
             except json.decoder.JSONDecodeError:
                 self.notification_stack.push(f"Error in kernel.json file. Invalid JSON.")
                 return
@@ -283,7 +290,7 @@ class KernelEditor(QDialog):
 
     @busy_effect
     def start_kernelspec_install_process(self, prgm, k_name, d_name):
-        """Installs kernel specifications for the given Python environment.
+        r"""Installs kernel specifications for the given Python environment.
         Runs e.g. this command in QProcess
 
         python -m ipykernel install --user --name python-X.Y --display-name PythonX.Y
@@ -660,7 +667,8 @@ class KernelEditor(QDialog):
         self._mouse_move_pos = globalpos
 
     @busy_effect
-    def is_package_installed(self, python_path, package_name):
+    @staticmethod
+    def is_package_installed(python_path, package_name):
         """Checks if given package is installed to given Python environment.
 
         Args:
@@ -672,9 +680,7 @@ class KernelEditor(QDialog):
         """
         response = subprocess.check_output([python_path, '-m', 'pip', 'freeze', '-q'])
         installed_packages = [r.decode().split('==')[0] for r in response.split()]
-        if package_name in installed_packages:
-            return True
-        return False
+        return package_name in installed_packages
 
     @busy_effect
     def start_package_install_process(self, python_path, package_name):

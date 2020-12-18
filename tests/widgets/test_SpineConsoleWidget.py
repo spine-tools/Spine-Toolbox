@@ -34,7 +34,6 @@ class TestSpineConsoleWidget(unittest.TestCase):
 
     def tearDown(self):
         """Clean up."""
-        pass
 
     def test_make_spine_console_widget(self):
         python_console = SpineConsoleWidget(self.toolbox, "Python Console")

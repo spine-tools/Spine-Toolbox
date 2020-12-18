@@ -166,7 +166,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         loop.exec_()
 
     def test_execute_project_with_single_item(self):
-        view, view_executable = self._make_item(self.add_view)
+        _, view_executable = self._make_item(self.add_view)
         with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
             mock_make_item.return_value = view_executable
             self.toolbox.project().execute_project()
@@ -286,6 +286,10 @@ class _MockExecutableItem(ExecutableItemBase):
     def execute(self, _forward_resources, _backward_resources):
         self.execute_called = True
         return True
+
+    @classmethod
+    def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):
+        raise NotImplementedError()
 
 
 if __name__ == '__main__':

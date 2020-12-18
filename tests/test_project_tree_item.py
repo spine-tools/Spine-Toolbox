@@ -17,7 +17,6 @@ Unit tests for project_tree_item module.
 """
 
 import unittest
-from networkx import DiGraph
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_item.project_item import ProjectItem
