@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.6%20|%203.7-blue.svg)](https://www.python.org/downloads/release/python-360/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
-![Unit tests](https://github.com/Spine-project/Spine-Toolbox/workflows/Unit%20tests/badge.svg)
+[![Unit tests](https://github.com/Spine-project/Spine-Toolbox/workflows/Unit%20tests/badge.svg)](https://github.com/Spine-project/Spine-Toolbox/actions?query=workflow%3A"Unit+tests")
 [![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
 
 An application to define, manage, and execute various energy system simulation models.
