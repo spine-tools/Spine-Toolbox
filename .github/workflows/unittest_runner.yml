@@ -2,13 +2,9 @@
 
 name: Unit tests
 
-# Run workflow at every 30th minute past every hour
-# from 10 through 18 on every day-of-week from Monday
-# through Friday.
+# Run workflow on every push
 on:
-  schedule:
-    # * is a special character in YAML so the string must be quoted
-    - cron:  '*/30 10-18 * * 1-5'
+  push
 
 jobs:
 
