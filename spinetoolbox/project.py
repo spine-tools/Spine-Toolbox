@@ -624,6 +624,14 @@ class SpineToolboxProject(MetaObject):
         if dag:
             self.notify_changes_in_dag(dag)
 
+    def is_busy(self):
+        """Queries if project is busy processing something.
+
+        Returns:
+            bool: True if project is busy, False otherwise
+        """
+        return bool(self._dags_about_to_be_notified)
+
     @property
     def settings(self):
         return self._settings

@@ -20,6 +20,7 @@ import os
 import os.path
 import shutil
 from unittest import mock
+from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
 
@@ -67,11 +68,13 @@ def create_toolboxui_with_project():
 
 def clean_up_toolboxui_with_project(toolbox):
     """Removes project directories and work directory."""
+    while toolbox.project().is_busy():
+        QApplication.processEvents()
     project_dir = toolbox.project().project_dir
-    if os.path.exists(project_dir):
-        shutil.rmtree(project_dir)
     toolbox.undo_stack.deleteLater()
     toolbox.deleteLater()
+    if os.path.exists(project_dir):
+        shutil.rmtree(project_dir)
 
 
 # noinspection PyMethodMayBeStatic, PyPep8Naming,SpellCheckingInspection
@@ -134,5 +137,4 @@ def add_importer(project, name, x=0, y=0):
 def add_gdx_exporter(project, name, x=0, y=0):
     """Helper function to add an gdx exporter to given project."""
     item = {name: {"type": "GdxExporter", "description": "", "x": x, "y": y, "settings_packs": None}}
-    with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
-        project.add_project_items(item)
+    project.add_project_items(item)
