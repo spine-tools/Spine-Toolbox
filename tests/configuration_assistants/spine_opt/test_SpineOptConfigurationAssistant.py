@@ -16,6 +16,7 @@ Unit tests for SpineOptConfigurationAssistant class.
 :date:   3.9.2019
 """
 
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch, Mock
 import logging
@@ -23,7 +24,7 @@ import sys
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.configuration_assistants.spine_opt.configuration_assistant import SpineOptConfigurationAssistant
 from spinetoolbox.execution_managers import QProcessExecutionManager
-from tests.mock_helpers import create_toolboxui_with_project
+from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox
 
 
 class TestSpineOptConfigurationAssistant(unittest.TestCase):
@@ -43,8 +44,9 @@ class TestSpineOptConfigurationAssistant(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test."""
-        toolbox = create_toolboxui_with_project()
-        self.widget = SpineOptConfigurationAssistant(toolbox)
+        self._temp_dir = TemporaryDirectory()
+        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
+        self.widget = SpineOptConfigurationAssistant(self._toolbox)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -52,6 +54,8 @@ class TestSpineOptConfigurationAssistant(unittest.TestCase):
         """
         self.widget.deleteLater()
         self.widget = None
+        clean_up_toolbox(self._toolbox)
+        self._temp_dir.cleanup()
 
     def goto_welcome(self):
         self.widget.set_up_machine()

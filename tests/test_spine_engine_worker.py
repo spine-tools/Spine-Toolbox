@@ -15,13 +15,14 @@ Unit tests for ``spine_engine_worker`` module.
 :authors: A. Soininen (VTT)
 :date:    3.12.2020
 """
+from tempfile import TemporaryDirectory
 import time
 import unittest
 from PySide2.QtCore import QObject, Slot
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.dag_handler import DirectedGraphHandler
 from spinetoolbox.spine_engine_worker import SpineEngineWorker
-from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
+from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestSpineEngineWorker(unittest.TestCase):
@@ -31,10 +32,12 @@ class TestSpineEngineWorker(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        self._toolbox = create_toolboxui_with_project()
+        self._temp_dir = TemporaryDirectory()
+        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
-        clean_up_toolboxui_with_project(self._toolbox)
+        clean_up_toolbox(self._toolbox)
+        self._temp_dir.cleanup()
 
     def test_empty_project_executes(self):
         dag = DirectedGraphHandler()

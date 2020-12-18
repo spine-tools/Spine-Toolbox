@@ -342,18 +342,6 @@ class SpineToolboxProject(MetaObject):
                 return
         self._toolbox.undo_stack.push(RemoveProjectItemCommand(self, name, delete_data=delete_data))
 
-    def do_remove_item(self, name):
-        """Removes item from project given its name.
-        This method is used when closing the existing project for opening a new one.
-
-        Args:
-            name (str): Item's name
-        """
-        ind = self._project_item_model.find_item(name)
-        category_ind = ind.parent()
-        item = self._project_item_model.item(ind)
-        self._remove_item(category_ind, item)
-
     def _remove_item(self, category_ind, item, delete_data=False):
         """Removes LeafProjectTreeItem from project.
 
@@ -362,10 +350,6 @@ class SpineToolboxProject(MetaObject):
             item (LeafProjectTreeItem): the item to remove
             delete_data (bool): If set to True, deletes the directories and data associated with the item
         """
-        try:
-            data_dir = item.project_item.data_dir
-        except AttributeError:
-            data_dir = None
         # Remove item from project model
         if not self._project_item_model.remove_item(item, parent=category_ind):
             self._logger.msg_error.emit("Removing item <b>{0}</b> from project failed".format(item.name))
@@ -375,6 +359,10 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler.remove_node_from_graph(item.name)
         item.project_item.tear_down()
         if delete_data:
+            try:
+                data_dir = item.project_item.data_dir
+            except AttributeError:
+                data_dir = None
             if data_dir:
                 # Remove data directory and all its contents
                 self._logger.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
@@ -654,6 +642,12 @@ class SpineToolboxProject(MetaObject):
         project_item.set_properties_ui(properties_ui)
         project_item.create_data_dir()
         project_item.set_up()
+
+    def tear_down(self):
+        """Cleans up project."""
+        for category_ind, project_tree_items in self._project_item_model.items_per_category().items():
+            for project_tree_item in project_tree_items:
+                self._remove_item(category_ind, project_tree_item, delete_data=False)
 
 
 def _ranks(node_successors):

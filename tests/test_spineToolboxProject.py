@@ -16,13 +16,14 @@ Unit tests for SpineToolboxProject class.
 :date:   14.11.2018
 """
 
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide2.QtCore import QVariantAnimation, QEventLoop
 from PySide2.QtWidgets import QApplication
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from .mock_helpers import (
-    clean_up_toolboxui_with_project,
+    clean_up_toolbox,
     create_toolboxui_with_project,
     add_ds,
     add_dc,
@@ -43,11 +44,13 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def setUp(self):
         """Makes a ToolboxUI instance and opens a project before each test."""
-        self.toolbox = create_toolboxui_with_project()
+        self._temp_dir = TemporaryDirectory()
+        self.toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
         """Runs after each test. Use this to free resources after a test if needed."""
-        clean_up_toolboxui_with_project(self.toolbox)
+        clean_up_toolbox(self.toolbox)
+        self._temp_dir.cleanup()
 
     def test_add_data_store(self):
         """Test adding a Data Store to project."""
@@ -204,7 +207,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         """Tests renaming a project."""
         new_name = "New Project Name"
         new_short_name = "new_project_name"
-        self.toolbox.project().set_name(new_name)
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"):
+            self.toolbox.project().set_name(new_name)
         self.assertEqual(self.toolbox.project().name, new_name)
         self.assertEqual(self.toolbox.project().short_name, new_short_name)
 

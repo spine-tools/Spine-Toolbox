@@ -16,6 +16,7 @@ Unit tests for ProjectItemModel class.
 :date:   14.10.2019
 """
 
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import NonCallableMagicMock
 from PySide2.QtCore import Qt
@@ -23,7 +24,7 @@ from PySide2.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.project_item_model import ProjectItemModel
 from spinetoolbox.project_tree_item import CategoryProjectTreeItem, LeafProjectTreeItem, RootProjectTreeItem
 from spinetoolbox.project_item.project_item import ProjectItem
-from ..mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
+from ..mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestProjectItemModel(unittest.TestCase):
@@ -34,11 +35,13 @@ class TestProjectItemModel(unittest.TestCase):
 
     def setUp(self):
         """Sets up toolbox."""
-        self.toolbox = create_toolboxui_with_project()
+        self._temp_dir = TemporaryDirectory()
+        self.toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
         """Cleans up."""
-        clean_up_toolboxui_with_project(self.toolbox)
+        clean_up_toolbox(self.toolbox)
+        self._temp_dir.cleanup()
 
     def test_empty_model(self):
         root = RootProjectTreeItem()

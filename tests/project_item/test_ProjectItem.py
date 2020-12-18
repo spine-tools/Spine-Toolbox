@@ -16,11 +16,12 @@ Unit tests for ProjectItem base class.
 :date:   4.10.2019
 """
 
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_item.project_item import ProjectItem
-from ..mock_helpers import create_toolboxui_with_project, clean_up_toolboxui_with_project
+from ..mock_helpers import create_toolboxui_with_project, clean_up_toolbox
 
 
 class TestProjectItem(unittest.TestCase):
@@ -31,13 +32,15 @@ class TestProjectItem(unittest.TestCase):
 
     def setUp(self):
         """Set up."""
-        self.toolbox = create_toolboxui_with_project()
+        self._temp_dir = TemporaryDirectory()
+        self.toolbox = create_toolboxui_with_project(self._temp_dir.name)
         self.project = self.toolbox.project()
 
     def tearDown(self):
         """Clean up."""
         self.project = None
-        clean_up_toolboxui_with_project(self.toolbox)
+        clean_up_toolbox(self.toolbox)
+        self._temp_dir.cleanup()
 
     def test_notify_destination(self):
         item = ProjectItem("name", "description", 0.0, 0.0, self.project, self.toolbox)

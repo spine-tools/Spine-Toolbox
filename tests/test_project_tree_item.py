@@ -16,6 +16,7 @@ Unit tests for project_tree_item module.
 :date:   17.1.2020
 """
 
+from tempfile import TemporaryDirectory
 import unittest
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
@@ -26,7 +27,7 @@ from spinetoolbox.project_tree_item import (
     LeafProjectTreeItem,
     RootProjectTreeItem,
 )
-from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
+from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestLeafProjectTreeItem(unittest.TestCase):
@@ -49,14 +50,17 @@ class TestLeafProjectTreeItem(unittest.TestCase):
         self.assertEqual(item.flags(), Qt.NoItemFlags)
 
     def test_CategoryProjectTreeItem_flags(self):
-        toolbox, item = self._category_item()
-        self.assertEqual(item.flags(), Qt.ItemIsEnabled)
-        self._destroy_toolbox(toolbox)
+        with TemporaryDirectory() as project_dir:
+            toolbox, item = self._category_item(project_dir)
+            self.assertEqual(item.flags(), Qt.ItemIsEnabled)
+            clean_up_toolbox(toolbox)
 
     def test_LeafProjectTreeItem_flags(self):
-        toolbox, item = self._leaf_item()
-        self.assertEqual(item.flags(), Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)
-        self._destroy_toolbox(toolbox)
+        with TemporaryDirectory() as project_dir:
+            toolbox = create_toolboxui_with_project(project_dir)
+            item = self._leaf_item(toolbox)
+            self.assertEqual(item.flags(), Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable)
+            clean_up_toolbox(toolbox)
 
     def test_RootProjectTreeItem_initial_name_and_description(self):
         item = RootProjectTreeItem()
@@ -65,50 +69,46 @@ class TestLeafProjectTreeItem(unittest.TestCase):
 
     def test_RootProjectTreeItem_parent_child_hierarchy(self):
         parent = RootProjectTreeItem()
-        toolbox, child = self._category_item()
-        parent.add_child(child)
-        self.assertEqual(parent.child_count(), 1)
-        self.assertEqual(parent.children()[0], child)
-        self.assertEqual(child.parent(), parent)
-        self.assertEqual(child.row(), 0)
-        parent.remove_child(0)
-        self.assertEqual(parent.child_count(), 0)
-        self.assertFalse(parent.children())
-        self.assertIsNone(child.parent())
-        self._destroy_toolbox(toolbox)
+        with TemporaryDirectory() as project_dir:
+            toolbox, child = self._category_item(project_dir)
+            parent.add_child(child)
+            self.assertEqual(parent.child_count(), 1)
+            self.assertEqual(parent.children()[0], child)
+            self.assertEqual(child.parent(), parent)
+            self.assertEqual(child.row(), 0)
+            parent.remove_child(0)
+            self.assertEqual(parent.child_count(), 0)
+            self.assertFalse(parent.children())
+            self.assertIsNone(child.parent())
+            clean_up_toolbox(toolbox)
 
     def test_CategoryProjectTreeItem_parent_child_hierarchy(self):
-        toolbox, parent = self._category_item()
-        toolbox, leaf = self._leaf_item(toolbox)
-        parent.add_child(leaf)
-        self.assertEqual(parent.child_count(), 1)
-        self.assertEqual(parent.children()[0], leaf)
-        self.assertEqual(leaf.parent(), parent)
-        self.assertEqual(leaf.row(), 0)
-        parent.remove_child(0)
-        self.assertEqual(parent.child_count(), 0)
-        self.assertFalse(parent.children())
-        self.assertIsNone(leaf.parent())
-        self._destroy_toolbox(toolbox)
+        with TemporaryDirectory() as project_dir:
+            toolbox, parent = self._category_item(project_dir)
+            leaf = self._leaf_item(toolbox)
+            parent.add_child(leaf)
+            self.assertEqual(parent.child_count(), 1)
+            self.assertEqual(parent.children()[0], leaf)
+            self.assertEqual(leaf.parent(), parent)
+            self.assertEqual(leaf.row(), 0)
+            parent.remove_child(0)
+            self.assertEqual(parent.child_count(), 0)
+            self.assertFalse(parent.children())
+            self.assertIsNone(leaf.parent())
+            clean_up_toolbox(toolbox)
 
     @staticmethod
-    def _category_item():
+    def _category_item(project_dir):
         """Set up toolbox."""
-        toolbox = create_toolboxui_with_project()
+        toolbox = create_toolboxui_with_project(project_dir)
         item = CategoryProjectTreeItem("category item", "A category tree item")
         return toolbox, item
 
     @staticmethod
-    def _leaf_item(toolbox=None):
-        if toolbox is None:
-            toolbox = create_toolboxui_with_project()
+    def _leaf_item(toolbox):
         project_item = ProjectItem("PI", "A Project item", 0.0, 0.0, toolbox.project(), toolbox)
         item = LeafProjectTreeItem(project_item, toolbox)
-        return toolbox, item
-
-    @staticmethod
-    def _destroy_toolbox(toolbox):
-        clean_up_toolboxui_with_project(toolbox)
+        return item
 
 
 if __name__ == '__main__':

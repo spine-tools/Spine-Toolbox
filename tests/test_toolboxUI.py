@@ -17,6 +17,7 @@ Unit tests for ToolboxUI class.
 """
 
 from collections import namedtuple
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 import logging
@@ -32,7 +33,7 @@ from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.graphics_items import Link
 from spinetoolbox.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
-from .mock_helpers import create_toolboxui, create_project, add_ds, add_dc
+from .mock_helpers import clean_up_toolbox, create_toolboxui, create_project, add_ds, add_dc
 
 
 # noinspection PyUnusedLocal,DuplicatedCode
@@ -56,14 +57,15 @@ class TestToolboxUI(unittest.TestCase):
         """Overridden method. Runs before each test. Makes an instance of ToolboxUI class
         without opening previous project."""
         self.toolbox = create_toolboxui()
+        self._temp_dir = None
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        self.toolbox.undo_stack.deleteLater()
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolbox(self.toolbox)
+        if self._temp_dir is not None:
+            self._temp_dir.cleanup()
 
     def test_init_project_item_model_without_project(self):
         """Test that a new project item model contains 6 category items.
@@ -79,10 +81,11 @@ class TestToolboxUI(unittest.TestCase):
         Mock save_project() and create_dir() so that .proj file and project directory (and work directory) are
         not actually created.
         """
-        create_project(self.toolbox)
-        self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
-        self.toolbox.init_project_item_model()
-        self.check_init_project_item_model()
+        with TemporaryDirectory() as project_dir:
+            create_project(self.toolbox, project_dir)
+            self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
+            self.toolbox.init_project_item_model()
+            self.check_init_project_item_model()
 
     def check_init_project_item_model(self):
         """Checks that category items are created as expected."""
@@ -135,8 +138,9 @@ class TestToolboxUI(unittest.TestCase):
         """Test that create_project method makes a SpineToolboxProject instance.
         Does not actually create a project directory nor project.json file.
         """
-        create_project(self.toolbox)
-        self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
+        with TemporaryDirectory() as project_dir:
+            create_project(self.toolbox, project_dir)
+            self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
 
     def test_open_project(self):
         """Test that opening a project directory works.
@@ -212,97 +216,105 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).
         """
-        create_project(self.toolbox)
-        ds1 = "DS1"
-        add_ds(self.toolbox.project(), ds1)
-        n_items = self.toolbox.project_item_model.n_items()
-        self.assertEqual(n_items, 1)  # Check that the project contains one item
-        ds_ind = self.toolbox.project_item_model.find_item(ds1)
-        tv = self.toolbox.ui.treeView_project
-        tv.expandAll()  # NOTE: mouseClick does not work without this
-        tv_sm = tv.selectionModel()
-        # Scroll to item -> get rectangle -> click
-        tv.scrollTo(ds_ind)  # Make sure the item is 'visible'
-        ds1_rect = tv.visualRect(ds_ind)
-        # logging.debug("viewport geometry:{0}".format(tv.viewport().geometry()))  # this is pos() and size() combined
-        # logging.debug("item rect:{0}".format(ds1_rect))
-        # Simulate mouse click on selected item
-        QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.NoModifier, ds1_rect.center())
-        self.assertTrue(tv_sm.isSelected(ds_ind))
-        self.assertEqual(tv_sm.currentIndex(), ds_ind)
-        self.assertEqual(1, len(tv_sm.selectedIndexes()))
-        # Active project item should be DS1
-        self.assertEqual(self.toolbox.project_item_model.item(ds_ind).project_item, self.toolbox.active_project_item)
+        with TemporaryDirectory() as project_dir:
+            create_project(self.toolbox, project_dir)
+            ds1 = "DS1"
+            add_ds(self.toolbox.project(), ds1)
+            n_items = self.toolbox.project_item_model.n_items()
+            self.assertEqual(n_items, 1)  # Check that the project contains one item
+            ds_ind = self.toolbox.project_item_model.find_item(ds1)
+            tv = self.toolbox.ui.treeView_project
+            tv.expandAll()  # NOTE: mouseClick does not work without this
+            tv_sm = tv.selectionModel()
+            # Scroll to item -> get rectangle -> click
+            tv.scrollTo(ds_ind)  # Make sure the item is 'visible'
+            ds1_rect = tv.visualRect(ds_ind)
+            # logging.debug("viewport geometry:{0}".format(tv.viewport().geometry()))  # this is pos() and size() combined
+            # logging.debug("item rect:{0}".format(ds1_rect))
+            # Simulate mouse click on selected item
+            QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.NoModifier, ds1_rect.center())
+            self.assertTrue(tv_sm.isSelected(ds_ind))
+            self.assertEqual(tv_sm.currentIndex(), ds_ind)
+            self.assertEqual(1, len(tv_sm.selectedIndexes()))
+            # Active project item should be DS1
+            self.assertEqual(
+                self.toolbox.project_item_model.item(ds_ind).project_item, self.toolbox.active_project_item
+            )
 
     def test_selection_in_project_item_list_2(self):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
         Click on a project item and then on another project item.
         """
-        create_project(self.toolbox)
-        ds1 = "DS1"
-        ds2 = "DS2"
-        add_ds(self.toolbox.project(), ds1)
-        add_ds(self.toolbox.project(), ds2)
-        n_items = self.toolbox.project_item_model.n_items()
-        self.assertEqual(n_items, 2)
-        ds1_ind = self.toolbox.project_item_model.find_item(ds1)
-        ds2_ind = self.toolbox.project_item_model.find_item(ds2)
-        tv = self.toolbox.ui.treeView_project
-        tv.expandAll()
-        tv_sm = tv.selectionModel()
-        # Scroll to item -> get rectangle -> click
-        tv.scrollTo(ds1_ind)
-        ds1_rect = tv.visualRect(ds1_ind)
-        QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.NoModifier, ds1_rect.center())
-        # Scroll to item -> get rectangle -> click
-        tv.scrollTo(ds2_ind)
-        ds2_rect = tv.visualRect(ds2_ind)
-        QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.NoModifier, ds2_rect.center())
-        self.assertTrue(tv_sm.isSelected(ds2_ind))
-        self.assertEqual(tv_sm.currentIndex(), ds2_ind)
-        self.assertEqual(1, len(tv_sm.selectedIndexes()))
-        # Active project item should be DS2
-        self.assertEqual(self.toolbox.project_item_model.item(ds2_ind).project_item, self.toolbox.active_project_item)
+        with TemporaryDirectory() as project_dir:
+            create_project(self.toolbox, project_dir)
+            ds1 = "DS1"
+            ds2 = "DS2"
+            add_ds(self.toolbox.project(), ds1)
+            add_ds(self.toolbox.project(), ds2)
+            n_items = self.toolbox.project_item_model.n_items()
+            self.assertEqual(n_items, 2)
+            ds1_ind = self.toolbox.project_item_model.find_item(ds1)
+            ds2_ind = self.toolbox.project_item_model.find_item(ds2)
+            tv = self.toolbox.ui.treeView_project
+            tv.expandAll()
+            tv_sm = tv.selectionModel()
+            # Scroll to item -> get rectangle -> click
+            tv.scrollTo(ds1_ind)
+            ds1_rect = tv.visualRect(ds1_ind)
+            QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.NoModifier, ds1_rect.center())
+            # Scroll to item -> get rectangle -> click
+            tv.scrollTo(ds2_ind)
+            ds2_rect = tv.visualRect(ds2_ind)
+            QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.NoModifier, ds2_rect.center())
+            self.assertTrue(tv_sm.isSelected(ds2_ind))
+            self.assertEqual(tv_sm.currentIndex(), ds2_ind)
+            self.assertEqual(1, len(tv_sm.selectedIndexes()))
+            # Active project item should be DS2
+            self.assertEqual(
+                self.toolbox.project_item_model.item(ds2_ind).project_item, self.toolbox.active_project_item
+            )
 
     def test_selection_in_project_item_list_3(self):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
         Test multiple selection (Ctrl-pressed) with two Data Store items.
         """
-        create_project(self.toolbox)
-        ds1 = "DS1"
-        ds2 = "DS2"
-        add_ds(self.toolbox.project(), ds1)
-        add_ds(self.toolbox.project(), ds2)
-        n_items = self.toolbox.project_item_model.n_items()
-        self.assertEqual(n_items, 2)
-        ds1_ind = self.toolbox.project_item_model.find_item(ds1)
-        ds2_ind = self.toolbox.project_item_model.find_item(ds2)
-        tv = self.toolbox.ui.treeView_project
-        tv.expandAll()
-        tv_sm = tv.selectionModel()
-        # Scroll to item -> get rectangle -> click
-        tv.scrollTo(ds1_ind)
-        ds1_rect = tv.visualRect(ds1_ind)
-        QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.ControlModifier, ds1_rect.center())
-        # Scroll to item -> get rectangle -> click
-        tv.scrollTo(ds2_ind)
-        ds2_rect = tv.visualRect(ds2_ind)
-        QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.ControlModifier, ds2_rect.center())
-        # Both items should be selected, but we don't know which one is current as QGraphicsScene.selecteItems() is not sorted
-        self.assertTrue(tv_sm.isSelected(ds1_ind))
-        self.assertTrue(tv_sm.isSelected(ds2_ind))
-        self.assertEqual(2, len(tv_sm.selectedIndexes()))
-        # There should also be 2 items selected in the Design View
-        n_selected_items_in_design_view = len(self.toolbox.ui.graphicsView.scene().selectedItems())
-        self.assertEqual(2, n_selected_items_in_design_view)
-        # Active project item should be None
-        self.assertIsNone(self.toolbox.active_project_item)
+        with TemporaryDirectory() as project_dir:
+            create_project(self.toolbox, project_dir)
+            ds1 = "DS1"
+            ds2 = "DS2"
+            add_ds(self.toolbox.project(), ds1)
+            add_ds(self.toolbox.project(), ds2)
+            n_items = self.toolbox.project_item_model.n_items()
+            self.assertEqual(n_items, 2)
+            ds1_ind = self.toolbox.project_item_model.find_item(ds1)
+            ds2_ind = self.toolbox.project_item_model.find_item(ds2)
+            tv = self.toolbox.ui.treeView_project
+            tv.expandAll()
+            tv_sm = tv.selectionModel()
+            # Scroll to item -> get rectangle -> click
+            tv.scrollTo(ds1_ind)
+            ds1_rect = tv.visualRect(ds1_ind)
+            QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.ControlModifier, ds1_rect.center())
+            # Scroll to item -> get rectangle -> click
+            tv.scrollTo(ds2_ind)
+            ds2_rect = tv.visualRect(ds2_ind)
+            QTest.mouseClick(tv.viewport(), Qt.LeftButton, Qt.ControlModifier, ds2_rect.center())
+            # Both items should be selected, but we don't know which one is current as QGraphicsScene.selecteItems() is not sorted
+            self.assertTrue(tv_sm.isSelected(ds1_ind))
+            self.assertTrue(tv_sm.isSelected(ds2_ind))
+            self.assertEqual(2, len(tv_sm.selectedIndexes()))
+            # There should also be 2 items selected in the Design View
+            n_selected_items_in_design_view = len(self.toolbox.ui.graphicsView.scene().selectedItems())
+            self.assertEqual(2, n_selected_items_in_design_view)
+            # Active project item should be None
+            self.assertIsNone(self.toolbox.active_project_item)
 
     def test_selection_in_design_view_1(self):
         """Test item selection in Design View. Simulates mouse click on a Data Connection item.
         Test a single item selection.
         """
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         add_dc(self.toolbox.project(), dc1, x=0, y=0)
         n_items = self.toolbox.project_item_model.n_items()
@@ -325,7 +337,8 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         First mouse click on project item. Second mouse click on a project item.
         """
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
         add_dc(self.toolbox.project(), dc1, x=0, y=0)
@@ -355,7 +368,8 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         First mouse click on project item. Second mouse click on design view.
         """
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         add_dc(self.toolbox.project(), dc1, x=0, y=0)
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
@@ -378,7 +392,8 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         Mouse click on a link. Check that Link is selected.
         """
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
         add_dc(self.toolbox.project(), dc1, x=0, y=0)
@@ -420,7 +435,8 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in Design View.
         First mouse click on project item, then mouse click on a Link.
         """
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
         add_dc(self.toolbox.project(), dc1, x=0, y=0)
@@ -466,7 +482,8 @@ class TestToolboxUI(unittest.TestCase):
         First mouse click on project item (Ctrl-key pressed).
         Second mouse click on a project item (Ctrl-key pressed).
         """
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
         add_dc(self.toolbox.project(), dc1, x=0, y=0)
@@ -532,7 +549,8 @@ class TestToolboxUI(unittest.TestCase):
 
     def test_remove_item(self):
         """Test removing a single project item."""
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         add_dc(self.toolbox.project(), dc1)
         # Check the size of project item model
@@ -673,6 +691,7 @@ class TestToolboxUI(unittest.TestCase):
             tasks = self.toolbox._tasks_before_exit()
             self.assertEqual(2, mock_qsettings_value.call_count)
         self.assertEqual(tasks, ["prompt exit", "save"])
+        self.toolbox._project = None
 
     def test_propose_item_name(self):
         class MockModel:
@@ -684,6 +703,8 @@ class TestToolboxUI(unittest.TestCase):
                 found = self.finds[self.find_count]
                 self.find_count += 1
                 return found
+
+            remove_leaves = mock.MagicMock()
 
         self.toolbox.project_item_model = namedtuple("model", ["find_name"])
         self.toolbox.project_item_model = MockModel()
@@ -700,7 +721,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(name, "prefix 3")
 
     def test_copy_project_item_to_clipboard(self):
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         add_dc(self.toolbox.project(), "data_connection")
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
@@ -715,20 +737,21 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(item_dump)
 
     def test_paste_project_item_from_clipboard(self):
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         add_dc(self.toolbox.project(), "data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
-        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
-            self.toolbox.ui.actionCopy.triggered.emit()
-            self.toolbox.ui.actionPaste.triggered.emit()
+        self.toolbox.ui.actionCopy.triggered.emit()
+        self.toolbox.ui.actionPaste.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
         new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
 
     def test_duplicate_project_item(self):
-        create_project(self.toolbox)
+        self._temp_dir = TemporaryDirectory()
+        create_project(self.toolbox, self._temp_dir.name)
         add_dc(self.toolbox.project(), "data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")

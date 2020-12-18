@@ -15,13 +15,14 @@ Unit tests for ``graphics_items`` module.
 :authors: A. Soininen (VTT)
 :date:    17.12.2020
 """
+from tempfile import TemporaryDirectory
 import unittest
 from PySide2.QtCore import QEvent, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
 from spinetoolbox.graphics_items import ProjectItemIcon, Link
 from spinetoolbox.project_commands import MoveIconCommand
-from .mock_helpers import clean_up_toolboxui_with_project, create_toolboxui_with_project
+from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestProjectItemIcon(unittest.TestCase):
@@ -31,10 +32,12 @@ class TestProjectItemIcon(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        self._toolbox = create_toolboxui_with_project()
+        self._temp_dir = TemporaryDirectory()
+        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
-        clean_up_toolboxui_with_project(self._toolbox)
+        clean_up_toolbox(self._toolbox)
+        self._temp_dir.cleanup()
 
     def test_init(self):
         icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))

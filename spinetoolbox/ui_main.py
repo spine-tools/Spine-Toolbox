@@ -379,8 +379,10 @@ class ToolboxUI(QMainWindow):
             location (str): Path to project directory
         """
         self.undo_critical_commands()
+        if self._project is not None:
+            self._project.tear_down()
+            self._project = None
         self.clear_ui()
-        self.project_item_model.remove_leaves()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self._project = SpineToolboxProject(
             self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self,
@@ -461,8 +463,6 @@ class ToolboxUI(QMainWindow):
             bool: True when restoring project succeeded, False otherwise
         """
         self.undo_critical_commands()
-        # Make room for a new project
-        self.clear_ui()
         # Clear text browsers
         if clear_logs:
             self.ui.textBrowser_eventlog.clear()
@@ -481,7 +481,11 @@ class ToolboxUI(QMainWindow):
         connections = project_info["project"]["connections"]
         project_items = project_info["items"]
         # Init project item model
-        self.project_item_model.remove_leaves()
+        if self._project is not None:
+            self._project.tear_down()
+            self._project.deleteLater()
+            self._project = None
+        self.clear_ui()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
         self._project = SpineToolboxProject(
@@ -706,11 +710,7 @@ class ToolboxUI(QMainWindow):
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
-        if not self.project():
-            return
         self.activate_no_selection_tab()  # Clear properties widget
-        self._project.deleteLater()
-        self._project = None
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
 
     def undo_critical_commands(self):
@@ -1527,13 +1527,10 @@ class ToolboxUI(QMainWindow):
 
     def tear_down_items_and_factories(self):
         """Calls the tear_down method on all project items, so they can clean up their mess if needed."""
-        if not self._project:
-            return
         for factory in self.item_factories.values():
             factory.tear_down()
-        for item in self.project_item_model.items():
-            if isinstance(item, LeafProjectTreeItem):
-                item.project_item.tear_down()
+        if self._project is not None:
+            self._project.tear_down()
 
     def _tasks_before_exit(self):
         """

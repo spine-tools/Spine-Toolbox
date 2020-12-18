@@ -116,6 +116,7 @@ class CustomFileSystemWatcher(QFileSystemWatcher):
         return self.removePath(path)
 
     def tear_down(self):
+        self.removePaths(self.directories())
         self.deleteLater()
 
     def _take_snapshot(self, dirname):
