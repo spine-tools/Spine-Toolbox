@@ -332,7 +332,7 @@ class ProjectItem(MetaObject):
         y = item_dict["y"]
         return description, x, y
 
-    def copy_local_data(self, original_data_dir):
+    def copy_local_data(self, original_data_dir, original_url):
         """
         Copies local data linked to a duplicated project item.
         """
