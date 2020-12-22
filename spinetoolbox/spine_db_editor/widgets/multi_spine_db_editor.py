@@ -189,7 +189,7 @@ class MultiSpineDBEditor(QMainWindow):
         self._hot_spot = hot_spot
         self.grabMouse()
         self._others = self.others()
-        self._timer_id = self.startTimer(1000 / 30)  # 30 fps
+        self._timer_id = self.startTimer(1000 / 60)  # 60 fps is supposed to be the maximum the eye can see
 
     def others(self):
         return [w for w in self.db_mngr.get_all_multi_spine_db_editors() if w is not self]

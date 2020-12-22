@@ -169,7 +169,7 @@ class SpineDBManager(QObject):
 
     def is_url_available(self, url, logger):
         if str(url) in self._db_maps:
-            message = f"The db at <b>{url}</b> is in use. Please close all applications using this url and try again."
+            message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
             logger.msg_error.emit(message)
             return False
         return True
@@ -182,7 +182,7 @@ class SpineDBManager(QObject):
                 msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
                 msg.setIcon(QMessageBox.Question)
                 msg.setWindowTitle("Database not empty")
-                msg.setText(f"The database at <b>'{url}'</b> is not empty.")
+                msg.setText(f"The URL <b>{url}</b> points to an existing database.")
                 msg.setInformativeText("Do you want to overwrite it?")
                 msg.addButton("Overwrite", QMessageBox.AcceptRole)
                 msg.addButton("Cancel", QMessageBox.RejectRole)
