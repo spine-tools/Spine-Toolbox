@@ -601,8 +601,11 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(0, self.toolbox.specification_model.rowCount())
         tool_spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
         # Add a Tool spec to 'project.json' file
-        with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename:
+        with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename, mock.patch(
+            "spine_items.tool.tool_specifications.ToolSpecification.save"
+        ) as mock_save_specification:
             mock_filename.return_value = [tool_spec_path]
+            mock_save_specification.return_value = True
             self.toolbox.import_specification()
         self.assertEqual(1, self.toolbox.specification_model.rowCount())  # Tool spec model has one entry now
         # Find tool spec on row 0 from model and check that the name matches
