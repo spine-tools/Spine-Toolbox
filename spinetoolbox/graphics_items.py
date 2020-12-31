@@ -904,7 +904,7 @@ class Link(LinkBase):
             r: self.db_mngr.get_db_map(url, self._toolbox) for url, r in self._unfetched_db_resources.items()
         }
         if unfetched_db_maps:
-            self.resource_filter_model.add_resources(unfetched_db_maps)
+            self.resource_filter_model.init_resources(unfetched_db_maps)
             db_map_scenarios = {}
             db_map_tools = {}
             for resource, db_map in unfetched_db_maps.items():
@@ -963,13 +963,25 @@ class Link(LinkBase):
     def receive_tools_removed(self, db_map_data):
         self.resource_filter_model.receive_tools_removed(db_map_data)
 
+    def receive_session_rolled_back(self, db_maps):
+        self._force_refetch(db_maps)
+
     def receive_session_refreshed(self, db_maps):
-        # Move fetched db_maps to unfetched, so they are refetched by ``self.refresh_resource_filter_model()``
+        self._force_refetch(db_maps)
+
+    def _force_refetch(self, db_maps):
+        """Forces refetching given db_maps in next activation.
+
+        Args:
+            db_maps (Sequence(DatabaseMapping))
+        """
         for db_map in db_maps:
             url = db_map.db_url
             resource = self._fetched_db_resources.pop(url, None)
             if resource is not None:
                 self._unfetched_db_resources[url] = resource
+        if self == self._toolbox.active_link:
+            self.refresh_resource_filter_model()
 
     @property
     def name(self):

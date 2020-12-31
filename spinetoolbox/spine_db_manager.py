@@ -54,6 +54,7 @@ from .spine_db_commands import (
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+from .spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 
 
 @busy_effect
@@ -300,7 +301,9 @@ class SpineDBManager(QObject):
             db_maps (DiffDatabaseMapping)
         """
         is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        is_orphan = lambda db_map: not self.signaller.db_map_listeners(db_map) - {listener}
+        is_orphan = lambda db_map: not any(
+            isinstance(x, SpineDBEditor) for x in self.signaller.db_map_listeners(db_map) - {listener}
+        )
         dirty_orphan_db_maps = [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
         if dirty_orphan_db_maps:
             answer = self._prompt_to_commit_changes()

@@ -105,7 +105,7 @@ class ResourceFilterModel(QStandardItemModel):
             filter_item = root_item.child(1)
             self._remove_leaves(filter_item, data, root_item.text(), TOOL_FILTER_TYPE)
 
-    def add_resources(self, resource_db_maps):
+    def init_resources(self, resource_db_maps):
         for resource, db_map in resource_db_maps.items():
             root_item = self._root_items.get(db_map)
             if root_item is not None:
@@ -137,7 +137,7 @@ class ResourceFilterModel(QStandardItemModel):
         if role == Qt.DisplayRole:
             if super().data(index) == self._SELECT_ALL:
                 return self._SELECT_ALL
-            return self._link.db_mngr.get_item(item._db_map, item._item_type, item._id)["name"]
+            return self._link.db_mngr.get_item(item._db_map, item._item_type, item._id).get("name")
         if role == Qt.CheckStateRole:
             resource_label = self._root_items[item._db_map].text()
             filter_type = item._filter_type
