@@ -842,16 +842,7 @@ class FilterIcon(QGraphicsEllipseItem):
         self._text_item.setPlainText("\uf0b0")
         self._text_item.setDefaultTextColor(color)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
-        self.setCursor(Qt.PointingHandCursor)
-
-    def itemChange(self, change, value):
-        """Selects the parent item instead of this."""
-        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
-            if not self._parent.isSelected():
-                self._parent.setSelected(True)
-            return not value
-        return super().itemChange(change, value)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
 
 
 class Link(LinkBase):
@@ -1149,6 +1140,12 @@ class Link(LinkBase):
             self.setPen(self.normal_pen)
             self._filter_icon.setPen(self.normal_pen)
         super().paint(painter, option, widget)
+
+    def shape(self):
+        shape = super().shape()
+        if self._filter_icon.isVisible():
+            shape.addEllipse(self._filter_icon.sceneBoundingRect())
+        return shape
 
     def itemChange(self, change, value):
         """Brings selected link to top."""
