@@ -103,349 +103,229 @@ class SpineDBSignaller(QObject):
         self.db_mngr.session_rolled_back.connect(self.receive_session_rolled_back)
         self.db_mngr.error_msg.connect(self.receive_error_msg)
 
+    @Slot(object)
+    def receive_scenarios_added(self, db_map_data):
+        self._call_in_listeners("receive_scenarios_added", db_map_data)
+
+    @Slot(object)
+    def receive_alternatives_added(self, db_map_data):
+        self._call_in_listeners("receive_alternatives_added", db_map_data)
+
+    @Slot(object)
+    def receive_object_classes_added(self, db_map_data):
+        self._call_in_listeners("receive_object_classes_added", db_map_data)
+
+    @Slot(object)
+    def receive_objects_added(self, db_map_data):
+        self._call_in_listeners("receive_objects_added", db_map_data)
+
+    @Slot(object)
+    def receive_relationship_classes_added(self, db_map_data):
+        self._call_in_listeners("receive_relationship_classes_added", db_map_data)
+
+    @Slot(object)
+    def receive_relationships_added(self, db_map_data):
+        self._call_in_listeners("receive_relationships_added", db_map_data)
+
+    @Slot(object)
+    def receive_entity_groups_added(self, db_map_data):
+        self._call_in_listeners("receive_entity_groups_added", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_definitions_added(self, db_map_data):
+        self._call_in_listeners("receive_parameter_definitions_added", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_values_added(self, db_map_data):
+        self._call_in_listeners("receive_parameter_values_added", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_value_lists_added(self, db_map_data):
+        self._call_in_listeners("receive_parameter_value_lists_added", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_tags_added(self, db_map_data):
+        self._call_in_listeners("receive_parameter_tags_added", db_map_data)
+
+    @Slot(object)
+    def receive_features_added(self, db_map_data):
+        self._call_in_listeners("receive_features_added", db_map_data)
+
+    @Slot(object)
+    def receive_tools_added(self, db_map_data):
+        self._call_in_listeners("receive_tools_added", db_map_data)
+
+    @Slot(object)
+    def receive_tool_features_added(self, db_map_data):
+        self._call_in_listeners("receive_tool_features_added", db_map_data)
+
+    @Slot(object)
+    def receive_tool_feature_methods_added(self, db_map_data):
+        self._call_in_listeners("receive_tool_feature_methods_added", db_map_data)
+
+    @Slot(object)
+    def receive_scenarios_updated(self, db_map_data):
+        self._call_in_listeners("receive_scenarios_updated", db_map_data)
+
+    @Slot(object)
+    def receive_alternatives_updated(self, db_map_data):
+        self._call_in_listeners("receive_alternatives_updated", db_map_data)
+
+    @Slot(object)
+    def receive_object_classes_updated(self, db_map_data):
+        self._call_in_listeners("receive_object_classes_updated", db_map_data)
+
+    @Slot(object)
+    def receive_objects_updated(self, db_map_data):
+        self._call_in_listeners("receive_objects_updated", db_map_data)
+
+    @Slot(object)
+    def receive_relationship_classes_updated(self, db_map_data):
+        self._call_in_listeners("receive_relationship_classes_updated", db_map_data)
+
+    @Slot(object)
+    def receive_relationships_updated(self, db_map_data):
+        self._call_in_listeners("receive_relationships_updated", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_definitions_updated(self, db_map_data):
+        self._call_in_listeners("receive_parameter_definitions_updated", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_values_updated(self, db_map_data):
+        self._call_in_listeners("receive_parameter_values_updated", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_value_lists_updated(self, db_map_data):
+        self._call_in_listeners("receive_parameter_value_lists_updated", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_tags_updated(self, db_map_data):
+        self._call_in_listeners("receive_parameter_tags_updated", db_map_data)
+
+    @Slot(object)
+    def receive_features_updated(self, db_map_data):
+        self._call_in_listeners("receive_features_updated", db_map_data)
+
+    @Slot(object)
+    def receive_tools_updated(self, db_map_data):
+        self._call_in_listeners("receive_tools_updated", db_map_data)
+
+    @Slot(object)
+    def receive_tool_features_updated(self, db_map_data):
+        self._call_in_listeners("receive_tool_features_updated", db_map_data)
+
+    @Slot(object)
+    def receive_tool_feature_methods_updated(self, db_map_data):
+        self._call_in_listeners("receive_tool_feature_methods_updated", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_definition_tags_set(self, db_map_data):
+        self._call_in_listeners("receive_parameter_definition_tags_set", db_map_data)
+
+    @Slot(object)
+    def receive_scenarios_removed(self, db_map_data):
+        self._call_in_listeners("receive_scenarios_removed", db_map_data)
+
+    @Slot(object)
+    def receive_alternatives_removed(self, db_map_data):
+        self._call_in_listeners("receive_alternatives_removed", db_map_data)
+
+    @Slot(object)
+    def receive_object_classes_removed(self, db_map_data):
+        self._call_in_listeners("receive_object_classes_removed", db_map_data)
+
+    @Slot(object)
+    def receive_objects_removed(self, db_map_data):
+        self._call_in_listeners("receive_objects_removed", db_map_data)
+
+    @Slot(object)
+    def receive_relationship_classes_removed(self, db_map_data):
+        self._call_in_listeners("receive_relationship_classes_removed", db_map_data)
+
+    @Slot(object)
+    def receive_relationships_removed(self, db_map_data):
+        self._call_in_listeners("receive_relationships_removed", db_map_data)
+
+    @Slot(object)
+    def receive_entity_groups_removed(self, db_map_data):
+        self._call_in_listeners("receive_entity_groups_removed", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_definitions_removed(self, db_map_data):
+        self._call_in_listeners("receive_parameter_definitions_removed", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_values_removed(self, db_map_data):
+        self._call_in_listeners("receive_parameter_values_removed", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_value_lists_removed(self, db_map_data):
+        self._call_in_listeners("receive_parameter_value_lists_removed", db_map_data)
+
+    @Slot(object)
+    def receive_parameter_tags_removed(self, db_map_data):
+        self._call_in_listeners("receive_parameter_tags_removed", db_map_data)
+
+    @Slot(object)
+    def receive_features_removed(self, db_map_data):
+        self._call_in_listeners("receive_features_removed", db_map_data)
+
+    @Slot(object)
+    def receive_tools_removed(self, db_map_data):
+        self._call_in_listeners("receive_tools_removed", db_map_data)
+
+    @Slot(object)
+    def receive_tool_features_removed(self, db_map_data):
+        self._call_in_listeners("receive_tool_features_removed", db_map_data)
+
+    @Slot(object)
+    def receive_tool_feature_methods_removed(self, db_map_data):
+        self._call_in_listeners("receive_tool_feature_methods_removed", db_map_data)
+
+    @Slot(object)
+    def receive_error_msg(self, db_map_error_log):
+        self._call_in_listeners("receive_error_msg", db_map_error_log)
+
     @staticmethod
     def _shared_db_map_data(db_map_data, db_maps):
         return {db_map: data for db_map, data in db_map_data.items() if db_map in db_maps}
 
-    @Slot(object)
-    def receive_scenarios_added(self, db_map_data):
+    def _call_in_listeners(self, callback, db_map_data):
         for listener, db_maps in self.listeners.items():
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
-                listener.receive_scenarios_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_alternatives_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_alternatives_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_object_classes_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_object_classes_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_objects_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_objects_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_relationship_classes_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_relationship_classes_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_relationships_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_relationships_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_entity_groups_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_entity_groups_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_definitions_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_definitions_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_values_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_values_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_value_lists_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_value_lists_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_tags_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_tags_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_features_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_features_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tools_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tools_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tool_features_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tool_features_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tool_feature_methods_added(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tool_feature_methods_added(shared_db_map_data)
-
-    @Slot(object)
-    def receive_scenarios_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_scenarios_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_alternatives_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_alternatives_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_object_classes_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_object_classes_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_objects_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_objects_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_relationship_classes_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_relationship_classes_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_relationships_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_relationships_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_definitions_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_definitions_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_values_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_values_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_value_lists_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_value_lists_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_tags_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_tags_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_features_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_features_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tools_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tools_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tool_features_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tool_features_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tool_feature_methods_updated(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tool_feature_methods_updated(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_definition_tags_set(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_definition_tags_set(shared_db_map_data)
-
-    @Slot(object)
-    def receive_scenarios_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_scenarios_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_alternatives_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_alternatives_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_object_classes_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_object_classes_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_objects_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_objects_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_relationship_classes_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_relationship_classes_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_relationships_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_relationships_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_entity_groups_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_entity_groups_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_definitions_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_definitions_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_values_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_values_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_value_lists_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_value_lists_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_parameter_tags_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_parameter_tags_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_features_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_features_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tools_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tools_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tool_features_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tool_features_removed(shared_db_map_data)
-
-    @Slot(object)
-    def receive_tool_feature_methods_removed(self, db_map_data):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
-            if shared_db_map_data:
-                listener.receive_tool_feature_methods_removed(shared_db_map_data)
+                try:
+                    getattr(listener, callback)(shared_db_map_data)
+                except AttributeError:
+                    pass
 
     @Slot(set)
     def receive_session_refreshed(self, db_maps):
         for listener, listener_db_maps in self.listeners.items():
             shared_db_maps = listener_db_maps.intersection(db_maps)
             if shared_db_maps:
-                listener.receive_session_refreshed(shared_db_maps)
+                try:
+                    listener.receive_session_refreshed(shared_db_maps)
+                except AttributeError:
+                    pass
 
     @Slot(set, object)
     def receive_session_committed(self, db_maps, cookie):
         for listener, listener_db_maps in self.listeners.items():
             shared_db_maps = listener_db_maps.intersection(db_maps)
             if shared_db_maps:
-                listener.receive_session_committed(shared_db_maps, cookie)
+                try:
+                    listener.receive_session_committed(shared_db_maps, cookie)
+                except AttributeError:
+                    pass
 
     @Slot(set)
     def receive_session_rolled_back(self, db_maps):
         for listener, listener_db_maps in self.listeners.items():
             shared_db_maps = listener_db_maps.intersection(db_maps)
             if shared_db_maps:
-                listener.receive_session_rolled_back(shared_db_maps)
-
-    @Slot(object)
-    def receive_error_msg(self, db_map_error_log):
-        for listener, db_maps in self.listeners.items():
-            shared_db_map_error_log = self._shared_db_map_data(db_map_error_log, db_maps)
-            if shared_db_map_error_log:
-                listener.receive_error_msg(shared_db_map_error_log)
+                try:
+                    listener.receive_session_rolled_back(shared_db_maps)
+                except AttributeError:
+                    pass

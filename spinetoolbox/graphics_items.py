@@ -17,7 +17,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, sin, cos, pi
-from itertools import product
+from itertools import product, chain
 from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation, QParallelAnimationGroup
 from PySide2.QtWidgets import (
     QGraphicsItem,
@@ -48,7 +48,7 @@ from spinedb_api.filters.tools import filter_config
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from spinetoolbox.project_commands import MoveIconCommand
-from spinetoolbox.project_commands import ToggleFilterValuesCommand
+from spinetoolbox.project_commands import ToggleFilterIdsCommand
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 
 
@@ -895,48 +895,101 @@ class Link(LinkBase):
         self._fetched_db_resources = dict()
         self._unfetched_db_resources = dict()
         self._obsolete_db_urls = set()
-        self.db_mngr.scenarios_added.connect(self.resource_filter_model.add_scenarios)
-        self.db_mngr.tools_added.connect(self.resource_filter_model.add_tools)
-        self.db_mngr.scenarios_updated.connect(lambda _: self.resource_filter_model.refresh_model())
-        self.db_mngr.tools_updated.connect(lambda _: self.resource_filter_model.refresh_model())
-        self.db_mngr.scenarios_removed.connect(self.resource_filter_model.remove_scenarios)
-        self.db_mngr.tools_removed.connect(self.resource_filter_model.remove_tools)
 
     def handle_dag_changed(self, upstream_resources):
+        """Handles changes in dag.
+
+        Args:
+            upstream_resources (list(ProjectItemResource)): Resources advertised by predecessor.
+        """
         db_resources = {r.url: r for r in upstream_resources if r.type_ == "database"}
         unfetched_urls = db_resources.keys() - self._fetched_db_resources.keys()
         self._unfetched_db_resources = {url: db_resources[url] for url in unfetched_urls}
         self._obsolete_db_urls = self._fetched_db_resources.keys() - db_resources.keys()
 
     def refresh_resource_filter_model(self):
+        """Refreshes the resource filter model. Called when the Link becomes active."""
         unfetched_db_maps = {
             r: self.db_mngr.get_db_map(url, self._toolbox) for url, r in self._unfetched_db_resources.items()
         }
         if unfetched_db_maps:
             self.resource_filter_model.add_resources(unfetched_db_maps)
-            db_map_scenarios = {db_map: self.db_mngr.get_scenarios(db_map) for db_map in unfetched_db_maps.values()}
-            db_map_tools = {db_map: self.db_mngr.get_tools(db_map) for db_map in unfetched_db_maps.values()}
+            db_map_scenarios = {}
+            db_map_tools = {}
+            for resource, db_map in unfetched_db_maps.items():
+                scenarios = db_map_scenarios[db_map] = self.db_mngr.get_scenarios(db_map)
+                tools = db_map_tools[db_map] = self.db_mngr.get_tools(db_map)
+                self._update_filters(resource.label, {x["id"] for x in scenarios}, {x["id"] for x in tools})
             self.db_mngr.cache_items("scenario", db_map_scenarios)
             self.db_mngr.cache_items("tool", db_map_tools)
-            self.resource_filter_model.add_scenarios(db_map_scenarios)
-            self.resource_filter_model.add_tools(db_map_tools)
+            self.resource_filter_model.receive_scenarios_added(db_map_scenarios)
+            self.resource_filter_model.receive_tools_added(db_map_tools)
             self._fetched_db_resources.update(self._unfetched_db_resources)
             self._unfetched_db_resources.clear()
+            self.db_mngr.register_listener(self, *unfetched_db_maps.values())
         obsolete_db_maps = {self.db_mngr.get_db_map(url, self._toolbox) for url in self._obsolete_db_urls}
         if obsolete_db_maps:
             self.resource_filter_model.remove_resources(obsolete_db_maps)
             for url in self._obsolete_db_urls:
                 del self._fetched_db_resources[url]
             self._obsolete_db_urls.clear()
+            self.db_mngr.unregister_listener(self, *obsolete_db_maps)
 
-    def receive_scenarios_fetched(self, db_map_data):
-        self.resource_filter_model.add_scenarios(db_map_data)
+    def _update_filters(self, resource_label, valid_scenario_ids, valid_tool_ids):
+        """Updates filters for given resource after possible changes in the underlying db.
+        Called by ``refresh_resource_filter_model()``.
+
+        Args:
+            resource_label (str): The resource label
+            valid_scenario_ids (set(int)): Set of scenario ids in the db
+            valid_tool_ids (set(int)): Set of tool ids in the db
+        """
+        filters = self.resource_filters.get(resource_label, {})
+        filter_scen_ids = filters.get(SCENARIO_FILTER_TYPE, [])
+        filter_tool_ids = filters.get(TOOL_FILTER_TYPE, [])
+        invalid_scen_ids = set(filter_scen_ids) - valid_scenario_ids
+        invalid_tool_ids = set(filter_tool_ids) - valid_tool_ids
+        for id_ in invalid_scen_ids:
+            filter_scen_ids.remove(id_)
+        for id_ in invalid_tool_ids:
+            filter_tool_ids.remove(id_)
+
+    def receive_scenarios_added(self, db_map_data):
+        self.resource_filter_model.receive_scenarios_added(db_map_data)
+
+    def receive_tools_added(self, db_map_data):
+        self.resource_filter_model.receive_tools_added(db_map_data)
+
+    def receive_scenarios_updated(self, _db_map_data):
+        self.resource_filter_model.refresh_model()
+
+    def receive_tools_updated(self, _db_map_data):
+        self.resource_filter_model.refresh_model()
+
+    def receive_scenarios_removed(self, db_map_data):
+        self.resource_filter_model.receive_scenarios_removed(db_map_data)
+
+    def receive_tools_removed(self, db_map_data):
+        self.resource_filter_model.receive_tools_removed(db_map_data)
+
+    def receive_session_refreshed(self, db_maps):
+        # Move fetched db_maps to unfetched, so they are refetched by ``self.refresh_resource_filter_model()``
+        for db_map in db_maps:
+            url = db_map.db_url
+            resource = self._fetched_db_resources.pop(url, None)
+            if resource is not None:
+                self._unfetched_db_resources[url] = resource
 
     @property
     def name(self):
         return f"from {self.src_icon.name()} to {self.dst_icon.name()}"
 
     def to_dict(self):
+        """Returns a dictionary representation of this Link.
+
+        Returns:
+            dict
+        """
         src_connector = self.src_connector
         src_anchor = src_connector.position
         src_name = src_connector.parent_name()
@@ -950,6 +1003,12 @@ class Link(LinkBase):
         return d
 
     def _compile_resource_filters(self):
+        """Returns a dictionary mapping resource labels to another dictionary mapping filter type to filtered ids.
+        Called by ``to_dict``.
+
+        Returns:
+            dict(str,dict(str,list))
+        """
         resource_filters = {}
         for resource, filters in self.resource_filters.items():
             for filter_type, values in filters.items():
@@ -958,45 +1017,59 @@ class Link(LinkBase):
                 resource_filters.setdefault(resource, {})[filter_type] = values
         return resource_filters
 
-    def toggle_filter_values(self, resource, filter_type, *values):
-        cmd = ToggleFilterValuesCommand(self, resource, filter_type, values)
+    def toggle_filter_ids(self, resource, filter_type, *ids):
+        """Pushes a ``ToggleFilterIdsCommand`` to the toolbox undo stack.
+
+        Args:
+            resource (str): Resource label
+            filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
+            ids (Iterable(int))
+        """
+        cmd = ToggleFilterIdsCommand(self, resource, filter_type, ids)
         self._toolbox.undo_stack.push(cmd)
 
-    def _do_toggle_filter_values(self, resource, filter_type, values):
+    def _do_toggle_filter_ids(self, resource, filter_type, ids):
+        """Toggles the given ids in the resource filters.
+
+        Args:
+            resource (str): Resource label
+            filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
+            ids (Iterable(int))
+        """
         current = self.resource_filters.setdefault(resource, {}).setdefault(filter_type, [])
-        for value in values:
-            if value in current:
-                current.remove(value)
+        for id_ in ids:
+            if id_ in current:
+                current.remove(id_)
             else:
-                current.append(value)
+                current.append(id_)
         if self == self._toolbox.active_link:
             self.resource_filter_model.refresh_model()
         self.update()
 
     def filter_stacks(self):
-        def filter_configs(db_map, filters):
+        """Returns a dictionary mapping tuples (resource label, destination item name) to a list of filter stacks.
+        A filter stack is simply a tuple where each element is a filter configuration dictionary.
+        Stacks are computed as the cross-product of all individual filters defined for a resource.
+
+        Returns:
+            dict((str,str),list(tuple(dict)))
+        """
+        self.refresh_resource_filter_model()
+        db_maps = {}
+        for url, r in chain(self._fetched_db_resources.items(), self._unfetched_db_resources.items()):
+            db_maps[r.label] = self.db_mngr.get_db_map(url, self._toolbox)
+        filter_stacks = {}
+        for resource_label, filters in self.resource_filters.items():
+            db_map = db_maps[resource_label]
+            filter_configs_list = []
             for filter_type, ids in filters.items():
-                if ids:
-                    get_items = {
-                        SCENARIO_FILTER_TYPE: self.db_mngr.get_scenarios,
-                        TOOL_FILTER_TYPE: self.db_mngr.get_tools,
-                    }[filter_type]
-                    items = {x["id"]: x["name"] for x in get_items(db_map)}
-                    yield [filter_config(filter_type, items[id_]) for id_ in ids]
-                else:
-                    yield [{}]
-
-        db_maps = {label: self.db_mngr.get_db_map(url, self._toolbox) for label, url in self._db_resource_label_url()}
-        return {
-            (resource_label, self.dst_icon.name()): list(product(*filter_configs(db_maps[resource_label], filters)))
-            for resource_label, filters in self.resource_filters.items()
-        }
-
-    def _db_resource_label_url(self):
-        for url, r in self._fetched_db_resources.items():
-            yield r.label, url
-        for url, r in self._unfetched_db_resources.items():
-            yield r.label, url
+                item_type = {SCENARIO_FILTER_TYPE: "scenario", TOOL_FILTER_TYPE: "tool"}[filter_type]
+                names = {self.db_mngr.get_item(db_map, item_type, id_).get("name") for id_ in ids}
+                names.discard(None)
+                filter_configs = [filter_config(filter_type, name) for name in names]
+                filter_configs_list.append(filter_configs)
+            filter_stacks[resource_label, self.dst_icon.name()] = list(product(*filter_configs_list))
+        return filter_stacks
 
     def do_update_geometry(self, guide_path):
         """See base class."""

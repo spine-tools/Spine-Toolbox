@@ -175,8 +175,6 @@ class SpineDBManager(QObject):
         return True
 
     def create_new_spine_database(self, url, logger):
-        if not self.is_url_available(url, logger):
-            return
         try:
             if not is_empty(url):
                 msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
@@ -191,6 +189,8 @@ class SpineDBManager(QObject):
                     return
             do_create_new_spine_database(url)
             logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
+            db_map = self.db_map(url)
+            self.refresh_session(db_map)
         except SpineDBAPIError as e:
             logger.msg_error.emit(f"Unable to create new Spine db at '{url}': {e}.")
 
@@ -275,29 +275,32 @@ class SpineDBManager(QObject):
         self.redo_action[db_map] = stack.createRedoAction(self)
         return db_map
 
-    def register_listener(self, db_editor, *db_maps):
-        """Register given db_editor as listener for all given db_map's signals.
+    def register_listener(self, listener, *db_maps):
+        """Register given listener for all given db_map's signals.
 
         Args:
-            db_editor (SpineDBEditor)
+            listener (object)
             db_maps (DiffDatabaseMapping)
         """
         for db_map in db_maps:
-            self.signaller.add_db_map_listener(db_map, db_editor)
+            self.signaller.add_db_map_listener(db_map, listener)
             stack = self.undo_stack[db_map]
-            stack.indexChanged.connect(db_editor.update_undo_redo_actions)
-            stack.cleanChanged.connect(db_editor.update_commit_enabled)
+            try:
+                stack.indexChanged.connect(listener.update_undo_redo_actions)
+                stack.cleanChanged.connect(listener.update_commit_enabled)
+            except AttributeError:
+                pass
 
-    def unregister_listener(self, db_editor, *db_maps):
-        """Unregisters given db_editor from given db_map signals.
+    def unregister_listener(self, listener, *db_maps):
+        """Unregisters given listener from given db_map signals.
         If any of the db_maps becomes an orphan and is dirty, prompts user to commit or rollback.
 
         Args:
-            db_editor (SpineDBEditor)
+            listener (object)
             db_maps (DiffDatabaseMapping)
         """
         is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        is_orphan = lambda db_map: not self.signaller.db_map_listeners(db_map) - {db_editor}
+        is_orphan = lambda db_map: not self.signaller.db_map_listeners(db_map) - {listener}
         dirty_orphan_db_maps = [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
         if dirty_orphan_db_maps:
             answer = self._prompt_to_commit_changes()
@@ -309,9 +312,12 @@ class SpineDBManager(QObject):
                 if not commit_msg:
                     return False
         for db_map in db_maps:
-            self.signaller.remove_db_map_listener(db_map, db_editor)
-            self.undo_stack[db_map].indexChanged.disconnect(db_editor.update_undo_redo_actions)
-            self.undo_stack[db_map].cleanChanged.disconnect(db_editor.update_commit_enabled)
+            self.signaller.remove_db_map_listener(db_map, listener)
+            try:
+                self.undo_stack[db_map].indexChanged.disconnect(listener.update_undo_redo_actions)
+                self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
+            except AttributeError:
+                pass
         if dirty_orphan_db_maps:
             if answer == QMessageBox.Save:
                 self._do_commit_session(dirty_orphan_db_maps, commit_msg)
@@ -591,9 +597,6 @@ class SpineDBManager(QObject):
             dict
         """
         return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
-
-    def _pop_item(self, db_map, item_type, id_):
-        return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
 
     def get_item_by_field(self, db_map, item_type, field, value):
         """Returns the first item of the given type in the given db map

@@ -16,7 +16,7 @@ Contains ResourceFilterModel.
 :date:   26.11.2020
 """
 
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
@@ -66,15 +66,14 @@ class ResourceFilterModel(QStandardItemModel):
         invalid_rows = [row for row in range(filter_item.rowCount()) if filter_item.child(row)._id in ids]
         for row in reversed(invalid_rows):
             filter_item.removeRow(row)
-        values = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
+        current_ids = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
         for id_ in ids:
             try:
-                values.remove(id_)
+                current_ids.remove(id_)
             except ValueError:
                 pass
 
-    @Slot(object)
-    def add_scenarios(self, db_map_data):
+    def receive_scenarios_added(self, db_map_data):
         for db_map, data in db_map_data.items():
             root_item = self._root_items.get(db_map)
             if not root_item:
@@ -82,8 +81,7 @@ class ResourceFilterModel(QStandardItemModel):
             filter_item = root_item.child(0)
             self._add_leaves(db_map, filter_item, data, SCENARIO_FILTER_TYPE, "scenario")
 
-    @Slot(object)
-    def add_tools(self, db_map_data):
+    def receive_tools_added(self, db_map_data):
         for db_map, data in db_map_data.items():
             root_item = self._root_items.get(db_map)
             if not root_item:
@@ -91,8 +89,7 @@ class ResourceFilterModel(QStandardItemModel):
             filter_item = root_item.child(1)
             self._add_leaves(db_map, filter_item, data, TOOL_FILTER_TYPE, "tool")
 
-    @Slot(object)
-    def remove_scenarios(self, db_map_data):
+    def receive_scenarios_removed(self, db_map_data):
         for db_map, data in db_map_data.items():
             root_item = self._root_items.get(db_map)
             if not root_item:
@@ -100,8 +97,7 @@ class ResourceFilterModel(QStandardItemModel):
             filter_item = root_item.child(0)
             self._remove_leaves(filter_item, data, root_item.text(), SCENARIO_FILTER_TYPE)
 
-    @Slot(object)
-    def remove_tools(self, db_map_data):
+    def receive_tools_removed(self, db_map_data):
         for db_map, data in db_map_data.items():
             root_item = self._root_items.get(db_map)
             if not root_item:
@@ -111,9 +107,13 @@ class ResourceFilterModel(QStandardItemModel):
 
     def add_resources(self, resource_db_maps):
         for resource, db_map in resource_db_maps.items():
-            if db_map in self._root_items:
+            root_item = self._root_items.get(db_map)
+            if root_item is not None:
+                for row in range(root_item.rowCount()):
+                    filter_item = root_item.child(row)
+                    filter_item.removeRows(0, filter_item.rowCount())
                 continue
-            self._root_items[db_map] = root_item = QStandardItem(resource.label)
+            root_item = self._root_items[db_map] = QStandardItem(resource.label)
             filter_items = [QStandardItem("Scenario filter"), QStandardItem("Tool filter")]
             root_item.appendRows(filter_items)
             self.appendRow(root_item)
@@ -141,11 +141,11 @@ class ResourceFilterModel(QStandardItemModel):
         if role == Qt.CheckStateRole:
             resource_label = self._root_items[item._db_map].text()
             filter_type = item._filter_type
-            values = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
+            ids = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
             if super().data(index) == self._SELECT_ALL:
-                all_values = self._link.db_mngr.get_items(item._db_map, item._item_type)
-                return Qt.Checked if len(values) == len(all_values) > 0 else Qt.Unchecked
-            return Qt.Checked if item._id in values else Qt.Unchecked
+                all_ids = self._link.db_mngr.get_items(item._db_map, item._item_type)
+                return Qt.Checked if len(ids) == len(all_ids) > 0 else Qt.Unchecked
+            return Qt.Checked if item._id in ids else Qt.Unchecked
         return super().data(index, role=role)
 
     def toggle_checked_state(self, index):
@@ -161,14 +161,14 @@ class ResourceFilterModel(QStandardItemModel):
         resource_label = self._root_items[item._db_map].text()
         filter_type = item._filter_type
         if super().data(index) == self._SELECT_ALL:
-            values = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
+            ids = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
             if index.data(Qt.CheckStateRole) == Qt.Unchecked:
-                all_values = [x["id"] for x in self._link.db_mngr.get_items(item._db_map, item._item_type)]
-                self._link.toggle_filter_values(resource_label, filter_type, *(set(all_values) - set(values)))
+                all_ids = [x["id"] for x in self._link.db_mngr.get_items(item._db_map, item._item_type)]
+                self._link.toggle_filter_ids(resource_label, filter_type, *(set(all_ids) - set(ids)))
             else:
-                self._link.toggle_filter_values(resource_label, filter_type, *values)
+                self._link.toggle_filter_ids(resource_label, filter_type, *ids)
             return
-        self._link.toggle_filter_values(resource_label, filter_type, item._id)
+        self._link.toggle_filter_ids(resource_label, filter_type, item._id)
 
     def refresh_model(self):
         """Notifies changes in the model. Called by the underlying Link once changes are successfully done."""

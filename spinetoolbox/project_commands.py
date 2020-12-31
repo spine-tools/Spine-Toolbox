@@ -289,25 +289,25 @@ class RemoveLinkCommand(SpineToolboxCommand):
         self.graphics_view._add_link(self.link)
 
 
-class ToggleFilterValuesCommand(SpineToolboxCommand):
-    def __init__(self, link, resource, filter_type, values):
+class ToggleFilterIdsCommand(SpineToolboxCommand):
+    def __init__(self, link, resource, filter_type, ids):
         """Command to toggle filter value.
 
         Args:
             link (Link): the link
             resource (str)
             filter_type (str)
-            values (list(str))
+            ids (list(int))
         """
         super().__init__()
         self.link = link
         self.resource = resource
         self.filter_type = filter_type
-        self.values = values
+        self.ids = ids
         self.setText(f"Change {filter_type} for {resource} at {link.name}")
 
     def redo(self):
-        self.link._do_toggle_filter_values(self.resource, self.filter_type, self.values)
+        self.link._do_toggle_filter_ids(self.resource, self.filter_type, self.ids)
 
     def undo(self):
         self.redo()
