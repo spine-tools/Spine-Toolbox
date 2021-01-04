@@ -24,6 +24,22 @@ from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
 from ..widgets.custom_qtextbrowser import SignedTextDocument
 from ..helpers import format_event_message, format_process_message, add_message_to_document
+from ..logger_interface import LoggerInterface
+
+
+class _ProjectItemLogger(LoggerInterface):
+    """A project item specific logger."""
+
+    def __init__(self, item):
+        """
+        Args:
+            item (ProjectItem)
+        """
+        super().__init__()
+        self.msg.connect(lambda text: item.add_event_message("", "msg", text))
+        self.msg_success.connect(lambda text: item.add_event_message("", "msg_success", text))
+        self.msg_error.connect(lambda text: item.add_event_message("", "msg_error", text))
+        self.msg_warning.connect(lambda text: item.add_event_message("", "msg_warning", text))
 
 
 class ProjectItem(MetaObject):
@@ -40,7 +56,7 @@ class ProjectItem(MetaObject):
     item_changed = Signal()
     """Request DAG update. Emitted when a change affects other items in the DAG."""
 
-    def __init__(self, name, description, x, y, project, logger):
+    def __init__(self, name, description, x, y, project):
         """
         Args:
             name (str): item name
@@ -48,13 +64,12 @@ class ProjectItem(MetaObject):
             x (float): horizontal position on the scene
             y (float): vertical position on the scene
             project (SpineToolboxProject): project item's project
-            logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
         self._project = project
         self.x = x
         self.y = y
-        self._logger = logger
+        self._logger = _ProjectItemLogger(self)
         self._properties_ui = None
         self._icon = None
         self._sigs = None

@@ -79,7 +79,7 @@ from .helpers import (
     format_process_message,
 )
 from .project_upgrader import ProjectUpgrader
-from .project_tree_item import LeafProjectTreeItem, CategoryProjectTreeItem, RootProjectTreeItem
+from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import (
     AddSpecificationCommand,
     RemoveSpecificationCommand,

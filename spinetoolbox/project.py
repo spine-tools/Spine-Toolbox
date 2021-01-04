@@ -205,7 +205,7 @@ class SpineToolboxProject(MetaObject):
                 self._logger.msg_error.emit(f"Loading project item <b>{item_name}</b> failed")
                 return {}
             try:
-                project_item = factory.make_item(item_name, item_dict, self._toolbox, self, self._logger)
+                project_item = factory.make_item(item_name, item_dict, self._toolbox, self)
             except TypeError as error:
                 self._logger.msg_error.emit(
                     f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
