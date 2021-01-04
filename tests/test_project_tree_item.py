@@ -106,7 +106,7 @@ class TestLeafProjectTreeItem(unittest.TestCase):
 
     @staticmethod
     def _leaf_item(toolbox):
-        project_item = ProjectItem("PI", "A Project item", 0.0, 0.0, toolbox.project(), toolbox)
+        project_item = ProjectItem("PI", "A Project item", 0.0, 0.0, toolbox.project())
         item = LeafProjectTreeItem(project_item, toolbox)
         return item
 

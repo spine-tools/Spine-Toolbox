@@ -105,6 +105,10 @@ class ProjectItem(MetaObject):
         raise NotImplementedError()
 
     @property
+    def logger(self):
+        return self._logger
+
+    @property
     def event_document(self):
         return self._event_document
 

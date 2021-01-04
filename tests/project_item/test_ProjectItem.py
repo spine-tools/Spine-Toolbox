@@ -43,11 +43,11 @@ class TestProjectItem(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_notify_destination(self):
-        item = ProjectItem("name", "description", 0.0, 0.0, self.project, self.toolbox)
+        item = ProjectItem("name", "description", 0.0, 0.0, self.project)
         item.item_type = MagicMock(return_value="item_type")
-        self.toolbox.msg_warning = MagicMock()
+        item.logger.msg_warning = MagicMock()
         item.notify_destination(item)
-        self.toolbox.msg_warning.emit.assert_called_with(
+        item.logger.msg_warning.emit.assert_called_with(
             "Link established."
             " Interaction between a <b>item_type</b> and a <b>item_type</b> has not been implemented yet."
         )
@@ -55,7 +55,7 @@ class TestProjectItem(unittest.TestCase):
     def test_item_dict(self):
         project = MagicMock()
         project.items_dir = "item_directory/"
-        item = ProjectItem("item name", "Item's description.", -2.3, 5.5, project, None)
+        item = ProjectItem("item name", "Item's description.", -2.3, 5.5, project)
         item.item_type = MagicMock(return_value="item type")
         point = NonCallableMagicMock()
         point.x = MagicMock(return_value=-2.3)
