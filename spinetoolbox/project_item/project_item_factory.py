@@ -81,7 +81,7 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def make_item(name, item_dict, toolbox, project, logger):
+    def make_item(name, item_dict, toolbox, project):
         """
         Returns a project item constructed from the given ``item_dict``.
 
@@ -90,7 +90,6 @@ class ProjectItemFactory:
             item_dict (dict): serialized project item
             toolbox (ToolboxUI): Toolbox main window
             project (SpineToolboxProject): the project the item belongs to
-            logger (LoggerInterface): a logger
         Returns:
             ProjectItem
         """

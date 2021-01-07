@@ -357,7 +357,7 @@ class ProjectItem(MetaObject):
         """
 
     @staticmethod
-    def from_dict(name, item_dict, toolbox, project, logger):
+    def from_dict(name, item_dict, toolbox, project):
         """
         Deserialized an item from item dict.
 
@@ -366,7 +366,6 @@ class ProjectItem(MetaObject):
             item_dict (dict): serialized item
             toolbox (ToolboxUI): the main window
             project (SpineToolboxProject): a project
-            logger (LoggerInterface): a logger
         Returns:
             ProjectItem: deserialized item
         """
