@@ -25,6 +25,7 @@ from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import NoSuchKernel
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
+from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
 
 
 class SpineConsoleWidget(RichJupyterWidget):
@@ -80,7 +81,7 @@ class SpineConsoleWidget(RichJupyterWidget):
         if self.kernel_manager and self.kernel_name == k_name:
             self._toolbox.msg_warning.emit(f"Kernel {k_name} already running in {self._name}")
             return
-        self.wake_up(k_name)
+        self.call_start_kernel(k_name)
 
     @Slot(bool)
     def restart_console(self, checked=False):
@@ -113,7 +114,37 @@ class SpineConsoleWidget(RichJupyterWidget):
             self.kernel_client = kc
         else:
             # No kernel running in Python Console or Python kernel has been changed in Settings->Tools. Start kernel
-            self.wake_up(k_name)
+            self.call_start_kernel(k_name)
+
+    def call_start_kernel(self, k_name=None):
+        """Finds a valid kernel and calls ``start_kernel()`` with it."""
+        d = {
+            "Python Console": ("Python", "pythonKernel", find_python_kernels),
+            "Julia Console": ("Julia", "juliaKernel", find_julia_kernels),
+        }
+        if self._name not in d:
+            self._toolbox.msg_error.emit("Unknown Console")
+            return
+        language, settings_entry, find_kernels = d[self._name]
+        if not k_name:
+            k_name = self._toolbox.qsettings().value(f"appSettings/{settings_entry}", defaultValue="")
+            if not k_name:
+                self._toolbox.msg_error.emit(
+                    f"No kernel selected. Go to Settings->Tools to select a {language} kernel."
+                )
+                return
+        kernels = find_kernels()
+        try:
+            kernel_path = kernels[k_name]
+        except KeyError:
+            self._toolbox.msg_error.emit(
+                f"Kernel {k_name} not found. Go to Settings->Tools and select another {language} kernel."
+            )
+            return
+        # Check if this kernel is already running
+        if self.kernel_manager and self.kernel_name == k_name:
+            return
+        self.start_kernel(k_name, kernel_path)
 
     def start_kernel(self, k_name, k_path):
         """Starts a kernel manager and kernel client and attaches the client to Julia or Python Console.
