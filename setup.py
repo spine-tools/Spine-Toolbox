@@ -32,7 +32,7 @@ with open("spinetoolbox/version.py") as fp:
 install_requires = [
     "pyside2 >=5.14, <5.15",
     "datapackage >= 1.15",
-    "jupyter-client < 5.3.2",
+    "jupyter-client > 6.1",
     "qtconsole >= 4.3.1",
     "sqlalchemy >= 1.3",
     "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
