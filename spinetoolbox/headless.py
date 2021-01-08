@@ -255,14 +255,7 @@ def _specifications(project_dict, project_dir, specification_factories, app_sett
             factory = specification_factories.get(item_type)
             if factory is None:
                 continue
-            specification = factory.make_specification(
-                definition,
-                definition_path,
-                app_settings,
-                logger,
-                embedded_julia_console=None,
-                embedded_python_console=None,
-            )
+            specification = factory.make_specification(definition, app_settings, logger)
             specifications.setdefault(item_type, dict())[specification.name] = specification
     return specifications
 

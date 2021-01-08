@@ -1436,6 +1436,7 @@ class ToolboxUI(QMainWindow):
         Args:
             item_type (str): item's type
             specification (ProjectItemSpecification, optional): item's specification
+            **kwargs: parameters passed to the specification widget
         """
         if not self._project:
             self.msg.emit("Please open or create a project first")
