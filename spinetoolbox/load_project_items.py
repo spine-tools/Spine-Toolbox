@@ -84,6 +84,12 @@ def _install_spine_items(tmpdirname):
         return False
 
 
+def _print_unsatisfiable_requirement(pkg, curr, req):
+    print(
+        f"Unsatisfiable requirement: {pkg} version is {curr}, whereas {req} is required", file=sys.stderr,
+    )
+
+
 def upgrade_project_items():
     """
     Upgrades project items.
@@ -92,6 +98,7 @@ def upgrade_project_items():
         bool: True if upgraded, False if no action taken.
     """
     if _spine_items_version_check():
+        # No need to upgrade
         return False
     print(
         """
@@ -104,6 +111,7 @@ UPGRADING PROJECT ITEMS...
         # Download
         _download_spine_items(tmpdirname)
         if not os.listdir(tmpdirname):
+            print(f"The directory {tmpdirname} is empty", file=sys.stderr)
             return False
         # Unpack
         zip_fp = os.path.join(tmpdirname, os.listdir(tmpdirname)[0])
@@ -126,11 +134,14 @@ UPGRADING PROJECT ITEMS...
         req_toolbox_version_split = version_split(req_toolbox_version)
         req_engine_version_split = version_split(req_engine_version)
         req_db_api_version_split = version_split(req_db_api_version)
-        if (
-            curr_toolbox_version_split < req_toolbox_version_split
-            or curr_engine_version_split < req_engine_version_split
-            or curr_db_api_version_split < req_db_api_version_split
-        ):
+        if curr_toolbox_version_split < req_toolbox_version_split:
+            _print_unsatisfiable_requirement("spinetoolbox", curr_toolbox_version, req_toolbox_version)
+            return False
+        if curr_engine_version_split < req_engine_version_split:
+            _print_unsatisfiable_requirement("spine_engine", curr_engine_version, req_engine_version)
+            return False
+        if curr_db_api_version_split < req_db_api_version_split:
+            _print_unsatisfiable_requirement("spinedb_api", curr_db_api_version, req_db_api_version)
             return False
         # Check if new items are already installed
         try:
@@ -139,6 +150,7 @@ UPGRADING PROJECT ITEMS...
             curr_items_version = spine_items.__version__
             new_items_version = version["__version__"]
             if curr_items_version == new_items_version:
+                # No need to upgrade
                 return False
 
         except ModuleNotFoundError:
