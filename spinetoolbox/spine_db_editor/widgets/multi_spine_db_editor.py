@@ -115,6 +115,7 @@ class MultiSpineDBEditor(QMainWindow):
     def __init__(self, db_mngr, db_url_codenames, create=False):
         super().__init__(flags=Qt.Window)
         self.db_mngr = db_mngr
+        self._db_url_codenames = db_url_codenames
         self.tab_widget = _DBEditorTabWidget()
         self.tab_bar = TabBarPlus(self)
         self.tab_widget.setTabBar(self.tab_bar)
@@ -123,10 +124,6 @@ class MultiSpineDBEditor(QMainWindow):
         self.settings_form = SpineDBEditorSettingsWidget(self)
         self.settings_group = "spineDBEditor"
         self.setAttribute(Qt.WA_DeleteOnClose)
-        if db_url_codenames is not None:
-            self.add_new_tab(db_url_codenames)
-            if not self.tab_widget.widget(0).db_maps:
-                self.close()
         self.setWindowTitle("Spine DB Editor")
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self._hot_spot = None
@@ -137,6 +134,11 @@ class MultiSpineDBEditor(QMainWindow):
         self._file_open_toolbar.hide()
         self.addToolBar(Qt.BottomToolBarArea, self._file_open_toolbar)
         self.connect_signals()
+
+    def show(self):
+        super().show()
+        if self._db_url_codenames is not None:
+            self.add_new_tab(self._db_url_codenames)
 
     def connect_signals(self):
         self.tab_widget.tabCloseRequested.connect(self._close_tab)
