@@ -316,7 +316,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         self._engine_data = engine_data
 
     def run_engine(self):
-        self._engine = SpineEngine(**self._engine_data, debug=True)
+        self._engine = SpineEngine(**self._engine_data)
 
     def get_engine_event(self):
         return self._engine.get_event()
