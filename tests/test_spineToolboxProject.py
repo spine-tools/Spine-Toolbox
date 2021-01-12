@@ -283,6 +283,10 @@ class _MockExecutableItem(ExecutableItemBase):
         super().__init__(name, logger)
         self.execute_called = False
 
+    @ExecutableItemBase.filter_id.setter
+    def filter_id(self, _):
+        pass
+
     @staticmethod
     def item_type():
         return "Mock item"
