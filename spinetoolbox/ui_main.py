@@ -378,7 +378,8 @@ class ToolboxUI(QMainWindow):
             description (str): Project description
             location (str): Path to project directory
         """
-        self.undo_critical_commands()
+        if not self.undo_critical_commands():
+            return
         if self._project is not None:
             self._project.tear_down()
             self._project = None
@@ -462,7 +463,8 @@ class ToolboxUI(QMainWindow):
         Returns:
             bool: True when restoring project succeeded, False otherwise
         """
-        self.undo_critical_commands()
+        if not self.undo_critical_commands():
+            return False
         # Clear text browsers
         if clear_logs:
             self.ui.textBrowser_eventlog.clear()
@@ -715,13 +717,21 @@ class ToolboxUI(QMainWindow):
 
     def undo_critical_commands(self):
         """Undoes critical commands in the undo stack.
+
+        Returns:
+            Bool: False if any critical commands aren't successfully undone
         """
         if self.undo_stack.isClean():
-            return
-        for ind in reversed(range(self.undo_stack.index())):
-            cmd = self.undo_stack.command(ind)
-            if cmd.is_critical():
-                cmd.undo()
+            return True
+        commands = [self.undo_stack.command(ind) for ind in range(self.undo_stack.index())]
+        critical_commands = [cmd for cmd in commands if cmd.is_critical()]
+        if not critical_commands:
+            return True
+        for cmd in reversed(critical_commands):
+            cmd.undo()
+            if not cmd.successfully_undone:
+                return False
+        return True
 
     def overwrite_check(self, project_dir):
         """Checks if given directory is a project directory and/or empty
@@ -1695,6 +1705,9 @@ class ToolboxUI(QMainWindow):
         # Show confirm exit message box
         exit_confirmed = self._perform_pre_exit_tasks()
         if not exit_confirmed:
+            event.ignore()
+            return
+        if not self.undo_critical_commands():
             event.ignore()
             return
         # Save settings

@@ -76,6 +76,10 @@ class SpineToolboxProject(MetaObject):
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit("Creating project directory structure in <b>{0}</b> failed".format(p_dir))
 
+    def toolbox(self):
+        """Called by ProjectItem to use the toolbox as logger for 'box' messages."""
+        return self._toolbox
+
     def connect_signals(self):
         """Connect signals to slots."""
         self.dag_handler.dag_simulation_requested.connect(self.notify_changes_in_dag)

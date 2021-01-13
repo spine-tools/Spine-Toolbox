@@ -137,27 +137,32 @@ def create_dir(base_path, folder="", verbosity=False):
     return True
 
 
-def rename_dir(old_dir, new_dir, logger):
-    """Rename directory. Note: This is not used in renaming projects due to unreliability.
-    Looks like it works fine in renaming project items though.
+def rename_dir(old_dir, new_dir, toolbox, box_title):
+    """Renames directory. Called by ``ProjectItemModel.set_item_name()``
 
     Args:
         old_dir (str): Absolute path to directory that will be renamed
         new_dir (str): Absolute path to new directory
-        logger (LoggerInterface): A logger instance
+        toolbox (ToolboxUI): A toolbox to log messages and ask questions.
+        box_title (str): The title of the message boxes, (e.g. "Undoing 'rename DC1 to DC2'")
     """
     if os.path.exists(new_dir):
-        # If the target is a directory, then there will not be a name clash in shutil.move()
-        # as the old_dir will be moved inside new_dir which is not a rename operation.
-        # We guard against that here.
-        msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
-        logger.information_box.emit("Renaming directory failed", msg)
-        return False
+        msg = "Directory <b>{0}</b> already exists.<br/><br/>Would you like to overwrite its contents?".format(new_dir)
+        box = QMessageBox(
+            QMessageBox.Question, box_title, msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=toolbox
+        )
+        box.button(QMessageBox.Ok).setText("Overwrite")
+        answer = box.exec_()
+        if answer != QMessageBox.Ok:
+            return False
+        shutil.rmtree(new_dir)
     try:
         shutil.move(old_dir, new_dir)
     except FileExistsError:
+        # This is unlikely because of the above `if`, but still possible since another concurrent process
+        # might have done things in between
         msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
-        logger.information_box.emit("Renaming directory failed", msg)
+        toolbox.information_box.emit(box_title, msg)
         return False
     except PermissionError as pe_e:
         logging.error(pe_e)
@@ -168,7 +173,7 @@ def rename_dir(old_dir, new_dir, logger):
             "<br/>2. Windows Explorer is open in the directory"
             "<br/><br/>Check these and try again.".format(old_dir)
         )
-        logger.information_box.emit("Renaming directory failed (Permission Error)", msg)
+        toolbox.information_box.emit(box_title, msg)
         return False
     except OSError as os_e:
         logging.error(os_e)
@@ -183,7 +188,7 @@ def rename_dir(old_dir, new_dir, logger):
             "<br/>2. A file in the directory is open in another program. "
             "<br/><br/>Check these and try again.".format(old_dir, new_dir)
         )
-        logger.information_box.emit("Renaming directory failed (OS Error)", msg)
+        toolbox.information_box.emit(box_title, msg)
         return False
     return True
 

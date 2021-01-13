@@ -19,7 +19,7 @@ import os
 import logging
 from PySide2.QtCore import Signal, Slot
 from spine_engine.utils.helpers import shorten
-from ..helpers import create_dir, rename_dir, open_url, QuietLogger
+from ..helpers import create_dir, open_url, QuietLogger
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
 from ..widgets.custom_qtextbrowser import SignedTextDocument
@@ -30,16 +30,19 @@ from ..logger_interface import LoggerInterface
 class _ProjectItemLogger(LoggerInterface):
     """A project item specific logger."""
 
-    def __init__(self, item):
+    def __init__(self, item, box_logger):
         """
         Args:
             item (ProjectItem)
+            box_logger (LoggerInterface)
         """
         super().__init__()
         self.msg.connect(lambda text: item.add_event_message("", "msg", text))
         self.msg_success.connect(lambda text: item.add_event_message("", "msg_success", text))
         self.msg_error.connect(lambda text: item.add_event_message("", "msg_error", text))
         self.msg_warning.connect(lambda text: item.add_event_message("", "msg_warning", text))
+        self.information_box.connect(box_logger.information_box)
+        self.error_box.connect(box_logger.error_box)
 
 
 class ProjectItem(MetaObject):
@@ -69,7 +72,7 @@ class ProjectItem(MetaObject):
         self._project = project
         self.x = x
         self.y = y
-        self._logger = _ProjectItemLogger(self)
+        self._logger = _ProjectItemLogger(self, project.toolbox())
         self._properties_ui = None
         self._icon = None
         self._sigs = None
@@ -389,27 +392,13 @@ class ProjectItem(MetaObject):
 
         Args:
             new_name(str): New name
-
-        Returns:
-            bool: True if renaming succeeded, False otherwise
         """
-        old_name = self.name
-        new_short_name = shorten(new_name)
-        # Rename project item data directory
-        new_data_dir = os.path.join(self._project.items_dir, new_short_name)
-        if not rename_dir(self.data_dir, new_data_dir, self._logger):
-            return False
-        # Rename project item
+        self._project.dag_handler.rename_node(self.name, new_name)
         self.set_name(new_name)
-        # Update project item directory variable
-        self.data_dir = new_data_dir
-        # Update name label in tab
+        self.data_dir = os.path.join(self._project.items_dir, shorten(new_name))
         if self._active:
             self.update_name_label()
-        # Update name item of the QGraphicsItem
         self.get_icon().update_name_item(new_name)
-        self._project.dag_handler.rename_node(old_name, new_name)
-        return True
 
     def open_directory(self):
         """Open this item's data directory in file explorer."""

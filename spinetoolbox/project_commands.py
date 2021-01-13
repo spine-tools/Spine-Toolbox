@@ -21,6 +21,9 @@ from PySide2.QtWidgets import QUndoCommand
 
 
 class SpineToolboxCommand(QUndoCommand):
+    successfully_undone = False
+    """Flag to register the outcome of undoing a critical command, so toolbox can react afterwards."""
+
     @staticmethod
     def is_critical():
         """Returns True if this command needs to be undone before
@@ -232,11 +235,13 @@ class RenameProjectItemCommand(SpineToolboxCommand):
         self.setText(f"rename {self.old_name} to {new_name}")
 
     def redo(self):
-        if not self.project_item_model.setData(self.tree_index, self.new_name):
+        box_title = f"Doing '{self.text()}'"
+        if not self.project_item_model.set_item_name(self.tree_index, self.new_name, box_title):
             self.setObsolete(True)
 
     def undo(self):
-        self.project_item_model.setData(self.tree_index, self.old_name)
+        box_title = f"Undoing '{self.text()}'"
+        self.successfully_undone = self.project_item_model.set_item_name(self.tree_index, self.old_name, box_title)
 
     @staticmethod
     def is_critical():

@@ -16,6 +16,7 @@ Contains a class for storing project items.
 :date:   23.1.2018
 """
 
+import os
 import logging
 from copy import copy
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
@@ -23,6 +24,7 @@ from PySide2.QtWidgets import QMessageBox
 from PySide2.QtGui import QIcon, QFont
 from spinetoolbox.metaobject import shorten
 from ..config import INVALID_CHARS
+from ..helpers import rename_dir
 
 
 class ProjectItemModel(QAbstractItemModel):
@@ -249,51 +251,53 @@ class ProjectItemModel(QAbstractItemModel):
         self.endRemoveRows()
         return retval
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def set_item_name(self, index, name, box_title):
         """Changes the name of the leaf item at given index to given value.
 
         Args:
             index (QModelIndex): Tree item index
             value (str): New project item name
-            role (int): Item data role to set
+            box_title (str)
 
         Returns:
             bool: True or False depending on whether the new name is acceptable and renaming succeeds
         """
-        if not role == Qt.EditRole:
-            return super().setData(index, value, role)
         item = index.internalPointer()
         if item.parent() is None:
             # The item has been removed from the model
             return False
         old_name = item.name
-        if not value.strip() or value == old_name:
+        if not name.strip() or name == old_name:
             return False
         # Check that new name is legal
-        if any(x in INVALID_CHARS for x in value):
-            msg = "<b>{0}</b> contains invalid characters.".format(value)
+        if any(x in INVALID_CHARS for x in name):
+            msg = "<b>{0}</b> contains invalid characters.".format(name)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid characters", msg)
             return False
         # Check if project item with the same name already exists
-        if self.find_item(value):
-            msg = "Project item <b>{0}</b> already exists".format(value)
+        if self.find_item(name):
+            msg = "Project item <b>{0}</b> already exists".format(name)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid name", msg)
             return False
         # Check that no existing project item short name matches the new item's short name.
         # This is to prevent two project items from using the same folder.
-        new_short_name = shorten(value)
+        new_short_name = shorten(name)
         if self._toolbox.project_item_model.short_name_reserved(new_short_name):
             msg = "Project item using directory <b>{0}</b> already exists".format(new_short_name)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid name", msg)
             return False
-        item.set_name(value)
-        if not item.project_item.rename(value):
-            item.set_name(old_name)
+        # Rename project item data directory
+        old_data_dir = item.project_item.data_dir
+        new_data_dir = os.path.join(self._toolbox.project().items_dir, new_short_name)
+        if not rename_dir(old_data_dir, new_data_dir, self._toolbox, box_title):
             return False
-        self._toolbox.msg_success.emit(f"Project item <b>{old_name}</b> renamed to <b>{value}</b>")
+        item.project_item.rename(name)
+        item.set_name(name)
+        self._toolbox.msg_success.emit(f"Project item <b>{old_name}</b> renamed to <b>{name}</b>")
+        self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
 
     def items(self, category_name=None):
