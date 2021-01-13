@@ -346,7 +346,7 @@ class SpineToolboxProject(MetaObject):
                 return
         self._toolbox.undo_stack.push(RemoveProjectItemCommand(self, name, delete_data=delete_data))
 
-    def _remove_item(self, category_ind, item, delete_data=False):
+    def do_remove_item(self, category_ind, item, delete_data=False):
         """Removes LeafProjectTreeItem from project.
 
         Args:
@@ -355,8 +355,7 @@ class SpineToolboxProject(MetaObject):
             delete_data (bool): If set to True, deletes the directories and data associated with the item
         """
         # Remove item from project model
-        if not self._project_item_model.remove_item(item, parent=category_ind):
-            self._logger.msg_error.emit("Removing item <b>{0}</b> from project failed".format(item.name))
+        self._project_item_model.remove_item(item, parent=category_ind)
         # Remove item icon and connected links (QGraphicsItems) from scene
         icon = item.project_item.get_icon()
         self._toolbox.ui.graphicsView.remove_icon(icon)
@@ -644,14 +643,13 @@ class SpineToolboxProject(MetaObject):
             project_item.set_icon(icon)
         properties_ui = self._toolbox.project_item_properties_ui(project_item.item_type())
         project_item.set_properties_ui(properties_ui)
-        project_item.create_data_dir()
         project_item.set_up()
 
     def tear_down(self):
         """Cleans up project."""
         for category_ind, project_tree_items in self._project_item_model.items_per_category().items():
             for project_tree_item in project_tree_items:
-                self._remove_item(category_ind, project_tree_item, delete_data=False)
+                self.do_remove_item(category_ind, project_tree_item, delete_data=False)
 
 
 def _ranks(node_successors):

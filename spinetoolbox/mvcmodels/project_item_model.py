@@ -247,9 +247,8 @@ class ProjectItemModel(QAbstractItemModel):
         parent_item = self.item(parent)
         row = item.row()
         self.beginRemoveRows(parent, row, row)
-        retval = parent_item.remove_child(row)
+        parent_item.remove_child(row)
         self.endRemoveRows()
-        return retval
 
     def set_item_name(self, index, name, box_title):
         """Changes the name of the leaf item at given index to given value.

@@ -152,7 +152,7 @@ class AddProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         for category_ind, project_tree_items in self.project_tree_items.items():
             for project_tree_item in project_tree_items:
-                self.project._remove_item(category_ind, project_tree_item, delete_data=True)
+                self.project.do_remove_item(category_ind, project_tree_item, delete_data=True)
 
 
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
@@ -173,7 +173,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     def redo(self):
         for category_ind, project_tree_items in self.items_per_category.items():
             for project_tree_item in project_tree_items:
-                self.project._remove_item(category_ind, project_tree_item, delete_data=self.delete_data)
+                self.project.do_remove_item(category_ind, project_tree_item, delete_data=self.delete_data)
         self.project._logger.msg.emit("All items removed from project")
 
     def undo(self):
@@ -207,7 +207,7 @@ class RemoveProjectItemCommand(SpineToolboxCommand):
         self.setText(f"remove {name}")
 
     def redo(self):
-        self.project._remove_item(self.category_ind, self.project_tree_item, delete_data=self.delete_data)
+        self.project.do_remove_item(self.category_ind, self.project_tree_item, delete_data=self.delete_data)
 
     def undo(self):
         self.project.dag_handler.blockSignals(True)

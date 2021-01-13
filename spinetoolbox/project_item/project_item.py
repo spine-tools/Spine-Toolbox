@@ -419,6 +419,8 @@ class ProjectItem(MetaObject):
         """Sets up this item. Called when adding the item to the project.
         Implement in subclasses to eg recreate attributes destroyed by tear_down.
         """
+        self.create_data_dir()
+        self.do_set_specification(self._specification)
 
     def update_name_label(self):
         """

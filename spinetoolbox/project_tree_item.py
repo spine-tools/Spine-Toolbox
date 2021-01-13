@@ -80,7 +80,7 @@ class BaseProjectTreeItem(MetaObject):
 
     def remove_child(self, row):
         """Remove the child of this BaseProjectTreeItem from given row. Do not call this method directly.
-        This method is called by LeafProjectItemTreeModel when items are removed.
+        This method is called by ProjectItemTreeModel when items are removed.
 
         Args:
             row (int): Row of child to remove
