@@ -80,12 +80,12 @@ class TestProjectItemModel(unittest.TestCase):
         self.assertEqual(model.n_items(), 1)
         self.assertEqual(model.items("category"), [leaf])
 
-    def test_setData(self):
+    def test_set_item_name(self):
         model = self.toolbox.project_item_model
         item_dict = {"view": {"type": "View", "description": "", "x": 0, "y": 0}}
         self.toolbox.project().add_project_items(item_dict)
         leaf_index = model.find_item("view")
-        status = model.setData(leaf_index, "new view item name")
+        status = model.set_item_name(leaf_index, "new view item name", "box_title")
         self.assertTrue(status)
         leaf_item = model.get_item("new view item name")
         self.assertIsNotNone(leaf_item)

@@ -49,7 +49,7 @@ class TestHelpers(unittest.TestCase):
             file_in_dir.touch()
             new_dir = Path(temp_dir, "new directory")
             logger = MagicMock()
-            self.assertTrue(rename_dir(str(old_dir), str(new_dir), logger))
+            self.assertTrue(rename_dir(str(old_dir), str(new_dir), logger, "box_title"))
             self.assertFalse(old_dir.exists())
             self.assertTrue(new_dir.exists())
             files_in_new_dir = list(new_dir.iterdir())
@@ -62,8 +62,9 @@ class TestHelpers(unittest.TestCase):
             new_dir = Path(temp_dir, "new directory")
             new_dir.mkdir()
             logger = MagicMock()
-            self.assertFalse(rename_dir(str(old_dir), str(new_dir), logger))
-            logger.information_box.emit.assert_called_once()
+            with unittest.mock.patch("spinetoolbox.helpers.QMessageBox") as mock_msg_box:
+                self.assertFalse(rename_dir(str(old_dir), str(new_dir), logger, "box_title"))
+                mock_msg_box.assert_called_once()
             self.assertTrue(old_dir.exists())
             self.assertTrue(new_dir.exists())
 
