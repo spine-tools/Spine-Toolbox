@@ -1014,9 +1014,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         data = self._parent.load_full_parameter_value_data(
             db_map_parameter_values=db_map_parameter_values, action=action
         )
-        data = {
-            key[:-3] + ((None, index),) + key[-3:]: value for key, value in data.items() for index in _indexes(value)
-        }
         self.update_model(data)
         return True
 
