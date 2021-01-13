@@ -107,8 +107,6 @@ class CustomFileSystemWatcher(QFileSystemWatcher):
         return self.addPath(path)
 
     def remove_persistent_dir_path(self, path):
-        if not os.path.isdir(path):
-            return False
         self._watched_dirs.discard(path)
         if path in self._watched_files:
             return

@@ -55,7 +55,7 @@ class TestHelpers(unittest.TestCase):
             files_in_new_dir = list(new_dir.iterdir())
             self.assertEqual(files_in_new_dir, [Path(new_dir, "file.fff")])
 
-    def test_rename_dir_fails_if_target_exists(self):
+    def test_rename_dir_prompts_user_if_target_exists(self):
         with TemporaryDirectory() as temp_dir:
             old_dir = Path(temp_dir, "old directory")
             old_dir.mkdir()
