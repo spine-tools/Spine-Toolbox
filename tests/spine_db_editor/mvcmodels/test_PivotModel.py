@@ -140,7 +140,7 @@ class TestPivotModel(unittest.TestCase):
         """test that _get_unique_index_values returns unique values for specified indexes"""
         model = PivotModel()
         model.reset_model(self.data, self.index_ids)
-        index_set = sorted(set([('a', 'aa'), ('a', 'bb'), ('b', 'cc'), ('c', 'cc'), ('d', 'dd'), ('e', 'ee')]))
+        index_set = sorted({('a', 'aa'), ('a', 'bb'), ('b', 'cc'), ('c', 'cc'), ('d', 'dd'), ('e', 'ee')})
         index_header_values = model._get_unique_index_values(('test1', 'test2'))
         self.assertEqual(index_header_values, index_set)
 
@@ -148,7 +148,7 @@ class TestPivotModel(unittest.TestCase):
         """test that _get_unique_index_values returns unique values for specified indexes with filter index and value"""
         model = PivotModel()
         model.reset_model(self.data, self.index_ids, ('test1', 'test2'), (), ('test3',), (5,))
-        index_set = sorted(set([('d', 'dd'), ('e', 'ee')]))
+        index_set = sorted({('d', 'dd'), ('e', 'ee')})
         index_header_values = model._get_unique_index_values(('test1', 'test2'))
         self.assertEqual(index_header_values, index_set)
 

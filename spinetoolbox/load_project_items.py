@@ -85,9 +85,7 @@ def _install_spine_items(tmpdirname):
 
 
 def _print_unsatisfiable_requirement(pkg, curr, req):
-    print(
-        f"Unsatisfiable requirement: {pkg} version is {curr}, whereas {req} is required", file=sys.stderr,
-    )
+    print(f"Unsatisfiable requirement: {pkg} version is {curr}, whereas {req} is required", file=sys.stderr)
 
 
 def upgrade_project_items():

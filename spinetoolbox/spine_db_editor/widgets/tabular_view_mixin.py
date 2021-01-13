@@ -176,21 +176,13 @@ class TabularViewMixin:
         """Returns a function to compute the db_map-id tuple of an item."""
         return {"add": lambda db_map, x: (db_map, x["id"]), "remove": lambda db_map, x: None}[action]
 
-    def _get_db_map_entities(self, class_id=None, class_type=None):
+    def _get_db_map_entities(self):
         """Returns a dict mapping db maps to a list of dict entity items in the current class.
-
-        Args:
-            class_id (dict): mapping db maps to class id
-            class_type (str)
 
         Returns:
             dict
         """
-        if class_id is None:
-            class_id = self.current_class_id
-        if class_type is None:
-            class_type = self.current_class_type
-        entity_type = {"object_class": "object", "relationship_class": "relationship"}[class_type]
+        entity_type = {"object_class": "object", "relationship_class": "relationship"}[self.current_class_type]
         return {
             db_map: self.db_mngr.get_items_by_field(db_map, entity_type, "class_id", class_id)
             for db_map, class_id in self.current_class_id.items()
@@ -397,6 +389,29 @@ class TabularViewMixin:
             for x in items
         }
 
+    def _indexes(self, value):
+        if value is None:
+            return []
+        db_map, id_ = value
+        return self.db_mngr.get_value_indexes(db_map, "parameter_value", id_)
+
+    def load_full_expanded_parameter_value_data(self, db_map_parameter_values=None, action="add"):
+        """Makes a dict of expanded parameter values for the current class.
+
+        Args:
+            db_map_parameter_values (list, optional)
+            action (str)
+
+        Returns:
+            dict: mapping from unique value id tuple to value tuple
+        """
+        data = self.load_full_parameter_value_data(db_map_parameter_values, action)
+        return {
+            key[:-3] + ((None, index),) + key[-3:]: value
+            for key, value in data.items()
+            for index in self._indexes(value)
+        }
+
     def load_parameter_value_data(self):
         """Returns a dict that merges empty and full parameter_value data.
 
@@ -415,15 +430,11 @@ class TabularViewMixin:
             dict: Key is a tuple object_id, ..., index, while value is None.
         """
 
-        def _indexes(value):
-            if value is None:
-                return []
-            db_map, id_ = value
-            return self.db_mngr.get_value_indexes(db_map, "parameter_value", id_)
-
         data = self.load_parameter_value_data()
         return {
-            key[:-3] + ((None, index),) + key[-3:]: value for key, value in data.items() for index in _indexes(value)
+            key[:-3] + ((None, index),) + key[-3:]: value
+            for key, value in data.items()
+            for index in self._indexes(value)
         }
 
     def get_pivot_preferences(self):

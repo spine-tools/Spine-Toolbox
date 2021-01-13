@@ -15,14 +15,20 @@ Unit tests for the plotting module.
 :author: A. Soininen(VTT)
 :date:   10.7.2019
 """
-
+import os.path
+from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import Mock, MagicMock, patch
-from PySide2.QtWidgets import QApplication, QAction
-from spinetoolbox.spine_db_editor.mvcmodels.pivot_table_models import (
-    ParameterValuePivotTableModel,
-    IndexExpansionPivotTableModel,
+from unittest.mock import MagicMock, patch
+from PySide2.QtWidgets import QApplication
+from spinedb_api import (
+    DiffDatabaseMapping,
+    import_object_classes,
+    import_object_parameters,
+    import_objects,
+    import_object_parameter_values,
+    Map,
 )
+from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 
 
@@ -33,26 +39,37 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        db_mngr = MagicMock()
-        db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: id_
-        db_mngr.get_item.side_effect = lambda db_map, item_type, id_: {"name": id_, "parameter_name": id_}
-        mock_db_map = Mock()
-        mock_db_map.codename = "codename"
-        db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
-        db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
+        app_settings = MagicMock()
+        self._temp_dir = TemporaryDirectory()
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
+        db_map = DiffDatabaseMapping(url, create=True)
+        import_object_classes(db_map, ("class1",))
+        import_object_parameters(db_map, (("class1", "parameter1"), ("class1", "parameter2")))
+        import_objects(db_map, (("class1", "object1"), ("class1", "object2")))
+        import_object_parameter_values(
+            db_map,
+            (
+                ("class1", "object1", "parameter1", 1.0),
+                ("class1", "object2", "parameter1", 3.0),
+                ("class1", "object1", "parameter2", 5.0),
+                ("class1", "object2", "parameter2", 7.0),
+            ),
+        )
+        db_map.commit_session("Add test data.")
+        db_map.connection.close()
+        self._db_mngr = SpineDBManager(app_settings, None)
         with patch.object(SpineDBEditor, "restore_ui"):
-            tabular_view = SpineDBEditor(db_mngr, mock_db_map)
-        self._model = ParameterValuePivotTableModel(tabular_view)
-        data = {
-            ('object1', 'parameter1', 'alternative1'): '1',
-            ('object2', 'parameter1', 'alternative1'): '3',
-            ('object1', 'parameter2', 'alternative1'): '5',
-            ('object2', 'parameter2', 'alternative1'): '7',
-        }
-        tabular_view.load_parameter_value_data = lambda: data
-        object_class_ids = {'object_class': 1}
-        self._model.call_reset_model(object_class_ids)
+            self._editor = SpineDBEditor(self._db_mngr, {url: db_map.codename})
+        object_class_index = self._editor.object_tree_model.index(0, 0)
+        self._editor.object_tree_model.fetchMore(object_class_index)
+        index = self._editor.object_tree_model.index(0, 0, object_class_index)
+        self._editor.reload_pivot_table(index)
+        self._model = self._editor.pivot_table_model
         self._model.start_fetching()
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        self._temp_dir.cleanup()
 
     def test_x_flag(self):
         self.assertIsNone(self._model.plot_x_column)
@@ -62,15 +79,36 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         self.assertIsNone(self._model.plot_x_column)
 
     def test_header_name(self):
-        self.assertEqual(self._model.header_name(self._model.index(0, 2)), 'alternative1')
+        self.assertEqual(self._model.rowCount(), 5)
+        self.assertEqual(self._model.columnCount(), 4)
         self.assertEqual(self._model.header_name(self._model.index(2, 0)), 'object1')
-        self.assertEqual(self._model.header_name(self._model.index(2, 1)), 'parameter1')
+        self.assertEqual(self._model.header_name(self._model.index(0, 1)), 'parameter1')
         self.assertEqual(self._model.header_name(self._model.index(3, 0)), 'object2')
-        self.assertEqual(self._model.header_name(self._model.index(3, 1)), 'parameter1')
-        self.assertEqual(self._model.header_name(self._model.index(4, 0)), 'object1')
-        self.assertEqual(self._model.header_name(self._model.index(4, 1)), 'parameter2')
-        self.assertEqual(self._model.header_name(self._model.index(5, 0)), 'object2')
-        self.assertEqual(self._model.header_name(self._model.index(5, 1)), 'parameter2')
+        self.assertEqual(self._model.header_name(self._model.index(0, 2)), 'parameter2')
+
+    def test_data(self):
+        self.assertEqual(self._model.rowCount(), 5)
+        self.assertEqual(self._model.columnCount(), 4)
+        self.assertEqual(self._model.index(0, 0).data(), "parameter")
+        self.assertEqual(self._model.index(1, 0).data(), "class1")
+        self.assertEqual(self._model.index(2, 0).data(), "object1")
+        self.assertEqual(self._model.index(3, 0).data(), "object2")
+        self.assertEqual(self._model.index(4, 0).data(), None)
+        self.assertEqual(self._model.index(0, 1).data(), "parameter1")
+        self.assertEqual(self._model.index(1, 1).data(), None)
+        self.assertEqual(self._model.index(2, 1).data(), str(1.0))
+        self.assertEqual(self._model.index(3, 1).data(), str(3.0))
+        self.assertEqual(self._model.index(4, 1).data(), None)
+        self.assertEqual(self._model.index(0, 2).data(), "parameter2")
+        self.assertEqual(self._model.index(1, 2).data(), None)
+        self.assertEqual(self._model.index(2, 2).data(), str(5.0))
+        self.assertEqual(self._model.index(3, 2).data(), str(7.0))
+        self.assertEqual(self._model.index(4, 2).data(), None)
+        self.assertEqual(self._model.index(0, 3).data(), None)
+        self.assertEqual(self._model.index(1, 3).data(), None)
+        self.assertEqual(self._model.index(2, 3).data(), None)
+        self.assertEqual(self._model.index(3, 3).data(), None)
+        self.assertEqual(self._model.index(4, 3).data(), None)
 
     def test_header_row_count(self):
         self.assertEqual(self._model.headerRowCount(), 2)
@@ -83,40 +121,65 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        db_mngr = MagicMock()
-        # db_mngr.get_value.side_effect = lambda db_map, item_type, id_, field, role: id_
-        db_mngr.get_item.side_effect = lambda db_map, item_type, id_: {"name": id_, "parameter_name": id_}
-        db_mngr.get_value_index.side_effect = (
-            lambda db_map, item_type, id_, index, role: {
-                "value1": {"index1": 5, "index2": -3},
-                "value2": {"index1": 40, "index2": -24},
-            }
-            .get(id_, {})
-            .get(index)
+        app_settings = MagicMock()
+        self._temp_dir = TemporaryDirectory()
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
+        db_map = DiffDatabaseMapping(url, create=True)
+        import_object_classes(db_map, ("class1",))
+        import_object_parameters(db_map, (("class1", "parameter1"), ("class1", "parameter2")))
+        import_objects(db_map, (("class1", "object1"), ("class1", "object2")))
+        import_object_parameter_values(
+            db_map,
+            (
+                ("class1", "object1", "parameter1", Map(["A", "B"], [1.1, 2.1])),
+                ("class1", "object2", "parameter1", Map(["C", "D"], [1.2, 2.2])),
+                ("class1", "object1", "parameter2", Map(["C", "D"], [-1.1, -2.1])),
+                ("class1", "object2", "parameter2", Map(["A", "B"], [-1.2, -2.2])),
+            ),
         )
-        mock_db_map = Mock()
-        mock_db_map.codename = "codename"
-        db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
-        db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
+        db_map.commit_session("Add test data.")
+        db_map.connection.close()
+        self._db_mngr = SpineDBManager(app_settings, None)
         with patch.object(SpineDBEditor, "restore_ui"):
-            tabular_view = SpineDBEditor(db_mngr, mock_db_map)
-        self._model = IndexExpansionPivotTableModel(tabular_view)
-        data = {
-            ('node1', 'unitA', 'index1', 'parameter1', 'alternative1'): 'value1',
-            ('node1', 'unitB', 'index2', 'parameter1', 'alternative1'): 'value1',
-            ('node2', 'unitA', 'index1', 'parameter1', 'alternative1'): 'value2',
-            ('node2', 'unitB', 'index2', 'parameter1', 'alternative1'): 'value2',
-        }
-        tabular_view.load_expanded_parameter_value_data = lambda: data
-        object_class_ids = {'node': 1, 'unit': 2}
-        self._model.call_reset_model(object_class_ids)
+            self._editor = SpineDBEditor(self._db_mngr, {url: db_map.codename})
+        object_class_index = self._editor.object_tree_model.index(0, 0)
+        self._editor.object_tree_model.fetchMore(object_class_index)
+        index = self._editor.object_tree_model.index(0, 0, object_class_index)
+        for action in self._editor.input_type_action_group.actions():
+            if action.text() == self._editor._INDEX_EXPANSION:
+                action.trigger()
+                break
+        self._editor.reload_pivot_table(index)
+        self._model = self._editor.pivot_table_model
         self._model.start_fetching()
 
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        self._temp_dir.cleanup()
+
     def test_data(self):
-        self.assertEqual(self._model.index(2, 4).data(), 5)
-        self.assertEqual(self._model.index(3, 4).data(), -3)
-        self.assertEqual(self._model.index(4, 4).data(), 40)
-        self.assertEqual(self._model.index(5, 4).data(), -24)
+        self.assertEqual(self._model.rowCount(), 11)
+        self.assertEqual(self._model.columnCount(), 5)
+        expected = [
+            [None, "parameter", "parameter1", "parameter2", None],
+            ["class1", "index", None, None, None],
+            ["object1", "A", str(1.1), None, None],
+            ["object1", "B", str(2.1), None, None],
+            ["object1", "C", None, str(-1.1), None],
+            ["object1", "D", None, str(-2.1), None],
+            ["object2", "C", str(1.2), None, None],
+            ["object2", "D", str(2.2), None, None],
+            ["object2", "A", None, str(-1.2), None],
+            ["object2", "B", None, str(-2.2), None],
+            [None, None, None, None, None],
+        ]
+        for column in range(5):
+            for row in range(11):
+                self.assertEqual(
+                    self._model.index(row, column).data(),
+                    expected[row][column],
+                    f"data mismatch on row {row} column {column}",
+                )
 
 
 if __name__ == '__main__':

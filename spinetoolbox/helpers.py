@@ -431,7 +431,15 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
 
 
 def tuple_itemgetter(itemgetter_func, num_indexes):
-    """Change output of itemgetter to always be a tuple even for one index"""
+    """Change output of itemgetter to always be a tuple even for a single index.
+
+    Args:
+        itemgetter_func (Callable): item getter function
+        num_indexes (int): number of indexes
+
+    Returns:
+        Callable: getter function that works with a single index
+    """
     return (lambda item: (itemgetter_func(item),)) if num_indexes == 1 else itemgetter_func
 
 

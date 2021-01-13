@@ -83,7 +83,7 @@ class PivotModel:
         return added_row_count, added_column_count
 
     def remove_from_model(self, data):
-        self._data = {key: self._data[key] for key in set(self._data) - set(data)}
+        self._data = {key: self._data[key] for key in self._data if key not in data}
         self.index_values = dict(zip(self.index_ids, zip(*self._data.keys())))
         old_row_count = len(self._row_data_header)
         old_column_count = len(self._column_data_header)
@@ -116,7 +116,15 @@ class PivotModel:
         raise ValueError(err_msg)
 
     def _index_key_getter(self, indexes):
-        """Returns an itemgetter that always returns tuples from list of indexes"""
+        """
+        Returns an itemgetter that always returns tuples from list of indexes
+
+        Args:
+            indexes (tuple)
+
+        Returns:
+            Callable: an itemgetter
+        """
         keys = tuple(self.index_ids.index(i) for i in indexes if i in self.index_ids)
         return tuple_itemgetter(operator.itemgetter(*keys), len(keys))
 
@@ -124,10 +132,10 @@ class PivotModel:
         """Returns unique indexes that match the frozen condition.
 
         Args:
-            indexes (list)
+            indexes (tuple): indexes to match
 
-        Returns
-            list
+        Returns:
+            list: unique indexes
         """
         if not indexes:
             return []

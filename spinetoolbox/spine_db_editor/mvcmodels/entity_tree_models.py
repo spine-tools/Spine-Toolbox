@@ -163,7 +163,7 @@ class ObjectTreeModel(MultiDBTreeModel):
             parent_item.update_children_by_id(db_map_ids)
 
     def find_next_relationship_index(self, index):
-        """Find and return next ocurrence of relationship item."""
+        """Find and return next occurrence of relationship item."""
         if not index.isValid():
             return
         rel_item = self.item_from_index(index)

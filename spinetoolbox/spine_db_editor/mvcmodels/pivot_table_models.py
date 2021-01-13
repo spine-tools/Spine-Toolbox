@@ -721,7 +721,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         return [self.db_mngr.get_item(db_map, "object", id_)["name"] for id_ in objects_ids]
 
     def _all_header_names(self, index):
-        """Returns the object, parameter, alternative, an db names corresponding to the given data index.
+        """Returns the object, parameter, alternative, and db names corresponding to the given data index.
 
         Args:
             index (QModelIndex)
@@ -1014,6 +1014,9 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         data = self._parent.load_full_parameter_value_data(
             db_map_parameter_values=db_map_parameter_values, action=action
         )
+        data = {
+            key[:-3] + ((None, index),) + key[-3:]: value for key, value in data.items() for index in _indexes(value)
+        }
         self.update_model(data)
         return True
 
@@ -1074,6 +1077,59 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         except ValueError:
             # The parameter index is not a column (it's either a row or frozen)
             return False
+
+    def receive_objects_added_or_removed(self, db_map_data, action):
+        return False
+
+    def receive_relationships_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        return False
+
+    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
+        return False
+
+    def receive_parameter_values_added_or_removed(self, db_map_data, action):
+        db_map_parameter_values = {
+            db_map: [
+                x
+                for x in parameter_values
+                if (x.get("object_class_id") or x.get("relationship_class_id"))
+                == self._parent.current_class_id.get(db_map)
+            ]
+            for db_map, parameter_values in db_map_data.items()
+        }
+        if not db_map_parameter_values:
+            return False
+        if action == "remove":
+            parameter_indexes = dict()
+            datas, indexes, parameters, alternatives, databases = self.model.index_values.values()
+            for data, index, parameter, alternative, database in zip(
+                datas, indexes, parameters, alternatives, databases
+            ):
+                parameter_indexes.setdefault((data, parameter, alternative, database), list()).append(index)
+            db_map_data = {
+                (
+                    (db_map, parameter["entity_id"]),
+                    (db_map, parameter["parameter_id"]),
+                    (db_map, parameter["alternative_id"]),
+                    db_map,
+                ): None
+                for db_map, parameters in db_map_parameter_values.items()
+                for parameter in parameters
+            }
+            db_map_data = {
+                keys[:-3] + (parameter_index,) + keys[-3:]: None
+                for keys in db_map_data
+                for parameter_index in parameter_indexes[keys]
+            }
+            self.receive_data_added_or_removed(db_map_data, action)
+            return True
+        if not any(db_map_parameter_values.values()):
+            return False
+        data = self._parent.load_full_expanded_parameter_value_data(
+            db_map_parameter_values=db_map_parameter_values, action=action
+        )
+        self.receive_data_added_or_removed(data, action)
+        return True
 
     def _data(self, index, role):
         row, column = self.map_to_pivot(index)
