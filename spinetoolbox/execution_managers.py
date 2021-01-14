@@ -52,18 +52,19 @@ class ExecutionManager(QObject):
 class QProcessExecutionManager(ExecutionManager):
     """Class to manage tool instance execution using a PySide2 QProcess."""
 
-    def __init__(self, logger, program=None, args=None, silent=False, semisilent=False):
+    def __init__(self, logger, program="", args=None, silent=False, semisilent=False):
         """Class constructor.
 
         Args:
             logger (LoggerInterface): a logger instance
             program (str): Path to program to run in the subprocess (e.g. julia.exe)
-            args (list): List of argument for the program (e.g. path to script file)
+            args (list, optional): List of argument for the program (e.g. path to script file)
             silent (bool): Whether or not to emit logger msg signals
+            semisilent (bool): If True, show Process Log messages
         """
         super().__init__(logger)
         self._program = program
-        self._args = args
+        self._args = args if args is not None else []
         self._silent = silent  # Do not show Event Log nor Process Log messages
         self._semisilent = semisilent  # Do not show Event Log messages but show Process Log messages
         self.process_failed = False
@@ -87,7 +88,7 @@ class QProcessExecutionManager(ExecutionManager):
         """Starts the execution of a command in a QProcess.
 
         Args:
-            workdir (str): Work directory
+            workdir (str, optional): Work directory
         """
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
@@ -102,7 +103,7 @@ class QProcessExecutionManager(ExecutionManager):
             self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
             self._process.readyReadStandardError.connect(self.on_ready_stderr)
         self._process.start(self._program, self._args)
-        if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
+        if self._process is not None and not self._process.waitForStarted(msecs=10000):
             self.process_failed = True
             self.process_failed_to_start = True
             self._process.deleteLater()
@@ -121,10 +122,13 @@ class QProcessExecutionManager(ExecutionManager):
     def wait_for_process_finished(self, msecs=30000):
         """Wait for subprocess to finish.
 
+        Args:
+            msecs (int): Timeout in milliseconds
+
         Return:
             True if process finished successfully, False otherwise
         """
-        if not self._process:
+        if self._process is None:
             return False
         if self.process_failed or self.process_failed_to_start:
             return False
@@ -139,12 +143,12 @@ class QProcessExecutionManager(ExecutionManager):
     def process_started(self):
         """Run when subprocess has started."""
 
-    @Slot("QProcess::ProcessState")
+    @Slot(int)
     def on_state_changed(self, new_state):
         """Runs when QProcess state changes.
 
         Args:
-            new_state (QProcess::ProcessState): Process state number
+            new_state (int): Process state number (``QProcess::ProcessState``)
         """
         if new_state == QProcess.Starting:
             self._logger.msg.emit("\tStarting program <b>{0}</b>".format(self._program))
@@ -159,12 +163,12 @@ class QProcessExecutionManager(ExecutionManager):
             self._logger.msg_error.emit("Process is in an unspecified state")
             logging.error("QProcess unspecified state: %s", new_state)
 
-    @Slot("QProcess::ProcessError")
+    @Slot(int)
     def on_process_error(self, process_error):
         """Runs if there is an error in the running QProcess.
 
         Args:
-            process_error (QProcess::ProcessError): Process error number
+            process_error (int): Process error number (``QProcess::ProcessError``)
         """
         if process_error == QProcess.FailedToStart:
             self.process_failed = True
@@ -190,7 +194,6 @@ class QProcessExecutionManager(ExecutionManager):
     def teardown_process(self):
         """Tears down the QProcess in case a QProcess.ProcessError occurred.
         Emits execution_finished signal."""
-        # self._logger.msg.emit("Tearing down process")
         if not self._process:
             pass
         else:
@@ -222,15 +225,14 @@ class QProcessExecutionManager(ExecutionManager):
             self._process = None
             self.data_to_inject = None
 
-    @Slot(int, "QProcess::ExitStatus")
+    @Slot(int, int)
     def on_process_finished(self, exit_code, exit_status):
         """Runs when subprocess has finished.
 
         Args:
             exit_code (int): Return code from external program (only valid for normal exits)
-            exit_status (QProcess.ExitStatus): Crash or normal exit
+            exit_status (int): Crash or normal exit (``QProcess::ExitStatus``)
         """
-        # logging.debug("Error that occurred last: {0}".format(self._process.error()))
         if not self._process:
             return
         if exit_status == QProcess.CrashExit:

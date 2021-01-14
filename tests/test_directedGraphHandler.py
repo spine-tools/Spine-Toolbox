@@ -1065,3 +1065,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         # Remove node e
         self.dag_handler.remove_node_from_graph("e")
         self.assertTrue(len(self.dag_handler.dags()) == 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

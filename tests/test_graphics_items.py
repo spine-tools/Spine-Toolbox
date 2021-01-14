@@ -15,12 +15,18 @@ Unit tests for ``graphics_items`` module.
 :authors: A. Soininen (VTT)
 :date:    17.12.2020
 """
+import os.path
 from tempfile import TemporaryDirectory
 import unittest
-from PySide2.QtCore import QEvent, Qt
+from unittest.mock import patch
+from PySide2.QtCore import QEvent, QPoint, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
-from spinetoolbox.graphics_items import ProjectItemIcon, Link
+from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
+from spinedb_api.filters.tools import filter_config
+from spine_engine.project_item.project_item_resource import ProjectItemResource
+from spinetoolbox.graphics_items import ExclamationIcon, Link, ProjectItemIcon, RankIcon
+from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.project_commands import MoveIconCommand
 from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
@@ -86,6 +92,168 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(self._toolbox.undo_stack.count(), 1)
         move_command = self._toolbox.undo_stack.command(0)
         self.assertIsInstance(move_command, MoveIconCommand)
+
+
+class TestExclamationIcon(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def test_no_notifications(self):
+        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+            icon = ExclamationIcon(None)
+            icon.hoverEnterEvent(QGraphicsSceneMouseEvent())
+            show_text.assert_not_called()
+
+    def test_add_notification(self):
+        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+            icon = ExclamationIcon(None)
+            icon.add_notification("Please note!")
+            icon.hoverEnterEvent(QGraphicsSceneMouseEvent())
+            show_text.assert_called_once_with(QPoint(0, 0), "<p>Please note!")
+
+    def test_clear_notifications(self):
+        with patch("PySide2.QtWidgets.QToolTip.showText") as show_text:
+            icon = ExclamationIcon(None)
+            icon.add_notification("Please note!")
+            icon.clear_notifications()
+            icon.hoverEnterEvent(QGraphicsSceneMouseEvent())
+            show_text.assert_not_called()
+
+
+class TestRankIcon(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self._temp_dir = TemporaryDirectory()
+        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
+
+    def tearDown(self):
+        clean_up_toolbox(self._toolbox)
+        self._temp_dir.cleanup()
+
+    def test_set_rank(self):
+        item_icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
+        icon = RankIcon(item_icon)
+        self.assertEqual(icon.toPlainText(), "")
+        icon.set_rank(23)
+        self.assertEqual(icon.toPlainText(), "23")
+
+
+class TestLink(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self._temp_dir = TemporaryDirectory()
+        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
+        source_item_icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
+        source_item_icon.update_name_item("source icon")
+        destination_item_icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
+        destination_item_icon.update_name_item("destination icon")
+        self._link = Link(self._toolbox, source_item_icon.conn_button(), destination_item_icon.conn_button())
+
+    def tearDown(self):
+        clean_up_toolbox(self._toolbox)
+        self._temp_dir.cleanup()
+
+    def test_empty_filter_stacks(self):
+        self.assertEqual(self._link.filter_stacks(), {})
+
+    def test_scenario_filter_gets_added_to_filter_model(self):
+        with TemporaryDirectory() as temp_dir:
+            url = "sqlite:///" + os.path.join(temp_dir, "db.sqlite")
+            db_map = DiffDatabaseMapping(url, create=True)
+            import_scenarios(db_map, (("scenario", True),))
+            db_map.commit_session("Add test data.")
+            db_map.connection.close()
+            self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+            self.assertEqual(self._link.filter_stacks(), {})
+            filter_model = self._link.resource_filter_model
+            self.assertEqual(filter_model.rowCount(), 1)
+            self.assertEqual(filter_model.columnCount(), 1)
+            index = filter_model.index(0, 0)
+            self.assertEqual(index.data(), url)
+            root_item = filter_model.itemFromIndex(index)
+            self.assertEqual(root_item.rowCount(), 2)
+            self.assertEqual(root_item.columnCount(), 1)
+            scenario_title_item = root_item.child(0, 0)
+            self.assertEqual(scenario_title_item.index().data(), "Scenario filter")
+            self.assertEqual(scenario_title_item.rowCount(), 2)
+            self.assertEqual(scenario_title_item.columnCount(), 1)
+            scenario_item = scenario_title_item.child(0, 0)
+            self.assertEqual(scenario_item.index().data(), "Select all")
+            scenario_item = scenario_title_item.child(1, 0)
+            self.assertEqual(scenario_item.index().data(), "scenario")
+            self._toolbox.db_mngr.close_all_sessions()
+
+    def test_tool_filter_gets_added_to_filter_model(self):
+        with TemporaryDirectory() as temp_dir:
+            url = "sqlite:///" + os.path.join(temp_dir, "db.sqlite")
+            db_map = DiffDatabaseMapping(url, create=True)
+            import_tools(db_map, ("tool",))
+            db_map.commit_session("Add test data.")
+            db_map.connection.close()
+            self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+            self.assertEqual(self._link.filter_stacks(), {})
+            filter_model = self._link.resource_filter_model
+            self.assertEqual(filter_model.rowCount(), 1)
+            self.assertEqual(filter_model.columnCount(), 1)
+            index = filter_model.index(0, 0)
+            self.assertEqual(index.data(), url)
+            root_item = filter_model.itemFromIndex(index)
+            self.assertEqual(root_item.rowCount(), 2)
+            self.assertEqual(root_item.columnCount(), 1)
+            tool_title_item = root_item.child(1, 0)
+            self.assertEqual(tool_title_item.index().data(), "Tool filter")
+            self.assertEqual(tool_title_item.rowCount(), 2)
+            self.assertEqual(tool_title_item.columnCount(), 1)
+            tool_item = tool_title_item.child(0, 0)
+            self.assertEqual(tool_item.index().data(), "Select all")
+            tool_item = tool_title_item.child(1, 0)
+            self.assertEqual(tool_item.index().data(), "tool")
+            self._toolbox.db_mngr.close_all_sessions()
+
+    def test_toggle_scenario_filter(self):
+        with TemporaryDirectory() as temp_dir:
+            url = "sqlite:///" + os.path.join(temp_dir, "db.sqlite")
+            db_map = DiffDatabaseMapping(url, create=True)
+            import_scenarios(db_map, (("scenario", True),))
+            db_map.commit_session("Add test data.")
+            db_map.connection.close()
+            self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+            self._link.refresh_resource_filter_model()
+            filter_model = self._link.resource_filter_model
+            scenario_item = filter_model.itemFromIndex(filter_model.index(0, 0)).child(0, 0).child(0, 0)
+            filter_model.toggle_checked_state(scenario_item.index())
+            self.assertEqual(
+                self._link.filter_stacks(),
+                {(url, "destination icon"): [(filter_config("scenario_filter", "scenario"),)]},
+            )
+            self._toolbox.db_mngr.close_all_sessions()
+
+    def test_toggle_tool_filter(self):
+        with TemporaryDirectory() as temp_dir:
+            url = "sqlite:///" + os.path.join(temp_dir, "db.sqlite")
+            db_map = DiffDatabaseMapping(url, create=True)
+            import_tools(db_map, ("tool",))
+            db_map.commit_session("Add test data.")
+            db_map.connection.close()
+            self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+            self._link.refresh_resource_filter_model()
+            filter_model = self._link.resource_filter_model
+            scenario_item = filter_model.itemFromIndex(filter_model.index(0, 0)).child(1, 0).child(0, 0)
+            filter_model.toggle_checked_state(scenario_item.index())
+            self.assertEqual(
+                self._link.filter_stacks(), {(url, "destination icon"): [(filter_config("tool_filter", "tool"),)]}
+            )
+            self._toolbox.db_mngr.close_all_sessions()
 
 
 if __name__ == "__main__":
