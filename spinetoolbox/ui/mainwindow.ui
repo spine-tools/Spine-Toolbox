@@ -117,6 +117,9 @@
       <property name="viewportUpdateMode">
        <enum>QGraphicsView::FullViewportUpdate</enum>
       </property>
+      <property name="rubberBandSelectionMode">
+       <enum>Qt::ContainsItemBoundingRect</enum>
+      </property>
      </widget>
     </item>
    </layout>
@@ -127,7 +130,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">

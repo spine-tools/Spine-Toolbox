@@ -179,13 +179,14 @@ class Ui_MainWindow(object):
         self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
         self.graphicsView.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.graphicsView.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.graphicsView.setRubberBandSelectionMode(Qt.ContainsItemBoundingRect)
 
         self.verticalLayout_10.addWidget(self.graphicsView)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 860, 27))
+        self.menubar.setGeometry(QRect(0, 0, 860, 26))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
