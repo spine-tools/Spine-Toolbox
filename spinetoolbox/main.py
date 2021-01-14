@@ -48,8 +48,15 @@ if not _skip_project_items_upgrade and upgrade_project_items():
     # Restart, otherwise the newer version is not picked.
     # Not even importlib.reload(site) or importlib.invalidate_caches() are sufficient,
     # because of .pyc files.
-    python = sys.executable
-    os.execl(python, '"' + python + '"', *sys.argv, "--skip-project-items-upgrade")
+    # We use `subprocess.run()` because `os.execl()` doesn't immediately replaces the current program on Windows
+    import subprocess
+
+    try:
+        subprocess.run([sys.executable, *sys.argv, "--skip-project-items-upgrade"], check=True)
+    except subprocess.CalledProcessError as err:
+        sys.exit(err.returncode)
+    sys.exit(0)
+
 
 from .ui_main import ToolboxUI
 from .version import __version__
