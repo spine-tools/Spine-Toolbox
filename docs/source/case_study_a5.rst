@@ -87,10 +87,6 @@ Each power station in the river is modelled using the following elements:
 Below is a schematic of the model. For clarity, only the Rebnis station is presented in full detail:
 
 
-.. attention::
-
-   This image is outdated, it looks different in 0.5
-
 .. image:: img/case_study_a5_schematic.png
    :align: center
    :scale: 50%
