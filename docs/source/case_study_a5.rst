@@ -574,7 +574,8 @@ Select the output data store and open the database editor to it.
 .. image:: img/case_study_a5_output.png
    :align: center
 
-To checkout the flow on the common electricity, go to *Object tree*, expand the ``unit`` object class,
+To checkout the flow on the electricity load (i.e., the total electricity production in the system),
+go to *Object tree*, expand the ``unit`` object class,
 and select ``electricity_load``, as illustrated in the picture above.
 Next, go to *Relationship parameter value* and double-click the first cell under `value`.
 The *Parameter value editor* will pop up. You should see something like this:
