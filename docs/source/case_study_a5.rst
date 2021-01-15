@@ -357,7 +357,7 @@ Creating objects
 
    d. ``some_week`` of class ``temporal_block``.
 
-#. Finally, create the following objects to get unit flow results back from Spine Opt:
+#. Finally, create the following objects to get results back from Spine Opt:
 
    a. ``my_report`` of class ``report``.
 
