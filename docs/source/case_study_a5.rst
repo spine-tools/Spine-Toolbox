@@ -78,7 +78,6 @@ Each power station in the river is modelled using the following elements:
 
 - An upper water node, located at the entrance of the station.
 - A lower water node, located at the exit of the station.
-- A reservoir unit, that takes water from the upper node to put it into a water storage and viceversa.
 - A power plant unit, that discharges water from the upper node into the lower node,
   and feeds electricity produced in the process to the common electricity node.
 - A spillway connection, that takes spilled water from the upper node and releases it to the downstream upper node.
@@ -348,9 +347,23 @@ Creating objects
      Selsfors_lower
      Kvistforsen_lower
 
-#. Finally, create ``water`` and ``electricity`` objects of class ``commodity``;
-   the ``electricity_node`` object of clas ``node``; the ``electricity_load`` object of class ``unit``;
-   and the ``some_week`` object of class ``temporal_block``.
+#. Next, create the following objects:
+
+   a. ``water`` and ``electricity`` of class ``commodity``.
+
+   b. ``electricity_node`` of class ``node``.
+
+   c. ``electricity_load`` of class ``unit``.
+
+   d. ``some_week`` of class ``temporal_block``.
+
+#. Finally, create the following objects to get unit flow results back from Spine Opt:
+
+   a. ``my_report`` of class ``report``.
+
+   b. ``unit_flow``, ``connection_flow``, and ``node_state`` of class ``output``.
+
+
 
 .. _Specifying object parameter values:
 
@@ -480,9 +493,13 @@ Establishing relationships
    and the ``water`` commodity, as well as between the ``electricity_node`` and ``electricity``.
 
 
-#. Finally, to establish that all nodes are balanced at each time slice in the one week horizon,
+#. Next, to establish that all nodes are balanced at each time slice in the one week horizon,
    create relationships of class ``node__temporal_block`` between all the nodes 
    and the temporal_block ``some_week``.
+
+#. Finally, create one relationships of class ``report__output`` between ``my_report`` and each of
+   the following ``output`` objects: ``unit_flow``, ``connection_flow``, and ``node_state``.
+   This is so results from running Spine Opt are written to the ouput database.
 
 
 .. _Specifying relationship parameter values:
@@ -554,6 +571,14 @@ Examining the results
 
 Select the output data store and open the database editor to it.
 
-.. attention::
+.. image:: img/case_study_a5_output.png
+   :align: center
 
-   What to do here?
+To checkout the flow on the common electricity, go to *Object tree*, expand the ``unit`` object class,
+and select ``electricity_load``, as illustrated in the picture above.
+Next, go to *Relationship parameter value* and double-click the first cell under `value`.
+The *Parameter value editor* will pop up. You should see something like this:
+
+
+.. image:: img/case_study_a5_output_electricity_load_unit_flow.png
+   :align: center
