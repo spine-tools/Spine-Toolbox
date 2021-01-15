@@ -1,0 +1,15 @@
+Rebnis_pwr_plant	electricity_node
+Sadva_pwr_plant	electricity_node
+Bergnäs_pwr_plant	electricity_node
+Slagnäs_pwr_plant	electricity_node
+Bastusel_pwr_plant	electricity_node
+Grytfors_pwr_plant	electricity_node
+Gallejaur_pwr_plant	electricity_node
+Vargfors_pwr_plant	electricity_node
+Rengård_pwr_plant	electricity_node
+Båtfors_pwr_plant	electricity_node
+Finnfors_pwr_plant	electricity_node
+Granfors_pwr_plant	electricity_node
+Krångfors_pwr_plant	electricity_node
+Selsfors_pwr_plant	electricity_node
+Kvistforsen_pwr_plant	electricity_node

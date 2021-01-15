@@ -1,0 +1,1 @@
+temporal_block	some_week	resolution	Base	{"type": "duration", "data": "1h"}

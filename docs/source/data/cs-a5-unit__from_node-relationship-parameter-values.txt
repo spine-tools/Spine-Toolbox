@@ -1,0 +1,16 @@
+unit__from_node	Bastusel_pwr_plant,Bastusel_upper	unit_capacity	Base	127.5
+unit__from_node	Bergnäs_pwr_plant,Bergnäs_upper	unit_capacity	Base	120
+unit__from_node	Båtfors_pwr_plant,Båtfors_upper	unit_capacity	Base	210
+unit__from_node	Finnfors_pwr_plant,Finnfors_upper	unit_capacity	Base	176.25
+unit__from_node	Gallejaur_pwr_plant,Gallejaur_upper	unit_capacity	Base	228.75
+unit__from_node	Granfors_pwr_plant,Granfors_upper	unit_capacity	Base	180
+unit__from_node	Grytfors_pwr_plant,Grytfors_upper	unit_capacity	Base	123.75
+unit__from_node	Krångfors_pwr_plant,Krångfors_upper	unit_capacity	Base	180
+unit__from_node	Kvistforsen_pwr_plant,Kvistforsen_upper	minimum_operating_point	Base	0.0888888888889
+unit__from_node	Kvistforsen_pwr_plant,Kvistforsen_upper	unit_capacity	Base	225
+unit__from_node	Rebnis_pwr_plant,Rebnis_upper	unit_capacity	Base	60
+unit__from_node	Rengård_pwr_plant,Rengård_upper	unit_capacity	Base	165
+unit__from_node	Sadva_pwr_plant,Sadva_upper	unit_capacity	Base	52.5
+unit__from_node	Selsfors_pwr_plant,Selsfors_upper	unit_capacity	Base	225
+unit__from_node	Slagnäs_pwr_plant,Slagnäs_upper	unit_capacity	Base	120
+unit__from_node	Vargfors_pwr_plant,Vargfors_upper	unit_capacity	Base	232.5

@@ -86,6 +86,11 @@ Each power station in the river is modelled using the following elements:
 
 Below is a schematic of the model. For clarity, only the Rebnis station is presented in full detail:
 
+
+.. attention::
+
+   This image is outdated, it looks different in 0.5
+
 .. image:: img/case_study_a5_schematic.png
    :align: center
    :scale: 50%
@@ -207,10 +212,10 @@ Entering input data
 Creating input database
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Before beginning, download `the SpineOpt database template
-<https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/v0.4.0/data/spineopt_template.json>`_.
 Follow the steps below to create a new Spine database for SpineOpt in the 
 `input` Data Store:
+
+#. Download `the SpineOpt database template <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/v0.4.0/data/spineopt_template.json>`_.
 
 #. Select the `input` Data Store item in the *Design View*.
 
@@ -237,15 +242,10 @@ Follow the steps below to create a new Spine database for SpineOpt in the
 Creating objects
 ~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to add power plants to the model as objects of class ``unit``:
+#. To add power plants to the model, create objects of class ``unit`` as follows:
 
-   a. Go to *Object tree*,
-      right-click on ``unit`` and select **Add objects** from the context menu. This will
-      open the *Add objects* dialog.
-   b. With your mouse, select the list of plant names from the text-box below
+   a. Select the list of plant names from the text-box below
       and copy it to the clipboard (**Ctrl+C**):
-
-      .. _pwr_plant_names:
 
       ::
 
@@ -265,7 +265,11 @@ Creating objects
         Selsfors_pwr_plant
         Kvistforsen_pwr_plant
 
-   c. Go back to the *Add objects* dialog, select the first cell under the **object name** column
+   b. Go to *Object tree* (on the top left of the window, usually),
+      right-click on ``unit`` and select **Add objects** from the context menu. This will
+      open the *Add objects* dialog.
+
+   c. Select the first cell under the **object name** column
       and press **Ctrl+V**. This will paste the list of plant names from the clipboard into that column,
       looking similar to this:
 
@@ -278,7 +282,7 @@ Creating objects
    f. Commit changes with the message ‘Add power plants’.
 
 
-#. Repeat the procedure to add discharge and spillway connections as objects of class ``connection``,
+#. To add discharge and spillway connections, create objects of class ``connection``
    with the following names:
    ::
 
@@ -313,9 +317,7 @@ Creating objects
      Selsfors_to_Kvistforsen_spill
      Kvistforsen_to_downstream_spill
 
-#. Repeat the procedure to add water nodes as objects of class ``node``, with the following names:
-
-   .. _water_nodes_names:
+#. To add water nodes, create objects of class ``node`` with the following names:
 
    ::
 
@@ -350,37 +352,52 @@ Creating objects
      Selsfors_lower
      Kvistforsen_lower
 
-#. Finally, add ``water`` and ``electricity`` as objects of class ``commodity``;
-   ``electricity_node`` as an object of clas ``node``; ``electricity_load`` as 
-   an object of class ``unit``; and ``some_week`` as object of class ``temporal_block``.
+#. Finally, create ``water`` and ``electricity`` objects of class ``commodity``;
+   the ``electricity_node`` object of clas ``node``; the ``electricity_load`` object of class ``unit``;
+   and the ``some_week`` object of class ``temporal_block``.
 
+.. _Specifying object parameter values:
 
 Specifying object parameter values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Still in the Database editor, choose object class ``model`` from the Object tree.
-In *Object parameter value* view (in the middle of the window, usually), you can
-edit and add new parameter values for the objects. Add a new parameter called 
-``duration_unit`` with value ‘hour’ in to the table for the ``instance`` model object.
-There are no other alternatives in this model, so choose ``Base``. 
 
-Also add parameters ``model_start`` and ``model_end``. To enter a date value, 
-right-click on the value field, select **Open in editor...** and choose 
-``Datetime`` as the parameter type in the opened dialog. Enter values 
-‘2020-01-01T00:00:00’ and ‘2019-01-08T00:00:00’, respectively. Finally, you should 
-have all three parameters defined as in the figure below.
+#. To specify the general behaviour of our model, enter ``model`` parameter values as follows:
 
-.. image:: img/case_study_a5_model_parameters.png
-      :align: center
+   a. Select the model parameter value data from the text-box below
+      and copy it to the clipboard (**Ctrl+C**):
 
-Following what you learned above, choose the object ``some_week`` of class 
-``temporal_block`` and enter a new value for parameter ``resolution`` of type 
-``Duration`` and with value ‘1h’. 
+      .. literalinclude:: data/cs-a5-model-parameter-values.txt
 
-Enter parameter values for the ``node`` class objects according to the data below.
-The values can be copied and pasted to the *Object parameter value* view.
+   b. Go to *Object parameter value* (on the top-center of the window, usually).
+      Make sure that the columns in the table are ordered as follows:
+      
+      ::
 
-.. literalinclude:: data/cs-a5-node-parameter-values.txt
+         object_class_name | object_name | parameter_name | alternative_name | value | database
+
+   c. Select the first empty cell under ``object_class_name`` and press **Ctrl+V**.
+      This will paste the model parameter value data from the clipboard into the table.
+      The form should be looking like this:
+
+      .. image:: img/case_study_a5_model_parameters.png
+            :align: center
+
+#. To specify the resolution of our temporal block, repeat the same procedure with the data below:
+
+   .. literalinclude:: data/cs-a5-temporal_block-parameter-values.txt
+
+#. To specify the behaviour of all system nodes, repeat the same procedure with the data below, where:
+
+   a. ``demand`` represents the local inflow (negative in most cases).
+   b. ``fix_node_state`` represents fixed reservoir levels (at the beginning and the end).
+   c. ``has_state`` indicates whether or not the node is a reservoir (true for all the upper nodes).
+   d. ``state_coeff`` is the reservoir 'efficienty' (always 1, meaning that there aren't any loses).
+   e. ``node_state_cap`` is the maximum level of the reservoirs.
+
+
+   .. literalinclude:: data/cs-a5-node-parameter-values.txt
+
 
 
 Establishing relationships
@@ -390,176 +407,136 @@ Establishing relationships
    target cells and press **Ctrl+V**.
 
 
-Follow the steps below to establish that power plant units receive water from 
-the station's upper node, as relationships of class ``unit__from_node``:
+#. To establish that power plant units receive water from 
+   the station's upper node, create relationships of class ``unit__from_node`` as follows:
 
-   #. Go to *Relationship tree*,
+   a. Select the list of power plant and corresponding upper node names from the text-box below
+      and copy it to the clipboard (**Ctrl+C**).
+
+      .. literalinclude:: data/cs-a5-unit__from_node-upper.txt
+
+   b. Go to *Relationship tree* (on the bottom left of the window, usually),
       right-click on ``unit__from_node``
       and select **Add relationships** from the context menu. This will
       open the *Add relationships* dialog.
-   #. Select again all `power plant names <pwr_plant_names_>`_ and copy them to the clipboard (**Ctrl+C**).
-   #. Go back to the *Add relationships* dialog, select the first cell under the *unit* column
-      and press **Ctrl+V**. This will paste the list of plant names from the clipboard into that column.
-   #. Repeat the procedure to paste the list of *upper* `node names <water_nodes_names_>`_
-      into the *node* column. 
-   #. Check that the names of the power plants and the upper reservoirs match.
-      Now the form should be looking like this:
+
+   c. Select the first cell under the *unit* column
+      and press **Ctrl+V**. This will paste the list of plant and node names from the clipboard into the table.
+      The form should be looking like this:
 
       .. image:: img/add_pwr_plant_water_from_node.png
         :align: center
 
-   #. Also connect unit ``electricity_load`` to node ``electricity_node``.
-   #. Click **Ok**.
-   #. Back in the *Spine database editor*, under *Relationship tree*, double click on
+   d. Click **Ok**.
+   e. Back in the *Spine database editor*, under *Relationship tree*, double click on
       ``unit__from_node`` to confirm that the relationships are effectively there.
-   #. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.
+   f. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.
       Enter ‘Add from nodes of power plants‘ as the commit message and click **Commit**.
 
-Repeat the procedure to establish that power plant units release water to the 
-station's lower node at each time slice in the one week horizon, as relationships 
-of class ``unit__from_node``:
+#. To establish that power plant units release water to the station's lower node,
+   create relationships of class ``unit__to_node`` with the following data:
 
-   .. image:: img/add_pwr_plant_water_to_node.png
-      :align: center
+   .. literalinclude:: data/cs-a5-unit__to_node-lower.txt
 
-Also establish a relationship so that the electricity load unit ``electricity_load``
-takes electricity from the common electricity node ``electricity_node`` as 
-a relationship of class ``unit__from_node``.
+   .. note:: At this point, you might be wondering what's the purpose of the ``unit__node__node``
+      relationship class. Shouldn't it be enough to have ``unit__from_node`` and ``unit__to_node`` to represent
+      the topology of the system? The answer is yes; but in addition to topology, we also need to represent
+      the *conversion process* that happens in the unit, where the water from one node is turned into electricty
+      for another node. And for this purpose, we use a relationship parameter value on the ``unit__node__node``
+      relationships (see :ref:`Specifying relationship parameter values`).
 
-Repeat the above procedure to establish that power plant units generate electricity 
-to the common electricity node at each time slice in the one week horizon, as 
-relationships of class ``unit__to_node``:
+#. To establish that the electricity load unit takes electricity from the common
+   electricity node, create a relationship of class ``unit__from_node`` between
+   ``electricity_load`` and ``electricity_node``.
 
-   .. image:: img/add_pwr_plant_electricity_to_node.png
-      :align: center
+#. To establish that power plant units inject electricity to the common electricity node,
+   create the following ``unit__to_node`` relationships:
 
-.. attention:: What do the ``unit__node__node`` relationships mean?
-
-.. warning:: 
-
-   **This is obsolete, right?**
-
-   Repeat the procedure to establish that reservoir units take and release water 
-   to and from the station's upper node at each time slice in the one week horizon,
-   as relationships of class ``unit__node__direction__temporal_block``:
-
-      .. image:: img/add_rsrv_water_to_from_node.png
-         :align: center
-
-   Repeat the procedure to establish the connection of each storage to the corresponding unit,
-   as relationships of class ``storage__unit``:
-
-   .. image:: img/add_storage_unit.png
-      :align: center
-
-   Repeat the procedure to establish that all storages store water,
-   as relationships of class ``storage__commodity``:
-
-   .. image:: img/add_storage_commodity.png
-      :align: center
+   .. literalinclude:: data/cs-a5-unit__to_node-electricity.txt
 
 
+#. To establish that discharge connections take water from the *lower* node of the upstream station,
+   create the following relationships of class ``connection__from_node``:
 
-Establish relatiosnhips that discharge and spillway connections take water from 
-the lower node of one station as relationships of class ``connection__from_node`` 
-according to the following data (you can copy & paste into the 
-**Add relationships** dialogue):
-
-::
-
-   Bastusel_to_Grytfors_disch	Bastusel_lower
-   Bastusel_to_Grytfors_spill	Bastusel_upper
-   Bergnäs_to_Slagnäs_disch	Bergnäs_lower
-   Bergnäs_to_Slagnäs_spill	Bergnäs_upper
-   Båtfors_to_Finnfors_disch	Båtfors_lower
-   Båtfors_to_Finnfors_spill	Båtfors_upper
-   Finnfors_to_Granfors_disch	Finnfors_lower
-   Finnfors_to_Granfors_spill	Finnfors_upper
-   Gallejaur_to_Vargfors_disch	Gallejaur_lower
-   Gallejaur_to_Vargfors_spill	Gallejaur_upper
-   Granfors_to_Krångfors_disch	Granfors_lower
-   Granfors_to_Krångfors_spill	Granfors_upper
-   Grytfors_to_Gallejaur_disch	Grytfors_lower
-   Grytfors_to_Gallejaur_spill	Grytfors_upper
-   Krångfors_to_Selsfors_disch	Krångfors_lower
-   Krångfors_to_Selsfors_spill	Krångfors_upper
-   Kvistforsen_to_downstream_disch	Kvistforsen_lower
-   Kvistforsen_to_downstream_spill	Kvistforsen_upper
-   Rebnis_to_Bergnäs_disch	Rebnis_lower
-   Rebnis_to_Bergnäs_spill	Rebnis_upper
-   Rengård_to_Båtfors_disch	Rengård_lower
-   Rengård_to_Båtfors_spill	Rengård_upper
-   Sadva_to_Bergnäs_disch	Sadva_lower
-   Sadva_to_Bergnäs_spill	Sadva_upper
-   Selsfors_to_Kvistforsen_disch	Selsfors_lower
-   Selsfors_to_Kvistforsen_spill	Selsfors_upper
-   Slagnäs_to_Bastusel_disch	Slagnäs_lower
-   Slagnäs_to_Bastusel_spill	Slagnäs_upper
-   Vargfors_to_Rengård_disch	Vargfors_lower
-   Vargfors_to_Rengård_spill	Vargfors_upper
-
-Complete the connections by adding relationships where the water is released to 
-the upper node of the downstream station:
-
-:: 
-
-   Bastusel_to_Grytfors_disch	Grytfors_upper
-   Bastusel_to_Grytfors_spill	Grytfors_upper
-   Bergnäs_to_Slagnäs_disch	Slagnäs_upper
-   Bergnäs_to_Slagnäs_spill	Slagnäs_upper
-   Båtfors_to_Finnfors_disch	Finnfors_upper
-   Båtfors_to_Finnfors_spill	Finnfors_upper
-   Finnfors_to_Granfors_disch	Granfors_upper
-   Finnfors_to_Granfors_spill	Granfors_upper
-   Gallejaur_to_Vargfors_disch	Vargfors_upper
-   Gallejaur_to_Vargfors_spill	Vargfors_upper
-   Granfors_to_Krångfors_disch	Krångfors_upper
-   Granfors_to_Krångfors_spill	Krångfors_upper
-   Grytfors_to_Gallejaur_disch	Gallejaur_upper
-   Grytfors_to_Gallejaur_spill	Gallejaur_upper
-   Krångfors_to_Selsfors_disch	Selsfors_upper
-   Krångfors_to_Selsfors_spill	Selsfors_upper
-   Rebnis_to_Bergnäs_disch	Bergnäs_upper
-   Rebnis_to_Bergnäs_spill	Bergnäs_upper
-   Rengård_to_Båtfors_disch	Båtfors_upper
-   Rengård_to_Båtfors_spill	Båtfors_upper
-   Sadva_to_Bergnäs_disch	Bergnäs_upper
-   Sadva_to_Bergnäs_spill	Bergnäs_upper
-   Selsfors_to_Kvistforsen_disch	Kvistforsen_upper
-   Selsfors_to_Kvistforsen_spill	Kvistforsen_upper
-   Slagnäs_to_Bastusel_disch	Bastusel_upper
-   Slagnäs_to_Bastusel_spill	Bastusel_upper
-   Vargfors_to_Rengård_disch	Rengård_upper
-   Vargfors_to_Rengård_spill	Rengård_upper
+   .. literalinclude:: data/cs-a5-connection__from_node-disch.txt
 
 
-.. attention:: What do the ``connection__node__node`` relationships mean?
+#. To establish that spillway connections take water from the *upper* node of the upstream station,
+   create the following relationships of class ``connection__from_node``:
 
-To establish that water nodes balance water and the electricity node balances 
-electricity, create relationships between all upper and lower reservoir nodes 
-and the ``water`` commodity as well as the ``electricity_node`` and ``electricity``.
+   .. literalinclude:: data/cs-a5-connection__from_node-spill.txt
 
-   .. image:: img/add_node_commodity.png
-      :align: center
+#. To establish that discharge and spillway connections release water onto 
+   the upper node of the downstream station, create the following ``connection__to_node`` relationships:
 
-Establish that all nodes are balanced at each time slice in the one week horizon
-by creating relationships of class ``node__temporal_block`` for all the nodes 
-and the temporal_block ``some_week``.
+   .. literalinclude:: data/cs-a5-connection__to_node-water.txt
 
-   .. image:: img/add_node_temporal_block.png
-      :align: center
+   .. note:: At this point, you might be wondering what's the purpose of the ``connection__node__node``
+      relationship class. Shouldn't it be enough to have ``connection__from_node`` and ``connection__to_node``
+      to represent the topology of the system? The answer is yes; but in addition to topology, we also need to represent
+      the *delay* in the river branches.
+      And for this purpose, we use a relationship parameter value on the ``connection__node__node``
+      relationships (see :ref:`Specifying relationship parameter values`).
 
+
+#. To establish that water nodes balance water and the electricity node balances 
+   electricity, create ``node__commodity`` relationships between all upper and lower reservoir nodes 
+   and the ``water`` commodity, as well as between the ``electricity_node`` and ``electricity``.
+
+
+#. Finally, to establish that all nodes are balanced at each time slice in the one week horizon,
+   create relationships of class ``node__temporal_block`` between all the nodes 
+   and the temporal_block ``some_week``.
+
+
+.. _Specifying relationship parameter values:
 
 Specifying relationship parameter values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Relationships can also have parameters, and their values can be seen in the
-*Relationship parameter value* panel. Following the procedure above for entering object parameter values,
-add the following values for ``unit__from_node``:
 
-.. literalinclude:: data/cs-a5-relationship-parameter-values.txt
+#. To specify the capacity of hydro power plants, enter ``unit__from_node`` parameter values as follows:
 
-Finally commit changes to the data store.
+   a. Select the parameter value data from the text-box below
+      and copy it to the clipboard (**Ctrl+C**):
+
+      .. literalinclude:: data/cs-a5-unit__from_node-relationship-parameter-values.txt
+
+   b. Go to *Relationship parameter value* (on the bottom-center of the window, usually).
+      Make sure that the columns in the table are ordered as follows:
+
+      ::
+
+         relationship_class_name | object_name_list | parameter_name | alternative_name | value | database
+
+   c. Select the first empty cell under ``relationship_class_name`` and press **Ctrl+V**.
+      This will paste the parameter value data from the clipboard into the table.
+
+
+#. To specify the variable operating cost of the electricity unit (equal to the negative electricity price),
+   repeat the same procedure with the data below:
+
+   .. literalinclude:: data/cs-a5-unit__from_node-vom_cost-relationship-parameter-values.txt
+
+#. To specify the conversion ratio from water to electricity of different hydro power plants,
+   repeat the same procedure with the data below:
+
+   .. literalinclude:: data/cs-a5-unit__node__node-relationship-parameter-values.txt
+
+
+#. To specify the average discharge of power plants in the first hours of the simulation,
+   repeat the same procedure with the data below:
+
+   .. literalinclude:: data/cs-a5-connection__from_node-relationship-parameter-values.txt
+
+
+#. Finally, to specify the delay in different water connections,
+   repeat the same procedure with the data below:
+
+   .. literalinclude:: data/cs-a5-connection__node__node-relationship-parameter-values.txt
+
+
+#. When you're ready, commit all changes to the database.
 
 
 Executing the workflow
