@@ -30,7 +30,7 @@ from spinedb_api import (
     DiffDatabaseMapping,
     SpineDBAPIError,
     SpineDBVersionError,
-    Anyone,
+    Asterisk,
 )
 from spine_engine.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spine_engine.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -434,7 +434,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def mass_export_items(self, db_map_item_types):
         def _ids(t, types):
-            return (Anyone,) if t in types else ()
+            return Asterisk if t in types else ()
 
         db_map_obj_cls_ids = {db_map: _ids("object_class", types) for db_map, types in db_map_item_types.items()}
         db_map_rel_cls_ids = {db_map: _ids("relationship_class", types) for db_map, types in db_map_item_types.items()}

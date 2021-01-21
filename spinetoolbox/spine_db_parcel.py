@@ -16,7 +16,7 @@ SpineDBParcel class.
 :date:   10.5.2020
 """
 
-from spinedb_api import Anyone
+from spinedb_api import Asterisk
 
 
 class SpineDBParcel:
@@ -46,7 +46,7 @@ class SpineDBParcel:
         return self._data
 
     def _get_fields(self, db_map, item_type, field, ids):
-        if Anyone in ids:
+        if ids is Asterisk:
             fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type)}
         else:
             fields = {self.db_mngr.get_field(db_map, item_type, id_, field) for id_ in ids}
