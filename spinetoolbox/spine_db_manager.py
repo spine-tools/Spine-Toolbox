@@ -137,7 +137,7 @@ class SpineDBManager(QObject):
 
         Args:
             settings (QSettings): Toolbox settings
-            parent (QObject)
+            parent (QObject, optional): parent object
         """
         super().__init__(parent)
         self._db_maps = {}
@@ -827,6 +827,16 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def _make_query(db_map, sq_name, ids=()):
+        """Makes a database query
+
+        Args:
+            db_map (DatabaseMappingBase): database map
+            sq_name (str): name of the subquery
+            ids (Iterable of int): ids by which the query should be filtered
+
+        Returns:
+            Alias: database subquery
+        """
         sq = getattr(db_map, sq_name)
         query = db_map.query(sq)
         if ids:
@@ -837,7 +847,8 @@ class SpineDBManager(QObject):
         """Returns alternatives from database.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMappingBase): database map
+            ids (Iterable of int): ids by which the alternatives should be filtered
 
         Returns:
             list: dictionary items

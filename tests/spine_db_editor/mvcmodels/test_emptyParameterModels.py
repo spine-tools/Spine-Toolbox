@@ -15,10 +15,18 @@ Unit tests for the EmptyParameterModel subclasses.
 :author: M. Marin (KTH)
 :date:   10.5.2019
 """
-
 import unittest
 from unittest import mock
 from PySide2.QtWidgets import QApplication
+from spinedb_api import (
+    import_object_classes,
+    import_object_parameters,
+    import_objects,
+    import_relationship_classes,
+    import_relationship_parameters,
+    import_relationships,
+)
+from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.mvcmodels.empty_parameter_models import (
     EmptyObjectParameterValueModel,
     EmptyRelationshipParameterValueModel,
@@ -39,10 +47,21 @@ class TestEmptyParameterModel(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test."""
-        self.mock_db_mngr = mock.MagicMock()
-        self.mock_db_map = mock.Mock()
-        self.mock_db_map.codename = "mock_db"
-        self.mock_db_mngr.db_maps = [self.mock_db_map]
+        app_settings = mock.MagicMock()
+        logger = mock.MagicMock()
+        self._db_mngr = SpineDBManager(app_settings, None)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="mock_db", create=True)
+        import_object_classes(self._db_map, ("dog", "fish"))
+        import_object_parameters(self._db_map, (("dog", "breed"),))
+        import_objects(self._db_map, (("dog", "pluto"), ("fish", "nemo")))
+        import_relationship_classes(self._db_map, (("dog__fish", ("dog", "fish")),))
+        import_relationship_parameters(self._db_map, (("dog__fish", "relative_speed"),))
+        import_relationships(self._db_map, (("dog_fish", ("pluto", "nemo")),))
+        self._db_map.commit_session("Add test data")
+        fetcher = self._db_mngr.get_fetcher(mock.MagicMock())
+        fetcher.fetch([self._db_map])
+        while fetcher.thread().isRunning():
+            QApplication.instance().processEvents()
         self.object_table_header = [
             "object_class_name",
             "object_name",
@@ -60,153 +79,117 @@ class TestEmptyParameterModel(unittest.TestCase):
             "database",
         ]
 
-        def _get_item(db_map, item_type, id_):
-            # print(db_map, item_type, id_)
-            return {
-                (self.mock_db_map, "object_class", 1): {"id": 1, "name": "dog"},
-                (self.mock_db_map, "object_class", 2): {"id": 2, "name": "fish"},
-                (self.mock_db_map, "alternative", 1): {"id": 1, "name": "Base"},
-            }.get((db_map, item_type, id_), {})
-
-        def _get_items_by_field(db_map, item_type, field, value):
-            return {
-                (self.mock_db_map, "alternative", "name", "Base"): [{"id": 1, "name": "Base"}],
-                (self.mock_db_map, "object", "name", "pluto"): [{"id": 1, "class_id": 1, "name": "pluto"}],
-                (self.mock_db_map, "object", "name", "nemo"): [{"id": 2, "class_id": 2, "name": "nemo"}],
-                (self.mock_db_map, "relationship", "object_name_list", "pluto,nemo"): [
-                    {"id": 3, "class_id": 3, "object_id_list": "1,2"}
-                ],
-                (self.mock_db_map, "object_class", "name", "dog"): [{"id": 1, "name": "dog"}],
-                (self.mock_db_map, "object_class", "name", "fish"): [{"id": 2, "name": "fish"}],
-                (self.mock_db_map, "relationship_class", "name", "dog__fish"): [
-                    {"id": 3, "name": "dog__fish", "object_class_id_list": "1,2"}
-                ],
-                (self.mock_db_map, "parameter_definition", "parameter_name", "breed"): [
-                    {"id": 1, "object_class_id": 1, "parameter_name": "breed"}
-                ],
-                (self.mock_db_map, "parameter_definition", "parameter_name", "relative_speed"): [
-                    {"id": 2, "relationship_class_id": 3, "parameter_name": "relative_speed"}
-                ],
-            }.get((db_map, item_type, field, value), [])
-
-        self.mock_db_mngr.get_items_by_field.side_effect = _get_items_by_field
-        self.mock_db_mngr.get_item_by_field.side_effect = lambda *args: next(iter(_get_items_by_field(*args)), {})
-        self.mock_db_mngr.get_item.side_effect = _get_item
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        self._db_mngr.deleteLater()
 
     def test_add_object_parameter_values_to_db(self):
         """Test that object parameter values are added to the db when editing the table."""
         header = self.object_table_header
-        model = EmptyObjectParameterValueModel(None, header, self.mock_db_mngr)
+        model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
-
-        def _add_parameter_values(db_map_data):
-            items = db_map_data[self.mock_db_map]
-            item = items[0]
-            self.assertEqual(len(items), 1)
-            self.assertEqual(item["object_class_id"], 1)
-            self.assertEqual(item["object_id"], 1)
-            self.assertEqual(item["parameter_definition_id"], 1)
-            self.assertEqual(item["alternative_id"], 1)
-            self.assertEqual(item["value"], "bloodhound")
-
-        self.mock_db_mngr.add_parameter_values.side_effect = _add_parameter_values
-        model.batch_set_data(_empty_indexes(model), ["dog", "pluto", "breed", "Base", "bloodhound", "mock_db"])
-        self.mock_db_mngr.add_parameter_values.assert_called_once()
+        self.assertTrue(
+            model.batch_set_data(_empty_indexes(model), ["dog", "pluto", "breed", 1, "bloodhound", "mock_db"])
+        )
+        values = self._db_mngr.get_object_parameter_values(self._db_map)
+        self.assertEqual(len(values), 1)
+        self.assertEqual(values[0]["object_class_name"], "dog")
+        self.assertEqual(values[0]["object_name"], "pluto")
+        self.assertEqual(values[0]["parameter_name"], "breed")
+        self.assertEqual(values[0]["value"], "bloodhound")
 
     def test_do_not_add_invalid_object_parameter_values(self):
         """Test that object parameter values aren't added to the db if data is incomplete."""
         header = self.object_table_header
-        model = EmptyObjectParameterValueModel(None, header, self.mock_db_mngr)
+        model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
-        model.batch_set_data(_empty_indexes(model), ["fish", "nemo", "water", "salty", "mock_db"])
-        self.mock_db_mngr.add_parameter_values.assert_not_called()
+        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["fish", "nemo", "water", "salty", "mock_db"]))
+        values = self._db_mngr.get_object_parameter_values(self._db_map)
+        self.assertEqual(values, [])
 
     def test_infer_class_from_object_and_parameter(self):
         """Test that object classes are inferred from the object and parameter if possible."""
         header = self.object_table_header
-        model = EmptyObjectParameterValueModel(None, header, self.mock_db_mngr)
+        model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
         indexes = _empty_indexes(model)
-        model.batch_set_data(indexes, ["cat", "pluto", "breed", "Base", "bloodhound", "mock_db"])
+        self.assertTrue(model.batch_set_data(indexes, ["cat", "pluto", "breed", 1, "bloodhound", "mock_db"]))
         self.assertEqual(indexes[0].data(), "dog")
-        self.mock_db_mngr.add_parameter_values.assert_called_once()
+        values = self._db_mngr.get_object_parameter_values(self._db_map)
+        self.assertEqual(len(values), 1)
+        self.assertEqual(values[0]["object_class_name"], "dog")
+        self.assertEqual(values[0]["object_name"], "pluto")
+        self.assertEqual(values[0]["parameter_name"], "breed")
+        self.assertEqual(values[0]["value"], "bloodhound")
 
     def test_add_relationship_parameter_values_to_db(self):
         """Test that relationship parameter values are added to the db when editing the table."""
         header = self.relationship_table_header
-        model = EmptyRelationshipParameterValueModel(None, header, self.mock_db_mngr)
+        model = EmptyRelationshipParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
-
-        def _add_parameter_values(db_map_data):
-            items = db_map_data[self.mock_db_map]
-            item = items[0]
-            self.assertEqual(len(items), 1)
-            self.assertEqual(item["relationship_class_id"], 3)
-            self.assertEqual(item["relationship_id"], 3)
-            self.assertEqual(item["parameter_definition_id"], 2)
-            self.assertEqual(item["alternative_id"], 1)
-            self.assertEqual(item["value"], -1)
-
-        self.mock_db_mngr.add_parameter_values.side_effect = _add_parameter_values
-        model.batch_set_data(
-            _empty_indexes(model), ["dog__fish", "pluto,nemo", "relative_speed", "Base", -1, "mock_db"]
+        self.assertTrue(
+            model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "relative_speed", 1, -1, "mock_db"])
         )
-        self.assertEqual(self.mock_db_mngr.add_parameter_values.call_count, 2)
+        values = self._db_mngr.get_relationship_parameter_values(self._db_map)
+        self.assertEqual(len(values), 1)
+        self.assertEqual(values[0]["relationship_class_name"], "dog__fish")
+        self.assertEqual(values[0]["object_name_list"], "pluto,nemo")
+        self.assertEqual(values[0]["parameter_name"], "relative_speed")
+        self.assertEqual(values[0]["value"], "-1")
 
     def test_do_not_add_invalid_relationship_parameter_values(self):
         """Test that relationship parameter values aren't added to the db if data is incomplete."""
         header = self.relationship_table_header
-        model = EmptyRelationshipParameterValueModel(None, header, self.mock_db_mngr)
+        model = EmptyRelationshipParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
-        model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "combined_mojo", 100, "mock_db"])
-        self.mock_db_mngr.add_parameter_values.assert_not_called()
+        self.assertTrue(
+            model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "combined_mojo", 100, "mock_db"])
+        )
+        values = self._db_mngr.get_relationship_parameter_values(self._db_map)
+        self.assertEqual(values, [])
 
     def test_add_object_parameter_definitions_to_db(self):
         """Test that object parameter definitions are added to the db when editing the table."""
         header = ["object_class_name", "parameter_name", "value_list_name", "parameter_tag_list", "database"]
-        model = EmptyObjectParameterDefinitionModel(None, header, self.mock_db_mngr)
+        model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore()
-
-        def _add_parameter_definitions(db_map_data):
-            items = db_map_data[self.mock_db_map]
-            item = items[0]
-            self.assertEqual(len(items), 1)
-            self.assertEqual(item["object_class_id"], 1)
-            self.assertEqual(item["name"], "color")
-
-        self.mock_db_mngr.add_parameter_definitions.side_effect = _add_parameter_definitions
-        model.batch_set_data(_empty_indexes(model), ["dog", "color", None, None, "mock_db"])
-        self.mock_db_mngr.add_parameter_definitions.assert_called_once()
+        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", None, None, "mock_db"]))
+        definitions = self._db_mngr.get_object_parameter_definitions(self._db_map)
+        self.assertEqual(len(definitions), 2)
+        names = {d["parameter_name"] for d in definitions}
+        self.assertEqual(names, {"breed", "color"})
 
     def test_do_not_add_invalid_object_parameter_definitions(self):
         """Test that object parameter definitions aren't added to the db if data is incomplete."""
         header = self.object_table_header
-        model = EmptyObjectParameterDefinitionModel(None, header, self.mock_db_mngr)
+        model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore()
-        model.batch_set_data(_empty_indexes(model), ["cat", "color", None, None, "mock_db"])
-        self.mock_db_mngr.add_parameter_values.assert_not_called()
+        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["cat", "color", None, None, "mock_db"]))
+        definitions = self._db_mngr.get_object_parameter_definitions(self._db_map)
+        self.assertEqual(len(definitions), 1)
+        self.assertEqual(definitions[0]["parameter_name"], "breed")
 
     def test_add_relationship_parameter_definitions_to_db(self):
         """Test that relationship parameter definitions are added to the db when editing the table."""
         header = ["relationship_class_name", "parameter_name", "value_list_name", "parameter_tag_list", "database"]
-        model = EmptyRelationshipParameterDefinitionModel(None, header, self.mock_db_mngr)
+        model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore()
-
-        def _add_parameter_definitions(db_map_data):
-            items = db_map_data[self.mock_db_map]
-            item = items[0]
-            self.assertEqual(len(items), 1)
-            self.assertEqual(item["relationship_class_id"], 3)
-            self.assertEqual(item["name"], "combined_mojo")
-
-        self.mock_db_mngr.add_parameter_definitions.side_effect = _add_parameter_definitions
-        model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", None, None, "mock_db"])
-        self.mock_db_mngr.add_parameter_definitions.assert_called_once()
+        self.assertTrue(
+            model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", None, None, "mock_db"])
+        )
+        definitions = self._db_mngr.get_relationship_parameter_definitions(self._db_map)
+        self.assertEqual(len(definitions), 2)
+        names = {d["parameter_name"] for d in definitions}
+        self.assertEqual(names, {"relative_speed", "combined_mojo"})
 
     def test_do_not_add_invalid_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions aren't added to the db if data is incomplete."""
         header = self.relationship_table_header
-        model = EmptyRelationshipParameterDefinitionModel(None, header, self.mock_db_mngr)
+        model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore()
-        model.batch_set_data(_empty_indexes(model), ["fish__dog", "each_others_opinion", None, None, "mock_db"])
-        self.mock_db_mngr.add_parameter_values.assert_not_called()
+        self.assertTrue(
+            model.batch_set_data(_empty_indexes(model), ["fish__dog", "each_others_opinion", None, None, "mock_db"])
+        )
+        definitions = self._db_mngr.get_relationship_parameter_definitions(self._db_map)
+        self.assertEqual(len(definitions), 1)
+        self.assertEqual(definitions[0]["parameter_name"], "relative_speed")

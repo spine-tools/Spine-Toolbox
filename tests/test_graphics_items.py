@@ -15,14 +15,13 @@ Unit tests for ``graphics_items`` module.
 :authors: A. Soininen (VTT)
 :date:    17.12.2020
 """
-import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 from PySide2.QtCore import QEvent, QPoint, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
-from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
+from spinedb_api import import_scenarios, import_tools
 from spinedb_api.filters.tools import filter_config
 from spine_engine.project_item.project_item_resource import ProjectItemResource
 from spinetoolbox.graphics_items import ExclamationIcon, Link, ProjectItemIcon, RankIcon
@@ -167,93 +166,83 @@ class TestLink(unittest.TestCase):
         self.assertEqual(self._link.filter_stacks(), {})
 
     def test_scenario_filter_gets_added_to_filter_model(self):
-        with TemporaryDirectory() as temp_dir:
-            url = "sqlite:///" + os.path.join(temp_dir, "db.sqlite")
-            db_map = DiffDatabaseMapping(url, create=True)
-            import_scenarios(db_map, (("scenario", True),))
-            db_map.commit_session("Add test data.")
-            db_map.connection.close()
-            self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
-            self.assertEqual(self._link.filter_stacks(), {})
-            filter_model = self._link.resource_filter_model
-            self.assertEqual(filter_model.rowCount(), 1)
-            self.assertEqual(filter_model.columnCount(), 1)
-            index = filter_model.index(0, 0)
-            self.assertEqual(index.data(), url)
-            root_item = filter_model.itemFromIndex(index)
-            self.assertEqual(root_item.rowCount(), 2)
-            self.assertEqual(root_item.columnCount(), 1)
-            scenario_title_item = root_item.child(0, 0)
-            self.assertEqual(scenario_title_item.index().data(), "Scenario filter")
-            self.assertEqual(scenario_title_item.rowCount(), 2)
-            self.assertEqual(scenario_title_item.columnCount(), 1)
-            scenario_item = scenario_title_item.child(0, 0)
-            self.assertEqual(scenario_item.index().data(), "Select all")
-            scenario_item = scenario_title_item.child(1, 0)
-            self.assertEqual(scenario_item.index().data(), "scenario")
-            self._toolbox.db_mngr.close_all_sessions()
+        db_map = self._toolbox.db_mngr.get_db_map("sqlite://", self._toolbox, create=True)
+        import_scenarios(db_map, (("scenario", True),))
+        db_map.commit_session("Add test data.")
+        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", "sqlite://")])
+        self.assertEqual(self._link.filter_stacks(), {})
+        filter_model = self._link.resource_filter_model
+        self.assertEqual(filter_model.rowCount(), 1)
+        self.assertEqual(filter_model.columnCount(), 1)
+        index = filter_model.index(0, 0)
+        self.assertEqual(index.data(), "sqlite://")
+        root_item = filter_model.itemFromIndex(index)
+        self.assertEqual(root_item.rowCount(), 2)
+        self.assertEqual(root_item.columnCount(), 1)
+        scenario_title_item = root_item.child(0, 0)
+        self.assertEqual(scenario_title_item.index().data(), "Scenario filter")
+        self.assertEqual(scenario_title_item.rowCount(), 2)
+        self.assertEqual(scenario_title_item.columnCount(), 1)
+        scenario_item = scenario_title_item.child(0, 0)
+        self.assertEqual(scenario_item.index().data(), "Select all")
+        scenario_item = scenario_title_item.child(1, 0)
+        self.assertEqual(scenario_item.index().data(), "scenario")
+        self._toolbox.db_mngr.close_all_sessions()
 
     def test_tool_filter_gets_added_to_filter_model(self):
-        with TemporaryDirectory() as temp_dir:
-            url = "sqlite:///" + os.path.join(temp_dir, "db.sqlite")
-            db_map = DiffDatabaseMapping(url, create=True)
-            import_tools(db_map, ("tool",))
-            db_map.commit_session("Add test data.")
-            db_map.connection.close()
-            self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
-            self.assertEqual(self._link.filter_stacks(), {})
-            filter_model = self._link.resource_filter_model
-            self.assertEqual(filter_model.rowCount(), 1)
-            self.assertEqual(filter_model.columnCount(), 1)
-            index = filter_model.index(0, 0)
-            self.assertEqual(index.data(), url)
-            root_item = filter_model.itemFromIndex(index)
-            self.assertEqual(root_item.rowCount(), 2)
-            self.assertEqual(root_item.columnCount(), 1)
-            tool_title_item = root_item.child(1, 0)
-            self.assertEqual(tool_title_item.index().data(), "Tool filter")
-            self.assertEqual(tool_title_item.rowCount(), 2)
-            self.assertEqual(tool_title_item.columnCount(), 1)
-            tool_item = tool_title_item.child(0, 0)
-            self.assertEqual(tool_item.index().data(), "Select all")
-            tool_item = tool_title_item.child(1, 0)
-            self.assertEqual(tool_item.index().data(), "tool")
-            self._toolbox.db_mngr.close_all_sessions()
+        url = "sqlite://"
+        db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox, create=True)
+        import_tools(db_map, ("tool",))
+        db_map.commit_session("Add test data.")
+        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+        self.assertEqual(self._link.filter_stacks(), {})
+        filter_model = self._link.resource_filter_model
+        self.assertEqual(filter_model.rowCount(), 1)
+        self.assertEqual(filter_model.columnCount(), 1)
+        index = filter_model.index(0, 0)
+        self.assertEqual(index.data(), url)
+        root_item = filter_model.itemFromIndex(index)
+        self.assertEqual(root_item.rowCount(), 2)
+        self.assertEqual(root_item.columnCount(), 1)
+        tool_title_item = root_item.child(1, 0)
+        self.assertEqual(tool_title_item.index().data(), "Tool filter")
+        self.assertEqual(tool_title_item.rowCount(), 2)
+        self.assertEqual(tool_title_item.columnCount(), 1)
+        tool_item = tool_title_item.child(0, 0)
+        self.assertEqual(tool_item.index().data(), "Select all")
+        tool_item = tool_title_item.child(1, 0)
+        self.assertEqual(tool_item.index().data(), "tool")
+        self._toolbox.db_mngr.close_all_sessions()
 
     def test_toggle_scenario_filter(self):
-        with TemporaryDirectory() as temp_dir:
-            url = "sqlite:///" + os.path.join(temp_dir, "db.sqlite")
-            db_map = DiffDatabaseMapping(url, create=True)
-            import_scenarios(db_map, (("scenario", True),))
-            db_map.commit_session("Add test data.")
-            db_map.connection.close()
-            self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
-            self._link.refresh_resource_filter_model()
-            filter_model = self._link.resource_filter_model
-            scenario_item = filter_model.itemFromIndex(filter_model.index(0, 0)).child(0, 0).child(0, 0)
-            filter_model.toggle_checked_state(scenario_item.index())
-            self.assertEqual(
-                self._link.filter_stacks(),
-                {(url, "destination icon"): [(filter_config("scenario_filter", "scenario"),)]},
-            )
-            self._toolbox.db_mngr.close_all_sessions()
+        url = "sqlite://"
+        db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox, create=True)
+        import_scenarios(db_map, (("scenario", True),))
+        db_map.commit_session("Add test data.")
+        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+        self._link.refresh_resource_filter_model()
+        filter_model = self._link.resource_filter_model
+        scenario_item = filter_model.itemFromIndex(filter_model.index(0, 0)).child(0, 0).child(0, 0)
+        filter_model.toggle_checked_state(scenario_item.index())
+        self.assertEqual(
+            self._link.filter_stacks(), {(url, "destination icon"): [(filter_config("scenario_filter", "scenario"),)]}
+        )
+        self._toolbox.db_mngr.close_all_sessions()
 
     def test_toggle_tool_filter(self):
-        with TemporaryDirectory() as temp_dir:
-            url = "sqlite:///" + os.path.join(temp_dir, "db.sqlite")
-            db_map = DiffDatabaseMapping(url, create=True)
-            import_tools(db_map, ("tool",))
-            db_map.commit_session("Add test data.")
-            db_map.connection.close()
-            self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
-            self._link.refresh_resource_filter_model()
-            filter_model = self._link.resource_filter_model
-            scenario_item = filter_model.itemFromIndex(filter_model.index(0, 0)).child(1, 0).child(0, 0)
-            filter_model.toggle_checked_state(scenario_item.index())
-            self.assertEqual(
-                self._link.filter_stacks(), {(url, "destination icon"): [(filter_config("tool_filter", "tool"),)]}
-            )
-            self._toolbox.db_mngr.close_all_sessions()
+        url = "sqlite://"
+        db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox, create=True)
+        import_tools(db_map, ("tool",))
+        db_map.commit_session("Add test data.")
+        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+        self._link.refresh_resource_filter_model()
+        filter_model = self._link.resource_filter_model
+        scenario_item = filter_model.itemFromIndex(filter_model.index(0, 0)).child(1, 0).child(0, 0)
+        filter_model.toggle_checked_state(scenario_item.index())
+        self.assertEqual(
+            self._link.filter_stacks(), {(url, "destination icon"): [(filter_config("tool_filter", "tool"),)]}
+        )
+        self._toolbox.db_mngr.close_all_sessions()
 
 
 if __name__ == "__main__":
