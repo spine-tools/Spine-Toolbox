@@ -30,6 +30,9 @@ class CopyTreeView(QTreeView):
         """Initialize the view."""
         super().__init__(parent=parent)
 
+    def can_copy(self):
+        return not self.selectionModel().selection().isEmpty()
+
     def copy(self):
         """Copy current selection to clipboard in excel format."""
         selection = self.selectionModel().selection()

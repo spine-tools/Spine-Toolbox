@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Classes for custom context menus and pop-up menus.
+Contains the UrlToolBar class and helpers.
 
 :author: M. Marin (KTH)
 :date:   13.5.2020
@@ -28,6 +28,7 @@ class UrlToolBar(QToolBar):
         self._db_editor = db_editor
         self._history = []
         self._history_index = -1
+        self._project_urls = {}
         self._go_back_action = self.addAction(QIcon(CharIconEngine("\uf060")), "Go back", db_editor.load_previous_urls)
         self._go_forward_action = self.addAction(
             QIcon(CharIconEngine("\uf061")), "Go forward", db_editor.load_next_urls
@@ -36,20 +37,15 @@ class UrlToolBar(QToolBar):
         self.reload_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_R))
         self._go_back_action.setEnabled(False)
         self._go_forward_action.setEnabled(False)
+        self._open_project_url_menu = self._add_open_project_url_menu()
         self._line_edit = QLineEdit(self)
         self._line_edit.setPlaceholderText("Type the URL of a Spine DB")
         self._line_edit.returnPressed.connect(self._handle_line_edit_return_pressed)
         self.addWidget(self._line_edit)
-        self.addAction(QIcon(CharIconEngine("\uf15b")), "<p>New database file</p>", db_editor.create_db_file)
-        self.addAction(QIcon(CharIconEngine("\uf07c")), "<p>Open database file</p>", db_editor.open_db_file)
-        self._open_ds_url_menu = self._add_open_ds_url_menu()
-        self._ds_urls = {}
-        self.addSeparator()
-        self._add_main_menu()
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 
-    def _add_open_ds_url_menu(self):
+    def _add_open_project_url_menu(self):
         toolbox = self._db_editor.toolbox
         if toolbox is None:
             return None
@@ -58,8 +54,8 @@ class UrlToolBar(QToolBar):
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)
         menu_button.setPopupMode(menu_button.InstantPopup)
-        menu_button.setToolTip("<p>Open URL from DS in project</p>")
-        menu.aboutToShow.connect(self._update_open_ds_url_menu)
+        menu_button.setToolTip("<p>Open URL from project</p>")
+        menu.aboutToShow.connect(self._update_open_project_url_menu)
         menu.triggered.connect(self._open_ds_url)
         slot = lambda *args: self._update_ds_url_menu_enabled()
         self._connect_project_item_model_signals(slot)
@@ -68,7 +64,7 @@ class UrlToolBar(QToolBar):
 
     def _update_ds_url_menu_enabled(self):
         ds_items = self._db_editor.toolbox.project_item_model.items("Data Stores")
-        self._open_ds_url_menu.setEnabled(bool(ds_items))
+        self._open_project_url_menu.setEnabled(bool(ds_items))
 
     def _connect_project_item_model_signals(self, slot):
         project_item_model = self._db_editor.toolbox.project_item_model
@@ -83,31 +79,22 @@ class UrlToolBar(QToolBar):
         project_item_model.rowsInserted.disconnect(slot)
 
     @Slot()
-    def _update_open_ds_url_menu(self):
+    def _update_open_project_url_menu(self):
         toolbox = self._db_editor.toolbox
-        self._open_ds_url_menu.clear()
+        self._open_project_url_menu.clear()
         ds_items = toolbox.project_item_model.items("Data Stores")
-        self._ds_urls = {ds.name: ds.project_item.sql_alchemy_url() for ds in ds_items}
-        for name, url in self._ds_urls.items():
-            action = self._open_ds_url_menu.addAction(name)
+        self._project_urls = {ds.name: ds.project_item.sql_alchemy_url() for ds in ds_items}
+        for name, url in self._project_urls.items():
+            action = self._open_project_url_menu.addAction(name)
             action.setEnabled(bool(url))
 
     @Slot("QAction")
     def _open_ds_url(self, action):
-        url = self._ds_urls[action.text()]
+        url = self._project_urls[action.text()]
         self._db_editor.load_db_urls({url: action.text()})
 
-    def _add_main_menu(self):
-        menu = QMenu(self)
-        menu.addMenu(self._db_editor.ui.menuSession)
-        menu.addMenu(self._db_editor.ui.menuFile)
-        menu.addMenu(self._db_editor.ui.menuEdit)
-        menu.addMenu(self._db_editor.ui.menuView)
-        menu.addMenu(self._db_editor.ui.menuPivot_table)
-        menu.addMenu(self._db_editor.ui.menuGraph)
-        menu.addSeparator()
-        menu.addAction(self._db_editor.ui.actionUser_guide)
-        menu.addAction(self._db_editor.ui.actionSettings)
+    def add_main_menu(self):
+        menu = self._db_editor.make_main_menu()
         menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)

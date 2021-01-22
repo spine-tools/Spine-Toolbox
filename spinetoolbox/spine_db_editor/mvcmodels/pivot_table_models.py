@@ -243,8 +243,11 @@ class PivotTableModelBase(QAbstractTableModel):
             left_indexes.append(index)
         return top_indexes, left_indexes
 
+    def index_within_top_left(self, index):
+        return index.row() < self.headerRowCount() and index.column() < self.headerColumnCount()
+
     def index_in_top(self, index):
-        return index.row() == len(self.model.pivot_columns) and index.column() < len(self.model.pivot_rows)
+        return index.row() == self.headerRowCount() - 1 and index.column() < len(self.model.pivot_rows)
 
     def index_in_left(self, index):
         return index.column() == self.headerColumnCount() - 1 and index.row() < len(self.model.pivot_columns)
@@ -310,7 +313,7 @@ class PivotTableModelBase(QAbstractTableModel):
         """
         return index.row() - self.headerRowCount(), index.column() - self.headerColumnCount()
 
-    def _top_left_id(self, index):
+    def top_left_id(self, index):
         """Returns the id of the top left header corresponding to the given header index.
 
         Args:
@@ -365,7 +368,7 @@ class PivotTableModelBase(QAbstractTableModel):
             str
         """
         header_id = self._header_id(index)
-        top_left_id = self._top_left_id(index)
+        top_left_id = self.top_left_id(index)
         return self._header_name(top_left_id, header_id)
 
     def _color_data(self, index):
@@ -377,7 +380,7 @@ class PivotTableModelBase(QAbstractTableModel):
 
     def _header_data(self, index, role=Qt.DisplayRole):
         header_id = self._header_id(index)
-        top_left_id = self._top_left_id(index)
+        top_left_id = self.top_left_id(index)
         return self._header_name(top_left_id, header_id)
 
     def _header_name(self, top_left_id, header_id):
@@ -457,7 +460,7 @@ class PivotTableModelBase(QAbstractTableModel):
         data_by_top_left_id = {}
         for index, value in header_data:
             db_map, id_ = self._header_id(index)
-            top_left_id = self._top_left_id(index)
+            top_left_id = self.top_left_id(index)
             item = dict(id=id_, name=value)
             data_by_top_left_id.setdefault(top_left_id, {}).setdefault(db_map, []).append(item)
         return any(self.top_left_headers[id_].update_data(data) for id_, data in data_by_top_left_id.items())
@@ -1062,7 +1065,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             if not data or data[0][0] is None:
                 # Don't add parameter values in index expansion mode
                 return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        if self._top_left_id(index) == self._index_top_left_header.name:
+        if self.top_left_id(index) == self._index_top_left_header.name:
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         return super().flags(index)
 

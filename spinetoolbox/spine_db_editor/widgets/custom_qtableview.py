@@ -18,12 +18,14 @@ Custom QTableView classes that support copy-paste and the like.
 
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QAction, QTableView, QMenu
+from PySide2.QtGui import QKeySequence
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
+from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
+from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints, PivotTablePlottingHints
 from .pivot_table_header_view import PivotTableHeaderView
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
 from .custom_delegates import (
     DatabaseNameDelegate,
     ParameterDefaultValueDelegate,
@@ -45,9 +47,9 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         super().__init__(parent=parent)
         self._menu = QMenu(self)
         self._spine_db_editor = None
-        self.open_in_editor_action = None
-        self.plot_action = None
-        self.plot_separator = None
+        self._open_in_editor_action = None
+        self._plot_action = None
+        self._plot_separator = None
 
     @property
     def value_column_header(self):
@@ -62,7 +64,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
              spine_db_editor (SpineDBEditor)
         """
         self._spine_db_editor = spine_db_editor
-        self.create_context_menu()
+        self.populate_context_menu()
         self.create_delegates()
 
     def _make_delegate(self, column_name, delegate_class):
@@ -116,20 +118,24 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         except PlottingError as error:
             report_plotting_failure(error, self._spine_db_editor)
 
-    def create_context_menu(self):
+    def populate_context_menu(self):
         """Creates a context menu for this view."""
-        self.open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
+        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
         self._menu.addSeparator()
-        self.plot_action = self._menu.addAction("Plot", self.plot)
-        self.plot_separator = self._menu.addSeparator()
+        self._plot_action = self._menu.addAction("Plot...", self.plot)
+        self._plot_separator = self._menu.addSeparator()
         self._menu.addAction(self._spine_db_editor.ui.actionCopy)
         self._menu.addAction(self._spine_db_editor.ui.actionPaste)
         self._menu.addSeparator()
+        remove_rows_action = self._menu.addAction("Remove row(s)", self.remove_selected)
+        self._menu.addSeparator()
         self._menu.addAction("Filter by", self.filter_by_selection)
         self._menu.addAction("Filter excluding", self.filter_excluding_selection)
-        self._menu.addSeparator()
-        self._menu.addAction(self._spine_db_editor.ui.actionRemove_selected)
-        self._menu.aboutToShow.connect(self._spine_db_editor._handle_menu_edit_about_to_show)
+        self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
+        # Shortcuts
+        remove_rows_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
+        remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
+        self.addAction(remove_rows_action)
 
     def contextMenuEvent(self, event):
         """Shows context menu.
@@ -138,15 +144,17 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
             event (QContextMenuEvent)
         """
         index = self.indexAt(event.pos())
+        if not index.isValid():
+            return
         model = self.model()
         is_value = model.headerData(index.column(), Qt.Horizontal) == self.value_column_header
-        self.open_in_editor_action.setVisible(is_value)
-        self.plot_action.setVisible(is_value)
+        self._open_in_editor_action.setEnabled(is_value)
+        self._plot_action.setEnabled(is_value)
         if is_value:
             plot_in_window_menu = QMenu("Plot in window")
             plot_in_window_menu.triggered.connect(self.plot_in_window)
             _prepare_plot_in_window_menu(plot_in_window_menu)
-            self._menu.insertMenu(self.plot_separator, plot_in_window_menu)
+            self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
         self._menu.exec_(event.globalPos())
         if is_value:
             plot_in_window_menu.deleteLater()
@@ -251,13 +259,11 @@ class ParameterValueTableView(ParameterTableView):
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
-    def create_context_menu(self):
+    def populate_context_menu(self):
         """Creates a context menu for this view."""
-        super().create_context_menu()
+        super().populate_context_menu()
         self._menu.addSeparator()
-        self._show_value_metadata_action = self._menu.addAction(
-            "Show parameter value metadata", self.show_value_metadata
-        )
+        self._show_value_metadata_action = self._menu.addAction("View metadata", self.show_value_metadata)
 
     def show_value_metadata(self):
         db_map_ids = {}
@@ -296,11 +302,11 @@ class PivotTableView(CopyPasteTableView):
     """Custom QTableView class with pivot capabilities.
     """
 
-    _REMOVE_OBJECT = "Remove selected objects"
-    _REMOVE_RELATIONSHIP = "Remove selected relationships"
-    _REMOVE_PARAMETER = "Remove selected parameter definitions"
-    _REMOVE_ALTERNATIVE = "Remove selected alternatives"
-    _REMOVE_SCENARIO = "Remove selected scenarios"
+    _REMOVE_OBJECT = "Remove objects"
+    _REMOVE_RELATIONSHIP = "Remove relationships"
+    _REMOVE_PARAMETER = "Remove parameter definitions"
+    _REMOVE_ALTERNATIVE = "Remove alternatives"
+    _REMOVE_SCENARIO = "Remove scenarios"
 
     def __init__(self, parent=None):
         """Initialize the class."""
@@ -312,15 +318,15 @@ class PivotTableView(CopyPasteTableView):
         self._selected_parameter_indexes = list()
         self._selected_alternative_indexes = list()
         self._selected_scenario_indexes = list()
-        self.open_in_editor_action = None
-        self.plot_action = None
+        self._open_in_editor_action = None
+        self._plot_action = None
         self._plot_in_window_menu = None
-        self.remove_values_action = None
-        self.remove_objects_action = None
-        self.remove_relationships_action = None
-        self.remove_parameters_action = None
-        self.remove_alternatives_action = None
-        self.remove_scenarios_action = None
+        self._remove_values_action = None
+        self._remove_objects_action = None
+        self._remove_relationships_action = None
+        self._remove_parameters_action = None
+        self._remove_alternatives_action = None
+        self._remove_scenarios_action = None
 
     @property
     def source_model(self):
@@ -332,7 +338,7 @@ class PivotTableView(CopyPasteTableView):
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
-        self.create_context_menu()
+        self.populate_context_menu()
         h_header = PivotTableHeaderView(Qt.Horizontal, "columns", self)
         h_header.setContextMenuPolicy(Qt.DefaultContextMenu)
         h_header.setResizeContentsPrecision(spine_db_editor.visible_rows)
@@ -342,22 +348,25 @@ class PivotTableView(CopyPasteTableView):
         self.setHorizontalHeader(h_header)
         self.setVerticalHeader(v_header)
 
-    def create_context_menu(self):
-        self.open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
+    def populate_context_menu(self):
+        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
         self._menu.addSeparator()
-        self.plot_action = self._menu.addAction("Plot", self.plot)
+        self._plot_action = self._menu.addAction("Plot", self.plot)
         self._plot_in_window_menu = self._menu.addMenu("Plot in window")
         self._plot_in_window_menu.triggered.connect(self._plot_in_window)
         self._menu.addSeparator()
-        self.remove_values_action = self._menu.addAction("Remove selected parameter values", self.remove_values)
-        self.remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
-        self.remove_relationships_action = self._menu.addAction(self._REMOVE_RELATIONSHIP, self.remove_relationships)
-        self.remove_parameters_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
-        self.remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
-        self.remove_scenarios_action = self._menu.addAction(self._REMOVE_SCENARIO, self.remove_scenarios)
+        self._menu.addAction(self._spine_db_editor.ui.actionCopy)
+        self._menu.addAction(self._spine_db_editor.ui.actionPaste)
+        self._menu.addSeparator()
+        self._remove_values_action = self._menu.addAction("Remove parameter values", self.remove_values)
+        self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
+        self._remove_relationships_action = self._menu.addAction(self._REMOVE_RELATIONSHIP, self.remove_relationships)
+        self._remove_parameters_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
+        self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
+        self._remove_scenarios_action = self._menu.addAction(self._REMOVE_SCENARIO, self.remove_scenarios)
+        self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
 
     def remove_selected(self):
-        self._find_selected_indexes()
         self.remove_values()
         if self._can_remove_relationships():
             self.remove_relationships()
@@ -453,25 +462,32 @@ class PivotTableView(CopyPasteTableView):
         Args:
             event (QContextMenuEvent)
         """
-        self._find_selected_indexes()
+        index = self.indexAt(event.pos())
+        index = self.model().mapToSource(index)
+        if not index.isValid() or self.source_model.index_within_top_left(index):
+            pivot_mode_menu = QMenu(self)
+            title = TitleWidgetAction("Pivot mode", self._spine_db_editor)
+            pivot_mode_menu.addAction(title)
+            pivot_mode_menu.addActions(self._spine_db_editor.input_type_action_group.actions())
+            pivot_mode_menu.exec_(event.globalPos())
+            return
+        self._refresh_selected_indexes()
         self._update_actions_availability()
-        pos = event.globalPos()
-        self._menu.move(pos)
         _prepare_plot_in_window_menu(self._plot_in_window_menu)
-        self._menu.show()
+        self._menu.exec_(event.globalPos())
 
-    def _find_selected_indexes(self):
-        indexes = [self.model().mapToSource(ind) for ind in self.selectedIndexes()]
+    def _refresh_selected_indexes(self):
         self._selected_value_indexes = list()
         self._selected_entity_indexes = list()
         self._selected_parameter_indexes = list()
         self._selected_alternative_indexes = list()
         self._selected_scenario_indexes = list()
+        indexes = [self.model().mapToSource(ind) for ind in self.selectedIndexes()]
         for index in indexes:
             if self.source_model.index_in_data(index):
                 self._selected_value_indexes.append(index)
             elif self.source_model.index_in_headers(index):
-                top_left_id = self.source_model._top_left_id(index)
+                top_left_id = self.source_model.top_left_id(index)
                 header_type = self.source_model.top_left_headers[top_left_id].header_type
                 if header_type == "parameter":
                     self._selected_parameter_indexes.append(index)
@@ -483,16 +499,16 @@ class PivotTableView(CopyPasteTableView):
                     self._selected_scenario_indexes.append(index)
 
     def _update_actions_availability(self):
-        self.open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
-        self.plot_action.setEnabled(len(self._selected_value_indexes) > 0)
-        self.remove_values_action.setEnabled(bool(self._selected_value_indexes))
-        self.remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
-        self.remove_relationships_action.setEnabled(
+        self._open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
+        self._plot_action.setEnabled(len(self._selected_value_indexes) > 0)
+        self._remove_values_action.setEnabled(bool(self._selected_value_indexes))
+        self._remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
+        self._remove_relationships_action.setEnabled(
             bool(self._selected_entity_indexes) and self._can_remove_relationships()
         )
-        self.remove_parameters_action.setEnabled(bool(self._selected_parameter_indexes))
-        self.remove_alternatives_action.setEnabled(bool(self._selected_alternative_indexes))
-        self.remove_scenarios_action.setEnabled(bool(self._selected_scenario_indexes))
+        self._remove_parameters_action.setEnabled(bool(self._selected_parameter_indexes))
+        self._remove_alternatives_action.setEnabled(bool(self._selected_alternative_indexes))
+        self._remove_scenarios_action.setEnabled(bool(self._selected_scenario_indexes))
 
     def _can_remove_relationships(self):
         return (

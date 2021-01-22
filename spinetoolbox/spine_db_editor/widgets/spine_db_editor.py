@@ -19,9 +19,9 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox
-from PySide2.QtCore import Qt, Signal, Slot
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu
+from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import (
     import_data,
     export_data,
@@ -46,11 +46,12 @@ from ...helpers import (
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
     format_string_list,
-    focused_widget_has_callable,
     call_on_focused_widget,
     busy_effect,
+    CharIconEngine,
 )
 from ...widgets.parameter_value_editor import ParameterValueEditor
+from ...widgets.custom_qwidgets import ToolbarWidgetAction
 from ...spine_db_parcel import SpineDBParcel
 from ...config import MAINWINDOW_SS, APPLICATION_PATH
 
@@ -81,7 +82,6 @@ class SpineDBEditorBase(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.menubar.hide()
         self.takeCentralWidget()
         self.url_toolbar = UrlToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
@@ -194,10 +194,94 @@ class SpineDBEditorBase(QMainWindow):
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None}, create=True)
 
-    def add_menu_actions(self):
-        """Adds actions to View and Edit menu."""
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
+    def _create_docks_menu(self):
+        """Returns a menu with all dock toggle/view actions. Called by ``self.make_main_menu()``.
+
+        Returns:
+            QMenu
+        """
+        menu = QMenu(self)
+        menu.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
+        menu.addSeparator()
+        menu.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_relationship_parameter_definition.toggleViewAction())
+        menu.addSeparator()
+        menu.addAction(self.ui.dockWidget_pivot_table.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_frozen_table.toggleViewAction())
+        menu.addSeparator()
+        menu.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
+        menu.addSeparator()
+        menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_parameter_tag.toggleViewAction())
+        menu.addSeparator()
+        menu.addAction(self.ui.dockWidget_exports.toggleViewAction())
+        return menu
+
+    def make_main_menu(self):
+        """Returns a menu with main actions. Called by ``UrlToolBar.add_main_menu()``.
+
+        Returns:
+            QMenu
+        """
+        menu = QMenu(self)
+        file_action = ToolbarWidgetAction("File", menu)
+        file_action.tool_bar.addActions([self.ui.actionNew_db_file, self.ui.actionOpen_db_file])
+        file_action.tool_bar.addSeparator()
+        file_action.tool_bar.addActions([self.ui.actionImport, self.ui.actionExport, self.ui.actionExport_session])
+        edit_action = ToolbarWidgetAction("Edit", menu)
+        edit_action.tool_bar.addActions([self.ui.actionUndo, self.ui.actionRedo])
+        edit_action.tool_bar.addSeparator()
+        edit_action.tool_bar.addActions([self.ui.actionCopy, self.ui.actionPaste])
+        edit_action.tool_bar.addSeparator()
+        edit_action.tool_bar.addAction(self.ui.actionMass_remove_items)
+        view_action = ToolbarWidgetAction("View", menu)
+        view_action.tool_bar.addActions(
+            [self.ui.actionStacked_style, self.ui.actionPivot_style, self.ui.actionGraph_style]
+        )
+        view_action.tool_bar.addSeparator()
+        docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "Docks...")
+        docks_menu_action.setMenu(self._create_docks_menu())
+        docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
+        docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
+        pivot_mode_action = ToolbarWidgetAction("Pivot mode", menu)
+        pivot_mode_action.tool_bar.addActions(self.input_type_action_group.actions())
+        session_action = ToolbarWidgetAction("Session", menu)
+        session_action.tool_bar.addActions([self.ui.actionCommit, self.ui.actionRollback])
+        session_action.tool_bar.addSeparator()
+        session_action.tool_bar.addAction(self.ui.actionView_history)
+        menu.addAction(file_action)
+        menu.addSeparator()
+        menu.addAction(edit_action)
+        menu.addSeparator()
+        menu.addAction(view_action)
+        menu.addSeparator()
+        menu.addAction(pivot_mode_action)
+        menu.addSeparator()
+        menu.addAction(session_action)
+        menu.addSeparator()
+        menu.addAction(self.ui.actionUser_guide)
+        menu.addAction(self.ui.actionSettings)
+        menu.aboutToShow.connect(self.refresh_copy_paste_actions)
+        # Add actions to activate shortcuts
+        self.addActions(
+            [
+                self.ui.actionNew_db_file,
+                self.ui.actionOpen_db_file,
+                self.ui.actionImport,
+                self.ui.actionExport,
+                self.ui.actionUndo,
+                self.ui.actionRedo,
+                self.ui.actionCopy,
+                self.ui.actionPaste,
+                self.ui.actionCommit,
+                self.ui.actionRollback,
+            ]
+        )
+        return menu
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -210,14 +294,13 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionView_history.triggered.connect(self.show_history_dialog)
         self.ui.actionClose.triggered.connect(self.close)
-        self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
+        self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
+        self.ui.actionOpen_db_file.triggered.connect(self.open_db_file)
         self.ui.actionImport.triggered.connect(self.import_file)
         self.ui.actionExport.triggered.connect(self.show_mass_export_items_dialog)
         self.ui.actionExport_session.triggered.connect(self.export_session)
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
-        self.ui.actionRemove_selected.triggered.connect(self.remove_selected)
-        self.ui.actionEdit_selected.triggered.connect(self.edit_selected)
         self.ui.actionMass_remove_items.triggered.connect(self.show_mass_remove_items_form)
 
     @Slot(int)
@@ -241,6 +324,14 @@ class SpineDBEditorBase(QMainWindow):
                 self.ui.actionRedo.triggered.disconnect(self.redo_action.triggered)
             self.ui.actionRedo.triggered.connect(new_redo_action.triggered)
             self.redo_action = new_redo_action
+        QTimer.singleShot(0, self._refresh_undo_redo_actions)
+
+    @Slot()
+    def _refresh_undo_redo_actions(self):
+        self.ui.actionUndo.setEnabled(self.undo_action.isEnabled())
+        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}")
+        self.ui.actionRedo.setEnabled(self.redo_action.isEnabled())
+        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}")
 
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):
@@ -296,24 +387,11 @@ class SpineDBEditorBase(QMainWindow):
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
     @Slot()
-    def _handle_menu_edit_about_to_show(self):
-        """Runs when the edit menu from the main menubar is about to show.
+    def refresh_copy_paste_actions(self):
+        """Runs when menus are about to show.
         Enables or disables actions according to selection status."""
-        # TODO: Try to also check if there's a selection to enable copy, remove, edit, etc.
-        self.ui.actionCopy.setEnabled(focused_widget_has_callable(self, "copy"))
-        self.ui.actionPaste.setEnabled(focused_widget_has_callable(self, "paste"))
-        self.ui.actionRemove_selected.setEnabled(focused_widget_has_callable(self, "remove_selected"))
-        self.ui.actionEdit_selected.setEnabled(focused_widget_has_callable(self, "edit_selected"))
-
-    @Slot(bool)
-    def remove_selected(self, checked=False):
-        """Removes selected items."""
-        call_on_focused_widget(self, "remove_selected")
-
-    @Slot(bool)
-    def edit_selected(self, checked=False):
-        """Edits selected items."""
-        call_on_focused_widget(self, "edit_selected")
+        self.ui.actionCopy.setEnabled(bool(call_on_focused_widget(self, "can_copy")))
+        self.ui.actionPaste.setEnabled(bool(call_on_focused_widget(self, "can_paste")))
 
     @Slot(bool)
     def copy(self, checked=False):
@@ -890,14 +968,6 @@ class SpineDBEditorBase(QMainWindow):
             return
         super().closeEvent(event)
 
-    def _focused_widget_has_callable(self, callable_name):
-        """Returns True if the currently focused widget or one of its ancestors has the given callable."""
-        return focused_widget_has_callable(self, callable_name)
-
-    def _call_on_focused_widget(self, callable_name):
-        """Calls the given callable on the currently focused widget or one of its ancestors."""
-        call_on_focused_widget(self, callable_name)
-
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
@@ -911,8 +981,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         """
         super().__init__(db_mngr)
         self._size = None
+        self.url_toolbar.add_main_menu()
         self.connect_signals()
-        self.add_menu_actions()
         self.apply_stacked_style()
         self.load_db_urls(db_url_codenames, create=create)
 
@@ -921,11 +991,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
         self.ui.actionPivot_style.triggered.connect(self.apply_pivot_style)
-
-    def add_menu_actions(self):
-        super().add_menu_actions()
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.ui.dockWidget_exports.toggleViewAction())
 
     def tabify_and_raise(self, docks):
         """

@@ -64,7 +64,7 @@ def make_figure_graphics_item(scene, z=0, static=True):
 class EntityItem(QGraphicsPixmapItem):
     """Base class for ObjectItem and RelationshipItem."""
 
-    def __init__(self, spine_db_editor, x, y, extent, entity_id=None):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id=None):
         """Initializes item
 
         Args:
@@ -72,12 +72,12 @@ class EntityItem(QGraphicsPixmapItem):
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): Preferred extent
-            entity_id (tuple): db_map, entity id
+            db_map_entity_id (tuple): db_map, entity id
         """
         super().__init__()
         self._spine_db_editor = spine_db_editor
         self.db_mngr = spine_db_editor.db_mngr
-        self.entity_id = entity_id
+        self.db_map_entity_id = db_map_entity_id
         self.arc_items = list()
         self._extent = extent
         self.refresh_icon()
@@ -107,7 +107,7 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.id_)["name"]
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["name"]
 
     @property
     def entity_class_type(self):
@@ -115,7 +115,7 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def entity_class_id(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.id_)["class_id"]
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["class_id"]
 
     @property
     def entity_class_name(self):
@@ -123,11 +123,11 @@ class EntityItem(QGraphicsPixmapItem):
 
     @property
     def db_map(self):
-        return self.entity_id[0]
+        return self.db_map_entity_id[0]
 
     @property
-    def id_(self):
-        return self.entity_id[1]
+    def entity_id(self):
+        return self.db_map_entity_id[1]
 
     @property
     def first_db_map(self):
@@ -144,6 +144,14 @@ class EntityItem(QGraphicsPixmapItem):
     @property
     def db_maps(self):
         return (self.db_map,)
+
+    def db_map_data(self, _db_map):
+        # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)
+
+    def db_map_id(self, _db_map):
+        # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
+        return self.entity_id
 
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
@@ -266,17 +274,7 @@ class EntityItem(QGraphicsPixmapItem):
         self.setVisible(on)
 
     def _make_menu(self):
-        menu = QMenu(self._spine_db_editor)
-        menu.addAction(self._spine_db_editor.ui.actionSave_positions)
-        menu.addAction(self._spine_db_editor.ui.actionClear_positions)
-        menu.addSeparator()
-        menu.addAction(self._spine_db_editor.ui.actionHide_selected)
-        menu.addAction(self._spine_db_editor.ui.actionPrune_selected_entities)
-        menu.addAction(self._spine_db_editor.ui.actionPrune_selected_classes)
-        menu.addSeparator()
-        menu.addAction(self._spine_db_editor.ui.actionEdit_selected)
-        menu.addAction(self._spine_db_editor.ui.actionRemove_selected)
-        return menu
+        return self._spine_db_editor.ui.graphicsView.make_items_menu()
 
     def contextMenuEvent(self, e):
         """Shows context menu.
@@ -288,8 +286,6 @@ class EntityItem(QGraphicsPixmapItem):
         if not self.isSelected() and not e.modifiers() & Qt.ControlModifier:
             self.scene().clearSelection()
         self.setSelected(True)
-        self._spine_db_editor._handle_menu_graph_about_to_show()
-        self._spine_db_editor._handle_menu_edit_about_to_show()
         menu = self._make_menu()
         menu.popup(e.screenPos())
 
@@ -297,7 +293,7 @@ class EntityItem(QGraphicsPixmapItem):
 class RelationshipItem(EntityItem):
     """Represents a relationship in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, entity_id=None):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id=None):
         """Initializes the item.
 
         Args:
@@ -305,9 +301,9 @@ class RelationshipItem(EntityItem):
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
-            entity_id (int): object id
+            db_map_entity_id (tuple): db_map, relationship id
         """
-        super().__init__(spine_db_editor, x, y, extent, entity_id=entity_id)
+        super().__init__(spine_db_editor, x, y, extent, db_map_entity_id=db_map_entity_id)
 
     @property
     def entity_type(self):
@@ -319,21 +315,21 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.id_)["object_name_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_name_list"]
 
     @property
     def object_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.id_)["object_id_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_id_list"]
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.id_)["class_name"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["class_name"]
 
     @property
     def db_representation(self):
         return dict(
             class_id=self.entity_class_id,
-            id=self.id_,
+            id=self.entity_id,
             object_id_list=self.object_id_list,
             object_name_list=self.object_name_list,
         )
@@ -361,7 +357,7 @@ class RelationshipItem(EntityItem):
 class ObjectItem(EntityItem):
     """Represents an object in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, entity_id=None):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id=None):
         """Initializes the item.
 
         Args:
@@ -369,9 +365,9 @@ class ObjectItem(EntityItem):
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
-            entity_id (tuple): db_map, object id
+            db_map_entity_id (tuple): db_map, object id
         """
-        super().__init__(spine_db_editor, x, y, extent, entity_id=entity_id)
+        super().__init__(spine_db_editor, x, y, extent, db_map_entity_id=db_map_entity_id)
         self._add_relationships_menu = None
         self._relationship_class_per_action = {}
         self.label_item = ObjectLabelItem(self)
@@ -384,7 +380,7 @@ class ObjectItem(EntityItem):
 
     @property
     def db_representation(self):
-        return dict(class_id=self.entity_class_id, id=self.id_, name=self.entity_name)
+        return dict(class_id=self.entity_class_id, id=self.entity_id, name=self.entity_name)
 
     def shape(self):
         path = super().shape()
@@ -426,7 +422,7 @@ class ObjectItem(EntityItem):
         """
         self._relationship_class_per_action.clear()
         object_class_ids_in_graph = {
-            x.entity_class_id for x in self._spine_db_editor.entity_items if isinstance(x, ObjectItem)
+            x.entity_class_id for x in self._spine_db_editor.ui.graphicsView.entity_items if isinstance(x, ObjectItem)
         }
         db_map_object_class_ids = {self.db_map: {self.entity_class_id}}
         for rel_cls in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).get(self.db_map, []):

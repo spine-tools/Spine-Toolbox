@@ -20,10 +20,11 @@ from itertools import product
 from collections import namedtuple
 from PySide2.QtCore import Qt, Slot, QTimer
 from PySide2.QtWidgets import QActionGroup
+from PySide2.QtGui import QIcon
 from spinedb_api.helpers import fix_name_ambiguity
 from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from ...helpers import busy_effect
+from ...helpers import busy_effect, CharIconEngine
 from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ParameterValuePivotTableModel,
@@ -37,10 +38,10 @@ from ..mvcmodels.frozen_table_model import FrozenTableModel
 class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""
 
-    _PARAMETER_VALUE = "Parameter value"
-    _INDEX_EXPANSION = "Index expansion"
+    _PARAMETER_VALUE = "Value"
+    _INDEX_EXPANSION = "Index"
     _RELATIONSHIP = "Relationship"
-    _SCENARIO_ALTERNATIVE = "Scenario alternative"
+    _SCENARIO_ALTERNATIVE = "Scenario"
 
     _PARAMETER = "parameter"
     _ALTERNATIVE = "alternative"
@@ -68,27 +69,18 @@ class TabularViewMixin:
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
 
     def populate_input_type_action_group(self):
-        menu = self.ui.menuPivot_table
         actions = {
-            input_type: self.input_type_action_group.addAction(input_type)
-            for input_type in [
-                self._PARAMETER_VALUE,
-                self._INDEX_EXPANSION,
-                self._RELATIONSHIP,
-                self._SCENARIO_ALTERNATIVE,
-            ]
+            input_type: self.input_type_action_group.addAction(QIcon(CharIconEngine(icon_code)), input_type)
+            for input_type, icon_code in (
+                (self._PARAMETER_VALUE, "\uf292"),
+                (self._INDEX_EXPANSION, "\uf12c"),
+                (self._RELATIONSHIP, "\uf1b3"),
+                (self._SCENARIO_ALTERNATIVE, "\uf008"),
+            )
         }
         for action in actions.values():
             action.setCheckable(True)
-            menu.addAction(action)
         actions[self.current_input_type].setChecked(True)
-
-    def add_menu_actions(self):
-        """Adds toggle view actions to View menu."""
-        super().add_menu_actions()
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.ui.dockWidget_pivot_table.toggleViewAction())
-        self.ui.menuView.addAction(self.ui.dockWidget_frozen_table.toggleViewAction())
 
     def connect_signals(self):
         """Connects signals to slots."""

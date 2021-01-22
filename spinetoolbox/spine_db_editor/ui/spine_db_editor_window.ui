@@ -846,136 +846,6 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>969</width>
-     <height>27</height>
-    </rect>
-   </property>
-   <property name="nativeMenuBar">
-    <bool>false</bool>
-   </property>
-   <widget class="QMenu" name="menuSession">
-    <property name="title">
-     <string>Session</string>
-    </property>
-    <property name="icon">
-     <iconset resource="../../ui/resources/resources_icons.qrc">
-      <normaloff>:/icons/menu_icons/user.svg</normaloff>:/icons/menu_icons/user.svg</iconset>
-    </property>
-    <addaction name="actionCommit"/>
-    <addaction name="actionRollback"/>
-    <addaction name="separator"/>
-    <addaction name="actionView_history"/>
-   </widget>
-   <widget class="QMenu" name="menuEdit">
-    <property name="title">
-     <string>Edit</string>
-    </property>
-    <property name="icon">
-     <iconset resource="../../ui/resources/resources_icons.qrc">
-      <normaloff>:/icons/menu_icons/edit.svg</normaloff>:/icons/menu_icons/edit.svg</iconset>
-    </property>
-    <addaction name="actionUndo"/>
-    <addaction name="actionRedo"/>
-    <addaction name="separator"/>
-    <addaction name="actionCopy"/>
-    <addaction name="actionPaste"/>
-    <addaction name="separator"/>
-    <addaction name="actionAdd_object_classes"/>
-    <addaction name="actionAdd_objects"/>
-    <addaction name="actionAdd_relationship_classes"/>
-    <addaction name="actionAdd_relationships"/>
-    <addaction name="actionManage_relationships"/>
-    <addaction name="separator"/>
-    <addaction name="actionEdit_selected"/>
-    <addaction name="separator"/>
-    <addaction name="actionRemove_selected"/>
-    <addaction name="actionMass_remove_items"/>
-   </widget>
-   <widget class="QMenu" name="menuFile">
-    <property name="title">
-     <string>File</string>
-    </property>
-    <property name="icon">
-     <iconset resource="../../ui/resources/resources_icons.qrc">
-      <normaloff>:/icons/menu_icons/file.svg</normaloff>:/icons/menu_icons/file.svg</iconset>
-    </property>
-    <addaction name="actionImport"/>
-    <addaction name="actionExport"/>
-    <addaction name="actionExport_session"/>
-   </widget>
-   <widget class="QMenu" name="menuView">
-    <property name="title">
-     <string>View</string>
-    </property>
-    <property name="icon">
-     <iconset resource="../../ui/resources/resources_icons.qrc">
-      <normaloff>:/icons/menu_icons/eye.svg</normaloff>:/icons/menu_icons/eye.svg</iconset>
-    </property>
-    <addaction name="actionStacked_style"/>
-    <addaction name="actionPivot_style"/>
-    <addaction name="actionGraph_style"/>
-   </widget>
-   <widget class="QMenu" name="menuGraph">
-    <property name="title">
-     <string>Graph</string>
-    </property>
-    <property name="icon">
-     <iconset resource="../../ui/resources/resources_icons.qrc">
-      <normaloff>:/icons/project-diagram.svg</normaloff>:/icons/project-diagram.svg</iconset>
-    </property>
-    <property name="toolTipsVisible">
-     <bool>true</bool>
-    </property>
-    <widget class="QMenu" name="menuRestore_pruned">
-     <property name="title">
-      <string>Restore pruned</string>
-     </property>
-    </widget>
-    <widget class="QMenu" name="menuAdd_parameter_heat_map">
-     <property name="title">
-      <string>Add parameter heat map</string>
-     </property>
-    </widget>
-    <addaction name="actionShow_cascading_relationships"/>
-    <addaction name="separator"/>
-    <addaction name="actionSelect_position_parameters"/>
-    <addaction name="actionSave_positions"/>
-    <addaction name="actionClear_positions"/>
-    <addaction name="separator"/>
-    <addaction name="actionHide_selected"/>
-    <addaction name="actionShow_hidden"/>
-    <addaction name="separator"/>
-    <addaction name="actionPrune_selected_entities"/>
-    <addaction name="actionPrune_selected_classes"/>
-    <addaction name="menuRestore_pruned"/>
-    <addaction name="actionRestore_all_pruned"/>
-    <addaction name="separator"/>
-    <addaction name="menuAdd_parameter_heat_map"/>
-    <addaction name="actionRebuild_graph"/>
-    <addaction name="separator"/>
-    <addaction name="actionExport_graph_as_pdf"/>
-   </widget>
-   <widget class="QMenu" name="menuPivot_table">
-    <property name="title">
-     <string>Pivot table</string>
-    </property>
-    <property name="icon">
-     <iconset resource="../../ui/resources/resources_icons.qrc">
-      <normaloff>:/icons/menu_icons/pivot-table.svg</normaloff>:/icons/menu_icons/pivot-table.svg</iconset>
-    </property>
-   </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuEdit"/>
-   <addaction name="menuView"/>
-   <addaction name="menuGraph"/>
-   <addaction name="menuPivot_table"/>
-   <addaction name="menuSession"/>
-  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>
@@ -997,7 +867,7 @@
    </property>
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/undo.svg</normaloff>:/icons/menu_icons/undo.svg</iconset>
+     <normaloff>:/icons/menu_icons/times.svg</normaloff>:/icons/menu_icons/times.svg</iconset>
    </property>
    <property name="text">
     <string>Rollback</string>
@@ -1018,54 +888,6 @@
     <string>Ctrl+W</string>
    </property>
   </action>
-  <action name="actionAdd_object_classes">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cube_plus.svg</normaloff>:/icons/menu_icons/cube_plus.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add object classes</string>
-   </property>
-   <property name="toolTip">
-    <string>Add object classes</string>
-   </property>
-  </action>
-  <action name="actionAdd_objects">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cube_plus.svg</normaloff>:/icons/menu_icons/cube_plus.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add objects</string>
-   </property>
-   <property name="toolTip">
-    <string>Add objects</string>
-   </property>
-  </action>
-  <action name="actionAdd_relationship_classes">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cubes_plus.svg</normaloff>:/icons/menu_icons/cubes_plus.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add relationship classes</string>
-   </property>
-   <property name="toolTip">
-    <string>Add relationship classes</string>
-   </property>
-  </action>
-  <action name="actionAdd_relationships">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cubes_plus.svg</normaloff>:/icons/menu_icons/cubes_plus.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Add relationships</string>
-   </property>
-   <property name="toolTip">
-    <string>Add relationships</string>
-   </property>
-  </action>
   <action name="actionImport">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
@@ -1075,7 +897,10 @@
     <string>Import...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import data from file into current urls&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import data from file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
    </property>
   </action>
   <action name="actionExport">
@@ -1090,7 +915,10 @@
     <string>Export...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export data from current url to a file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export data into file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
    </property>
   </action>
   <action name="actionCopy">
@@ -1123,63 +951,16 @@
     <string>Ctrl+V</string>
    </property>
   </action>
-  <action name="actionEdit_selected">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cube_pen.svg</normaloff>:/icons/menu_icons/cube_pen.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Edit selected items</string>
-   </property>
-  </action>
-  <action name="actionRemove_selected">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cube_minus.svg</normaloff>:/icons/menu_icons/cube_minus.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Remove selected items</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Del</string>
-   </property>
-  </action>
-  <action name="actionHide_selected">
-   <property name="text">
-    <string>Hide selected</string>
-   </property>
-  </action>
-  <action name="actionShow_hidden">
-   <property name="text">
-    <string>Show hidden</string>
-   </property>
-  </action>
-  <action name="actionPrune_selected_entities">
-   <property name="text">
-    <string>Prune selected entities</string>
-   </property>
-  </action>
-  <action name="actionRestore_all_pruned">
-   <property name="text">
-    <string>Restore all pruned</string>
-   </property>
-  </action>
   <action name="actionStacked_style">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/table.svg</normaloff>:/icons/menu_icons/table.svg</iconset>
    </property>
    <property name="text">
-    <string>Stacked style</string>
+    <string>Stacked</string>
    </property>
    <property name="toolTip">
-    <string>Stacked-table style</string>
+    <string>Stacked style</string>
    </property>
   </action>
   <action name="actionGraph_style">
@@ -1188,7 +969,7 @@
      <normaloff>:/icons/project-diagram.svg</normaloff>:/icons/project-diagram.svg</iconset>
    </property>
    <property name="text">
-    <string>Graph style</string>
+    <string>Graph</string>
    </property>
   </action>
   <action name="actionPivot_style">
@@ -1197,40 +978,16 @@
      <normaloff>:/icons/menu_icons/pivot-table.svg</normaloff>:/icons/menu_icons/pivot-table.svg</iconset>
    </property>
    <property name="text">
-    <string>Pivot style</string>
+    <string>Pivot</string>
    </property>
   </action>
   <action name="actionView_history">
-   <property name="text">
-    <string>View history...</string>
-   </property>
-  </action>
-  <action name="actionClear_positions">
-   <property name="text">
-    <string>Clear saved positions</string>
-   </property>
-  </action>
-  <action name="actionSave_positions">
-   <property name="text">
-    <string>Save positions</string>
-   </property>
-  </action>
-  <action name="actionExport_graph_as_pdf">
-   <property name="enabled">
-    <bool>false</bool>
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/history.svg</normaloff>:/icons/menu_icons/history.svg</iconset>
    </property>
    <property name="text">
-    <string>Export graph as PDF...</string>
-   </property>
-  </action>
-  <action name="actionPrune_selected_classes">
-   <property name="text">
-    <string>Prune selected classes</string>
-   </property>
-  </action>
-  <action name="actiontt">
-   <property name="text">
-    <string>tt</string>
+    <string>History...</string>
    </property>
   </action>
   <action name="actionMass_remove_items">
@@ -1239,17 +996,10 @@
      <normaloff>:/icons/menu_icons/cube_minus.svg</normaloff>:/icons/menu_icons/cube_minus.svg</iconset>
    </property>
    <property name="text">
-    <string>Mass remove items...</string>
+    <string>Purge</string>
    </property>
-  </action>
-  <action name="actionSaveAsTemplate">
-   <property name="text">
-    <string>Save as template...</string>
-   </property>
-  </action>
-  <action name="actionLoadTemplate">
-   <property name="text">
-    <string>Load template...</string>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Mass-remove items&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionExport_session">
@@ -1261,7 +1011,7 @@
     <string>Export session...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export items added and updated in the current session (since last commit) into a file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export current session (changes since last commit) into file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionSettings">
@@ -1271,66 +1021,6 @@
    </property>
    <property name="text">
     <string>Settings...</string>
-   </property>
-  </action>
-  <action name="actionShow_cascading_relationships">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Show cascading relationships</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Checked&lt;/span&gt;: Whenever an object is included in the Entity graph, the graph automatically includes &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; its relationships.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Unchecked&lt;/span&gt;: Whenever &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </action>
-  <action name="actionIndexed_parameter_expansion">
-   <property name="text">
-    <string>Indexed parameter expansion</string>
-   </property>
-  </action>
-  <action name="actionInput_type_parameter_value">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Parameter value</string>
-   </property>
-  </action>
-  <action name="actionInput_type_relationship">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Relationship</string>
-   </property>
-  </action>
-  <action name="actionInput_type_index_expansion">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Index expansion</string>
-   </property>
-  </action>
-  <action name="actionRebuild_graph">
-   <property name="text">
-    <string>Rebuild graph</string>
-   </property>
-  </action>
-  <action name="actionManage_relationships">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Manage relationships</string>
    </property>
   </action>
   <action name="actionUser_guide">
@@ -1343,16 +1033,6 @@
    </property>
    <property name="shortcut">
     <string>F1</string>
-   </property>
-  </action>
-  <action name="actionSelect_position_parameters">
-   <property name="text">
-    <string>Select position parameters...</string>
-   </property>
-  </action>
-  <action name="actionRelationship">
-   <property name="text">
-    <string>Relationship</string>
    </property>
   </action>
   <action name="actionUndo">
@@ -1371,6 +1051,36 @@
    </property>
    <property name="text">
     <string>Redo</string>
+   </property>
+  </action>
+  <action name="actionNew_db_file">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/file.svg</normaloff>:/icons/menu_icons/file.svg</iconset>
+   </property>
+   <property name="text">
+    <string>New...</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;New database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionOpen_db_file">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Open...</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
  </widget>

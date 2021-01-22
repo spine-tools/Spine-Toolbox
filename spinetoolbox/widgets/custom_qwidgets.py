@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QLabel,
     QFrame,
 )
-from PySide2.QtCore import QTimer, Signal, Slot
+from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize
 from PySide2.QtGui import QPainter, QFontMetrics
 from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 
@@ -165,90 +165,21 @@ class CustomWidgetAction(QWidgetAction):
         self.parentWidget().update(self.parentWidget().geometry())
 
 
-class TitleWidgetAction(CustomWidgetAction):
-    """
-    A widget action for adding titled sections to menus.
-    """
-
-    # NOTE: I'm aware of QMenu.addSection(), but it doesn't seem to work on all platforms?
-
-    H_MARGIN = 6
-    V_MARGIN = 2
-
-    def __init__(self, title, parent=None):
-        super().__init__(parent)
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
-        layout.setContentsMargins(self.H_MARGIN, self.V_MARGIN, self.H_MARGIN, self.V_MARGIN)
-        layout.setSpacing(self.V_MARGIN)
-        label = QLabel(title, widget)
-        fm = QFontMetrics(label.font())
-        label.setFixedWidth(fm.horizontalAdvance(title))
-        lines = QFrame(widget), QFrame(widget)
-        for line in lines:
-            line.setFrameShape(QFrame.HLine)
-            line.setFrameShadow(QFrame.Sunken)
-            layout.addWidget(line)
-        layout.insertWidget(1, label)
-        self.setDefaultWidget(widget)
-
-
-class ZoomWidgetAction(CustomWidgetAction):
-    """A widget action with plus, minus, and reset buttons.
-    Used to create zoom actions for menus.
-    """
-
-    minus_pressed = Signal()
-    plus_pressed = Signal()
-    reset_pressed = Signal()
-
-    def __init__(self, parent=None):
+class ToolbarWidgetAction(CustomWidgetAction):
+    def __init__(self, text, parent=None, compact=False):
         """Class constructor.
 
         Args:
             parent (QWidget): the widget's parent
         """
         super().__init__(parent)
-        actions = {"-": "Zoom out", "Reset": "Reset zoom", "+": "Zoom in"}
-        widget = ActionToolbarWidget("Zoom", actions, parent)
+        widget = ActionToolbarWidget(text, parent=parent, compact=compact)
         self.setDefaultWidget(widget)
-        widget.action_triggered.connect(self._handle_action_triggered)
-
-    @Slot(str)
-    def _handle_action_triggered(self, name):
-        {"+": self.plus_pressed, "-": self.minus_pressed, "Reset": self.reset_pressed}[name].emit()
-
-
-class RotateWidgetAction(CustomWidgetAction):
-    """A widget action with rotate left and right buttons.
-    Used to create rotate actions for menus.
-    """
-
-    clockwise_pressed = Signal()
-    anticlockwise_pressed = Signal()
-
-    def __init__(self, parent=None):
-        """Class constructor.
-
-        Args:
-            parent (QWidget): the widget's parent
-        """
-        super().__init__(parent)
-        actions = {"\u2b6f": "Rotate counter-clockwise", "\u2b6e": "Rotate clockwise"}
-        widget = ActionToolbarWidget("Rotate", actions, parent)
-        self.setDefaultWidget(widget)
-        widget.action_triggered.connect(self._handle_action_triggered)
-
-    @Slot(str)
-    def _handle_action_triggered(self, name):
-        {"\u2b6f": self.anticlockwise_pressed, "\u2b6e": self.clockwise_pressed}[name].emit()
+        self.tool_bar = widget.tool_bar
 
 
 class ActionToolbarWidget(QWidget):
-
-    action_triggered = Signal(str)
-
-    def __init__(self, text, actions, parent=None):
+    def __init__(self, text, parent=None, compact=False):
         """Class constructor.
 
         Args:
@@ -261,18 +192,50 @@ class ActionToolbarWidget(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        tool_bar = QToolBar(self)
-        tool_bar.setFixedHeight(self.option.rect.height())
+        self.tool_bar = QToolBar(self)
+        if compact:
+            self.tool_bar.setFixedHeight(self.option.rect.height())
+        extent = qApp.style().pixelMetric(QStyle.PM_SmallIconSize)
+        self.tool_bar.setIconSize(QSize(extent, extent))
         layout.addSpacing(self.option.rect.width())
         layout.addStretch()
-        layout.addWidget(tool_bar)
-        for name, tool_tip in actions.items():
-            action = tool_bar.addAction(name)
-            action.setToolTip(tool_tip)
-            action.triggered.connect(lambda x=False, name=name: self.action_triggered.emit(name))
+        layout.addWidget(self.tool_bar)
+        self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
     def paintEvent(self, event):
         """Overridden method."""
         painter = QPainter(self)
         self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
         super().paintEvent(event)
+
+
+class TitleWidgetAction(CustomWidgetAction):
+    """
+    A widget action for adding titled sections to menus.
+    """
+
+    # NOTE: I'm aware of QMenu.addSection(), but it doesn't seem to work on all platforms?
+
+    H_MARGIN = 5
+    V_MARGIN = 2
+
+    def __init__(self, title, parent=None):
+        super().__init__(parent)
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(self.H_MARGIN, self.V_MARGIN, self.H_MARGIN, self.V_MARGIN)
+        layout.setSpacing(self.V_MARGIN)
+        label = QLabel(title, widget)
+        fm = QFontMetrics(label.font())
+        label.setFixedWidth(fm.horizontalAdvance(title))
+        self._add_line(widget, layout)
+        layout.addWidget(label)
+        self._add_line(widget, layout)
+        self.setDefaultWidget(widget)
+
+    @staticmethod
+    def _add_line(widget, layout):
+        line = QFrame(widget)
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(line)

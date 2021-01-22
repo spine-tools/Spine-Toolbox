@@ -69,16 +69,6 @@ class ParameterViewMixin:
         self.ui.treeView_parameter_tag.setModel(self.parameter_tag_model)
         self.ui.treeView_parameter_tag.connect_spine_db_editor(self)
 
-    def add_menu_actions(self):
-        """Adds toggle view actions to View menu."""
-        super().add_menu_actions()
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.ui.dockWidget_parameter_tag.toggleViewAction())
-        self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
-        self.ui.menuView.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
-        self.ui.menuView.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
-        self.ui.menuView.addAction(self.ui.dockWidget_relationship_parameter_definition.toggleViewAction())
-
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
@@ -90,7 +80,7 @@ class ParameterViewMixin:
         self.ui.treeView_relationship.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
         self.ui.treeView_relationship.tree_selection_changed.connect(self._handle_relationship_tree_selection_changed)
-        self.graph_selection_changed.connect(self._handle_graph_selection_changed)
+        self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
         """Initializes models."""

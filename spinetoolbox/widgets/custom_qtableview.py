@@ -60,6 +60,9 @@ class CopyPasteTableView(QTableView):
         indexes = [ind for ind in selection.indexes() if ind.flags() & Qt.ItemIsEditable]
         return self.model().batch_set_data(indexes, len(indexes) * [None])
 
+    def can_copy(self):
+        return not self.selectionModel().selection().isEmpty()
+
     @busy_effect
     def copy(self):
         """Copy current selection to clipboard in excel format."""
@@ -94,8 +97,10 @@ class CopyPasteTableView(QTableView):
             QApplication.clipboard().setText(output.getvalue())
         return True
 
-    def canPaste(self):  # pylint: disable=no-self-use
-        return True
+    def can_paste(self):
+        return QApplication.clipboard().text() and (
+            not self.selectionModel().selection().isEmpty() or self.currentIndex().isValid()
+        )
 
     @busy_effect
     def paste(self):

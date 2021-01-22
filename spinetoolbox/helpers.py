@@ -835,8 +835,7 @@ def call_on_focused_widget(parent, callable_name):
         if hasattr(focus_widget, callable_name):
             method = getattr(focus_widget, callable_name)
             if callable(method):
-                method()
-                break
+                return method()
         focus_widget = focus_widget.parentWidget()
 
 

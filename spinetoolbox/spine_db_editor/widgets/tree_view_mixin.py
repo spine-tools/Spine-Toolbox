@@ -70,23 +70,11 @@ class TreeViewMixin:
         self.ui.treeView_alternative_scenario.connect_spine_db_editor(self)
         self.ui.treeView_tool_feature.connect_spine_db_editor(self)
 
-    def add_menu_actions(self):
-        """Adds toggle view actions to View menu."""
-        super().add_menu_actions()
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
-        self.ui.menuView.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
-
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
         self.ui.treeView_object.tree_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
         self.ui.treeView_relationship.tree_selection_changed.connect(self.ui.treeView_object.clear_any_selections)
-        self.ui.actionAdd_object_classes.triggered.connect(self.show_add_object_classes_form)
-        self.ui.actionAdd_relationship_classes.triggered.connect(self.show_add_relationship_classes_form)
-        self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
-        self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
-        self.ui.actionManage_relationships.triggered.connect(self.show_manage_relationships_form)
         self._object_classes_fetched.connect(self._expand_object_tree_root_index)
         self._relationship_classes_fetched.connect(self._expand_relationship_tree_root_index)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))

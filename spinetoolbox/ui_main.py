@@ -48,7 +48,7 @@ from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
 from .widgets.settings_widget import SettingsWidget
-from .widgets.custom_qwidgets import ZoomWidgetAction
+from .widgets.custom_qwidgets import ToolbarWidgetAction
 from .widgets.spine_console_widget import SpineConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
@@ -152,7 +152,6 @@ class ToolboxUI(QMainWindow):
         self.process_output_context_menu = None
         self.add_project_item_form = None
         self.specification_form = None
-        self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
         self.main_toolbar = toolbars.MainToolBar(self)
@@ -164,7 +163,7 @@ class ToolboxUI(QMainWindow):
         self.python_console = SpineConsoleWidget(self, "Python Console")
         self.ui.dockWidgetContents_python_console.layout().addWidget(self.python_console)
         # Setup main window menu
-        self.setup_zoom_widget_action()
+        self.add_zoom_action()
         self.add_menu_actions()
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
@@ -228,10 +227,6 @@ class ToolboxUI(QMainWindow):
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
-        # Zoom actions
-        self.zoom_widget_action.minus_pressed.connect(self._handle_zoom_minus_pressed)
-        self.zoom_widget_action.plus_pressed.connect(self._handle_zoom_plus_pressed)
-        self.zoom_widget_action.reset_pressed.connect(self._handle_zoom_reset_pressed)
         # Undo stack
         self.undo_stack.cleanChanged.connect(self.update_window_modified)
         # Log views
@@ -386,7 +381,7 @@ class ToolboxUI(QMainWindow):
         self.clear_ui()
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self._project = SpineToolboxProject(
-            self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self,
+            self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
         )
         self._project.connect_signals()
         self._connect_project_signals()
@@ -491,7 +486,7 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
         self._project = SpineToolboxProject(
-            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self,
+            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
         )
         self._connect_project_signals()
         self.update_window_title()
@@ -1189,11 +1184,14 @@ class ToolboxUI(QMainWindow):
         """Slot for handling case when 'reset zoom' button in menu is pressed."""
         self.ui.graphicsView.reset_zoom()
 
-    def setup_zoom_widget_action(self):
+    def add_zoom_action(self):
         """Setups zoom widget action in view menu."""
-        self.zoom_widget_action = ZoomWidgetAction(self.ui.menuView)
+        zoom_action = ToolbarWidgetAction("Zoom", parent=self.ui.menuView, compact=True)
+        zoom_action.tool_bar.addAction("-", self._handle_zoom_minus_pressed).setToolTip("Zoom out")
+        zoom_action.tool_bar.addAction("Reset", self._handle_zoom_reset_pressed).setToolTip("Reset zoom")
+        zoom_action.tool_bar.addAction("+", self._handle_zoom_plus_pressed).setToolTip("Zoom in")
         self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.zoom_widget_action)
+        self.ui.menuView.addAction(zoom_action)
 
     @Slot()
     def restore_dock_widgets(self):

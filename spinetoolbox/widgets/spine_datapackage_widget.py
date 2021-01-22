@@ -140,7 +140,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionSave_All.triggered.connect(self.save_all)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
-        self.ui.menuEdit.aboutToShow.connect(self._handle_menu_edit_about_to_show)
+        self.ui.menuEdit.aboutToShow.connect(self.refresh_copy_paste_actions)
         self.fields_model.dataChanged.connect(self._handle_fields_data_changed)
         self.undo_group.cleanChanged.connect(self.update_window_modified)
         checkbox_delegate = CheckBoxDelegate(self)
@@ -218,7 +218,7 @@ class SpineDatapackageWidget(QMainWindow):
         self._save_resource_actions += new_actions
 
     @Slot()
-    def _handle_menu_edit_about_to_show(self):
+    def refresh_copy_paste_actions(self):
         """Adjusts copy and paste actions depending on which widget has the focus.
         """
         self.ui.actionCopy.setEnabled(focused_widget_has_callable(self, "copy"))

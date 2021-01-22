@@ -796,7 +796,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
 
 
 class AddOrManageObjectGroupDialog(QDialog):
-    def __init__(self, parent, object_class_item, db_mngr, *db_maps):
+    def __init__(self, parent, object_class_item, db_mngr, *db_maps, object_item=None):
         """
         Args:
             parent (SpineDBEditor): data store widget
@@ -806,6 +806,7 @@ class AddOrManageObjectGroupDialog(QDialog):
         """
         super().__init__(parent)
         self.object_class_item = object_class_item
+        self.object_item = object_item
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self.db_map = db_maps[0]
@@ -983,8 +984,7 @@ class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
             db_mngr (SpineDBManager)
             *db_maps: database mappings
         """
-        self.object_item = object_item
-        super().__init__(parent, object_item.parent_item, db_mngr, *db_maps)
+        super().__init__(parent, object_item.parent_item, db_mngr, *db_maps, object_item=object_item)
         self.setWindowTitle("Manage object group")
         self.group_name_line_edit.setReadOnly(True)
         self.group_name_line_edit.setText(object_item.display_data)

@@ -199,7 +199,7 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
     @Slot(bool)
     def set_show_cascading_relationships(self, checked=False):
         for db_editor in self._multi_db_editor.db_mngr.get_all_spine_db_editors():
-            db_editor.set_show_cascading_relationships(checked)
+            db_editor.ui.graphicsView.set_show_cascading_relationships(checked)
 
 
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
