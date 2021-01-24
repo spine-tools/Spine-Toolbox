@@ -24,16 +24,22 @@ from ...widgets.custom_menus import FilterMenuBase
 
 
 class MainMenu(QMenu):
-    def event(self, e):
-        """Manually adds the 'Alt' modifier to shortcut overrides, so shortcuts work with just pressing the mnemonic key.
+    def event(self, ev):
+        """Intercepts shortcurts and instead sends an equivalent event with the 'Alt' modifier,
+        so that mnemonics works with just the key.
+        Also sends a key press event with the 'Alt' key when this menu shows,
+        so that mnemonics are underligned on windows.
         """
-        if e.type() == QEvent.KeyPress and e.key() == Qt.Key_Alt:
+        if ev.type() == QEvent.KeyPress and ev.key() == Qt.Key_Alt:
             return True
-        if e.type() == QEvent.ShortcutOverride and e.modifiers() & Qt.AltModifier == 0:
-            e = QKeyEvent(QEvent.KeyPress, e.key(), e.modifiers() | Qt.AltModifier)
-            qApp.postEvent(self, e)  # pylint: disable=undefined-variable
+        if ev.type() == QEvent.ShortcutOverride and ev.modifiers() & Qt.AltModifier == 0:
+            ev = QKeyEvent(QEvent.KeyPress, ev.key(), ev.modifiers() | Qt.AltModifier)
+            qApp.postEvent(self, ev)  # pylint: disable=undefined-variable
             return True
-        return super().event(e)
+        if ev.type() == QEvent.Show:
+            pev = QKeyEvent(QEvent.KeyPress, Qt.Key_Alt, Qt.NoModifier)
+            qApp.postEvent(self, pev)  # pylint: disable=undefined-variable
+        return super().event(ev)
 
 
 class ParameterViewFilterMenu(FilterMenuBase):
