@@ -15,7 +15,7 @@ Contains the UrlToolBar class and helpers.
 :author: M. Marin (KTH)
 :date:   13.5.2020
 """
-from PySide2.QtWidgets import QToolBar, QLineEdit, QMenu
+from PySide2.QtWidgets import QToolBar, QLineEdit, QMenu, QAction
 from PySide2.QtGui import QIcon, QKeySequence
 from PySide2.QtCore import QSize, Qt, Slot
 from spinetoolbox.helpers import CharIconEngine
@@ -93,13 +93,18 @@ class UrlToolBar(QToolBar):
         url = self._project_urls[action.text()]
         self._db_editor.load_db_urls({url: action.text()})
 
-    def add_main_menu(self):
-        menu = self._db_editor.make_main_menu()
+    def add_main_menu(self, menu):
         menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")
         menu_action.setMenu(menu)
         menu_button = self.widgetForAction(menu_action)
         menu_button.setPopupMode(menu_button.InstantPopup)
-        menu_button.setToolTip("<p>Customize and control Spine DB Editor</p>")
+        action = QAction(self)
+        action.triggered.connect(menu_button.showMenu)
+        keys = [QKeySequence(Qt.ALT + Qt.Key_F), QKeySequence(Qt.ALT + Qt.Key_E)]
+        action.setShortcuts(keys)
+        keys_str = ", ".join([key.toString() for key in keys])
+        menu_button.setToolTip(f"<p>Customize and control Spine DB Editor ({keys_str})</p>")
+        return action
 
     def _update_history_actions_availability(self):
         self._go_back_action.setEnabled(self._history_index > 0)

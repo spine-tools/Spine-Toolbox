@@ -855,7 +855,7 @@
      <normaloff>:/icons/menu_icons/check.svg</normaloff>:/icons/menu_icons/check.svg</iconset>
    </property>
    <property name="text">
-    <string>Commit</string>
+    <string>&amp;Commit...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Return</string>
@@ -870,7 +870,7 @@
      <normaloff>:/icons/menu_icons/times.svg</normaloff>:/icons/menu_icons/times.svg</iconset>
    </property>
    <property name="text">
-    <string>Rollback</string>
+    <string>Roll&amp;back</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Backspace</string>
@@ -894,7 +894,7 @@
      <normaloff>:/icons/menu_icons/database-import.svg</normaloff>:/icons/menu_icons/database-import.svg</iconset>
    </property>
    <property name="text">
-    <string>Import...</string>
+    <string>I&amp;mport...</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import data from file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -912,7 +912,7 @@
      <normaloff>:/icons/menu_icons/database-export.svg</normaloff>:/icons/menu_icons/database-export.svg</iconset>
    </property>
    <property name="text">
-    <string>Export...</string>
+    <string>&amp;Export...</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export data into file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -957,7 +957,7 @@
      <normaloff>:/icons/menu_icons/table.svg</normaloff>:/icons/menu_icons/table.svg</iconset>
    </property>
    <property name="text">
-    <string>Stacked</string>
+    <string>S&amp;tacked</string>
    </property>
    <property name="toolTip">
     <string>Stacked style</string>
@@ -969,7 +969,7 @@
      <normaloff>:/icons/project-diagram.svg</normaloff>:/icons/project-diagram.svg</iconset>
    </property>
    <property name="text">
-    <string>Graph</string>
+    <string>&amp;Graph</string>
    </property>
   </action>
   <action name="actionPivot_style">
@@ -978,7 +978,7 @@
      <normaloff>:/icons/menu_icons/pivot-table.svg</normaloff>:/icons/menu_icons/pivot-table.svg</iconset>
    </property>
    <property name="text">
-    <string>Pivot</string>
+    <string>&amp;Pivot</string>
    </property>
   </action>
   <action name="actionView_history">
@@ -987,7 +987,7 @@
      <normaloff>:/icons/menu_icons/history.svg</normaloff>:/icons/menu_icons/history.svg</iconset>
    </property>
    <property name="text">
-    <string>History...</string>
+    <string>&amp;History...</string>
    </property>
   </action>
   <action name="actionMass_remove_items">
@@ -996,7 +996,7 @@
      <normaloff>:/icons/menu_icons/cube_minus.svg</normaloff>:/icons/menu_icons/cube_minus.svg</iconset>
    </property>
    <property name="text">
-    <string>Purge</string>
+    <string>P&amp;urge...</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Mass-remove items&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1008,7 +1008,7 @@
      <normaloff>:/icons/menu_icons/database-export.svg</normaloff>:/icons/menu_icons/database-export.svg</iconset>
    </property>
    <property name="text">
-    <string>Export session...</string>
+    <string>E&amp;xport session...</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export current session (changes since last commit) into file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1021,6 +1021,9 @@
    </property>
    <property name="text">
     <string>Settings...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+,</string>
    </property>
   </action>
   <action name="actionUser_guide">
@@ -1059,13 +1062,10 @@
      <normaloff>:/icons/menu_icons/file.svg</normaloff>:/icons/menu_icons/file.svg</iconset>
    </property>
    <property name="text">
-    <string>New...</string>
+    <string>&amp;New...</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;New database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+N</string>
    </property>
   </action>
   <action name="actionOpen_db_file">
@@ -1074,13 +1074,10 @@
      <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
    </property>
    <property name="text">
-    <string>Open...</string>
+    <string>&amp;Open...</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+O</string>
    </property>
   </action>
  </widget>

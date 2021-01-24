@@ -20,8 +20,8 @@ import os
 import json
 from sqlalchemy.engine.url import URL
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
+from PySide2.QtCore import Qt, Signal, Slot, QTimer, QEvent
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon, QKeyEvent
 from spinedb_api import (
     import_data,
     export_data,
@@ -194,8 +194,8 @@ class SpineDBEditorBase(QMainWindow):
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None}, create=True)
 
-    def _create_docks_menu(self):
-        """Returns a menu with all dock toggle/view actions. Called by ``self.make_main_menu()``.
+    def _make_docks_menu(self):
+        """Returns a menu with all dock toggle/view actions. Called by ``self.add_main_menu()``.
 
         Returns:
             QMenu
@@ -221,12 +221,8 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.dockWidget_exports.toggleViewAction())
         return menu
 
-    def make_main_menu(self):
-        """Returns a menu with main actions. Called by ``UrlToolBar.add_main_menu()``.
-
-        Returns:
-            QMenu
-        """
+    def add_main_menu(self):
+        """Adds a menu with main actions to toolbar."""
         menu = QMenu(self)
         file_action = ToolbarWidgetAction("File", menu)
         file_action.tool_bar.addActions([self.ui.actionNew_db_file, self.ui.actionOpen_db_file])
@@ -243,8 +239,8 @@ class SpineDBEditorBase(QMainWindow):
             [self.ui.actionStacked_style, self.ui.actionPivot_style, self.ui.actionGraph_style]
         )
         view_action.tool_bar.addSeparator()
-        docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "Docks...")
-        docks_menu_action.setMenu(self._create_docks_menu())
+        docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "&Docks...")
+        docks_menu_action.setMenu(self._make_docks_menu())
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
         docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
         pivot_mode_action = ToolbarWidgetAction("Pivot mode", menu)
@@ -266,6 +262,7 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.actionUser_guide)
         menu.addAction(self.ui.actionSettings)
         menu.aboutToShow.connect(self.refresh_copy_paste_actions)
+        menu_action = self.url_toolbar.add_main_menu(menu)
         # Add actions to activate shortcuts
         self.addActions(
             [
@@ -279,9 +276,20 @@ class SpineDBEditorBase(QMainWindow):
                 self.ui.actionPaste,
                 self.ui.actionCommit,
                 self.ui.actionRollback,
+                menu_action,
             ]
         )
-        return menu
+        menu.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        """Manually adds the 'Alt' modifier to shortcut overrides, so shortcuts work with just pressing the mnemonic key.
+        """
+        if event.type() == QEvent.ShortcutOverride:
+            if event.modifiers() & Qt.AltModifier == 0:
+                event = QKeyEvent(QEvent.KeyPress, event.key(), event.modifiers() | Qt.AltModifier)
+                qApp.postEvent(watched, event)  # pylint: disable=undefined-variable
+                return True
+        return super().eventFilter(watched, event)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -981,7 +989,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         """
         super().__init__(db_mngr)
         self._size = None
-        self.url_toolbar.add_main_menu()
+        self.add_main_menu()
         self.connect_signals()
         self.apply_stacked_style()
         self.load_db_urls(db_url_codenames, create=create)

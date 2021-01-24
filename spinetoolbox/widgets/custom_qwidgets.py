@@ -178,6 +178,31 @@ class ToolbarWidgetAction(CustomWidgetAction):
         self.tool_bar = widget.tool_bar
 
 
+class _MnemonicsToolBar(QToolBar):
+    """Fixes action texts to respect mnemonics (e.g., &Edit), by explicitly re-setting the text to the button.
+
+    Ideally we'd watch for ``self.actionEvent()`` sent with ``QEvent.ActionChanged``, but
+
+        AttributeError: 'PySide2.QtGui.QActionEvent' object has no attribute 'action'
+    """
+
+    def addActions(self, actions):
+        super().addActions(actions)
+        for action in actions:
+            self._fix_action_text(action)
+
+    def addAction(self, *args, **kwargs):
+        result = super().addAction(*args, **kwargs)
+        action = result if result is not None else args[0]
+        self._fix_action_text(action)
+        return result
+
+    def _fix_action_text(self, action):
+        button = self.widgetForAction(action)
+        button.setText(action.text())
+        action.changed.connect(lambda action=action: button.setText(action.text()))
+
+
 class ActionToolbarWidget(QWidget):
     def __init__(self, text, parent=None, compact=False):
         """Class constructor.
@@ -192,10 +217,10 @@ class ActionToolbarWidget(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        self.tool_bar = QToolBar(self)
+        self.tool_bar = _MnemonicsToolBar(self)
         if compact:
             self.tool_bar.setFixedHeight(self.option.rect.height())
-        extent = qApp.style().pixelMetric(QStyle.PM_SmallIconSize)
+        extent = qApp.style().pixelMetric(QStyle.PM_SmallIconSize)  # pylint: disable=undefined-variable
         self.tool_bar.setIconSize(QSize(extent, extent))
         layout.addSpacing(self.option.rect.width())
         layout.addStretch()

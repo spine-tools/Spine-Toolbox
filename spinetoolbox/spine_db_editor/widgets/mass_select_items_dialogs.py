@@ -116,7 +116,7 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
             db_maps (DiffDatabaseMapping): the dbs to select items from
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Mass remove items")
+        self.setWindowTitle("Purge items")
 
     def accept(self):
         super().accept()
@@ -146,7 +146,7 @@ class MassExportItemsDialog(MassSelectItemsDialog):
             db_maps (DiffDatabaseMapping): the dbs to select items from
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Mass export items")
+        self.setWindowTitle("Export items")
 
     def accept(self):
         super().accept()
