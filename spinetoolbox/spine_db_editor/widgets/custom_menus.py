@@ -16,10 +16,24 @@ Classes for custom context menus and pop-up menus.
 :date:   13.5.2020
 """
 
-from PySide2.QtWidgets import QWidgetAction
-from PySide2.QtCore import QEvent, QPoint, Signal, Slot
+from PySide2.QtWidgets import QWidgetAction, QMenu
+from PySide2.QtCore import Qt, QEvent, QPoint, Signal, Slot
+from PySide2.QtGui import QKeyEvent
 from .custom_qwidgets import LazyFilterWidget, DataToValueFilterWidget
 from ...widgets.custom_menus import FilterMenuBase
+
+
+class MainMenu(QMenu):
+    def event(self, e):
+        """Manually adds the 'Alt' modifier to shortcut overrides, so shortcuts work with just pressing the mnemonic key.
+        """
+        if e.type() == QEvent.KeyPress and e.key() == Qt.Key_Alt:
+            return True
+        if e.type() == QEvent.ShortcutOverride and e.modifiers() & Qt.AltModifier == 0:
+            e = QKeyEvent(QEvent.KeyPress, e.key(), e.modifiers() | Qt.AltModifier)
+            qApp.postEvent(self, e)  # pylint: disable=undefined-variable
+            return True
+        return super().event(e)
 
 
 class ParameterViewFilterMenu(FilterMenuBase):

@@ -20,8 +20,8 @@ import os
 import json
 from sqlalchemy.engine.url import URL
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu
-from PySide2.QtCore import Qt, Signal, Slot, QTimer, QEvent
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon, QKeyEvent
+from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import (
     import_data,
     export_data,
@@ -34,6 +34,7 @@ from spinedb_api import (
 )
 from spine_engine.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spine_engine.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from .custom_menus import MainMenu
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -223,7 +224,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def add_main_menu(self):
         """Adds a menu with main actions to toolbar."""
-        menu = QMenu(self)
+        menu = MainMenu(self)
         file_action = ToolbarWidgetAction("File", menu)
         file_action.tool_bar.addActions([self.ui.actionNew_db_file, self.ui.actionOpen_db_file])
         file_action.tool_bar.addSeparator()
@@ -279,17 +280,6 @@ class SpineDBEditorBase(QMainWindow):
                 menu_action,
             ]
         )
-        menu.installEventFilter(self)
-
-    def eventFilter(self, watched, event):
-        """Manually adds the 'Alt' modifier to shortcut overrides, so shortcuts work with just pressing the mnemonic key.
-        """
-        if event.type() == QEvent.ShortcutOverride:
-            if event.modifiers() & Qt.AltModifier == 0:
-                event = QKeyEvent(QEvent.KeyPress, event.key(), event.modifiers() | Qt.AltModifier)
-                qApp.postEvent(watched, event)  # pylint: disable=undefined-variable
-                return True
-        return super().eventFilter(watched, event)
 
     def connect_signals(self):
         """Connects signals to slots."""
