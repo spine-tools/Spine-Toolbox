@@ -198,7 +198,10 @@ class ToolBarWidgetAction(CustomWidgetAction):
     def _handle_hovered(self):
         super()._handle_hovered()
         if self._parent_key_press_event:
-            self.tool_bar.keyPressEvent(self._parent_key_press_event)
+            if self.tool_bar.is_enabled():
+                self.tool_bar.keyPressEvent(self._parent_key_press_event)
+            else:
+                self.parent().keyPressEvent(self._parent_key_press_event)
             self._parent_key_press_event = None
 
 
@@ -245,6 +248,9 @@ class _MenuToolBar(QToolBar):
     enabled_changed = Signal(bool)
     _enabled = True
     _focus_widget = None
+
+    def is_enabled(self):
+        return self._enabled
 
     def addActions(self, actions):
         """Overriden method to customize tool buttons."""
