@@ -21,7 +21,7 @@ from PySide2.QtWidgets import QMenu
 from PySide2.QtGui import QCursor, QPainter
 from PySide2.QtPrintSupport import QPrinter
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
-from ...widgets.custom_qwidgets import ToolbarWidgetAction
+from ...widgets.custom_qwidgets import ToolBarWidgetAction
 from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, CrossHairsArcItem, make_figure_graphics_item
 from .select_position_parameters_dialog import SelectPositionParametersDialog
 from .graph_layout_generator import make_heat_map
@@ -120,11 +120,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.build_graph)
         self._export_as_pdf_action = self._menu.addAction("Export as PDF", self.export_as_pdf)
         self._menu.addSeparator()
-        self._zoom_action = ToolbarWidgetAction("Zoom", self._menu, compact=True)
+        self._zoom_action = ToolBarWidgetAction("Zoom", self._menu, compact=True)
         self._zoom_action.tool_bar.addAction("-", self.zoom_out).setToolTip("Zoom out")
         self._zoom_action.tool_bar.addAction("Reset", self.reset_zoom).setToolTip("Reset zoom")
         self._zoom_action.tool_bar.addAction("+", self.zoom_in).setToolTip("Zoom in")
-        self._rotate_action = ToolbarWidgetAction("Rotate", self._menu, compact=True)
+        self._rotate_action = ToolBarWidgetAction("Rotate", self._menu, compact=True)
         self._rotate_action.tool_bar.addAction("\u2b6f", self.rotate_anticlockwise).setToolTip(
             "Rotate counter-clockwise"
         )

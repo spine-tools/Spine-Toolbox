@@ -48,7 +48,7 @@ from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
 from .widgets.settings_widget import SettingsWidget
-from .widgets.custom_qwidgets import ToolbarWidgetAction
+from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.spine_console_widget import SpineConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
@@ -1186,7 +1186,7 @@ class ToolboxUI(QMainWindow):
 
     def add_zoom_action(self):
         """Setups zoom widget action in view menu."""
-        zoom_action = ToolbarWidgetAction("Zoom", parent=self.ui.menuView, compact=True)
+        zoom_action = ToolBarWidgetAction("Zoom", parent=self.ui.menuView, compact=True)
         zoom_action.tool_bar.addAction("-", self._handle_zoom_minus_pressed).setToolTip("Zoom out")
         zoom_action.tool_bar.addAction("Reset", self._handle_zoom_reset_pressed).setToolTip("Reset zoom")
         zoom_action.tool_bar.addAction("+", self._handle_zoom_plus_pressed).setToolTip("Zoom in")

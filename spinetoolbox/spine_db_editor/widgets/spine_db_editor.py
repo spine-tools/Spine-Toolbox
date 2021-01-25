@@ -52,7 +52,7 @@ from ...helpers import (
     CharIconEngine,
 )
 from ...widgets.parameter_value_editor import ParameterValueEditor
-from ...widgets.custom_qwidgets import ToolbarWidgetAction
+from ...widgets.custom_qwidgets import ToolBarWidgetAction
 from ...spine_db_parcel import SpineDBParcel
 from ...config import MAINWINDOW_SS, APPLICATION_PATH
 
@@ -225,17 +225,17 @@ class SpineDBEditorBase(QMainWindow):
     def add_main_menu(self):
         """Adds a menu with main actions to toolbar."""
         menu = MainMenu(self)
-        file_action = ToolbarWidgetAction("File", menu)
+        file_action = ToolBarWidgetAction("File", menu)
         file_action.tool_bar.addActions([self.ui.actionNew_db_file, self.ui.actionOpen_db_file])
         file_action.tool_bar.addSeparator()
         file_action.tool_bar.addActions([self.ui.actionImport, self.ui.actionExport, self.ui.actionExport_session])
-        edit_action = ToolbarWidgetAction("Edit", menu)
+        edit_action = ToolBarWidgetAction("Edit", menu)
         edit_action.tool_bar.addActions([self.ui.actionUndo, self.ui.actionRedo])
         edit_action.tool_bar.addSeparator()
         edit_action.tool_bar.addActions([self.ui.actionCopy, self.ui.actionPaste])
         edit_action.tool_bar.addSeparator()
         edit_action.tool_bar.addAction(self.ui.actionMass_remove_items)
-        view_action = ToolbarWidgetAction("View", menu)
+        view_action = ToolBarWidgetAction("View", menu)
         view_action.tool_bar.addActions(
             [self.ui.actionStacked_style, self.ui.actionPivot_style, self.ui.actionGraph_style]
         )
@@ -244,9 +244,9 @@ class SpineDBEditorBase(QMainWindow):
         docks_menu_action.setMenu(self._make_docks_menu())
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
         docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
-        pivot_mode_action = ToolbarWidgetAction("Pivot mode", menu)
+        pivot_mode_action = ToolBarWidgetAction("Pivot mode", menu)
         pivot_mode_action.tool_bar.addActions(self.input_type_action_group.actions())
-        session_action = ToolbarWidgetAction("Session", menu)
+        session_action = ToolBarWidgetAction("Session", menu)
         session_action.tool_bar.addActions([self.ui.actionCommit, self.ui.actionRollback])
         session_action.tool_bar.addSeparator()
         session_action.tool_bar.addAction(self.ui.actionView_history)

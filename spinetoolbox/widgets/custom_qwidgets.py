@@ -32,8 +32,8 @@ from PySide2.QtWidgets import (
     QLabel,
     QFrame,
 )
-from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize
-from PySide2.QtGui import QPainter, QFontMetrics
+from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent
+from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent
 from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 
 
@@ -146,11 +146,13 @@ class SimpleFilterWidget(FilterWidgetBase):
 
 
 class CustomWidgetAction(QWidgetAction):
+    """A QWidgetAction with custom hovering."""
+
     def __init__(self, parent=None):
         """Class constructor.
 
         Args:
-            parent (QWidget): the widget's parent
+            parent (QMenu): the widget's parent
         """
         super().__init__(parent)
         self.hovered.connect(self._handle_hovered)
@@ -165,45 +167,48 @@ class CustomWidgetAction(QWidgetAction):
         self.parentWidget().update(self.parentWidget().geometry())
 
 
-class ToolbarWidgetAction(CustomWidgetAction):
+class ToolBarWidgetAction(CustomWidgetAction):
+    """An action with a tool bar.
+
+    Attributes:
+        tool_bar (QToolBar)
+    """
+
+    _parent_key_press_event = None
+
     def __init__(self, text, parent=None, compact=False):
         """Class constructor.
 
         Args:
-            parent (QWidget): the widget's parent
+            parent (QMenu): the widget's parent
         """
         super().__init__(parent)
-        widget = ActionToolbarWidget(text, parent=parent, compact=compact)
+        widget = _MenuToolBarWidget(text, parent=parent, compact=compact)
         self.setDefaultWidget(widget)
         self.tool_bar = widget.tool_bar
+        self.tool_bar.enabled_changed.connect(self.setEnabled)
+        parent.installEventFilter(self)
+
+    def eventFilter(self, obj, ev):
+        if ev.type() == QEvent.KeyPress:
+            self._parent_key_press_event = QKeyEvent(ev.type(), ev.key(), ev.modifiers())
+        return super().eventFilter(obj, ev)
+
+    @Slot()
+    def _handle_hovered(self):
+        super()._handle_hovered()
+        if self._parent_key_press_event:
+            self.tool_bar.keyPressEvent(self._parent_key_press_event)
+            self._parent_key_press_event = None
 
 
-class _MnemonicsToolBar(QToolBar):
-    """Fixes action texts to respect mnemonics (e.g., &Edit), by explicitly re-setting the text to the button.
+class _MenuToolBarWidget(QWidget):
+    """Paints a tool bar beside a menu item.
 
-    Ideally we'd watch for ``self.actionEvent()`` sent with ``QEvent.ActionChanged``, but
-
-        AttributeError: 'PySide2.QtGui.QActionEvent' object has no attribute 'action'
+    Attributes:
+        tool_bar (QToolBar)
     """
 
-    def addActions(self, actions):
-        super().addActions(actions)
-        for action in actions:
-            self._fix_action_text(action)
-
-    def addAction(self, *args, **kwargs):
-        result = super().addAction(*args, **kwargs)
-        action = result if result is not None else args[0]
-        self._fix_action_text(action)
-        return result
-
-    def _fix_action_text(self, action):
-        button = self.widgetForAction(action)
-        button.setText(action.text())
-        action.changed.connect(lambda action=action: button.setText(action.text()))
-
-
-class ActionToolbarWidget(QWidget):
     def __init__(self, text, parent=None, compact=False):
         """Class constructor.
 
@@ -217,27 +222,114 @@ class ActionToolbarWidget(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        self.tool_bar = _MnemonicsToolBar(self)
+        self.tool_bar = _MenuToolBar(self)
+        layout.addSpacing(self.option.rect.width())  # This makes room for the menu item
+        layout.addStretch()
+        layout.addWidget(self.tool_bar)
         if compact:
             self.tool_bar.setFixedHeight(self.option.rect.height())
         extent = qApp.style().pixelMetric(QStyle.PM_SmallIconSize)  # pylint: disable=undefined-variable
         self.tool_bar.setIconSize(QSize(extent, extent))
-        layout.addSpacing(self.option.rect.width())
-        layout.addStretch()
-        layout.addWidget(self.tool_bar)
         self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
     def paintEvent(self, event):
-        """Overridden method."""
+        """Draws the menu item, then calls the super() method to draw the tool bar."""
         painter = QPainter(self)
         self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
         super().paintEvent(event)
 
 
+class _MenuToolBar(QToolBar):
+    """A custom tool bar for ``_MenuToolBarWidget``."""
+
+    enabled_changed = Signal(bool)
+    _enabled = True
+    _focus_widget = None
+
+    def addActions(self, actions):
+        """Overriden method to customize tool buttons."""
+        super().addActions(actions)
+        for action in actions:
+            self._setup_action_button(action)
+
+    def addAction(self, *args, **kwargs):
+        """Overriden method to customize the tool button."""
+        result = super().addAction(*args, **kwargs)
+        action = result if result is not None else args[0]
+        self._setup_action_button(action)
+        return result
+
+    def _setup_action_button(self, action):
+        """Customizes the QToolButton associated with given action:
+            1. Makes sure that the text honores the action's mnemonics.
+            2. Installs this as event filter on the button (see ``self.eventFilter()``).
+
+        Must be called everytime an action is added to the tool bar.
+
+        Args:
+            QAction
+        """
+        button = self.widgetForAction(action)
+        if not button:
+            return
+        button.setText(action.text())
+        action.changed.connect(lambda action=action: button.setText(action.text()))
+        button.installEventFilter(self)
+
+    def actionEvent(self, ev):
+        """Updates ``self._enabled``: True if at least one non-separator action is enabled, False otherwise.
+        Emits ``self.enabled_changed`` accordingly.
+        """
+        super().actionEvent(ev)
+        new_enabled = any(not a.isSeparator() and a.isEnabled() for a in self.actions())
+        if new_enabled != self._enabled:
+            self.enabled_changed.emit(new_enabled)
+        self._enabled = new_enabled
+
+    def eventFilter(self, obj, ev):
+        """Installed on each action's QToolButton.
+        Ignores Up and Down key press events, so they are handled by the toolbar for custom navigation.
+        """
+        if ev.type() == QEvent.KeyPress:
+            if ev.key() in (Qt.Key_Left, Qt.Key_Right):
+                ev.accept()
+                return True
+            if ev.key() in (Qt.Key_Up, Qt.Key_Down):
+                ev.ignore()
+                return True
+        return super().eventFilter(obj, ev)
+
+    def keyPressEvent(self, ev):
+        """Navigates over the tool bar buttons."""
+        if ev.key() in (Qt.Key_Left, Qt.Key_Right):  # FIXME
+            ev.ignore()
+            return
+        if ev.key() in (Qt.Key_Up, Qt.Key_Down):
+            widgets = [self.widgetForAction(a) for a in self.actions() if not a.isSeparator() and a.isEnabled()]
+            if self._focus_widget not in widgets:
+                self._focus_widget = None
+            if self._focus_widget is None:
+                next_index = 0 if ev.key() == Qt.Key_Down else len(widgets) - 1
+            else:
+                index = widgets.index(self._focus_widget)
+                next_index = index + 1 if ev.key() == Qt.Key_Down else index - 1
+            if 0 <= next_index < len(widgets):
+                self._focus_widget = widgets[next_index]
+                self._focus_widget.setFocus()
+                return
+            self._focus_widget = None
+            ev.ignore()
+        super().keyPressEvent(ev)
+
+    def hideEvent(self, ev):
+        super().hideEvent(ev)
+        if self._focus_widget is not None:
+            self._focus_widget.clearFocus()
+            self._focus_widget = None
+
+
 class TitleWidgetAction(CustomWidgetAction):
-    """
-    A widget action for adding titled sections to menus.
-    """
+    """A titled separator."""
 
     # NOTE: I'm aware of QMenu.addSection(), but it doesn't seem to work on all platforms?
 
@@ -264,3 +356,6 @@ class TitleWidgetAction(CustomWidgetAction):
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
         layout.addWidget(line)
+
+    def isSeparator(self):  # pylint: disable=no-self-use
+        return True

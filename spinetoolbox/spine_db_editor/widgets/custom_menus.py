@@ -16,9 +16,9 @@ Classes for custom context menus and pop-up menus.
 :date:   13.5.2020
 """
 
-from PySide2.QtWidgets import QWidgetAction, QMenu
+from PySide2.QtWidgets import QWidgetAction, QMenu, QWidget
 from PySide2.QtCore import Qt, QEvent, QPoint, Signal, Slot
-from PySide2.QtGui import QKeyEvent
+from PySide2.QtGui import QKeyEvent, QKeySequence
 from .custom_qwidgets import LazyFilterWidget, DataToValueFilterWidget
 from ...widgets.custom_menus import FilterMenuBase
 
@@ -32,10 +32,14 @@ class MainMenu(QMenu):
         """
         if ev.type() == QEvent.KeyPress and ev.key() == Qt.Key_Alt:
             return True
-        if ev.type() == QEvent.ShortcutOverride and ev.modifiers() & Qt.AltModifier == 0:
-            ev = QKeyEvent(QEvent.KeyPress, ev.key(), ev.modifiers() | Qt.AltModifier)
-            qApp.postEvent(self, ev)  # pylint: disable=undefined-variable
-            return True
+        if ev.type() == QEvent.ShortcutOverride and ev.modifiers() == Qt.NoModifier:
+            actions = self.actions() + [a for child in self.findChildren(QWidget) for a in child.actions()]
+            mnemonics = [QKeySequence.mnemonic(a.text()) for a in actions]
+            key_seq = QKeySequence(Qt.ALT + ev.key())
+            if key_seq in mnemonics:
+                ev = QKeyEvent(QEvent.KeyPress, ev.key(), Qt.AltModifier)
+                qApp.postEvent(self, ev)  # pylint: disable=undefined-variable
+                return True
         if ev.type() == QEvent.Show:
             pev = QKeyEvent(QEvent.KeyPress, Qt.Key_Alt, Qt.NoModifier)
             qApp.postEvent(self, pev)  # pylint: disable=undefined-variable
