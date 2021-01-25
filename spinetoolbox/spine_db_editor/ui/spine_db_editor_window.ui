@@ -924,7 +924,7 @@
      <normaloff>:/icons/menu_icons/copy.svg</normaloff>:/icons/menu_icons/copy.svg</iconset>
    </property>
    <property name="text">
-    <string>Copy</string>
+    <string>Cop&amp;y</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -939,7 +939,7 @@
      <normaloff>:/icons/menu_icons/paste.svg</normaloff>:/icons/menu_icons/paste.svg</iconset>
    </property>
    <property name="text">
-    <string>Paste</string>
+    <string>P&amp;aste</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
@@ -1038,7 +1038,7 @@
      <normaloff>:/icons/menu_icons/undo.svg</normaloff>:/icons/menu_icons/undo.svg</iconset>
    </property>
    <property name="text">
-    <string>Undo</string>
+    <string>Un&amp;do</string>
    </property>
   </action>
   <action name="actionRedo">
@@ -1047,7 +1047,7 @@
      <normaloff>:/icons/menu_icons/redo.svg</normaloff>:/icons/menu_icons/redo.svg</iconset>
    </property>
    <property name="text">
-    <string>Redo</string>
+    <string>&amp;Redo</string>
    </property>
   </action>
   <action name="actionNew_db_file">

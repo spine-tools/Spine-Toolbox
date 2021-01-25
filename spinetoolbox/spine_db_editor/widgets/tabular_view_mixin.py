@@ -40,7 +40,7 @@ class TabularViewMixin:
 
     _PARAMETER_VALUE = "&Value"
     _INDEX_EXPANSION = "&Index"
-    _RELATIONSHIP = "&Relationship"
+    _RELATIONSHIP = "Re&lationship"
     _SCENARIO_ALTERNATIVE = "&Scenario"
 
     _PARAMETER = "parameter"

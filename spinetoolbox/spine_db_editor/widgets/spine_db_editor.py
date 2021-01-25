@@ -240,7 +240,7 @@ class SpineDBEditorBase(QMainWindow):
             [self.ui.actionStacked_style, self.ui.actionPivot_style, self.ui.actionGraph_style]
         )
         view_action.tool_bar.addSeparator()
-        docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "&Docks...")
+        docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "Doc&ks...")
         docks_menu_action.setMenu(self._make_docks_menu())
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
         docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
