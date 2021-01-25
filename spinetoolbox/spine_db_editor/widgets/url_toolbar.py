@@ -45,6 +45,10 @@ class UrlToolBar(QToolBar):
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 
+    @property
+    def line_edit(self):
+        return self._line_edit
+
     def _add_open_project_url_menu(self):
         toolbox = self._db_editor.toolbox
         if toolbox is None:

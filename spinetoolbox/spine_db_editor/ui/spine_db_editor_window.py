@@ -483,10 +483,6 @@ class Ui_MainWindow(object):
 
         self.dockWidget_tool_feature_tree.setWidget(self.dockWidgetContents_13)
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_tool_feature_tree)
-        QWidget.setTabOrder(self.tableView_object_parameter_value, self.tableView_object_parameter_definition)
-        QWidget.setTabOrder(self.tableView_object_parameter_definition, self.tableView_relationship_parameter_value)
-        QWidget.setTabOrder(self.tableView_relationship_parameter_value, self.tableView_relationship_parameter_definition)
-        QWidget.setTabOrder(self.tableView_relationship_parameter_definition, self.treeView_parameter_value_list)
 
         self.retranslateUi(MainWindow)
 

@@ -19,7 +19,16 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QErrorMessage,
+    QDockWidget,
+    QMessageBox,
+    QMenu,
+    QTreeView,
+    QTableView,
+    QTabBar,
+)
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import (
@@ -376,13 +385,6 @@ class SpineDBEditorBase(QMainWindow):
         if self.silenced:
             return
         self.notification_stack.push_link(msg, open_link=open_link)
-
-    def restore_dock_widgets(self):
-        """Docks all floating and or hidden QDockWidgets back to the window."""
-        for dock in self.findChildren(QDockWidget):
-            dock.setVisible(True)
-            dock.setFloating(False)
-            self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
     @Slot()
     def refresh_copy_paste_actions(self):
@@ -979,6 +981,10 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         """
         super().__init__(db_mngr)
         self._size = None
+        dock_views = {d: d.findChild(QTreeView) or d.findChild(QTableView) for d in self.findChildren(QDockWidget)}
+        self._dock_views = {d: v for d, v in dock_views.items() if v is not None}
+        self._refresh_timer = QTimer(self)  # Used to limit refresh
+        self._refresh_timer.setSingleShot(True)
         self.add_main_menu()
         self.connect_signals()
         self.apply_stacked_style()
@@ -989,6 +995,40 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
         self.ui.actionPivot_style.triggered.connect(self.apply_pivot_style)
+        self._refresh_timer.timeout.connect(self._refresh_tab_order)
+        for dock in self._dock_views:
+            dock.visibilityChanged.connect(self._restart_refresh_timer)
+
+    @Slot(bool)
+    def _restart_refresh_timer(self, _visible=None):
+        self._refresh_timer.start(10)
+
+    @Slot()
+    def _refresh_tab_order(self):
+        visible_docks = []
+        for dock, view in self._dock_views.items():
+            if dock.pos().x() >= 0 and not dock.isFloating():
+                visible_docks.append(dock)
+                view.setFocusPolicy(Qt.StrongFocus)
+            else:
+                view.setFocusPolicy(Qt.ClickFocus)
+        if not visible_docks:
+            return
+        sorted_docks = sorted(visible_docks, key=lambda d: (d.pos().x(), d.pos().y()))
+        tab_bars = {}
+        for tab_bar in self.findChildren(QTabBar):
+            i = tab_bar.currentIndex()
+            if i != -1:
+                tab_bars[tab_bar.tabText(i)] = tab_bar
+        sorted_widgets = []
+        for dock in sorted_docks:
+            sorted_widgets.append(self._dock_views[dock])
+            tab_bar = tab_bars.get(dock.windowTitle())
+            if tab_bar is not None:
+                sorted_widgets.append(tab_bar)
+        self.setTabOrder(self.url_toolbar.line_edit, sorted_widgets[0])
+        for first, second in zip(sorted_widgets[:-1], sorted_widgets[1:]):
+            self.setTabOrder(first, second)
 
     def tabify_and_raise(self, docks):
         """
@@ -1001,8 +1041,17 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.tabifyDockWidget(first, second)
         docks[0].raise_()
 
+    def restore_dock_widgets(self):
+        """Docks all floating and or hidden QDockWidgets back to the window."""
+        for dock in self._dock_views:
+            dock.setVisible(True)
+            dock.setFloating(False)
+            self.addDockWidget(Qt.RightDockWidgetArea, dock)
+
     def begin_style_change(self):
         """Begins a style change operation."""
+        for dock in self._dock_views:
+            dock.visibilityChanged.disconnect(self._restart_refresh_timer)
         self._size = self.size()
         self.restore_dock_widgets()
 
@@ -1011,6 +1060,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         qApp.processEvents()  # pylint: disable=undefined-variable
         self.ui.dockWidget_exports.hide()
         self.resize(self._size)
+        for dock in self._dock_views:
+            dock.visibilityChanged.connect(self._restart_refresh_timer)
+        self._restart_refresh_timer()
 
     @Slot(bool)
     def apply_stacked_style(self, checked=False):

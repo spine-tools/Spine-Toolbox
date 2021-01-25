@@ -134,6 +134,8 @@ class MultiSpineDBEditor(QMainWindow):
         self._file_open_toolbar.hide()
         self.addToolBar(Qt.BottomToolBarArea, self._file_open_toolbar)
         self.connect_signals()
+        for w in self.findChildren(QWidget):
+            w.setFocusPolicy(Qt.ClickFocus)
 
     def show(self):
         super().show()

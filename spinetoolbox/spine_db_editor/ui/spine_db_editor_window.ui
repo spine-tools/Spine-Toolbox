@@ -1142,13 +1142,6 @@
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
- <tabstops>
-  <tabstop>tableView_object_parameter_value</tabstop>
-  <tabstop>tableView_object_parameter_definition</tabstop>
-  <tabstop>tableView_relationship_parameter_value</tabstop>
-  <tabstop>tableView_relationship_parameter_definition</tabstop>
-  <tabstop>treeView_parameter_value_list</tabstop>
- </tabstops>
  <resources>
   <include location="../../ui/resources/resources_icons.qrc"/>
  </resources>
