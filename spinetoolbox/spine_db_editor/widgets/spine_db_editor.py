@@ -19,16 +19,7 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import (
-    QMainWindow,
-    QErrorMessage,
-    QDockWidget,
-    QMessageBox,
-    QMenu,
-    QTreeView,
-    QTableView,
-    QTabBar,
-)
+from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu, QAbstractScrollArea, QTabBar
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import (
@@ -981,8 +972,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         """
         super().__init__(db_mngr)
         self._size = None
-        dock_views = {d: d.findChild(QTreeView) or d.findChild(QTableView) for d in self.findChildren(QDockWidget)}
-        self._dock_views = {d: v for d, v in dock_views.items() if v is not None}
+        self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._refresh_timer = QTimer(self)  # Used to limit refresh
         self._refresh_timer.setSingleShot(True)
         self.add_main_menu()
@@ -1007,6 +997,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def _refresh_tab_order(self):
         visible_docks = []
         for dock, view in self._dock_views.items():
+            if view is None:
+                continue
             if dock.pos().x() >= 0 and not dock.isFloating():
                 visible_docks.append(dock)
                 view.setFocusPolicy(Qt.StrongFocus)

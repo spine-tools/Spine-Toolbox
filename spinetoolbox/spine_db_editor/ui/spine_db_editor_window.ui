@@ -650,6 +650,9 @@
        <property name="contextMenuPolicy">
         <enum>Qt::DefaultContextMenu</enum>
        </property>
+       <property name="tabKeyNavigation">
+        <bool>false</bool>
+       </property>
       </widget>
      </item>
     </layout>
@@ -683,6 +686,9 @@
       <widget class="FrozenTableView" name="frozen_table">
        <property name="acceptDrops">
         <bool>true</bool>
+       </property>
+       <property name="tabKeyNavigation">
+        <bool>false</bool>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::SingleSelection</enum>

@@ -398,6 +398,7 @@ class Ui_MainWindow(object):
         self.pivot_table = PivotTableView(self.dockWidgetContents_10)
         self.pivot_table.setObjectName(u"pivot_table")
         self.pivot_table.setContextMenuPolicy(Qt.DefaultContextMenu)
+        self.pivot_table.setTabKeyNavigation(False)
 
         self.verticalLayout_13.addWidget(self.pivot_table)
 
@@ -414,6 +415,7 @@ class Ui_MainWindow(object):
         self.frozen_table = FrozenTableView(self.dockWidgetContents_11)
         self.frozen_table.setObjectName(u"frozen_table")
         self.frozen_table.setAcceptDrops(True)
+        self.frozen_table.setTabKeyNavigation(False)
         self.frozen_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.frozen_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.frozen_table.verticalHeader().setVisible(False)
