@@ -903,6 +903,7 @@ class Link(LinkBase):
         unfetched_db_maps = {
             r: self.db_mngr.get_db_map(url, self._toolbox) for url, r in self._unfetched_db_resources.items()
         }
+        unfetched_db_maps = {r: db_map for r, db_map in unfetched_db_maps.items() if db_map is not None}
         if unfetched_db_maps:
             self.resource_filter_model.init_resources(unfetched_db_maps)
             db_map_scenarios = {}
