@@ -34,15 +34,20 @@ class PropertyQLineEdit(QLineEdit):
             e (QKeyEvent): Event
         """
         mw = self.nativeParentWidget()  # ToolboxUI
+        try:
+            undo_stack = mw.undo_stack
+        except AttributeError:
+            super().keyPressEvent(e)
+            return
         if e.matches(QKeySequence.Undo):
-            mw.undo_stack.undo()
+            undo_stack.undo()
         elif e.matches(QKeySequence.Redo):
-            mw.undo_stack.redo()
+            undo_stack.redo()
         else:
             super().keyPressEvent(e)
 
 
-class CustomQLineEdit(QLineEdit):
+class CustomQLineEdit(PropertyQLineEdit):
     """A custom QLineEdit that accepts file drops and displays the path.
 
     Attributes:
@@ -75,19 +80,3 @@ class CustomQLineEdit(QLineEdit):
         """Emit file_dropped signal with the file for the dropped url."""
         url = event.mimeData().urls()[0]
         self.file_dropped.emit(url.toLocalFile())
-
-    def keyPressEvent(self, e):
-        """Overridden to catch and pass on the
-        Undo and Redo commands when this line
-        edit has the focus.
-
-        Args:
-            e (QKeyEvent): Event
-        """
-        mw = self.nativeParentWidget()  # ToolboxUI
-        if e.matches(QKeySequence.Undo):
-            mw.undo_stack.undo()
-        elif e.matches(QKeySequence.Redo):
-            mw.undo_stack.redo()
-        else:
-            super().keyPressEvent(e)
