@@ -36,6 +36,7 @@ from PySide2.QtWidgets import (
     QDockWidget,
     QAction,
     QUndoStack,
+
 )
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from spine_engine.utils.helpers import shorten
@@ -216,8 +217,10 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         self.ui.actionCopy.triggered.connect(self.project_item_to_clipboard)
-        self.ui.actionPaste.triggered.connect(self.project_item_from_clipboard)
-        self.ui.actionDuplicate.triggered.connect(self.duplicate_project_item)
+        self.ui.actionPaste.triggered.connect(lambda: self.project_item_from_clipboard(duplicate_files=False))
+        self.ui.actionDuplicate.triggered.connect(lambda: self.duplicate_project_item(duplicate_files=False))
+        self.ui.actionPasteAndDuplicateFiles.triggered.connect(lambda: self.project_item_from_clipboard(duplicate_files=True))
+        self.ui.actionDuplicateAndDuplicateFiles.triggered.connect(lambda: self.duplicate_project_item(duplicate_files=True))
         self.ui.actionOpen_project_directory.triggered.connect(self._open_project_directory)
         self.ui.actionOpen_item_directory.triggered.connect(self._open_project_item_directory)
         self.ui.actionRename_item.triggered.connect(self._rename_project_item)
@@ -1786,7 +1789,7 @@ class ToolboxUI(QMainWindow):
         item_dict["x"] = new_x
         item_dict["y"] = new_y
 
-    def _deserialize_items(self, items_dict):
+    def _deserialize_items(self, items_dict, duplicate_files=False):
         """
         Deserializes project items from a dictionary and adds them to the current project.
 
@@ -1801,6 +1804,7 @@ class ToolboxUI(QMainWindow):
         scene_rect = scene.sceneRect()
         final_items_dict = dict()
         for name, item_dict in items_dict.items():
+            item_dict["duplicate_files"] = duplicate_files
             if self.project_item_model.find_item(name) is not None:
                 new_name = self.propose_item_name(name)
                 final_items_dict[new_name] = item_dict
@@ -1822,8 +1826,10 @@ class ToolboxUI(QMainWindow):
         clipboard.setMimeData(data)
 
     @Slot()
-    def project_item_from_clipboard(self):
-        """Adds project items in system's clipboard to the current project."""
+    def project_item_from_clipboard(self, duplicate_files=False):
+        """Adds project items in system's clipboard to the current project.
+        args: duplicate_files bool
+        """
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         byte_data = mime_data.data("application/vnd.spinetoolbox.ProjectItem")
@@ -1831,15 +1837,15 @@ class ToolboxUI(QMainWindow):
             return
         item_dump = str(byte_data.data(), "utf-8")
         item_dicts = json.loads(item_dump)
-        self._deserialize_items(item_dicts)
+        self._deserialize_items(item_dicts, duplicate_files)
 
     @Slot()
-    def duplicate_project_item(self):
+    def duplicate_project_item(self, duplicate_files=False):
         """Duplicates the selected project items."""
         item_dicts = self._serialize_selected_items()
         if not item_dicts:
             return
-        self._deserialize_items(item_dicts)
+        self._deserialize_items(item_dicts, duplicate_files)
 
     def propose_item_name(self, prefix):
         """
@@ -1866,7 +1872,8 @@ class ToolboxUI(QMainWindow):
 
     def _create_item_edit_actions(self):
         """Creates project item edit actions (copy, paste, duplicate) and adds them to proper places."""
-        actions = [self.ui.actionCopy, self.ui.actionPaste, self.ui.actionPaste, self.ui.actionRemove]
+        actions = [self.ui.actionCopy, self.ui.actionPaste, self.ui.actionPasteAndDuplicateFiles,
+                   self.ui.actionDuplicate, self.ui.actionDuplicateAndDuplicateFiles, self.ui.actionRemove]
         for action in actions:
             action.setShortcutContext(Qt.WidgetShortcut)
             self.ui.treeView_project.addAction(action)
@@ -1978,7 +1985,9 @@ class ToolboxUI(QMainWindow):
             menu.addSeparator()
         menu.addAction(self.ui.actionCopy)
         menu.addAction(self.ui.actionPaste)
+        menu.addAction(self.ui.actionPasteAndDuplicateFiles)
         menu.addAction(self.ui.actionDuplicate)
+        menu.addAction(self.ui.actionDuplicateAndDuplicateFiles)
         menu.addAction(self.ui.actionOpen_item_directory)
         menu.addSeparator()
         menu.addAction(self.ui.actionRemove)

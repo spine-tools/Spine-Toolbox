@@ -185,7 +185,9 @@
     </property>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
+    <addaction name="actionPasteAndDuplicateFiles"/>
     <addaction name="actionDuplicate"/>
+    <addaction name="actionDuplicateAndDuplicateFiles"/>
     <addaction name="separator"/>
     <addaction name="actionRemove"/>
     <addaction name="actionRemove_all"/>
@@ -890,6 +892,25 @@
    </property>
    <property name="text">
     <string>New DB editor</string>
+   </property>
+  </action>
+  <action name="actionPasteAndDuplicateFiles">
+   <property name="text">
+    <string>Paste ProjectItem and duplicate files</string>
+   </property>
+   <property name="toolTip">
+    <string>Paste ProjectItem and duplicate files</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+V</string>
+   </property>
+  </action>
+  <action name="actionDuplicateAndDuplicateFiles">
+   <property name="text">
+    <string>Duplicate ProjectItem and duplicate files</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+D</string>
    </property>
   </action>
  </widget>
