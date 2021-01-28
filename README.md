@@ -39,9 +39,6 @@ Step-by-step instructions:
 [miniconda](https://docs.conda.io/en/latest/miniconda.html)
 
 2. Open Anaconda prompt
-3. Install **git** into the base environment
-
-        conda install -c anaconda git
 
 4. Create a new environment by typing
 
@@ -51,12 +48,15 @@ Step-by-step instructions:
 
         conda activate spinetoolbox
 
+3. Install **git** into the new environment
+        conda install -c anaconda git
+
 6. Clone either the `master` or the latest release branch from Spine Toolbox 
    repository on GitHub onto your computer. 
 7. cd to Spine Toolbox root directory (the one with requirements.txt)
 8. Install requirements using **pip**
 
-        pip install -r requirements.txt
+        python -m pip install -r requirements.txt
 
 9. Run
 
