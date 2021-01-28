@@ -1,0 +1,16 @@
+Rebnis_pwr_plant	Rebnis_upper
+Sadva_pwr_plant	Sadva_upper
+Bergnäs_pwr_plant	Bergnäs_upper
+Slagnäs_pwr_plant	Slagnäs_upper
+Bastusel_pwr_plant	Bastusel_upper
+Grytfors_pwr_plant	Grytfors_upper
+Gallejaur_pwr_plant	Gallejaur_upper
+Vargfors_pwr_plant	Vargfors_upper
+Rengård_pwr_plant	Rengård_upper
+Båtfors_pwr_plant	Båtfors_upper
+Finnfors_pwr_plant	Finnfors_upper
+Granfors_pwr_plant	Granfors_upper
+Krångfors_pwr_plant	Krångfors_upper
+Selsfors_pwr_plant	Selsfors_upper
+Kvistforsen_pwr_plant	Kvistforsen_upper
+electricity_load	electricity_node

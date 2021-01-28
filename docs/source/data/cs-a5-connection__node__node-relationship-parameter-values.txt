@@ -1,0 +1,56 @@
+connection__node__node	Bastusel_to_Grytfors_disch,Grytfors_upper,Bastusel_lower	connection_flow_delay	Base	{"type": "duration", "data": "1h"}
+connection__node__node	Bastusel_to_Grytfors_spill,Grytfors_upper,Bastusel_upper	connection_flow_delay	Base	{"type": "duration", "data": "150m"}
+connection__node__node	Bergnäs_to_Slagnäs_disch,Slagnäs_upper,Bergnäs_lower	connection_flow_delay	Base	{"type": "duration", "data": "1h"}
+connection__node__node	Bergnäs_to_Slagnäs_spill,Slagnäs_upper,Bergnäs_upper	connection_flow_delay	Base	{"type": "duration", "data": "1h"}
+connection__node__node	Båtfors_to_Finnfors_disch,Finnfors_upper,Båtfors_lower	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Båtfors_to_Finnfors_spill,Finnfors_upper,Båtfors_upper	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Finnfors_to_Granfors_disch,Granfors_upper,Finnfors_lower	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Finnfors_to_Granfors_spill,Granfors_upper,Finnfors_upper	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Gallejaur_to_Vargfors_disch,Vargfors_upper,Gallejaur_lower	connection_flow_delay	Base	{"type": "duration", "data": "30m"}
+connection__node__node	Gallejaur_to_Vargfors_spill,Vargfors_upper,Gallejaur_upper	connection_flow_delay	Base	{"type": "duration", "data": "150m"}
+connection__node__node	Granfors_to_Krångfors_disch,Krångfors_upper,Granfors_lower	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Granfors_to_Krångfors_spill,Krångfors_upper,Granfors_upper	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Grytfors_to_Gallejaur_disch,Gallejaur_upper,Grytfors_lower	connection_flow_delay	Base	{"type": "duration", "data": "15m"}
+connection__node__node	Grytfors_to_Gallejaur_spill,Gallejaur_upper,Grytfors_upper	connection_flow_delay	Base	{"type": "duration", "data": "15m"}
+connection__node__node	Krångfors_to_Selsfors_disch,Selsfors_upper,Krångfors_lower	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Krångfors_to_Selsfors_spill,Selsfors_upper,Krångfors_upper	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Rebnis_to_Bergnäs_disch,Bergnäs_upper,Rebnis_lower	connection_flow_delay	Base	{"type": "duration", "data": "2D"}
+connection__node__node	Rebnis_to_Bergnäs_spill,Bergnäs_upper,Rebnis_upper	connection_flow_delay	Base	{"type": "duration", "data": "2D"}
+connection__node__node	Rengård_to_Båtfors_disch,Båtfors_upper,Rengård_lower	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Rengård_to_Båtfors_spill,Båtfors_upper,Rengård_upper	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Sadva_to_Bergnäs_disch,Bergnäs_upper,Sadva_lower	connection_flow_delay	Base	{"type": "duration", "data": "2D"}
+connection__node__node	Sadva_to_Bergnäs_spill,Bergnäs_upper,Sadva_upper	connection_flow_delay	Base	{"type": "duration", "data": "2D"}
+connection__node__node	Selsfors_to_Kvistforsen_disch,Kvistforsen_upper,Selsfors_lower	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Selsfors_to_Kvistforsen_spill,Kvistforsen_upper,Selsfors_upper	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Slagnäs_to_Bastusel_disch,Bastusel_upper,Slagnäs_lower	connection_flow_delay	Base	{"type": "duration", "data": "4h"}
+connection__node__node	Slagnäs_to_Bastusel_spill,Bastusel_upper,Slagnäs_upper	connection_flow_delay	Base	{"type": "duration", "data": "4h"}
+connection__node__node	Vargfors_to_Rengård_disch,Rengård_upper,Vargfors_lower	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Vargfors_to_Rengård_spill,Rengård_upper,Vargfors_upper	connection_flow_delay	Base	{"type": "duration", "data": "3h"}
+connection__node__node	Bastusel_to_Grytfors_disch,Grytfors_upper,Bastusel_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Bastusel_to_Grytfors_spill,Grytfors_upper,Bastusel_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Bergnäs_to_Slagnäs_disch,Slagnäs_upper,Bergnäs_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Bergnäs_to_Slagnäs_spill,Slagnäs_upper,Bergnäs_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Båtfors_to_Finnfors_disch,Finnfors_upper,Båtfors_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Båtfors_to_Finnfors_spill,Finnfors_upper,Båtfors_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Finnfors_to_Granfors_disch,Granfors_upper,Finnfors_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Finnfors_to_Granfors_spill,Granfors_upper,Finnfors_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Gallejaur_to_Vargfors_disch,Vargfors_upper,Gallejaur_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Gallejaur_to_Vargfors_spill,Vargfors_upper,Gallejaur_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Granfors_to_Krångfors_disch,Krångfors_upper,Granfors_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Granfors_to_Krångfors_spill,Krångfors_upper,Granfors_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Grytfors_to_Gallejaur_disch,Gallejaur_upper,Grytfors_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Grytfors_to_Gallejaur_spill,Gallejaur_upper,Grytfors_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Krångfors_to_Selsfors_disch,Selsfors_upper,Krångfors_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Krångfors_to_Selsfors_spill,Selsfors_upper,Krångfors_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Rebnis_to_Bergnäs_disch,Bergnäs_upper,Rebnis_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Rebnis_to_Bergnäs_spill,Bergnäs_upper,Rebnis_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Rengård_to_Båtfors_disch,Båtfors_upper,Rengård_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Rengård_to_Båtfors_spill,Båtfors_upper,Rengård_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Sadva_to_Bergnäs_disch,Bergnäs_upper,Sadva_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Sadva_to_Bergnäs_spill,Bergnäs_upper,Sadva_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Selsfors_to_Kvistforsen_disch,Kvistforsen_upper,Selsfors_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Selsfors_to_Kvistforsen_spill,Kvistforsen_upper,Selsfors_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Slagnäs_to_Bastusel_disch,Bastusel_upper,Slagnäs_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Slagnäs_to_Bastusel_spill,Bastusel_upper,Slagnäs_upper	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Vargfors_to_Rengård_disch,Rengård_upper,Vargfors_lower	fix_ratio_out_in_connection_flow	Base	1
+connection__node__node	Vargfors_to_Rengård_spill,Rengård_upper,Vargfors_upper	fix_ratio_out_in_connection_flow	Base	1

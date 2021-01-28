@@ -1,0 +1,17 @@
+unit__from_node	Bastusel_pwr_plant,Bastusel_upper	unit_capacity	Base	127.5
+unit__from_node	Bergnäs_pwr_plant,Bergnäs_upper	unit_capacity	Base	120
+unit__from_node	Båtfors_pwr_plant,Båtfors_upper	unit_capacity	Base	210
+unit__from_node	Finnfors_pwr_plant,Finnfors_upper	unit_capacity	Base	176.25
+unit__from_node	Gallejaur_pwr_plant,Gallejaur_upper	unit_capacity	Base	228.75
+unit__from_node	Granfors_pwr_plant,Granfors_upper	unit_capacity	Base	180
+unit__from_node	Grytfors_pwr_plant,Grytfors_upper	unit_capacity	Base	123.75
+unit__from_node	Krångfors_pwr_plant,Krångfors_upper	unit_capacity	Base	180
+unit__from_node	Kvistforsen_pwr_plant,Kvistforsen_upper	minimum_operating_point	Base	0.0888888888889
+unit__from_node	Kvistforsen_pwr_plant,Kvistforsen_upper	unit_capacity	Base	225
+unit__from_node	Rebnis_pwr_plant,Rebnis_upper	unit_capacity	Base	60
+unit__from_node	Rengård_pwr_plant,Rengård_upper	unit_capacity	Base	165
+unit__from_node	Sadva_pwr_plant,Sadva_upper	unit_capacity	Base	52.5
+unit__from_node	Selsfors_pwr_plant,Selsfors_upper	unit_capacity	Base	225
+unit__from_node	Slagnäs_pwr_plant,Slagnäs_upper	unit_capacity	Base	120
+unit__from_node	Vargfors_pwr_plant,Vargfors_upper	unit_capacity	Base	232.5
+unit__from_node	electricity_load,electricity_node	vom_cost	Base	{"type": "time_series", "index": {"start": "2019-01-01 00:00:00", "resolution": "1h", "ignore_year": false, "repeat": false}, "data": [-162.03, -156.36, -151.06, -153.52, -158.91, -164.02, -175.56, -283.11, -278.76, -299.57, -285.28, -207.34, -194.95, -190.41, -185.4, -183.41, -191.54, -202.9, -197.69, -195.33, -186.72, -178.87, -174.71, -168.75, -172.89, -172.13, -171.66, -173.27, -176.97, -179.63, -226.41, -271.96, -399.3, -402.53, -353.28, -330.79, -294.54, -271.29, -248.71, -226.79, -240.93, -374.44, -255.54, -210.47, -186.65, -178.21, -173.18, -166.44, -165.09, -162.91, -161.11, -162.53, -166.04, -169.16, -174.28, -185.37, -195.79, -189.92, -187.74, -181.96, -179.12, -178.36, -177.13, -177.03, -177.69, -184.8, -187.27, -179.49, -175.23, -172.67, -169.07, -165.37, -170.06, -171.48, -171.58, -174.14, -180.3, -185.89, -195.37, -328.65, -365.91, -315.0, -242.68, -230.73, -225.33, -225.8, -213.38, -207.32, -215.37, -243.81, -243.53, -215.56, -192.05, -187.88, -181.15, -172.15, -174.16, -171.05, -170.77, -174.82, -179.62, -178.87, -191.49, -229.64, -336.07, -242.07, -228.5, -201.85, -196.67, -192.34, -190.36, -187.44, -186.68, -190.26, -191.21, -187.53, -179.34, -171.9, -166.53, -160.59, -166.08, -157.74, -145.36, -145.64, -147.42, -149.77, -153.33, -141.33, -145.08, -150.52, -153.42, -159.43, -159.05, -149.49, -147.89, -150.52, -157.08, -172.37, -174.06, -171.15, -160.46, -147.8, -141.61, -134.39, -144.41, -140.19, -138.59, -140.0, -139.53, -140.28, -144.03, -146.57, -149.39, -156.24, -157.93, -156.43, -155.21, -149.86, -148.07, -147.13, -148.82, -162.53, -174.74, -170.89, -163.94, -157.93, -150.7, -143.94]}

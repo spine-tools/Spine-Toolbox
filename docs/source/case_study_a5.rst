@@ -2,15 +2,16 @@
     Created: 18.6.2018
 
 
-.. |ds_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/database.svg
+.. |ds_icon| image:: img/project_item_icons/database.svg
             :width: 16
-.. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
+.. |tool_icon| image:: img/project_item_icons/hammer.svg
              :width: 16
-
-.. _SpineData.jl: https://gitlab.vtt.fi/spine/data/tree/manuelma
-.. _SpineOpt.jl: https://github.com/Spine-project/SpineOpt.jl
-.. _Jupyter: http://jupyter.org/
-.. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
+.. |execute_project| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
+             :width: 16
+.. |new| image:: ../../spinetoolbox/ui/resources/menu_icons/file.svg
+             :width: 16
+.. |save| image:: ../../spinetoolbox/ui/resources/menu_icons/save_solid.svg
+             :width: 16
 
 
 **********************
@@ -81,13 +82,13 @@ Each power station in the river is modelled using the following elements:
 
 - An upper water node, located at the entrance of the station.
 - A lower water node, located at the exit of the station.
-- A reservoir unit, that takes water from the upper node to put it into a water storage and viceversa.
 - A power plant unit, that discharges water from the upper node into the lower node,
   and feeds electricity produced in the process to the common electricity node.
 - A spillway connection, that takes spilled water from the upper node and releases it to the downstream upper node.
 - A discharge connection, that takes water from the lower node and releases it to the downstream upper node.
 
 Below is a schematic of the model. For clarity, only the Rebnis station is presented in full detail:
+
 
 .. image:: img/case_study_a5_schematic.png
    :align: center
@@ -99,42 +100,110 @@ Guide
 Installing requirements
 =======================
 
-Make sure that Spine Toolbox and julia 1.0 (or greater) are properly installed
-as described at the following links:
+.. note:: This tutorial is written for latest `Spine Toolbox 
+   <https://github.com/Spine-project/Spine-Toolbox/>`_ and `SpineOpt 
+   <https://github.com/Spine-project/SpineOpt.jl>`_ development versions.
 
-- `Running Spine Toolbox <https://github.com/Spine-project/Spine-Toolbox#running-spine-toolbox>`_
-- `Julia downloads <https://julialang.org/downloads/>`_
+#. Install Spine Toolbox as described `here 
+   <https://github.com/Spine-project/Spine-Toolbox#installing-spine-toolbox>`_.
+
+#. Download and install Julia 1.2 (or greater) as described `here <https://julialang.org/downloads/>`_.
+
+#. Install SpineOpt: Launch Spine Toolbox and select
+   **File -> Tool configuration assistants... -> SpineOpt.jl** from the main menu.
+
+
+Creating a new project
+======================
+
+Each Spine Toolbox project resides in its own directory, where the user 
+can store data, programming scripts and other material needed for the project. 
+The Toolbox application also creates its own special subdirectory `.spinetoolbox`, 
+for project settings, etc.
+
+To create a new project, select **File -> New project...** from Spine Toolbox main menu.
+Browse to a location where you want to create the project and create a new folder for it,
+called e.g. ‘Case Study A5’, and then click **Open**.
+
+
+Configuring SpineOpt 
+~~~~~~~~~~~~~~~~~~~~
+
+#. To use SpineOpt in your project, you need to create a Tool specification for it.
+   Click on the small arrow next to the Tool icon |tool_icon| (in the *Items* section of the tool bar),
+   and select **Create new Tool Specification...** from the drop-down menu.
+   The *Edit Tool Specification* form will popup:
+
+   .. image:: img/edit_tool_specification_new_program_file.png
+         :align: center
+
+#. Type ‘SpineOpt’ as the name of the specification and select ‘Julia’ as the type.
+   Unselect *Execute in work directory*. 
+
+#. Click on |new| (marked in red in the image above) to create a new Julia file.
+   Enter a file name, e.g. ‘run_spineopt.jl’, and click **Save**.
+
+#. Back in the *Edit Tool Specification* form, you should now see a small text editor
+   with the legend *Create main program file here...*
+   Go ahead and enter the following text in it: 
+
+   .. code-block:: julia
+
+      using SpineOpt
+      run_spineopt(ARGS...)
+
+   At this point, the form should be looking similar to this:
+
+   .. image:: img/edit_tool_specification_spine_opt.png
+         :align: center
+
+#. Click |save| (marked in red in the image above) to save the main program file,
+   and then **Ok** to save the specification and leave the form.
+
 
 Setting up project
 ==================
 
-#. Launch Spine Toolbox and from the main menu, select **File -> New...** to create a new project.
-   Type "Case Study A5" as the project name and click **Ok**.
+#. Drag the Data Store icon |ds_icon| from the tool bar and drop it into the 
+   *Design View*. This will open the *Add Data Store* dialog. 
+   Type ‘input’ as the Data Store name and click **Ok**.
 
-#. Drag the Data Store icon (|ds_icon|)
-   from the toolbar and drop it into the *Design View*.
-   This will open the *Add Data Store* dialog.
-   Type "input" as the Data Store name and click **Ok**.
+#. Repeat the above operation to create a Data Store called ‘output’.
 
-#. Repeat the above operation to create a Data Store called "output".
-
-#. Drag the Tool icon (|tool_icon|)
-   from the toolbar and drop it into the *Design View*.
-   This will open the *Add Tool* dialog.
-   Type "SpineOpt" as the Tool name and click **Ok**.
+#. Click on the small arrow next to the Tool icon |tool_icon| and drag the ‘SpineOpt’
+   item from the drop-down menu into the *Design View*.
+   This will open the *Add Tool* dialog. Type ‘SpineOpt’ as the Tool name and click **Ok**.
 
    .. note:: Each item in the *Design view* is equipped with three *connectors*
       (the small squares at the item boundaries).
 
-#. Click on one of "input" connectors and then on one of "SpineOpt" connectors. This will create
-   a *connection* from the former to the latter.
+#. Click on one of ‘input’ connectors and then on one of ‘SpineOpt’ connectors. 
+   This will create a *connection* from the former to the latter.
 
-#. Repeat the procedure to create a *connection* from "SpineOpt" to "output". It should look something
-   like this:
+#. Repeat the procedure to create a *connection* from `SpineOpt` to `output`. 
+   It should look something like this:
 
-   .. todo:: Add image
+   .. image:: img/case_study_a5_item_connections.png
+      :align: center
+
+#. Select the `SpineOpt` Tool to show the *Tool Properties* (on the right side of the window, usually).
+   You should see two elements listed under *Available resources*, ``{db_url@input}`` and ``{db_url@output}``.
+
+#. Drag the first resource, ``{db_url@input}``, and drop it in *Command line arguments*,
+   just as shown in the image below.
+
+   .. image:: img/case_study_a5_spine_opt_tool_properties.png
+      :align: center
+
+#. Drag the second resource, ``{db_url@output}``, and drop it right below the previous one.
+   The panel should be now looking like this:
+
+   .. image:: img/case_study_a5_spine_opt_tool_properties_cmdline_args.png
+      :align: center
 
 #. From the main menu, select **File -> Save project**.
+
+
 
 Entering input data
 ===================
@@ -142,34 +211,43 @@ Entering input data
 Creating input database
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to create a new Spine database for SpineOpt.jl in the 'input' Data Store:
+Follow the steps below to create a new Spine database for SpineOpt in the 
+`input` Data Store:
 
-   #. Select the 'input' Data Store item in the *Design View*.
-   #. Go to *Data Store Properties*, check the box that reads **For SpineOpt** and press **New Spine db**.
+#. Download `the SpineOpt database template 
+   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/data/spineopt_template.json>`_.
 
-#. Still in *Data Store Properties*, click **Open editor**. This will open the newly created database
-   in the *Spine database editor*, looking similar to this:
+#. Select the `input` Data Store item in the *Design View*.
 
-   .. image:: img/case_study_a5_treeview_empty.png
+#. Go to *Data Store Properties* and hit **New Spine db**.
+
+#. Still in *Data Store Properties*, click **Open editor**. This will open 
+   the newly created database in the *Spine DB editor*, looking similar to this:
+
+   .. image:: img/case_study_a5_spine_db_editor_empty.png
       :align: center
 
    |
 
-   .. note:: The *Spine database editor* is a dedicated interface within Spine Toolbox
+   .. note:: The *Spine DB editor* is a dedicated interface within Spine Toolbox
       for visualizing and managing Spine databases.
+
+#. Press **Ctrl + F** to display the main menu, select **File -> Import...**,
+   and then select the template file you previously downloaded. 
+   The contents of that file will be imported into the current database,
+   and you should then see classes like ‘commodity’, ‘connection’ and ‘model’ under 
+   the root node in the *Object tree* (on the left).
+
+#. From the main menu, select **Session -> Commit**.
+   Enter ‘Import SpineOpt template’ as message in the popup dialog, and click **Commit**.
 
 Creating objects
 ~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to add power plants to the model as objects of class ``unit``:
+#. To add power plants to the model, create objects of class ``unit`` as follows:
 
-   #. Go to *Object tree*,
-      right-click on ``unit`` and select **Add objects** from the context menu. This will
-      open the *Add objects* dialog.
-   #. With your mouse, select the list of plant names from the text-box below
+   a. Select the list of plant names from the text-box below
       and copy it to the clipboard (**Ctrl+C**):
-
-      .. _pwr_plant_names:
 
       ::
 
@@ -189,43 +267,25 @@ Creating objects
         Selsfors_pwr_plant
         Kvistforsen_pwr_plant
 
-   #. Go back to the *Add objects* dialog, select the first cell under the **object name** column
-      and press **Ctrl+V**. This will paste the list of plant names from the clipboard into that column,
-      looking similar to this:
+   b. Go to *Object tree* (on the top left of the window, usually),
+      right-click on ``unit`` and select **Add objects** from the context menu. This will
+      open the *Add objects* dialog.
+
+   c. Select the first cell under the **object name** column
+      and press **Ctrl+V**. This will paste the list of plant names from the clipboard into that column;
+      the **object class name** column will be filled automatically with ‘unit‘.
+      The form should now be looking similar to this:
 
         .. image:: img/add_power_plant_units.png
           :align: center
 
-   #. Click **Ok**.
-   #. Back in the *Spine database editor*, under *Object tree*, double click on ``unit``
+   d. Click **Ok**.
+   e. Back in the *Spine DB editor*, under *Object tree*, double click on ``unit``
       to confirm that the objects are effectively there.
-   #. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.
-      Enter "Add power plants" as the commit message and click **Commit**.
+   f. Commit changes with the message ‘Add power plants’.
 
 
-#. Repeat the procedure to add reservoirs as objects of class ``unit``,
-   with the following names:
-   ::
-
-     Rebnis_rsrv
-     Sadva_rsrv
-     Bergnäs_rsrv
-     Slagnäs_rsrv
-     Bastusel_rsrv
-     Grytfors_rsrv
-     Gallejaur_rsrv
-     Vargfors_rsrv
-     Rengård_rsrv
-     Båtfors_rsrv
-     Finnfors_rsrv
-     Granfors_rsrv
-     Krångfors_rsrv
-     Selsfors_rsrv
-     Kvistforsen_rsrv
-
-
-
-#. Repeat the procedure to add discharge and spillway connections as objects of class ``connection``,
+#. To add discharge and spillway connections, create objects of class ``connection``
    with the following names:
    ::
 
@@ -260,29 +320,7 @@ Creating objects
      Selsfors_to_Kvistforsen_spill
      Kvistforsen_to_downstream_spill
 
-#. Repeat the procedure to add water storages as objects of class ``storage``,
-   with the following names:
-   ::
-
-     Rebnis_stor
-     Sadva_stor
-     Bergnäs_stor
-     Slagnäs_stor
-     Bastusel_stor
-     Grytfors_stor
-     Gallejaur_stor
-     Vargfors_stor
-     Rengård_stor
-     Båtfors_stor
-     Finnfors_stor
-     Granfors_stor
-     Krångfors_stor
-     Selsfors_stor
-     Kvistforsen_stor
-
-#. Repeat the procedure to add water nodes as objects of class ``node``, with the following names:
-
-   .. _water_nodes_names:
+#. To add water nodes, create objects of class ``node`` with the following names:
 
    ::
 
@@ -317,142 +355,237 @@ Creating objects
      Selsfors_lower
      Kvistforsen_lower
 
-#. Finally, add ``water`` and ``electricity`` as objects of class ``commodity``;
-   ``electricity_node`` as an object of clas ``node``; ``electricity_load`` as an object of class ``unit``;
-   and ``some_week`` and ``past`` as objects of class ``temporal_block``.
+#. Next, create the following objects:
 
+   a. ``instance`` of class ``model``.
+
+   b. ``water`` and ``electricity`` of class ``commodity``.
+
+   c. ``electricity_node`` of class ``node``.
+
+   d. ``electricity_load`` of class ``unit``.
+
+   e. ``some_week`` of class ``temporal_block``.
+
+   f. ``deterministic`` of class ``stochastic_structure``.
+
+   g. ``realization`` of class ``stochastic_scenario``.
+
+#. Finally, create the following objects to get results back from Spine Opt:
+
+   a. ``my_report`` of class ``report``.
+
+   b. ``unit_flow``, ``connection_flow``, and ``node_state`` of class ``output``.
+
+
+
+.. _Specifying object parameter values:
 
 Specifying object parameter values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-TODO
+
+#. To specify the general behaviour of our model, enter ``model`` parameter values as follows:
+
+   a. Select the model parameter value data from the text-box below
+      and copy it to the clipboard (**Ctrl+C**):
+
+      .. literalinclude:: data/cs-a5-model-parameter-values.txt
+
+   b. Go to *Object parameter value* (on the top-center of the window, usually).
+      Make sure that the columns in the table are ordered as follows:
+      
+      ::
+
+         object_class_name | object_name | parameter_name | alternative_name | value | database
+
+   c. Select the first empty cell under ``object_class_name`` and press **Ctrl+V**.
+      This will paste the model parameter value data from the clipboard into the table.
+      The form should be looking like this:
+
+      .. image:: img/case_study_a5_model_parameters.png
+            :align: center
+
+#. To specify the resolution of our temporal block, repeat the same procedure with the data below:
+
+   .. literalinclude:: data/cs-a5-temporal_block-parameter-values.txt
+
+#. To specify the behaviour of all system nodes, repeat the same procedure with the data below, where:
+
+   a. ``demand`` represents the local inflow (negative in most cases).
+   b. ``fix_node_state`` represents fixed reservoir levels (at the beginning and the end).
+   c. ``has_state`` indicates whether or not the node is a reservoir (true for all the upper nodes).
+   d. ``state_coeff`` is the reservoir 'efficienty' (always 1, meaning that there aren't any loses).
+   e. ``node_state_cap`` is the maximum level of the reservoirs.
+
+
+   .. literalinclude:: data/cs-a5-node-parameter-values.txt
+
+
 
 Establishing relationships
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to establish that power plant units receive water from the station's upper node
-   at each time slice in the one week horizon, as relationships of class ``unit__node__direction__temporal_block``:
+.. tip:: To enter the same text on several cells, copy the text into the clipboard, then select all
+   target cells and press **Ctrl+V**.
 
-   #. Go to *Relationship tree*,
-      right-click on ``unit__node__direction__temporal_block``
+
+#. To establish that (i) power plant units receive water from 
+   the station's upper node, and (ii) the electricity load unit takes electricity from the common
+   electricity node, create relationships of class ``unit__from_node`` as follows:
+
+   a. Select the list of unit and node names from the text-box below
+      and copy it to the clipboard (**Ctrl+C**).
+
+      .. literalinclude:: data/cs-a5-unit__from_node.txt
+
+   b. Go to *Relationship tree* (on the bottom left of the window, usually),
+      right-click on ``unit__from_node``
       and select **Add relationships** from the context menu. This will
       open the *Add relationships* dialog.
-   #. Select again all `power plant names <pwr_plant_names_>`_ and copy them to the clipboard (**Ctrl+C**).
-   #. Go back to the *Add relationships* dialog, select the first cell under the **unit name** column
-      and press **Ctrl+V**. This will paste the list of plant names from the clipboard into that column.
-   #. Repeat the procedure to paste the list of *upper* `node names <water_nodes_names_>`_
-      into the **node name** column.
-   #. For each row in the table, enter ``from_node`` under **direction name** and ``some_week``
-      under **temporal block name**. Now the form should be looking like this:
+
+   c. Select the first cell under the *unit* column
+      and press **Ctrl+V**. This will paste the list of plant and node names from the clipboard into the table.
+      The form should be looking like this:
 
       .. image:: img/add_pwr_plant_water_from_node.png
         :align: center
 
-      .. tip:: To enter the same text on several cells, copy the text into the clipboard, then select all
-         target cells and press **Ctrl+V**.
+   d. Click **Ok**.
+   e. Back in the *Spine DB editor*, under *Relationship tree*, double click on
+      ``unit__from_node`` to confirm that the relationships are effectively there.
+   f. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.
+      Enter ‘Add from nodes of power plants‘ as the commit message and click **Commit**.
 
-   #. Click **Ok**.
-   #. Back in the *Spine database editor*, under *Relationship tree*, double click on
-      ``unit__node__direction__temporal_block``
-      to confirm that the relationships are effectively there.
-   #. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.
-      Enter "Add sending nodes of power plants" as the commit message and click **Commit**.
+#. To establish that (i) power plant units release water to the station's lower node,
+   and (ii) power plant units inject electricity to the common electricity node,
+   create relationships of class ``unit__to_node`` with the following data:
+
+   .. literalinclude:: data/cs-a5-unit__to_node.txt
+
+   .. note:: At this point, you might be wondering what's the purpose of the ``unit__node__node``
+      relationship class. Shouldn't it be enough to have ``unit__from_node`` and ``unit__to_node`` to represent
+      the topology of the system? The answer is yes; but in addition to topology, we also need to represent
+      the *conversion process* that happens in the unit, where the water from one node is turned into electricty
+      for another node. And for this purpose, we use a relationship parameter value on the ``unit__node__node``
+      relationships (see :ref:`Specifying relationship parameter values`).
+
+#. To establish that (i) discharge connections take water from the *lower* node of the upstream station,
+   and (ii) spillway connections take water from the *upper* node of the upstream station,
+   create the following relationships of class ``connection__from_node``:
+
+   .. literalinclude:: data/cs-a5-connection__from_node.txt
+
+#. To establish that both discharge and spillway connections release water onto 
+   the upper node of the downstream station, create the following ``connection__to_node`` relationships:
+
+   .. literalinclude:: data/cs-a5-connection__to_node.txt
+
+   .. note:: At this point, you might be wondering what's the purpose of the ``connection__node__node``
+      relationship class. Shouldn't it be enough to have ``connection__from_node`` and ``connection__to_node``
+      to represent the topology of the system? The answer is yes; but in addition to topology, we also need to represent
+      the *delay* in the river branches.
+      And for this purpose, we use a relationship parameter value on the ``connection__node__node``
+      relationships (see :ref:`Specifying relationship parameter values`).
 
 
-#. Repeat the procedure to establish that power plant units release water to the station's lower node
-   at each time slice in the one week horizon, as relationships of class ``unit__node__direction__temporal_block``:
+#. To establish that water nodes balance water and the electricity node balances 
+   electricity, create ``node__commodity`` relationships between all upper and lower reservoir nodes 
+   and the ``water`` commodity, as well as between the ``electricity_node`` and ``electricity``.
 
-   .. image:: img/add_pwr_plant_water_to_node.png
-      :align: center
+   .. literalinclude:: data/cs-a5-node__commodity.txt
 
-#. Repeat the procedure to establish that power plant units release electricity to the common electricity node
-   at each time slice in the one week horizon, as relationships of class ``unit__node__direction__temporal_block``:
+#. Next, to establish that all nodes are balanced at each time slice in the one week horizon,
+   create relationships of class ``model__default_temporal_block`` between the model ``instance`` 
+   and the temporal_block ``some_week``.
 
-   .. image:: img/add_pwr_plant_electricity_to_node.png
-      :align: center
+#. To establish that this model is deterministic,
+   create a relationships of class ``model__default_stochastic_structure`` between the model ``instance`` 
+   and the temporal_block ``deterministic``, and a relationship of class ``stochastic_structure__stochastic_scenario``
+   between ``deterministic`` and ``realization``.
 
-#. Repeat the procedure to establish that reservoir units take and release water to and from
-   the station's upper node at each time slice in the one week horizon,
-   as relationships of class ``unit__node__direction__temporal_block``:
+#. Finally, create one relationship of class ``report__output`` between ``my_report`` and each of
+   the following ``output`` objects: ``unit_flow``, ``connection_flow``, and ``node_state``, as well as
+   one relationship of class ``model__report`` between ``instance`` and ``my_report``.
+   This is so results from running Spine Opt are written to the ouput database.
 
-   .. image:: img/add_rsrv_water_to_from_node.png
-      :align: center
 
-#. Repeat the procedure to establish that the electricity load takes electricity from
-   the common electricity node at each time slice in the one week horizon,
-   as a relationship of class ``unit__node__direction__temporal_block``:
-
-   .. image:: img/add_electricity_load_from_node.png
-      :align: center
-
-#. Repeat the procedure to establish that discharge connections
-   take water from the lower node of one station and release it
-   to the upper node of the downstream station, at each time slice in the one week horizon,
-   as relationships of class ``connection__node__direction__temporal_block``:
-
-   .. image:: img/add_discharge_water_to_from_node.png
-      :align: center
-
-#. Repeat the procedure to establish that spillway connections
-   take water from the upper node of one station and release it
-   to the upper node of the downstream station, at each time slice in the one week horizon,
-   as relationships of class ``connection__node__direction__temporal_block``:
-
-   .. image:: img/add_spillway_water_to_from_node.png
-      :align: center
-
-#. Repeat the procedure to establish that water nodes balance water,
-   and the electricity node balances electricity, as relationships of class ``node__commodity``:
-
-   .. image:: img/add_node_commodity.png
-      :align: center
-
-#. Repeat the procedure to establish that all nodes are balanced at each time slice in the one week horizon,
-   as relationships of class ``node__temporal_block``:
-
-   .. image:: img/add_node_temporal_block.png
-      :align: center
-
-#. Repeat the procedure to establish the connection of each storage to the corresponding unit,
-   as relationships of class ``storage__unit``:
-
-   .. image:: img/add_storage_unit.png
-      :align: center
-
-#. Repeat the procedure to establish that all storages store water,
-   as relationships of class ``storage__commodity``:
-
-   .. image:: img/add_storage_commodity.png
-      :align: center
-
+.. _Specifying relationship parameter values:
 
 Specifying relationship parameter values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-TODO
 
-Running SpineOpt.jl
-===================
+#. To specify (i) the capacity of hydro power plants, 
+   and (ii) the variable operating cost of the electricity unit (equal to the negative electricity price), enter ``unit__from_node`` parameter values as follows:
 
-Configuring Julia
-~~~~~~~~~~~~~~~~~
+   a. Select the parameter value data from the text-box below
+      and copy it to the clipboard (**Ctrl+C**):
 
-#. Go to Spine Toolbox mainwindow and from the main menu, select **File -> Settings**. This will open the
-   *Settings* dialog.
+      .. literalinclude:: data/cs-a5-unit__from_node-relationship-parameter-values.txt
 
-#. Go to the *Julia* group box and enter the path to your julia executable in the first line edit.
+   b. Go to *Relationship parameter value* (on the bottom-center of the window, usually).
+      Make sure that the columns in the table are ordered as follows:
 
-#. (Optional) Enter the path of a julia project that you want to use with Spine Toolbox in the second line edit.
-   Leave blank to use julia's home project.
+      ::
 
-#. Click **Ok**.
+         relationship_class_name | object_name_list | parameter_name | alternative_name | value | database
 
-#. From the application main menu, select **File -> Tool configuration assistant.** This will install the
-   `SpineOpt.jl package <https://github.com/Spine-project/SpineOpt.jl>`_
-   to the julia project specified above. Follow the instructions until completion.
+   c. Select the first empty cell under ``relationship_class_name`` and press **Ctrl+V**.
+      This will paste the parameter value data from the clipboard into the table.
 
 
-Creating a Tool specification for SpineOpt.jl
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#. To specify the conversion ratio from water to electricity and from water to water
+   of different hydro power plants (the latter being equal to 1), repeat the same procedure with the data below:
 
-TODO
+   .. literalinclude:: data/cs-a5-unit__node__node-relationship-parameter-values.txt
+
+
+#. To specify the average discharge and spillage in the first hours of the simulation,
+   repeat the same procedure with the data below:
+
+   .. literalinclude:: data/cs-a5-connection__from_node-relationship-parameter-values.txt
+
+
+#. Finally, to specify the delay and transfer ratio of different water connections (the latter being equal to 1),
+   repeat the same procedure with the data below:
+
+   .. literalinclude:: data/cs-a5-connection__node__node-relationship-parameter-values.txt
+
+
+#. When you're ready, commit all changes to the database.
+
+
+Executing the workflow
+======================
+
+Once the workflow is defined and input data is in place, the project is ready
+to be executed. Hit the **Execute project** button |execute_project| on 
+the tool bar.
+
+You should see ‘Executing All Directed Acyclic Graphs’ printed in the *Event log*
+(on the lower left by default).
+SpineOpt output messages will appear in the *Process Log* panel in the middle.
+After some processing, ‘DAG 1/1 completed successfully’ appears and the 
+execution is complete.
+
+
+Examining the results
+=====================
+
+Select the output data store and open the Spine DB editor.
+
+TODO: Update the image below with the new look of Spine DB editor
+
+.. image:: img/case_study_a5_output.png
+   :align: center
+
+To checkout the flow on the electricity load (i.e., the total electricity production in the system),
+go to *Object tree*, expand the ``unit`` object class,
+and select ``electricity_load``, as illustrated in the picture above.
+Next, go to *Relationship parameter value* and double-click the first cell under `value`.
+The *Parameter value editor* will pop up. You should see something like this:
+
+
+.. image:: img/case_study_a5_output_electricity_load_unit_flow.png
+   :align: center
