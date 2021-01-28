@@ -575,8 +575,6 @@ Examining the results
 
 Select the output data store and open the Spine DB editor.
 
-TODO: Update the image below with the new look of Spine DB editor
-
 .. image:: img/case_study_a5_output.png
    :align: center
 
