@@ -379,7 +379,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         Also notifies the empty model so it can remove rows that are already in.
 
         Args:
-            db_map_data (dict): list of removed dict-items keyed by DiffDatabaseMapping
+            db_map_data (dict): list of added dict-items keyed by DiffDatabaseMapping
         """
         for db_map, items in db_map_data.items():
             items_per_class = self._items_per_class(items)
