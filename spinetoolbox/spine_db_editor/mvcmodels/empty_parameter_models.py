@@ -133,14 +133,15 @@ class EmptyParameterModel(EmptyRowModel):
         if not super().batch_set_data(indexes, data):
             return False
         rows = {ind.row() for ind in indexes}
-        self.add_items_to_db(rows)
+        db_map_data = self._make_db_map_data(rows)
+        self.add_items_to_db(db_map_data)
         return True
 
-    def add_items_to_db(self, rows):
+    def add_items_to_db(self, db_map_data):
         """Add items to db.
 
         Args:
-            rows (set): add data from these rows
+            db_map_data (dict): mapping DiffDatabaseMapping instance to list of items
         """
         raise NotImplementedError()
 
@@ -150,6 +151,9 @@ class EmptyParameterModel(EmptyRowModel):
 
         Args:
             rows (set): group data from these rows
+
+        Returns:
+            dict: mapping DiffDatabaseMapping instance to list of items
         """
         items = [dict(zip(self.header, self._main_data[row]), row=row) for row in rows]
         db_map_data = dict()
@@ -176,13 +180,8 @@ class EmptyParameterDefinitionModel(
         """See base class."""
         raise NotImplementedError()
 
-    def add_items_to_db(self, rows):
-        """Add items to db.
-
-        Args:
-            rows (set): add data from these rows
-        """
-        db_map_data = self._make_db_map_data(rows)
+    def add_items_to_db(self, db_map_data):
+        """See base class."""
         self.build_lookup_dictionary(db_map_data)
         db_map_param_def = dict()
         db_map_error_log = dict()
@@ -262,13 +261,8 @@ class EmptyParameterValueModel(
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
         return (*super()._make_unique_id(item), item.get(self.entity_name_key))
 
-    def add_items_to_db(self, rows):
-        """Add items to db.
-
-        Args:
-            rows (set): add data from these rows
-        """
-        db_map_data = self._make_db_map_data(rows)
+    def add_items_to_db(self, db_map_data):
+        """See base class."""
         self.build_lookup_dictionary(db_map_data)
         db_map_param_val = dict()
         db_map_error_log = dict()
@@ -336,17 +330,12 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
     def entity_type(self):
         return "relationship"
 
-    def add_items_to_db(self, rows):
-        """Add items to db.
-
-        Args:
-            rows (set): add data from these rows
-        """
+    def add_items_to_db(self, db_map_data):
+        """See base class."""
         # Call the super method to add whatever is ready.
         # This will fill the relationship_class_name as a side effect
-        super().add_items_to_db(rows)
+        super().add_items_to_db(db_map_data)
         # Now we try to add relationships
-        db_map_data = self._make_db_map_data(rows)
         self.build_lookup_dictionaries(db_map_data)
         db_map_relationships = dict()
         db_map_error_log = dict()
@@ -360,6 +349,6 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
         if any(db_map_relationships.values()):
             self.db_mngr.add_relationships(db_map_relationships)
             # Something might have become ready after adding the relationship(s), so we do one more pass
-            super().add_items_to_db(rows)
+            super().add_items_to_db(db_map_data)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
