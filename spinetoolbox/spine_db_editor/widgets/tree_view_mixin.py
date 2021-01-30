@@ -170,10 +170,10 @@ class TreeViewMixin:
         db_map_obj_ids = self._db_map_ids(obj_inds)
         db_map_rel_cls_ids = self._db_map_ids(rel_cls_inds)
         db_map_rel_ids = self._db_map_ids(rel_inds)
-        parcel.push_object_class_ids(db_map_obj_cls_ids)
-        parcel.push_object_ids(db_map_obj_ids)
-        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
-        parcel.push_relationship_ids(db_map_rel_ids)
+        parcel.full_push_object_class_ids(db_map_obj_cls_ids)
+        parcel.full_push_object_ids(db_map_obj_ids)
+        parcel.full_push_relationship_class_ids(db_map_rel_cls_ids)
+        parcel.full_push_relationship_ids(db_map_rel_ids)
         self.export_data(parcel.data)
 
     def duplicate_object(self, index):
@@ -193,7 +193,7 @@ class TreeViewMixin:
         parcel = SpineDBParcel(self.db_mngr)
         object_item = index.internalPointer()
         db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
-        parcel.push_inside_object_ids(db_map_obj_ids)
+        parcel.inner_push_object_ids(db_map_obj_ids)
         data = self._make_data_for_export(parcel.data)
         data = {
             "objects": [
