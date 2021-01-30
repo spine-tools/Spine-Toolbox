@@ -972,15 +972,6 @@
     <string>&amp;Graph</string>
    </property>
   </action>
-  <action name="actionPivot_style">
-   <property name="icon">
-    <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/pivot-table.svg</normaloff>:/icons/menu_icons/pivot-table.svg</iconset>
-   </property>
-   <property name="text">
-    <string>&amp;Pivot</string>
-   </property>
-  </action>
   <action name="actionView_history">
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">

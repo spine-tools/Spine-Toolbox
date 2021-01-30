@@ -58,8 +58,8 @@ class TabularViewMixin:
         self.filter_menus = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
-        self.input_type_action_group = QActionGroup(self)
-        self.populate_input_type_action_group()
+        self.pivot_action_group = QActionGroup(self)
+        self.populate_pivot_action_group()
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = None
         self.frozen_table_model = FrozenTableModel(self)
@@ -68,9 +68,9 @@ class TabularViewMixin:
         self.ui.frozen_table.setModel(self.frozen_table_model)
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
 
-    def populate_input_type_action_group(self):
+    def populate_pivot_action_group(self):
         actions = {
-            input_type: self.input_type_action_group.addAction(QIcon(CharIconEngine(icon_code)), input_type)
+            input_type: self.pivot_action_group.addAction(QIcon(CharIconEngine(icon_code)), input_type)
             for input_type, icon_code in (
                 (self._PARAMETER_VALUE, "\uf292"),
                 (self._INDEX_EXPANSION, "\uf12c"),
@@ -89,7 +89,7 @@ class TabularViewMixin:
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
-        self.input_type_action_group.triggered.connect(self.do_reload_pivot_table)
+        self.pivot_action_group.triggered.connect(self.do_reload_pivot_table)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
@@ -477,7 +477,7 @@ class TabularViewMixin:
         """
         qApp.processEvents()  # pylint: disable=undefined-variable
         if action is None:
-            action = self.input_type_action_group.checkedAction()
+            action = self.pivot_action_group.checkedAction()
         self.current_input_type = action.text()
         if not self._can_build_pivot_table():
             return

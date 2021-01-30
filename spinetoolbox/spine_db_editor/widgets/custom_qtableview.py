@@ -465,11 +465,11 @@ class PivotTableView(CopyPasteTableView):
         index = self.indexAt(event.pos())
         index = self.model().mapToSource(index)
         if not index.isValid() or self.source_model.index_within_top_left(index):
-            pivot_mode_menu = QMenu(self)
-            title = TitleWidgetAction("Pivot mode", self._spine_db_editor)
-            pivot_mode_menu.addAction(title)
-            pivot_mode_menu.addActions(self._spine_db_editor.input_type_action_group.actions())
-            pivot_mode_menu.exec_(event.globalPos())
+            pivot_menu = QMenu(self)
+            title = TitleWidgetAction("Pivot", self._spine_db_editor)
+            pivot_menu.addAction(title)
+            pivot_menu.addActions(self._spine_db_editor.pivot_action_group.actions())
+            pivot_menu.exec_(event.globalPos())
             return
         self._refresh_selected_indexes()
         self._update_actions_availability()
