@@ -130,7 +130,7 @@ class SpineDBEditorSettingsMixin:
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
-        self.ui.checkBox_show_cascading_relationships.clicked.connect(self.set_show_cascading_relationships)
+        self.ui.checkBox_auto_expand_objects.clicked.connect(self.set_auto_expand_objects)
 
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
@@ -139,9 +139,7 @@ class SpineDBEditorSettingsMixin:
         smooth_zoom = self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false")
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
-        show_cascading_relationships = self._qsettings.value(
-            "appSettings/showCascadingRelationships", defaultValue="true"
-        )
+        auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
         elif commit_at_exit == 1:
@@ -152,7 +150,7 @@ class SpineDBEditorSettingsMixin:
         self.ui.checkBox_smooth_entity_graph_zoom.setChecked(smooth_zoom == "true")
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
         self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
-        self.ui.checkBox_show_cascading_relationships.setChecked(show_cascading_relationships == "true")
+        self.ui.checkBox_auto_expand_objects.setChecked(auto_expand_objects == "true")
 
     def save_settings(self):
         """Get selections and save them to persistent memory."""
@@ -167,17 +165,13 @@ class SpineDBEditorSettingsMixin:
         self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
         relationship_items_follow = "true" if int(self.ui.checkBox_relationship_items_follow.checkState()) else "false"
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
-        show_cascading_relationships = (
-            "true" if int(self.ui.checkBox_show_cascading_relationships.checkState()) else "false"
-        )
-        self._qsettings.setValue("appSettings/showCascadingRelationships", show_cascading_relationships)
+        auto_expand_objects = "true" if int(self.ui.checkBox_auto_expand_objects.checkState()) else "false"
+        self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
 
     def update_ui(self):
         super().update_ui()
-        show_cascading_relationships = (
-            self._qsettings.value("appSettings/showCascadingRelationships", defaultValue="true") == "true"
-        )
-        self.set_show_cascading_relationships(show_cascading_relationships)
+        auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
+        self.set_auto_expand_objects(auto_expand_objects)
 
 
 class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
@@ -197,9 +191,9 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
         self.read_settings()
 
     @Slot(bool)
-    def set_show_cascading_relationships(self, checked=False):
+    def set_auto_expand_objects(self, checked=False):
         for db_editor in self._multi_db_editor.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_show_cascading_relationships(checked)
+            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
 
 
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
@@ -246,9 +240,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_use_python_console.clicked.connect(self.toggle_python_execution_mode)
 
     @Slot(bool)
-    def set_show_cascading_relationships(self, checked=False):
+    def set_auto_expand_objects(self, checked=False):
         for db_editor in self._toolbox.db_mngr.get_all_spine_db_editors():
-            db_editor.set_show_cascading_relationships(checked)
+            db_editor.set_auto_expand_objects(checked)
 
     @Slot(bool)
     def browse_gams_path(self, checked=False):

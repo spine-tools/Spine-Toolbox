@@ -40,6 +40,7 @@ class GraphViewMixin:
     VERTEX_EXTENT = 64
     _ARC_WIDTH = 0.15 * VERTEX_EXTENT
     _ARC_LENGTH_HINT = 1.5 * VERTEX_EXTENT
+    _MAX_CONCURRENT_BUILDS = 4
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -201,9 +202,10 @@ class GraphViewMixin:
         """Builds the graph.
 
         Args:
-            persistent (bool, optional): If True, builds the graph on top of the current one.
+            persistent (bool, optional): If True, elements in the current graph (if any) retain their position
+                in the new one.
         """
-        if not self.ui.dockWidget_entity_graph.isVisible():
+        if not self.ui.dockWidget_entity_graph.isVisible() or len(self.layout_gens) > self._MAX_CONCURRENT_BUILDS:
             return
         self.ui.graphicsView.clear_cross_hairs_items()  # Needed
         self._persistent = persistent
@@ -212,8 +214,7 @@ class GraphViewMixin:
         layout_gen = self._make_layout_generator()
         self.layout_gens.append(layout_gen)
         layout_gen.show_progress_widget(self.ui.graphicsView)
-        # NOTE: Connecting like below allows us to connect more than one layout finished to _complete_graph
-        layout_gen.finished.connect(lambda x, y: self._complete_graph(x, y))  # pylint: disable=unnecessary-lambda
+        layout_gen.finished.connect(lambda x, y, layout_gen=layout_gen: self._complete_graph(x, y, layout_gen))
         layout_gen.destroyed.connect(lambda obj=None, layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
         layout_gen.start()
 
@@ -222,12 +223,14 @@ class GraphViewMixin:
             if layout_gen.is_running():
                 layout_gen.stop()
 
-    def _complete_graph(self, x, y):
+    def _complete_graph(self, x, y, layout_gen):
         """
         Args:
             x (list): Horizontal coordinates
             y (list): Vertical coordinates
         """
+        if layout_gen != self.layout_gens[-1]:
+            return
         self.ui.graphicsView.removed_items.clear()
         self.ui.graphicsView.selected_items.clear()
         self.ui.graphicsView.hidden_items.clear()
@@ -275,7 +278,7 @@ class GraphViewMixin:
         return selected_object_ids, selected_relationship_ids
 
     def _get_all_relationships_for_graph(self, object_ids, relationship_ids):
-        cond = any if self.ui.graphicsView.show_cascading_relationships else all
+        cond = any if self.ui.graphicsView.auto_expand_objects else all
         return [
             (db_map, x)
             for db_map in self.db_maps

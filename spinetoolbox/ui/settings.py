@@ -543,10 +543,10 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_rotation)
 
-        self.checkBox_show_cascading_relationships = QCheckBox(self.groupBox_data_store)
-        self.checkBox_show_cascading_relationships.setObjectName(u"checkBox_show_cascading_relationships")
+        self.checkBox_auto_expand_objects = QCheckBox(self.groupBox_data_store)
+        self.checkBox_auto_expand_objects.setObjectName(u"checkBox_auto_expand_objects")
 
-        self.verticalLayout_4.addWidget(self.checkBox_show_cascading_relationships)
+        self.verticalLayout_4.addWidget(self.checkBox_auto_expand_objects)
 
 
         self.verticalLayout_9.addWidget(self.groupBox_data_store)
@@ -611,14 +611,14 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.checkBox_object_tree_sticky_selection, self.checkBox_relationship_items_follow)
         QWidget.setTabOrder(self.checkBox_relationship_items_follow, self.checkBox_smooth_entity_graph_zoom)
         QWidget.setTabOrder(self.checkBox_smooth_entity_graph_zoom, self.checkBox_smooth_entity_graph_rotation)
-        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_show_cascading_relationships)
-        QWidget.setTabOrder(self.checkBox_show_cascading_relationships, self.listWidget)
+        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_auto_expand_objects)
+        QWidget.setTabOrder(self.checkBox_auto_expand_objects, self.listWidget)
 
         self.retranslateUi(SettingsForm)
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(3)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -781,8 +781,8 @@ class Ui_SettingsForm(object):
         self.checkBox_smooth_entity_graph_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph zoom", None))
         self.checkBox_smooth_entity_graph_rotation.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph rotation", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_show_cascading_relationships.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
+        self.checkBox_auto_expand_objects.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_show_cascading_relationships.setText(QCoreApplication.translate("SettingsForm", u"Show cascading relationships by default in Entity graph", None))
+        self.checkBox_auto_expand_objects.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand objects by default in Entity graph", None))
     # retranslateUi
 

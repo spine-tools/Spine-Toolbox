@@ -18,8 +18,9 @@ Classes for custom QGraphicsViews for the Entity graph view.
 
 from PySide2.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
 from PySide2.QtWidgets import QMenu
-from PySide2.QtGui import QCursor, QPainter
+from PySide2.QtGui import QCursor, QPainter, QIcon
 from PySide2.QtPrintSupport import QPrinter
+from ...helpers import CharIconEngine
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
 from ..graphics_items import EntityItem, ObjectItem, RelationshipItem, CrossHairsArcItem, make_figure_graphics_item
@@ -52,8 +53,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._hovered_obj_item = None
         self.relationship_class = None
         self.cross_hairs_items = []
-        self.show_cascading_relationships = None
-        self._show_cascading_relationships_action = None
+        self.auto_expand_objects = None
+        self._auto_expand_objects_action = None
         self._save_pos_action = None
         self._clear_pos_action = None
         self._hide_action = None
@@ -65,6 +66,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._export_as_pdf_action = None
         self._zoom_action = None
         self._rotate_action = None
+        self._arc_length_action = None
         self._restore_pruned_menu = None
         self._parameter_heat_map_menu = None
 
@@ -92,14 +94,13 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.populate_context_menu()
 
     def populate_context_menu(self):
-        self._show_cascading_relationships_action = self._menu.addAction("Show cascading relationship")
-        self._show_cascading_relationships_action.setCheckable(True)
-        self.show_cascading_relationships = (
-            self._spine_db_editor.qsettings.value("appSettings/showCascadingRelationships", defaultValue="false")
-            == "true"
+        self._auto_expand_objects_action = self._menu.addAction("Auto-expand objects")
+        self._auto_expand_objects_action.setCheckable(True)
+        self.auto_expand_objects = (
+            self._spine_db_editor.qsettings.value("appSettings/autoExpandObjects", defaultValue="false") == "true"
         )
-        self._show_cascading_relationships_action.setChecked(self.show_cascading_relationships)
-        self._show_cascading_relationships_action.toggled.connect(self.set_show_cascading_relationships)
+        self._auto_expand_objects_action.setChecked(self.auto_expand_objects)
+        self._auto_expand_objects_action.toggled.connect(self.set_auto_expand_objects)
         self._menu.addSeparator()
         self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
         self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
@@ -129,11 +130,28 @@ class EntityQGraphicsView(CustomQGraphicsView):
             "Rotate counter-clockwise"
         )
         self._rotate_action.tool_bar.addAction("\u2b6e", self.rotate_clockwise).setToolTip("Rotate clockwise")
+        self._arc_length_action = ToolBarWidgetAction("Arc length", self._menu, compact=True)
+        self._arc_length_action.tool_bar.addAction(
+            QIcon(CharIconEngine("\uf422")), "", self.decrease_arc_length
+        ).setToolTip("Decrease arc length")
+        self._arc_length_action.tool_bar.addAction(
+            QIcon(CharIconEngine("\uf424")), "", self.increase_arc_length
+        ).setToolTip("Increase arc length")
         self._menu.addSeparator()
         self._menu.addAction(self._zoom_action)
-        self._menu.addSeparator()
+        self._menu.addAction(self._arc_length_action)
         self._menu.addAction(self._rotate_action)
         self._menu.aboutToShow.connect(self._update_actions_visibility)
+
+    def increase_arc_length(self):
+        for item in self.entity_items:
+            item.setPos(1.1 * item.pos())
+            item.update_arcs_line()
+
+    def decrease_arc_length(self):
+        for item in self.entity_items:
+            item.setPos(item.pos() / 1.1)
+            item.update_arcs_line()
 
     @Slot()
     def _update_actions_visibility(self):
@@ -192,9 +210,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._spine_db_editor.db_mngr.remove_items(db_map_typed_data)
 
     @Slot(bool)
-    def set_show_cascading_relationships(self, checked=False):
-        self.show_cascading_relationships = checked
-        self._show_cascading_relationships_action.setChecked(checked)
+    def set_auto_expand_objects(self, checked=False):
+        self.auto_expand_objects = checked
+        self._auto_expand_objects_action.setChecked(checked)
         self._spine_db_editor.build_graph()
 
     @Slot(bool)
@@ -214,14 +232,21 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.hidden_items.clear()
 
     def _get_selected_entity_names(self):
-        if len(self.selected_items) == 1:
-            return "'" + self.selected_items[0].entity_name + "'"
-        return "selected entities"
+        if not self.selected_items:
+            return ""
+        names = "'" + self.selected_items[0].entity_name + "'"
+        if len(self.selected_items) > 1:
+            names += f" and {len(self.selected_items) - 1} other entities"
+        return names
 
     def _get_selected_class_names(self):
-        if len(self.selected_items) == 1:
-            return "'" + self.selected_items[0].entity_class_name + "'"
-        return "selected classes"
+        if not self.selected_items:
+            return ""
+        entity_class_names = list(set(item.entity_class_name for item in self.selected_items))
+        names = "'" + entity_class_names[0] + "'"
+        if len(entity_class_names) > 1:
+            names += f" and {len(entity_class_names) - 1} other classes"
+        return names
 
     @Slot(bool)
     def prune_selected_entities(self, checked=False):

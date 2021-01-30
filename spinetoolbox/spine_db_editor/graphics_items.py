@@ -368,8 +368,7 @@ class ObjectItem(EntityItem):
             db_map_entity_id (tuple): db_map, object id
         """
         super().__init__(spine_db_editor, x, y, extent, db_map_entity_id=db_map_entity_id)
-        self._add_relationships_menu = None
-        self._relationship_class_per_action = {}
+        self._relationship_classes = {}
         self.label_item = ObjectLabelItem(self)
         self.setZValue(0.5)
         self.update_name(self.entity_name)
@@ -405,13 +404,63 @@ class ObjectItem(EntityItem):
         for rel_item in rel_items:
             rel_item.follow_object_by(dx, dy)
 
+    def mouseDoubleClickEvent(self, e):
+        add_relationships_menu = QMenu(self._spine_db_editor)
+        title = TitleWidgetAction("Add relationships", self._spine_db_editor)
+        add_relationships_menu.addAction(title)
+        add_relationships_menu.triggered.connect(self._start_relationship)
+        self._refresh_relationship_classes()
+        self._populate_add_relationships_menu(add_relationships_menu)
+        add_relationships_menu.popup(e.screenPos())
+
     def _make_menu(self):
         menu = super()._make_menu()
-        menu.addSeparator()
-        add_relationships_menu = menu.addMenu("Add relationships...")
+        expand_menu = QMenu("Expand", menu)
+        expand_menu.triggered.connect(self._expand)
+        collapse_menu = QMenu("Collapse", menu)
+        collapse_menu.triggered.connect(self._collapse)
+        add_relationships_menu = QMenu("Add relationships", menu)
         add_relationships_menu.triggered.connect(self._start_relationship)
+        self._refresh_relationship_classes()
+        self._populate_expand_collapse_menu(expand_menu)
+        self._populate_expand_collapse_menu(collapse_menu)
         self._populate_add_relationships_menu(add_relationships_menu)
+        first = menu.actions()[0]
+        first = menu.insertSeparator(first)
+        first = menu.insertMenu(first, add_relationships_menu)
+        first = menu.insertMenu(first, collapse_menu)
+        menu.insertMenu(first, expand_menu)
         return menu
+
+    def _refresh_relationship_classes(self):
+        self._relationship_classes.clear()
+        db_map_object_ids = {self.db_map: {self.entity_id}}
+        relationship_ids_per_class = {}
+        for rel in self.db_mngr.find_cascading_relationships(db_map_object_ids).get(self.db_map, []):
+            relationship_ids_per_class.setdefault(rel["class_id"], set()).add((self.db_map, rel["id"]))
+        db_map_object_class_ids = {self.db_map: {self.entity_class_id}}
+        for rel_cls in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).get(self.db_map, []):
+            rel_cls = rel_cls.copy()
+            rel_cls["object_class_id_list"] = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
+            rel_cls["relationship_ids"] = relationship_ids_per_class.get(rel_cls["id"], set())
+            self._relationship_classes[rel_cls["name"]] = rel_cls
+
+    def _populate_expand_collapse_menu(self, menu):
+        """
+        Populates the 'Expand' or 'Collapse' menu.
+
+        Args:
+            menu (QMenu)
+        """
+        if not self._relationship_classes:
+            menu.setEnabled(False)
+            return
+        menu.setEnabled(True)
+        menu.addAction("All")
+        menu.addSeparator()
+        for name, rel_cls in self._relationship_classes.items():
+            icon = self.db_mngr.entity_class_icon(self.db_map, "relationship_class", rel_cls["id"])
+            menu.addAction(icon, name).setEnabled(bool(rel_cls["relationship_ids"]))
 
     def _populate_add_relationships_menu(self, menu):
         """
@@ -420,33 +469,35 @@ class ObjectItem(EntityItem):
         Args:
             menu (QMenu)
         """
-        self._relationship_class_per_action.clear()
         object_class_ids_in_graph = {
             x.entity_class_id for x in self._spine_db_editor.ui.graphicsView.entity_items if isinstance(x, ObjectItem)
         }
-        db_map_object_class_ids = {self.db_map: {self.entity_class_id}}
-        for rel_cls in self.db_mngr.find_cascading_relationship_classes(db_map_object_class_ids).get(self.db_map, []):
-            object_class_id_list = [int(id_) for id_ in rel_cls["object_class_id_list"].split(",")]
-            if not set(object_class_id_list) <= object_class_ids_in_graph:
-                continue
+        for name, rel_cls in self._relationship_classes.items():
             icon = self.db_mngr.entity_class_icon(self.db_map, "relationship_class", rel_cls["id"])
-            action = menu.addAction(icon, rel_cls["name"])
-            rel_cls = rel_cls.copy()
-            rel_cls["object_class_id_list"] = object_class_id_list
-            self._relationship_class_per_action[action] = rel_cls
-        menu.setEnabled(bool(self._relationship_class_per_action))
+            menu.addAction(icon, name).setEnabled(set(rel_cls["object_class_id_list"]) <= object_class_ids_in_graph)
+        menu.setEnabled(bool(self._relationship_classes))
 
-    def mouseDoubleClickEvent(self, e):
-        add_relationships_menu = QMenu(self._spine_db_editor)
-        title = TitleWidgetAction("Add relationships", self._spine_db_editor)
-        add_relationships_menu.addAction(title)
-        add_relationships_menu.triggered.connect(self._start_relationship)
-        self._populate_add_relationships_menu(add_relationships_menu)
-        add_relationships_menu.popup(e.screenPos())
+    def _get_relationship_ids_to_expand_or_collapse(self, action):
+        rel_cls = self._relationship_classes.get(action.text())
+        if rel_cls is not None:
+            return rel_cls["relationship_ids"]
+        return {id_ for rel_cls in self._relationship_classes.values() for id_ in rel_cls["relationship_ids"]}
+
+    @Slot("QAction")
+    def _expand(self, action):
+        relationship_ids = self._get_relationship_ids_to_expand_or_collapse(action)
+        self._spine_db_editor.added_relationship_ids.update(relationship_ids)
+        self._spine_db_editor.build_graph(persistent=True)
+
+    @Slot("QAction")
+    def _collapse(self, action):
+        relationship_ids = self._get_relationship_ids_to_expand_or_collapse(action)
+        self._spine_db_editor.added_relationship_ids.difference_update(relationship_ids)
+        self._spine_db_editor.build_graph(persistent=True)
 
     @Slot("QAction")
     def _start_relationship(self, action):
-        self._spine_db_editor.start_relationship(self._relationship_class_per_action[action], self)
+        self._spine_db_editor.start_relationship(self._relationship_classes[action.text()], self)
 
 
 class ArcItem(QGraphicsPathItem):

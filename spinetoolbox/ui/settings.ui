@@ -1074,12 +1074,12 @@ p, li { white-space: pre-wrap; }
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="checkBox_show_cascading_relationships">
+             <widget class="QCheckBox" name="checkBox_auto_expand_objects">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Checked&lt;/span&gt;: Whenever an object is included in the Entity graph, the graph automatically includes &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; its relationships.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Unchecked&lt;/span&gt;: Whenever &lt;span style=&quot; font-style:italic;&quot;&gt;all&lt;/span&gt; the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.&lt;/p&gt;&lt;p&gt;Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Show cascading relationships by default in Entity graph</string>
+               <string>Auto-expand objects by default in Entity graph</string>
               </property>
              </widget>
             </item>
@@ -1176,7 +1176,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_relationship_items_follow</tabstop>
   <tabstop>checkBox_smooth_entity_graph_zoom</tabstop>
   <tabstop>checkBox_smooth_entity_graph_rotation</tabstop>
-  <tabstop>checkBox_show_cascading_relationships</tabstop>
+  <tabstop>checkBox_auto_expand_objects</tabstop>
   <tabstop>listWidget</tabstop>
  </tabstops>
  <resources>

@@ -2,6 +2,7 @@
 
 import sys
 import locale
+import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QSettings
@@ -29,7 +30,9 @@ def main(argv):
     except IndexError:
         return 2
     app = QApplication(argv)
-    QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+    status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+    if status < 0:
+        logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
     locale.setlocale(locale.LC_NUMERIC, 'C')
     settings = QSettings("SpineProject", "Spine Toolbox")
     db_mngr = SpineDBManager(settings, None)

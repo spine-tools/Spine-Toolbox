@@ -218,7 +218,7 @@ class GraphLayoutGenerator(QObject):
         """Computes and returns x and y coordinates for each vertex in the graph, using VSGD-MS."""
         self._state = _State.RUNNING
         if self.vertex_count <= 1:
-            x, y = [0], [0]
+            x, y = np.array([0.0]), np.array([0.0])
             self.emit_finished(x, y)
             self.stop()
             return

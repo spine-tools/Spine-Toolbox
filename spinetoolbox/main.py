@@ -19,7 +19,6 @@ Provides the main() function.
 from argparse import ArgumentParser
 import sys
 import logging
-import os
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
 from .spinedb_api_version_check import spinedb_api_version_check
