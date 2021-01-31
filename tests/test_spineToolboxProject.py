@@ -170,7 +170,7 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_execute_project_with_single_item(self):
         _, view_executable = self._make_item(self.add_view)
-        with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
+        with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.return_value = view_executable
             self.toolbox.project().execute_project()
             self._wait_for_execution_finished()
@@ -179,7 +179,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_execute_project_with_two_dags(self):
         item1, item1_executable = self._make_item(self.add_dc)
         item2, item2_executable = self._make_item(self.add_view)
-        with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
+        with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 item1.name: item1_executable,
                 item2.name: item2_executable,
@@ -193,7 +193,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1, item1_executable = self._make_item(self.add_dc)
         item2, item2_executable = self._make_item(self.add_view)
         self.toolbox.project().set_item_selected(item2)
-        with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
+        with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 item1.name: item1_executable,
                 item2.name: item2_executable,
@@ -225,7 +225,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.toolbox.project().dag_handler.add_graph_edge(data_store.name, data_connection.name)
         self.toolbox.project().dag_handler.add_graph_edge(data_connection.name, view.name)
         self.toolbox.project().set_item_selected(data_connection)
-        with mock.patch("spinetoolbox.spine_engine_worker.SpineEngine._make_item") as mock_make_item:
+        with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 data_store.name: data_store_executable,
                 data_connection.name: data_connection_executable,
