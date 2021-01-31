@@ -26,6 +26,7 @@ from jupyter_client.kernelspec import NoSuchKernel
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
+from spinetoolbox.spine_engine_manager import make_engine_manager
 
 
 class SpineConsoleWidget(RichJupyterWidget):
@@ -41,11 +42,12 @@ class SpineConsoleWidget(RichJupyterWidget):
         super().__init__(parent=toolbox)
         self._toolbox = toolbox
         self._name = name
-        self.owner = owner
+        self.owners = {owner}
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
         self.kernel_name = None
         self.kernel_manager = None
         self.kernel_client = None
+        self._engine_connection_file = None  # To restart kernels controlled by Spine Engine
         self.normal_cursor = self._control.viewport().cursor()
         self._copy_input_action = QAction('Copy (Only Input)', self)
         self._copy_input_action.triggered.connect(lambda checked: self.copy_input())
@@ -64,6 +66,10 @@ class SpineConsoleWidget(RichJupyterWidget):
     def name(self):
         """Returns console name."""
         return self._name
+
+    @property
+    def owner(self):
+        return "&".join(self.owners)
 
     @Slot(bool)
     def start_console(self, checked=False):
@@ -85,9 +91,16 @@ class SpineConsoleWidget(RichJupyterWidget):
 
     @Slot(bool)
     def restart_console(self, checked=False):
-        """Restarts chosen Python/Julia kernel. Starts a new kernel if it
+        """Restarts current Python/Julia kernel. Starts a new kernel if it
         is not running or if chosen kernel has been changed in Settings.
         Context menu restart action handler."""
+        if self._engine_connection_file:
+            self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
+            engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+            engine_mngr = make_engine_manager(engine_server_address)
+            engine_mngr.restart_kernel(self._engine_connection_file)
+            self._replace_client()
+            return
         if self._name == "Python Console":
             k_name = self._toolbox.qsettings().value("appSettings/pythonKernel", defaultValue="")
         else:
@@ -101,17 +114,11 @@ class SpineConsoleWidget(RichJupyterWidget):
             # Restart current kernel
             self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
             self._toolbox.msg.emit(f"*** Restarting {self._name} ***")
-            # self.shutdown_kernel()
-            if self.kernel_client:
-                self.kernel_client.stop_channels()
             # Restart kernel manager
             blackhole = open(os.devnull, 'w')
             self.kernel_manager.restart_kernel(now=True, stdout=blackhole, stderr=blackhole)
             # Start kernel client and attach it to kernel manager
-            kc = self.kernel_manager.client()
-            kc.hb_channel.time_to_dead = JUPYTER_KERNEL_TIME_TO_DEAD
-            kc.start_channels()
-            self.kernel_client = kc
+            self._replace_client()
         else:
             # No kernel running in Python Console or Python kernel has been changed in Settings->Tools. Start kernel
             self.call_start_kernel(k_name)
@@ -234,10 +241,12 @@ class SpineConsoleWidget(RichJupyterWidget):
                 menu.insertAction(before_action, self._copy_input_action)
                 break
         first_action = menu.actions()[0]
-        if not self.kernel_manager:
-            menu.insertAction(first_action, self.start_console_action)
-        else:
+        if self.kernel_manager or self._engine_connection_file:
+            self.restart_console_action.setEnabled(not self._kernel_starting)
             menu.insertAction(first_action, self.restart_console_action)
+        else:
+            self.start_console_action.setEnabled(not self._kernel_starting)
+            menu.insertAction(first_action, self.start_console_action)
         menu.insertSeparator(first_action)
         return menu
 
@@ -269,30 +278,30 @@ class SpineConsoleWidget(RichJupyterWidget):
             text = text[:-1]
         QApplication.clipboard().setText(text)
 
-    def _setup_client(self):
-        """Sets up client."""
+    def _replace_client(self):
         if self.kernel_manager is None:
             return
-        new_kernel_client = self.kernel_manager.client()
-        new_kernel_client.hb_channel.time_to_dead = (
-            JUPYTER_KERNEL_TIME_TO_DEAD  # Not crucial, but nicer to keep the same as mngr
-        )
-        new_kernel_client.start_channels()
+        kc = self.kernel_manager.client()
+        kc.hb_channel.time_to_dead = JUPYTER_KERNEL_TIME_TO_DEAD  # Not crucial, but nicer to keep the same as mngr
+        kc.start_channels()
         if self.kernel_client is not None:
             self.kernel_client.stop_channels()
-        self.kernel_client = new_kernel_client
+        self.kernel_client = kc
 
     def connect_to_kernel(self, kernel_name, connection_file):
         """Connects to an existing kernel. Used when Spine Engine is managing the kernel
         for project execution.
 
         Args:
+            kernel_name (str)
             connection_file (str): Path to the connection file of the kernel
         """
+        self.kernel_name = kernel_name
+        self._engine_connection_file = connection_file
+        self._kernel_starting = True
         self.kernel_manager = QtKernelManager(connection_file=connection_file)
         self.kernel_manager.load_connection_file()
-        self.kernel_name = kernel_name
-        self._setup_client()
+        self._replace_client()
         self.include_other_output = True
         self.other_output_prefix = ""
 

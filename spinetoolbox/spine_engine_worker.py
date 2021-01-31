@@ -16,10 +16,8 @@ Contains SpineEngineWorker.
 :date:   14.10.2020
 """
 
-import socket
-import json
 from PySide2.QtCore import Signal, Slot, QObject, QThread
-from spine_engine.spine_engine import SpineEngine
+from .spine_engine_manager import make_engine_manager
 
 
 @Slot(list)
@@ -78,7 +76,9 @@ class SpineEngineWorker(QObject):
         """
         super().__init__()
         self._toolbox = toolbox
-        self._engine_mngr = self._make_engine_manager(engine_data)
+        self._engine_data = engine_data
+        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        self._engine_mngr = make_engine_manager(engine_server_address)
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"
@@ -93,12 +93,6 @@ class SpineEngineWorker(QObject):
         self._node_execution_finished.connect(_handle_node_execution_finished)
         self._event_message_arrived.connect(_handle_event_message_arrived)
         self._process_message_arrived.connect(_handle_process_message_arrived)
-
-    def _make_engine_manager(self, engine_data):
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        if not engine_server_address:
-            return LocalSpineEngineManager(engine_data)
-        return RemoteSpineEngineManager(engine_server_address, engine_data)
 
     def stop_engine(self):
         self._engine_mngr.stop_engine()
@@ -116,7 +110,7 @@ class SpineEngineWorker(QObject):
     @Slot()
     def do_work(self):
         """Does the work and emits finished when done."""
-        self._engine_mngr.run_engine()
+        self._engine_mngr.run_engine(self._engine_data)
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
             self._process_event(event_type, data)
@@ -221,106 +215,3 @@ class SpineEngineWorker(QObject):
         self._thread.quit()
         self._thread.wait()
         self.deleteLater()
-
-
-class SpineEngineManagerBase:
-    def run_engine(self):
-        raise NotImplementedError()
-
-    def get_engine_event(self):
-        raise NotImplementedError()
-
-    def stop_engine(self):
-        raise NotImplementedError()
-
-
-class RemoteSpineEngineManager(SpineEngineManagerBase):
-    _ENCODING = "ascii"
-
-    def __init__(self, engine_server_address, engine_data):
-        """
-        Sends a run_engine request to the server.
-
-        Args:
-            engine_data (dict): The engine data.
-
-        Returns:
-            str: engine id, for further calls
-        """
-        self._engine_server_address = engine_server_address
-        self._engine_data = engine_data
-        self.request = None
-        self._engine_id = None
-
-    def run_engine(self):
-        """
-        Sends a run_engine request to the server.
-        """
-        self._engine_id = self._send("run_engine", self._engine_data)
-
-    def get_engine_event(self):
-        """
-        Sends a get_engine_event request to the server.
-
-        Returns:
-            tuple(str,dict): two element tuple: event type identifier string, and event data dictionary
-        return self._send("run_engine", data)
-        """
-        return self._send("get_engine_event", self._engine_id)
-
-    def stop_engine(self):
-        """
-        Sends a stop_engine request to the server.
-        """
-        self._send("stop_engine", self._engine_id, receive=False)
-
-    def _send(self, request, *args, receive=True):
-        """
-        Sends a request to the server with the given arguments.
-
-        Args:
-            request (str): One of the supported engine server requests
-            args: Request arguments
-            receive (bool, optional): If True (the default) also receives the response and returns it.
-
-        Returns:
-            str or NoneType: response, or None if receive is False
-        """
-        msg = json.dumps((request, args))
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.request:
-            self.request.connect(self._engine_server_address)
-            self.request.sendall(bytes(msg, "ascii"))
-            if receive:
-                response = self._recvall()
-                return json.loads(response)
-
-    def _recvall(self):
-        """
-        Receives and returns all data in the current request.
-
-        Returns:
-            str
-        """
-        BUFF_SIZE = 4096
-        fragments = []
-        while True:
-            chunk = str(self.request.recv(BUFF_SIZE), self._ENCODING)
-            fragments.append(chunk)
-            if len(chunk) < BUFF_SIZE:
-                break
-        return "".join(fragments)
-
-
-class LocalSpineEngineManager(SpineEngineManagerBase):
-    def __init__(self, engine_data):
-        self._engine = None
-        self._engine_data = engine_data
-
-    def run_engine(self):
-        self._engine = SpineEngine(**self._engine_data)
-
-    def get_engine_event(self):
-        return self._engine.get_event()
-
-    def stop_engine(self):
-        self._engine.stop()

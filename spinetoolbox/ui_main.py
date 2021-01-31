@@ -162,6 +162,8 @@ class ToolboxUI(QMainWindow):
         # Make Python REPL
         self.python_console = SpineConsoleWidget(self, "Python Console")
         self.ui.dockWidgetContents_python_console.layout().addWidget(self.python_console)
+        # Additional consoles for item execution. See ``ToolboxUI.make_console()``
+        self._extra_consoles = {}
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -218,8 +220,12 @@ class ToolboxUI(QMainWindow):
         self.ui.actionCopy.triggered.connect(self.project_item_to_clipboard)
         self.ui.actionPaste.triggered.connect(lambda: self.project_item_from_clipboard(duplicate_files=False))
         self.ui.actionDuplicate.triggered.connect(lambda: self.duplicate_project_item(duplicate_files=False))
-        self.ui.actionPasteAndDuplicateFiles.triggered.connect(lambda: self.project_item_from_clipboard(duplicate_files=True))
-        self.ui.actionDuplicateAndDuplicateFiles.triggered.connect(lambda: self.duplicate_project_item(duplicate_files=True))
+        self.ui.actionPasteAndDuplicateFiles.triggered.connect(
+            lambda: self.project_item_from_clipboard(duplicate_files=True)
+        )
+        self.ui.actionDuplicateAndDuplicateFiles.triggered.connect(
+            lambda: self.duplicate_project_item(duplicate_files=True)
+        )
         self.ui.actionOpen_project_directory.triggered.connect(self._open_project_directory)
         self.ui.actionOpen_item_directory.triggered.connect(self._open_project_item_directory)
         self.ui.actionRename_item.triggered.connect(self._rename_project_item)
@@ -1871,8 +1877,14 @@ class ToolboxUI(QMainWindow):
 
     def _create_item_edit_actions(self):
         """Creates project item edit actions (copy, paste, duplicate) and adds them to proper places."""
-        actions = [self.ui.actionCopy, self.ui.actionPaste, self.ui.actionPasteAndDuplicateFiles,
-                   self.ui.actionDuplicate, self.ui.actionDuplicateAndDuplicateFiles, self.ui.actionRemove]
+        actions = [
+            self.ui.actionCopy,
+            self.ui.actionPaste,
+            self.ui.actionPasteAndDuplicateFiles,
+            self.ui.actionDuplicate,
+            self.ui.actionDuplicateAndDuplicateFiles,
+            self.ui.actionRemove,
+        ]
         for action in actions:
             action.setShortcutContext(Qt.WidgetShortcut)
             self.ui.treeView_project.addAction(action)
@@ -1993,3 +2005,23 @@ class ToolboxUI(QMainWindow):
         menu.addSeparator()
         menu.addAction(self.ui.actionRename_item)
         return menu
+
+    def make_console(self, name, item_name, kernel_name, connection_file):
+        """Creates a new SpineConsoleWidget for given connection file if none exists yet, and returns it.
+
+        Args:
+            name (str): Console name
+            item_name (str): Name of the item that requests the console
+            kernel_name (str): Name of the kernel
+            connection_file (str): Path of kernel connection file
+
+        Returns:
+            SpineConsoleWidget
+        """
+        console = self._extra_consoles.get(connection_file)
+        if console is not None:
+            console.owners.add(item_name)
+            return console
+        console = self._extra_consoles[connection_file] = SpineConsoleWidget(self, name, owner=item_name)
+        console.connect_to_kernel(kernel_name, connection_file)
+        return console
