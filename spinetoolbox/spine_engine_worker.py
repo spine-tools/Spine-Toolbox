@@ -159,11 +159,12 @@ class SpineEngineWorker(QObject):
         item = self._project_items[msg["item_name"]]
         language = msg["language"].capitalize()
         if msg["type"] == "kernel_started":
-            start_console = {"julia": item.start_julia_console, "python": item.start_python_console}.get(
-                msg["language"]
-            )
-            if start_console is not None:
-                start_console(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
+            console_requested_signal = {
+                "julia": item.julia_console_requested,
+                "python": item.python_console_requested,
+            }.get(msg["language"])
+            if console_requested_signal is not None:
+                console_requested_signal.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
                 f"\tUnable to find specification for {language} kernel <b>{msg['kernel_name']}</b>. "

@@ -36,7 +36,6 @@ from PySide2.QtWidgets import (
     QDockWidget,
     QAction,
     QUndoStack,
-
 )
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from spine_engine.utils.helpers import shorten
@@ -1368,7 +1367,7 @@ class ToolboxUI(QMainWindow):
         new_title = "Event Log"
         owner = self.ui.textBrowser_eventlog.document().owner
         if owner:
-            new_title = f"{new_title} --{owner}"
+            new_title = f"{new_title} [{owner}]"
         self.ui.dockWidget_eventlog.setWindowTitle(new_title)
 
     def _update_process_log_title(self):
@@ -1376,7 +1375,7 @@ class ToolboxUI(QMainWindow):
         new_title = "Process Log"
         owner = self.ui.textBrowser_processlog.document().owner
         if owner:
-            new_title = f"{new_title} --{owner}"
+            new_title = f"{new_title} [{owner}]"
         self.ui.dockWidget_process_output.setWindowTitle(new_title)
 
     @staticmethod
@@ -1390,7 +1389,7 @@ class ToolboxUI(QMainWindow):
         console.show()
         new_title = console.name()
         if console.owner:
-            new_title = f"{new_title} --{console.owner}"
+            new_title = f"{new_title} [{console.owner}]"
         widget.parent().setWindowTitle(new_title)
 
     def override_execution_list(self):
@@ -1399,7 +1398,7 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidget_executions.setVisible(
             bool(self.active_project_item.filter_execution_documents or self.active_project_item.filter_consoles)
         )
-        self.ui.dockWidget_executions.setWindowTitle(f"Executions --{self.active_project_item.name}")
+        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self.active_project_item.name}]")
         current = self.ui.listView_executions.currentIndex()
         self._select_execution(current, None)
 
