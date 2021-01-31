@@ -145,7 +145,7 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
         object_class_index = self._editor.object_tree_model.index(0, 0)
         self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
-        for action in self._editor.input_type_action_group.actions():
+        for action in self._editor.pivot_action_group.actions():
             if action.text() == self._editor._INDEX_EXPANSION:
                 action.trigger()
                 break
