@@ -52,13 +52,11 @@ class SpineDBParcel:
 
     def push_object_class_ids(self, db_map_ids):
         """Pushes object_class ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["object_class_ids"].update(ids)
+        self._update_ids(db_map_ids, "object_class_ids")
 
     def push_relationship_class_ids(self, db_map_ids):
         """Pushes relationship_class ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["relationship_class_ids"].update(ids)
+        self._update_ids(db_map_ids, "relationship_class_ids")
         self.push_object_class_ids(
             {
                 db_map: {
@@ -72,16 +70,14 @@ class SpineDBParcel:
 
     def push_object_ids(self, db_map_ids):
         """Pushes object ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["object_ids"].update(ids)
+        self._update_ids(db_map_ids, "object_ids")
         self.push_object_class_ids(
             {db_map: self._get_fields(db_map, "object", "class_id", ids) for db_map, ids in db_map_ids.items()}
         )
 
     def push_relationship_ids(self, db_map_ids):
         """Pushes relationship ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["relationship_ids"].update(ids)
+        self._update_ids(db_map_ids, "relationship_ids")
         self.push_object_ids(
             {
                 db_map: {
@@ -95,13 +91,11 @@ class SpineDBParcel:
 
     def push_parameter_value_list_ids(self, db_map_ids):
         """Pushes parameter_value_list ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["parameter_value_list_ids"].update(ids)
+        self._update_ids(db_map_ids, "parameter_value_list_ids")
 
     def push_parameter_definition_ids(self, db_map_ids, entity_type):
         """Pushes parameter_definition ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)[entity_type + "_parameter_ids"].update(ids)
+        self._update_ids(db_map_ids, entity_type + "_parameter_ids")
         self.push_parameter_value_list_ids(
             {
                 db_map: self._get_fields(db_map, "parameter_definition", "value_list_id", ids)
@@ -125,8 +119,7 @@ class SpineDBParcel:
 
     def push_parameter_value_ids(self, db_map_ids, entity_type):
         """Pushes parameter_value ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)[entity_type + "_parameter_value_ids"].update(ids)
+        self._update_ids(db_map_ids, entity_type + "_parameter_value_ids")
         self.push_parameter_definition_ids(
             {
                 db_map: self._get_fields(db_map, "parameter_value", "parameter_id", ids)
@@ -157,8 +150,7 @@ class SpineDBParcel:
 
     def push_object_group_ids(self, db_map_ids):
         """Pushes object group ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["object_group_ids"].update(ids)
+        self._update_ids(db_map_ids, "object_group_ids")
         self.push_object_ids(
             {
                 db_map: self._get_fields(db_map, "entity_group", "entity_id", ids)
@@ -169,18 +161,15 @@ class SpineDBParcel:
 
     def push_alternative_ids(self, db_map_ids):
         """Pushes alternative ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["alternative_ids"].update(ids)
+        self._update_ids(db_map_ids, "alternative_ids")
 
     def push_scenario_ids(self, db_map_ids):
         """Pushes scenario ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["scenario_ids"].update(ids)
+        self._update_ids(db_map_ids, "scenario_ids")
 
     def push_scenario_alternative_ids(self, db_map_ids):
         """Pushes scenario_alternative ids."""
-        for db_map, ids in db_map_ids.items():
-            self._setdefault(db_map)["scenario_alternative_ids"].update(ids)
+        self._update_ids(db_map_ids, "scenario_alternative_ids")
         self.push_alternative_ids(
             {
                 db_map: self._get_fields(db_map, "scenario_alternative", "alternative_id", ids)
@@ -264,7 +253,31 @@ class SpineDBParcel:
         for db_map, ids in db_map_ids.items():
             self._setdefault(db_map)[entity_type + "_parameter_value_ids"].update(ids)
 
+    def _update_ids(self, db_map_ids, which):
+        """Updates ids for given database item.
+
+        Args:
+            db_map_ids (dict): mapping from :class:`DatabaseMappingBase` to ids or ``Asterisk``
+            which (str): item name
+        """
+        for db_map, ids in db_map_ids.items():
+            if ids is Asterisk:
+                self._setdefault(db_map)[which] = ids
+            else:
+                current = self._setdefault(db_map)[which]
+                if current is not Asterisk:
+                    current.update(ids)
+
     def _setdefault(self, db_map):
+        """
+        Adds new id sets for given ``db_map`` or returns existing ones.
+
+        Args:
+            db_map (DatabaseMappingBase): a database map
+
+        Returns:
+            dict: mapping from item name to set of ids
+        """
         d = {
             "object_class_ids": set(),
             "relationship_class_ids": set(),
