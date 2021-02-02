@@ -349,18 +349,16 @@ Creating objects
 
 #. Next, create the following objects:
 
-   a. ``water`` and ``electricity`` of class ``commodity``.
+   a. ``instance`` of class ``model``.
+   b. ``water`` and ``electricity`` of class ``commodity``.
+   c. ``electricity_node`` of class ``node``.
+   d. ``electricity_load`` of class ``unit``.
+   e. ``some_week`` of class ``temporal_block``.
 
-   b. ``electricity_node`` of class ``node``.
-
-   c. ``electricity_load`` of class ``unit``.
-
-   d. ``some_week`` of class ``temporal_block``.
 
 #. Finally, create the following objects to get results back from Spine Opt:
 
    a. ``my_report`` of class ``report``.
-
    b. ``unit_flow``, ``connection_flow``, and ``node_state`` of class ``output``.
 
 
