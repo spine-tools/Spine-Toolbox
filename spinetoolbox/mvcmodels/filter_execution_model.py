@@ -42,7 +42,7 @@ class FilterExecutionModel(QAbstractItemModel):
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid() or self._item is None:
             return 0
-        return len(self._item.filter_execution_documents)
+        return len(self._item.filter_log_documents)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if section == 0 and orientation == Qt.Horizontal and role == Qt.DisplayRole:
@@ -52,10 +52,10 @@ class FilterExecutionModel(QAbstractItemModel):
         if self._item is None:
             return None
         if role == Qt.DisplayRole:
-            return list(self._item.filter_execution_documents.keys())[index.row()]
+            return list(self._item.filter_log_documents.keys())[index.row()]
 
     def get_documents(self, filter_id):
-        docs = self._item.filter_execution_documents[filter_id]
+        docs = self._item.filter_log_documents[filter_id]
         return docs["event_log"], docs["process_log"]
 
     def get_consoles(self, filter_id):

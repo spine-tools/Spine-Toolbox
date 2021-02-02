@@ -86,7 +86,7 @@ class ProjectItem(MetaObject):
         self.undo_specification = None
         self._event_document = SignedTextDocument(name)
         self._process_document = SignedTextDocument(name)
-        self._filter_execution_documents = {}
+        self._filter_log_documents = {}
         self.julia_console = None
         self.python_console = None
         self._filter_consoles = {}
@@ -120,8 +120,8 @@ class ProjectItem(MetaObject):
         return self._process_document
 
     @property
-    def filter_execution_documents(self):
-        return self._filter_execution_documents
+    def filter_log_documents(self):
+        return self._filter_log_documents
 
     @property
     def filter_consoles(self):
@@ -451,14 +451,14 @@ class ProjectItem(MetaObject):
             "implemented yet."
         )
 
-    def _create_filter_execution_documents(self, filter_id):
+    def _create_filter_log_documents(self, filter_id):
         """Creates a pair of event and process log documents for a filter execution.
 
         Args:
             filter_id (str): filter identifier
         """
-        if filter_id not in self._filter_execution_documents:
-            self._filter_execution_documents[filter_id] = {
+        if filter_id not in self._filter_log_documents:
+            self._filter_log_documents[filter_id] = {
                 "event_log": SignedTextDocument(self.name),
                 "process_log": SignedTextDocument(self.name),
             }
@@ -474,8 +474,8 @@ class ProjectItem(MetaObject):
             msg_text (str): message text
         """
         if filter_id:
-            self._create_filter_execution_documents(filter_id)
-            document = self._filter_execution_documents[filter_id]["event_log"]
+            self._create_filter_log_documents(filter_id)
+            document = self._filter_log_documents[filter_id]["event_log"]
         else:
             document = self._event_document
         message = format_event_message(msg_type, msg_text)
@@ -490,8 +490,8 @@ class ProjectItem(MetaObject):
             msg_text (str): message text
         """
         if filter_id:
-            self._create_filter_execution_documents(filter_id)
-            document = self._filter_execution_documents[filter_id]["process_log"]
+            self._create_filter_log_documents(filter_id)
+            document = self._filter_log_documents[filter_id]["process_log"]
         else:
             document = self._process_document
         message = format_process_message(msg_type, msg_text)

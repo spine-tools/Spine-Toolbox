@@ -49,6 +49,14 @@ class SpineEngineManagerBase:
         """
         raise NotImplementedError()
 
+    def shutdown_kernel(self, connection_file):
+        """Shuts down the jupyter kernel associated to given connection file.
+
+        Args:
+            connection_file (str): path of connection file
+        """
+        raise NotImplementedError()
+
 
 class RemoteSpineEngineManager(SpineEngineManagerBase):
     _ENCODING = "ascii"
@@ -78,6 +86,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
     def restart_kernel(self, connection_file):
         """See base class."""
         self._send("restart_kernel", connection_file)
+
+    def shutdown_kernel(self, connection_file):
+        """See base class."""
+        self._send("shutdown_kernel", connection_file)
 
     def _send(self, request, *args, receive=True):
         """
@@ -133,9 +145,14 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         self._engine.stop()
 
     def restart_kernel(self, connection_file):
-        from spine_engine.execution_managers import restart_kernel
+        from spine_engine.execution_managers import get_kernel_manager
 
-        restart_kernel(connection_file)
+        get_kernel_manager(connection_file).restart_kernel(now=True)
+
+    def shutdown_kernel(self, connection_file):
+        from spine_engine.execution_managers import get_kernel_manager
+
+        get_kernel_manager(connection_file).shutdown_kernel(now=True)
 
 
 def make_engine_manager(engine_server_address):

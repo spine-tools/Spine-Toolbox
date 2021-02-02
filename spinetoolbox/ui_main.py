@@ -56,6 +56,7 @@ from .widgets.link_properties_widget import LinkPropertiesWidget
 from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+from .spine_engine_manager import make_engine_manager
 from .config import (
     STATUSBAR_SS,
     TEXTBROWSER_SS,
@@ -1402,7 +1403,7 @@ class ToolboxUI(QMainWindow):
         """Displays executions of the active project item in Executions and updates title."""
         self.ui.listView_executions.model().reset_model(self.active_project_item)
         self.ui.dockWidget_executions.setVisible(
-            bool(self.active_project_item.filter_execution_documents or self.active_project_item.filter_consoles)
+            bool(self.active_project_item.filter_log_documents or self.active_project_item.filter_consoles)
         )
         self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self.active_project_item.name}]")
         current = self.ui.listView_executions.currentIndex()
@@ -1731,6 +1732,7 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_console.shutdown_kernel()
         self.python_console.shutdown_kernel()
+        self._shutdown_engine_kernels()
         self.tear_down_items_and_factories()
         event.accept()
 
@@ -2025,3 +2027,10 @@ class ToolboxUI(QMainWindow):
         console = self._extra_consoles[connection_file] = SpineConsoleWidget(self, name, owner=item_name)
         console.connect_to_kernel(kernel_name, connection_file)
         return console
+
+    def _shutdown_engine_kernels(self):
+        """Shuts down all kernels managed by Spine Engine."""
+        engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        engine_mngr = make_engine_manager(engine_server_address)
+        for connection_file in self._extra_consoles:
+            engine_mngr.shutdown_kernel(connection_file)
