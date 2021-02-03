@@ -45,6 +45,7 @@ with open("spinetoolbox/version.py") as fp:
 def main(argv):
     """Main of cx_Freeze_setup.py."""
     python_dir, python_exe = os.path.split(sys.executable)
+    python37_dll = os.path.join(python_dir, "python37.dll")
     os.environ['TCL_LIBRARY'] = os.path.join(python_dir, "tcl", "tcl8.6")
     os.environ['TK_LIBRARY'] = os.path.join(python_dir, "tcl", "tk8.6")
     # tcl86t.dll and tk86t.dll are required by tkinter, which in turn is required by matplotlib
@@ -60,6 +61,7 @@ def main(argv):
     alembic_version_files = alembic_files(python_dir)
     pyvenv_cfg = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "build_utils", "pyvenv.cfg"))
     path_pth = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "build_utils", "path.pth"))
+    site_customize = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "build_utils", "sitecustomize.py"))
     # Most dependencies are automatically detected but some need to be manually included.
     build_exe_options = {
         "packages": ["packaging", "pkg_resources", "spine_engine"],
@@ -121,8 +123,10 @@ def main(argv):
             copying_file,
             copying_lesser_file,
             (sys.executable, os.path.join("tools/", python_exe)),
+            (python37_dll, os.path.join("tools/", "python37.dll")),
             pyvenv_cfg,
             path_pth,
+            site_customize,
         ]
         + alembic_version_files,
         "include_msvcr": True
