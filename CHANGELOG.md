@@ -3,9 +3,13 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## Unreleased
+##[0.5.0-final.1] - 2020-02-03
+
 ### Added
 - Tutorial for case study A5 in the documentation
+
+### Fixed
+- [win-x64] Fixed /tools/python.exe by adding sitecustomize.py and a missing python37.dll
 
 ## [0.5.0-final.0] - 2020-12-14
 
