@@ -65,7 +65,7 @@ class SpineDBFetcher(QObject):
         self._fetch_completed.connect(self._emit_finished)
         self._alternatives_fetched.connect(self._receive_alternatives_fetched)
         self._scenarios_fetched.connect(self._receive_scenarios_fetched)
-        self._scenarios_alternatives_fetched.connect(self._receive_scenarios_alternatives_fetched)
+        self._scenarios_alternatives_fetched.connect(self._receive_scenario_alternatives_fetched)
         self._object_classes_fetched.connect(self._receive_object_classes_fetched)
         self._objects_fetched.connect(self._receive_objects_fetched)
         self._relationship_classes_fetched.connect(self._receive_relationship_classes_fetched)
@@ -83,6 +83,9 @@ class SpineDBFetcher(QObject):
 
     def fetch(self, db_maps):
         """Fetches items from the database and emit fetched signals.
+
+        Args:
+            db_maps (Iterable of DatabaseMappingBase): database maps to fetch
         """
         self._listener.setCursor(QCursor(Qt.BusyCursor))
         self._listener.silenced = True
@@ -130,6 +133,7 @@ class SpineDBFetcher(QObject):
     def quit(self):
         self._thread.quit()
         self._thread.wait()
+        self._thread.deleteLater()
 
     @Slot(object)
     def _receive_alternatives_fetched(self, db_map_data):
@@ -142,7 +146,7 @@ class SpineDBFetcher(QObject):
         self._listener.receive_scenarios_fetched(db_map_data)
 
     @Slot(object)
-    def _receive_scenarios_alternatives_fetched(self, db_map_data):
+    def _receive_scenario_alternatives_fetched(self, db_map_data):
         self._db_mngr.cache_items("scenario_alternative", db_map_data)
 
     @Slot(object)

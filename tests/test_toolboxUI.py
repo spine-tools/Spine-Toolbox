@@ -125,6 +125,11 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIsInstance(
             item6.parent(), RootProjectTreeItem, "Parent item of category item on row 5 should be root"
         )
+        item7 = self.toolbox.project_item_model.root().child(6)
+        self.assertEqual(item7.name, "Manipulators", "Item on row 6 is not 'Manipulators'")
+        self.assertIsInstance(
+            item7.parent(), RootProjectTreeItem, "Parent item of category item on row 6 should be root"
+        )
 
     def test_init_specification_model(self):
         """Check that specification model has no items after init and that

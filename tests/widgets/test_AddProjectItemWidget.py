@@ -15,13 +15,14 @@ Unit tests for AddProjectItemWidget.
 :author: A. Soininen (VTT)
 :date:   17.10.2019
 """
-
+from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import MagicMock
-from PySide2.QtWidgets import QApplication, QWidget
-from PySide2.QtGui import QStandardItemModel
+from unittest.mock import MagicMock, patch
+from PySide2.QtWidgets import QApplication
+from spinetoolbox.project_item.project_item import ProjectItem
+from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
-from ..mock_helpers import create_toolboxui
+from ..mock_helpers import create_toolboxui_with_project, clean_up_toolbox
 
 
 class TestAddProjectItemWidget(unittest.TestCase):
@@ -32,52 +33,126 @@ class TestAddProjectItemWidget(unittest.TestCase):
 
     def setUp(self):
         """Set up toolbox."""
-        self.toolbox = QWidget()
-        self.toolbox.project = lambda: None
-        self.toolbox.item_factories = MagicMock()
-        self.toolbox.propose_item_name = propose_item_name = MagicMock()
-        self.toolbox.filtered_spec_factory_models = filtered_spec_factory_models = MagicMock()
-        filtered_spec_factory_models.__getitem__.side_effect = lambda key: QStandardItemModel()
-        propose_item_name.side_effect = lambda x: ""
-        self.factory = MagicMock()
-        self.toolbox.item_factories.__getitem__.side_effect = lambda key: self.factory
+        self._temp_dir = TemporaryDirectory()
+        with patch("spinetoolbox.ui_main.load_project_items") as mock_load_project_items:
+            mock_load_project_items.return_value = (
+                {TestProjectItem.item_type(): TestProjectItem.item_category()},
+                {TestProjectItem.item_type(): TestItemFactory},
+            )
+            self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
         """Clean up."""
-        # clean_up_toolboxui_with_project(self.toolbox)
+        clean_up_toolbox(self._toolbox)
+        self._temp_dir.cleanup()
 
     def test_name_field_initially_selected(self):
-        prefix = "project_item"
-        self.toolbox.propose_item_name.side_effect = lambda x: prefix + " 1"
-        class_ = MagicMock()
-        widget = AddProjectItemWidget(self.toolbox, 0.0, 0.0, class_=class_)
-        self.assertEqual(widget.ui.lineEdit_name.selectedText(), prefix + " 1")
+        widget = AddProjectItemWidget(self._toolbox, 0.0, 0.0, class_=TestProjectItem)
+        self.assertEqual(widget.ui.lineEdit_name.selectedText(), "TestItemType 1")
 
     def test_find_item_is_used_to_create_prefix(self):
-        class_ = MagicMock()
-        class_.item_type.return_value = "Data Store"
-        toolbox = create_toolboxui()
-        toolbox.init_project_item_model()
-        widget = AddProjectItemWidget(toolbox, 0.0, 0.0, class_=class_)
-        self.assertEqual(widget.ui.lineEdit_name.text(), "Data Store 1")
+        widget = AddProjectItemWidget(self._toolbox, 0.0, 0.0, class_=TestProjectItem)
+        self.assertEqual(widget.ui.lineEdit_name.text(), "TestItemType 1")
 
-    def test_specifications_combo_box_disabled_if_item_does_not_support_specifications(self,):
-        self.factory.supports_specifications.return_value = False
-        prefix = "project_item"
-        class_ = MagicMock()
-        class_.default_name_prefix.return_value = prefix
-        class_.item_type.return_value = "Data Store"
-        widget = AddProjectItemWidget(self.toolbox, 0.0, 0.0, class_=class_)
-        self.assertFalse(widget.ui.comboBox_specification.isEnabled())
+
+class TestAddProjectItemWidgetWithSpecifications(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        """Set up toolbox."""
+        self._temp_dir = TemporaryDirectory()
+        with patch("spinetoolbox.ui_main.load_project_items") as mock_load_project_items:
+            mock_load_project_items.return_value = (
+                {TestProjectItem.item_type(): TestProjectItem.item_category()},
+                {TestProjectItem.item_type(): TestSpecificationSupportingItemFactory},
+            )
+            self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
+
+    def tearDown(self):
+        """Clean up."""
+        clean_up_toolbox(self._toolbox)
+        self._temp_dir.cleanup()
 
     def test_specifications_combo_box_enabled_if_item_supports_specifications(self):
-        self.factory.supports_specifications.return_value = True
-        prefix = "project_item"
-        class_ = MagicMock()
-        class_.default_name_prefix.return_value = prefix
-        class_.item_type.return_value = "Tool"
-        widget = AddProjectItemWidget(self.toolbox, 0.0, 0.0, class_=class_)
+        widget = AddProjectItemWidget(self._toolbox, 0.0, 0.0, class_=TestProjectItem)
         self.assertTrue(widget.ui.comboBox_specification.isEnabled())
+
+
+class TestProjectItem(ProjectItem):
+    def __init__(self, project):
+        super().__init__("item name", "item description", 0.0, 0.0, project)
+
+    @staticmethod
+    def item_type():
+        return "TestItemType"
+
+    @staticmethod
+    def item_category():
+        return "TestCategory"
+
+    @property
+    def executable_class(self):
+        raise NotImplementedError()
+
+    @staticmethod
+    def from_dict(name, item_dict, toolbox, project):
+        return TestProjectItem(project)
+
+    def update_name_label(self):
+        return
+
+
+class TestItemFactory(ProjectItemFactory):
+    @staticmethod
+    def item_class():
+        return TestProjectItem
+
+    @staticmethod
+    def icon():
+        return ""
+
+    @staticmethod
+    def supports_specifications():
+        return False
+
+    @staticmethod
+    def make_add_item_widget(toolbox, x, y, specification):
+        return MagicMock()
+
+    @staticmethod
+    def make_icon(toolbox):
+        return MagicMock()
+
+    @staticmethod
+    def make_item(name, item_dict, toolbox, project):
+        return TestProjectItem(project)
+
+    @staticmethod
+    def make_properties_widget(toolbox):
+        """
+        Creates the item's properties tab widget.
+
+        Returns:
+            QWidget: item's properties tab widget
+        """
+        return MagicMock()
+
+    @staticmethod
+    def make_specification_menu(parent, index):
+        return MagicMock()
+
+    @staticmethod
+    def show_specification_widget(toolbox, specification=None, **kwargs):
+        return MagicMock()
+
+
+class TestSpecificationSupportingItemFactory(TestItemFactory):
+    @staticmethod
+    def supports_specifications():
+        return True
 
 
 if __name__ == "__main__":

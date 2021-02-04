@@ -99,12 +99,20 @@ class ProjectItem(MetaObject):
 
     @staticmethod
     def item_type():
-        """Item's type identifier string."""
+        """Item's type identifier string.
+
+        Returns:
+            str: type string
+        """
         raise NotImplementedError()
 
     @staticmethod
     def item_category():
-        """Item's category."""
+        """Item's category.
+
+        Returns:
+            str: category name
+        """
         raise NotImplementedError()
 
     @property
