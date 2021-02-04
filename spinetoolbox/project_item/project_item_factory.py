@@ -138,5 +138,15 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
+    def repair_specification(toolbox, specification):
+        """Called right after a spec is added to the project. Finds if there's something wrong with the spec
+        and proposes actions to fix it with help from toolbox.
+
+        Args:
+            toolbox (ToolboxUI): Toolbox main window
+            specification (ProjectItemSpecification): a specification to check
+        """
+
+    @staticmethod
     def tear_down():
         """Tears down the factory. Called by toolbox when closing."""

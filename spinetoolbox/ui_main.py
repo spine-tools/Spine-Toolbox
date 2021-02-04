@@ -144,6 +144,7 @@ class ToolboxUI(QMainWindow):
         self.sync_item_selection_with_scene = True
         self.link_properties_widget = LinkPropertiesWidget(self)
         self._saved_specification = None
+        self._anchor_callbacks = {}
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -638,6 +639,9 @@ class ToolboxUI(QMainWindow):
             spec.definition_file_path = path
             # Insert tool into model
             self.specification_model.insertRow(spec)
+            item_factory = self.item_factories.get(spec.item_type)
+            if item_factory is not None:
+                item_factory.repair_specification(self, spec)
         if n_specs == 0:
             self.msg_warning.emit("Project has no specifications")
 
@@ -659,15 +663,9 @@ class ToolboxUI(QMainWindow):
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
+            # FIXME: Prompt to find it?
             self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
             return None
-        item_type = definition.get("item_type", "Tool")
-        if item_type == "Tool":
-            includes_main_path = definition.get("includes_main_path", ".")
-            if not os.path.isabs(includes_main_path):
-                definition["includes_main_path"] = os.path.normpath(
-                    os.path.join(os.path.dirname(def_path), includes_main_path)
-                )
         spec = self.load_specification(definition)
         if spec is not None:
             spec.definition_file_path = def_path
@@ -680,14 +678,14 @@ class ToolboxUI(QMainWindow):
             definition (dict): Dictionary with the definition
 
         Returns:
-            ProjectItemSpecification or NoneType: specification or None if specification factory was not found
+            ProjectItemSpecification or NoneType: specification or None if factory isn't found.
         """
-        # NOTE: Default to Tools so tool-specs work out of the box
+        # NOTE: If the spec doesn't have the "item_type" key, we can assume it's a tool spec
         item_type = definition.get("item_type", "Tool")
-        factory = self._item_specification_factories.get(item_type)
-        if factory is None:
+        spec_factory = self._item_specification_factories.get(item_type)
+        if spec_factory is None:
             return None
-        return factory.make_specification(definition, self._qsettings, self)
+        return spec_factory.make_specification(definition, self._qsettings, self)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -889,10 +887,14 @@ class ToolboxUI(QMainWindow):
         if not specification:
             return
         self.add_specification(specification)
+        item_factory = self.item_factories.get(specification.item_type)
+        if item_factory is not None:
+            item_factory.repair_specification(self, specification)
 
     def _save_specificiation_file(self, specification):
         if specification.definition_file_path:
             return specification.save()
+        # Determine a candidate definition file path
         specs_dir = self.project().specs_dir
         specs_type_dir = os.path.join(specs_dir, specification.item_type)
         try:
@@ -1083,6 +1085,16 @@ class ToolboxUI(QMainWindow):
             return
         self._project.remove_all_items()
 
+    def register_anchor_callback(self, url, callback):
+        """Registers a callback for a given anchor in event log, see ``open_anchor()``.
+        Used by ``ToolFactory.repair_specification()``.
+
+        Args:
+            url (str): The anchor url
+            callback (function): A function to call when the anchor is clicked on event log.
+        """
+        self._anchor_callbacks[url] = callback
+
     @Slot(QUrl)
     def open_anchor(self, qurl):
         """Open file explorer in the directory given in qurl.
@@ -1098,6 +1110,10 @@ class ToolboxUI(QMainWindow):
                 self._saved_specification, self._saved_specification.definition_file_path
             ):
                 self._emit_specification_saved(self._saved_specification)
+            return
+        callback = self._anchor_callbacks.get(url, None)
+        if callback is not None:
+            callback()
             return
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(qurl)
