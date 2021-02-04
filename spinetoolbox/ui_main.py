@@ -1502,14 +1502,13 @@ class ToolboxUI(QMainWindow):
         global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
         self.show_project_item_context_menu(global_pos, ind)
 
-    def show_project_item_context_menu(self, pos, index_or_name):
+    def show_project_item_context_menu(self, pos, index):
         """Create and show project item context menu.
 
         Args:
             pos (QPoint): Mouse position
-            index_or_name (QModelIndex or str): Index or name of concerned item
+            index (QModelIndex): Index of concerned item
         """
-        index = self.project_item_model.find_item(index_or_name) if isinstance(index_or_name, str) else index_or_name
         if not index.isValid():
             # Clicked on a blank area, show the project item model context menu
             menu = QMenu(self)

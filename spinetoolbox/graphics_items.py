@@ -297,7 +297,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         self.scene().clearSelection()
         self.setSelected(True)
-        self._toolbox.show_project_item_context_menu(event.screenPos(), self.name())
+        ind = self._toolbox.project_item_model.find_item(self.name())
+        self._toolbox.show_project_item_context_menu(event.screenPos(), ind)
 
     def itemChange(self, change, value):
         """
