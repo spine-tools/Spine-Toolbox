@@ -20,6 +20,7 @@ from PySide2.QtCore import Slot
 from PySide2.QtGui import QTextCursor, QTextDocument
 from PySide2.QtWidgets import QTextBrowser, QAction
 from spinetoolbox.helpers import add_message_to_document
+from ..config import TEXTBROWSER_OVERRIDE_SS, TEXTBROWSER_SS
 
 
 class SignedTextDocument(QTextDocument):
@@ -39,6 +40,7 @@ class CustomQTextBrowser(QTextBrowser):
         super().__init__(parent=parent)
         self._original_document = SignedTextDocument()
         self.setDocument(self._original_document)
+        self.setStyleSheet(TEXTBROWSER_SS)
         self._max_blocks = 2000
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
@@ -52,6 +54,7 @@ class CustomQTextBrowser(QTextBrowser):
         """
         self.setDocument(document)
         self._scroll_to_bottom()
+        self.setStyleSheet(TEXTBROWSER_OVERRIDE_SS)
 
     def restore_original_document(self):
         """
@@ -59,6 +62,7 @@ class CustomQTextBrowser(QTextBrowser):
         """
         self.setDocument(self._original_document)
         self._scroll_to_bottom()
+        self.setStyleSheet(TEXTBROWSER_SS)
 
     def _scroll_to_bottom(self):
         vertical_scroll_bar = self.verticalScrollBar()

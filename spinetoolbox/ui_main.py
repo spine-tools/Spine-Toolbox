@@ -59,7 +59,6 @@ from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_engine_manager import make_engine_manager
 from .config import (
     STATUSBAR_SS,
-    TEXTBROWSER_SS,
     MAINWINDOW_SS,
     DOCUMENTATION_PATH,
     _program_root,
@@ -125,8 +124,6 @@ class ToolboxUI(QMainWindow):
         # Set style sheets
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
-        self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
-        self.ui.textBrowser_processlog.setStyleSheet(TEXTBROWSER_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
@@ -1420,7 +1417,7 @@ class ToolboxUI(QMainWindow):
         new_title = "Event Log"
         owner = self.ui.textBrowser_eventlog.document().owner
         if owner:
-            new_title = f"{new_title} [{owner}]"
+            new_title = f"{owner} - {new_title}"
         self.ui.dockWidget_eventlog.setWindowTitle(new_title)
 
     def _update_process_log_title(self):
@@ -1428,7 +1425,7 @@ class ToolboxUI(QMainWindow):
         new_title = "Process Log"
         owner = self.ui.textBrowser_processlog.document().owner
         if owner:
-            new_title = f"{new_title} [{owner}]"
+            new_title = f"{owner} - {new_title}"
         self.ui.dockWidget_process_output.setWindowTitle(new_title)
 
     @staticmethod
@@ -1442,7 +1439,7 @@ class ToolboxUI(QMainWindow):
         console.show()
         new_title = console.name()
         if console.owner:
-            new_title = f"{new_title} [{console.owner}]"
+            new_title = f"{console.owner} - {new_title}"
         widget.parent().setWindowTitle(new_title)
 
     @Slot()

@@ -457,6 +457,14 @@ class ExecutionIcon(QGraphicsEllipseItem):
             self.setBrush(self.normal_brush)
         super().paint(painter, option, widget)
 
+    def itemChange(self, change, value):
+        """Unselect any selected ExecutionIcons if this is becoming selected."""
+        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
+            for x in self.scene().items():
+                if isinstance(x, ExecutionIcon) and x.isSelected():
+                    x.setSelected(False)
+        return super().itemChange(change, value)
+
     def _repaint(self, text, color):
         self._text_item.prepareGeometryChange()
         self._text_item.setPos(0, 0)

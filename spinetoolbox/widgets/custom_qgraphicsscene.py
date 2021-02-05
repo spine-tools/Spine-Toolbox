@@ -145,6 +145,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         if project_item_icons:
             last_ind = self._toolbox.project_item_model.find_item(project_item_icons[-1].name())
             self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(last_ind, QItemSelectionModel.NoUpdate)
+        # Set active project item, active link, and executed item in toolbox
         active_project_item = (
             self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
             if len(project_item_icons) == 1

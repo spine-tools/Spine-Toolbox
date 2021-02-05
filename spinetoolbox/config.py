@@ -88,12 +88,18 @@ ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, 
 # (known Qt issue)
 ICON_TOOLBAR_SS = f"QToolBar{{spacing: 6px; background: {ICON_BACKGROUND}; padding: 3px; border-style: solid;}}"
 
-TEXTBROWSER_SS = (
-    "QTextBrowser {background-color: #19232D; border: 1px solid #32414B; color: #F0F0F0; border-radius: 2px;}"
-    "QTextBrowser:hover,"
-    "QTextBrowser:selected,"
-    "QTextBrowser:pressed {border: 1px solid #668599;}"
-)
+
+def _make_text_browser_ss(color):
+    return (
+        f"QTextBrowser {{background-color: {color}; border: 1px solid #32414B; color: #F0F0F0; border-radius: 2px;}}"
+        "QTextBrowser:hover,"
+        "QTextBrowser:selected,"
+        "QTextBrowser:pressed {border: 1px solid #668599;}"
+    )
+
+
+TEXTBROWSER_SS = _make_text_browser_ss("#19232D")
+TEXTBROWSER_OVERRIDE_SS = _make_text_browser_ss("#2d2119")
 
 # ToolboxUI stylesheet. A lot of widgets inherit this sheet.
 MAINWINDOW_SS = (
