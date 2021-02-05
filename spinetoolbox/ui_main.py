@@ -802,7 +802,10 @@ class ToolboxUI(QMainWindow):
             self.activate_link_tab()
         else:
             self.activate_no_selection_tab()
-        self.overrride_logs_and_consoles()
+        if self._executed_item:
+            self.overrride_logs_and_consoles()
+        else:
+            self.restore_original_logs_and_consoles()
 
     def _set_active_project_item(self, active_project_item):
         """
@@ -841,11 +844,6 @@ class ToolboxUI(QMainWindow):
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
         self.ui.dockWidget_item.setWindowTitle("Properties")
-        self.restore_original_event_log_document()
-        self.restore_original_process_log_document()
-        self.restore_original_python_console()
-        self.restore_original_julia_console()
-        self.ui.dockWidget_executions.hide()
 
     def activate_item_tab(self):
         """Shows active project item properties tab according to item type."""
@@ -1337,9 +1335,14 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
+    def restore_original_logs_and_consoles(self):
+        self.restore_original_event_log_document()
+        self.restore_original_process_log_document()
+        self.restore_original_python_console()
+        self.restore_original_julia_console()
+        self.ui.dockWidget_executions.hide()
+
     def overrride_logs_and_consoles(self):
-        if self._executed_item is None:
-            return
         self.override_event_log()
         self.override_process_log()
         self.override_python_console()
