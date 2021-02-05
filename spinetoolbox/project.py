@@ -43,7 +43,7 @@ class SpineToolboxProject(MetaObject):
     project_execution_about_to_start = Signal()
     """Emitted just before the entire project is executed."""
     project_execution_finished = Signal()
-    """Emitted when the execution finishes, used in unit tests."""
+    """Emitted when the execution finishes."""
 
     def __init__(self, toolbox, name, description, p_dir, project_item_model, settings, logger):
 
@@ -384,6 +384,7 @@ class SpineToolboxProject(MetaObject):
             dags (Sequence(DiGraph))
             execution_permits (Sequence(dict))
         """
+        self.project_execution_about_to_start.emit()
         self._execution_stopped = False
         self._execute_dags(dags, execution_permits)
 
@@ -516,7 +517,6 @@ class SpineToolboxProject(MetaObject):
 
     def execute_project(self):
         """Executes all dags in the project."""
-        self.project_execution_about_to_start.emit()
         dags = self.dag_handler.dags()
         if not dags:
             self._logger.msg_warning.emit("Project has no items to execute")

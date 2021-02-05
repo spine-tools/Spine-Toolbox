@@ -176,7 +176,6 @@ class ToolboxUI(QMainWindow):
         self._proposed_item_name_counts = dict()
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setDisabled(True)
-        self.connect_signals()
         self.restore_ui()
         self.ui.dockWidget_executions.hide()
         self.parse_project_item_modules()
@@ -185,6 +184,7 @@ class ToolboxUI(QMainWindow):
         self.init_specification_model()
         self.main_toolbar.setup()
         self.set_work_directory()
+        self.connect_signals()
 
     def connect_signals(self):
         """Connect signals."""
@@ -237,9 +237,17 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Undo stack
         self.undo_stack.cleanChanged.connect(self.update_window_modified)
-        # Log views
+        # Views
         self.ui.listView_executions.selectionModel().currentChanged.connect(self._select_execution)
         self.ui.listView_executions.model().layoutChanged.connect(self._refresh_execution_list)
+        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
+        # Models
+        self.project_item_model.rowsInserted.connect(self._update_execute_enabled)
+        self.project_item_model.rowsRemoved.connect(self._update_execute_enabled)
+
+    def _update_execute_enabled(self):
+        first_index = next(self.project_item_model.leaf_indexes(), None)
+        self.main_toolbar.execute_project_button.setEnabled(first_index is not None)
 
     @Slot(bool)
     def update_window_modified(self, clean):
@@ -387,7 +395,6 @@ class ToolboxUI(QMainWindow):
             self._project.tear_down()
             self._project = None
         self.clear_ui()
-        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self._project = SpineToolboxProject(
             self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
         )
@@ -491,7 +498,6 @@ class ToolboxUI(QMainWindow):
             self._project.deleteLater()
             self._project = None
         self.clear_ui()
-        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Create project
         self._project = SpineToolboxProject(
             self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
@@ -780,14 +786,15 @@ class ToolboxUI(QMainWindow):
     def item_selection_changed(self, selected, deselected):
         """Synchronizes selection with scene. The scene handles item/link de/activation.
         """
+        inds = self.ui.treeView_project.selectedIndexes()
+        self.main_toolbar.execute_selection_button.setEnabled(bool(inds))
         if not self.sync_item_selection_with_scene:
             return
-        inds = self.ui.treeView_project.selectedIndexes()
-        proj_items = [self.project_item_model.item(i).project_item for i in inds]
-        proj_item_names = {i.name for i in proj_items}
+        project_items = [self.project_item_model.item(i).project_item for i in inds]
+        project_item_names = {i.name for i in project_items}
         scene = self.ui.graphicsView.scene()
         for icon in scene.project_item_icons():
-            icon.setSelected(icon.name() in proj_item_names)
+            icon.setSelected(icon.name() in project_item_names)
 
     def refresh_active_elements(self, active_project_item, active_link, executed_item):
         self._set_active_project_item(active_project_item)
@@ -1924,12 +1931,6 @@ class ToolboxUI(QMainWindow):
             self.ui.treeView_project.addAction(action)
             self.ui.graphicsView.addAction(action)
 
-    @Slot()
-    def _scroll_event_log_to_end(self):
-        self.ui.textBrowser_eventlog.verticalScrollBar().setValue(
-            self.ui.textBrowser_eventlog.verticalScrollBar().maximum()
-        )
-
     @Slot(str, str)
     def _show_message_box(self, title, message):
         """Shows an information message box."""
@@ -1944,7 +1945,22 @@ class ToolboxUI(QMainWindow):
 
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
-        self._project.project_execution_about_to_start.connect(self._scroll_event_log_to_end)
+        self._project.project_execution_about_to_start.connect(self.ui.textBrowser_eventlog.scroll_to_bottom)
+        self._project.project_execution_about_to_start.connect(self._handle_project_execution_about_to_start)
+        self._project.project_execution_finished.connect(self._handle_project_execution_finished)
+
+    @Slot()
+    def _handle_project_execution_about_to_start(self):
+        self.main_toolbar.execute_project_button.setEnabled(False)
+        self.main_toolbar.execute_selection_button.setEnabled(False)
+        self.main_toolbar.stop_execution_button.setEnabled(True)
+
+    @Slot()
+    def _handle_project_execution_finished(self):
+        self.main_toolbar.execute_project_button.setEnabled(True)
+        inds = self.ui.treeView_project.selectedIndexes()
+        self.main_toolbar.execute_selection_button.setEnabled(bool(inds))
+        self.main_toolbar.stop_execution_button.setEnabled(False)
 
     def project_item_properties_ui(self, item_type):
         """

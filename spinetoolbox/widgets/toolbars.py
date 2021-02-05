@@ -37,6 +37,9 @@ class MainToolBar(QToolBar):
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
         self._project_item_buttons = []
+        self.execute_project_button = None
+        self.execute_selection_button = None
+        self.stop_execution_button = None
 
     def setup(self):
         self.add_project_item_buttons()
@@ -62,19 +65,23 @@ class MainToolBar(QToolBar):
         button.setToolTip(f"<p>{tip}</p>")
         button.clicked.connect(slot)
         self.addWidget(button)
+        return button
 
     def add_execute_buttons(self):
         self.addSeparator()
         self.addWidget(QLabel("Execute"))
-        self._add_tool_button(
+        self.execute_project_button = self._add_tool_button(
             QIcon(":/icons/menu_icons/play-circle-solid.svg"), "Execute project", self.execute_project
         )
-        self._add_tool_button(
+        self.execute_selection_button = self._add_tool_button(
             QIcon(":/icons/menu_icons/play-circle-regular.svg"), "Execute selection", self.execute_selected
         )
-        self._add_tool_button(
+        self.stop_execution_button = self._add_tool_button(
             QIcon(":/icons/menu_icons/stop-circle-regular.svg"), "Stop execution", self.stop_execution
         )
+        self.execute_project_button.setEnabled(False)  # Will become enabled when user adds items
+        self.execute_selection_button.setEnabled(False)  # Will become enabled when user selects something
+        self.stop_execution_button.setEnabled(False)  # Will become enabled when user executes something
 
     @Slot(bool)
     def execute_project(self, checked=False):

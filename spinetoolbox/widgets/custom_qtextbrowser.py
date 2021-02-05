@@ -53,7 +53,7 @@ class CustomQTextBrowser(QTextBrowser):
             document (QTextDocument)
         """
         self.setDocument(document)
-        self._scroll_to_bottom()
+        self.scroll_to_bottom()
         self.setStyleSheet(TEXTBROWSER_OVERRIDE_SS)
 
     def restore_original_document(self):
@@ -61,10 +61,11 @@ class CustomQTextBrowser(QTextBrowser):
         Restores the original document
         """
         self.setDocument(self._original_document)
-        self._scroll_to_bottom()
+        self.scroll_to_bottom()
         self.setStyleSheet(TEXTBROWSER_SS)
 
-    def _scroll_to_bottom(self):
+    @Slot()
+    def scroll_to_bottom(self):
         vertical_scroll_bar = self.verticalScrollBar()
         vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
 
@@ -88,7 +89,7 @@ class CustomQTextBrowser(QTextBrowser):
                 cursor.select(QTextCursor.BlockUnderCursor)
                 cursor.removeSelectedText()
                 cursor.deleteChar()  # Remove the trailing newline
-        self._scroll_to_bottom()
+        self.scroll_to_bottom()
 
     def contextMenuEvent(self, event):
         """Reimplemented method to add a clear action into the default context menu.

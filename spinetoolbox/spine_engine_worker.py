@@ -211,7 +211,7 @@ class SpineEngineWorker(QObject):
 
     def clean_up(self):
         for item in self._executing_items:
-            self._node_execution_finished.emit(item, None, None, False)
+            self._node_execution_finished.emit(item, None, None, False, False)
         self._thread.quit()
         self._thread.wait()
         self.deleteLater()
