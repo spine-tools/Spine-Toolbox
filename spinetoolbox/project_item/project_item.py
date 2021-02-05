@@ -24,25 +24,6 @@ from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
 from ..widgets.custom_qtextbrowser import SignedTextDocument
 from ..helpers import format_event_message, format_process_message, add_message_to_document
-from ..logger_interface import LoggerInterface
-
-
-class _ProjectItemLogger(LoggerInterface):
-    """A project item specific logger."""
-
-    def __init__(self, item, box_logger):
-        """
-        Args:
-            item (ProjectItem)
-            box_logger (LoggerInterface)
-        """
-        super().__init__()
-        self.msg.connect(lambda text: item.add_event_message("", "msg", text))
-        self.msg_success.connect(lambda text: item.add_event_message("", "msg_success", text))
-        self.msg_error.connect(lambda text: item.add_event_message("", "msg_error", text))
-        self.msg_warning.connect(lambda text: item.add_event_message("", "msg_warning", text))
-        self.information_box.connect(box_logger.information_box)
-        self.error_box.connect(box_logger.error_box)
 
 
 class ProjectItem(MetaObject):
@@ -72,7 +53,7 @@ class ProjectItem(MetaObject):
         self._project = project
         self.x = x
         self.y = y
-        self._logger = _ProjectItemLogger(self, project.toolbox())
+        self._logger = project.toolbox()
         self._properties_ui = None
         self._icon = None
         self._sigs = None

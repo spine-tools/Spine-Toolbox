@@ -141,6 +141,7 @@ class ToolboxUI(QMainWindow):
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.active_link = None
+        self._executed_item = None  # Item whose ExecutionIcon is selected at the moment
         self.sync_item_selection_with_scene = True
         self.link_properties_widget = LinkPropertiesWidget(self)
         self._saved_specification = None
@@ -791,22 +792,24 @@ class ToolboxUI(QMainWindow):
         for icon in scene.project_item_icons():
             icon.setSelected(icon.name() in proj_item_names)
 
-    def refresh_active_elements(self, new_active_project_item, new_active_link):
-        self._set_active_project_item(new_active_project_item)
-        self._set_active_link(new_active_link)
+    def refresh_active_elements(self, active_project_item, active_link, executed_item):
+        self._set_active_project_item(active_project_item)
+        self._set_active_link(active_link)
+        self._executed_item = executed_item
         if self.active_project_item:
             self.activate_item_tab()
         elif self.active_link:
             self.activate_link_tab()
         else:
             self.activate_no_selection_tab()
+        self.overrride_logs_and_consoles()
 
-    def _set_active_project_item(self, new_active_project_item):
+    def _set_active_project_item(self, active_project_item):
         """
         Args:
-            new_active_project_item (ProjectItemBase or NoneType)
+            active_project_item (ProjectItemBase or NoneType)
         """
-        if self.active_project_item == new_active_project_item:
+        if self.active_project_item == active_project_item:
             return
         if self.active_project_item:
             # Deactivate old active project item
@@ -814,20 +817,20 @@ class ToolboxUI(QMainWindow):
                 self.msg_error.emit(
                     "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
                 )
-        self.active_project_item = new_active_project_item
+        self.active_project_item = active_project_item
         if self.active_project_item:
             self.active_project_item.activate()
 
-    def _set_active_link(self, new_active_link):
+    def _set_active_link(self, active_link):
         """
         Args:
-            new_active_link (Link or NoneType)
+            active_link (Link or NoneType)
         """
-        if self.active_link == new_active_link:
+        if self.active_link == active_link:
             return
         if self.active_link:
             self.link_properties_widget.unset_link()
-        self.active_link = new_active_link
+        self.active_link = active_link
         if self.active_link:
             self.link_properties_widget.set_link(self.active_link)
 
@@ -853,11 +856,6 @@ class ToolboxUI(QMainWindow):
                 break
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
-        self.override_event_log()
-        self.override_process_log()
-        self.override_python_console()
-        self.override_julia_console()
-        self.override_execution_list()
 
     def activate_link_tab(self):
         """Shows link properties tab."""
@@ -1339,29 +1337,58 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
+    def overrride_logs_and_consoles(self):
+        if self._executed_item is None:
+            return
+        self.override_event_log()
+        self.override_process_log()
+        self.override_python_console()
+        self.override_julia_console()
+        self.override_execution_list()
+
     def override_event_log(self):
         """Sets the log document of the active project item in Event Log and updates title."""
-        document = self.active_project_item.event_document
+        if self._executed_item is None:
+            return
+        document = self._executed_item.event_document
         self.ui.textBrowser_eventlog.set_override_document(document)
         self._update_event_log_title()
 
     def override_process_log(self):
         """Sets the log document of the active project item in Process Log and updates title."""
-        document = self.active_project_item.process_document
+        if self._executed_item is None:
+            return
+        document = self._executed_item.process_document
         self.ui.textBrowser_processlog.set_override_document(document)
         self._update_process_log_title()
 
     def override_python_console(self):
         """Sets the python console of the active project item in Python Console and updates title."""
-        console = self.active_project_item.python_console
+        if self._executed_item is None:
+            return
+        console = self._executed_item.python_console
         dockwidget = self.ui.dockWidgetContents_python_console
         self._set_override_console(dockwidget, console)
 
     def override_julia_console(self):
         """Sets the julia console of the active project item in Julia Console and updates title."""
-        console = self.active_project_item.julia_console
+        if self._executed_item is None:
+            return
+        console = self._executed_item.julia_console
         widget = self.ui.dockWidgetContents_julia_console
         self._set_override_console(widget, console)
+
+    def override_execution_list(self):
+        """Displays executions of the active project item in Executions and updates title."""
+        if self._executed_item is None:
+            return
+        self.ui.listView_executions.model().reset_model(self._executed_item)
+        self.ui.dockWidget_executions.setVisible(
+            bool(self._executed_item.filter_log_documents or self._executed_item.filter_consoles)
+        )
+        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self._executed_item.name}]")
+        current = self.ui.listView_executions.currentIndex()
+        self._select_execution(current, None)
 
     def restore_original_event_log_document(self):
         """Sets the Event Log document back to the original."""
@@ -1414,16 +1441,6 @@ class ToolboxUI(QMainWindow):
         if console.owner:
             new_title = f"{new_title} [{console.owner}]"
         widget.parent().setWindowTitle(new_title)
-
-    def override_execution_list(self):
-        """Displays executions of the active project item in Executions and updates title."""
-        self.ui.listView_executions.model().reset_model(self.active_project_item)
-        self.ui.dockWidget_executions.setVisible(
-            bool(self.active_project_item.filter_log_documents or self.active_project_item.filter_consoles)
-        )
-        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self.active_project_item.name}]")
-        current = self.ui.listView_executions.currentIndex()
-        self._select_execution(current, None)
 
     @Slot()
     def _refresh_execution_list(self):
