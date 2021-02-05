@@ -1518,14 +1518,14 @@ class ToolboxUI(QMainWindow):
         # index_url = "file:///" + doc_index_path
         index_url = "https://spine-toolbox.readthedocs.io/en/latest/"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        open_url(index_url, self)
+        open_url(index_url)
 
     @Slot()
     def show_getting_started_guide(self):
         """Open Spine Toolbox Getting Started HTML page in browser."""
         index_url = "https://spine-toolbox.readthedocs.io/en/latest/getting_started.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        open_url(index_url, self)
+        open_url(index_url)
 
     @Slot(QPoint)
     def show_item_context_menu(self, pos):
@@ -1967,8 +1967,9 @@ class ToolboxUI(QMainWindow):
     def _open_project_directory(self, _):
         """Opens project's root directory in system's file browser."""
         if self._project is None:
+            self.msg.emit("Please open or create a project first")
             return
-        open_url("file:///" + self._project.project_dir, self)
+        open_url("file:///" + self._project.project_dir)
 
     @Slot(bool)
     def _open_project_item_directory(self, _):

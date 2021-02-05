@@ -193,11 +193,22 @@ def rename_dir(old_dir, new_dir, toolbox, box_title):
     return True
 
 
-def open_url(url, logger=None):
-    result = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-    if logger is not None:
-        logger.msg_error.emit(f"Unable to open URL <b>{url}</b>")
-    return result
+def open_url(url):
+    """Opens the given url in the appropriate Web browser for the user's desktop environment,
+    and returns true if successful; otherwise returns false.
+
+    If the URL is a reference to a local file (i.e., the URL scheme is "file") then it will
+    be opened with a suitable application instead of a Web browser.
+
+    Handle return value on caller side.
+
+    Args:
+        url(str): URL to open
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
 
 
 def set_taskbar_icon():
