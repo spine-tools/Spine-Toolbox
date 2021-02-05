@@ -394,7 +394,8 @@ class ProjectItem(MetaObject):
             self.update_name_label()
         self.get_icon().update_name_item(new_name)
 
-    def open_directory(self):
+    @Slot(bool)
+    def open_directory(self, checked=False):
         """Open this item's data directory in file explorer."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
