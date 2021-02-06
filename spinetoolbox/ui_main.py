@@ -138,7 +138,8 @@ class ToolboxUI(QMainWindow):
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.active_link = None
-        self._executed_item = None  # Item whose ExecutionIcon is selected at the moment
+        self.executed_item = None  # Item whose ExecutionIcon is selected at the moment
+        self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
         self.link_properties_widget = LinkPropertiesWidget(self)
         self._saved_specification = None
@@ -799,14 +800,14 @@ class ToolboxUI(QMainWindow):
     def refresh_active_elements(self, active_project_item, active_link, executed_item):
         self._set_active_project_item(active_project_item)
         self._set_active_link(active_link)
-        self._executed_item = executed_item
+        self.executed_item = executed_item
         if self.active_project_item:
             self.activate_item_tab()
         elif self.active_link:
             self.activate_link_tab()
         else:
             self.activate_no_selection_tab()
-        if self._executed_item:
+        if self.executed_item:
             self.overrride_logs_and_consoles()
         else:
             self.restore_original_logs_and_consoles()
@@ -1355,45 +1356,45 @@ class ToolboxUI(QMainWindow):
 
     def override_event_log(self):
         """Sets the log document of the active project item in Event Log and updates title."""
-        if self._executed_item is None:
+        if self.executed_item is None:
             return
-        document = self._executed_item.event_document
+        document = self.executed_item.event_document
         self.ui.textBrowser_eventlog.set_override_document(document)
         self._update_event_log_title()
 
     def override_process_log(self):
         """Sets the log document of the active project item in Process Log and updates title."""
-        if self._executed_item is None:
+        if self.executed_item is None:
             return
-        document = self._executed_item.process_document
+        document = self.executed_item.process_document
         self.ui.textBrowser_processlog.set_override_document(document)
         self._update_process_log_title()
 
     def override_python_console(self):
         """Sets the python console of the active project item in Python Console and updates title."""
-        if self._executed_item is None:
+        if self.executed_item is None:
             return
-        console = self._executed_item.python_console
+        console = self.executed_item.python_console
         dockwidget = self.ui.dockWidgetContents_python_console
         self._set_override_console(dockwidget, console)
 
     def override_julia_console(self):
         """Sets the julia console of the active project item in Julia Console and updates title."""
-        if self._executed_item is None:
+        if self.executed_item is None:
             return
-        console = self._executed_item.julia_console
+        console = self.executed_item.julia_console
         widget = self.ui.dockWidgetContents_julia_console
         self._set_override_console(widget, console)
 
     def override_execution_list(self):
         """Displays executions of the active project item in Executions and updates title."""
-        if self._executed_item is None:
+        if self.executed_item is None:
             return
-        self.ui.listView_executions.model().reset_model(self._executed_item)
+        self.ui.listView_executions.model().reset_model(self.executed_item)
         self.ui.dockWidget_executions.setVisible(
-            bool(self._executed_item.filter_log_documents or self._executed_item.filter_consoles)
+            bool(self.executed_item.filter_log_documents or self.executed_item.filter_consoles)
         )
-        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self._executed_item.name}]")
+        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self.executed_item.name}]")
         current = self.ui.listView_executions.currentIndex()
         self._select_execution(current, None)
 
@@ -1951,6 +1952,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def _handle_project_execution_about_to_start(self):
+        self.execution_in_progress = True
         self.main_toolbar.execute_project_button.setEnabled(False)
         self.main_toolbar.execute_selection_button.setEnabled(False)
         self.main_toolbar.stop_execution_button.setEnabled(True)
@@ -1961,6 +1963,7 @@ class ToolboxUI(QMainWindow):
         inds = self.ui.treeView_project.selectedIndexes()
         self.main_toolbar.execute_selection_button.setEnabled(bool(inds))
         self.main_toolbar.stop_execution_button.setEnabled(False)
+        self.execution_in_progress = False
 
     def project_item_properties_ui(self, item_type):
         """

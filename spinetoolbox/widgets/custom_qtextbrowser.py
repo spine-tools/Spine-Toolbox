@@ -89,7 +89,15 @@ class CustomQTextBrowser(QTextBrowser):
                 cursor.select(QTextCursor.BlockUnderCursor)
                 cursor.removeSelectedText()
                 cursor.deleteChar()  # Remove the trailing newline
-        self.scroll_to_bottom()
+        if self.document() == self._original_document:
+            self.scroll_to_bottom()
+        # Restore the main document by deselecting the executed item icon,
+        # **except** if there's an execution in progress
+        toolbox = self.nativeParentWidget()
+        if toolbox.execution_in_progress:
+            return
+        if toolbox.executed_item is not None:
+            toolbox.executed_item.get_icon().execution_icon.setSelected(False)
 
     def contextMenuEvent(self, event):
         """Reimplemented method to add a clear action into the default context menu.

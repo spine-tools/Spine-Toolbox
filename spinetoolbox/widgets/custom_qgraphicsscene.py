@@ -158,6 +158,8 @@ class DesignGraphicsScene(CustomGraphicsScene):
             else None
         )
         self._toolbox.refresh_active_elements(active_project_item, active_link, executed_project_item)
+        if executed_project_item:
+            executed_project_item.get_icon().setSelected(True)
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.

@@ -377,14 +377,22 @@ class SpineToolboxProject(MetaObject):
                     self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
             self._logger.msg.emit("Item <b>{0}</b> removed from project".format(item.name))
 
-    def execute_dags(self, dags, execution_permits):
+    def execute_dags(self, dags, execution_permits, msg):
         """Executes given dags.
 
         Args:
             dags (Sequence(DiGraph))
             execution_permits (Sequence(dict))
         """
+        # NOTE: emit ``project_execution_about_to_start`` before any logger messages.
+        # This is so toolbox knows that there's an execution in progress,
+        # and it doesn't restore the main log document when those messages arrive.
+        # (The user wants to see execution messages.)
         self.project_execution_about_to_start.emit()
+        self._logger.msg.emit("")
+        self._logger.msg.emit("-------------------------------------------------")
+        self._logger.msg.emit(f"<b>{msg}</b>")
+        self._logger.msg.emit("-------------------------------------------------")
         self._execution_stopped = False
         self._execute_dags(dags, execution_permits)
 
@@ -509,11 +517,7 @@ class SpineToolboxProject(MetaObject):
             for item_name in dag.nodes:
                 execution_permits[item_name] = item_name in executable_item_names
             execution_permit_list.append(execution_permits)
-        self._logger.msg.emit("")
-        self._logger.msg.emit("-------------------------------------------------")
-        self._logger.msg.emit("<b>Executing Selected Directed Acyclic Graphs</b>")
-        self._logger.msg.emit("-------------------------------------------------")
-        self.execute_dags(dags, execution_permit_list)
+        self.execute_dags(dags, execution_permit_list, "Executing Selected Directed Acyclic Graphs")
 
     def execute_project(self):
         """Executes all dags in the project."""
@@ -524,11 +528,7 @@ class SpineToolboxProject(MetaObject):
         execution_permit_list = list()
         for dag in dags:
             execution_permit_list.append({item_name: True for item_name in dag.nodes})
-        self._logger.msg.emit("")
-        self._logger.msg.emit("--------------------------------------------")
-        self._logger.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
-        self._logger.msg.emit("--------------------------------------------")
-        self.execute_dags(dags, execution_permit_list)
+        self.execute_dags(dags, execution_permit_list, "Executing All Directed Acyclic Graphs")
 
     def stop(self):
         """Stops execution. Slot for the main window Stop tool button in the toolbar."""
