@@ -462,6 +462,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
             for x in self.scene().items():
                 if isinstance(x, ExecutionIcon) and x.isSelected():
+                    self.scene().ignore_next_selection_change = True
                     x.setSelected(False)
         return super().itemChange(change, value)
 

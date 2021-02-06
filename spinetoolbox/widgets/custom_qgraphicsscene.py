@@ -65,6 +65,8 @@ class DesignGraphicsScene(CustomGraphicsScene):
         super().__init__(parent)
         self._toolbox = toolbox
         self.item_shadow = None
+        self.ignore_next_selection_change = False
+        self._last_selected_items = set()
         # Set background attributes
         settings = toolbox.qsettings()
         self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
@@ -124,16 +126,43 @@ class DesignGraphicsScene(CustomGraphicsScene):
     @Slot()
     def handle_selection_changed(self):
         """Synchronizes selection with the project tree."""
+        if self.ignore_next_selection_change:
+            self.ignore_next_selection_change = False
+            return
+        selected_items = set(self.selectedItems())
+        if self._last_selected_items == selected_items:
+            return
+        self._last_selected_items = selected_items
+        execution_icons = []
         project_item_icons = []
         links = []
-        execution_icons = []
         for item in self.selectedItems():
-            if isinstance(item, ProjectItemIcon):
+            if isinstance(item, ExecutionIcon):
+                execution_icons.append(item)
+            elif isinstance(item, ProjectItemIcon):
                 project_item_icons.append(item)
             elif isinstance(item, Link):
                 links.append(item)
-            elif isinstance(item, ExecutionIcon):
-                execution_icons.append(item)
+        # Set active project item, active link, and executed item in toolbox
+        executed_project_item = (
+            self._toolbox.project_item_model.get_item(execution_icons[0].item_name()).project_item
+            if len(execution_icons) == 1
+            else None
+        )
+        if executed_project_item:
+            icon = executed_project_item.get_icon()
+            if not icon.isSelected():
+                self.ignore_next_selection_change = True
+                icon.setSelected(True)
+                project_item_icons.append(icon)
+        active_project_item = (
+            self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
+            if len(project_item_icons) == 1
+            else None
+        )
+        active_link = links[0] if len(links) == 1 else None
+        self._toolbox.refresh_active_elements(active_project_item, active_link, executed_project_item)
+        # Sync selection with project tree view
         selected_item_names = {icon.name() for icon in project_item_icons}
         self._toolbox.sync_item_selection_with_scene = False
         for ind in self._toolbox.project_item_model.leaf_indexes():
@@ -145,21 +174,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
         if project_item_icons:
             last_ind = self._toolbox.project_item_model.find_item(project_item_icons[-1].name())
             self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(last_ind, QItemSelectionModel.NoUpdate)
-        # Set active project item, active link, and executed item in toolbox
-        active_project_item = (
-            self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
-            if len(project_item_icons) == 1
-            else None
-        )
-        active_link = links[0] if len(links) == 1 else None
-        executed_project_item = (
-            self._toolbox.project_item_model.get_item(execution_icons[0].item_name()).project_item
-            if len(execution_icons) == 1
-            else None
-        )
-        self._toolbox.refresh_active_elements(active_project_item, active_link, executed_project_item)
-        if executed_project_item:
-            executed_project_item.get_icon().setSelected(True)
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.
