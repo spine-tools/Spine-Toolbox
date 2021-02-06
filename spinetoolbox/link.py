@@ -679,7 +679,7 @@ class LinkDrawer(LinkBase):
         """Removes this drawer from the scene, clears its source and destination connectors, and hides it.
         After calling this, the scene is no longer in link drawing mode.
         """
-        self.src_connector.scene().removeItem(self)
+        self.scene().removeItem(self)
         self.src_connector.set_friend_connectors_enabled(True)
         self.src_connector = self.dst_connector = self.tip = None
         self.hide()

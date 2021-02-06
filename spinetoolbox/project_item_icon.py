@@ -415,6 +415,15 @@ class ConnectorButton(QGraphicsRectItem):
             link_drawer.dst_connector = None
             link_drawer.update_geometry()
 
+    def itemChange(self, change, value):
+        """If this is being removed from the scene while it's the origin of the link drawer,
+        put the latter to sleep."""
+        if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
+            link_drawer = self.scene().link_drawer
+            if link_drawer.src_connector is self:
+                link_drawer.sleep()
+        return super().itemChange(change, value)
+
 
 class ExecutionIcon(QGraphicsEllipseItem):
     """An icon to show information about the item's execution."""
