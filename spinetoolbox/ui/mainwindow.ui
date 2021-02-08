@@ -130,7 +130,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>27</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -896,10 +896,10 @@
   </action>
   <action name="actionPasteAndDuplicateFiles">
    <property name="text">
-    <string>Paste ProjectItem and duplicate files</string>
+    <string>Paste project Item and duplicate files</string>
    </property>
    <property name="toolTip">
-    <string>Paste ProjectItem and duplicate files</string>
+    <string>Paste project item and duplicate files</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+V</string>
@@ -907,7 +907,7 @@
   </action>
   <action name="actionDuplicateAndDuplicateFiles">
    <property name="text">
-    <string>Duplicate ProjectItem and duplicate files</string>
+    <string>Duplicate project item and duplicate files</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+D</string>
