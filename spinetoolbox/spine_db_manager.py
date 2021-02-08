@@ -218,34 +218,47 @@ class SpineDBManager(QObject):
 
         Args:
             url (str, URL)
-            upgrade (bool, optional)
+            logger (LoggerInterface)
             codename (str, NoneType, optional)
+            upgrade (bool, optional)
+            create (bool, optional)
 
         Returns:
             DiffDatabaseMapping, NoneType
         """
         try:
             return self._do_get_db_map(url, codename, upgrade, create)
-        except SpineDBVersionError:
-            msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Incompatible database version")
-            msg.setText(
-                "The database at <b>{}</b> is from an older version of Spine "
-                "and needs to be upgraded in order to be used with the current version.".format(url)
-            )
-            msg.setInformativeText(
-                "Do you want to upgrade it now?"
-                "<p><b>WARNING</b>: After the upgrade, "
-                "the database may no longer be used "
-                "with previous versions of Spine."
-            )
-            msg.addButton(QMessageBox.Cancel)
-            msg.addButton("Upgrade", QMessageBox.YesRole)
-            ret = msg.exec_()  # Show message box
-            if ret == QMessageBox.Cancel:
+        except SpineDBVersionError as v_err:
+            if v_err.upgrade_available:
+                msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
+                msg.setIcon(QMessageBox.Question)
+                msg.setWindowTitle("Incompatible database version")
+                msg.setText(
+                    f"The database at <b>{url}</b> is at revision <b>{v_err.current}</b> and needs to be "
+                    f"upgraded to revision <b>{v_err.expected}</b> in order to be used with the current "
+                    f"version of Spine Toolbox."
+                )
+                msg.setInformativeText(
+                    "Do you want to upgrade the database now?"
+                    "<p><b>WARNING</b>: After the upgrade, "
+                    "the database may no longer be used "
+                    "with previous versions of Spine."
+                )
+                msg.addButton(QMessageBox.Cancel)
+                msg.addButton("Upgrade", QMessageBox.YesRole)
+                ret = msg.exec_()  # Show message box
+                if ret == QMessageBox.Cancel:
+                    return None
+                return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)
+            else:
+                QMessageBox.information(qApp.activeWindow(),
+                                        "Unsupported database version",
+                                        f"Database at <b>{url}</b> is newer than this version of Spine Toolbox "
+                                        f"can handle.<br><br>"
+                                        f"The db is at revision <b>{v_err.current}</b> while this version "
+                                        f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>. "
+                                        f"<br><br>Please upgrade Spine Toolbox to open this database.")
                 return None
-            return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)
         except SpineDBAPIError as err:
             logger.msg_error.emit(err.msg)
             return None
