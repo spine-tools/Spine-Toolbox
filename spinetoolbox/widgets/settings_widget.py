@@ -20,18 +20,17 @@ import os
 from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QPixmap
+from spine_engine.utils.helpers import resolve_julia_executable_from_path, resolve_python_executable_from_path
+from .notification import Notification
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..graphics_items import Link
 from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
-from .notification import Notification
 from ..helpers import (
     select_python_interpreter,
     select_julia_executable,
     select_julia_project,
     file_is_valid,
     dir_is_valid,
-    resolve_julia_executable_from_path,
-    resolve_python_executable_from_path,
 )
 
 

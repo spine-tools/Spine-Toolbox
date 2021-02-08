@@ -23,6 +23,7 @@ from PySide2.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QA
 from PySide2.QtCore import Slot, Qt, QModelIndex
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QIcon
 from jupyter_client.kernelspec import find_kernel_specs
+from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable_from_path
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.widgets.notification import Notification, NotificationStack
 from spinetoolbox.helpers import (
@@ -33,8 +34,6 @@ from spinetoolbox.helpers import (
     select_julia_project,
     file_is_valid,
     dir_is_valid,
-    resolve_python_interpreter,
-    resolve_julia_executable_from_path,
     ensure_window_is_on_screen,
     get_datetime,
 )

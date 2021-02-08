@@ -62,7 +62,7 @@ class TestSpineOptConfigurationAssistant(unittest.TestCase):
         self.widget.machine.start()
         QApplication.processEvents()
 
-    def goto_updating_spine_opt(self):
+    def goto_checking_spine_opt_version(self):
         with patch(
             "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.QProcessExecutionManager"
         ) as mock_QProcessExecutionManager:
@@ -73,134 +73,112 @@ class TestSpineOptConfigurationAssistant(unittest.TestCase):
         with patch.object(QProcessExecutionManager, "start_execution"):
             self.widget.button_right.click()
 
-    def goto_checking_py_call_program1(self):
-        self.goto_updating_spine_opt()
-        with patch.object(QProcessExecutionManager, "start_execution"):
-            self.widget.exec_mngr.execution_finished.emit(0)
-
-    def goto_prompt_to_install_latest_spine_opt(self):
-        self.goto_updating_spine_opt()
-        self.widget.exec_mngr.execution_finished.emit(-1)
-
-    def goto_installing_latest_spine_opt(self):
-        self.goto_prompt_to_install_latest_spine_opt()
-        with patch.object(QProcessExecutionManager, "start_execution"):
-            self.widget.button_right.click()
-
-    def goto_report_spine_opt_installation_failed(self):
-        self.goto_installing_latest_spine_opt()
-        self.widget.exec_mngr.execution_finished.emit(-1)
-
-    def goto_checking_py_call_program2(self):
-        self.goto_installing_latest_spine_opt()
-        with patch.object(QProcessExecutionManager, "start_execution"):
-            self.widget.exec_mngr.execution_finished.emit(0)
-
-    def goto_prompt_to_reconfigure_py_call(self):
-        self.goto_checking_py_call_program1()
-        self.widget.exec_mngr.process_output = "otherpython"
+    def goto_prompt_to_install_spine_opt(self):
+        self.goto_checking_spine_opt_version()
+        self.widget.spine_opt_version = None
         self.widget.exec_mngr.execution_finished.emit(0)
 
-    def goto_prompt_to_install_py_call(self):
-        self.goto_checking_py_call_program1()
+    def goto_prompt_to_update_spine_opt(self):
+        self.goto_checking_spine_opt_version()
+        self.widget.exec_mngr.process_output = "0.1.0"
+        self.widget.exec_mngr.execution_finished.emit(0)
+
+    def goto_installing_spine_opt(self):
+        self.goto_prompt_to_install_spine_opt()
+        with patch.object(QProcessExecutionManager, "start_execution"):
+            self.widget.button_right.click()
+
+    def goto_updating_spine_opt(self):
+        self.goto_prompt_to_update_spine_opt()
+        with patch.object(QProcessExecutionManager, "start_execution"):
+            self.widget.button_right.click()
+
+    def goto_report_failure_checking(self):
+        self.goto_checking_spine_opt_version()
         self.widget.exec_mngr.execution_finished.emit(-1)
 
-    def goto_reconfiguring_py_call(self):
-        self.goto_prompt_to_reconfigure_py_call()
-        with patch.object(QProcessExecutionManager, "start_execution"):
-            self.widget.button_right.click()
+    def goto_report_failure_installing(self):
+        self.goto_installing_spine_opt()
+        self.widget.exec_mngr.execution_finished.emit(-1)
 
-    def goto_installing_py_call(self):
-        self.goto_prompt_to_install_py_call()
-        with patch.object(QProcessExecutionManager, "start_execution"):
-            self.widget.button_right.click()
+    def goto_report_failure_updating(self):
+        self.goto_updating_spine_opt()
+        self.widget.exec_mngr.execution_finished.emit(-1)
 
-    def test_report_julia_not_found(self):
-        with patch(
-            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.QProcessExecutionManager"
-        ) as mock_QProcessExecutionManager:
-            exec_mngr = Mock()
-            mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
-            exec_mngr.process_output = None
-            self.goto_welcome()
-        self.assertEqual(self.widget.current_state, "report_julia_not_found")
+    def goto_report_ready_by_checking(self):
+        self.goto_checking_spine_opt_version()
+        self.widget.exec_mngr.process_output = self.widget._preferred_spine_opt_version
+        self.widget.exec_mngr.execution_finished.emit(0)
+
+    def goto_report_ready_by_installing(self):
+        self.goto_installing_spine_opt()
+        self.widget.exec_mngr.execution_finished.emit(0)
+
+    def goto_report_ready_by_updating(self):
+        self.goto_updating_spine_opt()
+        self.widget.exec_mngr.execution_finished.emit(0)
 
     def test_report_bad_julia_version(self):
         with patch(
-            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.QProcessExecutionManager"
-        ) as mock_QProcessExecutionManager:
-            exec_mngr = Mock()
-            mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
-            exec_mngr.process_output = "1.0.0"
+            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.subprocess"
+        ) as mock_subprocess:
+            p = Mock()
+            mock_subprocess.run.side_effect = lambda *args, **kwargs: p
+            p.stdout = b"1.0.0"
             self.goto_welcome()
         self.assertEqual(self.widget.current_state, "report_bad_julia_version")
+
+    def test_report_julia_not_found(self):
+        with patch(
+            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.get_julia_command"
+        ) as mock_get_julia_command:
+            mock_get_julia_command.return_value = None
+            self.goto_welcome()
+        self.assertEqual(self.widget.current_state, "report_julia_not_found")
+
+    def test_checking_spine_opt_version(self):
+        self.goto_checking_spine_opt_version()
+        self.assertEqual(self.widget.current_state, "checking_spine_opt_version")
+
+    def test_prompt_to_install_spine_opt(self):
+        self.goto_prompt_to_install_spine_opt()
+        self.assertEqual(self.widget.current_state, "prompt_to_install_spine_opt")
+
+    def test_prompt_to_update_spine_opt(self):
+        self.goto_prompt_to_update_spine_opt()
+        self.assertEqual(self.widget.current_state, "prompt_to_update_spine_opt")
+
+    def test_installing_spine_opt(self):
+        self.goto_installing_spine_opt()
+        self.assertEqual(self.widget.current_state, "installing_spine_opt")
 
     def test_updating_spine_opt(self):
         self.goto_updating_spine_opt()
         self.assertEqual(self.widget.current_state, "updating_spine_opt")
 
-    def test_prompt_to_install_latest_spine_opt(self):
-        self.goto_prompt_to_install_latest_spine_opt()
-        self.assertEqual(self.widget.current_state, "prompt_to_install_latest_spine_opt")
+    def test_report_failure_checking(self):
+        self.goto_report_failure_checking()
+        self.assertEqual(self.widget.current_state, "report_failure")
 
-    def test_installing_latest_spine_opt(self):
-        self.goto_installing_latest_spine_opt()
-        self.assertEqual(self.widget.current_state, "installing_latest_spine_opt")
+    def test_report_failure_installing(self):
+        self.goto_report_failure_installing()
+        self.assertEqual(self.widget.current_state, "report_failure")
 
-    def test_checking_py_call_program1(self):
-        self.goto_checking_py_call_program1()
-        self.assertEqual(self.widget.current_state, "checking_py_call_program")
+    def test_report_failure_updating(self):
+        self.goto_report_failure_updating()
+        self.assertEqual(self.widget.current_state, "report_failure")
 
-    def test_checking_py_call_program2(self):
-        self.goto_checking_py_call_program2()
-        self.assertEqual(self.widget.current_state, "checking_py_call_program")
-
-    @unittest.skip("test_prompt_to_reconfigure_py_call(): Update needed")
-    def test_prompt_to_reconfigure_py_call(self):
-        self.goto_prompt_to_reconfigure_py_call()
-        self.assertEqual(self.widget.current_state, "prompt_to_reconfigure_py_call")
-
-    def test_prompt_to_install_py_call(self):
-        self.goto_prompt_to_install_py_call()
-        self.assertEqual(self.widget.current_state, "prompt_to_install_py_call")
-
-    def test_report_spine_opt_installation_failed(self):
-        self.goto_report_spine_opt_installation_failed()
-        self.assertEqual(self.widget.current_state, "report_spine_opt_installation_failed")
-
-    @unittest.skip("test_reconfiguring_py_call(): Update needed")
-    def test_reconfiguring_py_call(self):
-        self.goto_reconfiguring_py_call()
-        self.assertEqual(self.widget.current_state, "reconfiguring_py_call")
-
-    def test_installing_py_call(self):
-        self.goto_installing_py_call()
-        self.assertEqual(self.widget.current_state, "installing_py_call")
-
-    @unittest.skip("test_report_spine_opt_ready1(): Update needed")
-    def test_report_spine_opt_ready1(self):
-        # TODO: Change sys.executable to something else because Configuration assistant has been updated.
-        self.goto_checking_py_call_program1()
-        self.widget.exec_mngr.process_output = sys.executable
-        self.widget.exec_mngr.execution_finished.emit(0)
+    def test_report_ready_by_checking(self):
+        self.goto_report_ready_by_checking()
         self.assertEqual(self.widget.current_state, "report_spine_opt_ready")
 
-    @unittest.skip("test_report_spine_opt_ready2(): Update needed")
-    def test_report_spine_opt_ready2(self):
-        self.goto_reconfiguring_py_call()
-        self.widget.exec_mngr.execution_finished.emit(0)
+    def test_report_ready_by_installing(self):
+        self.goto_report_ready_by_installing()
         self.assertEqual(self.widget.current_state, "report_spine_opt_ready")
 
-    @unittest.skip("test_report_py_call_process_failed1(): Update needed")
-    def test_report_py_call_process_failed1(self):
-        self.goto_reconfiguring_py_call()
-        self.widget.exec_mngr.execution_finished.emit(-1)
-        self.assertEqual(self.widget.current_state, "report_py_call_process_failed")
-
-    def test_report_py_call_process_failed2(self):
-        self.goto_installing_py_call()
-        self.widget.exec_mngr.execution_finished.emit(-1)
-        self.assertEqual(self.widget.current_state, "report_py_call_process_failed")
+    def test_report_ready_by_updating(self):
+        self.goto_report_ready_by_updating()
+        self.assertEqual(self.widget.current_state, "report_spine_opt_ready")
 
 
 if __name__ == '__main__':
