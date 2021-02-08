@@ -94,10 +94,8 @@ echo Installing SpineOpt package...
 call %julia% --project="%toolbox_pkg_folder%" -e^
  "using Pkg; pkg\"registry add https://github.com/Spine-project/SpineJuliaRegistry\"; pkg\"add SpineOpt\""
 call python bin\configure_julia.py %julia% %toolbox_pkg_folder%
-goto end
 
 :: Create executables
-echo Finishing...
 :: - spinetoolbox
 echo call %miniconda_dir%\Scripts\activate.bat %miniconda_dir%> %toolbox_exe%
 echo call conda activate spinetoolbox>> %toolbox_exe%
@@ -114,7 +112,7 @@ echo call %julia% --project="." -e "using Pkg; pkg\"up SpineOpt\"">> %toolbox_up
 powershell -sta Add-Type -AssemblyName PresentationCore,PresentationFramework;^
 $message_title = 'Spine Toolbox installation complete';^
 $message_body = 'We will now take you to the installation folder.' + \"`n`n\"^
-+ '- Run `spinetoolbox` to launch Spine Toolbox.' + \"`n`n\"^
++ '- Run `spinetoolbox` to launch the application.' + \"`n`n\"^
 + '- Run `upgrade` to upgrade to the most recent version.';^
 $button_type = [System.Windows.MessageBoxButton]::OK;^
 $message_icon = [System.Windows.MessageBoxImage]::Information;^

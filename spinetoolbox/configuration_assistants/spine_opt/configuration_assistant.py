@@ -17,7 +17,6 @@ Widget for assisting the user in configuring SpineOpt.jl.
 """
 
 import subprocess
-from packaging import version
 from PySide2.QtCore import Signal, Slot
 from spinetoolbox.widgets.state_machine_widget import StateMachineWidget
 from spinetoolbox.execution_managers import QProcessExecutionManager
@@ -121,7 +120,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         self.julia_version = self.find_julia_version()
         if self.julia_version is None:
             return self._make_report_julia_not_found()
-        if version.parse(self.julia_version) < version.parse(self._required_julia_version):
+        if version_parse(self.julia_version) < version_parse(self._required_julia_version):
             return self._make_report_wrong_julia_version()
         self.julia_project = self.find_julia_project()
         self.julia_setup = (
@@ -202,7 +201,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         if not self.spine_opt_version:
             self.spine_opt_not_found.emit()
             return
-        if version.parse(self.spine_opt_version) < version.parse(self._preferred_spine_opt_version):
+        if version_parse(self.spine_opt_version) < version_parse(self._preferred_spine_opt_version):
             self.spine_opt_outdated.emit()
             return
         self.spine_opt_ready.emit()
@@ -268,3 +267,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         self.updating_spine_opt.entered.connect(self.update_spine_opt)
         # Update msg
         self.spine_opt_outdated.connect(self._update_prompt_to_update_spine_opt)
+
+
+def version_parse(version_str):
+    return tuple(version_str.split("."))
