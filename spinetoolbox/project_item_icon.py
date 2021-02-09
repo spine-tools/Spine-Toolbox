@@ -277,6 +277,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Mouse event
         """
+        event.accept()
         self.scene().clearSelection()
         self.setSelected(True)
         ind = self._toolbox.project_item_model.find_item(self.name())

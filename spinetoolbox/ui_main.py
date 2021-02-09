@@ -1544,20 +1544,24 @@ class ToolboxUI(QMainWindow):
         self.show_project_item_context_menu(global_pos, ind)
 
     def show_project_item_context_menu(self, pos, index):
-        """Create and show project item context menu.
+        """Creates and shows the project item context menu.
 
         Args:
             pos (QPoint): Mouse position
-            index (QModelIndex): Index of concerned item
+            index (QModelIndex, None): Index of concerned item or None
         """
-        if not index.isValid():
-            # Clicked on a blank area, show the project item model context menu
+        if not index:  # Clicked on a blank area in Design view
+            menu = QMenu(self)
+            menu.addAction(self.ui.actionOpen_project_directory)
+            menu.addSeparator()
+            menu.addAction(self.ui.actionPaste)
+            menu.addAction(self.ui.actionPasteAndDuplicateFiles)
+        elif not index.isValid():  # Clicked on a blank area in Project tree view
             menu = QMenu(self)
             menu.addAction(self.ui.actionOpen_project_directory)
             menu.addSeparator()
             menu.addAction(self.ui.actionExport_project_to_GraphML)
-        else:
-            # Clicked on an item, show the custom context menu for that item
+        else:  # Clicked on an item, show the custom context menu for that item
             item = self.project_item_model.item(index)
             menu = item.custom_context_menu(self)
         menu.exec_(pos)

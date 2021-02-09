@@ -20,7 +20,7 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF
+from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF, QPoint
 from spine_engine import ExecutionDirection, SpineEngineState
 from ..graphics_items import Link, ProjectItemIcon
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
@@ -495,3 +495,18 @@ class DesignQGraphicsView(CustomQGraphicsView):
         item = self._project_item_model.get_item(item_name).project_item
         icon = item.get_icon()
         icon.run_execution_leave_animation(False)
+
+    def contextMenuEvent(self, event):
+        """Shows context menu for the blank view
+
+        Args:
+            event (QContextMenuEvent): Event
+        """
+        if not self._toolbox.project():
+            return
+        QGraphicsView.contextMenuEvent(self, event)  # Pass the event first to see if any item accepts it
+        if not event.isAccepted():
+            event.accept()
+            global_pos = self.viewport().mapToGlobal(event.pos())
+            self._toolbox.show_project_item_context_menu(global_pos, None)
+

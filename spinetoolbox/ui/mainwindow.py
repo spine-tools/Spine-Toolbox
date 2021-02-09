@@ -175,6 +175,7 @@ class Ui_MainWindow(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
         self.graphicsView.setSizePolicy(sizePolicy1)
+        self.graphicsView.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.graphicsView.setFrameShape(QFrame.NoFrame)
         self.graphicsView.setFrameShadow(QFrame.Raised)
         self.graphicsView.setMidLineWidth(0)
