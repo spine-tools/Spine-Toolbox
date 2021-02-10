@@ -97,6 +97,7 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         self._list_view.setModel(model)
         model.rowsInserted.connect(lambda *args: self._resize())
         model.rowsRemoved.connect(lambda *args: self._resize())
+        model.modelReset.connect(lambda *args: self._resize())
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
         self._list_view.drag_about_to_start.connect(self.dd_menu.hide)
 
@@ -106,8 +107,8 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
             self._list_view.setIconSize(size)
 
     def _resize(self):
-        self._list_view._set_preferred_heigth()
-        self._list_widget._set_preferred_heigth()
+        self._list_view._set_preferred_height()
+        self._list_widget._set_preferred_height()
         width = max(self._list_view._get_preferred_width(), self._list_widget._get_preferred_width())
         self._list_view.setFixedWidth(width)
         self._list_widget.setFixedWidth(width)
@@ -150,7 +151,7 @@ class CreateNewSpecListWidget(QListWidget):
         self.setCurrentIndex(QModelIndex())
         super().paintEvent(event)
 
-    def _set_preferred_heigth(self):
+    def _set_preferred_height(self):
         item = self.item(0)
         rect = self.visualItemRect(item)
         height = rect.height() + 2 * self.frameWidth()
@@ -220,7 +221,7 @@ class ProjectItemDragListView(ProjectItemDragMixin, QListView):
             self.mime_data = QMimeData()
             self.mime_data.setText(mime_data_text)
 
-    def _set_preferred_heigth(self):
+    def _set_preferred_height(self):
         model = self.model()
         if not model:
             self.setFixedHeight(0)
