@@ -16,16 +16,14 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
-from PySide2.QtCore import Qt, QObject, Signal, Slot
+from PySide2.QtCore import Qt, QObject, Signal, Slot, QThread
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (
     is_empty,
     create_new_spine_database,
-    DiffDatabaseMapping,
     SpineDBVersionError,
     SpineDBAPIError,
-    get_data_for_import,
     from_database,
     to_database,
     relativedelta_to_duration,
@@ -42,9 +40,9 @@ from spinedb_api import (
 from .helpers import IconManager, busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
+from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import (
     AgedUndoStack,
-    AgedUndoCommand,
     AddItemsCommand,
     CheckAddParameterValuesCommand,
     UpdateItemsCommand,
@@ -124,11 +122,13 @@ class SpineDBManager(QObject):
     # Uncached
     items_removed_from_cache = Signal(object)
     # Internal
-    _scenario_alternatives_added = Signal(object)
-    _scenario_alternatives_updated = Signal(object)
-    _scenario_alternatives_removed = Signal(object)
-    _parameter_definition_tags_added = Signal(object)
-    _parameter_definition_tags_removed = Signal(object)
+    scenario_alternatives_added = Signal(object)
+    scenario_alternatives_updated = Signal(object)
+    scenario_alternatives_removed = Signal(object)
+    parameter_definition_tags_added = Signal(object)
+    parameter_definition_tags_removed = Signal(object)
+    # For tests
+    data_imported = Signal()
 
     _GROUP_SEP = " \u01C0 "
 
@@ -148,8 +148,15 @@ class SpineDBManager(QObject):
         self.redo_action = {}
         self.icon_mngr = {}
         self.signaller = SpineDBSignaller(self)
+        self._thread = QThread()
+        self._worker = SpineDBWorker(self)
         self._fetchers = []
         self.connect_signals()
+
+    @property
+    def thread(self):
+        self._thread.start()
+        return self._thread
 
     @property
     def db_maps(self):
@@ -204,13 +211,15 @@ class SpineDBManager(QObject):
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
-        db_map.connection.close()
+        self._close_db_map(db_map)
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
         for db_map in self._db_maps.values():
-            if not db_map.connection.closed:
-                db_map.connection.close()
+            self._close_db_map(db_map)
+
+    def _close_db_map(self, db_map):
+        self._worker.close_db_map(db_map)
 
     def get_db_map(self, url, logger, codename=None, upgrade=False, create=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
@@ -250,15 +259,16 @@ class SpineDBManager(QObject):
                 if ret == QMessageBox.Cancel:
                     return None
                 return self.get_db_map(url, logger, codename=codename, upgrade=True, create=create)
-            else:
-                QMessageBox.information(qApp.activeWindow(),
-                                        "Unsupported database version",
-                                        f"Database at <b>{url}</b> is newer than this version of Spine Toolbox "
-                                        f"can handle.<br><br>"
-                                        f"The db is at revision <b>{v_err.current}</b> while this version "
-                                        f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>. "
-                                        f"<br><br>Please upgrade Spine Toolbox to open this database.")
-                return None
+            QMessageBox.information(
+                qApp.activeWindow(),  # pylint: disable=undefined-variable
+                "Unsupported database version",
+                f"Database at <b>{url}</b> is newer than this version of Spine Toolbox "
+                f"can handle.<br><br>"
+                f"The db is at revision <b>{v_err.current}</b> while this version "
+                f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>. "
+                f"<br><br>Please upgrade Spine Toolbox to open this database.",
+            )
+            return None
         except SpineDBAPIError as err:
             logger.msg_error.emit(err.msg)
             return None
@@ -283,7 +293,7 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        db_map = self._db_maps[url] = DiffDatabaseMapping(url, codename=codename, upgrade=upgrade, create=create)
+        db_map = self._db_maps[url] = self._worker.get_db_map(url, codename=codename, upgrade=upgrade, create=create)
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
         self.undo_action[db_map] = stack.createUndoAction(self)
         self.redo_action[db_map] = stack.createRedoAction(self)
@@ -336,9 +346,9 @@ class SpineDBManager(QObject):
                 pass
         if dirty_orphan_db_maps:
             if answer == QMessageBox.Save:
-                self._do_commit_session(dirty_orphan_db_maps, commit_msg)
+                self._worker.commit_session(dirty_orphan_db_maps, commit_msg)
             else:
-                self._do_rollback_session(dirty_orphan_db_maps)
+                self._worker.rollback_session(dirty_orphan_db_maps)
         for db_map in db_maps:
             if not self.signaller.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
@@ -399,19 +409,12 @@ class SpineDBManager(QObject):
             fetcher (SpineDBFetcher): the fetcher to clean up
         """
         self._fetchers.remove(fetcher)
-        fetcher.clean_up()
-        fetcher.deleteLater()
+        fetcher.close()
 
-    @Slot()
-    def stop_fetchers(self):
-        """
-        Quits all fetchers and deletes them.
-        """
-        for fetcher in self._fetchers:
-            fetcher.finished.disconnect(self._clean_up_fetcher)
-            fetcher.quit()
-            fetcher.deleteLater()
-        self._fetchers.clear()
+    def clean_up(self):
+        self._thread.quit()
+        self._thread.wait()
+        self.deleteLater()
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set()
@@ -438,22 +441,7 @@ class SpineDBManager(QObject):
         commit_msg = self._get_commit_msg(db_names)
         if not commit_msg:
             return
-        self._do_commit_session(dirty_db_maps, commit_msg, cookie)
-
-    def _do_commit_session(self, dirty_db_maps, commit_msg, cookie=None):
-        db_map_error_log = {}
-        committed_db_maps = set()
-        for db_map in dirty_db_maps:
-            try:
-                db_map.commit_session(commit_msg)
-                committed_db_maps.add(db_map)
-                self.undo_stack[db_map].setClean()
-            except SpineDBAPIError as e:
-                db_map_error_log[db_map] = e.msg
-        if any(db_map_error_log.values()):
-            self.error_msg.emit(db_map_error_log)
-        if committed_db_maps:
-            self.session_committed.emit(committed_db_maps, cookie)
+        self._worker.commit_session(dirty_db_maps, commit_msg, cookie)
 
     @staticmethod
     def _get_commit_msg(db_names):
@@ -471,23 +459,7 @@ class SpineDBManager(QObject):
         db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
         if not self._get_rollback_confirmation(db_names):
             return
-        self._do_rollback_session(dirty_db_maps)
-
-    def _do_rollback_session(self, dirty_db_maps):
-        db_map_error_log = {}
-        rolled_db_maps = set()
-        for db_map in dirty_db_maps:
-            try:
-                db_map.rollback_session()
-                rolled_db_maps.add(db_map)
-                self.undo_stack[db_map].clear()
-                del self._cache[db_map]
-            except SpineDBAPIError as e:
-                db_map_error_log[db_map] = e.msg
-        if any(db_map_error_log.values()):
-            self.error_msg.emit(db_map_error_log)
-        if rolled_db_maps:
-            self.session_rolled_back.emit(rolled_db_maps)
+        self._worker.rollback_session(dirty_db_maps)
 
     @staticmethod
     def _get_rollback_confirmation(db_names):
@@ -511,10 +483,10 @@ class SpineDBManager(QObject):
             "parameter_tag": (self.parameter_tags_added, self.parameter_tags_updated),
             "parameter_value_list": (self.parameter_value_lists_added, self.parameter_value_lists_updated),
             "parameter_definition": (self.parameter_definitions_added, self.parameter_definitions_updated),
-            "parameter_definition_tag": (self._parameter_definition_tags_added,),
+            "parameter_definition_tag": (self.parameter_definition_tags_added,),
             "alternative": (self.alternatives_added, self.alternatives_updated),
             "scenario": (self.scenarios_added, self.scenarios_updated),
-            "scenario_alternative": (self._scenario_alternatives_added, self._scenario_alternatives_updated),
+            "scenario_alternative": (self.scenario_alternatives_added, self.scenario_alternatives_updated),
             "object": (self.objects_added, self.objects_updated),
             "relationship": (self.relationships_added, self.relationships_updated),
             "entity_group": (self.entity_groups_added,),
@@ -529,34 +501,11 @@ class SpineDBManager(QObject):
                 signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
+        self._worker.connect_signals()
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
-        # On cascade refresh
-        self.alternatives_updated.connect(self.cascade_refresh_parameter_values_by_alternative)
-        self.object_classes_updated.connect(self.cascade_refresh_relationship_classes)
-        self.object_classes_updated.connect(self.cascade_refresh_parameter_definitions)
-        self.object_classes_updated.connect(self.cascade_refresh_parameter_values_by_entity_class)
-        self.relationship_classes_updated.connect(self.cascade_refresh_parameter_definitions)
-        self.relationship_classes_updated.connect(self.cascade_refresh_parameter_values_by_entity_class)
-        self.objects_updated.connect(self.cascade_refresh_relationships_by_object)
-        self.objects_updated.connect(self.cascade_refresh_parameter_values_by_entity)
-        self.relationships_updated.connect(self.cascade_refresh_parameter_values_by_entity)
-        self.parameter_definitions_updated.connect(self.cascade_refresh_parameter_values_by_definition)
-        self.parameter_value_lists_added.connect(self.cascade_refresh_parameter_definitions_by_value_list)
-        self.parameter_value_lists_updated.connect(self.cascade_refresh_parameter_definitions_by_value_list)
-        self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
-        self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
-        self.parameter_definitions_updated.connect(self.cascade_refresh_features_by_paremeter_definition)
-        self.parameter_value_lists_updated.connect(self.cascade_refresh_features_by_paremeter_value_list)
-        self.features_updated.connect(self.cascade_refresh_tool_features_by_feature)
-        # refresh
-        self._scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
-        self._scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
-        self._scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
-        self._parameter_definition_tags_added.connect(self._refresh_parameter_definitions_by_tag)
-        self._parameter_definition_tags_removed.connect(self._refresh_parameter_definitions_by_tag)
-        qApp.aboutToQuit.connect(self.stop_fetchers)  # pylint: disable=undefined-variable
+        qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -1127,64 +1076,10 @@ class SpineDBManager(QObject):
                 to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
-        db_map_error_log = dict()
-        for db_map, data in db_map_data.items():
-            try:
-                data_for_import = get_data_for_import(db_map, **data)
-            except (TypeError, ValueError) as err:
-                msg = f"Failed to import data: {err}. Please check that your data source has the right format."
-                db_map_error_log.setdefault(db_map, []).append(msg)
-                continue
-            import_command = AgedUndoCommand()
-            import_command.setText(command_text)
-            child_cmds = []
-            # NOTE: we push the import command before adding the children,
-            # because we *need* to call redo() on the children one by one so the data gets in gradually
-            self.undo_stack[db_map].push(import_command)
-            for item_type, (to_add, to_update, import_error_log) in data_for_import:
-                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
-                if to_add:
-                    add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=import_command)
-                    add_cmd.redo()
-                    child_cmds.append(add_cmd)
-                if to_update:
-                    upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=import_command)
-                    upd_cmd.redo()
-                    child_cmds.append(upd_cmd)
-            if all([cmd.isObsolete() for cmd in child_cmds]):
-                # Nothing imported. Set the command obsolete and call undo() on the stack to removed it
-                import_command.setObsolete(True)
-                self.undo_stack[db_map].undo()
-        if any(db_map_error_log.values()):
-            self.error_msg.emit(db_map_error_log)
+        self._worker.import_data(db_map_data, command_text)
 
-    @busy_effect
     def add_or_update_items(self, db_map_data, method_name, get_method_name, signal_name):
-        """Adds or updates items in db.
-
-        Args:
-            db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
-            method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
-            get_method_name (str): attribute of SpineDBManager to call for getting affected items
-            signal_name (str) : signal attribute of SpineDBManager to emit if successful
-        """
-        db_map_data_out = dict()
-        db_map_error_log = dict()
-        for db_map, items in db_map_data.items():
-            result = getattr(db_map, method_name)(*items)
-            if isinstance(result, tuple):
-                ids, errors = result
-            else:
-                ids, errors = result, ()
-            if errors:
-                db_map_error_log[db_map] = errors
-            if not ids:
-                continue
-            db_map_data_out[db_map] = getattr(self, get_method_name)(db_map, ids=ids)
-        if any(db_map_error_log.values()):
-            self.error_msg.emit(db_map_error_log)
-        if any(db_map_data_out.values()):
-            getattr(self, signal_name).emit(db_map_data_out)
+        self._worker.add_or_update_items(db_map_data, method_name, get_method_name, signal_name)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
@@ -1503,29 +1398,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
-        for db_map, data in db_map_data.items():
-            macro_command = AgedUndoCommand()
-            macro_command.setText(f"set scenario alternatives in {db_map.codename}")
-            self.undo_stack[db_map].push(macro_command)
-            child_cmds = []
-            items_to_add, items_to_update, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data)
-            if ids_to_remove:
-                rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove}, parent=macro_command)
-                rm_cmd.redo()
-                child_cmds.append(rm_cmd)
-            if items_to_update:
-                upd_cmd = UpdateItemsCommand(
-                    self, db_map, items_to_update, "scenario_alternative", parent=macro_command
-                )
-                upd_cmd.redo()
-                child_cmds.append(upd_cmd)
-            if items_to_add:
-                add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative", parent=macro_command)
-                add_cmd.redo()
-                child_cmds.append(add_cmd)
-            if all([cmd.isObsolete() for cmd in child_cmds]):
-                macro_command.setObsolete(True)
-                self.undo_stack[db_map].undo()
+        self._worker.set_scenario_alternatives(db_map_data)
 
     def set_parameter_definition_tags(self, db_map_data):
         """Sets parameter_definition tags in db.
@@ -1533,36 +1406,11 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
-        for db_map, data in db_map_data.items():
-            macro_command = AgedUndoCommand()
-            macro_command.setText(f"set parameter definition tags in {db_map.codename}")
-            self.undo_stack[db_map].push(macro_command)
-            child_cmds = []
-            items_to_add, ids_to_remove = db_map.get_data_to_set_parameter_definition_tags(*data)
-            if ids_to_remove:
-                rm_cmd = RemoveItemsCommand(
-                    self, db_map, {"parameter_definition_tag": ids_to_remove}, parent=macro_command
-                )
-                rm_cmd.redo()
-                child_cmds.append(rm_cmd)
-            if items_to_add:
-                add_cmd = AddItemsCommand(self, db_map, items_to_add, "parameter_definition_tag", parent=macro_command)
-                add_cmd.redo()
-                child_cmds.append(add_cmd)
-            if all([cmd.isObsolete() for cmd in child_cmds]):
-                macro_command.setObsolete(True)
-                self.undo_stack[db_map].undo()
+        self._worker.set_parameter_definition_tags(db_map_data)
 
     def remove_items(self, db_map_typed_ids):
         for db_map, ids_per_type in db_map_typed_ids.items():
-            ids_per_type = db_map.cascading_ids(**ids_per_type)
             self.undo_stack[db_map].push(RemoveItemsCommand(self, db_map, ids_per_type))
-
-    def do_cascade_remove_items(self, db_map_typed_ids):
-        db_map_typed_ids = {
-            db_map: db_map.cascading_ids(**ids_per_type) for db_map, ids_per_type in db_map_typed_ids.items()
-        }
-        self.do_remove_items(db_map_typed_ids)
 
     @busy_effect
     def do_remove_items(self, db_map_typed_ids):
@@ -1571,16 +1419,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_typed_ids (dict): lists of items to remove, keyed by item type (str), keyed by DiffDatabaseMapping
         """
-        db_map_error_log = dict()
-        for db_map, ids_per_type in db_map_typed_ids.items():
-            try:
-                db_map.remove_items(**ids_per_type)
-            except SpineDBAPIError as err:
-                db_map_error_log[db_map] = [err]
-                continue
-        if any(db_map_error_log.values()):
-            self.error_msg.emit(db_map_error_log)
-        self.uncache_items(db_map_typed_ids)
+        self._worker.remove_items(db_map_typed_ids)
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -1596,10 +1435,10 @@ class SpineDBManager(QObject):
             "entity_group": self.entity_groups_removed,
             "relationship": self.relationships_removed,
             "object": self.objects_removed,
-            "scenario_alternative": self._scenario_alternatives_removed,
+            "scenario_alternative": self.scenario_alternatives_removed,
             "scenario": self.scenarios_removed,
             "alternative": self.alternatives_removed,
-            "parameter_definition_tag": self._parameter_definition_tags_removed,
+            "parameter_definition_tag": self.parameter_definition_tags_removed,
             "tool_feature_method": self.tool_feature_methods_removed,
             "tool_feature": self.tool_features_removed,
             "feature": self.features_removed,
@@ -1635,228 +1474,6 @@ class SpineDBManager(QObject):
             for item in items:
                 d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
         return d
-
-    @Slot(object)
-    def _refresh_scenario_alternatives(self, db_map_data):
-        """Refreshes cached scenarios when updating scenario alternatives.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_data = {
-            db_map: self.get_scenarios(db_map, ids={x["scenario_id"] for x in data})
-            for db_map, data in db_map_data.items()
-        }
-        if not any(db_map_data.values()):
-            return
-        self.scenarios_updated.emit(db_map_data)
-
-    @Slot(object)
-    def _refresh_parameter_definitions_by_tag(self, db_map_data):
-        """Refreshes cached parameter definitions when updating parameter tags.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_data = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["parameter_definition_id"] for x in data})
-            for db_map, data in db_map_data.items()
-        }
-        if not any(db_map_data.values()):
-            return
-        self.parameter_definitions_updated.emit(db_map_data)
-
-    @Slot(object)
-    def cascade_refresh_relationship_classes(self, db_map_data):
-        """Refreshes cached relationship classes when updating object classes.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_relationship_classes(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_relationship_classes(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.relationship_classes_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_relationships_by_object(self, db_map_data):
-        """Refreshed cached relationships in cascade when updating objects.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_relationships(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.relationships_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_parameter_definitions(self, db_map_data):
-        """Refreshes cached parameter definitions in cascade when updating entity classes.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter_definition")
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.parameter_definitions_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
-        """Refreshes cached parameter definitions when updating parameter_value lists.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.parameter_definitions_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
-        """Refreshes cached parameter values in cascade when updating entity classes.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter_value")
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.parameter_values_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_parameter_values_by_entity(self, db_map_data):
-        """Refreshes cached parameter values in cascade when updating entities.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.parameter_values_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_parameter_values_by_alternative(self, db_map_data):
-        """Refreshes cached parameter values in cascade when updating alternatives.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.parameter_values_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_parameter_values_by_definition(self, db_map_data):
-        """Refreshes cached parameter values in cascade when updating parameter definitions.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_parameter_values(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.parameter_values_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
-        """Refreshes cached parameter definitions when updating parameter tags.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_parameter_definitions(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.parameter_definitions_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_features_by_paremeter_definition(self, db_map_data):
-        """Refreshes cached features in cascade when updating parameter definitions.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_features_by_parameter_definition(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_features(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.features_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_features_by_paremeter_value_list(self, db_map_data):
-        """Refreshes cached features in cascade when updating parameter value lists.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_features_by_parameter_value_list(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_features(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.features_updated.emit(db_map_cascading_data)
-
-    @Slot(object)
-    def cascade_refresh_tool_features_by_feature(self, db_map_data):
-        """Refreshes cached tool features in cascade when updating features.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_tool_features_by_feature(self.db_map_ids(db_map_data))
-        if not any(db_map_cascading_data.values()):
-            return
-        db_map_cascading_data = {
-            db_map: self.get_tool_features(db_map, ids={x["id"] for x in data})
-            for db_map, data in db_map_cascading_data.items()
-        }
-        self.tool_features_updated.emit(db_map_cascading_data)
 
     def find_cascading_relationship_classes(self, db_map_ids):
         """Finds and returns cascading relationship classes for the given object_class ids."""

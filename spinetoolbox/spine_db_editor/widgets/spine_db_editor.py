@@ -741,51 +741,6 @@ class SpineDBEditorBase(QMainWindow):
         msg = f"Successfully {action} {count} {item_type} item(s)"
         self.msg.emit(msg)
 
-    def receive_scenarios_fetched(self, db_map_data):
-        pass
-
-    def receive_alternatives_fetched(self, db_map_data):
-        pass
-
-    def receive_object_classes_fetched(self, db_map_data):
-        pass
-
-    def receive_objects_fetched(self, db_map_data):
-        pass
-
-    def receive_relationship_classes_fetched(self, db_map_data):
-        pass
-
-    def receive_relationships_fetched(self, db_map_data):
-        pass
-
-    def receive_entity_groups_fetched(self, db_map_data):
-        pass
-
-    def receive_parameter_definitions_fetched(self, db_map_data):
-        pass
-
-    def receive_parameter_values_fetched(self, db_map_data):
-        pass
-
-    def receive_parameter_value_lists_fetched(self, db_map_data):
-        self.parameter_value_list_model.add_parameter_value_lists(db_map_data)
-
-    def receive_parameter_tags_fetched(self, db_map_data):
-        pass
-
-    def receive_features_fetched(self, db_map_data):
-        pass
-
-    def receive_tools_fetched(self, db_map_data):
-        pass
-
-    def receive_tool_features_fetched(self, db_map_data):
-        pass
-
-    def receive_tool_feature_methods_fetched(self, db_map_data):
-        pass
-
     def receive_scenarios_added(self, db_map_data):
         self.notify_items_changed("added", "scenario", db_map_data)
 

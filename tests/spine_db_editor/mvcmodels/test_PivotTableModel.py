@@ -18,7 +18,7 @@ Unit tests for the plotting module.
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 from PySide2.QtWidgets import QApplication
 from spinedb_api import (
     DiffDatabaseMapping,
@@ -57,9 +57,11 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         )
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._db_mngr = SpineDBManager(app_settings, None)
-        with patch.object(SpineDBEditor, "restore_ui"):
-            self._editor = SpineDBEditor(self._db_mngr, {url: db_map.codename})
+        with patch("spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock) as mock_thread:
+            mock_thread.return_value = QApplication.instance().thread()
+            self._db_mngr = SpineDBManager(app_settings, None)
+            with patch.object(SpineDBEditor, "restore_ui"):
+                self._editor = SpineDBEditor(self._db_mngr, {url: db_map.codename})
         object_class_index = self._editor.object_tree_model.index(0, 0)
         self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
@@ -139,9 +141,11 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
         )
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._db_mngr = SpineDBManager(app_settings, None)
-        with patch.object(SpineDBEditor, "restore_ui"):
-            self._editor = SpineDBEditor(self._db_mngr, {url: db_map.codename})
+        with patch("spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock) as mock_thread:
+            mock_thread.return_value = QApplication.instance().thread()
+            self._db_mngr = SpineDBManager(app_settings, None)
+            with patch.object(SpineDBEditor, "restore_ui"):
+                self._editor = SpineDBEditor(self._db_mngr, {url: db_map.codename})
         object_class_index = self._editor.object_tree_model.index(0, 0)
         self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)

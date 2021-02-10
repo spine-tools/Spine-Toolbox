@@ -276,7 +276,7 @@ class TestSpineDBEditor(
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of SpineDBEditor classes."""
-        with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
+        with mock.patch("spinetoolbox.spine_db_worker.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
         ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             mock_settings = mock.Mock()
@@ -304,7 +304,6 @@ class TestSpineDBEditor(
         ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.spine_db_editor.close()
             mock_save_w_s.assert_called_once()
-        self.spine_db_editor.db_mngr.stop_fetchers()
         QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
         self.spine_db_editor.deleteLater()
         self.spine_db_editor = None

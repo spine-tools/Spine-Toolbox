@@ -347,19 +347,13 @@ class Link(LinkBase):
         unfetched_db_maps = {r: db_map for r, db_map in unfetched_db_maps.items() if db_map is not None}
         if unfetched_db_maps:
             self.resource_filter_model.init_resources(unfetched_db_maps)
-            db_map_scenarios = {}
-            db_map_tools = {}
-            for resource, db_map in unfetched_db_maps.items():
-                scenarios = db_map_scenarios[db_map] = self.db_mngr.get_scenarios(db_map)
-                tools = db_map_tools[db_map] = self.db_mngr.get_tools(db_map)
-                self._update_filters(resource.label, {x["id"] for x in scenarios}, {x["id"] for x in tools})
-            self.db_mngr.cache_items("scenario", db_map_scenarios)
-            self.db_mngr.cache_items("tool", db_map_tools)
-            self.resource_filter_model.receive_scenarios_added(db_map_scenarios)
-            self.resource_filter_model.receive_tools_added(db_map_tools)
+            db_maps = unfetched_db_maps.values()
+            self.db_mngr.register_listener(self, *db_maps)
+            fetcher = self.db_mngr.get_fetcher(self)
+            fetcher.finished.connect(lambda _, x=unfetched_db_maps: self._update_filters(x))
+            fetcher.fetch(db_maps, tablenames=["scenario", "tool"])
             self._fetched_db_resources.update(self._unfetched_db_resources)
             self._unfetched_db_resources.clear()
-            self.db_mngr.register_listener(self, *unfetched_db_maps.values())
         obsolete_db_maps = {self.db_mngr.get_db_map(url, self._toolbox) for url in self._obsolete_db_urls}
         if obsolete_db_maps:
             self.resource_filter_model.remove_resources(obsolete_db_maps)
@@ -368,24 +362,25 @@ class Link(LinkBase):
             self._obsolete_db_urls.clear()
             self.db_mngr.unregister_listener(self, *obsolete_db_maps)
 
-    def _update_filters(self, resource_label, valid_scenario_ids, valid_tool_ids):
+    def _update_filters(self, resource_db_maps):
         """Updates filters for given resource after possible changes in the underlying db.
         Called by ``refresh_resource_filter_model()``.
 
         Args:
-            resource_label (str): The resource label
-            valid_scenario_ids (set(int)): Set of scenario ids in the db
-            valid_tool_ids (set(int)): Set of tool ids in the db
+            resource_db_maps (dict): ProjectItemResource to DatabaseMapping
         """
-        filters = self.resource_filters.get(resource_label, {})
-        filter_scen_ids = filters.get(SCENARIO_FILTER_TYPE, [])
-        filter_tool_ids = filters.get(TOOL_FILTER_TYPE, [])
-        invalid_scen_ids = set(filter_scen_ids) - valid_scenario_ids
-        invalid_tool_ids = set(filter_tool_ids) - valid_tool_ids
-        for id_ in invalid_scen_ids:
-            filter_scen_ids.remove(id_)
-        for id_ in invalid_tool_ids:
-            filter_tool_ids.remove(id_)
+        for resource, db_map in resource_db_maps.items():
+            valid_scenario_ids = {x["id"] for x in self.db_mngr.get_items(db_map, "scenario")}
+            valid_tool_ids = {x["id"] for x in self.db_mngr.get_items(db_map, "tool")}
+            filters = self.resource_filters.get(resource.label, {})
+            filter_scen_ids = filters.get(SCENARIO_FILTER_TYPE, [])
+            filter_tool_ids = filters.get(TOOL_FILTER_TYPE, [])
+            invalid_scen_ids = set(filter_scen_ids) - valid_scenario_ids
+            invalid_tool_ids = set(filter_tool_ids) - valid_tool_ids
+            for id_ in invalid_scen_ids:
+                filter_scen_ids.remove(id_)
+            for id_ in invalid_tool_ids:
+                filter_tool_ids.remove(id_)
 
     def receive_scenarios_added(self, db_map_data):
         self.resource_filter_model.receive_scenarios_added(db_map_data)

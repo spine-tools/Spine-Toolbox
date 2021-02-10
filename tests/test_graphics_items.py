@@ -17,7 +17,7 @@ Unit tests for ``graphics_items`` module.
 """
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 from PySide2.QtCore import QEvent, QPoint, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
@@ -151,7 +151,10 @@ class TestLink(unittest.TestCase):
 
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
-        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
+        with patch("spinetoolbox.ui_main.SpineDBManager.thread", new_callable=PropertyMock) as mock_thread:
+            mock_thread.return_value = QApplication.instance().thread()
+            self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
+        type(self._toolbox.db_mngr).thread = PropertyMock(return_value=QApplication.instance().thread())
         source_item_icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
         source_item_icon.update_name_item("source icon")
         destination_item_icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))

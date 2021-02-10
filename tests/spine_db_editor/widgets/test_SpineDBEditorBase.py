@@ -31,7 +31,7 @@ class TestSpineDBEditorBase(unittest.TestCase):
 
     def setUp(self):
         """Builds a SpineDBEditorBase object."""
-        with mock.patch("spinetoolbox.spine_db_manager.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
+        with mock.patch("spinetoolbox.spine_db_worker.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
         ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             mock_settings = mock.Mock()

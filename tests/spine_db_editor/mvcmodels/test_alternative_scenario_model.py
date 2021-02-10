@@ -15,7 +15,7 @@ Unit tests for :class:`AlternativeScenarioModel`.
 :date:    21.1.2021
 """
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.spine_db_manager import SpineDBManager
@@ -32,7 +32,11 @@ class TestAlternativeScenarioModel(unittest.TestCase):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
-        self._db_mngr = SpineDBManager(app_settings, None)
+        with unittest.mock.patch(
+            "spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock
+        ) as mock_thread:
+            mock_thread.return_value = QApplication.instance().thread()
+            self._db_mngr = SpineDBManager(app_settings, None)
         self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 

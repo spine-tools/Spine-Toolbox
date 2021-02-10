@@ -49,7 +49,12 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Overridden method. Runs before each test."""
         app_settings = mock.MagicMock()
         logger = mock.MagicMock()
-        self._db_mngr = SpineDBManager(app_settings, None)
+        with mock.patch(
+            "spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=mock.PropertyMock
+        ) as mock_thread:
+            mock_thread.return_value = QApplication.instance().thread()
+            self._db_mngr = SpineDBManager(app_settings, None)
+            fetcher = self._db_mngr.get_fetcher(mock.MagicMock())
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="mock_db", create=True)
         import_object_classes(self._db_map, ("dog", "fish"))
         import_object_parameters(self._db_map, (("dog", "breed"),))
@@ -58,10 +63,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         import_relationship_parameters(self._db_map, (("dog__fish", "relative_speed"),))
         import_relationships(self._db_map, (("dog_fish", ("pluto", "nemo")),))
         self._db_map.commit_session("Add test data")
-        fetcher = self._db_mngr.get_fetcher(mock.MagicMock())
         fetcher.fetch([self._db_map])
-        while fetcher.thread().isRunning():
-            QApplication.instance().processEvents()
         self.object_table_header = [
             "object_class_name",
             "object_name",

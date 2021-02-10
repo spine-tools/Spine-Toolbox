@@ -113,7 +113,7 @@ powershell -sta Add-Type -AssemblyName PresentationCore,PresentationFramework;^
 $message_title = 'Spine Toolbox installation complete';^
 $message_body = 'We will now take you to the installation folder.' + \"`n`n\"^
 + '- Run `spinetoolbox` to launch the application.' + \"`n`n\"^
-+ '- Run `upgrade` to upgrade to the most recent version.';^
++ '- Run `upgrade` to get the most recent version.';^
 $button_type = [System.Windows.MessageBoxButton]::OK;^
 $message_icon = [System.Windows.MessageBoxImage]::Information;^
 [System.Windows.MessageBox]::Show($message_body, $message_title, $button_type, $message_icon) >nul 2>&1

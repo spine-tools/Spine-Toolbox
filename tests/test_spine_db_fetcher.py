@@ -20,28 +20,11 @@ from unittest.mock import MagicMock
 from PySide2.QtCore import QObject, Slot
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication
-from spinedb_api import (
-    import_alternatives,
-    import_features,
-    import_object_classes,
-    import_objects,
-    import_object_parameter_values,
-    import_object_parameters,
-    import_parameter_value_lists,
-    import_relationship_classes,
-    import_relationships,
-    import_scenario_alternatives,
-    import_scenarios,
-    import_tool_feature_methods,
-    import_tool_features,
-    import_tools,
-)
-from spinedb_api.import_functions import import_object_groups
 from spinetoolbox.spine_db_fetcher import SpineDBFetcher
 from spinetoolbox.spine_db_manager import SpineDBManager
 
 
-class MyTestCase(unittest.TestCase):
+class TestSpineDBFetcher(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -54,51 +37,64 @@ class MyTestCase(unittest.TestCase):
         self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="test_db", create=True)
         self._listener = MagicMock()
         self._fetcher = SpineDBFetcher(self._db_mngr, self._listener)
-        self._semaphore = Semaphore()
-        self._fetcher.finished.connect(self._semaphore.let_continue)
+        self._fetcher_semaphore = Semaphore()
+        self._import_semaphore = Semaphore()
+        self._commit_semaphore = Semaphore()
+        self._fetcher.finished.connect(self._fetcher_semaphore.let_continue)
+        self._db_mngr.data_imported.connect(self._import_semaphore.let_continue)
+        self._db_mngr.session_committed.connect(self._commit_semaphore.let_continue)
 
     def tearDown(self):
-        self._fetcher.clean_up()
+        self._fetcher.close()
         self.assertFalse(self._listener.silenced)
         self._db_mngr.close_all_sessions()
-        self._semaphore.deleteLater()
+        self._fetcher_semaphore.deleteLater()
+        self._commit_semaphore.deleteLater()
 
     def test_fetch_empty_database(self):
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
         self.assertTrue(self._listener.silenced)
-        self._listener.receive_alternatives_fetched.assert_called_once_with(
+        self._listener.receive_alternatives_added.assert_called_once_with(
             {self._db_map: [{"id": 1, "name": "Base", "description": "Base alternative", "commit_id": 1}]}
         )
         self.assertEqual(
             self._db_mngr.get_item(self._db_map, "alternative", 1),
             {'commit_id': 1, 'description': 'Base alternative', 'id': 1, 'name': 'Base'},
         )
-        self._listener.receive_scenarios_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_scenario_alternatives_fetched.assert_not_called()
-        self._listener.receive_object_classes_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_objects_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_relationship_classes_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_relationships_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_entity_groups_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_parameter_definitions_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_parameter_definition_tags_fetched.assert_not_called()
-        self._listener.receive_parameter_values_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_parameter_value_lists_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_parameter_tags_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_features_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_tools_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_tool_features_fetched.assert_called_once_with({self._db_map: []})
-        self._listener.receive_tool_feature_methods_fetched.assert_called_once_with({self._db_map: []})
+        self._listener.receive_scenarios_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_scenario_alternatives_added.assert_not_called()
+        self._listener.receive_object_classes_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_objects_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_relationship_classes_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_relationships_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_entity_groups_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_parameter_definitions_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_parameter_definition_tags_added.assert_not_called()
+        self._listener.receive_parameter_values_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_parameter_value_lists_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_parameter_tags_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_features_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_tools_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_tool_features_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_tool_feature_methods_added.assert_called_once_with({self._db_map: []})
+
+    def _import_data(self, **data):
+        self._db_mngr.import_data({self._db_map: data})
+        while not self._import_semaphore.can_continue:
+            QApplication.processEvents()
+        self._db_mngr._get_commit_msg = lambda *args, **kwargs: "Add test data."
+        self._db_mngr.commit_session(self._db_map)
+        while not self._commit_semaphore.can_continue:
+            QApplication.processEvents()
 
     def test_fetch_alternatives(self):
-        import_alternatives(self._db_map, ("alt",))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(alternatives=("alt",))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_alternatives_fetched.assert_called_once_with(
+        self._listener.receive_alternatives_added.assert_called_once_with(
             {
                 self._db_map: [
                     {'id': 1, 'name': 'Base', 'description': 'Base alternative', 'commit_id': 1},
@@ -112,12 +108,11 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_scenarios(self):
-        import_scenarios(self._db_map, ("scenario",))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(scenarios=("scenario",))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_scenarios_fetched.assert_called_once_with(
+        self._listener.receive_scenarios_added.assert_called_once_with(
             {
                 self._db_map: [
                     {
@@ -144,12 +139,9 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_scenario_alternatives(self):
-        import_alternatives(self._db_map, ("alt",))
-        import_scenarios(self._db_map, ("scenario",))
-        import_scenario_alternatives(self._db_map, (("scenario", "alt"),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(alternatives=("alt",), scenarios=("scenario",), scenario_alternatives=(("scenario", "alt"),))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
         self.assertEqual(
             self._db_mngr.get_item(self._db_map, "scenario_alternative", 1),
@@ -157,12 +149,11 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_object_classes(self):
-        import_object_classes(self._db_map, ("oc",))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(object_classes=("oc",))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_object_classes_fetched.assert_called_once_with(
+        self._listener.receive_object_classes_added.assert_called_once_with(
             {
                 self._db_map: [
                     {
@@ -192,13 +183,11 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_objects(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_objects(self._db_map, (("oc", "obj"),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_objects_fetched.assert_called_once_with(
+        self._listener.receive_objects_added.assert_called_once_with(
             {self._db_map: [{'id': 1, 'class_id': 1, 'class_name': 'oc', 'name': 'obj', 'description': None}]}
         )
         self.assertEqual(
@@ -207,13 +196,11 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_relationship_classes(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_relationship_classes(self._db_map, (("rc", ("oc",)),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(object_classes=("oc",), relationship_classes=(("rc", ("oc",)),))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_relationship_classes_fetched.assert_called_once_with(
+        self._listener.receive_relationship_classes_added.assert_called_once_with(
             {
                 self._db_map: [
                     {
@@ -232,15 +219,16 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_relationships(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_objects(self._db_map, (("oc", "obj"),))
-        import_relationship_classes(self._db_map, (("rc", ("oc",)),))
-        import_relationships(self._db_map, (("rc", ("obj",)),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(
+            object_classes=("oc",),
+            objects=(("oc", "obj"),),
+            relationship_classes=(("rc", ("oc",)),),
+            relationships=(("rc", ("obj",)),),
+        )
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_relationships_fetched.assert_called_once_with(
+        self._listener.receive_relationships_added.assert_called_once_with(
             {
                 self._db_map: [
                     {
@@ -271,14 +259,13 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_object_groups(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_objects(self._db_map, (("oc", "obj"), ("oc", "group")))
-        import_object_groups(self._db_map, (("oc", "group", "obj"),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(
+            object_classes=("oc",), objects=(("oc", "obj"), ("oc", "group")), object_groups=(("oc", "group", "obj"),)
+        )
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_entity_groups_fetched.assert_called_once_with(
+        self._listener.receive_entity_groups_added.assert_called_once_with(
             {self._db_map: [{'id': 1, 'entity_id': 2, 'entity_class_id': 1, 'member_id': 1}]}
         )
         self.assertEqual(
@@ -287,13 +274,11 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_parameter_definitions(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_object_parameters(self._db_map, (("oc", "param"),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(object_classes=("oc",), object_parameters=(("oc", "param"),))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_parameter_definitions_fetched.assert_called_once_with(
+        self._listener.receive_parameter_definitions_added.assert_called_once_with(
             {
                 self._db_map: [
                     {
@@ -330,15 +315,16 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_parameter_values(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_objects(self._db_map, (("oc", "obj"),))
-        import_object_parameters(self._db_map, (("oc", "param"),))
-        import_object_parameter_values(self._db_map, (("oc", "obj", "param", 2.3),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(
+            object_classes=("oc",),
+            objects=(("oc", "obj"),),
+            object_parameters=(("oc", "param"),),
+            object_parameter_values=(("oc", "obj", "param", 2.3),),
+        )
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_parameter_values_fetched.assert_called_once_with(
+        self._listener.receive_parameter_values_added.assert_called_once_with(
             {
                 self._db_map: [
                     {
@@ -377,12 +363,11 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_parameter_value_lists(self):
-        import_parameter_value_lists(self._db_map, (("value_list", (2.3,)),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(parameter_value_lists=(("value_list", (2.3,)),))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_parameter_value_lists_fetched.assert_called_once_with(
+        self._listener.receive_parameter_value_lists_added.assert_called_once_with(
             {self._db_map: [{'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_list': '[2.3]'}]}
         )
         self.assertEqual(
@@ -391,15 +376,16 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_features(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_parameter_value_lists(self._db_map, (("value_list", (2.3,)),))
-        import_object_parameters(self._db_map, (("oc", "param", 2.3, "value_list"),))
-        import_features(self._db_map, (("oc", "param"),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(
+            object_classes=("oc",),
+            parameter_value_lists=(("value_list", (2.3,)),),
+            object_parameters=(("oc", "param", 2.3, "value_list"),),
+            features=(("oc", "param"),),
+        )
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_features_fetched.assert_called_once_with(
+        self._listener.receive_features_added.assert_called_once_with(
             {
                 self._db_map: [
                     {
@@ -430,12 +416,11 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_tools(self):
-        import_tools(self._db_map, ("tool",))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(tools=("tool",))
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_tools_fetched.assert_called_once_with(
+        self._listener.receive_tools_added.assert_called_once_with(
             {self._db_map: [{'id': 1, 'name': 'tool', 'description': None, 'commit_id': 2}]}
         )
         self.assertEqual(
@@ -444,17 +429,18 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_tool_features(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_parameter_value_lists(self._db_map, (("value_list", (2.3,)),))
-        import_object_parameters(self._db_map, (("oc", "param", 2.3, "value_list"),))
-        import_features(self._db_map, (("oc", "param"),))
-        import_tools(self._db_map, ("tool",))
-        import_tool_features(self._db_map, (("tool", "oc", "param"),))
-        self._db_map.commit_session("Add test data.")
+        self._import_data(
+            object_classes=("oc",),
+            parameter_value_lists=(("value_list", (2.3,)),),
+            object_parameters=(("oc", "param", 2.3, "value_list"),),
+            features=(("oc", "param"),),
+            tools=("tool",),
+            tool_features=(("tool", "oc", "param"),),
+        )
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_tool_features_fetched.assert_called_once_with(
+        self._listener.receive_tool_features_added.assert_called_once_with(
             {
                 self._db_map: [
                     {
@@ -474,19 +460,19 @@ class MyTestCase(unittest.TestCase):
         )
 
     def test_fetch_tool_feature_methods(self):
-        import_object_classes(self._db_map, ("oc",))
-        import_parameter_value_lists(self._db_map, (("value_list", "m"),))
-        import_object_parameters(self._db_map, (("oc", "param", "m", "value_list"),))
-        import_features(self._db_map, (("oc", "param"),))
-        import_tools(self._db_map, ("tool",))
-        import_tool_features(self._db_map, (("tool", "oc", "param"),))
-        import_tool_feature_methods(self._db_map, (("tool", "oc", "param", "m"),))
-        self._db_map.commit_session("Add test data.")
-        value_lists = self._db_map.query(self._db_map.wide_parameter_value_list_sq).all()
+        self._import_data(
+            object_classes=("oc",),
+            parameter_value_lists=(("value_list", "m"),),
+            object_parameters=(("oc", "param", "m", "value_list"),),
+            features=(("oc", "param"),),
+            tools=("tool",),
+            tool_features=(("tool", "oc", "param"),),
+            tool_feature_methods=(("tool", "oc", "param", "m"),),
+        )
         self._fetcher.fetch([self._db_map])
-        while not self._semaphore.fetcher_finished:
+        while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
-        self._listener.receive_tool_feature_methods_fetched.assert_called_once_with(
+        self._listener.receive_tool_feature_methods_added.assert_called_once_with(
             {
                 self._db_map: [
                     {'id': 1, 'tool_feature_id': 1, 'parameter_value_list_id': 1, 'method_index': 0, 'commit_id': 2}
@@ -502,11 +488,11 @@ class MyTestCase(unittest.TestCase):
 class Semaphore(QObject):
     def __init__(self):
         super().__init__()
-        self.fetcher_finished = False
+        self.can_continue = False
 
     @Slot()
     def let_continue(self):
-        self.fetcher_finished = True
+        self.can_continue = True
 
 
 if __name__ == "__main__":

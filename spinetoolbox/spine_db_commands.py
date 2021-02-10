@@ -234,13 +234,13 @@ class SpineDBCommand(AgedUndoCommand):
         "relationship": "relationships_added",
         "entity_group": "entity_groups_added",
         "parameter_definition": "parameter_definitions_added",
-        "parameter_definition_tag": "_parameter_definition_tags_added",
+        "parameter_definition_tag": "parameter_definition_tags_added",
         "parameter_value": "parameter_values_added",
         "parameter_value_list": "parameter_value_lists_added",
         "parameter_tag": "parameter_tags_added",
         "alternative": "alternatives_added",
         "scenario": "scenarios_added",
-        "scenario_alternative": "_scenario_alternatives_added",
+        "scenario_alternative": "scenario_alternatives_added",
         "feature": "features_added",
         "tool": "tools_added",
         "tool_feature": "tool_features_added",
@@ -257,7 +257,7 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_tag": "parameter_tags_updated",
         "alternative": "alternatives_updated",
         "scenario": "scenarios_updated",
-        "scenario_alternative": "_scenario_alternatives_updated",
+        "scenario_alternative": "scenario_alternatives_updated",
         "feature": "features_updated",
         "tool": "tools_updated",
         "tool_feature": "tool_features_updated",
@@ -277,7 +277,7 @@ class SpineDBCommand(AgedUndoCommand):
         self.completed_signal = None
         self._completed = False
 
-    def silence_listener(self, func):
+    def run_quietly(self, func):
         """Calls given function while silencing the listener Spine db editors.
         This is so undo() and subsequent redo() calls don't trigger the same notifications over and over.
         """
@@ -299,13 +299,10 @@ class SpineDBCommand(AgedUndoCommand):
 
         def redo(self):
             if self._completed:
-                self.silence_listener(func)
+                self.run_quietly(func)
                 return
             self.completed_signal.connect(self.receive_items_changed)
             func(self)
-            self.completed_signal.disconnect(self.receive_items_changed)
-            if not self._completed:
-                self.setObsolete(True)
 
         return redo
 
@@ -315,14 +312,17 @@ class SpineDBCommand(AgedUndoCommand):
         """
 
         def undo(self):
-            self.silence_listener(func)
+            self.run_quietly(func)
 
         return undo
 
     @Slot(object)
     def receive_items_changed(self, _db_map_data):
         """Marks the command as completed."""
+        self.completed_signal.disconnect(self.receive_items_changed)
         self._completed = True
+        if not self._completed:
+            self.setObsolete(True)
 
     def data(self):
         """Returns data to present this command in a DBHistoryDialog."""
@@ -357,7 +357,7 @@ class AddItemsCommand(SpineDBCommand):
 
     @SpineDBCommand.undomethod
     def undo(self):
-        self.db_mngr.do_cascade_remove_items(self.undo_db_map_typed_ids)
+        self.db_mngr.do_remove_items(self.undo_db_map_typed_ids)
 
     @Slot(object)
     def receive_items_changed(self, db_map_data):

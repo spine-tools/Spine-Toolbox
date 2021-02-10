@@ -75,8 +75,8 @@ class TreeViewMixin:
         super().connect_signals()
         self.ui.treeView_object.tree_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
         self.ui.treeView_relationship.tree_selection_changed.connect(self.ui.treeView_object.clear_any_selections)
-        self._object_classes_fetched.connect(self._expand_object_tree_root_index)
-        self._relationship_classes_fetched.connect(self._expand_relationship_tree_root_index)
+        self._object_classes_added.connect(self._expand_object_tree_root_index)
+        self._relationship_classes_added.connect(self._expand_relationship_tree_root_index)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
 
@@ -332,38 +332,6 @@ class TreeViewMixin:
         """Enables or disables actions and informs the user about what just happened."""
         super().notify_items_changed(action, item_type, db_map_data)
         self.update_export_enabled()
-
-    def receive_alternatives_fetched(self, db_map_data):
-        super().receive_alternatives_fetched(db_map_data)
-        self.alternative_scenario_model.add_alternatives(db_map_data)
-
-    def receive_scenarios_fetched(self, db_map_data):
-        super().receive_scenarios_fetched(db_map_data)
-        self.alternative_scenario_model.add_scenarios(db_map_data)
-
-    def receive_object_classes_fetched(self, db_map_data):
-        super().receive_object_classes_fetched(db_map_data)
-        self._object_classes_fetched.emit()
-
-    def receive_relationship_classes_fetched(self, db_map_data):
-        super().receive_object_classes_fetched(db_map_data)
-        self._relationship_classes_fetched.emit()
-
-    def receive_features_fetched(self, db_map_data):
-        super().receive_features_fetched(db_map_data)
-        self.tool_feature_model.add_features(db_map_data)
-
-    def receive_tools_fetched(self, db_map_data):
-        super().receive_tools_fetched(db_map_data)
-        self.tool_feature_model.add_tools(db_map_data)
-
-    def receive_tool_features_fetched(self, db_map_data):
-        super().receive_tool_features_fetched(db_map_data)
-        self.tool_feature_model.add_tool_features(db_map_data)
-
-    def receive_tool_feature_methods_fetched(self, db_map_data):
-        super().receive_tool_feature_methods_fetched(db_map_data)
-        self.tool_feature_model.add_tool_feature_methods(db_map_data)
 
     def receive_alternatives_added(self, db_map_data):
         super().receive_alternatives_added(db_map_data)
