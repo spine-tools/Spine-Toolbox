@@ -142,7 +142,6 @@ class ToolboxUI(QMainWindow):
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
         self.link_properties_widget = LinkPropertiesWidget(self)
-        self._saved_specification = None
         self._anchor_callbacks = {}
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
@@ -920,11 +919,10 @@ class ToolboxUI(QMainWindow):
 
     def _emit_specification_saved(self, specification):
         path = specification.definition_file_path
-        self._saved_specification = specification
         self.msg_success.emit(
             f"Specification <b>{specification.name}</b> successfully saved as "
             f"<a style='color:#99CCFF;' href='file:///{path}'>{path}</a> "
-            f"<a style='color:white;' href='change_spec_file'><b>[change]</b></a>"
+            f"<a style='color:white;' href='change_spec_file.{specification.name}'><b>[change]</b></a>"
         )
 
     def add_specification(self, specification):
@@ -1106,11 +1104,14 @@ class ToolboxUI(QMainWindow):
         url = qurl.url()
         if url == "#":  # This is a Tip so do not try to open the URL
             return
-        if url == "change_spec_file":
-            if self._prompt_to_save_specification_file(
-                self._saved_specification, self._saved_specification.definition_file_path
-            ):
-                self._emit_specification_saved(self._saved_specification)
+        if url.startswith("change_spec_file."):
+            _, spec_name = url.split(".")
+            spec = self.specification_model.find_specification(spec_name)
+            if not spec:
+                self.msg_error.emit(f"Unable to find specification '{spec_name}'")
+                return
+            if self._prompt_to_save_specification_file(spec, spec.definition_file_path):
+                self._emit_specification_saved(spec)
             return
         callback = self._anchor_callbacks.get(url, None)
         if callback is not None:
