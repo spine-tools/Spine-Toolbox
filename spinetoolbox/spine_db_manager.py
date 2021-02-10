@@ -16,6 +16,7 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
+import itertools
 from PySide2.QtCore import Qt, QObject, Signal, Slot, QThread
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
@@ -59,6 +60,15 @@ from .spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 def do_create_new_spine_database(url):
     """Creates a new spine database at the given url."""
     create_new_spine_database(url)
+
+
+def _grouper(iterable, n):
+    it = iter(iterable)
+    while True:
+        chunk = list(itertools.islice(it, n))
+        if not chunk:
+            return
+        yield chunk
 
 
 class SpineDBManager(QObject):
@@ -785,11 +795,21 @@ class SpineDBManager(QObject):
         return [int(id_) for id_ in alternative_id_list.split(",")]
 
     @staticmethod
-    def get_db_items(query, key=lambda x: x["id"]):
-        return sorted((x._asdict() for x in query), key=key)
+    def get_db_items(query, chunk_size=1000):
+        """Runs the given query and yield results by chunks of given size.
+
+        Returns:
+            generator(list)
+        """
+        it = (x._asdict() for x in query.yield_per(chunk_size).enable_eagerloads(False))
+        while True:
+            chunk = list(itertools.islice(it, chunk_size))
+            if not chunk:
+                return
+            yield chunk
 
     @staticmethod
-    def _make_query(db_map, sq_name, ids=()):
+    def _make_query(db_map, sq_name, ids=(), key=("id",)):
         """Makes a database query
 
         Args:
@@ -803,7 +823,7 @@ class SpineDBManager(QObject):
         sq = getattr(db_map, sq_name)
         query = db_map.query(sq)
         if ids:
-            query = query.filter(db_map.in_(sq.c.id, ids))
+            query = query.filter(db_map.in_(sq.c.id, ids)).order_by(*[getattr(sq.c, k) for k in key])
         return query
 
     def get_alternatives(self, db_map, ids=()):
@@ -816,7 +836,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "alternative_sq", ids=ids), key=lambda x: x["name"])
+        yield from self.get_db_items(self._make_query(db_map, "alternative_sq", ids=ids, key=["name"]))
 
     def get_scenarios(self, db_map, ids=()):
         """Returns scenarios from database.
@@ -827,7 +847,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "wide_scenario_sq", ids=ids), key=lambda x: x["name"])
+        yield from self.get_db_items(self._make_query(db_map, "wide_scenario_sq", ids=ids, key=["name"]))
 
     def get_scenario_alternatives(self, db_map, ids=()):
         """Returns scenario alternatives from database.
@@ -838,7 +858,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "scenario_alternative_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "scenario_alternative_sq", ids=ids))
 
     def get_object_classes(self, db_map, ids=()):
         """Returns object classes from database.
@@ -849,7 +869,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "object_class_sq", ids=ids), key=lambda x: x["name"])
+        yield from self.get_db_items(self._make_query(db_map, "object_class_sq", ids=ids, key=["name"]))
 
     def get_objects(self, db_map, ids=()):
         """Returns objects from database.
@@ -860,9 +880,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "ext_object_sq", ids=ids), key=lambda x: (x["class_id"], x["name"])
-        )
+        yield from self.get_db_items(self._make_query(db_map, "ext_object_sq", ids=ids, key=["class_id", "name"]))
 
     def get_relationship_classes(self, db_map, ids=()):
         """Returns relationship classes from database.
@@ -873,9 +891,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "wide_relationship_class_sq", ids=ids), key=lambda x: x["name"]
-        )
+        yield from self.get_db_items(self._make_query(db_map, "wide_relationship_class_sq", ids=ids, key=["name"]))
 
     def get_relationships(self, db_map, ids=()):
         """Returns relationships from database.
@@ -886,9 +902,8 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "wide_relationship_sq", ids=ids),
-            key=lambda x: (x["class_id"], x["object_name_list"]),
+        yield from self.get_db_items(
+            self._make_query(db_map, "wide_relationship_sq", ids=ids, key=["class_id", "object_name_list"])
         )
 
     def get_entity_groups(self, db_map, ids=()):
@@ -900,7 +915,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "entity_group_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "entity_group_sq", ids=ids))
 
     def get_object_parameter_definitions(self, db_map, ids=()):
         """Returns object parameter definitions from database.
@@ -911,11 +926,11 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        items = self.get_db_items(
-            self._make_query(db_map, "object_parameter_definition_sq", ids=ids),
-            key=lambda x: (x["object_class_name"], x["parameter_name"]),
+        yield from self.get_db_items(
+            self._make_query(
+                db_map, "object_parameter_definition_sq", ids=ids, key=["object_class_name", "parameter_name"]
+            )
         )
-        return items
 
     def get_relationship_parameter_definitions(self, db_map, ids=()):
         """Returns relationship parameter definitions from database.
@@ -926,9 +941,13 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "relationship_parameter_definition_sq", ids=ids),
-            key=lambda x: (x["relationship_class_name"], x["parameter_name"]),
+        yield from self.get_db_items(
+            self._make_query(
+                db_map,
+                "relationship_parameter_definition_sq",
+                ids=ids,
+                key=["relationship_class_name", "parameter_name"],
+            )
         )
 
     def get_parameter_definitions(self, db_map, ids=()):
@@ -940,9 +959,8 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_object_parameter_definitions(db_map, ids=ids) + self.get_relationship_parameter_definitions(
-            db_map, ids=ids
-        )
+        yield from self.get_object_parameter_definitions(db_map, ids=ids)
+        yield from self.get_relationship_parameter_definitions(db_map, ids=ids)
 
     def get_parameter_definition_tags(self, db_map, ids=()):
         """Returns parameter definition tags.
@@ -953,7 +971,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "parameter_definition_tag_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "parameter_definition_tag_sq", ids=ids))
 
     def get_object_parameter_values(self, db_map, ids=()):
         """Returns object parameter values from database.
@@ -964,9 +982,10 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "object_parameter_value_sq", ids=ids),
-            key=lambda x: (x["object_class_name"], x["object_name"], x["parameter_name"]),
+        yield from self.get_db_items(
+            self._make_query(
+                db_map, "object_parameter_value_sq", ids=ids, key=["object_class_name", "object_name", "parameter_name"]
+            )
         )
 
     def get_relationship_parameter_values(self, db_map, ids=()):
@@ -978,9 +997,13 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "relationship_parameter_value_sq", ids=ids),
-            key=lambda x: (x["relationship_class_name"], x["object_name_list"], x["parameter_name"]),
+        yield from self.get_db_items(
+            self._make_query(
+                db_map,
+                "relationship_parameter_value_sq",
+                ids=ids,
+                key=["relationship_class_name", "object_name_list", "parameter_name"],
+            )
         )
 
     def get_parameter_values(self, db_map, ids=()):
@@ -992,9 +1015,8 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_object_parameter_values(db_map, ids=ids) + self.get_relationship_parameter_values(
-            db_map, ids=ids
-        )
+        yield from self.get_object_parameter_values(db_map, ids=ids)
+        yield from self.get_relationship_parameter_values(db_map, ids=ids)
 
     def get_parameter_value_lists(self, db_map, ids=()):
         """Returns parameter_value lists from database.
@@ -1005,9 +1027,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "wide_parameter_value_list_sq", ids=ids), key=lambda x: x["name"]
-        )
+        yield from self.get_db_items(self._make_query(db_map, "wide_parameter_value_list_sq", ids=ids, key=["name"]))
 
     def get_parameter_tags(self, db_map, ids=()):
         """Get parameter tags from database.
@@ -1018,7 +1038,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "parameter_tag_sq", ids=ids), key=lambda x: x["tag"])
+        yield from self.get_db_items(self._make_query(db_map, "parameter_tag_sq", ids=ids, key=["tag"]))
 
     def get_features(self, db_map, ids=()):
         """Returns features from database.
@@ -1029,9 +1049,8 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(
-            self._make_query(db_map, "ext_feature_sq", ids=ids),
-            key=lambda x: (x["entity_class_name"], x["parameter_definition_name"]),
+        yield from self.get_db_items(
+            self._make_query(db_map, "ext_feature_sq", ids=ids, key=["entity_class_name", "parameter_definition_name"])
         )
 
     def get_tools(self, db_map, ids=()):
@@ -1043,7 +1062,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "tool_sq", ids=ids), key=lambda x: x["name"])
+        yield from self.get_db_items(self._make_query(db_map, "tool_sq", ids=ids, key=["name"]))
 
     def get_tool_features(self, db_map, ids=()):
         """Returns tool features from database.
@@ -1054,7 +1073,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "tool_feature_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "tool_feature_sq", ids=ids))
 
     def get_tool_feature_methods(self, db_map, ids=()):
         """Returns tool feature methods from database.
@@ -1065,7 +1084,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        return self.get_db_items(self._make_query(db_map, "tool_feature_method_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "tool_feature_method_sq", ids=ids))
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.

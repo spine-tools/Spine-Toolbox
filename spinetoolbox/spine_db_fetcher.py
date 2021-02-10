@@ -97,8 +97,9 @@ class SpineDBFetcher(QObject):
             if getter_receiver is None:
                 continue
             getter, receiver = getter_receiver
-            items = {db_map: getter(db_map) for db_map in db_maps}
-            receiver(items)
+            for db_map in db_maps:
+                for chunk in getter(db_map):
+                    receiver({db_map: chunk})
         self.finished.emit(self)
 
     def _receive_alternatives_added(self, db_map_data):
