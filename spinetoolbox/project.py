@@ -430,9 +430,17 @@ class SpineToolboxProject(MetaObject):
         settings = self._make_settings_dict()
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
-            self._execute_dag(dag, execution_permits, dag_identifier, settings)
+            worker = self._create_engine_worker(dag, execution_permits, dag_identifier, settings)
+            self._engine_workers.append(worker)
+        # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
+        # are added to ``_engine_workers``, and thus ``_handle_engine_worker_finished()`` will believe
+        # that the project is done executing before it's fully loaded.
+        for worker in self._engine_workers:
+            self._logger.msg.emit("<b>Starting DAG {0}</b>".format(worker.dag_identifier))
+            self._logger.msg.emit("Order: {0}".format(" -> ".join(worker._engine_data["node_successors"])))
+            worker.start()
 
-    def _execute_dag(self, dag, execution_permits, dag_identifier, settings):
+    def _create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
         node_successors = self._get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
@@ -457,12 +465,9 @@ class SpineToolboxProject(MetaObject):
             "settings": settings,
             "project_dir": self.project_dir,
         }
-        self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
-        self._logger.msg.emit("Order: {0}".format(" -> ".join(list(node_successors))))
         worker = SpineEngineWorker(self._toolbox, data, dag, dag_identifier, project_items)
-        self._engine_workers.append(worker)
         worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
-        worker.start()
+        return worker
 
     def _handle_engine_worker_finished(self, worker):
         finished_outcomes = {

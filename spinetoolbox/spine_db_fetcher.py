@@ -24,7 +24,7 @@ class SpineDBFetcher(QObject):
     """Fetches content from a Spine database and 'sends' them to another thread (via a signal-slot mechanism of course),
     so contents can be processed in that thread without affecting the UI."""
 
-    finished = Signal(object)
+    finished = Signal()
     _fetch_requested = Signal(object, object)
 
     def __init__(self, db_mngr, listener):
@@ -37,7 +37,7 @@ class SpineDBFetcher(QObject):
         super().__init__()
         self._db_mngr = db_mngr
         self._listener = listener
-        # NOTE: by moving this to another thread, all the slots defined below are called on that thread too
+        self.is_finished = False
         self.moveToThread(db_mngr.thread)
         self._fetch_requested.connect(self._do_fetch)
 
@@ -100,7 +100,8 @@ class SpineDBFetcher(QObject):
             for db_map in db_maps:
                 for chunk in getter(db_map):
                     receiver({db_map: chunk})
-        self.finished.emit(self)
+        self.finished.emit()
+        self.is_finished = True
 
     def _receive_alternatives_added(self, db_map_data):
         self._db_mngr.cache_items("alternative", db_map_data)

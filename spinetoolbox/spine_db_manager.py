@@ -406,11 +406,11 @@ class SpineDBManager(QObject):
             listener (SpineDBEditor)
         """
         fetcher = SpineDBFetcher(self, listener)
-        fetcher.finished.connect(self._clean_up_fetcher)
+        # NOTE: The below connection style prevents segfaults when connecting to a slot that's being executed
+        fetcher.finished.connect(lambda fetcher=fetcher: self._clean_up_fetcher(fetcher))
         self._fetchers.append(fetcher)
         return fetcher
 
-    @Slot(object)
     def _clean_up_fetcher(self, fetcher):
         """
         Cleans up things after fetcher has finished working.

@@ -23,7 +23,7 @@ from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 
 
 class FilterValueItem(QStandardItem):
-    _db_map = None
+    _db_url = None
     _item_type = None
     _filter_type = None
     _id = None
@@ -44,17 +44,17 @@ class ResourceFilterModel(QStandardItemModel):
         self._link = link
         self._root_items = {}
 
-    def _add_leaves(self, db_map, filter_item, items, filter_type, item_type):
+    def _add_leaves(self, db_url, filter_item, items, filter_type, item_type):
         value_items = []
         if not filter_item.rowCount() and items:
             select_all_item = FilterValueItem(self._SELECT_ALL)
-            select_all_item._db_map = db_map
+            select_all_item._db_url = db_url
             select_all_item._item_type = item_type
             select_all_item._filter_type = filter_type
             value_items.append(select_all_item)
         for item in items:
             value_item = FilterValueItem()
-            value_item._db_map = db_map
+            value_item._db_url = db_url
             value_item._id = item["id"]
             value_item._item_type = item_type
             value_item._filter_type = filter_type
@@ -75,23 +75,23 @@ class ResourceFilterModel(QStandardItemModel):
 
     def receive_scenarios_added(self, db_map_data):
         for db_map, data in db_map_data.items():
-            root_item = self._root_items.get(db_map)
+            root_item = self._root_items.get(db_map.db_url)
             if not root_item:
                 continue
             filter_item = root_item.child(0)
-            self._add_leaves(db_map, filter_item, data, SCENARIO_FILTER_TYPE, "scenario")
+            self._add_leaves(db_map.db_url, filter_item, data, SCENARIO_FILTER_TYPE, "scenario")
 
     def receive_tools_added(self, db_map_data):
         for db_map, data in db_map_data.items():
-            root_item = self._root_items.get(db_map)
+            root_item = self._root_items.get(db_map.db_url)
             if not root_item:
                 continue
             filter_item = root_item.child(1)
-            self._add_leaves(db_map, filter_item, data, TOOL_FILTER_TYPE, "tool")
+            self._add_leaves(db_map.db_url, filter_item, data, TOOL_FILTER_TYPE, "tool")
 
     def receive_scenarios_removed(self, db_map_data):
         for db_map, data in db_map_data.items():
-            root_item = self._root_items.get(db_map)
+            root_item = self._root_items.get(db_map.db_url)
             if not root_item:
                 continue
             filter_item = root_item.child(0)
@@ -99,29 +99,29 @@ class ResourceFilterModel(QStandardItemModel):
 
     def receive_tools_removed(self, db_map_data):
         for db_map, data in db_map_data.items():
-            root_item = self._root_items.get(db_map)
+            root_item = self._root_items.get(db_map.db_url)
             if not root_item:
                 continue
             filter_item = root_item.child(1)
             self._remove_leaves(filter_item, data, root_item.text(), TOOL_FILTER_TYPE)
 
-    def init_resources(self, resource_db_maps):
-        for resource, db_map in resource_db_maps.items():
-            root_item = self._root_items.get(db_map)
+    def init_resources(self, resources):
+        for resource in resources:
+            root_item = self._root_items.get(resource.url)
             if root_item is not None:
                 for row in range(root_item.rowCount()):
                     filter_item = root_item.child(row)
                     filter_item.removeRows(0, filter_item.rowCount())
                 continue
-            root_item = self._root_items[db_map] = QStandardItem(resource.label)
+            root_item = self._root_items[resource.url] = QStandardItem(resource.label)
             filter_items = [QStandardItem("Scenario filter"), QStandardItem("Tool filter")]
             root_item.appendRows(filter_items)
             self.appendRow(root_item)
 
-    def remove_resources(self, db_maps):
+    def remove_resources(self, urls):
         invalid_rows = []
-        for db_map in db_maps:
-            resource_item = self._root_items.pop(db_map, None)
+        for url in urls:
+            resource_item = self._root_items.pop(url, None)
             if resource_item is not None:
                 invalid_rows.append(self.indexFromItem(resource_item).row())
         for row in sorted(invalid_rows, reverse=True):
@@ -137,13 +137,15 @@ class ResourceFilterModel(QStandardItemModel):
         if role == Qt.DisplayRole:
             if super().data(index) == self._SELECT_ALL:
                 return self._SELECT_ALL
-            return self._link.db_mngr.get_item(item._db_map, item._item_type, item._id).get("name")
+            db_map = self._link.db_mngr.db_map(item._db_url)
+            return self._link.db_mngr.get_item(db_map, item._item_type, item._id).get("name")
         if role == Qt.CheckStateRole:
-            resource_label = self._root_items[item._db_map].text()
+            resource_label = self._root_items[item._db_url].text()
             filter_type = item._filter_type
             ids = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
             if super().data(index) == self._SELECT_ALL:
-                all_ids = self._link.db_mngr.get_items(item._db_map, item._item_type)
+                db_map = self._link.db_mngr.db_map(item._db_url)
+                all_ids = self._link.db_mngr.get_items(db_map, item._item_type)
                 return Qt.Checked if len(ids) == len(all_ids) > 0 else Qt.Unchecked
             return Qt.Checked if item._id in ids else Qt.Unchecked
         return super().data(index, role=role)
@@ -158,12 +160,13 @@ class ResourceFilterModel(QStandardItemModel):
         item = self.itemFromIndex(index)
         if not isinstance(item, FilterValueItem):
             return
-        resource_label = self._root_items[item._db_map].text()
+        resource_label = self._root_items[item._db_url].text()
         filter_type = item._filter_type
         if super().data(index) == self._SELECT_ALL:
             ids = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
             if index.data(Qt.CheckStateRole) == Qt.Unchecked:
-                all_ids = [x["id"] for x in self._link.db_mngr.get_items(item._db_map, item._item_type)]
+                db_map = self._link.db_mngr.db_map(item._db_url)
+                all_ids = [x["id"] for x in self._link.db_mngr.get_items(db_map, item._item_type)]
                 self._link.toggle_filter_ids(resource_label, filter_type, *(set(all_ids) - set(ids)))
             else:
                 self._link.toggle_filter_ids(resource_label, filter_type, *ids)
