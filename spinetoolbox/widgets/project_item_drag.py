@@ -81,15 +81,15 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         self._list_widget.itemClicked.connect(
             lambda _, item_type=item_type: self._toolbox.show_specification_form(item_type)
         )
-        menu = QMenu(self)
-        widget_action = CustomWidgetAction(menu)
+        self.dd_menu = QMenu(self)  # Drop-down menu
+        widget_action = CustomWidgetAction(self.dd_menu)
         widget_action.setDefaultWidget(self._list_view)
-        menu.addAction(widget_action)
-        widget_action = CustomWidgetAction(menu)
+        self.dd_menu.addAction(widget_action)
+        widget_action = CustomWidgetAction(self.dd_menu)
         widget_action.setDefaultWidget(self._list_widget)
-        menu.addAction(widget_action)
-        menu.setStyleSheet(f"QMenu{{background: {ICON_BACKGROUND};}}")
-        self.setMenu(menu)
+        self.dd_menu.addAction(widget_action)
+        self.dd_menu.setStyleSheet(f"QMenu{{background: {ICON_BACKGROUND};}}")
+        self.setMenu(self.dd_menu)
         self.setPopupMode(QToolButton.MenuButtonPopup)
         self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self._resize()
@@ -98,7 +98,7 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         model.rowsInserted.connect(lambda *args: self._resize())
         model.rowsRemoved.connect(lambda *args: self._resize())
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
-        self._list_view.drag_about_to_start.connect(menu.hide)
+        self._list_view.drag_about_to_start.connect(self.dd_menu.hide)
 
     def setIconSize(self, size):
         super().setIconSize(size)
