@@ -47,6 +47,7 @@ class TestSpineOptConfigurationAssistant(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
         self.widget = SpineOptConfigurationAssistant(self._toolbox)
+        self.widget.exec_mngr = Mock()
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -57,19 +58,19 @@ class TestSpineOptConfigurationAssistant(unittest.TestCase):
         clean_up_toolbox(self._toolbox)
         self._temp_dir.cleanup()
 
-    def goto_welcome(self):
-        self.widget.set_up_machine()
+    def goto_welcome(self, julia_found=True):
+        julia_command = ["julia", "--project=@."] if julia_found else None
+        with unittest.mock.patch(
+            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.get_julia_command"
+        ) as mock_get_julia_command:
+            mock_get_julia_command.return_value = julia_command
+            self.widget.set_up_machine()
         self.widget.machine.start()
         QApplication.processEvents()
 
     def goto_checking_spine_opt_version(self):
-        with patch(
-            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.QProcessExecutionManager"
-        ) as mock_QProcessExecutionManager:
-            exec_mngr = Mock()
-            mock_QProcessExecutionManager.side_effect = lambda *args, **kwargs: exec_mngr
-            exec_mngr.process_output = self.widget._required_julia_version
-            self.goto_welcome()
+        self.widget.exec_mngr.process_output = self.widget._required_julia_version
+        self.goto_welcome()
         with patch.object(QProcessExecutionManager, "start_execution"):
             self.widget.button_right.click()
 
@@ -129,11 +130,7 @@ class TestSpineOptConfigurationAssistant(unittest.TestCase):
         self.assertEqual(self.widget.current_state, "report_bad_julia_version")
 
     def test_report_julia_not_found(self):
-        with patch(
-            "spinetoolbox.configuration_assistants.spine_opt.configuration_assistant.get_julia_command"
-        ) as mock_get_julia_command:
-            mock_get_julia_command.return_value = None
-            self.goto_welcome()
+        self.goto_welcome(julia_found=False)
         self.assertEqual(self.widget.current_state, "report_julia_not_found")
 
     def test_checking_spine_opt_version(self):

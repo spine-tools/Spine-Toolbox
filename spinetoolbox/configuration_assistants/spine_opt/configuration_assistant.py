@@ -84,11 +84,11 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
             "<html><p>Unable to find Julia. Make sure that Julia is installed correctly and try again.</p></html>",
         )  # FIXME: Send them to julia downloads
 
-    def _make_report_wrong_julia_version(self):
+    def _make_report_wrong_julia_version(self, julia_version):
         return self._make_report_state(
             "report_bad_julia_version",
             f"<html><p>SpineOpt.jl requires Julia version >= {self._required_julia_version}, "
-            f"whereas current version is {self.julia_version}. "
+            f"whereas current version is {julia_version}. "
             "Upgrade Julia and try again.</p></html>",
         )  # FIXME: Send them to julia downloads
 
@@ -117,11 +117,11 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         return str(p.stdout, "utf-8").strip()
 
     def _make_welcome(self):
-        self.julia_version = self.find_julia_version()
-        if self.julia_version is None:
+        julia_version = self.find_julia_version()
+        if julia_version is None:
             return self._make_report_julia_not_found()
-        if version_parse(self.julia_version) < version_parse(self._required_julia_version):
-            return self._make_report_wrong_julia_version()
+        if version_parse(julia_version) < version_parse(self._required_julia_version):
+            return self._make_report_wrong_julia_version(julia_version)
         self.julia_project = self.find_julia_project()
         self.julia_setup = (
             '<div style="text-align: left;">Your Julia setup:<ul>'
