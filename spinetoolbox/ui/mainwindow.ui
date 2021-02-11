@@ -600,6 +600,9 @@
    <property name="text">
     <string>Quit</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
    </property>
@@ -629,6 +632,9 @@
    <property name="text">
     <string>Save project</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
    </property>
@@ -640,6 +646,9 @@
    </property>
    <property name="text">
     <string>Save project as...</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Save project in another directory&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+S</string>
@@ -653,6 +662,9 @@
    <property name="text">
     <string>Open project...</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open existing project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
    </property>
@@ -665,6 +677,9 @@
    <property name="text">
     <string>New project...</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
    </property>
@@ -676,6 +691,9 @@
    </property>
    <property name="text">
     <string>Settings...</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open application and project settings&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+,</string>
@@ -773,7 +791,7 @@
     <string>Remove all</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all items from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all project items&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionExport_project_to_GraphML">
@@ -783,6 +801,9 @@
    </property>
    <property name="text">
     <string>Export project to GraphML</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export project to GraphML&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionGetting_started">
@@ -805,10 +826,16 @@
    <property name="text">
     <string>Open recent</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open recent project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </action>
   <action name="actionCopy">
    <property name="text">
     <string>Copy</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copy project item(s)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -817,6 +844,9 @@
   <action name="actionPaste">
    <property name="text">
     <string>Paste</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Paste project item(s)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
@@ -827,7 +857,7 @@
     <string>Duplicate</string>
    </property>
    <property name="toolTip">
-    <string>Duplicate selected project item</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Duplicate project item(s)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>
@@ -858,7 +888,7 @@
     <string>Remove</string>
    </property>
    <property name="toolTip">
-    <string>Remove selected project item(s).</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove project item(s)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Del</string>
@@ -869,7 +899,7 @@
     <string>Open project directory...</string>
    </property>
    <property name="toolTip">
-    <string>Open project directory in file browser.</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionOpen_item_directory">
@@ -877,7 +907,7 @@
     <string>Open item directory...</string>
    </property>
    <property name="toolTip">
-    <string>Open item directory in file browser.</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open item directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionRename_item">
@@ -885,7 +915,7 @@
     <string>Rename...</string>
    </property>
    <property name="toolTip">
-    <string>Rename project item.</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Rename project item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionNew_DB_editor">
@@ -896,13 +926,16 @@
    <property name="text">
     <string>New DB editor</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Spine Db Editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
   </action>
   <action name="actionPasteAndDuplicateFiles">
    <property name="text">
-    <string>Paste project Item and duplicate files</string>
+    <string>Paste and duplicate files</string>
    </property>
    <property name="toolTip">
-    <string>Paste project item and duplicate files</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Paste project item(s) and duplicate files&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+V</string>
@@ -910,7 +943,10 @@
   </action>
   <action name="actionDuplicateAndDuplicateFiles">
    <property name="text">
-    <string>Duplicate project item and duplicate files</string>
+    <string>Duplicate and duplicate files</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Duplicate project item(s) and duplicate files&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+D</string>

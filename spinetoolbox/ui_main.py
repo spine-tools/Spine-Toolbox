@@ -119,7 +119,7 @@ class ToolboxUI(QMainWindow):
         self.ui.graphicsView.set_ui(self)
         self.key_press_filter = ChildCyclingKeyPressFilter()
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
-        self._create_item_edit_actions()
+        self._share_item_edit_actions()
         self.ui.listView_executions.setModel(FilterExecutionModel(self))
         # Set style sheets
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
@@ -167,6 +167,8 @@ class ToolboxUI(QMainWindow):
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
+        self.ui.menuFile.setToolTipsVisible(True)
+        self.ui.menuEdit.setToolTipsVisible(True)
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
@@ -214,6 +216,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
+        self.ui.menuEdit.aboutToShow.connect(self.refresh_edit_action_states)
+        self.ui.menuEdit.aboutToHide.connect(self.enable_edit_actions)
         # noinspection PyArgumentList
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
@@ -1237,7 +1241,7 @@ class ToolboxUI(QMainWindow):
         self.addAction(self.show_supported_img_formats)
 
     def add_menu_actions(self):
-        """Add extra actions to View menu."""
+        """Add extra actions to Edit and View menu."""
         self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
@@ -1553,18 +1557,17 @@ class ToolboxUI(QMainWindow):
         """
         if not index:  # Clicked on a blank area in Design view
             menu = QMenu(self)
-            menu.addAction(self.ui.actionOpen_project_directory)
-            menu.addSeparator()
             menu.addAction(self.ui.actionPaste)
             menu.addAction(self.ui.actionPasteAndDuplicateFiles)
         elif not index.isValid():  # Clicked on a blank area in Project tree view
             menu = QMenu(self)
             menu.addAction(self.ui.actionOpen_project_directory)
-            menu.addSeparator()
-            menu.addAction(self.ui.actionExport_project_to_GraphML)
         else:  # Clicked on an item, show the custom context menu for that item
             item = self.project_item_model.item(index)
             menu = item.custom_context_menu(self)
+        menu.setToolTipsVisible(True)
+        menu.aboutToShow.connect(self.refresh_edit_action_states)
+        menu.aboutToHide.connect(self.enable_edit_actions)
         menu.exec_(pos)
         menu.deleteLater()
 
@@ -1587,6 +1590,36 @@ class ToolboxUI(QMainWindow):
             link.send_to_bottom()
         self.link_context_menu.deleteLater()
         self.link_context_menu = None
+
+    @Slot()
+    def refresh_edit_action_states(self):
+        """Sets the enabled/disabled state for copy, paste, duplicate,
+        and remove actions in File-Edit menu, project tree view
+        context menu, and in Design View context menus just before the
+        menus are shown to user."""
+        clipboard = QApplication.clipboard()
+        byte_data = clipboard.mimeData().data("application/vnd.spinetoolbox.ProjectItem")
+        can_paste = False if byte_data.isNull() else True
+        can_copy = any(isinstance(x, ProjectItemIcon) for x in self.ui.graphicsView.scene().selectedItems())
+        has_items = True if self.project_item_model.n_items() > 0 else False
+        self.ui.actionCopy.setEnabled(can_copy)
+        self.ui.actionPaste.setEnabled(can_paste)
+        self.ui.actionPasteAndDuplicateFiles.setEnabled(can_paste)
+        self.ui.actionDuplicate.setEnabled(can_copy)
+        self.ui.actionDuplicateAndDuplicateFiles.setEnabled(can_copy)
+        self.ui.actionRemove.setEnabled(can_copy)
+        self.ui.actionRemove_all.setEnabled(has_items)
+
+    @Slot()
+    def enable_edit_actions(self):
+        """Enables project item edit actions after a QMenu has been shown.
+        This is needed to enable keyboard shortcuts (e.g. Ctrl-C & del)
+        again."""
+        self.ui.actionCopy.setEnabled(True)
+        self.ui.actionPaste.setEnabled(True)
+        self.ui.actionPasteAndDuplicateFiles.setEnabled(True)
+        self.ui.actionDuplicate.setEnabled(True)
+        self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
 
     def tear_down_items_and_factories(self):
         """Calls the tear_down method on all project items, so they can clean up their mess if needed."""
@@ -1880,7 +1913,9 @@ class ToolboxUI(QMainWindow):
     @Slot()
     def project_item_from_clipboard(self, duplicate_files=False):
         """Adds project items in system's clipboard to the current project.
-        args: duplicate_files bool
+
+        Args:
+            duplicate_files (bool): Duplicate files boolean
         """
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
@@ -1900,8 +1935,7 @@ class ToolboxUI(QMainWindow):
         self._deserialize_items(item_dicts, duplicate_files)
 
     def propose_item_name(self, prefix):
-        """
-        Proposes a name for a project item.
+        """Proposes a name for a project item.
 
         The format is `prefix_xx` where `xx` is a counter value [01..99].
 
@@ -1909,7 +1943,7 @@ class ToolboxUI(QMainWindow):
             prefix (str): a prefix for the name
 
         Returns:
-            a name string
+            str: a name string
         """
         name_count = self._proposed_item_name_counts.setdefault(prefix, 0)
         name = prefix + " {}".format(name_count + 1)
@@ -1922,8 +1956,8 @@ class ToolboxUI(QMainWindow):
             name = self.propose_item_name(prefix)
         return name
 
-    def _create_item_edit_actions(self):
-        """Creates project item edit actions (copy, paste, duplicate) and adds them to proper places."""
+    def _share_item_edit_actions(self):
+        """Adds generic actions to project tree view and Design View."""
         actions = [
             self.ui.actionCopy,
             self.ui.actionPaste,
@@ -1971,11 +2005,11 @@ class ToolboxUI(QMainWindow):
         self.execution_in_progress = False
 
     def project_item_properties_ui(self, item_type):
-        """
-        Returns the properties tab widget's ui.
+        """Returns the properties tab widget's ui.
 
         Args:
             item_type (str): project item's type
+
         Returns:
             QWidget: item's properties tab widget
         """
@@ -2028,19 +2062,18 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.push(RenameProjectItemCommand(self.project_item_model, item, new_name))
 
     def item_category_context_menu(self):
-        """
-        Creates a context menu for project item categories.
+        """Creates a context menu for category items.
 
         Returns:
             QMenu: category context menu
         """
         menu = QMenu(self)
+        menu.setToolTipsVisible(True)
         menu.addAction(self.ui.actionOpen_project_directory)
         return menu
 
     def project_item_context_menu(self, additional_actions):
-        """
-        Creates a context menu for project items.
+        """Creates a context menu for project items.
 
         Args:
             additional_actions (list of QAction): actions to be prepended to the menu
@@ -2049,6 +2082,7 @@ class ToolboxUI(QMainWindow):
             QMenu: project item context menu
         """
         menu = QMenu(self)
+        menu.setToolTipsVisible(True)
         if additional_actions:
             for action in additional_actions:
                 menu.addAction(action)
@@ -2063,6 +2097,8 @@ class ToolboxUI(QMainWindow):
         menu.addAction(self.ui.actionRemove)
         menu.addSeparator()
         menu.addAction(self.ui.actionRename_item)
+        menu.aboutToShow.connect(self.refresh_edit_action_states)
+        menu.aboutToHide.connect(self.enable_edit_actions)
         return menu
 
     def make_console(self, name, item_name, kernel_name, connection_file):
