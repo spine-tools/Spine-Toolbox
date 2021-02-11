@@ -22,6 +22,7 @@ from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF, QPoint
 from spine_engine import ExecutionDirection, SpineEngineState
+from spine_engine.project_item.connection import Connection
 from ..graphics_items import Link, ProjectItemIcon
 from ..project_commands import AddLinkCommand, RemoveLinkCommand
 from .custom_qgraphicsscene import DesignGraphicsScene
@@ -326,47 +327,61 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def add_link(self, src_connector, dst_connector):
         """
         Pushes an AddLinkCommand to the toolbox undo stack.
+
+        Args:
+            src_connector (ConnectorButton): source connector button
+            dst_connector (ConnectorButton): destination connector button
         """
         self._toolbox.undo_stack.push(AddLinkCommand(self, src_connector, dst_connector))
         self.notify_destination_items(src_connector, dst_connector)
 
-    def make_link(self, src_connector, dst_connector, resource_filters=None):
-        """Returns a Link between given connectors.
+    def make_link(self, src_connector, dst_connector, connection=None):
+        """Constructs a Link between given connectors.
 
         Args:
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
-            resource_filters (dict, optional)
+            connection (Connection, optional): Underlying connection
 
         Returns:
-            Link
+            Link: new link
         """
-        return Link(self._toolbox, src_connector, dst_connector, resource_filters)
+        if connection is None:
+            connection = Connection(
+                src_connector.project_item().name,
+                src_connector.position,
+                dst_connector.project_item().name,
+                dst_connector.position,
+            )
+        return Link(self._toolbox, src_connector, dst_connector, connection)
 
-    def do_add_link(self, src_connector, dst_connector, resource_filters):
-        """Makes a Link between given source and destination connectors and adds it to the project.
+    def restore_link(self, src_connector, dst_connector, connection):
+        """Restores a Link between given source and destination connectors.
 
         Args:
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
-            resource_filters (dict)
+            connection (connection, optional): connection between source and destination
         """
-        link = self.make_link(src_connector, dst_connector, resource_filters)
-        self._add_link(link)
+        link = self.make_link(src_connector, dst_connector, connection)
+        self.do_add_or_replace_link(link, False)
 
-    def _add_link(self, link):
-        """Adds given Link to the project.
+    def do_add_or_replace_link(self, link, establish_connection=True):
+        """Adds given Link to or replaces existing parallel link on the Design view.
 
         Args:
             link (Link): the link to add
+            establish_connection (bool): if True, link's connection is added to the project
+
+        Returns:
+            Link: replaced link or None if no link was replaced
         """
         replaced_link = self._remove_redundant_link(link)
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
         self.scene().addItem(link)
-        src_name = link.src_icon.name()
-        dst_name = link.dst_icon.name()
-        self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
+        if establish_connection:
+            link.establish_connection()
         return replaced_link
 
     @staticmethod
@@ -391,14 +406,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """
         self._toolbox.undo_stack.push(RemoveLinkCommand(self, link))
 
-    def do_remove_link(self, link):
-        """Removes link from the project."""
-        link.wipe_out()
-        # Remove edge (connection link) from dag
-        src_name = link.src_icon.name()
-        dst_name = link.dst_icon.name()
-        self._toolbox.project().dag_handler.remove_graph_edge(src_name, dst_name)
-
     def remove_selected_links(self):
         for item in self.scene().selectedItems():
             if isinstance(item, Link):
@@ -416,37 +423,15 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def restore_links(self, connections):
         """Creates Links from the given connections list.
 
-        - List of dicts is accepted, e.g.
-
-        .. code-block::
-
-            [
-                {"from": ["DC1", "right"], "to": ["Tool1", "left"]}, "resource_filters": {}
-                ...
-            ]
-
         Args:
-            connections (list): List of connections.
+            connections (list of Connection): List of connections.
         """
-        if not connections:
-            return
         for conn in connections:
-            src_name, src_anchor = conn["from"]
-            dst_name, dst_anchor = conn["to"]
-            # Do not restore feedback links
-            if src_name == dst_name:
-                continue
-            src_ind = self._project_item_model.find_item(src_name)
-            dst_ind = self._project_item_model.find_item(dst_name)
-            if not src_ind or not dst_ind:
-                self._toolbox.msg_warning.emit(f"Restoring connection <b>{src_name}->{dst_name}</b> failed")
-                continue
-            src_item = self._project_item_model.item(src_ind).project_item
-            src_connector = src_item.get_icon().conn_button(src_anchor)
-            dst_item = self._project_item_model.item(dst_ind).project_item
-            dst_connector = dst_item.get_icon().conn_button(dst_anchor)
-            resource_filters = conn.get("resource_filters")
-            self.do_add_link(src_connector, dst_connector, resource_filters)
+            source_item = self._project_item_model.get_item(conn.source).project_item
+            src_connector = source_item.get_icon().conn_button(conn.source_position)
+            destination_item = self._project_item_model.get_item(conn.destination).project_item
+            dst_connector = destination_item.get_icon().conn_button(conn.destination_position)
+            self.restore_link(src_connector, dst_connector, conn)
 
     def notify_destination_items(self, src_connector, dst_connector):
         """Notify destination items that they have been connected to a source item."""

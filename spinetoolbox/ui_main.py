@@ -37,11 +37,12 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
 )
+from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from spine_engine.utils.helpers import shorten
 from .graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
-from .load_project_items import load_item_specification_factories, load_project_items
+from .load_project_items import load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_factory_models import ProjectItemSpecFactoryModel, FilteredSpecFactoryModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
@@ -108,7 +109,6 @@ class ToolboxUI(QMainWindow):
 
         super().__init__(flags=Qt.Window)
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")
-        # Set number formatting to use user's default settings
         locale.setlocale(locale.LC_NUMERIC, 'C')
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
@@ -253,7 +253,7 @@ class ToolboxUI(QMainWindow):
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
-        self._item_categories, self.item_factories = load_project_items(self)
+        self._item_categories, self.item_factories = load_project_items()
         self._item_specification_factories = load_item_specification_factories()
 
     def make_item_properties_uis(self):
@@ -415,9 +415,9 @@ class ToolboxUI(QMainWindow):
         """Opens project from a selected or given directory.
 
         Args:
-            load_dir (str): Path to project base directory. If default value is used,
-            a file explorer dialog is opened where the user can select the
-            project to open.
+            load_dir (str, optional): Path to project base directory. If default value is used,
+                a file explorer dialog is opened where the user can select the
+                project to open.
             clear_logs (bool): True clears Event and Process Log, False does not
 
         Returns:
@@ -510,13 +510,11 @@ class ToolboxUI(QMainWindow):
         ]
         self.populate_specification_model(deserialized_paths)
         # Populate project model with project items
-        if not self._project.load(project_items):
-            self.msg_error.emit("Loading project items failed")
-            return False
+        self._project.load(project_items, connections)
         self.ui.treeView_project.expandAll()
         # Restore connections
         self.msg.emit("Restoring connections...")
-        self.ui.graphicsView.restore_links(connections)
+        self.ui.graphicsView.restore_links(self._project.connections)
         # Simulate project execution after restoring links
         self._project.notify_changes_in_all_dags()
         self._project.connect_signals()
@@ -670,6 +668,14 @@ class ToolboxUI(QMainWindow):
         if spec is not None:
             spec.definition_file_path = def_path
         return spec
+
+    def supports_specifications(self, item_type):
+        """Returns True if given project item type supports specifications.
+
+        Returns:
+            bool: True if item supports specifications, False otherwise
+        """
+        return item_type in self._item_specification_factories
 
     def load_specification(self, definition):
         """Returns Item specification from a definition dictionary.
@@ -1123,15 +1129,15 @@ class ToolboxUI(QMainWindow):
 
         Args:
             ind (QModelIndex): In the ProjectItemSpecFactoryModel
-            pos (QPoint): Mouse position
+            global_pos (QPoint): Mouse position
         """
         if not self.project():
             return
         spec = self.specification_model.specification(ind.row())
-        factory = self.item_factories[spec.item_type]
-        if not factory.supports_specifications():
+        if not self.supports_specification(spec.item_type):
             return
-        self.specification_context_menu = factory.make_specification_menu(self, ind)
+        item_factory = self.item_factories[spec.item_type]
+        self.specification_context_menu = item_factory.make_specification_menu(self, ind)
         self.specification_context_menu.exec_(global_pos)
         self.specification_context_menu.deleteLater()
         self.specification_context_menu = None
@@ -1476,10 +1482,22 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form = factory.make_add_item_widget(self, x, y, spec)
         self.add_project_item_form.show()
 
+    def supports_specification(self, item_type):
+        """
+        Returns True if given item type supports specifications.
+
+        Args:
+            item_type (str): item's type
+
+        Returns:
+            bool: True if item supports specifications, False otherwise
+        """
+        return item_type in self._item_specification_factories
+
     @Slot()
     def show_specification_form(self, item_type, specification=None, **kwargs):
         """
-        Show specification widget.
+        Shows specification widget.
 
         Args:
             item_type (str): item's type
@@ -1489,10 +1507,9 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        factory = self.item_factories[item_type]
-        if not factory.supports_specifications():
+        if not self.supports_specification(item_type):
             return
-        factory.show_specification_widget(self, specification, **kwargs)
+        self.item_factories[item_type].show_specification_widget(self, specification, **kwargs)
 
     @Slot()
     def show_settings(self):

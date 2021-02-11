@@ -17,14 +17,9 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, sin, cos, pi
-from itertools import product, chain
-from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation, QEventLoop
+from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, QGraphicsEllipseItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont
-from spinedb_api.filters.tools import filter_config
-from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
-from spinetoolbox.project_commands import ToggleFilterIdsCommand
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 from .project_item_icon import ConnectorButton
 
@@ -289,21 +284,18 @@ class FilterIcon(QGraphicsEllipseItem):
 class Link(LinkBase):
     """A graphics item to represent the connection between two project items."""
 
-    def __init__(self, toolbox, src_connector, dst_connector, resource_filters=None):
+    def __init__(self, toolbox, src_connector, dst_connector, connection):
         """
         Args:
             toolbox (ToolboxUI): main UI class instance
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
-            resource_filters (dict, optional): Mapping resource labels to filter types to list of values
+            connection (spine_engine.project_item.Connection): connection this link represents
         """
         super().__init__(toolbox)
-        if resource_filters is None:
-            resource_filters = {}
+        self._connection = connection
         self.src_connector = src_connector  # QGraphicsRectItem
         self.dst_connector = dst_connector
-        self.src_icon = src_connector.parent
-        self.dst_icon = dst_connector.parent
         self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
         self._filter_icon_extent = 4 * self.magic_number
@@ -311,7 +303,7 @@ class Link(LinkBase):
         self._filter_icon.setPen(self.normal_pen)
         self.setToolTip(
             "<html><p>Connection from <b>{0}</b>'s output "
-            "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name())
+            "to <b>{1}</b>'s input</html>".format(self._connection.source, self._connection.destination)
         )
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
         self.parallel_link = None
@@ -321,12 +313,7 @@ class Link(LinkBase):
         self.update_geometry()
         self._color = QColor(255, 255, 0, 204)
         self._exec_color = None
-        self.resource_filters = resource_filters
-        self.resource_filter_model = ResourceFilterModel(self)
-        self.db_mngr = toolbox.db_mngr
-        self._fetched_db_resources = set()
-        self._unfetched_db_resources = set()
-        self._obsolete_db_resources = set()
+        self.resource_filter_model = ResourceFilterModel(self._connection, toolbox.undo_stack, toolbox)
 
     def handle_dag_changed(self, upstream_resources):
         """Handles changes in dag.
@@ -334,228 +321,19 @@ class Link(LinkBase):
         Args:
             upstream_resources (list(ProjectItemResource)): Resources advertised by predecessor.
         """
-        db_resources = {r for r in upstream_resources if r.type_ == "database"}
-        self._unfetched_db_resources = db_resources - self._fetched_db_resources
-        self._obsolete_db_resources = self._fetched_db_resources - db_resources
+        self.resource_filter_model.set_item_resources(upstream_resources)
 
     def refresh_resource_filter_model(self):
-        """Refreshes the resource filter model. Called when the Link becomes active."""
-        self._fetch_unfetched()
-        self._remove_obsolete()
-
-    def _fetch_unfetched(self):
-        """Fetches db maps corresponding to unfetched incoming db resources."""
-        unfetched_db_maps = set()
-        unfetchable_resources = set()
-        for resource in self._unfetched_db_resources:
-            db_map = self.db_mngr.get_db_map(resource.url, self._toolbox)
-            if db_map is None:
-                unfetchable_resources.add(resource)
-                continue
-            unfetched_db_maps.add(db_map)
-        self._unfetched_db_resources -= unfetchable_resources
-        self.resource_filter_model.init_resources(self._unfetched_db_resources)
-        self.db_mngr.register_listener(self, *unfetched_db_maps)
-        self._synch_fetch_db_maps(unfetched_db_maps)
-        self._fetched_db_resources |= self._unfetched_db_resources
-        self._unfetched_db_resources.clear()
-
-    def _remove_obsolete(self):
-        """Removes obsolete resources."""
-        self.resource_filter_model.remove_resources({r.url for r in self._obsolete_db_resources})
-        obsolete_db_maps = {self.db_mngr.get_db_map(r.url, self._toolbox) for r in self._obsolete_db_resources}
-        obsolete_db_maps.discard(None)
-        self.db_mngr.unregister_listener(self, *obsolete_db_maps)
-        self._fetched_db_resources -= self._obsolete_db_resources
-        self._obsolete_db_resources.clear()
-
-    def _synch_fetch_db_maps(self, db_maps):
-        """Fetches given db_maps synchronously. Called by ``refresh_resource_filter_model()`` and ``filter_stacks()``.
-
-        Args:
-            db_maps (Sequence): DatabaseMapping instances
-        """
-        if not db_maps:
-            return
-        fetcher = self.db_mngr.get_fetcher(self)
-        loop = QEventLoop()
-        fetcher.finished.connect(loop.quit)
-        fetcher.fetch(db_maps, tablenames=["scenario", "tool"])
-        if not fetcher.is_finished:
-            loop.exec_()
-        self._update_filters(db_maps)
-
-    def _update_filters(self, db_maps):
-        """Updates filters for given resource after possible changes in the underlying db.
-        Called by ``_synch_fetch_db_maps()``.
-
-        Args:
-            db_maps (Sequence): DatabaseMapping instances
-        """
-        resource_labels = {r.url: r.label for r in chain(self._fetched_db_resources, self._unfetched_db_resources)}
-        for db_map in db_maps:
-            resource_label = resource_labels.get(db_map.db_url)
-            if not resource_label:
-                continue
-            valid_scenario_ids = {x["id"] for x in self.db_mngr.get_items(db_map, "scenario")}
-            valid_tool_ids = {x["id"] for x in self.db_mngr.get_items(db_map, "tool")}
-            filters = self.resource_filters.get(resource_label, {})
-            filter_scen_ids = filters.get(SCENARIO_FILTER_TYPE, [])
-            filter_tool_ids = filters.get(TOOL_FILTER_TYPE, [])
-            invalid_scen_ids = set(filter_scen_ids) - valid_scenario_ids
-            invalid_tool_ids = set(filter_tool_ids) - valid_tool_ids
-            for id_ in invalid_scen_ids:
-                filter_scen_ids.remove(id_)
-            for id_ in invalid_tool_ids:
-                filter_tool_ids.remove(id_)
-
-    def filter_stacks(self):
-        """Returns a dictionary mapping tuples (resource label, destination item name) to a list of filter stacks.
-        A filter stack is simply a tuple where each element is a filter configuration dictionary.
-        Stacks are computed as the cross-product of all individual filters defined for a resource.
-
-        Returns:
-            dict((str,str),list(tuple(dict)))
-        """
-        # Fetches resources that have filters defined, so we can call ``self.db_mngr.get_item()`` below
-        resources_to_fetch = (
-            resource_label
-            for resource_label, filters in self.resource_filters.items()
-            for filter_type, ids in filters.items()
-            if ids
-        )
-        urls = {r.label: r.url for r in chain(self._fetched_db_resources, self._unfetched_db_resources)}
-        db_maps = {}
-        for resource_label in resources_to_fetch:
-            url = urls.get(resource_label)
-            if url is None:
-                continue
-            db_map = self.db_mngr.get_db_map(url, self._toolbox)
-            if db_map is None:
-                continue
-            db_maps[resource_label] = db_map
-        self._synch_fetch_db_maps(db_maps.values())
-        # Now compute the filter stacks
-        filter_stacks = {}
-        for resource_label, filters in self.resource_filters.items():
-            filter_configs_list = []
-            for filter_type, ids in filters.items():
-                db_map = db_maps.get(resource_label)
-                if db_map is None:
-                    filter_configs_list.append([])
-                    continue
-                item_type = {SCENARIO_FILTER_TYPE: "scenario", TOOL_FILTER_TYPE: "tool"}[filter_type]
-                names = {self.db_mngr.get_item(db_map, item_type, id_).get("name") for id_ in ids}
-                names.discard(None)
-                filter_configs = [filter_config(filter_type, name) for name in names]
-                filter_configs_list.append(filter_configs)
-            filter_stacks[resource_label, self.dst_icon.name()] = list(product(*filter_configs_list))
-        return filter_stacks
-
-    def receive_scenarios_added(self, db_map_data):
-        self.resource_filter_model.receive_scenarios_added(db_map_data)
-
-    def receive_tools_added(self, db_map_data):
-        self.resource_filter_model.receive_tools_added(db_map_data)
-
-    def receive_scenarios_updated(self, _db_map_data):
-        self.resource_filter_model.refresh_model()
-
-    def receive_tools_updated(self, _db_map_data):
-        self.resource_filter_model.refresh_model()
-
-    def receive_scenarios_removed(self, db_map_data):
-        self.resource_filter_model.receive_scenarios_removed(db_map_data)
-
-    def receive_tools_removed(self, db_map_data):
-        self.resource_filter_model.receive_tools_removed(db_map_data)
-
-    def receive_session_rolled_back(self, db_maps):
-        self._force_refetch(db_maps)
-
-    def receive_session_refreshed(self, db_maps):
-        self._force_refetch(db_maps)
-
-    def _force_refetch(self, db_maps):
-        """Forces refetching given db_maps in next activation, after they've been refreshed or rolled back.
-
-        Args:
-            db_maps (Sequence(DatabaseMapping))
-        """
-        for db_map in db_maps:
-            url = db_map.db_url
-            resource = next((r for r in self._fetched_db_resources if r.url == url), None)
-            if resource is not None:
-                self._fetched_db_resources.remove(resource)
-                self._unfetched_db_resources.add(resource)
-        if self == self._toolbox.active_link:
-            self.refresh_resource_filter_model()
+        """Makes resource filter mode fetch filter data from database."""
+        self.resource_filter_model.build_tree()
 
     @property
     def name(self):
-        return f"from {self.src_icon.name()} to {self.dst_icon.name()}"
+        return f"from {self._connection.source} to {self._connection.destination}"
 
-    def to_dict(self):
-        """Returns a dictionary representation of this Link.
-
-        Returns:
-            dict
-        """
-        src_connector = self.src_connector
-        src_anchor = src_connector.position
-        src_name = src_connector.parent_name()
-        dst_connector = self.dst_connector
-        dst_anchor = dst_connector.position
-        dst_name = dst_connector.parent_name()
-        d = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
-        resource_filters = self._compile_resource_filters()
-        if resource_filters:
-            d["resource_filters"] = resource_filters
-        return d
-
-    def _compile_resource_filters(self):
-        """Returns a dictionary mapping resource labels to another dictionary mapping filter type to filtered ids.
-        Called by ``to_dict``.
-
-        Returns:
-            dict(str,dict(str,list))
-        """
-        resource_filters = {}
-        for resource, filters in self.resource_filters.items():
-            for filter_type, values in filters.items():
-                if not values:
-                    continue
-                resource_filters.setdefault(resource, {})[filter_type] = values
-        return resource_filters
-
-    def toggle_filter_ids(self, resource, filter_type, *ids):
-        """Pushes a ``ToggleFilterIdsCommand`` to the toolbox undo stack.
-
-        Args:
-            resource (str): Resource label
-            filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
-            ids (Iterable(int))
-        """
-        cmd = ToggleFilterIdsCommand(self, resource, filter_type, ids)
-        self._toolbox.undo_stack.push(cmd)
-
-    def _do_toggle_filter_ids(self, resource, filter_type, ids):
-        """Toggles the given ids in the resource filters.
-
-        Args:
-            resource (str): Resource label
-            filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
-            ids (Iterable(int))
-        """
-        current = self.resource_filters.setdefault(resource, {}).setdefault(filter_type, [])
-        for id_ in ids:
-            if id_ in current:
-                current.remove(id_)
-            else:
-                current.append(id_)
-        if self == self._toolbox.active_link:
-            self.resource_filter_model.refresh_model()
-        self.update()
+    @property
+    def connection(self):
+        return self._connection
 
     def do_update_geometry(self, guide_path):
         """See base class."""
@@ -626,7 +404,7 @@ class Link(LinkBase):
 
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
-        self._filter_icon.setVisible(bool(self._compile_resource_filters()))
+        self._filter_icon.setVisible(self._connection.has_filters())
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self.setPen(self.selected_pen)
@@ -652,8 +430,13 @@ class Link(LinkBase):
             return value
         return super().itemChange(change, value)
 
+    def establish_connection(self):
+        """Adds link's connection back to the project."""
+        self._toolbox.project().add_connection(self._connection)
+
     def wipe_out(self):
         """Removes any trace of this item from the system."""
+        self._toolbox.project().remove_connection(self._connection)
         self.src_connector.links.remove(self)
         self.dst_connector.links.remove(self)
         scene = self.scene()

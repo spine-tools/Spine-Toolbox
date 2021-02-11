@@ -50,7 +50,7 @@ class MainToolBar(QToolBar):
         self._project_item_buttons = []
         for item_type, factory in self._toolbox.item_factories.items():
             icon = QIcon(factory.icon())
-            button = ProjectItemButton(self._toolbox, icon, item_type, factory.supports_specifications())
+            button = ProjectItemButton(self._toolbox, icon, item_type)
             button.setIconSize(self.iconSize())
             self.addWidget(button)
             self._project_item_buttons.append(button)

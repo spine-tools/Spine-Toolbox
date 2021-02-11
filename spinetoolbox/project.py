@@ -21,8 +21,9 @@ import json
 import logging
 from PySide2.QtCore import Slot, Signal, QTimer
 from PySide2.QtWidgets import QMessageBox
+from spine_engine.project_item.connection import Connection
 from spinetoolbox.metaobject import MetaObject
-from spinetoolbox.helpers import create_dir, inverted, erase_dir
+from spinetoolbox.helpers import create_dir, inverted, erase_dir, make_settings_dict_for_engine
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem
@@ -61,6 +62,7 @@ class SpineToolboxProject(MetaObject):
         super().__init__(name, description)
         self._toolbox = toolbox
         self._project_item_model = project_item_model
+        self._connections = list()
         self._logger = logger
         self._settings = settings
         self._dags_about_to_be_notified = set()
@@ -151,8 +153,7 @@ class SpineToolboxProject(MetaObject):
         project_dict["name"] = self.name
         project_dict["description"] = self.description
         project_dict["specifications"] = spec_paths
-        # Compute connections directly from Links on scene
-        project_dict["connections"] = [link.to_dict() for link in self._toolbox.ui.graphicsView.links()]
+        project_dict["connections"] = [connection.to_dict() for connection in self._connections]
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._project_item_model.root().children():
@@ -167,20 +168,19 @@ class SpineToolboxProject(MetaObject):
             json.dump(saved_dict, fp, indent=4)
         return True
 
-    def load(self, items_dict):
+    def load(self, items_dict, connection_dicts):
         """Populates project item model with items loaded from project file.
 
         Args:
             items_dict (dict): Dictionary containing all project items in JSON format
-
-        Returns:
-            bool: True if successful, False otherwise
+            connection_dicts (list of dict): List containing all connections in JSON format
         """
         self._logger.msg.emit("Loading project items...")
         if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
         self.make_and_add_project_items(items_dict, verbosity=False)
-        return True
+        for connection in map(Connection.from_dict, connection_dicts):
+            self.add_connection(connection)
 
     def add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.
@@ -262,6 +262,23 @@ class SpineToolboxProject(MetaObject):
         if set_selected:
             item = list(project_tree_items)[-1]
             self.set_item_selected(item)
+
+    @property
+    def connections(self):
+        return self._connections
+
+    def add_connection(self, connection):
+        """Adds a connection to the project.
+
+        Args:
+            connection (Connection): connection to add
+        """
+        self._connections.append(connection)
+        self.dag_handler.add_graph_edge(connection.source, connection.destination)
+
+    def remove_connection(self, connection):
+        self._connections.remove(connection)
+        self.dag_handler.remove_graph_edge(connection.source, connection.destination)
 
     def set_item_selected(self, item):
         """
@@ -405,25 +422,11 @@ class SpineToolboxProject(MetaObject):
             return None
         return node_successors
 
-    def make_settings_dict(self):
-        # XXX: We may want to introduce a new group "executionSettings", for more clarity
-        settings = {}
-        self._settings.beginGroup("appSettings")
-        for key in self._settings.childKeys():
-            value = self._settings.value(key)
-            try:
-                json.dumps(value)
-            except (TypeError, json.decoder.JSONDecodeError):
-                continue
-            settings[f"appSettings/{key}"] = value
-        self._settings.endGroup()
-        return settings
-
     def _execute_dags(self, dags, execution_permits_list):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
             return
-        settings = self.make_settings_dict()
+        settings = make_settings_dict_for_engine(self._settings)
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
             worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
@@ -434,7 +437,7 @@ class SpineToolboxProject(MetaObject):
         # that the project is done executing before it's fully loaded.
         for worker in self._engine_workers:
             self._logger.msg.emit("<b>Starting DAG {0}</b>".format(worker.dag_identifier))
-            self._logger.msg.emit("Order: {0}".format(" -> ".join(worker._engine_data["node_successors"])))
+            self._logger.msg.emit("Order: {0}".format(" -> ".join(worker.engine_data["node_successors"])))
             worker.start()
 
     def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
@@ -449,21 +452,19 @@ class SpineToolboxProject(MetaObject):
             spec = project_item.specification()
             if spec is not None:
                 specifications.setdefault(project_item.item_type(), list()).append(spec.to_dict())
-        filter_stacks = {}
-        for item in project_items.values():
-            for link in item.get_icon().outgoing_links():
-                filter_stacks.update(link.filter_stacks())
+        connections = [c.to_dict() for c in self._connections]
         data = {
             "items": items,
             "specifications": specifications,
+            "connections": connections,
             "node_successors": node_successors,
-            "filter_stacks": filter_stacks,
             "execution_permits": execution_permits,
             "settings": settings,
             "project_dir": self.project_dir,
         }
         server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
-        worker = SpineEngineWorker(data, dag, dag_identifier, project_items, server_address)
+        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, project_items)
+        worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -484,7 +485,7 @@ class SpineToolboxProject(MetaObject):
         # Can't say I really understand the whole extent of it.
         for finished_worker in self._engine_workers:
             self.notify_changes_in_dag(finished_worker.dag)
-            for item, direction, state in finished_worker.sucessful_executions:
+            for item, direction, state in finished_worker.successful_executions:
                 item.handle_execution_successful(direction, state)
             finished_worker.clean_up()
         self._engine_workers.clear()

@@ -40,19 +40,6 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def supports_specifications():
-        """
-        Returns whether or not this factory supports specs.
-
-        If the subclass implementation returns True, then it must also implement
-        ``specification_form_maker``, and ``specification_menu_maker``.
-
-        Returns:
-            bool
-        """
-        return False
-
-    @staticmethod
     def make_add_item_widget(toolbox, x, y, specification):
         """
         Returns an appropriate Add project item widget.

@@ -158,12 +158,9 @@ UPGRADING PROJECT ITEMS...
     return True
 
 
-def load_project_items(toolbox):
+def load_project_items():
     """
     Loads the standard project item modules included in the Toolbox package.
-
-    Args:
-        toolbox (ToolboxUI): Toolbox main widget
 
     Returns:
         tuple of dict: two dictionaries; first maps item type to its category
@@ -206,48 +203,3 @@ def _find_module_material(module):
             if item_type is not None and factory is not None:
                 return item_type, category, factory
     return None
-
-
-def load_item_specification_factories():
-    """
-    Loads the project item specification factories in the standard Toolbox package.
-
-    Returns:
-        dict: a map from item type to specification factory
-    """
-    import spine_items  # pylint: disable=import-outside-toplevel
-
-    items_root = pathlib.Path(spine_items.__file__).parent
-    factories = dict()
-    for child in items_root.iterdir():
-        if child.is_dir() and child.joinpath("specification_factory.py").exists():
-            spec = importlib.util.find_spec(f"spine_items.{child.stem}.specification_factory")
-            m = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(m)
-            if hasattr(m, "SpecificationFactory"):
-                item_type = m.SpecificationFactory.item_type()
-                factories[item_type] = m.SpecificationFactory
-    return factories
-
-
-def load_executable_items():
-    """
-    Loads the project item executable classes included in the standard Toolbox package.
-
-    Returns:
-        dict: a map from item type to the executable item class
-    """
-    import spine_items  # pylint: disable=import-outside-toplevel
-
-    items_root = pathlib.Path(spine_items.__file__).parent
-    classes = dict()
-    for child in items_root.iterdir():
-        if child.is_dir() and child.joinpath("executable_item.py").exists():
-            spec = importlib.util.find_spec(f"spine_items.{child.stem}.executable_item")
-            m = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(m)
-            if hasattr(m, "ExecutableItem"):
-                item_class = m.ExecutableItem
-                item_type = item_class.item_type()
-                classes[item_type] = item_class
-    return classes

@@ -36,7 +36,6 @@ class LinkPropertiesWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         toolbox.ui.tabWidget_item_properties.addTab(self, "Link properties")
-        self.ui.treeView_resources.clicked.connect(self._handle_index_clicked)
 
     def set_link(self, link):
         """Hooks the widget to given link, so that user actions are reflected in the link's filter configuration.
@@ -50,13 +49,5 @@ class LinkPropertiesWidget(QWidget):
         self.ui.label_link_name.setText(link.name)
 
     def unset_link(self):
-        """Releases the widget from any links.
-
-        Args:
-            link (Link)
-        """
+        """Releases the widget from any links."""
         self.ui.treeView_resources.setModel(None)
-
-    @Slot("QModelIndex")
-    def _handle_index_clicked(self, index):
-        self.ui.treeView_resources.model().toggle_checked_state(index)

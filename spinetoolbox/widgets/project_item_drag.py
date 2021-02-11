@@ -64,23 +64,20 @@ class ProjectItemDragMixin:
 
 
 class ProjectItemButton(ProjectItemDragMixin, QToolButton):
-    def __init__(self, toolbox, icon, item_type, supports_specs, parent=None):
+    def __init__(self, toolbox, icon, item_type, parent=None):
         super().__init__(parent=parent)
-        self._toolbox = toolbox
         self.item_type = item_type
         self.setIcon(icon)
         self.setMouseTracking(True)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
-        if not supports_specs:
+        if not toolbox.supports_specification(item_type):
             self._list_view = None
             return
         self._list_view = ProjectItemDragListView()
-        self._list_view.doubleClicked.connect(self._toolbox.edit_specification)
-        self._list_view.context_menu_requested.connect(self._toolbox.show_specification_context_menu)
+        self._list_view.doubleClicked.connect(toolbox.edit_specification)
+        self._list_view.context_menu_requested.connect(toolbox.show_specification_context_menu)
         self._list_widget = CreateNewSpecListWidget(item_type)
-        self._list_widget.itemClicked.connect(
-            lambda _, item_type=item_type: self._toolbox.show_specification_form(item_type)
-        )
+        self._list_widget.itemClicked.connect(lambda _, item_type=item_type: toolbox.show_specification_form(item_type))
         self.dd_menu = QMenu(self)  # Drop-down menu
         widget_action = CustomWidgetAction(self.dd_menu)
         widget_action.setDefaultWidget(self._list_view)
@@ -93,7 +90,7 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         self.setPopupMode(QToolButton.MenuButtonPopup)
         self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self._resize()
-        model = self._toolbox.filtered_spec_factory_models.get(self.item_type)
+        model = toolbox.filtered_spec_factory_models.get(self.item_type)
         self._list_view.setModel(model)
         model.rowsInserted.connect(lambda *args: self._resize())
         model.rowsRemoved.connect(lambda *args: self._resize())

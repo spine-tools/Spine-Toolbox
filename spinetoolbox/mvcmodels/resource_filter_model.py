@@ -15,164 +15,156 @@ Contains ResourceFilterModel.
 :author: M. Marin (KTH)
 :date:   26.11.2020
 """
-
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
-
-
-class FilterValueItem(QStandardItem):
-    _db_url = None
-    _item_type = None
-    _filter_type = None
-    _id = None
+from ..project_commands import SetFiltersOnlineCommand
 
 
 class ResourceFilterModel(QStandardItemModel):
 
     tree_built = Signal()
     _SELECT_ALL = "Select all"
+    _FILTER_TYPES = {"Scenario filter": SCENARIO_FILTER_TYPE, "Tool filter": TOOL_FILTER_TYPE}
+    _FILTER_TYPE_TO_TEXT = dict(zip(_FILTER_TYPES.values(), _FILTER_TYPES.keys()))
+    _ID_ROLE = Qt.UserRole + 1
 
-    def __init__(self, link):
+    def __init__(self, connection, undo_stack, logger):
         """
         Args:
-            link (Link)
-            parent (QObject)
+            connection (Connection): link whose resources to model
+            undo_stack (QUndoStack): an undo stack
+            logger (LoggerInterface): a logger
         """
         super().__init__()
-        self._link = link
-        self._root_items = {}
+        self._connection = connection
+        self._undo_stack = undo_stack
+        self._logger = logger
 
-    def _add_leaves(self, db_url, filter_item, items, filter_type, item_type):
-        value_items = []
-        if not filter_item.rowCount() and items:
-            select_all_item = FilterValueItem(self._SELECT_ALL)
-            select_all_item._db_url = db_url
-            select_all_item._item_type = item_type
-            select_all_item._filter_type = filter_type
-            value_items.append(select_all_item)
-        for item in items:
-            value_item = FilterValueItem()
-            value_item._db_url = db_url
-            value_item._id = item["id"]
-            value_item._item_type = item_type
-            value_item._filter_type = filter_type
-            value_items.append(value_item)
-        filter_item.appendRows(value_items)
+    @property
+    def connection(self):
+        return self._connection
 
-    def _remove_leaves(self, filter_item, items, resource_label, filter_type):
-        ids = {x["id"] for x in items}
-        invalid_rows = [row for row in range(filter_item.rowCount()) if filter_item.child(row)._id in ids]
-        for row in reversed(invalid_rows):
-            filter_item.removeRow(row)
-        current_ids = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
-        for id_ in ids:
-            try:
-                current_ids.remove(id_)
-            except ValueError:
-                pass
-
-    def receive_scenarios_added(self, db_map_data):
-        for db_map, data in db_map_data.items():
-            root_item = self._root_items.get(db_map.db_url)
-            if not root_item:
-                continue
-            filter_item = root_item.child(0)
-            self._add_leaves(db_map.db_url, filter_item, data, SCENARIO_FILTER_TYPE, "scenario")
-
-    def receive_tools_added(self, db_map_data):
-        for db_map, data in db_map_data.items():
-            root_item = self._root_items.get(db_map.db_url)
-            if not root_item:
-                continue
-            filter_item = root_item.child(1)
-            self._add_leaves(db_map.db_url, filter_item, data, TOOL_FILTER_TYPE, "tool")
-
-    def receive_scenarios_removed(self, db_map_data):
-        for db_map, data in db_map_data.items():
-            root_item = self._root_items.get(db_map.db_url)
-            if not root_item:
-                continue
-            filter_item = root_item.child(0)
-            self._remove_leaves(filter_item, data, root_item.text(), SCENARIO_FILTER_TYPE)
-
-    def receive_tools_removed(self, db_map_data):
-        for db_map, data in db_map_data.items():
-            root_item = self._root_items.get(db_map.db_url)
-            if not root_item:
-                continue
-            filter_item = root_item.child(1)
-            self._remove_leaves(filter_item, data, root_item.text(), TOOL_FILTER_TYPE)
-
-    def init_resources(self, resources):
-        for resource in resources:
-            root_item = self._root_items.get(resource.url)
-            if root_item is not None:
-                for row in range(root_item.rowCount()):
-                    filter_item = root_item.child(row)
-                    filter_item.removeRows(0, filter_item.rowCount())
-                continue
-            root_item = self._root_items[resource.url] = QStandardItem(resource.label)
-            filter_items = [QStandardItem("Scenario filter"), QStandardItem("Tool filter")]
-            root_item.appendRows(filter_items)
-            self.appendRow(root_item)
-
-    def remove_resources(self, urls):
-        invalid_rows = []
-        for url in urls:
-            resource_item = self._root_items.pop(url, None)
-            if resource_item is not None:
-                invalid_rows.append(self.indexFromItem(resource_item).row())
-        for row in sorted(invalid_rows, reverse=True):
-            self.removeRow(row)
-
-    def flags(self, index):  # pylint: disable=no-self-use
-        return Qt.ItemIsEnabled
-
-    def data(self, index, role=Qt.DisplayRole):
-        item = self.itemFromIndex(index)
-        if not isinstance(item, FilterValueItem):
-            return super().data(index, role=role)
-        if role == Qt.DisplayRole:
-            if super().data(index) == self._SELECT_ALL:
-                return self._SELECT_ALL
-            db_map = self._link.db_mngr.db_map(item._db_url)
-            return self._link.db_mngr.get_item(db_map, item._item_type, item._id).get("name")
-        if role == Qt.CheckStateRole:
-            resource_label = self._root_items[item._db_url].text()
-            filter_type = item._filter_type
-            ids = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
-            if super().data(index) == self._SELECT_ALL:
-                db_map = self._link.db_mngr.db_map(item._db_url)
-                all_ids = self._link.db_mngr.get_items(db_map, item._item_type)
-                return Qt.Checked if len(ids) == len(all_ids) > 0 else Qt.Unchecked
-            return Qt.Checked if item._id in ids else Qt.Unchecked
-        return super().data(index, role=role)
-
-    def toggle_checked_state(self, index):
-        """Toggles the checked state of the index if it's a leaf.
-        This calls a method in the underlying Link object which in turn pushes a command to the undo stack...
+    def set_item_resources(self, resources):
+        """Sets project item resources for the model.
 
         Args:
-            QModelIndex
+            resources (Iterable of ProjectItemResource): item's resources
+        """
+        self._connection.receive_resources_from_source(resources)
+
+    def build_tree(self):
+        """Rebuilds model's contents."""
+
+        def append_filter_items(parent_item, filters, filter_type):
+            for id_, is_on in filters[filter_type].items():
+                filter_item = QStandardItem(self._connection.id_to_name(id_, filter_type))
+                filter_item.setData(id_, self._ID_ROLE)
+                filter_item.setData(Qt.Checked if is_on else Qt.Unchecked, Qt.CheckStateRole)
+                filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
+                parent_item.appendRow(filter_item)
+
+        self.clear()
+        self._connection.fetch_database_items()
+        for resource_label, filters_by_type in self._connection.resource_filters.items():
+            root_item = QStandardItem(resource_label)
+            root_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            self.appendRow(root_item)
+            for name, type_ in self._FILTER_TYPES.items():
+                filter_parent = QStandardItem(name)
+                filter_parent.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                select_all_item = QStandardItem(self._SELECT_ALL)
+                select_all_item.setData(False, Qt.CheckStateRole)
+                select_all_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
+                filter_parent.appendRow(select_all_item)
+                root_item.appendRow(filter_parent)
+                if type_ in filters_by_type:
+                    append_filter_items(filter_parent, filters_by_type, type_)
+                    self._set_all_selected_item(resource_label, filter_parent)
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if role != Qt.CheckStateRole:
+            return super().setData(index, value, role)
+        self._change_filter_checked_state(index, value == Qt.Checked)
+        return True
+
+    def _change_filter_checked_state(self, index, is_on):
+        """Changes the online status of the filter item at index.
+
+        Args:
+            index (QModelIndex): item's index
+            is_on (bool): True if filter are turned online, False otherwise
         """
         item = self.itemFromIndex(index)
-        if not isinstance(item, FilterValueItem):
+        if item.hasChildren():
             return
-        resource_label = self._root_items[item._db_url].text()
-        filter_type = item._filter_type
-        if super().data(index) == self._SELECT_ALL:
-            ids = self._link.resource_filters.get(resource_label, {}).get(filter_type, [])
-            if index.data(Qt.CheckStateRole) == Qt.Unchecked:
-                db_map = self._link.db_mngr.db_map(item._db_url)
-                all_ids = [x["id"] for x in self._link.db_mngr.get_items(db_map, item._item_type)]
-                self._link.toggle_filter_ids(resource_label, filter_type, *(set(all_ids) - set(ids)))
-            else:
-                self._link.toggle_filter_ids(resource_label, filter_type, *ids)
-            return
-        self._link.toggle_filter_ids(resource_label, filter_type, item._id)
+        resource_type_item = item.parent()
+        filter_type = self._FILTER_TYPES[resource_type_item.text()]
+        root_item = resource_type_item.parent()
+        resource_label = root_item.text()
+        if item.text() == self._SELECT_ALL:
+            ids = self._connection.resource_filters.get(resource_label, {}).get(filter_type, {}).keys()
+            activated = {id_: is_on for id_ in ids}
+            cmd = SetFiltersOnlineCommand(self, resource_label, filter_type, activated)
+        else:
+            cmd = SetFiltersOnlineCommand(self, resource_label, filter_type, {item.data(self._ID_ROLE): is_on})
+        self._undo_stack.push(cmd)
 
-    def refresh_model(self):
-        """Notifies changes in the model. Called by the underlying Link once changes are successfully done."""
-        self.layoutChanged.emit()
+    def set_online(self, resource, filter_type, online):
+        """Sets the given filters online or offline.
+
+        Args:
+            resource (str): Resource label
+            filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
+            online (dict): mapping from scenario/tool id to online flag
+        """
+        self._connection.set_online(resource, filter_type, online)
+        filter_type_item = self._find_filter_type_item(resource, filter_type)
+        for row in range(filter_type_item.rowCount()):
+            filter_item = filter_type_item.child(row)
+            is_on = online.get(filter_item.data(self._ID_ROLE), None)
+            if is_on is not None:
+                checked = Qt.Checked if is_on else Qt.Unchecked
+                if filter_item.data(Qt.CheckStateRole) != checked:
+                    filter_item.setData(checked, Qt.CheckStateRole)
+                    self.dataChanged.emit(filter_item.index(), filter_item.index(), [Qt.CheckStateRole])
+        self._set_all_selected_item(resource, filter_type_item, True)
+
+    def _find_filter_type_item(self, resource, filter_type):
+        """Searches for filter type item.
+
+        Args:
+            resource (str): resource label
+            filter_type (str): filter type identifier
+
+        Returns:
+            QStandardItem: filter type item or None if not found
+        """
+        root_item = self.findItems(resource)[0]
+        filter_type_item = None
+        filter_type_text = self._FILTER_TYPE_TO_TEXT[filter_type]
+        for row in range(root_item.rowCount()):
+            filter_type_item = root_item.child(row)
+            if filter_type_item.text() == filter_type_text:
+                break
+        return filter_type_item
+
+    def _set_all_selected_item(self, resource, filter_type_item, emit_data_changed=False):
+        """Updates 'Select All' item's checked state.
+
+         Args:
+             resource (str): resource label
+             filter_type_item (QStandardItem): filter type item
+             emit_data_changed (bool): if True, emit dataChanged signal if the state was updated
+         """
+        all_online = all(
+            self._connection.resource_filters[resource][self._FILTER_TYPES[filter_type_item.text()]].values()
+        )
+        all_selected_item = filter_type_item.child(0)
+        all_selected = all_selected_item.data(Qt.CheckStateRole) == Qt.Checked
+        if all_selected != all_online:
+            checked = Qt.Checked if all_online else Qt.Unchecked
+            all_selected_item.setData(checked, Qt.CheckStateRole)
+            if emit_data_changed:
+                self.dataChanged.emit(all_selected_item.index(), all_selected_item.index(), [Qt.CheckStateRole])

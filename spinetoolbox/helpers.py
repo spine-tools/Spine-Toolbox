@@ -1006,3 +1006,26 @@ class QuietLogger:
 
     def __call__(self, *args, **kwargs):
         pass
+
+
+def make_settings_dict_for_engine(app_settings):
+    """Converts Toolbox settings to a dictionary acceptable by Engine.
+
+    Args:
+        app_settings (QSettings): Toolbox settings
+
+    Returns:
+        dict: Engine-compatible settings
+    """
+    # XXX: We may want to introduce a new group "executionSettings", for more clarity
+    settings = {}
+    app_settings.beginGroup("appSettings")
+    for key in app_settings.childKeys():
+        value = app_settings.value(key)
+        try:
+            json.dumps(value)
+        except (TypeError, json.decoder.JSONDecodeError):
+            continue
+        settings[f"appSettings/{key}"] = value
+    app_settings.endGroup()
+    return settings

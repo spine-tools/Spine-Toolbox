@@ -66,14 +66,14 @@ class SpineEngineWorker(QObject):
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
 
-    def __init__(self, engine_data, dag, dag_identifier, project_items, engine_server_address):
+    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items):
         """
         Args:
+            engine_server_address (str): Address of engine server if any
             engine_data (dict): engine data
             dag (DirectedGraphHandler)
             dag_identifier (str)
             project_items (dict): mapping from project item name to :class:`ProjectItem`
-            engine_server_address (str): Address of engine server if any
         """
         super().__init__()
         self._engine_data = engine_data
@@ -85,10 +85,15 @@ class SpineEngineWorker(QObject):
         self._project_items = project_items
         self.event_messages = {}
         self.process_messages = {}
-        self.sucessful_executions = []
+        self.successful_executions = []
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
+
+    @property
+    def engine_data(self):
+        """Engine data dictionary."""
+        return self._engine_data
 
     def get_engine_data(self):
         """Returns the engine data. Together with ``self.set_engine_data()`` it can be used to modify
@@ -241,7 +246,7 @@ class SpineEngineWorker(QObject):
     def _do_handle_node_execution_finished(self, item_name, direction, state, success, skipped):
         item = self._project_items[item_name]
         if success and not skipped:
-            self.sucessful_executions.append((item, direction, state))
+            self.successful_executions.append((item, direction, state))
         self._executing_items.remove(item)
         self._node_execution_finished.emit(item, direction, state, success, skipped)
 

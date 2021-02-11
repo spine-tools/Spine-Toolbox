@@ -16,11 +16,8 @@ Unit tests for the :module:`spinetoolbox.load_project_items` module.
 :date:   8.5.2020
 """
 import unittest
-from unittest.mock import MagicMock
 from PySide2.QtWidgets import QApplication
-from spine_engine.project_item.executable_item_base import ExecutableItemBase
-from spine_engine.project_item.project_item_specification_factory import ProjectItemSpecificationFactory
-from spinetoolbox.load_project_items import load_executable_items, load_item_specification_factories, load_project_items
+from spinetoolbox.load_project_items import load_project_items
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 
 
@@ -31,8 +28,7 @@ class TestLoadProjectItems(unittest.TestCase):
             QApplication()
 
     def test_load_project_items_finds_all_default_items(self):
-        toolbox = MagicMock()
-        categories, factories = load_project_items(toolbox)
+        categories, factories = load_project_items()
         expected_categories = {
             "Data Connection": "Data Connections",
             "Data Transformer": "Manipulators",
@@ -49,34 +45,6 @@ class TestLoadProjectItems(unittest.TestCase):
             self.assertIn(item_type, factories)
         for factory in factories.values():
             self.assertTrue(issubclass(factory, ProjectItemFactory))
-
-    def test_load_item_specification_factories(self):
-        factories = load_item_specification_factories()
-        self.assertEqual(len(factories), 3)
-        self.assertIn("Tool", factories)
-        self.assertTrue(issubclass(factories["Tool"], ProjectItemSpecificationFactory))
-        self.assertIn("Data Transformer", factories)
-        self.assertTrue(issubclass(factories["Data Transformer"], ProjectItemSpecificationFactory))
-        self.assertIn("Importer", factories)
-        self.assertTrue(issubclass(factories["Importer"], ProjectItemSpecificationFactory))
-
-    def test_item_factories_report_specification_support_correctly(self):
-        toolbox = MagicMock()
-        _, item_factories = load_project_items(toolbox)
-        specification_factories = load_item_specification_factories()
-        for item_type, item_factory in item_factories.items():
-            if item_factory.supports_specifications():
-                self.assertIn(item_type, specification_factories)
-            else:
-                self.assertNotIn(item_type, specification_factories)
-
-    def test_load_executable_items(self):
-        item_classes = load_executable_items()
-        item_types = ("Data Connection", "Data Store", "Importer", "GdxExporter", "Tool", "View")
-        for item_type in item_types:
-            self.assertIn(item_type, item_classes)
-        for item_class in item_classes.values():
-            self.assertTrue(issubclass(item_class, ExecutableItemBase))
 
 
 if __name__ == '__main__':

@@ -64,11 +64,14 @@ class TestAddProjectItemWidgetWithSpecifications(unittest.TestCase):
     def setUp(self):
         """Set up toolbox."""
         self._temp_dir = TemporaryDirectory()
-        with patch("spinetoolbox.ui_main.load_project_items") as mock_load_project_items:
+        with patch("spinetoolbox.ui_main.load_project_items") as mock_load_project_items, patch(
+            "spinetoolbox.ui_main.load_item_specification_factories"
+        ) as mock_load_specification_factories:
             mock_load_project_items.return_value = (
                 {TestProjectItem.item_type(): TestProjectItem.item_category()},
-                {TestProjectItem.item_type(): TestSpecificationSupportingItemFactory},
+                {TestProjectItem.item_type(): TestItemFactory},
             )
+            mock_load_specification_factories.return_value = {TestProjectItem.item_type(): TestSpecificationFactory}
             self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
 
     def tearDown(self):
@@ -115,10 +118,6 @@ class TestItemFactory(ProjectItemFactory):
         return ""
 
     @staticmethod
-    def supports_specifications():
-        return False
-
-    @staticmethod
     def make_add_item_widget(toolbox, x, y, specification):
         return MagicMock()
 
@@ -149,10 +148,8 @@ class TestItemFactory(ProjectItemFactory):
         return MagicMock()
 
 
-class TestSpecificationSupportingItemFactory(TestItemFactory):
-    @staticmethod
-    def supports_specifications():
-        return True
+class TestSpecificationFactory:
+    pass
 
 
 if __name__ == "__main__":

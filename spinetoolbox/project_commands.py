@@ -181,7 +181,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
         for category_ind, project_tree_items in self.items_per_category.items():
             self.project.do_add_project_tree_items(category_ind, *project_tree_items)
         for link in self.links:
-            self.project._toolbox.ui.graphicsView._add_link(link)
+            self.project._toolbox.ui.graphicsView.do_add_or_replace_link(link)
         self.project.dag_handler.blockSignals(False)
         self.project.notify_changes_in_all_dags()
 
@@ -213,7 +213,7 @@ class RemoveProjectItemCommand(SpineToolboxCommand):
         self.project.dag_handler.blockSignals(True)
         self.project.do_add_project_tree_items(self.category_ind, self.project_tree_item)
         for link in self.links:
-            self.project._toolbox.ui.graphicsView._add_link(link)
+            self.project._toolbox.ui.graphicsView.do_add_or_replace_link(link)
         self.project.dag_handler.blockSignals(False)
         self.project.notify_changes_in_containing_dag(self.name)
 
@@ -264,14 +264,14 @@ class AddLinkCommand(SpineToolboxCommand):
         self.link_name = f"link from {src_connector.parent_name()} to {dst_connector.parent_name()}"
 
     def redo(self):
-        self.replaced_link = self.graphics_view._add_link(self.link)
+        self.replaced_link = self.graphics_view.do_add_or_replace_link(self.link)
         action = "add" if self.replaced_link is None else "replace"
         self.setText(f"{action} {self.link_name}")
 
     def undo(self):
-        self.graphics_view.do_remove_link(self.link)
+        self.link.wipe_out()
         if self.replaced_link is not None:
-            self.graphics_view._add_link(self.replaced_link)
+            self.graphics_view.do_add_or_replace_link(self.replaced_link)
 
 
 class RemoveLinkCommand(SpineToolboxCommand):
@@ -288,34 +288,37 @@ class RemoveLinkCommand(SpineToolboxCommand):
         self.setText(f"remove link {link.name}")
 
     def redo(self):
-        self.graphics_view.do_remove_link(self.link)
+        self.link.wipe_out()
 
     def undo(self):
-        self.graphics_view._add_link(self.link)
+        self.graphics_view.do_add_or_replace_link(self.link)
 
 
-class ToggleFilterIdsCommand(SpineToolboxCommand):
-    def __init__(self, link, resource, filter_type, ids):
+class SetFiltersOnlineCommand(SpineToolboxCommand):
+    def __init__(self, resource_filter_model, resource, filter_type, online):
         """Command to toggle filter value.
 
         Args:
-            link (Link): the link
-            resource (str)
-            filter_type (str)
-            ids (list(int))
+            resource_filter_model (ResourceFilterModel): filter model
+            resource (str): resource label
+            filter_type (str): filter type identifier
+            online (dict): mapping from scenario/tool id to online flag
         """
         super().__init__()
-        self.link = link
-        self.resource = resource
-        self.filter_type = filter_type
-        self.ids = ids
-        self.setText(f"Change {filter_type} for {resource} at {link.name}")
+        self._resource_filter_model = resource_filter_model
+        self._resource = resource
+        self._filter_type = filter_type
+        self._online = online
+        source_name = self._resource_filter_model.connection.source
+        destination_name = self._resource_filter_model.connection.destination
+        self.setText(f"change {filter_type} for {resource} at link from {source_name} to {destination_name}")
 
     def redo(self):
-        self.link._do_toggle_filter_ids(self.resource, self.filter_type, self.ids)
+        self._resource_filter_model.set_online(self._resource, self._filter_type, self._online)
 
     def undo(self):
-        self.redo()
+        negated_online = {id_: not online for id_, online in self._online.items()}
+        self._resource_filter_model.set_online(self._resource, self._filter_type, negated_online)
 
 
 class AddSpecificationCommand(SpineToolboxCommand):

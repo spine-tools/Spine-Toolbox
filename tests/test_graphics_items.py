@@ -15,14 +15,15 @@ Unit tests for ``graphics_items`` module.
 :authors: A. Soininen (VTT)
 :date:    17.12.2020
 """
+import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch, PropertyMock
 from PySide2.QtCore import QEvent, QPoint, Qt
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
-from spinedb_api import import_scenarios, import_tools
-from spinedb_api.filters.tools import filter_config
+from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
+from spine_engine.project_item.connection import Connection
 from spine_engine.project_item.project_item_resource import ProjectItemResource
 from spinetoolbox.graphics_items import ExclamationIcon, Link, ProjectItemIcon, RankIcon
 from spinetoolbox.metaobject import MetaObject
@@ -72,7 +73,8 @@ class TestProjectItemIcon(unittest.TestCase):
     def test_outgoing_and_incoming_links(self):
         source_icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
         target_icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
-        link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"))
+        connection = Connection("source item", "bottom", "destination item", "bottom")
+        link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"), connection)
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
         self.assertEqual(source_icon.outgoing_links(), [link])
@@ -159,27 +161,29 @@ class TestLink(unittest.TestCase):
         source_item_icon.update_name_item("source icon")
         destination_item_icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
         destination_item_icon.update_name_item("destination icon")
-        self._link = Link(self._toolbox, source_item_icon.conn_button(), destination_item_icon.conn_button())
+        connection = Connection("source icon", "right", "destination icon", "left")
+        self._link = Link(
+            self._toolbox, source_item_icon.conn_button(), destination_item_icon.conn_button(), connection
+        )
 
     def tearDown(self):
         clean_up_toolbox(self._toolbox)
         self._temp_dir.cleanup()
 
-    def test_empty_filter_stacks(self):
-        self.assertEqual(self._link.filter_stacks(), {})
-
     def test_scenario_filter_gets_added_to_filter_model(self):
-        db_map = self._toolbox.db_mngr.get_db_map("sqlite://", self._toolbox, create=True)
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
+        db_map = DiffDatabaseMapping(url, create=True)
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
-        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", "sqlite://")])
+        db_map.connection.close()
+        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
         self._link.refresh_resource_filter_model()
-        self.assertEqual(self._link.filter_stacks(), {})
+        self.assertTrue(self._link.connection.has_filters())
         filter_model = self._link.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
         index = filter_model.index(0, 0)
-        self.assertEqual(index.data(), "sqlite://")
+        self.assertEqual(index.data(), url)
         root_item = filter_model.itemFromIndex(index)
         self.assertEqual(root_item.rowCount(), 2)
         self.assertEqual(root_item.columnCount(), 1)
@@ -191,16 +195,16 @@ class TestLink(unittest.TestCase):
         self.assertEqual(scenario_item.index().data(), "Select all")
         scenario_item = scenario_title_item.child(1, 0)
         self.assertEqual(scenario_item.index().data(), "scenario")
-        self._toolbox.db_mngr.close_all_sessions()
 
     def test_tool_filter_gets_added_to_filter_model(self):
-        url = "sqlite://"
-        db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox, create=True)
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
+        db_map = DiffDatabaseMapping(url, create=True)
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
+        db_map.connection.close()
         self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
         self._link.refresh_resource_filter_model()
-        self.assertEqual(self._link.filter_stacks(), {})
+        self.assertTrue(self._link.connection.has_filters())
         filter_model = self._link.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
         self.assertEqual(filter_model.columnCount(), 1)
@@ -217,37 +221,30 @@ class TestLink(unittest.TestCase):
         self.assertEqual(tool_item.index().data(), "Select all")
         tool_item = tool_title_item.child(1, 0)
         self.assertEqual(tool_item.index().data(), "tool")
-        self._toolbox.db_mngr.close_all_sessions()
 
     def test_toggle_scenario_filter(self):
-        url = "sqlite://"
-        db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox, create=True)
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
+        db_map = DiffDatabaseMapping(url, create=True)
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
+        db_map.connection.close()
         self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
         self._link.refresh_resource_filter_model()
         filter_model = self._link.resource_filter_model
-        scenario_item = filter_model.itemFromIndex(filter_model.index(0, 0)).child(0, 0).child(0, 0)
-        filter_model.toggle_checked_state(scenario_item.index())
-        self.assertEqual(
-            self._link.filter_stacks(), {(url, "destination icon"): [(filter_config("scenario_filter", "scenario"),)]}
-        )
-        self._toolbox.db_mngr.close_all_sessions()
+        filter_model.set_online(url, "scenario_filter", {1: True})
+        self.assertEqual(self._link.connection.resource_filters, {url: {"scenario_filter": {1: True}}})
 
     def test_toggle_tool_filter(self):
-        url = "sqlite://"
-        db_map = self._toolbox.db_mngr.get_db_map(url, self._toolbox, create=True)
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
+        db_map = DiffDatabaseMapping(url, create=True)
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
+        db_map.connection.close()
         self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
         self._link.refresh_resource_filter_model()
         filter_model = self._link.resource_filter_model
-        scenario_item = filter_model.itemFromIndex(filter_model.index(0, 0)).child(1, 0).child(0, 0)
-        filter_model.toggle_checked_state(scenario_item.index())
-        self.assertEqual(
-            self._link.filter_stacks(), {(url, "destination icon"): [(filter_config("tool_filter", "tool"),)]}
-        )
-        self._toolbox.db_mngr.close_all_sessions()
+        filter_model.set_online(url, "tool_filter", {1: True})
+        self.assertEqual(self._link.connection.resource_filters, {url: {"tool_filter": {1: True}}})
 
 
 if __name__ == "__main__":

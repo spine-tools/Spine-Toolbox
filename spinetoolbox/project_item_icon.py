@@ -361,6 +361,14 @@ class ConnectorButton(QGraphicsRectItem):
         """Returns project item name owning this connector button."""
         return self._parent.name()
 
+    def project_item(self):
+        """Returns the project item this connector button is attached to.
+
+        Returns:
+            ProjectItem: project item
+        """
+        return self._toolbox.project_item_model.get_item(self._parent.name()).project_item
+
     def mousePressEvent(self, event):
         """Connector button mouse press event. Either starts or closes a link.
 

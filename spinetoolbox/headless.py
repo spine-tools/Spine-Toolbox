@@ -21,10 +21,11 @@ import logging
 import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
-from spine_engine import SpineEngine, SpineEngineState
+from spine_engine import SpineEngineState
 from spine_engine.utils.serialization import deserialize_path
 from .dag_handler import DirectedGraphHandler
-from .load_project_items import load_executable_items, load_item_specification_factories
+from .helpers import make_settings_dict_for_engine
+from .spine_engine_manager import make_engine_manager
 
 
 class HeadlessLogger(QObject):
@@ -108,8 +109,10 @@ class ExecuteProject(QObject):
         """
         super().__init__(parent)
         self._args = args
+        self._logger = HeadlessLogger()
         self._startup_event_type = startup_event_type
         self._start.connect(self._execute)
+        self._node_messages = dict()
 
     @Slot()
     def _execute(self):
@@ -122,8 +125,11 @@ class ExecuteProject(QObject):
             raise
 
     def _open_and_execute_project(self):
-        """Opens a project and executes all DAGs in that project."""
-        logger = HeadlessLogger()
+        """Opens a project and executes all DAGs in that project.
+
+        Returns:
+            _Status: status code
+        """
         project_dir = self._args.project
         project_file_path = pathlib.Path(project_dir, ".spinetoolbox", "project.json").resolve()
         try:
@@ -131,27 +137,56 @@ class ExecuteProject(QObject):
                 try:
                     project_dict = json.load(project_file)
                 except json.decoder.JSONDecodeError:
-                    logger.msg_error.emit(f"Error in project file {project_file_path}. Invalid JSON.")
+                    self._logger.msg_error.emit(f"Error in project file {project_file_path}. Invalid JSON.")
                     return _Status.ERROR
         except OSError:
-            logger.msg_error.emit(f"Project file {project_file_path} missing")
+            self._logger.msg_error.emit(f"Project file {project_file_path} missing")
             return _Status.ERROR
-        executable_items, dag_handler = open_project(project_dict, project_dir, logger)
-        if executable_items is None:
-            return _Status.ERROR
+        item_dicts, specification_dicts, connection_dicts, dag_handler = open_project(
+            project_dict, project_dir, self._logger
+        )
         dags = dag_handler.dags()
+        app_settings = QSettings("SpineProject", "Spine Toolbox")
+        settings = make_settings_dict_for_engine(app_settings)
         for dag in dags:
             node_successors = dag_handler.node_successors(dag)
             if not node_successors:
-                logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
+                self._logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
                 return _Status.ERROR
-            items_in_dag = tuple(item for item in executable_items if item.name in dag.nodes)
             execution_permits = {item_name: True for item_name in dag.nodes}
-            engine = SpineEngine(items_in_dag, node_successors, execution_permits)
-            engine.run()
-            if engine.state() == SpineEngineState.FAILED:
-                return _Status.ERROR
+            engine_data = {
+                "items": item_dicts,
+                "specifications": specification_dicts,
+                "connections": connection_dicts,
+                "node_successors": node_successors,
+                "execution_permits": execution_permits,
+                "settings": settings,
+                "project_dir": project_dir,
+            }
+            engine_server_address = app_settings.value("appSettings/engineServerAddress", defaultValue="")
+            engine_manager = make_engine_manager(engine_server_address)
+            engine_manager.run_engine(engine_data)
+            while True:
+                event_type, data = engine_manager.get_engine_event()
+                self._process_engine_event(event_type, data)
+                if event_type == "dag_exec_finished":
+                    if data == SpineEngineState.FAILED:
+                        return _Status.ERROR
+                    break
         return _Status.OK
+
+    def _process_engine_event(self, event_type, data):
+        handler = {
+            "exec_started": self._handle_node_execution_started,
+            "exec_finished": self._handle_node_execution_finished,
+            "event_msg": self._handle_event_msg,
+            "process_msg": self._handle_process_msg,
+            "standard_execution_msg": self._handle_standard_execution_msg,
+            "kernel_execution_msg": self._handle_kernel_execution_msg,
+        }.get(event_type)
+        if handler is None:
+            return
+        handler(data)
 
     def event(self, e):
         if e.type() == self._startup_event_type:
@@ -159,6 +194,71 @@ class ExecuteProject(QObject):
             self._start.emit()
             return True
         return super().event(e)
+
+    def _handle_node_execution_started(self, data):
+        """Starts collecting messages from given node.
+
+        Args:
+            data (dict): execution start data
+        """
+        if data["direction"] == "BACKWARD":
+            # Currently there are no interesting messages when executing backwards.
+            return
+        self._node_messages[data["item_name"]] = list()
+
+    def _handle_node_execution_finished(self, data):
+        """Prints messages for finished nodes.
+
+        Args:
+            data (dict): execution end data
+        """
+        item_name = data["item_name"]
+        messages = self._node_messages.get(item_name)
+        if messages is None:
+            return
+        for message in messages:
+            self._logger.msg.emit(message)
+        del self._node_messages[item_name]
+
+    def _handle_event_msg(self, data):
+        """Stores event messages for later printing.
+
+        Args:
+            data (dict): event message data
+        """
+        messages = self._node_messages.get(data["item_name"])
+        if messages is None:
+            return
+        messages.append(data["msg_text"])
+
+    def _handle_process_msg(self, data):
+        """Stores process messages for later printing.
+
+        Args:
+            data (dict): process message data
+        """
+        messages = self._node_messages.get(data["item_name"])
+        if messages is None:
+            return
+        messages.append(data["msg_text"])
+
+    def _handle_standard_execution_msg(self, data):
+        """Handles standard execution messages.
+
+        Currently, these messages are ignored.
+
+        Args:
+            data (dict): execution message data
+        """
+
+    def _handle_kernel_execution_msg(self, data):
+        """Handles kernel messages.
+
+        Currently, these messages are ignored.
+
+        Args:
+            data (dict): execution message data
+        """
 
 
 def headless_main(args):
@@ -186,78 +286,50 @@ def open_project(project_dict, project_dir, logger):
         project_dir (str): path to a directory containing the ``.spinetoolbox`` dir
         logger (LoggerInterface): a logger
     Returns:
-        tuple: a list of executable items, a dict of item specifications, and a DagHandler object
+        tuple: item dicts, specification dicts, connection dicts and a DagHandler object
     """
-    app_settings = QSettings("SpineProject", "Spine Toolbox")
-    specification_factories = load_item_specification_factories()
-    item_specifications = _specifications(project_dict, project_dir, specification_factories, app_settings, logger)
-    executable_classes = load_executable_items()
-    executable_items = list()
+    specification_dicts = _specification_dicts(project_dict, project_dir, logger)
+    item_dicts = dict()
     dag_handler = DirectedGraphHandler()
     for item_name, item_dict in project_dict["items"].items():
         dag_handler.add_dag_node(item_name)
-        try:
-            item_type = item_dict["type"]
-        except KeyError:
-            logger.msg_error.emit(
-                "Project item is missing the 'type' attribute in the project.json file."
-                " This might be caused by an outdated project file."
-            )
-            return None, None
-        executable_class = executable_classes[item_type]
-        try:
-            item = executable_class.from_dict(
-                item_dict, item_name, project_dir, app_settings, item_specifications, logger
-            )
-        except KeyError as missing_key:
-            logger.msg_error.emit(f"'{missing_key}' is missing in the project.json file.")
-            item = None
-        if item is None:
-            return None, None
-        executable_items.append(item)
+        item_dicts[item_name] = item_dict
     for connection in project_dict["project"]["connections"]:
         from_name = connection["from"][0]
         to_name = connection["to"][0]
         dag_handler.add_graph_edge(from_name, to_name)
-    return executable_items, dag_handler
+    return project_dict["items"], specification_dicts, project_dict["project"]["connections"], dag_handler
 
 
-def _specifications(project_dict, project_dir, specification_factories, app_settings, logger):
+def _specification_dicts(project_dict, project_dir, logger):
     """
-    Creates project item specifications.
+    Loads project item specification dictionaries.
 
     Args:
         project_dict (dict): a serialized project dictionary
         project_dir (str): path to a directory containing the ``.spinetoolbox`` dir
-        specification_factories (dict): a mapping from item type to specification factory
-        app_settings (QSettings): Toolbox settings
         logger (LoggerInterface): a logger
     Returns:
-        dict: a mapping from item type and specification name to specification
+        dict: a mapping from item type to a list of specification dicts
     """
-    specifications = dict()
-    specifications_dict = project_dict["project"].get("specifications", {})
-    definition_file_paths = dict()
-    for item_type, serialized_paths in specifications_dict.items():
-        definition_file_paths[item_type] = [deserialize_path(path, project_dir) for path in serialized_paths]
-    for item_type, paths in definition_file_paths.items():
-        for definition_path in paths:
+    specification_dicts = dict()
+    specification_file_paths = dict()
+    for item_type, serialized_paths in project_dict["project"].get("specifications", {}).items():
+        specification_file_paths[item_type] = [deserialize_path(path, project_dir) for path in serialized_paths]
+    for item_type, paths in specification_file_paths.items():
+        for path in paths:
             try:
-                with open(definition_path, "r") as definition_file:
+                with open(path, "r") as definition_file:
                     try:
-                        definition = json.load(definition_file)
+                        specification_dict = json.load(definition_file)
                     except ValueError:
-                        logger.msg_error.emit(f"Item specification file '{definition_path}' not valid")
+                        logger.msg_error.emit(f"Item specification file '{path}' not valid")
                         continue
             except FileNotFoundError:
-                logger.msg_error.emit(f"Specification file <b>{definition_path}</b> does not exist")
+                logger.msg_error.emit(f"Specification file <b>{path}</b> does not exist")
                 continue
-            factory = specification_factories.get(item_type)
-            if factory is None:
-                continue
-            specification = factory.make_specification(definition, app_settings, logger)
-            specifications.setdefault(item_type, dict())[specification.name] = specification
-    return specifications
+            specification_dicts.setdefault(item_type, list()).append(specification_dict)
+    return specification_dicts
 
 
 @unique
