@@ -46,7 +46,6 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def tearDown(self):
         self._fetcher.close()
-        self.assertFalse(self._listener.silenced)
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
         self._fetcher_semaphore.deleteLater()
