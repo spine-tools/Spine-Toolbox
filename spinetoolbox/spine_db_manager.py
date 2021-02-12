@@ -17,7 +17,7 @@ The SpineDBManager class
 """
 
 import itertools
-from PySide2.QtCore import Qt, QObject, Signal, Slot, QThread
+from PySide2.QtCore import Qt, QObject, Signal, QThread
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (

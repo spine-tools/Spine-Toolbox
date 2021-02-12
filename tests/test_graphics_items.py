@@ -173,6 +173,7 @@ class TestLink(unittest.TestCase):
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
         self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", "sqlite://")])
+        self._link.refresh_resource_filter_model()
         self.assertEqual(self._link.filter_stacks(), {})
         filter_model = self._link.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
@@ -198,6 +199,7 @@ class TestLink(unittest.TestCase):
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
         self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+        self._link.refresh_resource_filter_model()
         self.assertEqual(self._link.filter_stacks(), {})
         filter_model = self._link.resource_filter_model
         self.assertEqual(filter_model.rowCount(), 1)
