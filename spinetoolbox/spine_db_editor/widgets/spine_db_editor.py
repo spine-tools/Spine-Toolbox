@@ -21,7 +21,7 @@ import json
 from sqlalchemy.engine.url import URL
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu, QAbstractScrollArea, QTabBar
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon, QCursor
 from spinedb_api import (
     import_data,
     export_data,
@@ -158,8 +158,18 @@ class SpineDBEditorBase(QMainWindow):
         if not db_maps:
             db_maps = self.db_maps
         fetcher = self.db_mngr.get_fetcher(self)
+        fetcher.finished.connect(self._make_iddle)
+        self._make_busy()
         fetcher.fetch(db_maps)
         self.setWindowTitle(f"{self.db_names}")
+
+    def _make_busy(self):
+        self.silenced = True
+        self.setCursor(QCursor(Qt.BusyCursor))
+
+    def _make_iddle(self):
+        self.silenced = False
+        self.unsetCursor()
 
     @Slot(bool)
     def load_previous_urls(self, _=False):

@@ -370,7 +370,7 @@ class Link(LinkBase):
         self._obsolete_db_resources.clear()
 
     def _synch_fetch_db_maps(self, db_maps):
-        """Fetches given db_maps synchronously. Called by ``refresh_resource_filter_model()`` and ``filter_stacks``.
+        """Fetches given db_maps synchronously. Called by ``refresh_resource_filter_model()`` and ``filter_stacks()``.
 
         Args:
             db_maps (Sequence): DatabaseMapping instances
@@ -417,8 +417,7 @@ class Link(LinkBase):
         Returns:
             dict((str,str),list(tuple(dict)))
         """
-        # Fetches resources that have filters defined, so we can call ``self.db_mngr.get_item()``
-        # to compute the filter stacks
+        # Fetches resources that have filters defined, so we can call ``self.db_mngr.get_item()`` below
         resources_to_fetch = (
             resource_label
             for resource_label, filters in self.resource_filters.items()

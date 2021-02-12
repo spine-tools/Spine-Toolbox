@@ -303,7 +303,10 @@ class SpineDBManager(QObject):
             if codename is not None:
                 db_map.codename = codename
             return db_map
-        db_map = self._db_maps[url] = self._worker.get_db_map(url, codename=codename, upgrade=upgrade, create=create)
+        db_map, err = self._worker.get_db_map(url, codename=codename, upgrade=upgrade, create=create)
+        if err is not None:
+            raise err
+        self._db_maps[url] = db_map
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
         self.undo_action[db_map] = stack.createUndoAction(self)
         self.redo_action[db_map] = stack.createRedoAction(self)

@@ -791,7 +791,7 @@ class ToolboxUI(QMainWindow):
         """Synchronizes selection with scene. The scene handles item/link de/activation.
         """
         inds = self.ui.treeView_project.selectedIndexes()
-        self.main_toolbar.execute_selection_button.setEnabled(bool(inds))
+        self.main_toolbar.execute_selection_button.setEnabled(bool(inds) and not self.execution_in_progress)
         if not self.sync_item_selection_with_scene:
             return
         project_items = [self.project_item_model.item(i).project_item for i in inds]
@@ -1998,11 +1998,11 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def _handle_project_execution_finished(self):
+        self.execution_in_progress = False
         self.main_toolbar.execute_project_button.setEnabled(True)
         inds = self.ui.treeView_project.selectedIndexes()
         self.main_toolbar.execute_selection_button.setEnabled(bool(inds))
         self.main_toolbar.stop_execution_button.setEnabled(False)
-        self.execution_in_progress = False
 
     def project_item_properties_ui(self, item_type):
         """Returns the properties tab widget's ui.

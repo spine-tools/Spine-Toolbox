@@ -16,8 +16,7 @@ SpineDBFetcher class.
 :date:   13.3.2020
 """
 
-from PySide2.QtCore import Signal, Slot, QObject, Qt
-from PySide2.QtGui import QCursor
+from PySide2.QtCore import Signal, Slot, QObject
 
 
 class SpineDBFetcher(QObject):
@@ -49,12 +48,8 @@ class SpineDBFetcher(QObject):
             tablenames (list, optional): If given, only fetches tables in this list, otherwise fetches them all
         """
         self._fetch_requested.emit(db_maps, tablenames)
-        self._listener.setCursor(QCursor(Qt.BusyCursor))
-        self._listener.silenced = True
 
     def close(self):
-        self._listener.silenced = False
-        self._listener.unsetCursor()
         self.deleteLater()
 
     @Slot(object, object)

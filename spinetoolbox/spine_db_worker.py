@@ -17,7 +17,7 @@ The SpineDBWorker class
 """
 
 from PySide2.QtCore import QObject, Signal, Slot, QEventLoop
-from spinedb_api import DiffDatabaseMapping, get_data_for_import, SpineDBAPIError
+from spinedb_api import DiffDatabaseMapping, get_data_for_import, SpineDBAPIError, SpineDBVersionError
 from .spine_db_commands import AgedUndoCommand, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 
 
@@ -42,6 +42,7 @@ class SpineDBWorker(QObject):
         self._db_map = None
         self._db_map_args = None
         self._db_map_kwargs = None
+        self._err = None
 
     def connect_signals(self):
         self._get_db_map_called.connect(self._get_db_map)
@@ -60,15 +61,19 @@ class SpineDBWorker(QObject):
         self._db_map = None
         self._db_map_args = args
         self._db_map_kwargs = kwargs
+        self._err = None
         self._get_db_map_called.emit()
-        if self._db_map is None:
+        if self._db_map is None and self._err is None:
             loop.exec_()
-        return self._db_map
+        return self._db_map, self._err
 
     @Slot()
     def _get_db_map(self):
         # FIXME: What to do in case of errors?
-        self._db_map = DiffDatabaseMapping(*self._db_map_args, **self._db_map_kwargs)
+        try:
+            self._db_map = DiffDatabaseMapping(*self._db_map_args, **self._db_map_kwargs)
+        except (SpineDBVersionError, SpineDBAPIError) as err:
+            self._err = err
         self._get_db_map_finished.emit()
 
     def close_db_map(self, db_map):
