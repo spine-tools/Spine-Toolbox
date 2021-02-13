@@ -22,7 +22,6 @@ from PySide2.QtCore import QObject, Slot
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.dag_handler import DirectedGraphHandler
 from spinetoolbox.spine_engine_worker import SpineEngineWorker
-from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestSpineEngineWorker(unittest.TestCase):
@@ -31,17 +30,9 @@ class TestSpineEngineWorker(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
-
-    def tearDown(self):
-        clean_up_toolbox(self._toolbox)
-        self._temp_dir.cleanup()
-
     def test_empty_project_executes(self):
         dag = DirectedGraphHandler()
-        worker = SpineEngineWorker(self._toolbox, {}, dag, "test dag", {})
+        worker = SpineEngineWorker({}, dag, "test dag", {}, "")
         receiver = _Receiver(worker)
         try:
             worker.start()
