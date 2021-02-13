@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Support for version 3 Spine Toolbox projects and an automatic upgrade of version 2 projects to version 3.
 - Support for version 4 Spine Toolbox projects.
 - Support for version 5 Spine Toolbox projects.
+- Support to create sysimages for Julia tools.
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
