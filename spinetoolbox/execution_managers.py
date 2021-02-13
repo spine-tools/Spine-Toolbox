@@ -69,7 +69,7 @@ class QProcessExecutionManager(ExecutionManager):
         self._semisilent = semisilent  # Do not show Event Log messages but show Process Log messages
         self.process_failed = False
         self.process_failed_to_start = False
-        self._user_stopped = False
+        self.user_stopped = False
         self._process = QProcess(self)
         self.process_output = None  # stdout when running silent
         self.error_output = None  # stderr when running silent
@@ -179,7 +179,7 @@ class QProcessExecutionManager(ExecutionManager):
             self._logger.msg_error.emit("Timed out")
         elif process_error == QProcess.Crashed:
             self.process_failed = True
-            if not self._user_stopped:
+            if not self.user_stopped:
                 self._logger.msg_error.emit("Process crashed")
         elif process_error == QProcess.WriteError:
             self._logger.msg_error.emit("Process WriteError")
@@ -210,18 +210,19 @@ class QProcessExecutionManager(ExecutionManager):
 
     def stop_execution(self):
         """See base class."""
-        self._logger.msg_error.emit("Terminating process")
-        self._user_stopped = True
+        self.user_stopped = True
         self.process_failed = True
         if not self._process:
             return
         try:
-            self._process.terminate()
+            self._process.kill()
+            if not self._process.waitForFinished(5000):
+                self._process.finished.emit(-1, -1)
+                self._process.deleteLater()
         except Exception as ex:  # pylint: disable=broad-except
             self._logger.msg_error.emit("[{0}] exception when terminating process".format(ex))
             logging.exception("Exception in closing QProcess: %s", ex)
         finally:
-            self._process.deleteLater()
             self._process = None
             self.data_to_inject = None
 
@@ -247,7 +248,7 @@ class QProcessExecutionManager(ExecutionManager):
             exit_code = -1
         if not exit_code == 0:
             self.process_failed = True
-        if not self._user_stopped:
+        if not self.user_stopped:
             out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
             errout = str(self._process.readAllStandardError().data(), "utf-8", errors="replace")
             if out is not None:

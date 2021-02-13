@@ -222,11 +222,13 @@ class _MenuToolBarWidget(QWidget):
         self.option = QStyleOptionMenuItem()
         action = QAction(text)
         QMenu(parent).initStyleOption(self.option, action)
+        w = self.option.fontMetrics.horizontalAdvance(text)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.tool_bar = _MenuToolBar(self)
-        layout.addSpacing(self.option.rect.width())  # This makes room for the menu item
+        extent = qApp.style().pixelMetric(QStyle.PM_ToolBarIconSize)  # pylint: disable=undefined-variable
+        layout.addSpacing(w + 3 * extent)  # This makes room for the menu item
         layout.addStretch()
         layout.addWidget(self.tool_bar)
         if compact:

@@ -16,6 +16,7 @@ Contains SpineEngineWorker.
 :date:   14.10.2020
 """
 
+import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from .spine_engine_manager import make_engine_manager
 
@@ -65,34 +66,54 @@ class SpineEngineWorker(QObject):
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
 
-    def __init__(self, toolbox, engine_data, dag, dag_identifier, project_items):
+    def __init__(self, engine_data, dag, dag_identifier, project_items, engine_server_address):
         """
         Args:
-            toolbox (ToolboxUI)
             engine_data (dict): engine data
             dag (DirectedGraphHandler)
             dag_identifier (str)
             project_items (dict): mapping from project item name to :class:`ProjectItem`
+            engine_server_address (str): Address of engine server if any
         """
         super().__init__()
-        self._toolbox = toolbox
         self._engine_data = engine_data
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         self._engine_mngr = make_engine_manager(engine_server_address)
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"
         self._executing_items = []
         self._project_items = project_items
+        self.event_messages = {}
+        self.process_messages = {}
         self.sucessful_executions = []
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
-        self._dag_execution_started.connect(_handle_dag_execution_started)
-        self._node_execution_started.connect(_handle_node_execution_started)
-        self._node_execution_finished.connect(_handle_node_execution_finished)
-        self._event_message_arrived.connect(_handle_event_message_arrived)
-        self._process_message_arrived.connect(_handle_process_message_arrived)
+
+    def get_engine_data(self):
+        """Returns the engine data. Together with ``self.set_engine_data()`` it can be used to modify
+        the workflow after it's initially created. We use it at the moment for creating Julia sysimages.
+
+        Returns:
+            dict
+        """
+        return copy.deepcopy(self._engine_data)
+
+    def set_engine_data(self, engine_data):
+        """Sets the engine data.
+
+        Args:
+            engine_data (dict): New data
+        """
+        self._engine_data = engine_data
+
+    @Slot(object, str, str)
+    def _handle_event_message_arrived(self, item, filter_id, msg_type, msg_text):
+        self.event_messages.setdefault(msg_type, []).append(msg_text)
+
+    @Slot(object, str, str)
+    def _handle_process_message_arrived(self, item, filter_id, msg_type, msg_text):
+        self.process_messages.setdefault(msg_type, []).append(msg_text)
 
     def stop_engine(self):
         self._engine_mngr.stop_engine()
@@ -103,7 +124,25 @@ class SpineEngineWorker(QObject):
     def thread(self):
         return self._thread
 
-    def start(self):
+    def _connect_log_signals(self, silent):
+        if silent:
+            self._event_message_arrived.connect(self._handle_event_message_arrived)
+            self._process_message_arrived.connect(self._handle_process_message_arrived)
+            return
+        self._dag_execution_started.connect(_handle_dag_execution_started)
+        self._node_execution_started.connect(_handle_node_execution_started)
+        self._node_execution_finished.connect(_handle_node_execution_finished)
+        self._event_message_arrived.connect(_handle_event_message_arrived)
+        self._process_message_arrived.connect(_handle_process_message_arrived)
+
+    def start(self, silent=False):
+        """Connects log signals.
+
+        Args:
+            silent (bool, optional): If True, log messages are not forwarded to the loggers
+                but saved in internal dicts.
+        """
+        self._connect_log_signals(silent)
         self._dag_execution_started.emit(list(self._project_items.values()))
         self._thread.start()
 

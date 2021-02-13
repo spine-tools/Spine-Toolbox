@@ -396,7 +396,7 @@ class SpineToolboxProject(MetaObject):
         self._execution_stopped = False
         self._execute_dags(dags, execution_permits)
 
-    def _get_node_successors(self, dag, dag_identifier):
+    def get_node_successors(self, dag, dag_identifier):
         node_successors = self.dag_handler.node_successors(dag)
         if not node_successors:
             self._logger.msg_warning.emit("<b>Graph {0} is not a Directed Acyclic Graph</b>".format(dag_identifier))
@@ -409,7 +409,7 @@ class SpineToolboxProject(MetaObject):
             return None
         return node_successors
 
-    def _make_settings_dict(self):
+    def make_settings_dict(self):
         # XXX: We may want to introduce a new group "executionSettings", for more clarity
         settings = {}
         self._settings.beginGroup("appSettings")
@@ -427,10 +427,11 @@ class SpineToolboxProject(MetaObject):
         if self._engine_workers:
             self._logger.msg_error.emit("Execution already in progress.")
             return
-        settings = self._make_settings_dict()
+        settings = self.make_settings_dict()
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
-            worker = self._create_engine_worker(dag, execution_permits, dag_identifier, settings)
+            worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
+            worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
             self._engine_workers.append(worker)
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
         # are added to ``_engine_workers``, and thus ``_handle_engine_worker_finished()`` will believe
@@ -440,8 +441,8 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg.emit("Order: {0}".format(" -> ".join(worker._engine_data["node_successors"])))
             worker.start()
 
-    def _create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
-        node_successors = self._get_node_successors(dag, dag_identifier)
+    def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
+        node_successors = self.get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
         project_items = {name: self._project_item_model.get_item(name).project_item for name in node_successors}
@@ -465,8 +466,8 @@ class SpineToolboxProject(MetaObject):
             "settings": settings,
             "project_dir": self.project_dir,
         }
-        worker = SpineEngineWorker(self._toolbox, data, dag, dag_identifier, project_items)
-        worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
+        server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
+        worker = SpineEngineWorker(data, dag, dag_identifier, project_items, server_address)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -481,10 +482,10 @@ class SpineToolboxProject(MetaObject):
         if any(worker.engine_final_state() not in finished_outcomes for worker in self._engine_workers):
             return
         # Only after all workers have finished, notify changes and handle successful executions.
-        # Doing it while executing leads to deadlocks in acquiring sqlalchemy's infamous _CONFIGURE_MUTEX lock,
-        # needed to create DatabaseMapping instances. It seems that the lock gets confused when
-        # being acquired by threads from different processes or maybe even different QThreads
-        # Can't say I really understand it totally.
+        # Doing it *while* executing leads to deadlocks at acquiring sqlalchemy's infamous _CONFIGURE_MUTEX
+        # (needed to create DatabaseMapping instances). It seems that the lock gets confused when
+        # being acquired by threads from different processes or maybe even different QThreads.
+        # Can't say I really understand the whole extent of it.
         for finished_worker in self._engine_workers:
             self.notify_changes_in_dag(finished_worker.dag)
             for item, direction, state in finished_worker.sucessful_executions:
@@ -492,6 +493,14 @@ class SpineToolboxProject(MetaObject):
             finished_worker.clean_up()
         self._engine_workers.clear()
         self.project_execution_finished.emit()
+
+    def dag_with_node(self, item_name):
+        dag = self.dag_handler.dag_with_node(item_name)
+        if not dag:
+            self._logger.msg_error.emit(
+                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item_name)
+            )
+        return dag
 
     def execute_selected(self):
         """Executes DAGs corresponding to all selected project items."""
@@ -508,12 +517,8 @@ class SpineToolboxProject(MetaObject):
         for ind in selected_indexes:
             item = self._project_item_model.item(ind)
             executable_item_names.append(item.name)
-            dag = self.dag_handler.dag_with_node(item.name)
+            dag = self.dag_with_node(item.name)
             if not dag:
-                self._logger.msg_error.emit(
-                    "[BUG] Could not find a graph containing {0}. "
-                    "<b>Please reopen the project.</b>".format(item.name)
-                )
                 continue
             dags.add(dag)
         execution_permit_list = list()

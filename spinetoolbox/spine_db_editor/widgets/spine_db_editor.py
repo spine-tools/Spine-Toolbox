@@ -43,6 +43,8 @@ from .tabular_view_mixin import TabularViewMixin
 from .db_session_history_dialog import DBSessionHistoryDialog
 from .url_toolbar import UrlToolBar
 from ...widgets.notification import NotificationStack
+from ...widgets.parameter_value_editor import ParameterValueEditor
+from ...widgets.custom_qwidgets import ToolBarWidgetAction
 from ...helpers import (
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
@@ -51,8 +53,6 @@ from ...helpers import (
     busy_effect,
     CharIconEngine,
 )
-from ...widgets.parameter_value_editor import ParameterValueEditor
-from ...widgets.custom_qwidgets import ToolBarWidgetAction
 from ...spine_db_parcel import SpineDBParcel
 from ...config import MAINWINDOW_SS, APPLICATION_PATH
 

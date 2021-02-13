@@ -131,9 +131,8 @@ class CustomPopupMenu(QMenu):
             enabled (bool): Is action enabled?
             tooltip (str): Tool tip for the action
         """
-        action = self.addAction(text)
+        action = self.addAction(text, slot)
         action.setEnabled(enabled)
-        action.triggered.connect(slot)
         if tooltip is not None:
             action.setToolTip(tooltip)
 
@@ -141,19 +140,19 @@ class CustomPopupMenu(QMenu):
 class ItemSpecificationMenu(CustomPopupMenu):
     """Context menu class for item specifications."""
 
-    def __init__(self, parent, index):
+    def __init__(self, toolbox, index):
         """
         Args:
-            parent (QWidget): Parent for menu widget (ToolboxUI)
+            toolbox (ToolboxUI): Toolbox that requests this menu, used as parent. 
             position (QPoint): Position on screen
             index (QModelIndex): the index
         """
-        super().__init__(parent)
+        super().__init__(toolbox)
+        self._toolbox = toolbox
         self.index = QPersistentModelIndex(index)
-        self.add_action("Edit specification", lambda: parent.edit_specification(self.index))
-        self.add_action("Remove specification", lambda: parent.remove_specification(self.index.row()))
-        self.add_action("Open specification file...", lambda: parent.open_specification_file(self.index))
-        self.addSeparator()
+        self.add_action("Edit specification", lambda: toolbox.edit_specification(self.index))
+        self.add_action("Remove specification", lambda: toolbox.remove_specification(self.index.row()))
+        self.add_action("Open specification file...", lambda: toolbox.open_specification_file(self.index))
 
 
 class RecentProjectsPopupMenu(CustomPopupMenu):
