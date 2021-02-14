@@ -532,6 +532,19 @@ class SpineDBManager(QObject):
             for item in items:
                 self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
 
+    def get_icon_mngr(self, db_map):
+        """Returns an icon manager for given db_map.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            IconManager
+        """
+        if db_map not in self.icon_mngr:
+            self.icon_mngr[db_map] = IconManager()
+        return self.icon_mngr[db_map]
+
     def update_icons(self, db_map_data):
         """Runs when object classes are added or updated. Setups icons for those classes.
 
@@ -539,7 +552,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
         for db_map, object_classes in db_map_data.items():
-            self.icon_mngr.setdefault(db_map, IconManager()).setup_object_pixmaps(object_classes)
+            self.get_icon_mngr(db_map).setup_object_pixmaps(object_classes)
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an appropriate icon for a given entity class.

@@ -203,4 +203,4 @@ class ShowIconColorEditorMixin:
         if db_map is None:
             return None
         object_class_name = index.data(Qt.DisplayRole)
-        return self.db_mngr.icon_mngr[db_map].create_object_pixmap(object_class_name)
+        return self.db_mngr.get_icon_mngr(db_map).create_object_pixmap(object_class_name)
