@@ -241,7 +241,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     @Slot(bool)
     def set_auto_expand_objects(self, checked=False):
         for db_editor in self._toolbox.db_mngr.get_all_spine_db_editors():
-            db_editor.set_auto_expand_objects(checked)
+            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
 
     @Slot(bool)
     def browse_gams_path(self, checked=False):
