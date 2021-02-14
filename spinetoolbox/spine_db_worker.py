@@ -208,7 +208,7 @@ class SpineDBWorker(QObject):
                     upd_cmd = UpdateItemsCommand(self._db_mngr, db_map, to_update, item_type, parent=command)
                     upd_cmd.redo()
                     child_cmds.append(upd_cmd)
-            if all([cmd.isObsolete() for cmd in child_cmds]):
+            if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
                 # Nothing imported. Set the command obsolete and call undo() on the stack to removed it
                 command.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
@@ -243,7 +243,7 @@ class SpineDBWorker(QObject):
                 add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "scenario_alternative", parent=command)
                 add_cmd.redo()
                 child_cmds.append(add_cmd)
-            if all([cmd.isObsolete() for cmd in child_cmds]):
+            if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
                 command.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
 
@@ -270,7 +270,7 @@ class SpineDBWorker(QObject):
                 )
                 add_cmd.redo()
                 child_cmds.append(add_cmd)
-            if all([cmd.isObsolete() for cmd in child_cmds]):
+            if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
                 command.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
 
