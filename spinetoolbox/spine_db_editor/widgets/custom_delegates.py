@@ -450,7 +450,7 @@ class AlternativeNameDelegate(ParameterDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        name_list = [x["name"] for x in self.db_mngr.get_alternatives(db_map)]
+        name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "alternative")]
         editor.set_data(index.data(Qt.EditRole), name_list)
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
