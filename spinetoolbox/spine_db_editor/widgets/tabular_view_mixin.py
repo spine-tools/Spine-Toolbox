@@ -387,6 +387,25 @@ class TabularViewMixin:
         db_map, id_ = value
         return self.db_mngr.get_value_indexes(db_map, "parameter_value", id_)
 
+    def load_empty_expanded_parameter_value_data(
+        self, db_map_entities=None, db_map_parameter_ids=None, db_map_alternative_ids=None
+    ):
+        """Makes a dict of expanded parameter values for the current class.
+
+        Args:
+            db_map_parameter_values (list, optional)
+            action (str)
+
+        Returns:
+            dict: mapping from unique value id tuple to value tuple
+        """
+        data = self.load_empty_parameter_value_data(db_map_entities, db_map_parameter_ids, db_map_alternative_ids)
+        return {
+            key[:-3] + ((None, index),) + key[-3:]: value
+            for key, value in data.items()
+            for index in self._indexes(value)
+        }
+
     def load_full_expanded_parameter_value_data(self, db_map_parameter_values=None, action="add"):
         """Makes a dict of expanded parameter values for the current class.
 
@@ -421,13 +440,9 @@ class TabularViewMixin:
         Returns:
             dict: Key is a tuple object_id, ..., index, while value is None.
         """
-
-        data = self.load_parameter_value_data()
-        return {
-            key[:-3] + ((None, index),) + key[-3:]: value
-            for key, value in data.items()
-            for index in self._indexes(value)
-        }
+        data = self.load_empty_expanded_parameter_value_data()
+        data.update(self.load_full_expanded_parameter_value_data())
+        return data
 
     def get_pivot_preferences(self):
         """Returns saved pivot preferences.

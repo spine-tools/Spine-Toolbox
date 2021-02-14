@@ -963,7 +963,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         }
         if not any(db_map_entities.values()):
             return False
-        db_map_data = self._parent.load_empty_parameter_value_data(db_map_entities=db_map_entities)
+        db_map_data = self._load_empty_parameter_value_data(db_map_entities=db_map_entities)
         self.receive_data_added_or_removed(db_map_data, action)
         return True
 
@@ -976,7 +976,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         }
         if not any(db_map_entities.values()):
             return False
-        data = self._parent.load_empty_parameter_value_data(db_map_entities=db_map_entities)
+        data = self._load_empty_parameter_value_data(db_map_entities=db_map_entities)
         self.receive_data_added_or_removed(data, action)
         return True
 
@@ -992,13 +992,13 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         }
         if not any(db_map_parameter_ids.values()):
             return False
-        data = self._parent.load_empty_parameter_value_data(db_map_parameter_ids=db_map_parameter_ids)
+        data = self._load_empty_parameter_value_data(db_map_parameter_ids=db_map_parameter_ids)
         self.receive_data_added_or_removed(data, action)
         return True
 
     def receive_alternatives_added_or_removed(self, db_map_data, action):
         db_map_alternative_ids = {db_map: [(db_map, a["id"]) for a in items] for db_map, items in db_map_data.items()}
-        data = self._parent.load_empty_parameter_value_data(db_map_alternative_ids=db_map_alternative_ids)
+        data = self._load_empty_parameter_value_data(db_map_alternative_ids=db_map_alternative_ids)
         self.receive_data_added_or_removed(data, action)
         return True
 
@@ -1014,11 +1014,15 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         }
         if not any(db_map_parameter_values.values()):
             return False
-        data = self._parent.load_full_parameter_value_data(
-            db_map_parameter_values=db_map_parameter_values, action=action
-        )
+        data = self._load_full_parameter_value_data(db_map_parameter_values=db_map_parameter_values, action=action)
         self.update_model(data)
         return True
+
+    def _load_empty_parameter_value_data(self, *args, **kwargs):
+        return self._parent.load_empty_parameter_value_data(*args, **kwargs)
+
+    def _load_full_parameter_value_data(self, *args, **kwargs):
+        return self._parent.load_full_parameter_value_data(*args, **kwargs)
 
 
 class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
@@ -1078,58 +1082,11 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             # The parameter index is not a column (it's either a row or frozen)
             return False
 
-    def receive_objects_added_or_removed(self, db_map_data, action):
-        return False
+    def _load_empty_parameter_value_data(self, *args, **kwargs):
+        return self._parent.load_empty_expanded_parameter_value_data(*args, **kwargs)
 
-    def receive_relationships_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_parameter_definitions_added_or_removed(self, db_map_data, action):  # pylint: disable=no-self-use
-        return False
-
-    def receive_parameter_values_added_or_removed(self, db_map_data, action):
-        db_map_parameter_values = {
-            db_map: [
-                x
-                for x in parameter_values
-                if (x.get("object_class_id") or x.get("relationship_class_id"))
-                == self._parent.current_class_id.get(db_map)
-            ]
-            for db_map, parameter_values in db_map_data.items()
-        }
-        if not db_map_parameter_values:
-            return False
-        if action == "remove":
-            parameter_indexes = dict()
-            datas, indexes, parameters, alternatives, databases = self.model.index_values.values()
-            for data, index, parameter, alternative, database in zip(
-                datas, indexes, parameters, alternatives, databases
-            ):
-                parameter_indexes.setdefault((data, parameter, alternative, database), list()).append(index)
-            db_map_data = {
-                (
-                    (db_map, parameter["entity_id"]),
-                    (db_map, parameter["parameter_id"]),
-                    (db_map, parameter["alternative_id"]),
-                    db_map,
-                ): None
-                for db_map, parameters in db_map_parameter_values.items()
-                for parameter in parameters
-            }
-            db_map_data = {
-                keys[:-3] + (parameter_index,) + keys[-3:]: None
-                for keys in db_map_data
-                for parameter_index in parameter_indexes[keys]
-            }
-            self.receive_data_added_or_removed(db_map_data, action)
-            return True
-        if not any(db_map_parameter_values.values()):
-            return False
-        data = self._parent.load_full_expanded_parameter_value_data(
-            db_map_parameter_values=db_map_parameter_values, action=action
-        )
-        self.receive_data_added_or_removed(data, action)
-        return True
+    def _load_full_parameter_value_data(self, *args, **kwargs):
+        return self._parent.load_full_expanded_parameter_value_data(*args, **kwargs)
 
     def _data(self, index, role):
         row, column = self.map_to_pivot(index)
