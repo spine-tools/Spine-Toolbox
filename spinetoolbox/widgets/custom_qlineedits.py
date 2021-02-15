@@ -18,7 +18,7 @@ Classes for custom line edits.
 
 import os
 from PySide2.QtCore import Qt, Signal
-from PySide2.QtWidgets import QLineEdit
+from PySide2.QtWidgets import QLineEdit, QUndoStack
 from PySide2.QtGui import QKeySequence
 
 
@@ -33,10 +33,8 @@ class PropertyQLineEdit(QLineEdit):
         Args:
             e (QKeyEvent): Event
         """
-        mw = self.nativeParentWidget()  # ToolboxUI
-        try:
-            undo_stack = mw.undo_stack
-        except AttributeError:
+        undo_stack = self.nativeParentWidget().findChild(QUndoStack)
+        if undo_stack is None:
             super().keyPressEvent(e)
             return
         if e.matches(QKeySequence.Undo):
