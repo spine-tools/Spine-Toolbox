@@ -32,8 +32,8 @@ from spinedb_api import (
     SpineDBVersionError,
     Asterisk,
 )
-from spine_engine.spine_io.exporters.excel import export_spine_database_to_xlsx
-from spine_engine.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from .custom_menus import MainMenu
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .parameter_view_mixin import ParameterViewMixin
