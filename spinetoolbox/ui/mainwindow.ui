@@ -133,7 +133,7 @@
      <x>0</x>
      <y>0</y>
      <width>860</width>
-     <height>21</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -284,7 +284,7 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_process_output">
+  <widget class="QDockWidget" name="dockWidget_itemlog">
    <property name="sizePolicy">
     <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
      <horstretch>0</horstretch>
@@ -293,12 +293,12 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>174</width>
+     <width>382</width>
      <height>178</height>
     </size>
    </property>
    <property name="windowTitle">
-    <string>Process Log</string>
+    <string>Item Execution Log</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>8</number>
@@ -327,7 +327,17 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="CustomQTextBrowser" name="textBrowser_processlog">
+      <widget class="QLabel" name="label_no_itemlog">
+       <property name="text">
+        <string>Select and execute a project item to view its execution log</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="CustomQTextBrowser" name="textBrowser_itemlog">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -425,7 +435,7 @@
   <widget class="QDockWidget" name="dockWidget_julia_console">
    <property name="minimumSize">
     <size>
-     <width>95</width>
+     <width>324</width>
      <height>80</height>
     </size>
    </property>
@@ -452,6 +462,16 @@
      <property name="bottomMargin">
       <number>0</number>
      </property>
+     <item>
+      <widget class="QLabel" name="label_no_julia_console">
+       <property name="text">
+        <string>Select and execute a Julia Tool to see  its console</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
   </widget>
@@ -552,6 +572,16 @@
      <property name="bottomMargin">
       <number>0</number>
      </property>
+     <item>
+      <widget class="QLabel" name="label_no_python_console">
+       <property name="text">
+        <string>Select and execute a Python Tool to see  its console</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
     </layout>
    </widget>
   </widget>
@@ -968,7 +998,7 @@
  <tabstops>
   <tabstop>graphicsView</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
-  <tabstop>textBrowser_processlog</tabstop>
+  <tabstop>textBrowser_itemlog</tabstop>
   <tabstop>tabWidget_item_properties</tabstop>
  </tabstops>
  <resources>

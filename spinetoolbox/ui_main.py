@@ -75,8 +75,7 @@ from .helpers import (
     ChildCyclingKeyPressFilter,
     open_url,
     busy_effect,
-    format_event_message,
-    format_process_message,
+    format_log_message,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
@@ -138,7 +137,6 @@ class ToolboxUI(QMainWindow):
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.active_link = None
-        self.executed_item = None  # Item whose ExecutionIcon is selected at the moment
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
         self.link_properties_widget = LinkPropertiesWidget(self)
@@ -156,12 +154,6 @@ class ToolboxUI(QMainWindow):
         # Make and initialize toolbars
         self.main_toolbar = toolbars.MainToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
-        # Make julia REPL
-        self.julia_console = SpineConsoleWidget(self, "Julia Console")
-        self.ui.dockWidgetContents_julia_console.layout().addWidget(self.julia_console)
-        # Make Python REPL
-        self.python_console = SpineConsoleWidget(self, "Python Console")
-        self.ui.dockWidgetContents_python_console.layout().addWidget(self.python_console)
         # Additional consoles for item execution. See ``ToolboxUI.make_console()``
         self._extra_consoles = {}
         # Setup main window menu
@@ -415,7 +407,7 @@ class ToolboxUI(QMainWindow):
         self.save_project()
         # Clear text browsers
         self.ui.textBrowser_eventlog.clear()
-        self.ui.textBrowser_processlog.clear()
+        self.ui.textBrowser_itemlog.clear()
         self.msg.emit("New project <b>{0}</b> is now open".format(self._project.name))
 
     @Slot()
@@ -482,7 +474,7 @@ class ToolboxUI(QMainWindow):
         # Clear text browsers
         if clear_logs:
             self.ui.textBrowser_eventlog.clear()
-            self.ui.textBrowser_processlog.clear()
+            self.ui.textBrowser_itemlog.clear()
         # Check if project dictionary needs to be upgraded
         project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
         if not project_info:
@@ -723,6 +715,7 @@ class ToolboxUI(QMainWindow):
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
         self.activate_no_selection_tab()  # Clear properties widget
+        self.restore_original_logs_and_consoles()
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
 
     def undo_critical_commands(self):
@@ -800,20 +793,18 @@ class ToolboxUI(QMainWindow):
         for icon in scene.project_item_icons():
             icon.setSelected(icon.name() in project_item_names)
 
-    def refresh_active_elements(self, active_project_item, active_link, executed_item):
+    def refresh_active_elements(self, active_project_item, active_link):
         self._set_active_project_item(active_project_item)
         self._set_active_link(active_link)
-        self.executed_item = executed_item
         if self.active_project_item:
             self.activate_item_tab()
-        elif self.active_link:
-            self.activate_link_tab()
-        else:
-            self.activate_no_selection_tab()
-        if self.executed_item:
-            self.overrride_logs_and_consoles()
+            self.override_logs_and_consoles()
         else:
             self.restore_original_logs_and_consoles()
+            if self.active_link:
+                self.activate_link_tab()
+            else:
+                self.activate_no_selection_tab()
 
     def _set_active_project_item(self, active_project_item):
         """
@@ -1245,7 +1236,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_itemlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_console.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_console.toggleViewAction())
@@ -1280,7 +1271,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_event_message("msg", msg, self.show_datetime)
+        message = format_log_message("msg", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1292,7 +1283,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_event_message("msg_success", msg, self.show_datetime)
+        message = format_log_message("msg_success", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1304,7 +1295,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_event_message("msg_error", msg, self.show_datetime)
+        message = format_log_message("msg_error", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1316,7 +1307,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_event_message("msg_warning", msg, self.show_datetime)
+        message = format_log_message("msg_warning", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
@@ -1328,8 +1319,8 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_process_message("msg", msg)
-        self.ui.textBrowser_processlog.append(message)
+        message = format_log_message("msg", msg)
+        self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
 
@@ -1340,120 +1331,104 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_process_message("msg_error", msg)
-        self.ui.textBrowser_processlog.append(message)
+        message = format_log_message("msg_error", msg)
+        self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
 
     def restore_original_logs_and_consoles(self):
-        self.restore_original_event_log_document()
-        self.restore_original_process_log_document()
+        self.restore_original_item_log_document()
         self.restore_original_python_console()
         self.restore_original_julia_console()
         self.ui.dockWidget_executions.hide()
 
-    def overrride_logs_and_consoles(self):
-        self.override_event_log()
-        self.override_process_log()
+    def override_logs_and_consoles(self):
+        self.override_item_log()
         self.override_python_console()
         self.override_julia_console()
         self.override_execution_list()
 
-    def override_event_log(self):
-        """Sets the log document of the active project item in Event Log and updates title."""
-        if self.executed_item is None:
+    def override_item_log(self):
+        """Sets the log document of the active project item in Item Execution Log and updates title."""
+        if self.active_project_item is None:
             return
-        document = self.executed_item.event_document
-        self.ui.textBrowser_eventlog.set_override_document(document)
-        self._update_event_log_title()
-
-    def override_process_log(self):
-        """Sets the log document of the active project item in Process Log and updates title."""
-        if self.executed_item is None:
+        document = self.active_project_item.log_document
+        if document is None:
+            self.restore_original_item_log_document()
             return
-        document = self.executed_item.process_document
-        self.ui.textBrowser_processlog.set_override_document(document)
-        self._update_process_log_title()
+        self.ui.textBrowser_itemlog.set_override_document(document)
+        self.ui.textBrowser_itemlog.show()
+        self.ui.label_no_itemlog.hide()
+        self._update_item_log_title()
 
     def override_python_console(self):
         """Sets the python console of the active project item in Python Console and updates title."""
-        if self.executed_item is None:
+        if self.active_project_item is None:
             return
-        console = self.executed_item.python_console
-        dockwidget = self.ui.dockWidgetContents_python_console
-        self._set_override_console(dockwidget, console)
+        console = self.active_project_item.python_console
+        if console is None:
+            self.restore_original_python_console()
+            return
+        widget = self.ui.dockWidgetContents_python_console
+        new_title = f"{console.owner} Python Console"
+        self._set_override_console(widget, console, new_title)
 
     def override_julia_console(self):
         """Sets the julia console of the active project item in Julia Console and updates title."""
-        if self.executed_item is None:
+        if self.active_project_item is None:
             return
-        console = self.executed_item.julia_console
+        console = self.active_project_item.julia_console
+        if console is None:
+            self.restore_original_julia_console()
+            return
         widget = self.ui.dockWidgetContents_julia_console
-        self._set_override_console(widget, console)
+        new_title = f"{console.owner} Julia Console"
+        self._set_override_console(widget, console, new_title)
 
     def override_execution_list(self):
         """Displays executions of the active project item in Executions and updates title."""
-        if self.executed_item is None:
+        if self.active_project_item is None:
             return
-        self.ui.listView_executions.model().reset_model(self.executed_item)
+        self.ui.listView_executions.model().reset_model(self.active_project_item)
         self.ui.dockWidget_executions.setVisible(
-            bool(self.executed_item.filter_log_documents or self.executed_item.filter_consoles)
+            bool(self.active_project_item.filter_log_documents or self.active_project_item.filter_consoles)
         )
-        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self.executed_item.name}]")
+        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self.active_project_item.name}]")
         current = self.ui.listView_executions.currentIndex()
         self._select_execution(current, None)
 
-    def restore_original_event_log_document(self):
-        """Sets the Event Log document back to the original."""
-        self.ui.textBrowser_eventlog.restore_original_document()
-        self._update_event_log_title()
-
-    def restore_original_process_log_document(self):
-        """Sets the Process Log document back to the original."""
-        self.ui.textBrowser_processlog.restore_original_document()
-        self._update_process_log_title()
+    def restore_original_item_log_document(self):
+        """Sets the Item Execution Log document back to the original."""
+        self.ui.textBrowser_itemlog.hide()
+        self.ui.label_no_itemlog.show()
+        self._update_item_log_title()
 
     def restore_original_python_console(self):
         """Sets the Python Console back to the original."""
-        console = self.python_console
         widget = self.ui.dockWidgetContents_python_console
-        self._set_override_console(widget, console)
+        self._set_override_console(widget, self.ui.label_no_python_console, "Python Console")
 
     def restore_original_julia_console(self):
         """Sets the Julia Console back to the original."""
-        console = self.julia_console
         widget = self.ui.dockWidgetContents_julia_console
-        self._set_override_console(widget, console)
+        self._set_override_console(widget, self.ui.label_no_julia_console, "Julia Console")
 
-    def _update_event_log_title(self):
+    def _update_item_log_title(self):
         """Updates Event Log title."""
-        new_title = "Event Log"
-        owner = self.ui.textBrowser_eventlog.document().owner
-        if owner:
-            new_title = f"{owner} - {new_title}"
-        self.ui.dockWidget_eventlog.setWindowTitle(new_title)
-
-    def _update_process_log_title(self):
-        """Updates Event Log title."""
-        new_title = "Process Log"
-        owner = self.ui.textBrowser_processlog.document().owner
-        if owner:
-            new_title = f"{owner} - {new_title}"
-        self.ui.dockWidget_process_output.setWindowTitle(new_title)
+        owner = self.ui.textBrowser_itemlog.document().owner
+        if not owner:
+            owner = "Item"
+        new_title = f"{owner} Execution Log"
+        self.ui.dockWidget_itemlog.setWindowTitle(new_title)
 
     @staticmethod
-    def _set_override_console(widget, console):
-        if console is None:
-            return
+    def _set_override_console(widget, console, new_title):
         layout = widget.layout()
         for i in range(layout.count()):
             layout.itemAt(i).widget().hide()
+        widget.parent().setWindowTitle(new_title)
         layout.addWidget(console)
         console.show()
-        new_title = console.name()
-        if console.owner:
-            new_title = f"{console.owner} - {new_title}"
-        widget.parent().setWindowTitle(new_title)
 
     @Slot()
     def _refresh_execution_list(self):
@@ -1472,10 +1447,9 @@ class ToolboxUI(QMainWindow):
         and any consoles in Python and Julia Console."""
         if not current.data():
             return
-        event_log_doc, process_log_doc = current.model().get_documents(current.data())
+        item_log_doc = current.model().get_log_document(current.data())
         python_console, julia_console = current.model().get_consoles(current.data())
-        self.ui.textBrowser_eventlog.set_override_document(event_log_doc)
-        self.ui.textBrowser_processlog.set_override_document(process_log_doc)
+        self.ui.textBrowser_itemlog.set_override_document(item_log_doc)
         self._set_override_console(self.ui.dockWidgetContents_python_console, python_console)
         self._set_override_console(self.ui.dockWidgetContents_julia_console, julia_console)
 
@@ -1808,8 +1782,6 @@ class ToolboxUI(QMainWindow):
         # Save number of screens
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
-        self.julia_console.shutdown_kernel()
-        self.python_console.shutdown_kernel()
         self._shutdown_engine_kernels()
         self.tear_down_items_and_factories()
         event.accept()

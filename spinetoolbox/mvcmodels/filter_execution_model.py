@@ -54,9 +54,8 @@ class FilterExecutionModel(QAbstractItemModel):
         if role == Qt.DisplayRole:
             return list(self._item.filter_log_documents.keys())[index.row()]
 
-    def get_documents(self, filter_id):
-        docs = self._item.filter_log_documents[filter_id]
-        return docs["event_log"], docs["process_log"]
+    def get_log_document(self, filter_id):
+        return self._item.filter_log_documents[filter_id]
 
     def get_consoles(self, filter_id):
         consoles = self._item.filter_consoles.get(filter_id, {})

@@ -182,10 +182,7 @@ class SpineEngineWorker(QObject):
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg", f"\tArguments: <b>{msg['args']}</b>")
             self._event_message_arrived.emit(
-                item,
-                msg["filter_id"],
-                "msg_warning",
-                "\tExecution is in progress. See Process Log for messages (stdout&stderr)",
+                item, msg["filter_id"], "msg_warning", "\tExecution is in progress. See messages below (stdout&stderr)"
             )
 
     def _handle_kernel_execution_msg(self, msg):

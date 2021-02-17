@@ -19,8 +19,10 @@ Widget for assisting the user in configuring SpineOpt.jl.
 import subprocess
 from PySide2.QtCore import Signal, Slot
 from spinetoolbox.widgets.state_machine_widget import StateMachineWidget
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.execution_managers import QProcessExecutionManager
-from spinetoolbox.helpers import busy_effect
+from spinetoolbox.helpers import busy_effect, format_log_message
+from spinetoolbox.logger_interface import LoggerInterface
 from spine_engine.utils.helpers import get_julia_command
 
 
@@ -39,7 +41,6 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         self.julia = None
         self.args = None
         self.julia_project = None
-        self.julia_setup = None
         self.exec_mngr = None
         self.spine_opt_version = None
         self.checking_spine_opt_version = None
@@ -49,7 +50,34 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         self.updating_spine_opt = None
         self.report_failure = None
         self.report_spine_opt_ready = None
+        self._logger = LoggerInterface()
+        self.process_log = CustomQTextBrowser(self)
+        layout = self.widget().layout()
+        layout.insertStretch(3)
+        layout.insertWidget(3, self.process_log)
         self.button_left.clicked.connect(self.close)
+        self._logger.msg_proc.connect(self.add_process_message)
+        self._logger.msg_error.connect(self.add_process_error_message)
+
+    @Slot(str)
+    def add_process_message(self, msg):
+        """Writes message from stdout to kernel editor text browser.
+
+        Args:
+            msg (str): String written to QTextBrowser
+        """
+        message = format_log_message("msg", msg, show_datetime=False)
+        self.process_log.append(message)
+
+    @Slot(str)
+    def add_process_error_message(self, msg):
+        """Writes message from stderr to kernel editor text browser.
+
+        Args:
+            msg (str): String written to QTextBrowser
+        """
+        message = format_log_message("msg_error", msg, show_datetime=False)
+        self.process_log.append(message)
 
     def _make_processing_state(self, name, text):
         s = self._make_state(name)
@@ -123,16 +151,13 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         if version_parse(julia_version) < version_parse(self._required_julia_version):
             return self._make_report_wrong_julia_version(julia_version)
         self.julia_project = self.find_julia_project()
-        self.julia_setup = (
-            '<div style="text-align: left;">Your Julia setup:<ul>'
-            f"<li>Executable: <b>{self.julia}</b></li>"
-            f"<li>Project: <b>{self.julia_project}</b></li>"
-            "</ul></div>"
-        )
+        self._logger.msg_proc.emit("Your Julia setup:")
+        self._logger.msg_proc.emit(f"Executable: <b>{self.julia}</b></li>")
+        self._logger.msg_proc.emit(f"Project: <b>{self.julia_project}</b></li>")
         self._welcome_text = (
             "<html><p>Welcome!</p>"
             "<p>This assistant will help you getting the right version of SpineOpt for Spine Toolbox.</p>"
-            f"{self.julia_setup}</html>"
+            f"</html>"
         )
         return super()._make_welcome()
 
@@ -143,8 +168,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
 
     def _make_prompt_to_install_spine_opt(self):
         return self._make_prompt_state(
-            "prompt_to_install_spine_opt",
-            f"<html><p>SpineOpt is not installed. Do you want to install it?</>{self.julia_setup}</html>",
+            "prompt_to_install_spine_opt", f"<html><p>SpineOpt is not installed. Do you want to install it?</></html>"
         )
 
     def _make_installing_spine_opt(self):
@@ -161,7 +185,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
             "text",
             f"<html><p>SpineOpt version {self.spine_opt_version} is installed, "
             f"however {self._preferred_spine_opt_version} is preferred.<p>"
-            f"<p>Do you want to update SpineOpt?</p>{self.julia_setup}</html>",
+            f"<p>Do you want to update SpineOpt?</p></html>",
         )
 
     def _make_updating_spine_opt(self):
@@ -186,7 +210,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
             'spine_opt = get(pkgs, "SpineOpt", nothing); '
             'if spine_opt != nothing println(spine_opt[1]["version"]) end'
         ]
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia, args, silent=True)
+        self.exec_mngr = QProcessExecutionManager(self._logger, self.julia, args, silent=True)
         self.exec_mngr.execution_finished.connect(self._handle_check_spine_opt_version_finished)
         self.exec_mngr.start_execution()
 
@@ -214,7 +238,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
             'Pkg.Registry.add(RegistrySpec(url="https://github.com/Spine-project/SpineJuliaRegistry.git")); '
             'Pkg.add("SpineOpt");'
         ]
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia, args, semisilent=True)
+        self.exec_mngr = QProcessExecutionManager(self._logger, self.julia, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_spine_opt_process_finished)
         self.exec_mngr.start_execution()
 
@@ -222,7 +246,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
     def update_spine_opt(self):
         args = self.args.copy()
         args += ['using Pkg; Pkg.update("SpineOpt")']
-        self.exec_mngr = QProcessExecutionManager(self._toolbox, self.julia, args, semisilent=True)
+        self.exec_mngr = QProcessExecutionManager(self._logger, self.julia, args, semisilent=True)
         self.exec_mngr.execution_finished.connect(self._handle_spine_opt_process_finished)
         self.exec_mngr.start_execution()
 

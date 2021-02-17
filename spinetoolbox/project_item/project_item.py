@@ -23,7 +23,7 @@ from ..helpers import create_dir, open_url, QuietLogger
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
 from ..widgets.custom_qtextbrowser import SignedTextDocument
-from ..helpers import format_event_message, format_process_message, add_message_to_document
+from ..helpers import format_log_message, add_message_to_document
 
 
 class ProjectItem(MetaObject):
@@ -65,8 +65,7 @@ class ProjectItem(MetaObject):
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
         self.undo_specification = None
-        self._event_document = SignedTextDocument(name)
-        self._process_document = SignedTextDocument(name)
+        self._log_document = None
         self._filter_log_documents = {}
         self.julia_console = None
         self.python_console = None
@@ -101,12 +100,8 @@ class ProjectItem(MetaObject):
         return self._logger
 
     @property
-    def event_document(self):
-        return self._event_document
-
-    @property
-    def process_document(self):
-        return self._process_document
+    def log_document(self):
+        return self._log_document
 
     @property
     def filter_log_documents(self):
@@ -441,51 +436,70 @@ class ProjectItem(MetaObject):
             "implemented yet."
         )
 
-    def _create_filter_log_documents(self, filter_id):
-        """Creates a pair of event and process log documents for a filter execution.
+    def _create_filter_log_document(self, filter_id):
+        """Creates log document for a filter execution if none yet, and returns it
 
         Args:
             filter_id (str): filter identifier
+
+        Returns:
+            SignedTextDocument
         """
         if filter_id not in self._filter_log_documents:
-            self._filter_log_documents[filter_id] = {
-                "event_log": SignedTextDocument(self.name),
-                "process_log": SignedTextDocument(self.name),
-            }
+            self._filter_log_documents[filter_id] = SignedTextDocument(self.name)
             if self._active:
                 self._project._toolbox.ui.listView_executions.model().layoutChanged.emit()
+        return self._filter_log_documents[filter_id]
+
+    def _create_log_document(self):
+        """Creates log document if none yet, and returns it
+
+        Args:
+            filter_id (str): filter identifier
+
+        Returns:
+            SignedTextDocument
+        """
+        if self._log_document is None:
+            self._log_document = SignedTextDocument(self.name)
+            if self._active:
+                self._project._toolbox.override_item_log()
+        return self._log_document
+
+    def add_log_message(self, filter_id, message):
+        """Adds a message to the log document.
+
+        Args:
+            filter_id (str): filter identifier
+            message (str): formatted message
+        """
+        if filter_id:
+            document = self._create_filter_log_document(filter_id)
+        else:
+            document = self._create_log_document()
+        add_message_to_document(document, message)
 
     def add_event_message(self, filter_id, msg_type, msg_text):
-        """Adds a message to the event log document.
+        """Adds a message to the log document.
 
         Args:
             filter_id (str): filter identifier
             msg_type (str): message type
             msg_text (str): message text
         """
-        if filter_id:
-            self._create_filter_log_documents(filter_id)
-            document = self._filter_log_documents[filter_id]["event_log"]
-        else:
-            document = self._event_document
-        message = format_event_message(msg_type, msg_text)
-        add_message_to_document(document, message)
+        message = format_log_message(msg_type, msg_text)
+        self.add_log_message(filter_id, message)
 
     def add_process_message(self, filter_id, msg_type, msg_text):
-        """Adds a message to the process log document.
+        """Adds a message to the log document.
 
         Args:
             filter_id (str): filter identifier
             msg_type (str): message type
             msg_text (str): message text
         """
-        if filter_id:
-            self._create_filter_log_documents(filter_id)
-            document = self._filter_log_documents[filter_id]["process_log"]
-        else:
-            document = self._process_document
-        message = format_process_message(msg_type, msg_text)
-        add_message_to_document(document, message)
+        message = format_log_message(msg_type, msg_text, show_datetime=False)
+        self.add_log_message(filter_id, message)
 
     @staticmethod
     def upgrade_v1_to_v2(item_name, item_dict):

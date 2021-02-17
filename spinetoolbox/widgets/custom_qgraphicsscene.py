@@ -20,7 +20,7 @@ import math
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
-from spinetoolbox.graphics_items import ProjectItemIcon, Link, ExecutionIcon
+from spinetoolbox.graphics_items import ProjectItemIcon, Link
 from .project_item_drag import ProjectItemDragMixin
 from ..graphics_items import LinkDrawer
 
@@ -65,7 +65,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
         super().__init__(parent)
         self._toolbox = toolbox
         self.item_shadow = None
-        self.ignore_next_selection_change = False
         self._last_selected_items = set()
         # Set background attributes
         settings = toolbox.qsettings()
@@ -126,42 +125,25 @@ class DesignGraphicsScene(CustomGraphicsScene):
     @Slot()
     def handle_selection_changed(self):
         """Synchronizes selection with the project tree."""
-        if self.ignore_next_selection_change:
-            self.ignore_next_selection_change = False
-            return
         selected_items = set(self.selectedItems())
         if self._last_selected_items == selected_items:
             return
         self._last_selected_items = selected_items
-        execution_icons = []
         project_item_icons = []
         links = []
         for item in self.selectedItems():
-            if isinstance(item, ExecutionIcon):
-                execution_icons.append(item)
-            elif isinstance(item, ProjectItemIcon):
+            if isinstance(item, ProjectItemIcon):
                 project_item_icons.append(item)
             elif isinstance(item, Link):
                 links.append(item)
         # Set active project item, active link, and executed item in toolbox
-        executed_project_item = (
-            self._toolbox.project_item_model.get_item(execution_icons[0].item_name()).project_item
-            if len(execution_icons) == 1
-            else None
-        )
-        if executed_project_item:
-            icon = executed_project_item.get_icon()
-            if not icon.isSelected():
-                self.ignore_next_selection_change = True
-                icon.setSelected(True)
-                project_item_icons.append(icon)
         active_project_item = (
             self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
             if len(project_item_icons) == 1
             else None
         )
         active_link = links[0] if len(links) == 1 else None
-        self._toolbox.refresh_active_elements(active_project_item, active_link, executed_project_item)
+        self._toolbox.refresh_active_elements(active_project_item, active_link)
         # Sync selection with project tree view
         selected_item_names = {icon.name() for icon in project_item_icons}
         self._toolbox.sync_item_selection_with_scene = False

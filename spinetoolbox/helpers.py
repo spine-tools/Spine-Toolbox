@@ -47,7 +47,6 @@ from PySide2.QtGui import (
     QPalette,
 )
 import spine_engine
-from spine_engine.config import PYTHON_EXECUTABLE, JULIA_EXECUTABLE
 from .config import REQUIRED_SPINE_ENGINE_VERSION
 
 
@@ -64,17 +63,11 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     register_matplotlib_converters()
 
 
-def format_event_message(msg_type, message, show_datetime=True):
+def format_log_message(msg_type, message, show_datetime=True):
     color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"
-
-
-def format_process_message(msg_type, message):
-    color = {"msg": "white", "msg_error": "#ff3333"}[msg_type]
-    open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
-    return open_tag + message + "</span>"
 
 
 def add_message_to_document(document, message):

@@ -28,6 +28,12 @@ from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
 from spinetoolbox.spine_engine_manager import make_engine_manager
 
+# Set logging level for jupyter loggers
+traitlets_logger = logging.getLogger("traitlets")
+asyncio_logger = logging.getLogger("asyncio")
+traitlets_logger.setLevel(level=logging.WARNING)
+asyncio_logger.setLevel(level=logging.WARNING)
+
 
 class SpineConsoleWidget(RichJupyterWidget):
     """Base class for all embedded console widgets that can run tool instances."""
@@ -57,11 +63,6 @@ class SpineConsoleWidget(RichJupyterWidget):
         self.start_console_action.triggered.connect(self.start_console)
         self.restart_console_action = QAction("Restart", self)
         self.restart_console_action.triggered.connect(self.restart_console)
-        # Set logging level for jupyter loggers
-        traitlets_logger = logging.getLogger("traitlets")
-        asyncio_logger = logging.getLogger("asyncio")
-        traitlets_logger.setLevel(level=logging.WARNING)
-        asyncio_logger.setLevel(level=logging.WARNING)
 
     def name(self):
         """Returns console name."""

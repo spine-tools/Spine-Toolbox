@@ -384,10 +384,6 @@ class SpineToolboxProject(MetaObject):
             dags (Sequence(DiGraph))
             execution_permits (Sequence(dict))
         """
-        # NOTE: emit ``project_execution_about_to_start`` before any logger messages.
-        # This is so toolbox knows that there's an execution in progress,
-        # and it doesn't restore the main log document when those messages arrive.
-        # (The user wants to see execution messages.)
         self.project_execution_about_to_start.emit()
         self._logger.msg.emit("")
         self._logger.msg.emit("-------------------------------------------------")

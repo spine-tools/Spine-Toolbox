@@ -452,29 +452,11 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self.selected_brush = qApp.palette().highlight()
         self.setBrush(self.normal_brush)
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
 
     def item_name(self):
         return self._parent.name()
-
-    def paint(self, painter, option, widget=None):
-        """Sets a dashed pen if selected."""
-        if option.state & QStyle.State_Selected:
-            option.state &= ~QStyle.State_Selected
-            self.setBrush(self.selected_brush)
-        else:
-            self.setBrush(self.normal_brush)
-        super().paint(painter, option, widget)
-
-    def itemChange(self, change, value):
-        """Unselect any selected ExecutionIcons if this is becoming selected."""
-        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
-            for x in self.scene().items():
-                if isinstance(x, ExecutionIcon) and x.isSelected():
-                    self.scene().ignore_next_selection_change = True
-                    x.setSelected(False)
-        return super().itemChange(change, value)
 
     def _repaint(self, text, color):
         self._text_item.prepareGeometryChange()
@@ -506,7 +488,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
             self._repaint(self._CROSS, QColor("red"))
 
     def hoverEnterEvent(self, event):
-        tip = f"<p><b>Execution {self._execution_state}</b>. Select to see Console and Log messages.</p>"
+        tip = f"<p><b>Execution {self._execution_state}</b>. Select this item to see Console and Log messages.</p>"
         QToolTip.showText(event.screenPos(), tip)
 
     def hoverLeaveEvent(self, event):
