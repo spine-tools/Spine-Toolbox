@@ -1,6 +1,6 @@
 # Spine Toolbox
 
-[![Python](https://img.shields.io/badge/python-3.6%20|%203.7%20|%203.8-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python](https://img.shields.io/badge/python-3.7%20|%203.8-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Unit tests](https://github.com/Spine-project/Spine-Toolbox/workflows/Unit%20tests/badge.svg)](https://github.com/Spine-project/Spine-Toolbox/actions?query=workflow%3A"Unit+tests")
 [![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
@@ -9,9 +9,10 @@ An application to define, manage, and execute various energy system simulation m
 
 ## Programming language
 
-- Python 3.6 (support will be removed soon)
-- Python 3.7 (recommended)
+- Python 3.7
 - Python 3.8
+
+Please note that Python 3.9 is not supported yet. 
 
 ## License
 
@@ -70,7 +71,7 @@ here, please see [Troubleshooting](#troubleshooting) section below.
 Step-by-step instructions:
 
 1. Clone either the `master` or the latest release branch onto your computer
-2. Install either Python 3.6 or Python 3.7
+2. Install either Python 3.7 or Python 3.8
 3. Install requirements
 
         pip install -r requirements.txt
@@ -92,7 +93,7 @@ run `spinetoolbox.exe`.
 
 ### About requirements
 
-Python 3.6 or Python 3.7 is required.
+Python 3.7 or Python 3.8 is required.
 
 See file `setup.py` and `requirements.txt` for packages required to run Spinetoolbox.
 
@@ -167,7 +168,7 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 ### Installation fails
 
-Please make sure you are using Python 3.6 or Python 3.7 to install the requirements.
+Please make sure you are using Python 3.7 or Python 3.8 to install the requirements.
 
 ### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
