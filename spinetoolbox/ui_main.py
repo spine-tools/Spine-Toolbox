@@ -1353,6 +1353,9 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item is None:
             return
         document = self.active_project_item.log_document
+        self._do_override_item_log(document)
+
+    def _do_override_item_log(self, document):
         if document is None:
             self.restore_original_item_log_document()
             return
@@ -1366,24 +1369,28 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item is None:
             return
         console = self.active_project_item.python_console
+        self._do_override_python_console(console)
+
+    def _do_override_python_console(self, console):
         if console is None:
             self.restore_original_python_console()
             return
         widget = self.ui.dockWidgetContents_python_console
-        new_title = f"{console.owner} Python Console"
-        self._set_override_console(widget, console, new_title)
+        self._set_override_console(widget, console, "Python Console")
 
     def override_julia_console(self):
         """Sets the julia console of the active project item in Julia Console and updates title."""
         if self.active_project_item is None:
             return
         console = self.active_project_item.julia_console
+        self._do_override_julia_console(console)
+
+    def _do_override_julia_console(self, console):
         if console is None:
             self.restore_original_julia_console()
             return
         widget = self.ui.dockWidgetContents_julia_console
-        new_title = f"{console.owner} Julia Console"
-        self._set_override_console(widget, console, new_title)
+        self._set_override_console(widget, console, "Julia Console")
 
     def override_execution_list(self):
         """Displays executions of the active project item in Executions and updates title."""
@@ -1426,9 +1433,13 @@ class ToolboxUI(QMainWindow):
         layout = widget.layout()
         for i in range(layout.count()):
             layout.itemAt(i).widget().hide()
-        widget.parent().setWindowTitle(new_title)
         layout.addWidget(console)
         console.show()
+        try:
+            new_title = f"{console.owner} {new_title}"
+        except AttributeError:
+            pass
+        widget.parent().setWindowTitle(new_title)
 
     @Slot()
     def _refresh_execution_list(self):
@@ -1448,10 +1459,10 @@ class ToolboxUI(QMainWindow):
         if not current.data():
             return
         item_log_doc = current.model().get_log_document(current.data())
+        self._do_override_item_log(item_log_doc)
         python_console, julia_console = current.model().get_consoles(current.data())
-        self.ui.textBrowser_itemlog.set_override_document(item_log_doc)
-        self._set_override_console(self.ui.dockWidgetContents_python_console, python_console)
-        self._set_override_console(self.ui.dockWidgetContents_julia_console, julia_console)
+        self._do_override_python_console(python_console)
+        self._do_override_julia_console(julia_console)
 
     def show_add_project_item_form(self, item_type, x=0, y=0, spec=""):
         """Show add project item widget."""
