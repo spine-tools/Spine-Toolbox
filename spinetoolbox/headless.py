@@ -328,6 +328,7 @@ def _specification_dicts(project_dict, project_dir, logger):
             except FileNotFoundError:
                 logger.msg_error.emit(f"Specification file <b>{path}</b> does not exist")
                 continue
+            specification_dict["definition_file_path"] = path
             specification_dicts.setdefault(item_type, list()).append(specification_dict)
     return specification_dicts
 

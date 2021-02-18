@@ -451,7 +451,9 @@ class SpineToolboxProject(MetaObject):
             items[name] = project_item.item_dict()
             spec = project_item.specification()
             if spec is not None:
-                specifications.setdefault(project_item.item_type(), list()).append(spec.to_dict())
+                spec_dict = spec.to_dict().copy()
+                spec_dict["definition_file_path"] = spec.definition_file_path
+                specifications.setdefault(project_item.item_type(), list()).append(spec_dict)
         connections = [c.to_dict() for c in self._connections]
         data = {
             "items": items,

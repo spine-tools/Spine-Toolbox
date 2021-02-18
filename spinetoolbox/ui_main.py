@@ -633,8 +633,6 @@ class ToolboxUI(QMainWindow):
             if not spec:
                 continue
             n_specs += 1
-            # Add tool definition file path to tool instance variable
-            spec.definition_file_path = path
             # Insert tool into model
             self.specification_model.insertRow(spec)
             item_factory = self.item_factories.get(spec.item_type)
@@ -664,6 +662,7 @@ class ToolboxUI(QMainWindow):
             # FIXME: Prompt to find it?
             self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
             return None
+        definition["definition_file_path"] = def_path
         spec = self.load_specification(definition)
         if spec is not None:
             spec.definition_file_path = def_path
