@@ -464,7 +464,6 @@ class SpineToolboxProject(MetaObject):
         }
         server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
         worker = SpineEngineWorker(server_address, data, dag, dag_identifier, project_items)
-        worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
         return worker
 
     def _handle_engine_worker_finished(self, worker):
