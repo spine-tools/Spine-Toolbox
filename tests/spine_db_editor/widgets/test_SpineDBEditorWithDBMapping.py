@@ -15,14 +15,14 @@ Unit tests for SpineDBEditor classes.
 :author: M. Marin (KTH)
 :date:   6.12.2018
 """
-
+import os.path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication
 from spinedb_api import create_new_spine_database
-import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 
@@ -44,8 +44,8 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of SpineDBEditor classes."""
-        # TODO: Use a temp file?
-        url = "sqlite:///test.sqlite"
+        self._temp_dir = TemporaryDirectory()
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test.sqlite")
         create_new_spine_database(url)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
@@ -75,6 +75,7 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         self.db_mngr.clean_up()
         self.spine_db_editor.deleteLater()
         self.spine_db_editor = None
+        self._temp_dir.cleanup()
 
     def fetch_object_tree_model(self):
         for item in self.spine_db_editor.object_tree_model.visit_all():
