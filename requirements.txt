@@ -19,6 +19,10 @@ pyrsistent < 0.17
 # tordano 6.1 is required on Python 3.8 on Windows to make Python and Julia Consoles work.
 # On tornado 6.0.4, jupyter-client fails in creating the communication channels (iopub, stdin, hb, etc.)
 tornado>=6.1
+# 'ImportError: DLL load failed while importing win32api' error happens on Conda Python 3.8 if pywin32>=227.
+# dagster does not allow 226, so we are left with 225. The error happens when trying to execute anything in the
+# Python or Julia Console
+pywin32==225;sys_platform=="win32"
 -e .
 # Spine Items requires the Toolbox, so install that last
 git+https://github.com/Spine-project/spine-items.git#egg=spine_items
