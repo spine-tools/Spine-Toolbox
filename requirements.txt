@@ -16,6 +16,9 @@ jsonschema == 2.6
 # pyrsistent is a requirement of tableschema which is a requirement of datapackage.
 # tableschema 1.19.4 requires pyrsistent < 0.17
 pyrsistent < 0.17
+# tordano 6.1 is required on Python 3.8 on Windows to make Python and Julia Consoles work.
+# On tornado 6.0.4, jupyter-client fails in creating the communication channels (iopub, stdin, hb, etc.)
+tornado>=6.1
 -e .
 # Spine Items requires the Toolbox, so install that last
 git+https://github.com/Spine-project/spine-items.git#egg=spine_items
