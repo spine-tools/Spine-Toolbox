@@ -509,4 +509,3 @@ class DesignQGraphicsView(CustomQGraphicsView):
             event.accept()
             global_pos = self.viewport().mapToGlobal(event.pos())
             self._toolbox.show_project_item_context_menu(global_pos, None)
-

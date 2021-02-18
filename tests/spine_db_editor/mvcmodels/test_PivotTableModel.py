@@ -164,26 +164,24 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
     def test_data(self):
         self.assertEqual(self._model.rowCount(), 11)
         self.assertEqual(self._model.columnCount(), 5)
+        model_data = list()
+        i = self._model.index
+        for row in range(11):
+            model_data.append(list(i(row, column).data() for column in range(5)))
         expected = [
             [None, "parameter", "parameter1", "parameter2", None],
             ["class1", "index", None, None, None],
             ["object1", "A", str(1.1), None, None],
             ["object1", "B", str(2.1), None, None],
-            ["object1", "C", None, str(-1.1), None],
-            ["object1", "D", None, str(-2.1), None],
             ["object2", "C", str(1.2), None, None],
             ["object2", "D", str(2.2), None, None],
+            ["object1", "C", None, str(-1.1), None],
+            ["object1", "D", None, str(-2.1), None],
             ["object2", "A", None, str(-1.2), None],
             ["object2", "B", None, str(-2.2), None],
             [None, None, None, None, None],
         ]
-        for column in range(5):
-            for row in range(11):
-                self.assertEqual(
-                    self._model.index(row, column).data(),
-                    expected[row][column],
-                    f"data mismatch on row {row} column {column}",
-                )
+        self.assertEqual(model_data, expected)
 
 
 if __name__ == '__main__':
