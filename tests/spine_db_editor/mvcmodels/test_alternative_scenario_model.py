@@ -42,6 +42,7 @@ class TestAlternativeScenarioModel(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
 
     def test_initial_state(self):
         model = AlternativeScenarioModel(self._db_editor, self._db_mngr, self._db_map)

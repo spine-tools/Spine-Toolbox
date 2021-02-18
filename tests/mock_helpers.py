@@ -59,6 +59,8 @@ def clean_up_toolbox(toolbox):
             QApplication.processEvents()
         toolbox.project().tear_down()
         toolbox.project().deleteLater()
+    toolbox.db_mngr.close_all_sessions()
+    toolbox.db_mngr.clean_up()
     toolbox.project_item_model.remove_leaves()
     toolbox.undo_stack.deleteLater()
     toolbox.deleteLater()

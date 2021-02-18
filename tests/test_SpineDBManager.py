@@ -43,6 +43,10 @@ class TestParameterValueFormatting(unittest.TestCase):
         self.db_mngr = SpineDBManager(None, None)
         self.db_mngr.get_item = Mock()
 
+    def tearDown(self):
+        self.db_mngr.close_all_sessions()
+        self.db_mngr.clean_up()
+
     def get_value(self, role):
         mock_db_map = Mock()
         id_ = 0

@@ -54,6 +54,8 @@ class TestSpineDBEditorBase(unittest.TestCase):
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
         ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.db_editor.close()
+        self.db_mngr.close_all_sessions()
+        self.db_mngr.clean_up()
         self.db_editor.deleteLater()
         self.db_editor = None
 

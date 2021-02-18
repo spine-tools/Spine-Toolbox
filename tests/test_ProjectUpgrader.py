@@ -27,7 +27,7 @@ from PySide2.QtWidgets import QApplication
 from spinetoolbox.project_upgrader import ProjectUpgrader
 from spinetoolbox.resources_icons_rc import qInitResources
 from spinetoolbox.config import LATEST_PROJECT_VERSION
-from .mock_helpers import create_toolboxui
+from .mock_helpers import create_toolboxui, clean_up_toolbox
 
 
 class TestProjectUpgrader(unittest.TestCase):
@@ -52,8 +52,7 @@ class TestProjectUpgrader(unittest.TestCase):
 
     def tearDown(self):
         """Runs after each test. Use this to free resources after a test if needed."""
-        self.toolbox.deleteLater()
-        self.toolbox = None
+        clean_up_toolbox(self.toolbox)
 
     def test_is_valid_v1(self):
         """Tests is_valid for a version 1 project dictionary."""

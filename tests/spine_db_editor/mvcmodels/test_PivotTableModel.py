@@ -71,6 +71,7 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
         self._temp_dir.cleanup()
 
     def test_x_flag(self):
@@ -159,6 +160,7 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
         self._temp_dir.cleanup()
 
     def test_data(self):

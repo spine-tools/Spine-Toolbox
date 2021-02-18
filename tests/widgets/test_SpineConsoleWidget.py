@@ -19,7 +19,7 @@ Unit tests for the SpineConsoleWidget.
 import unittest
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.widgets.spine_console_widget import SpineConsoleWidget
-from tests.mock_helpers import create_toolboxui
+from tests.mock_helpers import create_toolboxui, clean_up_toolbox
 
 
 class TestSpineConsoleWidget(unittest.TestCase):
@@ -34,6 +34,7 @@ class TestSpineConsoleWidget(unittest.TestCase):
 
     def tearDown(self):
         """Clean up."""
+        clean_up_toolbox(self.toolbox)
 
     def test_make_spine_console_widget(self):
         python_console = SpineConsoleWidget(self.toolbox, "Python Console")

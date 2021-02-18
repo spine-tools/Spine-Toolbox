@@ -305,6 +305,8 @@ class TestSpineDBEditor(
             self.spine_db_editor.close()
             mock_save_w_s.assert_called_once()
         QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
+        self.db_mngr.close_all_sessions()
+        self.db_mngr.clean_up()
         self.spine_db_editor.deleteLater()
         self.spine_db_editor = None
 

@@ -20,7 +20,7 @@ import unittest
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.widgets.kernel_editor import KernelEditor
 from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import create_toolboxui
+from tests.mock_helpers import create_toolboxui, clean_up_toolbox
 
 
 class TestKernelEditor(unittest.TestCase):
@@ -35,6 +35,7 @@ class TestKernelEditor(unittest.TestCase):
 
     def tearDown(self):
         """Clean up."""
+        clean_up_toolbox(self.toolbox)
 
     def test_make_kernel_editor(self):
         sw = SettingsWidget(self.toolbox)

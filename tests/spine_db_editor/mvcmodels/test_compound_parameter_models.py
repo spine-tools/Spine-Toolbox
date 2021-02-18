@@ -47,6 +47,7 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
 
     def test_horizontal_header(self):
         model = CompoundObjectParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -96,6 +97,7 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
 
     def test_horizontal_header(self):
         model = CompoundRelationshipParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -147,6 +149,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
 
     def test_horizontal_header(self):
         model = CompoundObjectParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -209,6 +212,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
 
     def test_horizontal_header(self):
         model = CompoundRelationshipParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
