@@ -38,12 +38,12 @@ asyncio_logger.setLevel(level=logging.WARNING)
 class SpineConsoleWidget(RichJupyterWidget):
     """Base class for all embedded console widgets that can run tool instances."""
 
-    def __init__(self, toolbox, name, owner=""):
+    def __init__(self, toolbox, name, owner=None):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Console name, e.g. 'Python Console'
-            owner (str): The name of the project item that 'owns' the console, empty if it's the toolbox 'main' console
+            owner (ProjectItem, NoneType): Item that owns the console.
         """
         super().__init__(parent=toolbox)
         self._toolbox = toolbox
@@ -69,8 +69,8 @@ class SpineConsoleWidget(RichJupyterWidget):
         return self._name
 
     @property
-    def owner(self):
-        return "&".join(self.owners)
+    def owner_names(self):
+        return "&".join(x.name for x in self.owners)
 
     @Slot(bool)
     def start_console(self, checked=False):

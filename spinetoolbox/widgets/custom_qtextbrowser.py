@@ -24,7 +24,11 @@ from ..config import TEXTBROWSER_OVERRIDE_SS, TEXTBROWSER_SS
 
 
 class SignedTextDocument(QTextDocument):
-    def __init__(self, owner=""):
+    def __init__(self, owner=None):
+        """
+        Args:
+            owner (ProjectItem, optional): The item that owns the document.
+        """
         super().__init__()
         self.owner = owner
 

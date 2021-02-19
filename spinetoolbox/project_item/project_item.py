@@ -393,6 +393,7 @@ class ProjectItem(MetaObject):
         self.data_dir = new_data_dir
         if self._active:
             self.update_name_label()
+            self._project._toolbox.override_logs_and_consoles()
         self.get_icon().update_name_item(new_name)
         return True
 
@@ -453,7 +454,7 @@ class ProjectItem(MetaObject):
             SignedTextDocument
         """
         if filter_id not in self._filter_log_documents:
-            self._filter_log_documents[filter_id] = SignedTextDocument(self.name)
+            self._filter_log_documents[filter_id] = SignedTextDocument(self)
             if self._active:
                 self._project._toolbox.ui.listView_executions.model().layoutChanged.emit()
         return self._filter_log_documents[filter_id]
@@ -468,7 +469,7 @@ class ProjectItem(MetaObject):
             SignedTextDocument
         """
         if self._log_document is None:
-            self._log_document = SignedTextDocument(self.name)
+            self._log_document = SignedTextDocument(self)
             if self._active:
                 self._project._toolbox.override_item_log()
         return self._log_document

@@ -190,6 +190,7 @@ class ToolboxUI(QMainWindow):
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
+        self.ui.textBrowser_itemlog.anchorClicked.connect(self.open_anchor)
         # Message box signals
         self.information_box.connect(self._show_message_box)
         self.error_box.connect(self._show_error_box)
@@ -1411,6 +1412,7 @@ class ToolboxUI(QMainWindow):
 
     def restore_original_item_log_document(self):
         """Sets the Item Execution Log document back to the original."""
+        self.ui.textBrowser_itemlog.restore_original_document()
         self.ui.textBrowser_itemlog.hide()
         self.ui.label_no_itemlog.show()
         self._update_item_log_title()
@@ -1428,9 +1430,8 @@ class ToolboxUI(QMainWindow):
     def _update_item_log_title(self):
         """Updates Event Log title."""
         owner = self.ui.textBrowser_itemlog.document().owner
-        if not owner:
-            owner = "Item"
-        new_title = f"{owner} Execution Log"
+        owner_name = owner.name if owner else "Item"
+        new_title = f"{owner_name} Execution Log"
         self.ui.dockWidget_itemlog.setWindowTitle(new_title)
 
     @staticmethod
@@ -1441,7 +1442,7 @@ class ToolboxUI(QMainWindow):
         layout.addWidget(console)
         console.show()
         try:
-            new_title = f"{console.owner} {new_title}"
+            new_title = f"{console.owner_names} {new_title}"
         except AttributeError:
             pass
         widget.parent().setWindowTitle(new_title)
@@ -2100,12 +2101,12 @@ class ToolboxUI(QMainWindow):
         menu.aboutToHide.connect(self.enable_edit_actions)
         return menu
 
-    def make_console(self, name, item_name, kernel_name, connection_file):
+    def make_console(self, name, item, kernel_name, connection_file):
         """Creates a new SpineConsoleWidget for given connection file if none exists yet, and returns it.
 
         Args:
             name (str): Console name
-            item_name (str): Name of the item that requests the console
+            item (ProjectItem): Item that owns the console
             kernel_name (str): Name of the kernel
             connection_file (str): Path of kernel connection file
 
@@ -2114,9 +2115,9 @@ class ToolboxUI(QMainWindow):
         """
         console = self._extra_consoles.get(connection_file)
         if console is not None:
-            console.owners.add(item_name)
+            console.owners.add(item)
             return console
-        console = self._extra_consoles[connection_file] = SpineConsoleWidget(self, name, owner=item_name)
+        console = self._extra_consoles[connection_file] = SpineConsoleWidget(self, name, owner=item)
         console.connect_to_kernel(kernel_name, connection_file)
         return console
 
