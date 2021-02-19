@@ -1,0 +1,54 @@
+# GitHub Action to run execution tests
+
+name: Execution tests
+
+# Run workflow on every push
+on:
+  push
+
+jobs:
+
+  execution-tests-windows:
+    name: Execution tests on Windows
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      env:
+        PYTHONUTF8: 1
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Run tests
+      run:
+        python -m unittest discover --pattern execution_test.py --verbose
+
+  execution-tests-linux:
+    name: Execution tests on Ubuntu
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install unixodbc
+      run:
+        sudo apt-get install -y unixodbc-dev  # Install to get sql.h headers
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Run tests
+      run:
+        python -m unittest discover --pattern execution_test.py --verbose

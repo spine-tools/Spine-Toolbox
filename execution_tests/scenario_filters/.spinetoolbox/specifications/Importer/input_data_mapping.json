@@ -1,0 +1,72 @@
+{
+    "name": "Input data mapping",
+    "item_type": "Importer",
+    "mapping": {
+        "table_mappings": {
+            "data": [
+                {
+                    "map_type": "ObjectClass",
+                    "skip_columns": [],
+                    "read_start_row": 0,
+                    "name": {
+                        "map_type": "column",
+                        "reference": 0
+                    },
+                    "parameters": {
+                        "map_type": "ParameterValue",
+                        "name": {
+                            "map_type": "column",
+                            "reference": 2
+                        },
+                        "value": {
+                            "main_value": {
+                                "map_type": "column",
+                                "reference": 4
+                            },
+                            "value_type": "single value"
+                        },
+                        "alternative_name": {
+                            "map_type": "column",
+                            "reference": 3
+                        },
+                        "parameter_value_metadata": {
+                            "map_type": "None"
+                        }
+                    },
+                    "import_objects": true,
+                    "objects": {
+                        "map_type": "column",
+                        "reference": 1
+                    },
+                    "object_metadata": {
+                        "map_type": "None"
+                    },
+                    "mapping_name": "Mapping 0"
+                }
+            ]
+        },
+        "table_options": {
+            "data": {
+                "encoding": "ascii",
+                "delimiter": ",",
+                "quotechar": "\"",
+                "skip": 0
+            }
+        },
+        "table_types": {
+            "data": {
+                "0": "string",
+                "1": "string",
+                "2": "string",
+                "3": "string",
+                "4": "float"
+            }
+        },
+        "table_row_types": {},
+        "selected_tables": [
+            "data"
+        ],
+        "source_type": "CSVConnector"
+    },
+    "description": "Import mappings for test's input data."
+}

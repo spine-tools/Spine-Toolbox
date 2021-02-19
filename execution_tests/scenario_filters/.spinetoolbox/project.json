@@ -1,0 +1,125 @@
+{
+    "project": {
+        "version": 6,
+        "name": "scenario_filters",
+        "description": "Test project to test scenario filtering in a Tool project item.",
+        "specifications": {
+            "Importer": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Importer/input_data_mapping.json"
+                }
+            ],
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/write_values.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "from": [
+                    "Input data",
+                    "right"
+                ],
+                "to": [
+                    "Importer",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Importer",
+                    "right"
+                ],
+                "to": [
+                    "Data store",
+                    "left"
+                ]
+            },
+            {
+                "from": [
+                    "Data store",
+                    "right"
+                ],
+                "to": [
+                    "Output writer",
+                    "left"
+                ],
+                "resource_filters": {
+                    "db_url@Data store": {
+                        "scenario_filter": [
+                            1,
+                            2
+                        ]
+                    }
+                }
+            }
+        ]
+    },
+    "items": {
+        "Data store": {
+            "type": "Data Store",
+            "description": "",
+            "x": 53.737819155539626,
+            "y": 2.499629194101132,
+            "url": {
+                "dialect": "sqlite",
+                "username": "",
+                "password": "",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/data_store/database.sqlite"
+                }
+            },
+            "cancel_on_error": true
+        },
+        "Input data": {
+            "type": "Data Connection",
+            "description": "",
+            "x": -196.59913736619953,
+            "y": 2.4947982762267387,
+            "references": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "input_data.csv"
+                }
+            ]
+        },
+        "Output writer": {
+            "type": "Tool",
+            "description": "",
+            "x": 183.09913736619956,
+            "y": 1.5003708058988678,
+            "specification": "Write values",
+            "execute_in_work": true,
+            "cmd_line_args": [
+                {
+                    "type": "resource",
+                    "arg": "db_url@Data store"
+                }
+            ]
+        },
+        "Importer": {
+            "type": "Importer",
+            "description": "",
+            "x": -68.55686683479854,
+            "y": 2.499629194101132,
+            "specification": "Input data mapping",
+            "cancel_on_error": false,
+            "file_selection": [
+                [
+                    "input_data.csv",
+                    true
+                ]
+            ]
+        }
+    }
+}

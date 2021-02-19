@@ -2,6 +2,7 @@
 *.pyc
 *.sqlite
 *.egg-info
+*.log
 .eggs/
 .spyderproject
 build/

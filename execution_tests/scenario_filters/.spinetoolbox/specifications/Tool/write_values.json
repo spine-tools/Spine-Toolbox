@@ -1,0 +1,16 @@
+{
+    "name": "Write values",
+    "tooltype": "python",
+    "includes": [
+        "tool.py"
+    ],
+    "description": "Writes parameter values on disk.",
+    "inputfiles": [],
+    "inputfiles_opt": [],
+    "outputfiles": [
+        "out.dat"
+    ],
+    "cmdline_args": [],
+    "execute_in_work": true,
+    "includes_main_path": "../../.."
+}
