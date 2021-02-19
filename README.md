@@ -36,70 +36,70 @@ Spine Toolbox is constantly improving. If you want to keep up with latest develo
 
 ### Installation
 
-1. Do you have Conda? If yes, go directly to step 2. Otherwise, install either [Anaconda](https://www.anaconda.com/distribution/) or 
-[Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+1. Do you have Conda? If yes, go directly to step 2. Otherwise, install either [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+(recommended) or [Anaconda](https://www.anaconda.com/distribution/) (good alternative).
 
-2. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png)
+2. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
 
-3. Create a new environment by typing
+3. Create a new environment by typing:
 
         conda create -n spinetoolbox python=3.7
 
-4. Activate the new environment
+4. Activate the new environment:
 
         conda activate spinetoolbox
 
-5. Install **git** into the new environment
+5. Install **git** into the new environment:
 
         conda install -c anaconda git
 
-6. Clone the Spine Toolbox repository from GitHub to your computer
+6. Clone the Spine Toolbox repository from GitHub to your computer:
 
         git clone https://github.com/Spine-project/Spine-Toolbox.git
 
-7. Navigate to your clone's root
+7. Navigate to your clone's root:
 
         cd Spine-Toolbox
 
-8. Install requirements using **pip**
+8. Install requirements using **pip**:
 
         python -m pip install -r requirements.txt
 
-9. Run
+9. Run:
 
         python -m spinetoolbox
 
 
 ### Running
 
-1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png)
+1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
 
-2. Activate the `spinetoolbox` environment
+2. Activate the `spinetoolbox` environment:
 
         conda activate spinetoolbox
 
-3. Run
+3. Run:
 
         python -m spinetoolbox
 
 ### Upgrading
 
 
-1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png)
+1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
 
-2. Activate the `spinetoolbox` environment
+2. Activate the `spinetoolbox` environment:
 
         conda activate spinetoolbox
 
-3. Navigate to your Spine Toolbox clone's root
+3. Navigate to your Spine Toolbox clone's root:
 
         cd Spine-Toolbox
 
-4. Pull the latest contents of the Spine Toolbox repository
+4. Pull the latest contents of the Spine Toolbox repository:
 
         git pull
 
-5. Upgrade requirements using **pip**
+5. Upgrade requirements using **pip**:
 
         python -m pip install --upgrade -r requirements.txt
 
@@ -111,20 +111,22 @@ Python 3.7 or Python 3.8 is required.
 See file `setup.py` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
 
-The requirements include two packages ([`spinedb_api`](https://github.com/Spine-project/Spine-Database-API)
-and [`spine_engine`](https://github.com/Spine-project/spine-engine)) 
+The requirements include three packages ([`spinedb_api`](https://github.com/Spine-project/Spine-Database-API),
+[`spine_engine`](https://github.com/Spine-project/spine-engine)), and [`spine_items`](https://github.com/Spine-project/spine-items)),
 developed by the Spine project consortium. Since these packages are developed very actively at the moment, 
 they may get upgraded quite regularly whenever you run `python -m pip install --upgrade -r requirements.txt`.
 
 In some cases (if you forget to run `python -m pip install --upgrade -r requirements.txt` after `git pull`),
 the application will refuse to start unless you upgrade these packages.
 Just follow the instructions that will appear in the Anaconda Prompt
-(or simply, run `python -m pip install --upgrade -r requirements.txt`)
+(or simply, run `python -m pip install --upgrade -r requirements.txt`).
 
 
 ### Building the User Guide
 
-Source files for the User Guide can be found in `docs/source` directory. In order to 
+You can find the latest documentation on [readthedocs](https://spine-toolbox.readthedocs.io/en/latest/index.html).
+If you want to build the documentation yourself,
+source files for the User Guide can be found in `docs/source` directory. In order to 
 build the HTML docs, you need to install the *optional requirements* (see section 
 'Installing requirements' above). This installs Sphinx (among other things), which 
 is required in building the documentation. When Sphinx is installed, you can build the 
@@ -179,7 +181,7 @@ Below are the bare minimum things you need to know.
 
 ### Setting up development environment
 
-1. Install the developer requirements
+1. Install the developer requirements:
 
         pip install -r dev-requirements.txt
 
