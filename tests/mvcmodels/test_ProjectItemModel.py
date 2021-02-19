@@ -45,7 +45,7 @@ class TestProjectItemModel(unittest.TestCase):
 
     def test_empty_model(self):
         root = RootProjectTreeItem()
-        model = ProjectItemModel(self.toolbox, root)
+        model = ProjectItemModel(root)
         self.assertEqual(model.rowCount(), 0)
         self.assertEqual(model.columnCount(), 1)
         self.assertEqual(model.n_items(), 0)
@@ -53,7 +53,7 @@ class TestProjectItemModel(unittest.TestCase):
 
     def test_insert_item_category_item(self):
         root = RootProjectTreeItem()
-        model = ProjectItemModel(self.toolbox, root)
+        model = ProjectItemModel(root)
         category = CategoryProjectTreeItem("category", "category description")
         model.insert_item(category)
         self.assertEqual(model.rowCount(), 1)
@@ -66,7 +66,7 @@ class TestProjectItemModel(unittest.TestCase):
 
     def test_insert_item_leaf_item(self):
         root = RootProjectTreeItem()
-        model = ProjectItemModel(self.toolbox, root)
+        model = ProjectItemModel(root)
         category = CategoryProjectTreeItem("category", "category description")
         model.insert_item(category)
         category_index = model.find_category("category")
@@ -80,25 +80,25 @@ class TestProjectItemModel(unittest.TestCase):
         self.assertEqual(model.n_items(), 1)
         self.assertEqual(model.items("category"), [leaf])
 
-    def test_set_item_name(self):
-        model = self.toolbox.project_item_model
-        item_dict = {"view": {"type": "View", "description": "", "x": 0, "y": 0}}
-        self.toolbox.project().add_project_items(item_dict)
-        leaf_index = model.find_item("view")
-        status = model.set_item_name(leaf_index, "new view item name", "box_title")
-        self.assertTrue(status)
+    def test_set_leaf_item_name(self):
+        root = RootProjectTreeItem()
+        model = ProjectItemModel(root)
+        category = CategoryProjectTreeItem("category", "category description")
+        model.insert_item(category)
+        category_index = model.find_category("category")
+        project_item = ProjectItem("item", "item description", 0.0, 0.0, self.toolbox.project())
+        leaf = LeafProjectTreeItem(project_item, self.toolbox)
+        model.insert_item(leaf, category_index)
+        leaf_index = model.find_item("item")
+        model.set_leaf_item_name(leaf_index, "new view item name")
         leaf_item = model.get_item("new view item name")
         self.assertIsNotNone(leaf_item)
-        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node("new view item name")
-        self.assertIsNotNone(dag_with_new_node_name)
-        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("View")
-        self.assertIsNone(dag_with_old_node_name)
 
     def test_category_of_item(self):
         root = RootProjectTreeItem()
         category = CategoryProjectTreeItem("category", "category description")
         root.add_child(category)
-        model = ProjectItemModel(self.toolbox, root)
+        model = ProjectItemModel(root)
         self.assertEqual(model.category_of_item("nonexistent item"), None)
         project_item = ProjectItem("item", "item description", 0.0, 0.0, self.toolbox.project())
         item = LeafProjectTreeItem(project_item, self.toolbox)

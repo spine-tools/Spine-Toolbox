@@ -24,8 +24,9 @@ from PySide2.QtWidgets import QMessageBox
 from spine_engine.project_item.connection import Connection
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.helpers import create_dir, inverted, erase_dir, make_settings_dict_for_engine
-from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
+from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME, INVALID_CHARS
 from .dag_handler import DirectedGraphHandler
+from .metaobject import shorten
 from .project_tree_item import LeafProjectTreeItem
 from .project_commands import (
     SetProjectNameCommand,
@@ -274,19 +275,45 @@ class SpineToolboxProject(MetaObject):
             item = list(project_tree_items)[-1]
             self.set_item_selected(item)
 
-    def item_renamed(self, previous_name, new_name):
-        """Updates connections after project item has been renamed.
+    def rename_item(self, previous_name, new_name, rename_data_dir_message):
+        """Renames a project item
 
          Args:
-             previous_name (str): item's previous name
+             previous_name (str): item's current name
              new_name (str): item's new name
+             rename_data_dir_message (str): message to show when renaming item's data directory
+
+         Returns:
+             bool: True if item was renamed successfully, False otherwise
          """
+        if not new_name.strip() or new_name == previous_name:
+            return False
+        if any(x in INVALID_CHARS for x in new_name):
+            msg = f"<b>{new_name}</b> contains invalid characters."
+            self._logger.error_box.emit("Invalid characters", msg)
+            return False
+        if self._project_item_model.find_item(new_name):
+            msg = f"Project item <b>{new_name}</b> already exists"
+            self._logger.error_box.emit("Invalid name", msg)
+            return False
+        new_short_name = shorten(new_name)
+        if self._toolbox.project_item_model.short_name_reserved(new_short_name):
+            msg = f"Project item using directory <b>{new_short_name}</b> already exists"
+            self._logger.error_box("Invalid name", msg)
+            return False
+        item_index = self._project_item_model.find_item(previous_name)
+        item = self._project_item_model.item(item_index).project_item
+        if not item.rename(new_name, rename_data_dir_message):
+            return False
+        self._project_item_model.set_leaf_item_name(item_index, new_name)
         self.dag_handler.rename_node(previous_name, new_name)
         for connection in self._connections:
             if connection.source == previous_name:
                 connection.source = new_name
             if connection.destination == previous_name:
                 connection.destination = new_name
+        self._logger.msg_success.emit(f"Project item <b>{previous_name}</b> renamed to <b>{new_name}</b>.")
+        return True
 
     @property
     def connections(self):
@@ -607,7 +634,7 @@ class SpineToolboxProject(MetaObject):
             # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
             for node in dag.nodes():
-                item = items[node].invalidate_workflow(edges)
+                items[node].invalidate_workflow(edges)
             return
         # Make resource map and run simulation
         node_predecessors = inverted(node_successors)

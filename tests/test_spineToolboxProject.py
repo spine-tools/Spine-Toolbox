@@ -15,7 +15,7 @@ Unit tests for SpineToolboxProject class.
 :author: P. Savolainen (VTT)
 :date:   14.11.2018
 """
-
+import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
@@ -23,6 +23,7 @@ from PySide2.QtCore import QVariantAnimation, QEventLoop
 from PySide2.QtWidgets import QApplication
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.connection import Connection
+from spinetoolbox.metaobject import shorten
 from .mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
@@ -238,17 +239,29 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertTrue(data_connection_executable.execute_called)
         self.assertFalse(view_executable.execute_called)
 
-    def test_rename_item_renames_connection_and_dag_edges(self):
+    def test_rename_item(self):
         project = self.toolbox.project()
         source_name = "source"
         destination_name = "destination"
         add_view(project, source_name)
         add_view(project, destination_name)
+        source_item = project.get_item("source")
         project.add_connection(Connection(source_name, "left", destination_name, "right"))
-        source_item = project.get_item(source_name)
-        destination_item = project.get_item(destination_name)
-        source_item.rename("renamed source")
+        while project.is_busy():
+            # Make sure we process all pending signals related to changes in DAG.
+            # Otherwise me may rename the item while the old name is still in use.
+            QApplication.processEvents()
+        project.rename_item("source", "renamed source", "")
+        self.assertTrue(bool(project.get_item("renamed source")))
+        self.assertEqual(source_item.name, "renamed source")
         self.assertEqual(project.connections, [Connection("renamed source", "left", destination_name, "right")])
+        dags = project.dag_handler.dags()
+        self.assertEqual(len(dags), 1)
+        self.assertEqual(
+            project.dag_handler.node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]}
+        )
+        self.assertEqual(source_item.get_icon().name(), "renamed source")
+        self.assertEqual(os.path.split(source_item.data_dir)[1], shorten("renamed source"))
 
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""

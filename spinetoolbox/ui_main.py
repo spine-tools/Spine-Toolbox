@@ -599,7 +599,7 @@ class ToolboxUI(QMainWindow):
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and add them to the model."""
         root_item = RootProjectTreeItem()
-        self.project_item_model = ProjectItemModel(self, root=root_item)
+        self.project_item_model = ProjectItemModel(root_item)
         for category in CATEGORIES:
             category_item = CategoryProjectTreeItem(str(category), CATEGORY_DESCRIPTIONS[category])
             self.project_item_model.insert_item(category_item)
@@ -2058,7 +2058,7 @@ class ToolboxUI(QMainWindow):
         if not answer[1]:
             return
         new_name = answer[0]
-        self.undo_stack.push(RenameProjectItemCommand(self.project_item_model, item, new_name))
+        self.undo_stack.push(RenameProjectItemCommand(self._project, item.name, new_name))
 
     def item_category_context_menu(self):
         """Creates a context menu for category items.

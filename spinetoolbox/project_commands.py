@@ -219,29 +219,28 @@ class RemoveProjectItemCommand(SpineToolboxCommand):
 
 
 class RenameProjectItemCommand(SpineToolboxCommand):
-    def __init__(self, project_item_model, tree_item, new_name):
-        """Command to rename items.
+    def __init__(self, project, previous_name, new_name):
+        """Command to rename project items.
 
         Args:
-            project_item_model (ProjectItemModel): the project
-            tree_item (LeafProjectTreeItem): the item to rename
+            project (SpineToolboxProject): the project
+            previous_name (str): item's previous name
             new_name (str): the new name
         """
         super().__init__()
-        self.project_item_model = project_item_model
-        self.tree_index = project_item_model.find_item(tree_item.name)
-        self.old_name = tree_item.name
-        self.new_name = new_name
-        self.setText(f"rename {self.old_name} to {new_name}")
+        self._project = project
+        self._previous_name = previous_name
+        self._new_name = new_name
+        self.setText(f"rename {self._previous_name} to {self._new_name}")
 
     def redo(self):
         box_title = f"Doing '{self.text()}'"
-        if not self.project_item_model.set_item_name(self.tree_index, self.new_name, box_title):
+        if not self._project.rename_item(self._previous_name, self._new_name, box_title):
             self.setObsolete(True)
 
     def undo(self):
         box_title = f"Undoing '{self.text()}'"
-        self.successfully_undone = self.project_item_model.set_item_name(self.tree_index, self.old_name, box_title)
+        self.successfully_undone = self._project.rename_item(self._new_name, self._previous_name, box_title)
 
     @staticmethod
     def is_critical():

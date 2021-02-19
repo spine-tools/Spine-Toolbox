@@ -23,7 +23,7 @@ from ..helpers import create_dir, open_url, QuietLogger
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
 from ..widgets.custom_qtextbrowser import SignedTextDocument
-from ..helpers import format_log_message, add_message_to_document
+from ..helpers import format_log_message, add_message_to_document, rename_dir
 
 
 class ProjectItem(MetaObject):
@@ -372,7 +372,7 @@ class ProjectItem(MetaObject):
         """
         return self._actions
 
-    def rename(self, new_name):
+    def rename(self, new_name, rename_data_dir_message):
         """
         Renames this item.
 
@@ -380,14 +380,21 @@ class ProjectItem(MetaObject):
         method in subclass. See e.g. rename() method in DataStore class.
 
         Args:
-            new_name(str): New name
+            new_name (str): New name
+            rename_data_dir_message (str): Message to show when renaming item's data directory
+
+        Returns:
+            bool: True if item was renamed successfully, False otherwise
         """
-        self._project.item_renamed(self.name, new_name)
+        new_data_dir = os.path.join(self._toolbox.project().items_dir, shorten(new_name))
+        if not rename_dir(self.data_dir, new_data_dir, self._toolbox, rename_data_dir_message):
+            return False
         self.set_name(new_name)
-        self.data_dir = os.path.join(self._project.items_dir, shorten(new_name))
+        self.data_dir = new_data_dir
         if self._active:
             self.update_name_label()
         self.get_icon().update_name_item(new_name)
+        return True
 
     @Slot(bool)
     def open_directory(self, checked=False):
