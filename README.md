@@ -49,7 +49,7 @@ Spine Toolbox is constantly improving. If you want to keep up with latest develo
 
         conda activate spinetoolbox
 
-5. Install **git** into the new environment:
+5. Install **git** in the new environment:
 
         conda install -c anaconda git
 
@@ -112,7 +112,7 @@ See file `setup.py` and `requirements.txt` for packages required to run Spine To
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
 
 The requirements include three packages ([`spinedb_api`](https://github.com/Spine-project/Spine-Database-API),
-[`spine_engine`](https://github.com/Spine-project/spine-engine)), and [`spine_items`](https://github.com/Spine-project/spine-items)),
+[`spine_engine`](https://github.com/Spine-project/spine-engine), and [`spine_items`](https://github.com/Spine-project/spine-items)),
 developed by the Spine project consortium. Since these packages are developed very actively at the moment, 
 they may get upgraded quite regularly whenever you run `python -m pip install --upgrade -r requirements.txt`.
 
