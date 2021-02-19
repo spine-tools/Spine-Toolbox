@@ -22,6 +22,7 @@ from unittest import mock
 from PySide2.QtCore import QVariantAnimation, QEventLoop
 from PySide2.QtWidgets import QApplication
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
+from spine_engine.project_item.connection import Connection
 from .mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
@@ -236,6 +237,18 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertFalse(data_store_executable.execute_called)
         self.assertTrue(data_connection_executable.execute_called)
         self.assertFalse(view_executable.execute_called)
+
+    def test_rename_item_renames_connection_and_dag_edges(self):
+        project = self.toolbox.project()
+        source_name = "source"
+        destination_name = "destination"
+        add_view(project, source_name)
+        add_view(project, destination_name)
+        project.add_connection(Connection(source_name, "left", destination_name, "right"))
+        source_item = project.get_item(source_name)
+        destination_item = project.get_item(destination_name)
+        source_item.rename("renamed source")
+        self.assertEqual(project.connections, [Connection("renamed source", "left", destination_name, "right")])
 
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""

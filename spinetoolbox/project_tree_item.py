@@ -174,7 +174,7 @@ class LeafProjectTreeItem(BaseProjectTreeItem):
         """
         Args:
             project_item (ProjectItem): the real project item this item represents
-            toolbox (ToobloxUI): a toolbox instance
+            toolbox (ToolboxUI): a toolbox instance
         """
         super().__init__(project_item.name, project_item.description)
         self._project_item = project_item

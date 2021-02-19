@@ -382,7 +382,7 @@ class ProjectItem(MetaObject):
         Args:
             new_name(str): New name
         """
-        self._project.dag_handler.rename_node(self.name, new_name)
+        self._project.item_renamed(self.name, new_name)
         self.set_name(new_name)
         self.data_dir = os.path.join(self._project.items_dir, shorten(new_name))
         if self._active:

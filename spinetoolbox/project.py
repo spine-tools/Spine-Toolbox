@@ -182,6 +182,17 @@ class SpineToolboxProject(MetaObject):
         for connection in map(Connection.from_dict, connection_dicts):
             self.add_connection(connection)
 
+    def get_item(self, name):
+        """Returns project item.
+
+        Args:
+            name (str): item's name
+
+        Returns:
+            ProjectItem: project item
+        """
+        return self._project_item_model.get_item(name).project_item
+
     def add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.
         """
@@ -262,6 +273,20 @@ class SpineToolboxProject(MetaObject):
         if set_selected:
             item = list(project_tree_items)[-1]
             self.set_item_selected(item)
+
+    def item_renamed(self, previous_name, new_name):
+        """Updates connections after project item has been renamed.
+
+         Args:
+             previous_name (str): item's previous name
+             new_name (str): item's new name
+         """
+        self.dag_handler.rename_node(previous_name, new_name)
+        for connection in self._connections:
+            if connection.source == previous_name:
+                connection.source = new_name
+            if connection.destination == previous_name:
+                connection.destination = new_name
 
     @property
     def connections(self):
