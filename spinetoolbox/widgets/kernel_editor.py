@@ -25,7 +25,6 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QI
 from jupyter_client.kernelspec import find_kernel_specs
 from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable_from_path
 from spinetoolbox.execution_managers import QProcessExecutionManager
-from spinetoolbox.widgets.notification import Notification, NotificationStack
 from spinetoolbox.helpers import (
     open_url,
     busy_effect,
@@ -65,7 +64,6 @@ class KernelEditor(QDialog):
         self._logger = LoggerInterface()
         self.ui = kernel_editor_dialog.Ui_Dialog()
         self.ui.setupUi(self)
-        self.notification_stack = NotificationStack(self)
         self.kernel_list_model = QStandardItemModel()
         self._kernel_list_context_menu = QMenu(self)
         self.selected_kernel = None
@@ -224,16 +222,16 @@ class KernelEditor(QDialog):
         d = current.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
         kernel_json = os.path.join(d, "kernel.json")
         if not os.path.exists(kernel_json):
-            self.notification_stack.push(f"Path {kernel_json} does not exist")
+            self._logger.msg_error.emit(f"Path {kernel_json} does not exist")
             return
         if os.stat(kernel_json).st_size == 0:
-            self.notification_stack.push(f"{kernel_json} is empty")
+            self._logger.msg_error.emit(f"{kernel_json} is empty")
             return
         with open(kernel_json, "r") as fh:
             try:
                 json.load(fh)
             except json.decoder.JSONDecodeError:
-                self.notification_stack.push(f"Error in kernel.json file. Invalid JSON.")
+                self._logger.msg_error.emit("Error in kernel.json file. Invalid JSON.")
                 return
 
     def find_column(self, label):
@@ -258,7 +256,7 @@ class KernelEditor(QDialog):
         prgm = self.ui.lineEdit_python_interpreter.text()
         if self._ipykernel_install_failed:
             # Makes sure that there's no never-ending loop if ipykernel installation fails for some reason
-            self.notification_stack.push(f"Installing package iPyKernel for {prgm} failed. Please install it manually.")
+            self._logger.msg_error.emit(f"Installing package iPyKernel for {prgm} failed. Please install it manually.")
             self._ipykernel_install_failed = False
             return
         kernel_name = self.ui.lineEdit_python_kernel_name.text()
@@ -342,11 +340,10 @@ class KernelEditor(QDialog):
         self._install_kernel_process.deleteLater()
         self._install_kernel_process = None
         if retval != 0:
-            self.notification_stack.push("Installing kernel specs failed. Please install them manually.")
+            self._logger.msg_error.emit("Installing kernel specs failed. Please install them manually.")
             self._logger.msg_error.emit("Failed")
             return
         self._logger.msg_success.emit("New kernel installed")
-        self.notification_stack.push("New kernel installed")
         self.populate_kernel_model()
         self.ui.tableView_kernel_list.resizeColumnsToContents()
 
@@ -364,14 +361,14 @@ class KernelEditor(QDialog):
         """
         if prgm.strip() == "":
             if python_or_julia == "python":
-                self.notification_stack.push("Python interpreter missing")
+                self._logger.msg_error.emit("Python interpreter missing")
             else:
-                self.notification_stack.push("Julia executable missing")
+                self._logger.msg_error.emit("Julia executable missing")
             return False
         if not file_is_valid(self, prgm, "Invalid Python Interpreter", extra_check=python_or_julia):
             return False
         if not kernel_name:
-            self.notification_stack.push("Kernel name missing")
+            self._logger.msg_error.emit("Kernel name missing")
             return False
         name_taken = False
         display_name_taken = False
@@ -386,7 +383,7 @@ class KernelEditor(QDialog):
                 display_name_taken = True
         if display_name_taken:
             # This now terminates the whole kernel making if display name is taken. We could just overwrite the kernel.
-            self.notification_stack.push(
+            self._logger.msg_error.emit(
                 f"Display name {display_name} already exists." f"Please provide a new name or remove the other kernel."
             )
             return False
@@ -619,7 +616,7 @@ class KernelEditor(QDialog):
             # noinspection PyCallByClass, PyArgumentList
             QMessageBox.warning(self, "Removing kernel failed", msg)
             return
-        notification = Notification(self, f"kernel {name} removed")
+        self._logger.msg.emit(f"kernel {name} removed")
         notification.show()
         self.populate_kernel_model()
         self.ui.tableView_kernel_list.resizeColumnsToContents()
@@ -687,7 +684,6 @@ class KernelEditor(QDialog):
             python_path (str): Full path to selected Python interpreter
             package_name (str): Package name to install using pip
         """
-        self.notification_stack.push(f"Installing ipykernel into {python_path}")
         self._logger.msg.emit(f"Installing ipykernel into {python_path}")
         args = list()
         args.append("-m")
@@ -713,9 +709,8 @@ class KernelEditor(QDialog):
             self._ipykernel_install_failed = True
             self._logger.msg_error.emit("Failed")
         else:
-            self.notification_stack.push("ipykernel installation succeeded")
             self._ipykernel_install_failed = False
-            self._logger.msg_success.emit("Done")
+            self._logger.msg_success.emit("ipykernel installation succeeded")
         self.make_python_kernel()  # Try installing kernel specs now
 
     @Slot(bool)
@@ -778,17 +773,15 @@ class KernelEditor(QDialog):
         exec_mngr = QProcessExecutionManager(self._logger, program, args, silent=True)
         exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=8000):
-            self.notification_stack.push(
+            self._logger.msg_error.emit(
                 "Couldn't start Julia to check IJulia status. "
                 "Please make sure that Julia {0} is correctly installed and try again.".format(program)
             )
             self._logger.msg_error.emit("Failed")
             return 0
         if exec_mngr.process_output == "True":
-            self.notification_stack.push("IJulia is installed")
             self._logger.msg.emit("IJulia is installed")
             return 1
-        self.notification_stack.push("IJulia is not installed")
         self._logger.msg_warning.emit("IJulia is not installed")
         return 2
 
@@ -801,13 +794,12 @@ class KernelEditor(QDialog):
             project (str): Julia project (e.g. dir path or '@.', or '.')
         """
         self._logger.msg.emit(f"Installing IJulia for project {project}")
+        self._logger.msg.emit("Depending on your system, this process can take a few minutes...")
         args = list()
         args.append(f"--project={project}")
         args.append("-e")
         args.append("try using Pkg catch; end; Pkg.add(ARGS[1])")
         args.append("IJulia")
-        self.notification_stack.push("Installing IJulia")
-        self.notification_stack.push("Depending on your system, this process can take a few minutes...")
         self._install_ijulia_process = QProcessExecutionManager(self._logger, julia, args)
         self._install_ijulia_process.execution_finished.connect(self.handle_ijulia_install_finished)
         self._install_ijulia_process.start_execution()
@@ -824,12 +816,10 @@ class KernelEditor(QDialog):
         self._install_ijulia_process.deleteLater()
         self._install_ijulia_process = None
         if ret != 0:
-            self.notification_stack.push("Installing IJulia failed. Please try again later.")
-            self._logger.msg_error.emit("Failed")
+            self._logger.msg_error.emit("Installing IJulia failed. Please try again later.")
             self._ready_to_install_kernel = False
             return
-        self.notification_stack.push("IJulia installed")
-        self._logger.msg_success.emit("Done")
+        self._logger.msg_success.emit("IJulia installed")
         self._ready_to_install_kernel = True
         self.make_julia_kernel()
 
@@ -837,13 +827,12 @@ class KernelEditor(QDialog):
     def start_ijulia_rebuild_process(self, program, project):
         """Starts rebuilding IJulia."""
         self._logger.msg.emit("Rebuilding IJulia")
+        self._logger.msg.emit("Depending on your system, this process can take a few minutes...")
         args = list()
         args.append(f"--project={project}")
         args.append("-e")
         args.append("try using Pkg catch; end; Pkg.build(ARGS[1])")
         args.append("IJulia")
-        self.notification_stack.push("Rebuilding IJulia")
-        self.notification_stack.push("Depending on your system, this process can take a few minutes...")
         self._rebuild_ijulia_process = QProcessExecutionManager(self._logger, program, args, semisilent=True)
         self._rebuild_ijulia_process.execution_finished.connect(self.handle_ijulia_rebuild_finished)
         self._rebuild_ijulia_process.start_execution()
@@ -860,12 +849,10 @@ class KernelEditor(QDialog):
         self._rebuild_ijulia_process.deleteLater()
         self._rebuild_ijulia_process = None
         if ret != 0:
-            self.notification_stack.push("Rebuilding IJulia failed. Please try again later.")
+            self._logger.msg_error.emit("Rebuilding IJulia failed. Please try again later.")
             self._ready_to_install_kernel = False
-            self._logger.msg_error.emit("Failed")
             return
-        self.notification_stack.push("IJulia rebuilt")
-        self._logger.msg_success.emit("Done")
+        self._logger.msg_success.emit("IJulia rebuilt")
         self._ready_to_install_kernel = True
         self.make_julia_kernel()
 
@@ -884,7 +871,6 @@ class KernelEditor(QDialog):
         args.append("using IJulia; installkernel(ARGS[1], ARGS[2])")
         args.append(f"{kernel_name}")
         args.append(f"--project={project}")
-        self.notification_stack.push(f"Installing kernel {kernel_name}")
         self._install_julia_kernel_process = QProcessExecutionManager(self._logger, program, args, semisilent=True)
         self._install_julia_kernel_process.execution_finished.connect(self.handle_installkernel_process_finished)
         self._install_julia_kernel_process.start_execution()
@@ -902,10 +888,8 @@ class KernelEditor(QDialog):
         self._install_julia_kernel_process = None
         self._ready_to_install_kernel = False
         if retval != 0:
-            self.notification_stack.push("Installing kernel failed")
-            self._logger.msg_error.emit("Failed")
+            self._logger.msg_error.emit("Installing kernel failed")
         else:
-            self.notification_stack.push("New kernel installed")
             self._logger.msg_success.emit("New kernel installed")
         self.populate_kernel_model()
         self.ui.tableView_kernel_list.resizeColumnsToContents()
