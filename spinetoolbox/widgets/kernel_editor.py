@@ -188,8 +188,6 @@ class KernelEditor(QDialog):
         project = self.ui.lineEdit_julia_project.text().strip()
         if kernel_name == "":
             kernel_name = "NA"
-        if project == "":
-            project = "@."
         tip = f"IJulia.installkernel({kernel_name}, --project={project})"
         self.ui.label_julia_cmd.setToolTip(tip)
 
@@ -727,11 +725,8 @@ class KernelEditor(QDialog):
         with the same name if this is ok by user."""
         julia = self.ui.lineEdit_julia_executable.text()
         project = self.ui.lineEdit_julia_project.text()
-        if project == "":
-            project = "@."
-        else:
-            if not dir_is_valid(self, project, "Invalid Julia Project directory"):
-                return
+        if not dir_is_valid(self, project, "Invalid Julia Project directory"):
+            return
         kernel_name = self.ui.lineEdit_julia_kernel_name.text()
         if not self.check_options(julia, kernel_name, kernel_name, "julia"):  # Julia display name cannot be chosen
             return
