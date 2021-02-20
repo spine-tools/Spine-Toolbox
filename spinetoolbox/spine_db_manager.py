@@ -382,13 +382,14 @@ class SpineDBManager(QObject):
             return QMessageBox.Discard
         if commit_at_exit == 1:  # Default
             # Show message box
-            msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
+            parent = qApp.activeWindow()  # pylint: disable=undefined-variable
+            msg = QMessageBox(parent)
             msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Commit Pending Changes")
+            msg.setWindowTitle(parent.windowTitle())
             msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
             msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            msg.button(QMessageBox.Save).setText("Commit And Close ")
-            msg.button(QMessageBox.Discard).setText("Discard Changes And Close")
+            msg.button(QMessageBox.Save).setText("Commit and close ")
+            msg.button(QMessageBox.Discard).setText("Discard changes and close")
             chkbox = QCheckBox()
             chkbox.setText("Do not ask me again")
             msg.setCheckBox(chkbox)

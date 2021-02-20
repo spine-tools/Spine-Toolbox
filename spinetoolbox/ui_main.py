@@ -80,12 +80,7 @@ from .helpers import (
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
-from .project_commands import (
-    AddSpecificationCommand,
-    RemoveSpecificationCommand,
-    RenameProjectItemCommand,
-    UpdateSpecificationCommand,
-)
+from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, RenameProjectItemCommand
 from .configuration_assistants import spine_opt
 
 
@@ -893,9 +888,15 @@ class ToolboxUI(QMainWindow):
             item_factory.repair_specification(self, specification)
 
     def _save_specificiation_file(self, specification):
+        """Saves the given spec. If the spec doesn't have the ``definition_file_path`` attribute set,
+        prompts the user to select a path.
+
+        Args:
+            specification (ProjectItemSpecification)
+        """
         if specification.definition_file_path:
             return specification.save()
-        # Determine a candidate definition file path
+        # Determine a candidate definition file path *inside* the project folder, for relocatability...
         specs_dir = self.project().specs_dir
         specs_type_dir = os.path.join(specs_dir, specification.item_type)
         try:
@@ -910,15 +911,62 @@ class ToolboxUI(QMainWindow):
         return self._prompt_to_save_specification_file(specification, candidate_def_file_path)
 
     def _prompt_to_save_specification_file(self, specification, candidate_def_file_path):
+        """Shows a dialog for the user to select a path to save given spec.
+
+        Args:
+            specification (ProjectItemSpecification): The spec
+            candidate_def_file_path (str): A proposed location.
+
+        Returns:
+            bool: True if the spec is saved successfully, False otherwise
+        """
         answer = QFileDialog.getSaveFileName(
             self, f"Save {specification.item_type} specification", candidate_def_file_path, "JSON (*.json)"
         )
         if not answer[0]:  # Cancel button clicked
             return False
-        specification.definition_file_path = os.path.abspath(answer[0])
-        return specification.save()
+        definition_file_path = os.path.abspath(answer[0])
+        return self._do_save_specification(specification, definition_file_path)
+
+    def _do_save_specification(self, specification, new_def_file_path):
+        curr_def_file_norm_path = os.path.normcase(specification.definition_file_path)
+        if os.path.normcase(new_def_file_path) == curr_def_file_norm_path:
+            return True
+        specification.definition_file_path = new_def_file_path
+        if not specification.save():
+            return False
+        # Update spec path in project file. Moving the specification file doesn't dirty the project,
+        # so this is the ideal place to do this in fact...
+        config_file = self._project.config_file
+        try:
+            with open(config_file, "r+") as fh:
+                try:
+                    proj_dict = json.load(fh)
+                except json.decoder.JSONDecodeError:
+                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON.".format(config_file))
+                    return False
+                spec_paths = proj_dict["project"].get("specifications", {}).get(specification.item_type, [])
+                norm_path_index = {
+                    os.path.normcase(deserialize_path(path, self._project.project_dir)): i
+                    for i, path in enumerate(spec_paths)
+                }
+                i = norm_path_index.get(curr_def_file_norm_path)
+                if i is not None:
+                    # We found the current path in the project. This means that we need to update it.
+                    spec_paths[i] = serialize_path(new_def_file_path)
+                    json.dump(fh, proj_dict)
+        except OSError:
+            self.msg_error.emit("Project file <b>{0}</b> missing".format(config_file))
+            return False
+        return True
 
     def _emit_specification_saved(self, specification):
+        """Prints a message in the event log, saying that given spec was saved in a certain location,
+        together with a clickable link to change the location.
+
+        Args:
+            specification (ProjectItemSpecification)
+        """
         path = specification.definition_file_path
         self.msg_success.emit(
             f"Specification <b>{specification.name}</b> successfully saved as "
@@ -926,33 +974,42 @@ class ToolboxUI(QMainWindow):
             f"<a style='color:white;' href='change_spec_file.{specification.name}'><b>[change]</b></a>"
         )
 
-    def add_specification(self, specification):
-        """Pushes a new AddSpecificationCommand to the undo stack."""
-        if not self._save_specificiation_file(specification):
-            return
-        self._emit_specification_saved(specification)
-        row = self.specification_model.specification_row(specification.name)
-        if row >= 0:
-            if self.specification_model.specification(row) != specification:
-                button = QMessageBox.question(
-                    self,
-                    "Duplicate specification name",
-                    f"There's already a specification called <b>{specification.name}</b> in the current project.<br>"
-                    "Do you want to replace it?",
-                )
-                if button != QMessageBox.Yes:
-                    return
-            self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
-        else:
-            self.undo_stack.push(AddSpecificationCommand(self, specification))
+    def add_specification(self, specification, update_existing=False, widget=None):
+        """Adds given specification to the project if there's no one with the same name.
+        Otherwise it updates the existing one.
 
-    def update_specification(self, specification):
-        if not self._save_specificiation_file(specification):
-            return
-        self._emit_specification_saved(specification)
+        Args:
+            specification (ProjectItemSpecification)
+            update_existing (bool, optional): If True, updates a spec with the same in the project.
+                If False (the default), it complains instead.
+            widget (QWidget, optional): The specification editor widget that calls this method.
+                Used to parent the QMessageBox
+
+        Returns:
+            bool: True if successful, False if not.
+        """
         row = self.specification_model.specification_row(specification.name)
         if row >= 0:
-            self.undo_stack.push(UpdateSpecificationCommand(self, row, specification))
+            if not update_existing:
+                if widget is None:
+                    widget = self
+                QMessageBox.critical(
+                    widget,
+                    "Duplicate specification name",
+                    f"There's already a specification called <b>{specification.name}</b> in the current project.<br>",
+                )
+                return False
+            current_specification = self.specification_model.specification(row)
+            if current_specification.is_equivalent(specification):
+                # Nothing changed
+                return True
+            specification.definition_file_path = current_specification.definition_file_path
+            return self.update_specification(row, specification)
+        if not self._save_specificiation_file(specification):
+            return False
+        self._emit_specification_saved(specification)
+        self.undo_stack.push(AddSpecificationCommand(self, specification))
+        return True
 
     def do_add_specification(self, specification, row=None):
         """Adds a ProjectItemSpecification instance to project.
@@ -963,16 +1020,20 @@ class ToolboxUI(QMainWindow):
         self.specification_model.insertRow(specification, row)
         self.msg_success.emit("Specification <b>{0}</b> added to project".format(specification.name))
 
-    def do_update_specification(self, row, specification):
-        """Updates a specification and refreshes all items that use it.
+    def update_specification(self, row, specification):
+        """Saves the given spec to disk, then sets it for the given row in the model,
+        then refreshes the spec in all items that use it.
 
         Args:
             row (int): Row of tool specification in ProjectItemSpecFactoryModel
             specification (ProjectItemSpecification): An updated specification
         """
+        if not self._save_specificiation_file(specification):
+            return False
+        self._emit_specification_saved(specification)
         if not self.specification_model.update_specification(row, specification):
             self.msg_error.emit(f"Unable to update specification <b>{specification.name}</b>")
-            return
+            return False
         self.msg_success.emit(f"Specification <b>{specification.name}</b> successfully updated")
         for item in self.project_item_model.items():
             project_item = item.project_item
@@ -992,37 +1053,7 @@ class ToolboxUI(QMainWindow):
                     f"of type <b>{project_item.item_type()}</b>"
                 )
                 project_item.do_set_specification(None)
-
-    def undo_update_specification(self, row):
-        """Reverts a specification update and refreshes all items that use it.
-
-        Args:
-            row (int): Row of item specification in ProjectItemSpecFactoryModel
-        """
-        if not self.specification_model.undo_update_specification(row):
-            self.msg_error.emit(f"Unable to update specification at row <b>{row}</b>")
-            return
-        specification = self.specification_model.specification(row)
-        self.msg_success.emit(f"Specification <b>{specification.name}</b> successfully updated")
-        for item in self.project_item_model.items():
-            project_item = item.project_item
-            if project_item.undo_specification == specification:
-                project_item.undo_set_specification()
-                self.msg_success.emit(
-                    f"Specification <b>{specification.name}</b> successfully updated "
-                    f"in Item <b>{project_item.name}</b>"
-                )
-
-    def _get_specific_items(self, specification):
-        """Yields project items with given specification.
-
-        Args:
-            specification (ProjectItemSpecification)
-        """
-        for item in self.project_item_model.items(specification.item_category):
-            project_item = item.project_item
-            if project_item.specification() == specification:
-                yield project_item
+        return True
 
     @Slot(bool)
     def remove_selected_specification(self, checked=False):
@@ -1041,6 +1072,17 @@ class ToolboxUI(QMainWindow):
 
     def remove_specification(self, row, ask_verification=True):
         self.undo_stack.push(RemoveSpecificationCommand(self, row, ask_verification=ask_verification))
+
+    def _get_items_with_spec(self, specification):
+        """Yields project items with given specification.
+
+        Args:
+            specification (ProjectItemSpecification)
+        """
+        for item in self.project_item_model.items(specification.item_category):
+            project_item = item.project_item
+            if project_item.specification() == specification:
+                yield project_item
 
     def do_remove_specification(self, row, ask_verification=True):
         """Removes specification from ProjectItemSpecFactoryModel.
@@ -1064,7 +1106,7 @@ class ToolboxUI(QMainWindow):
             answer = message_box.exec_()
             if answer != QMessageBox.Ok:
                 return
-        items_with_removed_spec = list(self._get_specific_items(specification))
+        items_with_removed_spec = list(self._get_items_with_spec(specification))
         if not self.specification_model.removeRow(row):
             self.msg_error.emit("Error in removing specification <b>{0}</b>".format(specification.name))
             return

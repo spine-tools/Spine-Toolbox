@@ -25,13 +25,11 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
     def __init__(self, icons):
         super().__init__()
         self._specs = list()
-        self._undo_specs = dict()
         self._icons = icons
 
     def clear(self):
         self.beginResetModel()
         self._specs = list()
-        self._undo_specs = dict()
         self.endResetModel()
 
     def rowCount(self, parent=None):
@@ -125,22 +123,11 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
             Boolean value depending on the result of the operation
         """
         try:
-            undo_spec = self._specs[row]
-        except IndexError:
-            return False
-        else:
-            self._undo_specs[row] = undo_spec
             self._specs[row] = spec
             self.dataChanged.emit(self.index(row), self.index(row))
             return True
-
-    def undo_update_specification(self, row):
-        undo_spec = self._undo_specs.pop(row, None)
-        if undo_spec is None:
+        except IndexError:
             return False
-        self._specs[row] = undo_spec
-        self.dataChanged.emit(self.index(row), self.index(row))
-        return True
 
     def specification(self, row):
         """Returns spec specification on given row.

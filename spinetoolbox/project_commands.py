@@ -338,6 +338,8 @@ class AddSpecificationCommand(SpineToolboxCommand):
 
     def undo(self):
         row = self.toolbox.specification_model.specification_row(self.specification.name)
+        # Store the current spec for eventual `redo()`
+        self.specification = self.toolbox.specification_model.specification(row)
         self.toolbox.do_remove_specification(row, ask_verification=False)
 
 
@@ -363,25 +365,3 @@ class RemoveSpecificationCommand(SpineToolboxCommand):
 
     def undo(self):
         self.toolbox.do_add_specification(self.specification, row=self.row)
-
-
-class UpdateSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, toolbox, row, specification):
-        """Command to update item specs in a project.
-
-        Args:
-            toolbox (ToolboxUI): the toolbox
-            row (int): the row in the ProjectItemSpecPaletteModel of the spec to be replaced
-            specification (ProjectItemSpecification): the updated spec
-        """
-        super().__init__()
-        self.toolbox = toolbox
-        self.row = row
-        self.redo_specification = specification
-        self.setText(f"update specification {specification.name}")
-
-    def redo(self):
-        self.toolbox.do_update_specification(self.row, self.redo_specification)
-
-    def undo(self):
-        self.toolbox.undo_update_specification(self.row)
