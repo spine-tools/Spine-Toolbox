@@ -165,7 +165,7 @@ Setting up project
 
 #. Repeat the above procedure to create a Data Store called ‘output’.
 
-#. Create a database for the ‘input‘ Data Store.
+#. Create a database for the ‘input‘ Data Store:
 
    #. Select the `input` Data Store item in the *Design View* to show the *Data Store Properties* 
       (on the right side of the window, usually).
@@ -190,7 +190,7 @@ Setting up project
    .. image:: img/case_study_a5_item_connections.png
       :align: center
 
-#. Setup the arguments for the `SpineOpt` Tool.
+#. Setup the arguments for the `SpineOpt` Tool:
 
    #. Select the `SpineOpt` Tool to show the *Tool Properties* (on the right side of the window, usually).
       You should see two elements listed under *Available resources*, ``{db_url@input}`` and ``{db_url@output}``.
