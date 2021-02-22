@@ -104,20 +104,15 @@ Installing requirements
    <https://github.com/Spine-project/Spine-Toolbox/>`_ and `SpineOpt 
    <https://github.com/Spine-project/SpineOpt.jl>`_ development versions.
 
-#. Install Spine Toolbox as described `here 
-   <https://github.com/Spine-project/Spine-Toolbox#installing-spine-toolbox>`_.
-
-#. Download and install Julia 1.2 (or greater) as described `here <https://julialang.org/downloads/>`_.
-
-#. Install SpineOpt: Launch Spine Toolbox and select
-   **File -> Tool configuration assistants... -> SpineOpt.jl** from the main menu.
+Follow the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_ 
+to install Spine Toolbox and SpineOpt in your system.
 
 
 Creating a new project
 ======================
 
 Each Spine Toolbox project resides in its own directory, where the user 
-can store data, programming scripts and other material needed for the project. 
+can store data, programming scripts and other necessary material. 
 The Toolbox application also creates its own special subdirectory `.spinetoolbox`, 
 for project settings, etc.
 
@@ -168,7 +163,16 @@ Setting up project
    *Design View*. This will open the *Add Data Store* dialog. 
    Type ‘input’ as the Data Store name and click **Ok**.
 
-#. Repeat the above operation to create a Data Store called ‘output’.
+#. Repeat the above procedure to create a Data Store called ‘output’.
+
+#. Create a database for the ‘input‘ Data Store.
+
+   #. Select the `input` Data Store item in the *Design View* to show the *Data Store Properties* 
+      (on the right side of the window, usually).
+
+   #. In *Data Store Properties*, select the *sqlite* dialect at the top, and hit **New Spine db**.
+
+#. Repeat the above procedure to create a database for the ‘output’ Data Store.
 
 #. Click on the small arrow next to the Tool icon |tool_icon| and drag the ‘SpineOpt’
    item from the drop-down menu into the *Design View*.
@@ -186,20 +190,24 @@ Setting up project
    .. image:: img/case_study_a5_item_connections.png
       :align: center
 
-#. Select the `SpineOpt` Tool to show the *Tool Properties* (on the right side of the window, usually).
-   You should see two elements listed under *Available resources*, ``{db_url@input}`` and ``{db_url@output}``.
+#. Setup the arguments for the `SpineOpt` Tool.
 
-#. Drag the first resource, ``{db_url@input}``, and drop it in *Command line arguments*,
-   just as shown in the image below.
+   #. Select the `SpineOpt` Tool to show the *Tool Properties* (on the right side of the window, usually).
+      You should see two elements listed under *Available resources*, ``{db_url@input}`` and ``{db_url@output}``.
 
-   .. image:: img/case_study_a5_spine_opt_tool_properties.png
-      :align: center
+   #. Drag the first resource, ``{db_url@input}``, and drop it in *Command line arguments*,
+      just as shown in the image below.
 
-#. Drag the second resource, ``{db_url@output}``, and drop it right below the previous one.
-   The panel should be now looking like this:
+      .. image:: img/case_study_a5_spine_opt_tool_properties.png
+         :align: center
 
-   .. image:: img/case_study_a5_spine_opt_tool_properties_cmdline_args.png
-      :align: center
+   #. Drag the second resource, ``{db_url@output}``, and drop it right below the previous one.
+      The panel should be now looking like this:
+
+      .. image:: img/case_study_a5_spine_opt_tool_properties_cmdline_args.png
+         :align: center
+
+   #. Double-check that the *order* of the arguments is correct: first, ``{db_url@input}``, and second, ``{db_url@output}``.
 
 #. From the main menu, select **File -> Save project**.
 
@@ -208,20 +216,16 @@ Setting up project
 Entering input data
 ===================
 
-Creating input database
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Follow the steps below to create a new Spine database for SpineOpt in the 
-`input` Data Store:
+Importing the SpineOpt database template
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. Download `the SpineOpt database template 
-   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/data/spineopt_template.json>`_.
+   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/data/spineopt_template.json>`_
+   (right click on the link, then select *Save link as...*)
 
 #. Select the `input` Data Store item in the *Design View*.
 
-#. Go to *Data Store Properties* and hit **New Spine db**.
-
-#. Still in *Data Store Properties*, click **Open editor**. This will open 
+#. Go to *Data Store Properties* and hit **Open editor**. This will open 
    the newly created database in the *Spine DB editor*, looking similar to this:
 
    .. image:: img/case_study_a5_spine_db_editor_empty.png
@@ -232,7 +236,7 @@ Follow the steps below to create a new Spine database for SpineOpt in the
    .. note:: The *Spine DB editor* is a dedicated interface within Spine Toolbox
       for visualizing and managing Spine databases.
 
-#. Press **Ctrl + F** to display the main menu, select **File -> Import...**,
+#. Press **Alt + F** to display the main menu, select **File -> Import...**,
    and then select the template file you previously downloaded. 
    The contents of that file will be imported into the current database,
    and you should then see classes like ‘commodity’, ‘connection’ and ‘model’ under 
