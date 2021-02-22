@@ -32,8 +32,7 @@ run `spinetoolbox.exe`.
 
 ## Development version
 
-The development version of Spine Toolbox is in the master branch on this repository.
-You can use it to get all the latest features and bug-fixes.
+The development version of Spine Toolbox is in the master branch on this repository, and it has all the latest features and bug-fixes.
 Please note that this version has passed automated testing, but has not been completely manually tested.
 
 ### Installation
