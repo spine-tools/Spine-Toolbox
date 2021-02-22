@@ -76,6 +76,7 @@ class SpineToolboxProject(MetaObject):
         self.specs_dir = None  # Full path to specs directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
         self._toolbox.undo_stack.clear()
+        p_dir = os.path.abspath(p_dir)
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit("Creating project directory structure in <b>{0}</b> failed".format(p_dir))
 

@@ -130,8 +130,8 @@ class ExecuteProject(QObject):
         Returns:
             _Status: status code
         """
-        project_dir = self._args.project
-        project_file_path = pathlib.Path(project_dir, ".spinetoolbox", "project.json").resolve()
+        project_dir = pathlib.Path(self._args.project).resolve()
+        project_file_path = project_dir / ".spinetoolbox" / "project.json"
         try:
             with project_file_path.open() as project_file:
                 try:
