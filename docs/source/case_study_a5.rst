@@ -208,6 +208,7 @@ Setting up project
          :align: center
 
    #. Double-check that the *order* of the arguments is correct: first, ``{db_url@input}``, and second, ``{db_url@output}``.
+      (You can drag and drop to reorganize them if needed.)
 
 #. From the main menu, select **File -> Save project**.
 
