@@ -22,11 +22,11 @@ import logging
 from PySide2.QtCore import Slot, Signal, QTimer
 from PySide2.QtWidgets import QMessageBox
 from spine_engine.project_item.connection import Connection
+from spine_engine.utils.helpers import shorten
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.helpers import create_dir, inverted, erase_dir, make_settings_dict_for_engine
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME, INVALID_CHARS
 from .dag_handler import DirectedGraphHandler
-from .metaobject import shorten
 from .project_tree_item import LeafProjectTreeItem
 from .project_commands import (
     SetProjectNameCommand,

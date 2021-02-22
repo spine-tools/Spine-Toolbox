@@ -23,7 +23,7 @@ from PySide2.QtCore import QVariantAnimation, QEventLoop
 from PySide2.QtWidgets import QApplication
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.connection import Connection
-from spinetoolbox.metaobject import shorten
+from spine_engine.utils.helpers import shorten
 from .mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
@@ -224,8 +224,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         data_store, data_store_executable = self._make_item(self.add_ds)
         data_connection, data_connection_executable = self._make_item(self.add_dc)
         view, view_executable = self._make_item(self.add_view)
-        self.toolbox.project().dag_handler.add_graph_edge(data_store.name, data_connection.name)
-        self.toolbox.project().dag_handler.add_graph_edge(data_connection.name, view.name)
+        self.toolbox.project().add_connection(Connection(data_store.name, "right", data_connection.name, "left"))
+        self.toolbox.project().add_connection(Connection(data_connection.name, "bottom", view.name, "top"))
         self.toolbox.project().set_item_selected(data_connection)
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
@@ -296,7 +296,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def _make_item(self, add_item_function):
         item_name = add_item_function()
         item = self.toolbox.project_item_model.get_item(item_name).project_item
-        item_executable = _MockExecutableItem(item_name, self.toolbox)
+        item_executable = _MockExecutableItem(item_name, self.toolbox.project().project_dir, self.toolbox)
         item.execution_item = mock.MagicMock(return_value=item_executable)
         animation = QVariantAnimation()
         animation.setDuration(0)
@@ -305,8 +305,8 @@ class TestSpineToolboxProject(unittest.TestCase):
 
 
 class _MockExecutableItem(ExecutableItemBase):
-    def __init__(self, name, logger):
-        super().__init__(name, logger)
+    def __init__(self, name, project_dir, logger):
+        super().__init__(name, project_dir, logger)
         self.execute_called = False
 
     @ExecutableItemBase.filter_id.setter
