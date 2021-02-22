@@ -44,7 +44,7 @@ from .graphics_items import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
-from .mvcmodels.project_item_factory_models import ProjectItemSpecFactoryModel, FilteredSpecFactoryModel
+from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
@@ -605,10 +605,10 @@ class ToolboxUI(QMainWindow):
 
     def init_specification_model(self):
         """Initializes specification model."""
-        self.filtered_spec_factory_models = {name: FilteredSpecFactoryModel(name) for name in self.item_factories}
+        self.filtered_spec_factory_models = {name: FilteredSpecificationModel(name) for name in self.item_factories}
         self.make_item_properties_uis()  # TODO: Why we need to do this *before* calling factory.icon()?
         factory_icons = {name: QIcon(factory.icon()) for name, factory in self.item_factories.items()}
-        self.specification_model = ProjectItemSpecFactoryModel(factory_icons)
+        self.specification_model = ProjectItemSpecificationModel(factory_icons)
         for model in self.filtered_spec_factory_models.values():
             model.setSourceModel(self.specification_model)
 
@@ -1025,7 +1025,7 @@ class ToolboxUI(QMainWindow):
         then refreshes the spec in all items that use it.
 
         Args:
-            row (int): Row of tool specification in ProjectItemSpecFactoryModel
+            row (int): Row of tool specification in ProjectItemSpecificationModel
             specification (ProjectItemSpecification): An updated specification
         """
         if not self._save_specificiation_file(specification):
@@ -1085,11 +1085,11 @@ class ToolboxUI(QMainWindow):
                 yield project_item
 
     def do_remove_specification(self, row, ask_verification=True):
-        """Removes specification from ProjectItemSpecFactoryModel.
+        """Removes specification from ProjectItemSpecificationModel.
         Removes also specifications from all items that use this specification.
 
         Args:
-            row (int): Row in ProjectItemSpecFactoryModel
+            row (int): Row in ProjectItemSpecificationModel
             ask_verification (bool): If True, displays a dialog box asking user to verify the removal
         """
         specification = self.specification_model.specification(row)
@@ -1170,7 +1170,7 @@ class ToolboxUI(QMainWindow):
         """Context menu for item specifications.
 
         Args:
-            ind (QModelIndex): In the ProjectItemSpecFactoryModel
+            ind (QModelIndex): In the ProjectItemSpecificationModel
             global_pos (QPoint): Mouse position
         """
         if not self.project():

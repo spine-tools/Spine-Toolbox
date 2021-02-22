@@ -19,7 +19,7 @@ Contains a class for storing Tool specifications.
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel
 
 
-class ProjectItemSpecFactoryModel(QAbstractListModel):
+class ProjectItemSpecificationModel(QAbstractListModel):
     """Class to store specs that are available in a project e.g. GAMS or Julia models."""
 
     def __init__(self, icons):
@@ -171,7 +171,7 @@ class ProjectItemSpecFactoryModel(QAbstractListModel):
         return self.createIndex(row, 0)
 
 
-class FilteredSpecFactoryModel(QSortFilterProxyModel):
+class FilteredSpecificationModel(QSortFilterProxyModel):
     def __init__(self, item_type):
         super().__init__()
         self.item_type = item_type
