@@ -45,6 +45,7 @@ from PySide2.QtGui import (
     QKeySequence,
     QTextCursor,
     QPalette,
+    QColor,
 )
 import spine_engine
 from .config import REQUIRED_SPINE_ENGINE_VERSION
@@ -1029,3 +1030,10 @@ def make_settings_dict_for_engine(app_settings):
         settings[f"appSettings/{key}"] = value
     app_settings.endGroup()
     return settings
+
+def color_from_index(i, count, base_hue=0.0, saturation=1.0):
+    golden_ratio = 0.618033988749895
+    h = golden_ratio * (360 / count) * i
+    h = ((base_hue + h) % 360) / 360
+    # return QColor.fromHsvF(217 / 360, 0.60, 1.0, 1.0)
+    return QColor.fromHsvF(h, saturation, 1.0, 1.0)
