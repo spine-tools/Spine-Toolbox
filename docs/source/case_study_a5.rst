@@ -360,7 +360,7 @@ Creating objects
      Selsfors_lower
      Kvistforsen_lower
 
-#. Next, create the following objects:
+#. Next, create the following objects (all names in **lower-case**):
 
    a. ``instance`` of class ``model``.
 
@@ -376,12 +376,15 @@ Creating objects
 
    g. ``realization`` of class ``stochastic_scenario``.
 
-#. Finally, create the following objects to get results back from Spine Opt:
+#. Finally, create the following objects to get results back from Spine Opt
+   (again, all names in **lower-case**):
 
    a. ``my_report`` of class ``report``.
 
    b. ``unit_flow``, ``connection_flow``, and ``node_state`` of class ``output``.
 
+
+.. note:: To modify an object after you enter it, right click on it and select **Edit...* from the context menu. 
 
 
 .. _Specifying object parameter values:
