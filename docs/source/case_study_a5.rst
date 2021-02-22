@@ -249,7 +249,7 @@ Importing the SpineOpt database template
 Creating objects
 ~~~~~~~~~~~~~~~~
 
-#. To add power plants to the model, create objects of class ``unit`` as follows:
+#. Add power plants to the model. Create objects of class ``unit`` as follows:
 
    a. Select the list of plant names from the text-box below
       and copy it to the clipboard (**Ctrl+C**):
@@ -290,7 +290,7 @@ Creating objects
    f. Commit changes with the message ‘Add power plants’.
 
 
-#. To add discharge and spillway connections, create objects of class ``connection``
+#. Add discharge and spillway connections. Create objects of class ``connection``
    with the following names:
    ::
 
@@ -325,7 +325,7 @@ Creating objects
      Selsfors_to_Kvistforsen_spill
      Kvistforsen_to_downstream_spill
 
-#. To add water nodes, create objects of class ``node`` with the following names:
+#. Add water nodes. Create objects of class ``node`` with the following names:
 
    ::
 
@@ -393,7 +393,7 @@ Specifying object parameter values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-#. To specify the general behaviour of our model, enter ``model`` parameter values as follows:
+#. Specify the general behaviour of our model. Enter ``model`` parameter values as follows:
 
    a. Select the model parameter value data from the text-box below
       and copy it to the clipboard (**Ctrl+C**):
@@ -414,11 +414,11 @@ Specifying object parameter values
       .. image:: img/case_study_a5_model_parameters.png
             :align: center
 
-#. To specify the resolution of our temporal block, repeat the same procedure with the data below:
+#. Specify the resolution of our temporal block. Repeat the same procedure with the data below:
 
    .. literalinclude:: data/cs-a5-temporal_block-parameter-values.txt
 
-#. To specify the behaviour of all system nodes, repeat the same procedure with the data below, where:
+#. Specify the behaviour of all system nodes. Repeat the same procedure with the data below, where:
 
    a. ``demand`` represents the local inflow (negative in most cases).
    b. ``fix_node_state`` represents fixed reservoir levels (at the beginning and the end).
@@ -438,9 +438,9 @@ Establishing relationships
    target cells and press **Ctrl+V**.
 
 
-#. To establish that (i) power plant units receive water from 
+#. Establish that (i) power plant units receive water from 
    the station's upper node, and (ii) the electricity load unit takes electricity from the common
-   electricity node, create relationships of class ``unit__from_node`` as follows:
+   electricity node. Create relationships of class ``unit__from_node`` as follows:
 
    a. Select the list of unit and node names from the text-box below
       and copy it to the clipboard (**Ctrl+C**).
@@ -465,9 +465,9 @@ Establishing relationships
    f. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.
       Enter ‘Add from nodes of power plants‘ as the commit message and click **Commit**.
 
-#. To establish that (i) power plant units release water to the station's lower node,
-   and (ii) power plant units inject electricity to the common electricity node,
-   create relationships of class ``unit__to_node`` with the following data:
+#. Establish that (i) power plant units release water to the station's lower node,
+   and (ii) power plant units inject electricity to the common electricity node.
+   Repeate the above procedure to create relationships of class ``unit__to_node`` with the following data:
 
    .. literalinclude:: data/cs-a5-unit__to_node.txt
 
@@ -478,14 +478,15 @@ Establishing relationships
       for another node. And for this purpose, we use a relationship parameter value on the ``unit__node__node``
       relationships (see :ref:`Specifying relationship parameter values`).
 
-#. To establish that (i) discharge connections take water from the *lower* node of the upstream station,
-   and (ii) spillway connections take water from the *upper* node of the upstream station,
-   create the following relationships of class ``connection__from_node``:
+#. Establish that (i) discharge connections take water from the *lower* node of the upstream station,
+   and (ii) spillway connections take water from the *upper* node of the upstream station.
+   Repeat the procedure to create relationships of class ``connection__from_node`` with the following data:
 
    .. literalinclude:: data/cs-a5-connection__from_node.txt
 
-#. To establish that both discharge and spillway connections release water onto 
-   the upper node of the downstream station, create the following ``connection__to_node`` relationships:
+#. Establish that both discharge and spillway connections release water onto 
+   the upper node of the downstream station.
+   Repeat the procedure to create ``connection__to_node`` relationships with the following data:
 
    .. literalinclude:: data/cs-a5-connection__to_node.txt
 
@@ -497,19 +498,20 @@ Establishing relationships
       relationships (see :ref:`Specifying relationship parameter values`).
 
 
-#. To establish that water nodes balance water and the electricity node balances 
-   electricity, create ``node__commodity`` relationships between all upper and lower reservoir nodes 
+#. Establish that water nodes balance water and the electricity node balances 
+   electricity.
+   Repeat the procedure to create ``node__commodity`` relationships between all upper and lower reservoir nodes 
    and the ``water`` commodity, as well as between the ``electricity_node`` and ``electricity``.
 
    .. literalinclude:: data/cs-a5-node__commodity.txt
 
-#. Next, to establish that all nodes are balanced at each time slice in the one week horizon,
-   create relationships of class ``model__default_temporal_block`` between the model ``instance`` 
+#. Establish that all nodes are balanced at each time slice in the one week horizon.
+   Create relationships of class ``model__default_temporal_block`` between the model ``instance`` 
    and the temporal_block ``some_week``.
 
-#. To establish that this model is deterministic,
-   create a relationships of class ``model__default_stochastic_structure`` between the model ``instance`` 
-   and the temporal_block ``deterministic``, and a relationship of class ``stochastic_structure__stochastic_scenario``
+#. Establish that this model is deterministic.
+   Create a relationships of class ``model__default_stochastic_structure`` between the model ``instance`` 
+   and ``deterministic``, and a relationship of class ``stochastic_structure__stochastic_scenario``
    between ``deterministic`` and ``realization``.
 
 #. Finally, create one relationship of class ``report__output`` between ``my_report`` and each of
@@ -524,8 +526,9 @@ Specifying relationship parameter values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-#. To specify (i) the capacity of hydro power plants, 
-   and (ii) the variable operating cost of the electricity unit (equal to the negative electricity price), enter ``unit__from_node`` parameter values as follows:
+#. Specify (i) the capacity of hydro power plants, 
+   and (ii) the variable operating cost of the electricity unit (equal to the negative electricity price).
+   Enter ``unit__from_node`` parameter values as follows:
 
    a. Select the parameter value data from the text-box below
       and copy it to the clipboard (**Ctrl+C**):
@@ -543,20 +546,20 @@ Specifying relationship parameter values
       This will paste the parameter value data from the clipboard into the table.
 
 
-#. To specify the conversion ratio from water to electricity and from water to water
-   of different hydro power plants (the latter being equal to 1), repeat the same procedure with the data below:
+#. Specify the conversion ratio from water to electricity and from water to water
+   of different hydro power plants (the latter being equal to 1). Repeat the same procedure with the data below:
 
    .. literalinclude:: data/cs-a5-unit__node__node-relationship-parameter-values.txt
 
 
-#. To specify the average discharge and spillage in the first hours of the simulation,
-   repeat the same procedure with the data below:
+#. specify the average discharge and spillage in the first hours of the simulation.
+   Repeat the same procedure with the data below:
 
    .. literalinclude:: data/cs-a5-connection__from_node-relationship-parameter-values.txt
 
 
-#. Finally, to specify the delay and transfer ratio of different water connections (the latter being equal to 1),
-   repeat the same procedure with the data below:
+#. Finally, specify the delay and transfer ratio of different water connections (the latter being equal to 1).
+   Repeat the same procedure with the data below:
 
    .. literalinclude:: data/cs-a5-connection__node__node-relationship-parameter-values.txt
 
