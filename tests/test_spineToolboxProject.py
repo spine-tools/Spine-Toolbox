@@ -297,7 +297,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         item_name = add_item_function()
         item = self.toolbox.project_item_model.get_item(item_name).project_item
         item_executable = _MockExecutableItem(item_name, self.toolbox.project().project_dir, self.toolbox)
-        item.execution_item = mock.MagicMock(return_value=item_executable)
         animation = QVariantAnimation()
         animation.setDuration(0)
         item.make_execution_leave_animation = mock.MagicMock(return_value=animation)

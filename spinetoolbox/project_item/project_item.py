@@ -12,14 +12,14 @@
 Contains base classes for project items and item factories.
 
 :authors: P. Savolainen (VTT)
-:date:   4.10.2018
+:date:    4.10.2018
 """
 
 import os
 import logging
 from PySide2.QtCore import Signal, Slot
 from spine_engine.utils.helpers import shorten
-from ..helpers import create_dir, open_url, QuietLogger
+from ..helpers import create_dir, open_url
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
 from ..widgets.custom_qtextbrowser import SignedTextDocument
@@ -232,17 +232,6 @@ class ProjectItem(MetaObject):
     @property
     def executable_class(self):
         raise NotImplementedError()
-
-    def execution_item(self, silent=True):
-        """Creates project item's execution counterpart."""
-        if self._specification is None:
-            specifications = {}
-        else:
-            specifications = {self.item_type(): {self._specification.name: self._specification}}
-        logger = QuietLogger() if silent else self._logger
-        return self.executable_class.from_dict(
-            self.item_dict(), self.name, self._project.project_dir, self._project.settings, specifications, logger
-        )
 
     @Slot(object, object)
     def handle_execution_successful(self, execution_direction, engine_state):
