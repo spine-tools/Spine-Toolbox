@@ -41,8 +41,6 @@ from .spine_engine_version_check import spine_engine_version_check
 if not spine_engine_version_check():
     sys.exit(1)
 
-# Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
-from . import resources_icons_rc  # pylint: disable=unused-import
 from .load_project_items import upgrade_project_items
 
 _skip_project_items_upgrade = False
@@ -63,6 +61,9 @@ if not _skip_project_items_upgrade and upgrade_project_items():
         sys.exit(err.returncode)
     sys.exit(0)
 
+# Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
+from . import resources_icons_rc  # pylint: disable=unused-import
+from spine_items import resources_icons_rc  # pylint: disable=unused-import
 
 from .ui_main import ToolboxUI
 from .version import __version__

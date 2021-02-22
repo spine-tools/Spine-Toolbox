@@ -21,7 +21,7 @@ from PySide2.QtCore import Qt, QSize, Signal, Slot, QMimeData, QModelIndex
 from PySide2.QtGui import QDrag, QResizeEvent, QIcon
 from PySide2.QtWidgets import QMenu, QToolButton, QApplication
 from .custom_qwidgets import CustomWidgetAction
-from ..config import ICON_BACKGROUND
+from ..helpers import make_icon_background
 
 
 class ProjectItemDragMixin:
@@ -63,40 +63,83 @@ class ProjectItemDragMixin:
         self.mime_data = None
 
 
-class ProjectItemButton(ProjectItemDragMixin, QToolButton):
+class ProjectItemButtonBase(ProjectItemDragMixin, QToolButton):
     def __init__(self, toolbox, icon, item_type, parent=None):
         super().__init__(parent=parent)
         self.item_type = item_type
         self.setIcon(icon)
         self.setMouseTracking(True)
+        self.drag_about_to_start.connect(self._handle_drag_about_to_start)
+
+    @Slot()
+    def _handle_drag_about_to_start(self):
+        self.setDown(False)
+        self.update()
+
+    def mousePressEvent(self, event):
+        """Register drag start position"""
+        super().mousePressEvent(event)
+        if event.button() == Qt.LeftButton:
+            self.drag_start_pos = event.pos()
+            self.pixmap = self.icon().pixmap(self.iconSize())
+            self.mime_data = QMimeData()
+            self.mime_data.setText(self._make_mime_data_text())
+
+    def _make_mime_data_text(self):
+        raise NotImplementedError()
+
+
+class PluginProjectItemSpecButton(ProjectItemButtonBase):
+    def __init__(self, toolbox, icon, item_type, spec_name, parent=None):
+        super().__init__(toolbox, icon, item_type, parent=parent)
+        self._spec_name = spec_name
+        font = self.font()
+        font.setPointSize(9)
+        self.setFont(font)
+        self.setText(spec_name)
+        self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.setToolTip(
+            f"<p>Drag-and-drop this onto the Design View to create a new <b>{self._spec_name}</b> item.</p>"
+        )
+
+    def _make_mime_data_text(self):
+        return ",".join([self.item_type, self._spec_name])
+
+
+class ProjectItemButton(ProjectItemButtonBase):
+    def __init__(self, toolbox, icon, item_type, parent=None):
+        super().__init__(toolbox, icon, item_type, parent=parent)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
         if not toolbox.supports_specification(item_type):
             self._list_view = None
+            self._menu = None
             return
+        self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self._list_view = ProjectItemDragListView()
         self._list_view.doubleClicked.connect(toolbox.edit_specification)
         self._list_view.context_menu_requested.connect(toolbox.show_specification_context_menu)
-        self._list_widget = CreateNewSpecListWidget(item_type)
+        self._list_widget = _CreateNewSpecListWidget(item_type)
         self._list_widget.itemClicked.connect(lambda _, item_type=item_type: toolbox.show_specification_form(item_type))
-        self.dd_menu = QMenu(self)  # Drop-down menu
-        widget_action = CustomWidgetAction(self.dd_menu)
+        self._menu = QMenu(self)  # Drop-down menu
+        widget_action = CustomWidgetAction(self._menu)
         widget_action.setDefaultWidget(self._list_view)
-        self.dd_menu.addAction(widget_action)
-        widget_action = CustomWidgetAction(self.dd_menu)
+        self._menu.addAction(widget_action)
+        widget_action = CustomWidgetAction(self._menu)
         widget_action.setDefaultWidget(self._list_widget)
-        self.dd_menu.addAction(widget_action)
-        self.dd_menu.setStyleSheet(f"QMenu{{background: {ICON_BACKGROUND};}}")
-        self.setMenu(self.dd_menu)
+        self._menu.addAction(widget_action)
+        self.setMenu(self._menu)
         self.setPopupMode(QToolButton.MenuButtonPopup)
-        self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self._resize()
         model = toolbox.filtered_spec_factory_models.get(self.item_type)
         self._list_view.setModel(model)
         model.rowsInserted.connect(lambda *args: self._resize())
         model.rowsRemoved.connect(lambda *args: self._resize())
         model.modelReset.connect(lambda *args: self._resize())
-        self.drag_about_to_start.connect(self._handle_drag_about_to_start)
-        self._list_view.drag_about_to_start.connect(self.dd_menu.hide)
+        self._list_view.drag_about_to_start.connect(self._menu.hide)
+
+    def set_menu_color(self, color):
+        if self._menu:
+            self._menu.setStyleSheet(f"QMenu{{background: {make_icon_background(color)};}}")
 
     def setIconSize(self, size):
         super().setIconSize(size)
@@ -112,20 +155,8 @@ class ProjectItemButton(ProjectItemDragMixin, QToolButton):
         event = QResizeEvent(QSize(), self.menu().size())
         QApplication.sendEvent(self.menu(), event)
 
-    @Slot()
-    def _handle_drag_about_to_start(self):
-        self.setDown(False)
-        self.update()
-
-    def mousePressEvent(self, event):
-        """Register drag start position"""
-        super().mousePressEvent(event)
-        if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.pos()
-            self.pixmap = self.icon().pixmap(self.iconSize())
-            mime_data_text = ",".join([self.item_type, ""])
-            self.mime_data = QMimeData()
-            self.mime_data.setText(mime_data_text)
+    def _make_mime_data_text(self):
+        return ",".join([self.item_type, ""])
 
 
 _VIEW_STYLE_SHEET = "QListView{background: transparent; border: 1px solid gray;} QListView::item{padding: 5px;}"
@@ -134,7 +165,11 @@ _VIEW_HOVER_STYLE_SHEET_ADDENDUM = (
 )
 
 
-class CreateNewSpecListWidget(QListWidget):
+class _CreateNewSpecListWidget(QListWidget):
+    """A list widget with only one item, to create a new spec.
+    Used as widget action for the last entry in ProjectItemButton's menu
+    """
+
     def __init__(self, item_type):
         super().__init__(None)
         self.setStyleSheet(_VIEW_STYLE_SHEET + _VIEW_HOVER_STYLE_SHEET_ADDENDUM)

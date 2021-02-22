@@ -103,7 +103,7 @@ def upgrade_project_items():
 UPGRADING PROJECT ITEMS...
 
 (Depending on your internet connection, this may take a few moments.)
-        """
+"""
     )
     with tempfile.TemporaryDirectory() as tmpdirname:
         # Download

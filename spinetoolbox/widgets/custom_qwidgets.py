@@ -183,7 +183,7 @@ class ToolBarWidgetAction(CustomWidgetAction):
             parent (QMenu): the widget's parent
         """
         super().__init__(parent)
-        widget = _MenuToolBarWidget(text, parent=parent, compact=compact)
+        widget = MenuToolBarWidget(text, parent=parent, compact=compact)
         self.setDefaultWidget(widget)
         self.tool_bar = widget.tool_bar
         self.tool_bar.enabled_changed.connect(self.setEnabled)
@@ -205,7 +205,7 @@ class ToolBarWidgetAction(CustomWidgetAction):
             self._parent_key_press_event = None
 
 
-class _MenuToolBarWidget(QWidget):
+class MenuToolBarWidget(QWidget):
     """Paints a tool bar beside a menu item.
 
     Attributes:
@@ -245,7 +245,7 @@ class _MenuToolBarWidget(QWidget):
 
 
 class _MenuToolBar(QToolBar):
-    """A custom tool bar for ``_MenuToolBarWidget``."""
+    """A custom tool bar for ``MenuToolBarWidget``."""
 
     enabled_changed = Signal(bool)
     _enabled = True
