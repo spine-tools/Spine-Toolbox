@@ -148,24 +148,24 @@ class PluginManager:
         Args:
             plugin_name (str): plugin name
         """
+        # 1. Create paths
         plugin = self._registry_plugins[plugin_name]
-        # Download plugin.json file
+        plugin_remote_file = plugin["url"]
+        plugin_remote_dir = os.path.dirname(plugin_remote_file) + os.sep
         plugin_local_dir = os.path.join(PLUGINS_PATH, plugin_name)
         plugin_local_file = os.path.join(plugin_local_dir, "plugin.json")
-        plugin_remote_file = plugin["url"]
+        # 1. Download and parse plugin.json file
         _download_file(plugin_remote_file, plugin_local_file)
-        # Parse plugin.json file
         with open(plugin_local_file) as fh:
             plugin_dict = json.load(fh)
-        # Download specification .json files
-        plugin_remote_dir = plugin_dict["base_path"]
+        # 3. Download specification .json files
         specifications = plugin_dict["specifications"]
         serialized_paths = (path for paths in specifications.values() for path in paths)
         for serialized in serialized_paths:
             local_file = deserialize_path(serialized, plugin_local_dir)
             remote_file = deserialize_remote_path(serialized, plugin_remote_dir)
             _download_file(remote_file, local_file)
-        # Download include files in tool specs
+        # 4. Download include files in tool specs
         serialized_includes = []
         for serialized in specifications.get("Tool", ()):
             spec_file = deserialize_path(serialized, plugin_local_dir)
@@ -181,7 +181,7 @@ class PluginManager:
             local_file = deserialize_path(serialized, plugin_local_dir)
             remote_file = deserialize_remote_path(serialized, plugin_remote_dir)
             _download_file(remote_file, local_file)
-        # Load plugin
+        # 5. Load plugin
         plugin_specs = self.load_individual_plugin(plugin_local_dir)
         for spec in plugin_specs:
             self._toolbox.do_add_specification(spec)
