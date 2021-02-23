@@ -48,7 +48,7 @@ from PySide2.QtGui import (
     QColor,
 )
 import spine_engine
-from .config import REQUIRED_SPINE_ENGINE_VERSION
+from .config import DEFAULT_WORK_DIR, REQUIRED_SPINE_ENGINE_VERSION
 
 
 if os.name == "nt":
@@ -1029,6 +1029,10 @@ def make_settings_dict_for_engine(app_settings):
             continue
         settings[f"appSettings/{key}"] = value
     app_settings.endGroup()
+    if "appSettings/workDir" not in settings:
+        # Headless mode may execute on a system where we don't have any Toolbox settings available.
+        # Make sure we set a sane work directory for Tools, at least.
+        settings["appSettings/workDir"] = DEFAULT_WORK_DIR
     return settings
 
 

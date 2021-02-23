@@ -36,7 +36,10 @@ from ..helpers import (
 
 class SettingsWidgetBase(QWidget):
     def __init__(self, qsettings):
-        """Initialize class."""
+        """
+        Args:
+            qsettings (QSettings): Toolbox settings
+        """
         # FIXME: setting the parent to toolbox causes the checkboxes in the
         # groupBox_general to not layout correctly, this might be caused elsewhere?
         from ..ui.settings import Ui_SettingsForm  # pylint: disable=import-outside-toplevel

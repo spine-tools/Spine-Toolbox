@@ -94,7 +94,7 @@ class ExecuteProject(QObject):
     """
     A 'task' which opens and executes a Toolbox project when triggered to do so.
 
-    The execution of this task is triggered by sending it a 'startup' QEvent using, e.g. QCoreApplication.postEvent()
+    The execution of this task is triggered by sending it a 'startup' QEvent using e.g. QCoreApplication.postEvent()
     """
 
     _start = Signal()
