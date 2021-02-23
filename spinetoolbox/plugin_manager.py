@@ -18,6 +18,7 @@ Contains PluginManager class.
 import os
 import json
 import urllib.request
+from urllib.parse import urljoin
 import shutil
 from PySide2.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QTimer, QSize
 from PySide2.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QListView, QDialogButtonBox
@@ -151,10 +152,10 @@ class PluginManager:
         # 1. Create paths
         plugin = self._registry_plugins[plugin_name]
         plugin_remote_file = plugin["url"]
-        plugin_remote_dir = os.path.dirname(plugin_remote_file) + os.sep
+        plugin_remote_dir = urljoin(plugin_remote_file, '.')
         plugin_local_dir = os.path.join(PLUGINS_PATH, plugin_name)
         plugin_local_file = os.path.join(plugin_local_dir, "plugin.json")
-        # 1. Download and parse plugin.json file
+        # 2. Download and parse plugin.json file
         _download_file(plugin_remote_file, plugin_local_file)
         with open(plugin_local_file) as fh:
             plugin_dict = json.load(fh)
