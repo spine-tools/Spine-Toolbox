@@ -214,9 +214,19 @@
     <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
    </widget>
+   <widget class="QMenu" name="menuPlugins">
+    <property name="title">
+     <string>Plugins</string>
+    </property>
+    <addaction name="actionInstall_plugin"/>
+    <addaction name="actionManage_plugins"/>
+    <addaction name="separator"/>
+    <addaction name="actionCreate_plugin"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
+   <addaction name="menuPlugins"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -980,6 +990,27 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+D</string>
+   </property>
+  </action>
+  <action name="actionInstall_plugin">
+   <property name="text">
+    <string>Install plugin...</string>
+   </property>
+  </action>
+  <action name="actionManage_plugins">
+   <property name="text">
+    <string>Manage plugins...</string>
+   </property>
+  </action>
+  <action name="actionCreate_plugin">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Create plugin...</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
    </property>
   </action>
  </widget>

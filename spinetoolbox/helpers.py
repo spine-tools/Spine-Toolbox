@@ -1036,6 +1036,18 @@ def make_settings_dict_for_engine(app_settings):
     return settings
 
 
+def make_icon_background(color):
+    color0 = color.name()
+    color1 = color.lighter(140).name()
+    return f"qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 {color0}, stop: 1 {color1});"
+
+
+def make_icon_toolbar_ss(color):
+    icon_background = make_icon_background(color)
+    # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
+    return f"QToolBar{{spacing: 6px; background: {icon_background}; padding: 3px; border-style: solid;}}"
+
+
 def color_from_index(i, count, base_hue=0.0, saturation=1.0):
     golden_ratio = 0.618033988749895
     h = golden_ratio * (360 / count) * i

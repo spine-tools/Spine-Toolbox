@@ -19,12 +19,39 @@ Functions to make and handle QToolBars.
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
 from PySide2.QtGui import QIcon
-from ..config import ICON_TOOLBAR_SS
-from .project_item_drag import ProjectItemButton
+from ..helpers import make_icon_toolbar_ss
+from .project_item_drag import ProjectItemButton, PluginProjectItemSpecButton
+
+
+class PluginToolBar(QToolBar):
+    """A plugin toolbar."""
+
+    def __init__(self, name, parent):
+        """
+
+        Args:
+            parent (ToolboxUI): QMainWindow instance
+        """
+        super().__init__(name, parent=parent)  # Inherits stylesheet from ToolboxUI
+        self._name = name
+        self._toolbox = parent
+        self.setObjectName(name.replace(" ", "_"))
+
+    def setup(self, plugin_specs):
+        self.addWidget(QLabel(self._name))
+        for spec in plugin_specs:
+            factory = self._toolbox.item_factories[spec.item_type]
+            icon = QIcon(factory.icon())
+            button = PluginProjectItemSpecButton(self._toolbox, icon, spec.item_type, spec.name)
+            button.setIconSize(self.iconSize())
+            self.addWidget(button)
+
+    def set_color(self, color):
+        self.setStyleSheet(make_icon_toolbar_ss(color))
 
 
 class MainToolBar(QToolBar):
-    """A toolbar to add items using drag and drop actions."""
+    """The main application toolbar: Items | Execute"""
 
     def __init__(self, parent):
         """
@@ -32,28 +59,32 @@ class MainToolBar(QToolBar):
         Args:
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
+        super().__init__("Main Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         self._toolbox = parent
-        self.setStyleSheet(ICON_TOOLBAR_SS)
-        self.setObjectName("ItemToolbar")
-        self._project_item_buttons = []
+        self.setObjectName("Main_Toolbar")
         self.execute_project_button = None
         self.execute_selection_button = None
         self.stop_execution_button = None
+        self._project_item_butoons = []
+
+    def set_color(self, color):
+        self.setStyleSheet(make_icon_toolbar_ss(color))
+        for button in self._project_item_butoons:
+            button.set_menu_color(color)
 
     def setup(self):
         self.add_project_item_buttons()
         self.add_execute_buttons()
 
     def add_project_item_buttons(self):
-        self.addWidget(QLabel("Items"))
-        self._project_item_buttons = []
+        self._project_item_butoons = []
+        self.addWidget(QLabel("Main"))
         for item_type, factory in self._toolbox.item_factories.items():
             icon = QIcon(factory.icon())
             button = ProjectItemButton(self._toolbox, icon, item_type)
             button.setIconSize(self.iconSize())
             self.addWidget(button)
-            self._project_item_buttons.append(button)
+            self._project_item_butoons.append(button)
         self.addSeparator()
         self._add_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification

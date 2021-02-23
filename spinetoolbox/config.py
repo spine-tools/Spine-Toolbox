@@ -18,9 +18,9 @@ Application constants and style sheets
 
 import sys
 import os
+from pathlib import Path
 
-
-REQUIRED_SPINE_ENGINE_VERSION = "0.9.21"
+REQUIRED_SPINE_ENGINE_VERSION = "0.9.22"
 REQUIRED_SPINEDB_API_VERSION = "0.11.1"
 PREFERRED_SPINE_ITEMS_VERSION = "0.4.41"
 LATEST_PROJECT_VERSION = 5
@@ -42,9 +42,11 @@ if _frozen:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "html"))
 else:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "build", "html"))
-PLUGINS_PATH = os.path.abspath(os.path.join(_program_root, "plugins"))
 ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/latest"
 
+PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "plugins"))
+
+PLUGIN_REGISTRY_URL = "https://spine-project.github.io/PluginRegistry/registry.json"
 # Jupyter kernel constants
 JUPYTER_KERNEL_TIME_TO_DEAD = 8.0
 
@@ -83,9 +85,9 @@ SETTINGS_SS = (
     "QSlider::sub-page:horizontal{background: transparent;}"
 )
 
+
 ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
-# NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
-# (known Qt issue)
+
 ICON_TOOLBAR_SS = f"QToolBar{{spacing: 6px; background: {ICON_BACKGROUND}; padding: 3px; border-style: solid;}}"
 
 

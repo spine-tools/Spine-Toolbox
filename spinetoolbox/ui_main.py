@@ -81,6 +81,7 @@ from .helpers import (
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, RenameProjectItemCommand
+from .plugin_manager import PluginManager
 from .configuration_assistants import spine_opt
 
 
@@ -171,7 +172,10 @@ class ToolboxUI(QMainWindow):
         self.parse_assistant_modules()
         self.init_project_item_model()
         self.init_specification_model()
+        self.make_item_properties_uis()
         self.main_toolbar.setup()
+        self._plugin_manager = PluginManager(self)
+        self._plugin_manager.load_plugins()
         self.set_work_directory()
         self.connect_signals()
 
@@ -201,6 +205,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
+        self.ui.actionInstall_plugin.triggered.connect(self._plugin_manager.show_install_plugin_dialog)
+        self.ui.actionManage_plugins.triggered.connect(self._plugin_manager.show_manage_plugins_dialog)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
@@ -251,10 +257,6 @@ class ToolboxUI(QMainWindow):
         """Collects data from project item factories."""
         self._item_categories, self.item_factories = load_project_items()
         self._item_specification_factories = load_item_specification_factories()
-
-    def make_item_properties_uis(self):
-        for item_type, factory in self.item_factories.items():
-            self._item_properties_uis[item_type] = factory.make_properties_widget(self)
 
     def parse_assistant_modules(self):
         """Makes actions to run assistants from assistant modules."""
@@ -605,12 +607,15 @@ class ToolboxUI(QMainWindow):
 
     def init_specification_model(self):
         """Initializes specification model."""
-        self.filtered_spec_factory_models = {name: FilteredSpecificationModel(name) for name in self.item_factories}
-        self.make_item_properties_uis()  # TODO: Why we need to do this *before* calling factory.icon()?
-        factory_icons = {name: QIcon(factory.icon()) for name, factory in self.item_factories.items()}
+        factory_icons = {item_type: QIcon(factory.icon()) for item_type, factory in self.item_factories.items()}
         self.specification_model = ProjectItemSpecificationModel(factory_icons)
-        for model in self.filtered_spec_factory_models.values():
+        for item_type in self.item_factories:
+            model = self.filtered_spec_factory_models[item_type] = FilteredSpecificationModel(item_type)
             model.setSourceModel(self.specification_model)
+
+    def make_item_properties_uis(self):
+        for item_type, factory in self.item_factories.items():
+            self._item_properties_uis[item_type] = factory.make_properties_widget(self)
 
     def populate_specification_model(self, specification_paths):
         """Populates specification model.
@@ -619,23 +624,32 @@ class ToolboxUI(QMainWindow):
             specification_paths (list): List of specification file paths for the current project
         """
         self.specification_model.clear()
-        n_specs = 0
         self.msg.emit("Loading specifications...")
+        specs = []
         for path in specification_paths:
             if not path:
                 continue
-            # Add tool specification into project
             spec = self.load_specification_from_file(path)
-            if not spec:
-                continue
-            n_specs += 1
-            # Insert tool into model
-            self.specification_model.insertRow(spec)
-            item_factory = self.item_factories.get(spec.item_type)
-            if item_factory is not None:
-                item_factory.repair_specification(self, spec)
-        if n_specs == 0:
+            specs.append(spec)
+        # Add specs to model
+        for spec in specs + self._plugin_manager.plugin_specs:
+            self.do_add_specification(spec)
+        if not specs:
             self.msg_warning.emit("Project has no specifications")
+
+    def parse_specification_file(self, def_path):
+        try:
+            with open(def_path, "r") as fp:
+                try:
+                    return json.load(fp)
+                except ValueError:
+                    self.msg_error.emit("Item specification file not valid")
+                    logging.exception("Loading JSON data failed")
+                    return None
+        except FileNotFoundError:
+            # TODO: Prompt to find it?
+            self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
+            return None
 
     def load_specification_from_file(self, def_path):
         """Returns an Item specification from a definition file.
@@ -646,20 +660,11 @@ class ToolboxUI(QMainWindow):
         Returns:
             ProjectItemSpecification: item specification or None if reading the file failed
         """
-        try:
-            with open(def_path, "r") as fp:
-                try:
-                    definition = json.load(fp)
-                except ValueError:
-                    self.msg_error.emit("Item specification file not valid")
-                    logging.exception("Loading JSON data failed")
-                    return None
-        except FileNotFoundError:
-            # FIXME: Prompt to find it?
-            self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
+        spec_dict = self.parse_specification_file(def_path)
+        if spec_dict is None:
             return None
-        definition["definition_file_path"] = def_path
-        spec = self.load_specification(definition)
+        spec_dict["definition_file_path"] = def_path
+        spec = self.load_specification(spec_dict)
         if spec is not None:
             spec.definition_file_path = def_path
         return spec
@@ -1019,6 +1024,9 @@ class ToolboxUI(QMainWindow):
         """
         self.specification_model.insertRow(specification, row)
         self.msg_success.emit("Specification <b>{0}</b> added to project".format(specification.name))
+        item_factory = self.item_factories.get(specification.item_type)
+        if item_factory is not None:
+            item_factory.repair_specification(self, specification)
 
     def update_specification(self, row, specification):
         """Saves the given spec to disk, then sets it for the given row in the model,
@@ -1110,13 +1118,11 @@ class ToolboxUI(QMainWindow):
         if not self.specification_model.removeRow(row):
             self.msg_error.emit("Error in removing specification <b>{0}</b>".format(specification.name))
             return
-        self.msg_success.emit("Specification removed")
+        self.msg_success.emit(f"Specification <b>{specification.name}</b> removed")
         for project_item in items_with_removed_spec:
             project_item.do_set_specification(None)
             self.msg.emit(
-                "Specification <b>{0}</b> successfully removed from Item <b>{1}</b>".format(
-                    specification.name, project_item.name
-                )
+                f"Specification <b>{specification.name}</b> successfully removed from Item <b>{project_item.name}</b>"
             )
 
     @Slot()
