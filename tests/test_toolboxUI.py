@@ -665,10 +665,12 @@ class TestToolboxUI(unittest.TestCase):
             mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, ["prompt exit"])
 
-    def test_tasks_before_exit_with_open_project(self):
+    def test_tasks_before_exit_with_open_dirty_project(self):
         """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
-        This test is done with a 'mock' project so MUT calls QSettings.value() twice."""
+        This test is done with a 'mock' project so MUST call QSettings.value() twice."""
         self.toolbox._project = 1  # Just make sure project is not None
+        self.toolbox.undo_stack = mock.Mock()
+        self.toolbox.undo_stack.isClean.return_value = False
         with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_1
             tasks = self.toolbox._tasks_before_exit()
