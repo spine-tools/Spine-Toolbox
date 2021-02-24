@@ -114,6 +114,7 @@ class SettingsWidgetBase(QWidget):
 
     def save_settings(self):
         """Gets selections and saves them to persistent memory."""
+        return True
 
     @Slot(bool)
     def update_ui_and_close(self, checked=False):
@@ -124,8 +125,8 @@ class SettingsWidgetBase(QWidget):
     @Slot(bool)
     def save_and_close(self, checked=False):
         """Saves settings and close."""
-        self.save_settings()
-        self.close()
+        if self.save_settings():
+            self.close()
 
 
 class SpineDBEditorSettingsMixin:
@@ -156,7 +157,8 @@ class SpineDBEditorSettingsMixin:
 
     def save_settings(self):
         """Get selections and save them to persistent memory."""
-        super().save_settings()
+        if not super().save_settings():
+            return False
         commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
         sticky_selection = "true" if int(self.ui.checkBox_object_tree_sticky_selection.checkState()) else "false"
@@ -169,6 +171,7 @@ class SpineDBEditorSettingsMixin:
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
         auto_expand_objects = "true" if int(self.ui.checkBox_auto_expand_objects.checkState()) else "false"
         self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
+        return True
 
     def update_ui(self):
         super().update_ui()
@@ -560,7 +563,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
         # checkBox check states are casted from integers to string because of Linux
-        super().save_settings()
+        if not super().save_settings():
+            return False
         open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
         exit_prompt = str(int(self.ui.checkBox_exit_prompt.checkState()))
@@ -591,7 +595,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         gams_path = self.ui.lineEdit_gams_path.text().strip()
         # Check gams_path is a file, it exists, and file name starts with 'gams'
         if not file_is_valid(self, gams_path, "Invalid GAMS Program", extra_check="gams"):
-            return
+            return False
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
         # Julia (str because Linux)
         use_emb_julia = "2" if self.ui.radioButton_use_julia_console.isChecked() else "0"
@@ -599,11 +603,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         julia_path = self.ui.lineEdit_julia_path.text().strip()
         # Check julia_path is a file, it exists, and file name starts with 'julia'
         if not file_is_valid(self, julia_path, "Invalid Julia Executable", extra_check="julia"):
-            return
+            return False
         self._qsettings.setValue("appSettings/juliaPath", julia_path)
         julia_project_path = self.ui.lineEdit_julia_project_path.text().strip()
         if not dir_is_valid(self, julia_project_path, "Invalid Julia Project"):  # Check it's a directory and it exists
-            return
+            return False
         self._qsettings.setValue("appSettings/juliaProjectPath", julia_project_path)
         if self.ui.comboBox_julia_kernel.currentIndex() == 0:
             julia_kernel = ""
@@ -616,7 +620,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         python_path = self.ui.lineEdit_python_path.text().strip()
         # Check python_path is a file, it exists, and file name starts with 'python'
         if not file_is_valid(self, python_path, "Invalid Python Interpreter", extra_check="python"):
-            return
+            return False
         self._qsettings.setValue("appSettings/pythonPath", python_path)
         if self.ui.comboBox_python_kernel.currentIndex() == 0:
             python_kernel = ""
@@ -630,6 +634,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._toolbox.show_datetime = self._toolbox.update_datetime()
         # Project
         self.update_project_settings()
+        return True
 
     def update_project_settings(self):
         """Update project name and description if these have been changed."""
