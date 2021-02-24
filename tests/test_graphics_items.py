@@ -26,7 +26,6 @@ from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
 from spine_engine.project_item.connection import Connection
 from spine_engine.project_item.project_item_resource import ProjectItemResource
 from spinetoolbox.graphics_items import ExclamationIcon, Link, ProjectItemIcon, RankIcon
-from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.project_commands import MoveIconCommand
 from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
@@ -176,7 +175,7 @@ class TestLink(unittest.TestCase):
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+        self._link.handle_dag_changed([ProjectItemResource("provider", "database", url)])
         self._link.refresh_resource_filter_model()
         self.assertTrue(self._link.connection.has_filters())
         filter_model = self._link.resource_filter_model
@@ -202,7 +201,7 @@ class TestLink(unittest.TestCase):
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+        self._link.handle_dag_changed([ProjectItemResource("provider", "database", url)])
         self._link.refresh_resource_filter_model()
         self.assertTrue(self._link.connection.has_filters())
         filter_model = self._link.resource_filter_model
@@ -228,7 +227,7 @@ class TestLink(unittest.TestCase):
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+        self._link.handle_dag_changed([ProjectItemResource("provider", "database", url)])
         self._link.refresh_resource_filter_model()
         filter_model = self._link.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
@@ -240,7 +239,7 @@ class TestLink(unittest.TestCase):
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.handle_dag_changed([ProjectItemResource(MetaObject("provider", ""), "database", url)])
+        self._link.handle_dag_changed([ProjectItemResource("provider", "database", url)])
         self._link.refresh_resource_filter_model()
         filter_model = self._link.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})
