@@ -87,6 +87,7 @@ def main():
     if args.execute_only:
         return headless_main(args)
     app = QApplication(sys.argv)
+    app.setApplicationName("Spine Toolbox")
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")

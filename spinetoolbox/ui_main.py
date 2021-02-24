@@ -1693,20 +1693,19 @@ class ToolboxUI(QMainWindow):
         """
         show_confirm_exit = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
         save_at_exit = (
-            int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1")) if self._project is not None else 0
+            int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
+            if self._project is not None and not self.undo_stack.isClean()
+            else 0
         )
+        if save_at_exit == 1:
+            return ["prompt save"]
         if show_confirm_exit != 2:
             # Don't prompt for exit
             if save_at_exit == 0:
                 return []
-            if save_at_exit == 1:
-                # We still need to prompt for saving
-                return ["prompt save"]
             return ["save"]
         if save_at_exit == 0:
             return ["prompt exit"]
-        if save_at_exit == 1:
-            return ["prompt save"]
         return ["prompt exit", "save"]
 
     def _perform_pre_exit_tasks(self):
@@ -1764,11 +1763,11 @@ class ToolboxUI(QMainWindow):
         """
         msg = QMessageBox(parent=self)
         msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle("Save project before exiting")
-        msg.setText("Exiting Spine Toolbox. Save changes to project?")
+        msg.setWindowTitle("Save project before leaving")
+        msg.setText("The project has unsaved changes. Do you want to save them before closing?")
         msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-        msg.button(QMessageBox.Save).setText("Save And Exit")
-        msg.button(QMessageBox.Discard).setText("Exit without Saving")
+        msg.button(QMessageBox.Save).setText("Save and exit")
+        msg.button(QMessageBox.Discard).setText("Exit without saving")
         chkbox = QCheckBox()
         chkbox.setText("Do not ask me again")
         msg.setCheckBox(chkbox)
