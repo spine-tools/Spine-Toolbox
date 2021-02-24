@@ -183,35 +183,17 @@ class TreeViewMixin:
         Args:
             index (QModelIndex)
         """
-        orig_name = index.data()
+        object_item = index.internalPointer()
+        orig_name = object_item.display_data
         dup_name, ok = QInputDialog.getText(
             self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
         )
         if not ok:
             return
-        _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
         parcel = SpineDBParcel(self.db_mngr)
-        object_item = index.internalPointer()
         db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
         parcel.inner_push_object_ids(db_map_obj_ids)
-        data = self._make_data_for_export(parcel.data)
-        data = {
-            "objects": [
-                (cls_name, dup_name, description) for (cls_name, obj_name, description) in data.get("objects", [])
-            ],
-            "relationships": [
-                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data.get("relationships", [])
-            ],
-            "object_parameter_values": [
-                (cls_name, dup_name, param_name, val, alt)
-                for (cls_name, obj_name, param_name, val, alt) in data.get("object_parameter_values", [])
-            ],
-            "relationship_parameter_values": [
-                (cls_name, _replace_name(obj_name_lst), param_name, val, alt)
-                for (cls_name, obj_name_lst, param_name, val, alt) in data.get("relationship_parameter_values", [])
-            ],
-        }
-        self.db_mngr.import_data({db_map: data for db_map in object_item.db_maps}, command_text="Duplicate object")
+        self.db_mngr.duplicate_object(object_item.db_maps, parcel.data, orig_name, dup_name)
 
     @Slot(bool)
     def show_add_object_classes_form(self, checked=False):

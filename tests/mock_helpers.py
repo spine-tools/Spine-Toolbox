@@ -24,7 +24,9 @@ from spinetoolbox.ui_main import ToolboxUI
 
 def create_toolboxui():
     """Returns ToolboxUI, where QSettings among others has been mocked."""
-    with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+    with mock.patch("spinetoolbox.plugin_manager.PluginManager.load_plugins"), mock.patch(
+        "spinetoolbox.ui_main.QSettings.value"
+    ) as mock_qsettings_value:
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
     return toolbox
@@ -45,6 +47,8 @@ def create_toolboxui_with_project(project_dir):
         "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
     ), mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
         "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
+    ), mock.patch(
+        "spinetoolbox.plugin_manager.PluginManager.load_plugins"
     ):
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()

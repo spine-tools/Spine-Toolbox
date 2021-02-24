@@ -1691,3 +1691,6 @@ class SpineDBManager(QObject):
 
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
         self._worker.export_data(caller, db_map_item_ids, file_path, file_filter)
+
+    def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
+        self._worker.duplicate_object(db_maps, object_data, orig_name, dup_name)

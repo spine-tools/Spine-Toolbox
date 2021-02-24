@@ -49,6 +49,7 @@ class SpineDBWorker(QObject):
     _set_scenario_alternatives_called = Signal(object)
     _set_parameter_definition_tags_called = Signal(bool)
     _export_data_called = Signal(object, object, str, str)
+    _duplicate_object_called = Signal(list, dict, str, str)
 
     def __init__(self, db_mngr):
         super().__init__()
@@ -70,6 +71,7 @@ class SpineDBWorker(QObject):
         self._set_scenario_alternatives_called.connect(self._set_scenario_alternatives)
         self._set_parameter_definition_tags_called.connect(self._set_parameter_definition_tags)
         self._export_data_called.connect(self._export_data)
+        self._duplicate_object_called.connect(self._duplicate_object)
 
     def get_db_map(self, *args, **kwargs):
         loop = QEventLoop()
@@ -235,13 +237,17 @@ class SpineDBWorker(QObject):
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
         self._export_data_called.emit(caller, db_map_item_ids, file_path, file_filter)
 
-    # XXX: Don't decorate the slot, otherwise it executes in the wrong thread!
-    # See bug report in https://bugreports.qt.io/projects/PYSIDE/issues/PYSIDE-1354?filter=allissues
-    def _export_data(self, caller, db_map_item_ids, file_path, file_filter):
+    def _get_data_for_export(self, db_map_item_ids):
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
             for key, items in export_data(db_map, **item_ids).items():
                 data.setdefault(key, []).extend(items)
+        return data
+
+    # XXX: Don't decorate the slot, otherwise it executes in the wrong thread!
+    # See bug report in https://bugreports.qt.io/projects/PYSIDE/issues/PYSIDE-1354?filter=allissues
+    def _export_data(self, caller, db_map_item_ids, file_path, file_filter):
+        data = self._get_data_for_export(db_map_item_ids)
         if file_filter.startswith("JSON"):
             self.export_to_json(file_path, data, caller)
         elif file_filter.startswith("SQLite"):
@@ -309,6 +315,30 @@ class SpineDBWorker(QObject):
             caller.msg_error.emit(error_msg)
         else:
             caller.file_exported.emit(file_path)
+
+    def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
+        self._duplicate_object_called.emit(db_maps, object_data, orig_name, dup_name)
+
+    def _duplicate_object(self, db_maps, object_data, orig_name, dup_name):
+        _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
+        data = self._get_data_for_export(object_data)
+        data = {
+            "objects": [
+                (cls_name, dup_name, description) for (cls_name, obj_name, description) in data.get("objects", [])
+            ],
+            "relationships": [
+                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data.get("relationships", [])
+            ],
+            "object_parameter_values": [
+                (cls_name, dup_name, param_name, val, alt)
+                for (cls_name, obj_name, param_name, val, alt) in data.get("object_parameter_values", [])
+            ],
+            "relationship_parameter_values": [
+                (cls_name, _replace_name(obj_name_lst), param_name, val, alt)
+                for (cls_name, obj_name_lst, param_name, val, alt) in data.get("relationship_parameter_values", [])
+            ],
+        }
+        self._db_mngr.import_data({db_map: data for db_map in db_maps}, command_text="Duplicate object")
 
     def set_scenario_alternatives(self, db_map_data):
         self._set_scenario_alternatives_called.emit(db_map_data)
