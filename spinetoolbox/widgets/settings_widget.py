@@ -546,6 +546,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if self._project:
             self.ui.lineEdit_project_name.setText(self._project.name)
             self.ui.textEdit_project_description.setText(self._project.description)
+        else:
+            # Disable project name and description line edits if no project open
+            self.ui.lineEdit_project_name.setDisabled(True)
+            self.ui.textEdit_project_description.setDisabled(True)
 
     @Slot()
     def save_settings(self):

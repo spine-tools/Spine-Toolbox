@@ -50,6 +50,10 @@ class PluginManager:
         self._registry_plugins = {}
         self._installed_plugins = {}
 
+    @property
+    def plugin_toolbars(self):
+        return self._plugin_toolbars
+
     def load_plugins(self):
         search_paths = {PLUGINS_PATH}
         search_paths |= set(

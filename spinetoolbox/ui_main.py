@@ -36,6 +36,7 @@ from PySide2.QtWidgets import (
     QDockWidget,
     QAction,
     QUndoStack,
+    QAbstractButton,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import serialize_path, deserialize_path
@@ -177,6 +178,7 @@ class ToolboxUI(QMainWindow):
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_plugins()
         self.set_work_directory()
+        self._disable_project_actions()
         self.connect_signals()
 
     def connect_signals(self):
@@ -392,6 +394,7 @@ class ToolboxUI(QMainWindow):
         self._project = SpineToolboxProject(
             self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
         )
+        self._enable_project_actions()
         self._project.connect_signals()
         self._connect_project_signals()
         self.populate_specification_model(list())  # Start project with no specifications
@@ -496,6 +499,7 @@ class ToolboxUI(QMainWindow):
         self._project = SpineToolboxProject(
             self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
         )
+        self._enable_project_actions()
         self._connect_project_signals()
         self.update_window_title()
         self.ui.actionSave.setDisabled(True)
@@ -521,6 +525,25 @@ class ToolboxUI(QMainWindow):
         self.update_recent_projects()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
+
+    def _toolbars(self):
+        """Yields all toolbars in the window."""
+        yield self.main_toolbar
+        yield from self._plugin_manager.plugin_toolbars.values()
+
+    def _disable_project_actions(self):
+        """Disables all project-related actions. Called in the constructor."""
+        for toolbar in self._toolbars():
+            for button in toolbar.findChildren(QAbstractButton):
+                button.setEnabled(False)
+        self.ui.actionOpen_project_directory.setEnabled(False)
+
+    def _enable_project_actions(self):
+        """Enables all project-related actions. Called right after a project is loaded."""
+        for toolbar in self._toolbars():
+            for action in toolbar.findChildren(QAbstractButton):
+                action.setEnabled(True)
+        self.ui.actionOpen_project_directory.setEnabled(True)
 
     @Slot()
     def show_recent_projects_menu(self):
