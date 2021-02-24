@@ -16,8 +16,22 @@ The SpineDBWorker class
 :date:   2.10.2019
 """
 
+import json
+import os
 from PySide2.QtCore import QObject, Signal, Slot, QEventLoop
-from spinedb_api import DiffDatabaseMapping, get_data_for_import, SpineDBAPIError, SpineDBVersionError
+from sqlalchemy.engine.url import URL
+from spinedb_api import (
+    DiffDatabaseMapping,
+    DatabaseMapping,
+    SpineDBAPIError,
+    SpineDBVersionError,
+    ParameterValueEncoder,
+    get_data_for_import,
+    import_data,
+    export_data,
+    create_new_spine_database,
+)
+from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_commands import AgedUndoCommand, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 
 
@@ -34,6 +48,7 @@ class SpineDBWorker(QObject):
     _import_data_called = Signal(object, str)
     _set_scenario_alternatives_called = Signal(object)
     _set_parameter_definition_tags_called = Signal(bool)
+    _export_data_called = Signal(object, object, str, str)
 
     def __init__(self, db_mngr):
         super().__init__()
@@ -54,6 +69,7 @@ class SpineDBWorker(QObject):
         self._import_data_called.connect(self._import_data)
         self._set_scenario_alternatives_called.connect(self._set_scenario_alternatives)
         self._set_parameter_definition_tags_called.connect(self._set_parameter_definition_tags)
+        self._export_data_called.connect(self._export_data)
 
     def get_db_map(self, *args, **kwargs):
         loop = QEventLoop()
@@ -215,6 +231,84 @@ class SpineDBWorker(QObject):
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
         self._db_mngr.data_imported.emit()
+
+    def export_data(self, caller, db_map_item_ids, file_path, file_filter):
+        self._export_data_called.emit(caller, db_map_item_ids, file_path, file_filter)
+
+    # XXX: Don't decorate the slot, otherwise it executes in the wrong thread!
+    # See bug report in https://bugreports.qt.io/projects/PYSIDE/issues/PYSIDE-1354?filter=allissues
+    def _export_data(self, caller, db_map_item_ids, file_path, file_filter):
+        data = {}
+        for db_map, item_ids in db_map_item_ids.items():
+            for key, items in export_data(db_map, **item_ids).items():
+                data.setdefault(key, []).extend(items)
+        if file_filter.startswith("JSON"):
+            self.export_to_json(file_path, data, caller)
+        elif file_filter.startswith("SQLite"):
+            self.export_to_sqlite(file_path, data, caller)
+        elif file_filter.startswith("Excel"):
+            self.export_to_excel(file_path, data, caller)
+        else:
+            raise ValueError()
+
+    def export_to_sqlite(self, file_path, data_for_export, caller):
+        """Exports given data into SQLite file."""
+        url = URL("sqlite", database=file_path)
+        if not self._db_mngr.is_url_available(url, caller):
+            return
+        create_new_spine_database(url)
+        db_map = DatabaseMapping(url)
+        import_data(db_map, **data_for_export)
+        try:
+            db_map.commit_session("Export data from Spine Toolbox.")
+        except SpineDBAPIError as err:
+            error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
+            caller.msg_error.emit(error_msg)
+        else:
+            caller.sqlite_file_exported.emit(file_path)
+
+    def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+        """Exports given data into JSON file."""
+        indent = 4 * " "
+        json_data = "{{{0}{1}{0}}}".format(
+            "\n" if data_for_export else "",
+            ",\n".join(
+                [
+                    indent
+                    + json.dumps(key)
+                    + ": [{0}{1}{0}]".format(
+                        "\n" + indent if values else "",
+                        (",\n" + indent).join(
+                            [indent + json.dumps(value, cls=ParameterValueEncoder) for value in values]
+                        ),
+                    )
+                    for key, values in data_for_export.items()
+                ]
+            ),
+        )
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+        caller.file_exported.emit(file_path)
+
+    def export_to_excel(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+        """Exports given data into Excel file."""
+        # NOTE: We import data into an in-memory Spine db and then export that to excel.
+        url = URL("sqlite", database="")
+        db_map = DatabaseMapping(url, create=True)
+        import_data(db_map, **data_for_export)
+        file_name = os.path.split(file_path)[1]
+        try:
+            export_spine_database_to_xlsx(db_map, file_path)
+        except PermissionError:
+            error_msg = {
+                None: [f"Unable to export file <b>{file_name}</b>.<br/>" "Close the file in Excel and try again."]
+            }
+            caller.msg_error.emit(error_msg)
+        except OSError:
+            error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
+            caller.msg_error.emit(error_msg)
+        else:
+            caller.file_exported.emit(file_path)
 
     def set_scenario_alternatives(self, db_map_data):
         self._set_scenario_alternatives_called.emit(db_map_data)

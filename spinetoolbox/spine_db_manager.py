@@ -1688,3 +1688,6 @@ class SpineDBManager(QObject):
         for w in SpineDBManager.get_all_multi_spine_db_editors():
             for k in range(w.tab_widget.count()):
                 yield w.tab_widget.widget(k)
+
+    def export_data(self, caller, db_map_item_ids, file_path, file_filter):
+        self._worker.export_data(caller, db_map_item_ids, file_path, file_filter)

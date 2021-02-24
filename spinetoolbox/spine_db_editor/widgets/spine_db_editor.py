@@ -22,17 +22,7 @@ from sqlalchemy.engine.url import URL
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu, QAbstractScrollArea, QTabBar
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon, QCursor
-from spinedb_api import (
-    import_data,
-    export_data,
-    ParameterValueEncoder,
-    create_new_spine_database,
-    DiffDatabaseMapping,
-    SpineDBAPIError,
-    SpineDBVersionError,
-    Asterisk,
-)
-from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from .custom_menus import MainMenu
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
@@ -445,7 +435,7 @@ class SpineDBEditorBase(QMainWindow):
         url = URL("sqlite", database=file_path)
         filename = os.path.split(file_path)[1]
         try:
-            db_map = DiffDatabaseMapping(url)
+            db_map = DatabaseMapping(url)
         except (SpineDBAPIError, SpineDBVersionError) as err:
             self.msg.emit(f"Could'n import file {filename}: {str(err)}")
             return
@@ -465,14 +455,6 @@ class SpineDBEditorBase(QMainWindow):
             self.msg_error.emit(msg)
         self.import_data(mapped_data)
         self.msg.emit(f"File {filename} successfully imported.")
-
-    @staticmethod
-    def _make_data_for_export(db_map_item_ids):
-        data = {}
-        for db_map, item_ids in db_map_item_ids.items():
-            for key, items in export_data(db_map, **item_ids).items():
-                data.setdefault(key, []).extend(items)
-        return data
 
     @Slot(bool)
     def show_mass_export_items_dialog(self, checked=False):
@@ -555,7 +537,7 @@ class SpineDBEditorBase(QMainWindow):
         """
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         self.qsettings.beginGroup(self.settings_group)
-        file_path, selected_filter = get_save_file_name_in_last_dir(
+        file_path, file_filter = get_save_file_name_in_last_dir(
             self.qsettings,
             "exportDB",
             self,
@@ -566,72 +548,7 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
             return
-        data_for_export = self._make_data_for_export(db_map_ids_for_export)
-        if selected_filter.startswith("JSON"):
-            self.export_to_json(file_path, data_for_export)
-        elif selected_filter.startswith("SQLite"):
-            self.export_to_sqlite(file_path, data_for_export)
-        elif selected_filter.startswith("Excel"):
-            self.export_to_excel(file_path, data_for_export)
-        else:
-            raise ValueError()
-
-    def export_to_sqlite(self, file_path, data_for_export):
-        """Exports given data into SQLite file."""
-        url = URL("sqlite", database=file_path)
-        if not self.db_mngr.is_url_available(url, self):
-            return
-        create_new_spine_database(url)
-        db_map = DiffDatabaseMapping(url)
-        import_data(db_map, **data_for_export)
-        try:
-            db_map.commit_session("Export initial data from Spine Toolbox.")
-        except SpineDBAPIError as err:
-            self.msg_error.emit(f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}")
-        else:
-            self.sqlite_file_exported.emit(file_path)
-
-    def export_to_json(self, file_path, data_for_export):
-        """Exports given data into JSON file."""
-        indent = 4 * " "
-        json_data = "{{{0}{1}{0}}}".format(
-            "\n" if data_for_export else "",
-            ",\n".join(
-                [
-                    indent
-                    + json.dumps(key)
-                    + ": [{0}{1}{0}]".format(
-                        "\n" + indent if values else "",
-                        (",\n" + indent).join(
-                            [indent + json.dumps(value, cls=ParameterValueEncoder) for value in values]
-                        ),
-                    )
-                    for key, values in data_for_export.items()
-                ]
-            ),
-        )
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(json_data)
-        self.file_exported.emit(file_path)
-
-    @busy_effect
-    def export_to_excel(self, file_path, data_for_export):
-        """Exports given data into Excel file."""
-        # NOTE: We import data into an in-memory Spine db and then export that to excel.
-        url = URL("sqlite", database="")
-        db_map = DiffDatabaseMapping(url, create=True)
-        import_data(db_map, **data_for_export)
-        file_name = os.path.split(file_path)[1]
-        try:
-            export_spine_database_to_xlsx(db_map, file_path)
-        except PermissionError:
-            self.msg_error.emit(
-                f"Unable to export file <b>{file_name}</b>.<br/>" "Close the file in Excel and try again."
-            )
-        except OSError:
-            self.msg_error.emit(f"[OSError] Unable to export file <b>{file_name}</b>.")
-        else:
-            self.file_exported.emit(file_path)
+        self.db_mngr.export_data(self, db_map_ids_for_export, file_path, file_filter)
 
     @staticmethod
     def _parse_db_map_metadata(db_map_metadata):
