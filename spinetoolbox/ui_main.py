@@ -78,6 +78,7 @@ from .helpers import (
     open_url,
     busy_effect,
     format_log_message,
+    color_from_index,
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
@@ -544,6 +545,15 @@ class ToolboxUI(QMainWindow):
             for action in toolbar.findChildren(QAbstractButton):
                 action.setEnabled(True)
         self.ui.actionOpen_project_directory.setEnabled(True)
+
+    def refresh_toolbars(self):
+        """Set toolbars' color using highest possible contrast."""
+        toolbars = list(self._toolbars())
+        for k, toolbar in enumerate(toolbars):
+            color = color_from_index(k, len(toolbars), base_hue=217.0, saturation=0.6)
+            toolbar.set_color(color)
+            for action in toolbar.findChildren(QAbstractButton):
+                action.setEnabled(self._project is not None)
 
     @Slot()
     def show_recent_projects_menu(self):

@@ -25,7 +25,6 @@ from PySide2.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QListView, QDialo
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from spine_engine.utils.serialization import serialize_path, deserialize_path, deserialize_remote_path
 from .config import PLUGINS_PATH, PLUGIN_REGISTRY_URL
-from .helpers import color_from_index
 from .widgets.toolbars import PluginToolBar
 from .widgets.custom_qwidgets import MenuToolBarWidget
 
@@ -69,14 +68,7 @@ class PluginManager:
             plugin_dirs += [item for item in top_level_items if os.path.isdir(item)]
         for plugin_dir in plugin_dirs:
             self.load_individual_plugin(plugin_dir)
-        self._refresh_toolbars()
-
-    def _refresh_toolbars(self):
-        """Set toolbars' color using highest possible contrast."""
-        all_toolbars = [self._toolbox.main_toolbar] + list(self._plugin_toolbars.values())
-        for k, toolbar in enumerate(all_toolbars):
-            color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
-            toolbar.set_color(color)
+        self._toolbox.refresh_toolbars()
 
     def load_individual_plugin(self, plugin_dir):
         """Loads plugin from directory and returns all the specs in a list.
@@ -190,7 +182,7 @@ class PluginManager:
         plugin_specs = self.load_individual_plugin(plugin_local_dir)
         for spec in plugin_specs:
             self._toolbox.do_add_specification(spec)
-        self._refresh_toolbars()
+        self._toolbox.refresh_toolbars()
 
     @Slot(str)
     def _remove_installed_plugin(self, plugin_name):
@@ -212,7 +204,7 @@ class PluginManager:
         # Remove plugin dir
         shutil.rmtree(plugin_dir)
         self._plugin_toolbars[plugin_name].deleteLater()
-        self._refresh_toolbars()
+        self._toolbox.refresh_toolbars()
 
     @Slot(str)
     def _update_plugin(self, plugin_name):
