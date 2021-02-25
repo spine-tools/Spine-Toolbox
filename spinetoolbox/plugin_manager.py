@@ -20,18 +20,50 @@ import json
 import urllib.request
 from urllib.parse import urljoin
 import shutil
-from PySide2.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QTimer, QSize
-from PySide2.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QListView, QDialogButtonBox
-from PySide2.QtGui import QStandardItemModel, QStandardItem
+from PySide2.QtCore import Qt, Signal, Slot, QObject, QThread
 from spine_engine.utils.serialization import serialize_path, deserialize_path, deserialize_remote_path
 from .config import PLUGINS_PATH, PLUGIN_REGISTRY_URL
 from .widgets.toolbars import PluginToolBar
-from .widgets.custom_qwidgets import MenuToolBarWidget
+from .widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog
 
 
 def _download_file(remote, local):
     os.makedirs(os.path.dirname(local), exist_ok=True)
     urllib.request.urlretrieve(remote, local)
+
+
+def _download_plugin(plugin, plugin_local_dir):
+    # 1. Create paths
+    plugin_remote_file = plugin["url"]
+    plugin_remote_dir = urljoin(plugin_remote_file, '.')
+    plugin_local_file = os.path.join(plugin_local_dir, "plugin.json")
+    # 2. Download and parse plugin.json file
+    _download_file(plugin_remote_file, plugin_local_file)
+    with open(plugin_local_file) as fh:
+        plugin_dict = json.load(fh)
+    # 3. Download specification .json files
+    specifications = plugin_dict["specifications"]
+    serialized_paths = (path for paths in specifications.values() for path in paths)
+    for serialized in serialized_paths:
+        local_file = deserialize_path(serialized, plugin_local_dir)
+        remote_file = deserialize_remote_path(serialized, plugin_remote_dir)
+        _download_file(remote_file, local_file)
+    # 4. Download include files in tool specs
+    serialized_includes = []
+    for serialized in specifications.get("Tool", ()):
+        spec_file = deserialize_path(serialized, plugin_local_dir)
+        with open(spec_file) as fh:
+            spect_dict = json.load(fh)
+        includes = spect_dict["includes"]
+        includes_main_path = spect_dict.get("includes_main_path", ".")
+        spec_dir = os.path.dirname(spec_file)
+        includes_main_path = os.path.join(spec_dir, includes_main_path)
+        includes = [os.path.join(includes_main_path, include) for include in includes]
+        serialized_includes += [serialize_path(include, plugin_local_dir) for include in includes]
+    for serialized in serialized_includes:
+        local_file = deserialize_path(serialized, plugin_local_dir)
+        remote_file = deserialize_remote_path(serialized, plugin_remote_dir)
+        _download_file(remote_file, local_file)
 
 
 class PluginManager:
@@ -44,10 +76,10 @@ class PluginManager:
         """
         self._toolbox = toolbox
         self._plugin_toolbars = {}
-        self.plugin_specs = []
-        self._registry = {}
-        self._registry_plugins = {}
+        self._workers = []
         self._installed_plugins = {}
+        self._registry_plugins = {}
+        self._plugin_specs = {}
 
     @property
     def plugin_toolbars(self):
@@ -86,7 +118,7 @@ class PluginManager:
             try:
                 plugin_dict = json.load(fh)
             except json.decoder.JSONDecodeError:
-                self.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Invalid JSON.")
+                self._toolbox.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Invalid JSON.")
                 return
         try:
             name = plugin_dict["name"]
@@ -94,48 +126,51 @@ class PluginManager:
             self._installed_plugins[name] = plugin_dict
             specifications = plugin_dict["specifications"]
         except KeyError as key:
-            self.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Key '{key}' not found.")
+            self._toolbox.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Key '{key}' not found.")
             return
         deserialized_paths = [deserialize_path(path, plugin_dir) for paths in specifications.values() for path in paths]
-        plugin_specs = []
+        plugin_specs = self._plugin_specs[name] = []
         for path in deserialized_paths:
             spec = self._toolbox.load_specification_from_file(path)
             if not spec:
                 continue
             spec.plugin = name
             plugin_specs.append(spec)
-        self.plugin_specs += plugin_specs
+        for spec in plugin_specs:
+            self._toolbox.do_add_specification(spec)
         toolbar = self._plugin_toolbars[name] = PluginToolBar(name, parent=self._toolbox)
         toolbar.setup(plugin_specs)
         self._toolbox.addToolBar(Qt.TopToolBarArea, toolbar)
-        return plugin_specs
+
+    def _create_worker(self):
+        worker = _PluginWorker()
+        self._workers.append(worker)
+        worker.finished.connect(lambda worker=worker: self._clean_up_worker(worker))
+        return worker
+
+    def _clean_up_worker(self, worker):
+        self._workers.remove(worker)
+        worker.clean_up()
 
     def _load_registry(self):
-        self._registry_plugins.clear()
         with urllib.request.urlopen(PLUGIN_REGISTRY_URL) as url:
-            self._registry = json.loads(url.read().decode())
-        self._registry_plugins = {plugin_dict["name"]: plugin_dict for plugin_dict in self._registry["plugins"]}
+            registry = json.loads(url.read().decode())
+        self._registry_plugins = {plugin_dict["name"]: plugin_dict for plugin_dict in registry["plugins"]}
 
     @Slot(bool)
     def show_install_plugin_dialog(self, _=False):
-        dialog = _InstallPluginDialog(self._toolbox)
-        self._load_registry()
+        self._toolbox.ui.menuPlugins.setEnabled(False)
+        worker = self._create_worker()
+        worker.finished.connect(self._do_show_install_plugin_dialog)
+        worker.start(self._load_registry)
+
+    @Slot()
+    def _do_show_install_plugin_dialog(self):
+        dialog = InstallPluginDialog(self._toolbox)
         names = self._registry_plugins.keys() - self._installed_plugins.keys()
         dialog.populate_list(names)
         dialog.item_selected.connect(self._install_plugin)
-        dialog.show()
-
-    @Slot(bool)
-    def show_manage_plugins_dialog(self, _=False):
-        dialog = _ManagePluginsDialog(self._toolbox)
-        self._load_registry()
-        names = (
-            (name, plugin_dict["version"].split(".") < self._registry_plugins[name]["version"].split("."))
-            for name, plugin_dict in self._installed_plugins.items()
-        )
-        dialog.populate_list(names)
-        dialog.item_removed.connect(self._remove_installed_plugin)
-        dialog.item_updated.connect(self._update_plugin)
+        dialog.destroyed.connect(lambda obj=None: self._toolbox.ui.menuPlugins.setEnabled(True))
         dialog.show()
 
     @Slot(str)
