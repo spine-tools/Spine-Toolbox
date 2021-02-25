@@ -576,6 +576,8 @@ class ToolboxUI(QMainWindow):
         # Put project's specification definition files into a dict by item type
         serialized_tool_spec_paths = dict()
         for spec in self.specification_model.specifications():
+            if spec.plugin:
+                continue
             serialized_path = serialize_path(spec.definition_file_path, self._project.project_dir)
             serialized_tool_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
         if not self._project.save(serialized_tool_spec_paths):
