@@ -145,47 +145,38 @@ class PluginManager:
         Args:
             plugin_name (str): plugin name
         """
-        # 1. Create paths
         plugin = self._registry_plugins[plugin_name]
-        plugin_remote_file = plugin["url"]
-        plugin_remote_dir = urljoin(plugin_remote_file, '.')
         plugin_local_dir = os.path.join(PLUGINS_PATH, plugin_name)
-        plugin_local_file = os.path.join(plugin_local_dir, "plugin.json")
-        # 2. Download and parse plugin.json file
-        _download_file(plugin_remote_file, plugin_local_file)
-        with open(plugin_local_file) as fh:
-            plugin_dict = json.load(fh)
-        # 3. Download specification .json files
-        specifications = plugin_dict["specifications"]
-        serialized_paths = (path for paths in specifications.values() for path in paths)
-        for serialized in serialized_paths:
-            local_file = deserialize_path(serialized, plugin_local_dir)
-            remote_file = deserialize_remote_path(serialized, plugin_remote_dir)
-            _download_file(remote_file, local_file)
-        # 4. Download include files in tool specs
-        serialized_includes = []
-        for serialized in specifications.get("Tool", ()):
-            spec_file = deserialize_path(serialized, plugin_local_dir)
-            with open(spec_file) as fh:
-                spect_dict = json.load(fh)
-            includes = spect_dict["includes"]
-            includes_main_path = spect_dict.get("includes_main_path", ".")
-            spec_dir = os.path.dirname(spec_file)
-            includes_main_path = os.path.join(spec_dir, includes_main_path)
-            includes = [os.path.join(includes_main_path, include) for include in includes]
-            serialized_includes += [serialize_path(include, plugin_local_dir) for include in includes]
-        for serialized in serialized_includes:
-            local_file = deserialize_path(serialized, plugin_local_dir)
-            remote_file = deserialize_remote_path(serialized, plugin_remote_dir)
-            _download_file(remote_file, local_file)
-        # 5. Load plugin
-        plugin_specs = self.load_individual_plugin(plugin_local_dir)
-        for spec in plugin_specs:
-            self._toolbox.do_add_specification(spec)
+        worker = self._create_worker()
+        worker.finished.connect(lambda plugin_local_dir=plugin_local_dir: self._load_installed_plugin(plugin_local_dir))
+        worker.start(_download_plugin, plugin, plugin_local_dir)
+
+    def _load_installed_plugin(self, plugin_local_dir):
+        self.load_individual_plugin(plugin_local_dir)
         self._toolbox.refresh_toolbars()
 
+    @Slot(bool)
+    def show_manage_plugins_dialog(self, _=False):
+        self._toolbox.ui.menuPlugins.setEnabled(False)
+        worker = self._create_worker()
+        worker.finished.connect(self._do_show_manage_plugins_dialog)
+        worker.start(self._load_registry)
+
+    @Slot()
+    def _do_show_manage_plugins_dialog(self):
+        dialog = ManagePluginsDialog(self._toolbox)
+        names = (
+            (name, plugin_dict["version"].split(".") < self._registry_plugins[name]["version"].split("."))
+            for name, plugin_dict in self._installed_plugins.items()
+        )
+        dialog.populate_list(names)
+        dialog.item_removed.connect(self._remove_plugin)
+        dialog.item_updated.connect(self._update_plugin)
+        dialog.destroyed.connect(lambda obj=None: self._toolbox.ui.menuPlugins.setEnabled(True))
+        dialog.show()
+
     @Slot(str)
-    def _remove_installed_plugin(self, plugin_name):
+    def _remove_plugin(self, plugin_name):
         """Removes installed plugin.
 
         Args:
@@ -212,122 +203,31 @@ class PluginManager:
         self._install_plugin(plugin_name)
 
 
-class _InstallPluginModel(QStandardItemModel):
-    def data(self, index, role=None):
-        if role == Qt.SizeHintRole:
-            return QSize(0, 40)
-        return super().data(index, role)
+class _PluginWorker(QObject):
 
+    finished = Signal()
 
-class _ManagePluginsModel(_InstallPluginModel):
-    def flags(self, index):
-        return super().flags(index) & ~Qt.ItemIsSelectable
+    def __init__(self):
+        super().__init__()
+        self._thread = QThread()
+        self.moveToThread(self._thread)
+        self._function = None
+        self._args = None
+        self._kwargs = None
 
+    def start(self, function, *args, **kwargs):
+        self._thread.started.connect(self._do_work)
+        self._function = function
+        self._args = args
+        self._kwargs = kwargs
+        self._thread.start()
 
-class _InstallPluginDialog(QDialog):
+    @Slot()
+    def _do_work(self):
+        self._function(*self._args, **self._kwargs)
+        self.finished.emit()
 
-    item_selected = Signal(str)
-
-    def __init__(self, parent):
-        """Initialize class"""
-        super().__init__(parent)
-        self.setWindowTitle('Install plugin')
-        QVBoxLayout(self)
-        self._line_edit = QLineEdit(self)
-        self._line_edit.setPlaceholderText("Search registry...")
-        self._list_view = QListView(self)
-        self._model = QSortFilterProxyModel(self)
-        self._source_model = _InstallPluginModel(self)
-        self._model.setSourceModel(self._source_model)
-        self._model.setFilterCaseSensitivity(Qt.CaseInsensitive)
-        self._list_view.setModel(self._model)
-        self._timer = QTimer(self)
-        self._timer.setInterval(200)
-        self._button_box = QDialogButtonBox(self)
-        self._button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
-        self._button_box.button(QDialogButtonBox.Ok).setEnabled(False)
-        self.layout().addWidget(self._line_edit)
-        self.layout().addWidget(self._list_view)
-        self.layout().addWidget(self._button_box)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setMinimumWidth(400)
-        self._button_box.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
-        self._button_box.button(QDialogButtonBox.Ok).clicked.connect(self._handle_ok_clicked)
-        self._list_view.doubleClicked.connect(self._emit_item_selected)
-        self._list_view.selectionModel().selectionChanged.connect(self._update_ok_button_enabled)
-        self._line_edit.textEdited.connect(self._handle_search_text_changed)
-        self._timer.timeout.connect(self._filter_model)
-
-    def populate_list(self, names):
-        for name in names:
-            self._source_model.appendRow(QStandardItem(name))
-
-    @Slot(str)
-    def _handle_search_text_changed(self, _text):
-        self._timer.start()
-
-    def _filter_model(self):
-        self._model.setFilterRegExp(self._line_edit.text())
-
-    @Slot(bool)
-    def _handle_ok_clicked(self, _=False):
-        index = self._list_view.currentIndex()
-        self._emit_item_selected(index)
-
-    @Slot("QModelIndex")
-    def _emit_item_selected(self, index):
-        if not index.isValid():
-            return
-        self.item_selected.emit(index.data(Qt.DisplayRole))
-        self.close()
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _update_ok_button_enabled(self, _selected, _deselected):
-        on = self._list_view.selectionModel().hasSelection()
-        self._button_box.button(QDialogButtonBox.Ok).setEnabled(on)
-
-
-class _ManagePluginsDialog(QDialog):
-    item_removed = Signal(str)
-    item_updated = Signal(str)
-
-    def __init__(self, parent):
-        """Initialize class"""
-        super().__init__(parent)
-        self.setWindowTitle('Manage plugins')
-        QVBoxLayout(self)
-        self._list_view = QListView(self)
-        self._model = _ManagePluginsModel(self)
-        self._list_view.setModel(self._model)
-        self._button_box = QDialogButtonBox(self)
-        self._button_box.setStandardButtons(QDialogButtonBox.Close)
-        self.layout().addWidget(self._list_view)
-        self.layout().addWidget(self._button_box)
-        self.setMinimumWidth(400)
-        self._button_box.button(QDialogButtonBox.Close).clicked.connect(self.close)
-
-    def populate_list(self, names):
-        for name, can_update in names:
-            item = QStandardItem(name)
-            self._model.appendRow(item)
-            widget = self._create_plugin_widget(name, can_update)
-            index = self._model.indexFromItem(item)
-            self._list_view.setIndexWidget(index, widget)
-
-    def _create_plugin_widget(self, plugin_name, can_update):
-        widget = MenuToolBarWidget(plugin_name)
-        widget.tool_bar.addAction("Remove", lambda _=False, n=plugin_name: self._emit_item_removed(n))
-        update = widget.tool_bar.addAction("Update", lambda _=False, n=plugin_name: self._emit_item_updated(n))
-        update.setEnabled(can_update)
-        update.triggered.connect(lambda _=False: update.setEnabled(False))
-        return widget
-
-    def _emit_item_removed(self, plugin_name):
-        for row in range(self._model.rowCount()):
-            if self._model.index(row, 0).data(Qt.DisplayRole) == plugin_name:
-                self._model.removeRow(row)
-                break
-        self.item_removed.emit(plugin_name)
-
-    def _emit_item_updated(self, plugin_name):
-        self.item_updated.emit(plugin_name)
+    def clean_up(self):
+        self._thread.quit()
+        self._thread.wait()
+        self.deleteLater()

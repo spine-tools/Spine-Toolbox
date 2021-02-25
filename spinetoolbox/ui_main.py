@@ -548,9 +548,9 @@ class ToolboxUI(QMainWindow):
 
     def refresh_toolbars(self):
         """Set toolbars' color using highest possible contrast."""
-        toolbars = list(self._toolbars())
-        for k, toolbar in enumerate(toolbars):
-            color = color_from_index(k, len(toolbars), base_hue=217.0, saturation=0.6)
+        all_toolbars = list(self._toolbars())
+        for k, toolbar in enumerate(all_toolbars):
+            color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
             for action in toolbar.findChildren(QAbstractButton):
                 action.setEnabled(self._project is not None)
@@ -667,7 +667,7 @@ class ToolboxUI(QMainWindow):
             spec = self.load_specification_from_file(path)
             specs.append(spec)
         # Add specs to model
-        for spec in specs + self._plugin_manager.plugin_specs:
+        for spec in specs:
             self.do_add_specification(spec)
         if not specs:
             self.msg_warning.emit("Project has no specifications")
