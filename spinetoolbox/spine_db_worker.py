@@ -350,19 +350,13 @@ class SpineDBWorker(QObject):
             command.setText(f"set scenario alternatives in {db_map.codename}")
             self._db_mngr.undo_stack[db_map].push(command)
             child_cmds = []
-            items_to_add, items_to_update, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data)
+            items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data)
             if ids_to_remove:
                 rm_cmd = RemoveItemsCommand(
                     self._db_mngr, db_map, {"scenario_alternative": ids_to_remove}, parent=command
                 )
                 rm_cmd.redo()
                 child_cmds.append(rm_cmd)
-            if items_to_update:
-                upd_cmd = UpdateItemsCommand(
-                    self._db_mngr, db_map, items_to_update, "scenario_alternative", parent=command
-                )
-                upd_cmd.redo()
-                child_cmds.append(upd_cmd)
             if items_to_add:
                 add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "scenario_alternative", parent=command)
                 add_cmd.redo()
