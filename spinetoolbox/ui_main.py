@@ -758,6 +758,7 @@ class ToolboxUI(QMainWindow):
         self.activate_no_selection_tab()  # Clear properties widget
         self.restore_original_logs_and_consoles()
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
+        self._shutdown_engine_kernels()
 
     def undo_critical_commands(self):
         """Undoes critical commands in the undo stack.
@@ -1892,7 +1893,6 @@ class ToolboxUI(QMainWindow):
         # Save number of screens
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
-        self._shutdown_engine_kernels()
         self.tear_down_items_and_factories()
         event.accept()
 
@@ -2207,5 +2207,7 @@ class ToolboxUI(QMainWindow):
         """Shuts down all kernels managed by Spine Engine."""
         engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        for connection_file in self._extra_consoles:
+        while self._extra_consoles:
+            connection_file, console = self._extra_consoles.popitem()
             engine_mngr.shutdown_kernel(connection_file)
+            console.deleteLater()

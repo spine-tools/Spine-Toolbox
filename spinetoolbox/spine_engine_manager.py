@@ -147,12 +147,16 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
     def restart_kernel(self, connection_file):
         from spine_engine.execution_managers import get_kernel_manager
 
-        get_kernel_manager(connection_file).restart_kernel(now=True)
+        km = get_kernel_manager(connection_file)
+        if km is not None:
+            km.restart_kernel(now=True)
 
     def shutdown_kernel(self, connection_file):
-        from spine_engine.execution_managers import get_kernel_manager
+        from spine_engine.execution_managers import pop_kernel_manager
 
-        get_kernel_manager(connection_file).shutdown_kernel(now=True)
+        km = pop_kernel_manager(connection_file)
+        if km is not None:
+            km.shutdown_kernel(now=True)
 
 
 def make_engine_manager(engine_server_address):
