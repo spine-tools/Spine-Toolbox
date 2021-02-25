@@ -44,6 +44,14 @@ class PropertyQLineEdit(QLineEdit):
         else:
             super().keyPressEvent(e)
 
+    def setText(self, text):
+        """Overridden to prevent the cursor going to the end whenever the user is still editing.
+        This happens because we set the text programmatically in undo/redo implementations.
+        """
+        pos = self.cursorPosition()
+        super().setText(text)
+        self.setCursorPosition(pos)
+
 
 class CustomQLineEdit(PropertyQLineEdit):
     """A custom QLineEdit that accepts file drops and displays the path.
