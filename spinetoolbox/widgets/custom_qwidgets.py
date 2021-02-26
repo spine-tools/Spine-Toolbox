@@ -257,10 +257,10 @@ class MenuItemToolBarWidget(ToolBarWidgetBase):
         """
         super().__init__(text, parent)
         self.option = QStyleOptionMenuItem()
-        if compact:
-            self.tool_bar.setFixedHeight(self.option.rect.height())
         action = QAction(self._text)
         QMenu(self._parent).initStyleOption(self.option, action)
+        if compact:
+            self.tool_bar.setFixedHeight(self.option.rect.height())
         text_width = self.option.fontMetrics.horizontalAdvance(self._text)
         icon_widht = qApp.style().pixelMetric(QStyle.PM_ToolBarIconSize)  # pylint: disable=undefined-variable
         spacing = text_width + 3 * icon_widht
