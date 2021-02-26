@@ -18,7 +18,7 @@ Contains PluginManager dialogs and widgets.
 from PySide2.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QTimer, QSize
 from PySide2.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QListView, QDialogButtonBox
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from .custom_qwidgets import MenuToolBarWidget
+from .custom_qwidgets import ToolBarWidget
 
 
 class _InstallPluginModel(QStandardItemModel):
@@ -125,7 +125,7 @@ class ManagePluginsDialog(QDialog):
             self._list_view.setIndexWidget(index, widget)
 
     def _create_plugin_widget(self, plugin_name, can_update):
-        widget = MenuToolBarWidget(plugin_name)
+        widget = ToolBarWidget(plugin_name, self)
         widget.tool_bar.addAction("Remove", lambda _=False, n=plugin_name: self._emit_item_removed(n))
         update = widget.tool_bar.addAction("Update", lambda _=False, n=plugin_name: self._emit_item_updated(n))
         update.setEnabled(can_update)

@@ -183,7 +183,7 @@ class ToolBarWidgetAction(CustomWidgetAction):
             parent (QMenu): the widget's parent
         """
         super().__init__(parent)
-        widget = MenuToolBarWidget(text, parent=parent, compact=compact)
+        widget = MenuItemToolBarWidget(text, parent=parent, compact=compact)
         self.setDefaultWidget(widget)
         self.tool_bar = widget.tool_bar
         self.tool_bar.enabled_changed.connect(self.setEnabled)
@@ -205,8 +205,43 @@ class ToolBarWidgetAction(CustomWidgetAction):
             self._parent_key_press_event = None
 
 
-class MenuToolBarWidget(QWidget):
-    """Paints a tool bar beside a menu item.
+class ToolBarWidgetBase(QWidget):
+    """A toolbar on the right, with enough space to print a text beneath.
+
+    Attributes:
+        tool_bar (QToolBar)
+    """
+
+    def __init__(self, text, parent=None):
+        """Class constructor.
+
+        Args:
+            text (str)
+            parent (QWidget): the widget's parent
+        """
+        super().__init__(parent)
+        self._text = text
+        self._parent = parent
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.tool_bar = _MenuToolBar(self)
+        layout.addStretch()
+        layout.addWidget(self.tool_bar)
+        icon_extent = qApp.style().pixelMetric(QStyle.PM_SmallIconSize)  # pylint: disable=undefined-variable
+        self.tool_bar.setIconSize(QSize(icon_extent, icon_extent))
+        self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+
+
+class ToolBarWidget(ToolBarWidgetBase):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        spacing = qApp.fontMetrics().horizontalAdvance(self._text)  # pylint: disable=undefined-variable
+        self.layout().insertSpacing(0, spacing)
+
+
+class MenuItemToolBarWidget(ToolBarWidgetBase):
+    """A menu item with a toolbar on the right.
 
     Attributes:
         tool_bar (QToolBar)
@@ -216,26 +251,20 @@ class MenuToolBarWidget(QWidget):
         """Class constructor.
 
         Args:
+            text (str)
             parent (QWidget): the widget's parent
+            compact (bool): if True, the widget uses the minimal space
         """
-        super().__init__(parent)
+        super().__init__(text, parent)
         self.option = QStyleOptionMenuItem()
-        action = QAction(text)
-        QMenu(parent).initStyleOption(self.option, action)
-        w = self.option.fontMetrics.horizontalAdvance(text)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.tool_bar = _MenuToolBar(self)
-        extent = qApp.style().pixelMetric(QStyle.PM_ToolBarIconSize)  # pylint: disable=undefined-variable
-        layout.addSpacing(w + 3 * extent)  # This makes room for the menu item
-        layout.addStretch()
-        layout.addWidget(self.tool_bar)
         if compact:
             self.tool_bar.setFixedHeight(self.option.rect.height())
-        extent = qApp.style().pixelMetric(QStyle.PM_SmallIconSize)  # pylint: disable=undefined-variable
-        self.tool_bar.setIconSize(QSize(extent, extent))
-        self.tool_bar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        action = QAction(self._text)
+        QMenu(self._parent).initStyleOption(self.option, action)
+        text_width = self.option.fontMetrics.horizontalAdvance(self._text)
+        icon_widht = qApp.style().pixelMetric(QStyle.PM_ToolBarIconSize)  # pylint: disable=undefined-variable
+        spacing = text_width + 3 * icon_widht
+        self.layout().insertSpacing(0, spacing)
 
     def paintEvent(self, event):
         """Draws the menu item, then calls the super() method to draw the tool bar."""
@@ -245,7 +274,7 @@ class MenuToolBarWidget(QWidget):
 
 
 class _MenuToolBar(QToolBar):
-    """A custom tool bar for ``MenuToolBarWidget``."""
+    """A custom tool bar for ``MenuItemToolBarWidget``."""
 
     enabled_changed = Signal(bool)
     _enabled = True
