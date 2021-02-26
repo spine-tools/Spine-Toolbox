@@ -140,17 +140,17 @@ class CustomPopupMenu(QMenu):
 class ItemSpecificationMenu(CustomPopupMenu):
     """Context menu class for item specifications."""
 
-    def __init__(self, toolbox, index):
+    def __init__(self, toolbox, index, item=None):
         """
         Args:
-            toolbox (ToolboxUI): Toolbox that requests this menu, used as parent. 
-            position (QPoint): Position on screen
+            toolbox (ToolboxUI): Toolbox that requests this menu, used as parent.
             index (QModelIndex): the index
+            item (ProjectItem, optional): passed to show_specification_form
         """
         super().__init__(toolbox)
         self._toolbox = toolbox
         self.index = QPersistentModelIndex(index)
-        self.add_action("Edit specification", lambda: toolbox.edit_specification(self.index))
+        self.add_action("Edit specification", lambda item=item: toolbox.edit_specification(self.index, item))
         self.add_action("Remove specification", lambda: toolbox.remove_specification(self.index.row()))
         self.add_action("Open specification file...", lambda: toolbox.open_specification_file(self.index))
 

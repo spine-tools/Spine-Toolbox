@@ -234,7 +234,7 @@ class PluginManager:
 
     @Slot(str)
     def _update_plugin(self, plugin_name):
-        self._remove_installed_plugin(plugin_name)
+        self._remove_plugin(plugin_name)
         self._install_plugin(plugin_name)
 
 

@@ -108,7 +108,7 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def show_specification_widget(toolbox, specification=None, **kwargs):
+    def show_specification_widget(toolbox, specification=None, item=None, **kwargs):
         """
         Creates the item's specification widget.
 
@@ -118,6 +118,7 @@ class ProjectItemFactory:
             toolbox (ToolboxUI): Toolbox main window
             specification (ProjectItemSpecification, optional): a specification to show in the widget or None for
                 a fresh start
+            item (ProjectItem, optional): a project item. If the specification is accepted, it is also set for this item
             **kwargs: parameters passed to the specification widget
         Returns:
             QWidget: item's specification widget
