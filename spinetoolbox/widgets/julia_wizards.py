@@ -47,12 +47,23 @@ class _PageId(IntEnum):
     FAILURE = auto()
 
 
+class _HyperTextLabel(QLabel):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setWordWrap(True)
+        self.setTextFormat(Qt.RichText)
+        self.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.setOpenExternalLinks(True)
+
+
 class IntroPage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Welcome")
-        label = QLabel("This wizard will help you install Julia in your computer.")
-        label.setWordWrap(True)
+        label = _HyperTextLabel(
+            "This wizard will help you install "
+            "<a title='julia language' href='https://julialang.org/'>Julia</a> in your computer."
+        )
         layout = QVBoxLayout(self)
         layout.addWidget(label)
 
@@ -71,14 +82,14 @@ class SelectDirsPage(QWizardPage):
         install_dir_line_edit.setText(default_install_dir())
         symlink_dir_line_edit.setText(default_symlink_dir())
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Where do you want Julia packages installed:"))
+        layout.addWidget(QLabel("Directory for Julia packages:"))
         install_dir_widget = QWidget()
         install_dir_layout = QHBoxLayout(install_dir_widget)
         install_dir_layout.addWidget(install_dir_line_edit)
         install_dir_button = QPushButton("Browse")
         install_dir_layout.addWidget(install_dir_button)
         layout.addWidget(install_dir_widget)
-        layout.addWidget(QLabel("Where you want Julia executables (e.g., `julia`, `julia-1`) placed:"))
+        layout.addWidget(QLabel("Directory for Julia executable:"))
         symlink_dir_widget = QWidget()
         symlink_dir_layout = QHBoxLayout(symlink_dir_widget)
         symlink_dir_layout.addWidget(symlink_dir_line_edit)
@@ -157,24 +168,24 @@ class InstallJuliaPage(QWizardPage):
         return self._exec_mngr is None
 
     def initializePage(self):
-        self._exec_mngr = QProcessExecutionManager(
-            self,
-            sys.executable,
-            [
-                "-m",
-                "jill",
-                "install",
-                "--confirm",
-                "--install_dir",
-                self.field("install_dir"),
-                "--symlink_dir",
-                self.field("symlink_dir"),
-            ],
-        )
+        args = [
+            "-m",
+            "jill",
+            "install",
+            "--confirm",
+            "--install_dir",
+            self.field("install_dir"),
+            "--symlink_dir",
+            self.field("symlink_dir"),
+        ]
+        self._exec_mngr = QProcessExecutionManager(self, sys.executable, args, semisilent=True)
         qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
         self.completeChanged.emit()
         self._exec_mngr.execution_finished.connect(self._handle_julia_install_finished)
         self._exec_mngr.start_execution()
+        self.msg_success.emit("Julia installation started")
+        cmd = sys.executable + " " + " ".join(args)
+        self.msg.emit(f"$ <b>{cmd}<b/>...")
 
     @Slot(int)
     def _handle_julia_install_finished(self, ret):
@@ -231,14 +242,10 @@ class FailurePage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Installation failed")
-        label = QLabel(
+        label = _HyperTextLabel(
             "Apologies. You may install Julia manually "
             "from <a title='julia downloads' href='https://julialang.org/downloads/'>here</a>."
         )
-        label.setWordWrap(True)
-        label.setTextFormat(Qt.RichText)
-        label.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        label.setOpenExternalLinks(True)
         layout = QVBoxLayout(self)
         layout.addWidget(label)
 
