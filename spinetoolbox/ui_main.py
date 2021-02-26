@@ -1227,17 +1227,18 @@ class ToolboxUI(QMainWindow):
         self.specification_context_menu = None
 
     @Slot(QModelIndex)
-    def edit_specification(self, index):
+    def edit_specification(self, index, item):
         """Open the tool specification widget for editing an existing tool specification.
 
         Args:
             index (QModelIndex): Index of the item (from double-click or contex menu signal)
+            item (ProjectItem, optional)
         """
         if not index.isValid():
             return
         specification = self.specification_model.specification(index.row())
         # Open spec in Tool specification edit widget
-        self.show_specification_form(specification.item_type, specification)
+        self.show_specification_form(specification.item_type, specification, item)
 
     @busy_effect
     @Slot(QModelIndex)
@@ -1579,13 +1580,14 @@ class ToolboxUI(QMainWindow):
         return item_type in self._item_specification_factories
 
     @Slot()
-    def show_specification_form(self, item_type, specification=None, **kwargs):
+    def show_specification_form(self, item_type, specification=None, item=None, **kwargs):
         """
         Shows specification widget.
 
         Args:
             item_type (str): item's type
-            specification (ProjectItemSpecification, optional): item's specification
+            specification (ProjectItemSpecification, optional): specification
+            item (ProjectItem, optional): project item
             **kwargs: parameters passed to the specification widget
         """
         if not self._project:
@@ -1593,7 +1595,7 @@ class ToolboxUI(QMainWindow):
             return
         if not self.supports_specification(item_type):
             return
-        self.item_factories[item_type].show_specification_widget(self, specification, **kwargs)
+        self.item_factories[item_type].show_specification_widget(self, specification, item, **kwargs)
 
     @Slot()
     def show_settings(self):
