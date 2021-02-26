@@ -206,7 +206,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>2</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -757,57 +757,8 @@ p, li { white-space: pre-wrap; }
            <property name="title">
             <string>Julia</string>
            </property>
-           <layout class="QGridLayout" name="gridLayout_5">
-            <property name="spacing">
-             <number>6</number>
-            </property>
-            <item row="4" column="1">
-             <widget class="QToolButton" name="toolButton_browse_julia_project">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia project using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-              <property name="icon">
-               <iconset resource="resources/resources_icons.qrc">
-                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLineEdit" name="lineEdit_julia_path">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia executable. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="placeholderText">
-               <string>Using Julia executable in system path</string>
-              </property>
-              <property name="clearButtonEnabled">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="CustomQComboBox" name="comboBox_julia_kernel">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel for the embedded Julia Console.&lt;/p&gt;&lt;p&gt;Only valid Julia kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
+           <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
              <widget class="QRadioButton" name="radioButton_use_julia_executable">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Julia Tools and scripts will be executed in a terminal as an individual process. Select the Julia executable and Julia project below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -820,29 +771,81 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="4" column="0">
-             <widget class="QLineEdit" name="lineEdit_julia_project_path">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="placeholderText">
-               <string>Using Julia home project</string>
-              </property>
-              <property name="clearButtonEnabled">
-               <bool>true</bool>
-              </property>
-             </widget>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_8">
+              <item>
+               <widget class="QLineEdit" name="lineEdit_julia_path">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia executable. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="placeholderText">
+                 <string>Using Julia executable in system path</string>
+                </property>
+                <property name="clearButtonEnabled">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="toolButton_browse_julia">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia executable using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="resources/resources_icons.qrc">
+                  <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
-            <item row="6" column="0">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_7">
+              <item>
+               <widget class="QLineEdit" name="lineEdit_julia_project_path">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="placeholderText">
+                 <string>Using Julia home project</string>
+                </property>
+                <property name="clearButtonEnabled">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="toolButton_browse_julia_project">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia project using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="text">
+                 <string>...</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="resources/resources_icons.qrc">
+                  <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
              <widget class="QRadioButton" name="radioButton_use_julia_console">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). Select the kernel for Julia Console from the drop-down menu below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -852,29 +855,67 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="3" column="1">
-             <widget class="QToolButton" name="toolButton_browse_julia">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia executable using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="icon">
-               <iconset resource="resources/resources_icons.qrc">
-                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_9">
+              <item>
+               <widget class="CustomQComboBox" name="comboBox_julia_kernel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel for the embedded Julia Console.&lt;/p&gt;&lt;p&gt;Only valid Julia kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Kernel spec editor</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="Line" name="line">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
               </property>
              </widget>
             </item>
-            <item row="7" column="1">
-             <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Kernel spec editor</string>
-              </property>
-             </widget>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_12">
+              <item>
+               <widget class="QPushButton" name="pushButton_install_julia">
+                <property name="text">
+                 <string>Install Julia</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_add_up_spine_opt">
+                <property name="text">
+                 <string>Add/Update SpineOpt</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_troubleshooting_julia">
+                <property name="text">
+                 <string>Troubleshooting</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>
@@ -896,14 +937,8 @@ p, li { white-space: pre-wrap; }
            <property name="title">
             <string>Python</string>
            </property>
-           <layout class="QGridLayout" name="gridLayout_2" columnstretch="0,0">
-            <property name="bottomMargin">
-             <number>11</number>
-            </property>
-            <property name="spacing">
-             <number>6</number>
-            </property>
-            <item row="0" column="0">
+           <layout class="QVBoxLayout" name="verticalLayout_5">
+            <item>
              <widget class="QRadioButton" name="radioButton_use_python_interpreter">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Python Tools and scripts are executed in a separate process in terminal. Select the python interpreter you want to use into the line edit below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -913,37 +948,41 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="1" column="0">
-             <widget class="QLineEdit" name="lineEdit_python_path">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="placeholderText">
-               <string>Using current Python interpreter</string>
-              </property>
-              <property name="clearButtonEnabled">
-               <bool>true</bool>
-              </property>
-             </widget>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_10">
+              <item>
+               <widget class="QLineEdit" name="lineEdit_python_path">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="placeholderText">
+                 <string>Using current Python interpreter</string>
+                </property>
+                <property name="clearButtonEnabled">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="toolButton_browse_python">
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="resources/resources_icons.qrc">
+                  <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
-            <item row="1" column="1">
-             <widget class="QToolButton" name="toolButton_browse_python">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="icon">
-               <iconset resource="resources/resources_icons.qrc">
-                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
+            <item>
              <widget class="QRadioButton" name="radioButton_use_python_console">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Python Tools and scripts are executed in the embedded Python Console. Select the kernel for the Python Console from the drop-down menu below.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -953,43 +992,47 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
-            <item row="3" column="0">
-             <widget class="CustomQComboBox" name="comboBox_python_kernel">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel for the embedded Python Console.&lt;/p&gt;&lt;p&gt;Only valid Python kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="sizeAdjustPolicy">
-               <enum>QComboBox::AdjustToContents</enum>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>Open kernel editor</string>
-              </property>
-              <property name="text">
-               <string>Kernel spec editor</string>
-              </property>
-             </widget>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_11">
+              <item>
+               <widget class="CustomQComboBox" name="comboBox_python_kernel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel for the embedded Python Console.&lt;/p&gt;&lt;p&gt;Only valid Python kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="sizeAdjustPolicy">
+                 <enum>QComboBox::AdjustToContents</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Open kernel editor</string>
+                </property>
+                <property name="text">
+                 <string>Kernel spec editor</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>

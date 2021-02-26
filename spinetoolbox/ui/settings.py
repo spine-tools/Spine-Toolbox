@@ -387,22 +387,57 @@ class Ui_SettingsForm(object):
 
         self.groupBox_julia = QGroupBox(self.ExternalTools)
         self.groupBox_julia.setObjectName(u"groupBox_julia")
-        self.gridLayout_5 = QGridLayout(self.groupBox_julia)
-        self.gridLayout_5.setSpacing(6)
-        self.gridLayout_5.setObjectName(u"gridLayout_5")
-        self.toolButton_browse_julia_project = QToolButton(self.groupBox_julia)
-        self.toolButton_browse_julia_project.setObjectName(u"toolButton_browse_julia_project")
-        self.toolButton_browse_julia_project.setIcon(icon4)
+        self.verticalLayout = QVBoxLayout(self.groupBox_julia)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.radioButton_use_julia_executable = QRadioButton(self.groupBox_julia)
+        self.radioButton_use_julia_executable.setObjectName(u"radioButton_use_julia_executable")
+        self.radioButton_use_julia_executable.setChecked(True)
 
-        self.gridLayout_5.addWidget(self.toolButton_browse_julia_project, 4, 1, 1, 1)
+        self.verticalLayout.addWidget(self.radioButton_use_julia_executable)
 
+        self.horizontalLayout_8 = QHBoxLayout()
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
         self.lineEdit_julia_path = QLineEdit(self.groupBox_julia)
         self.lineEdit_julia_path.setObjectName(u"lineEdit_julia_path")
         self.lineEdit_julia_path.setMinimumSize(QSize(0, 20))
         self.lineEdit_julia_path.setClearButtonEnabled(True)
 
-        self.gridLayout_5.addWidget(self.lineEdit_julia_path, 3, 0, 1, 1)
+        self.horizontalLayout_8.addWidget(self.lineEdit_julia_path)
 
+        self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
+        self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
+        self.toolButton_browse_julia.setIcon(icon4)
+
+        self.horizontalLayout_8.addWidget(self.toolButton_browse_julia)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_8)
+
+        self.horizontalLayout_7 = QHBoxLayout()
+        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.lineEdit_julia_project_path = QLineEdit(self.groupBox_julia)
+        self.lineEdit_julia_project_path.setObjectName(u"lineEdit_julia_project_path")
+        self.lineEdit_julia_project_path.setMinimumSize(QSize(0, 20))
+        self.lineEdit_julia_project_path.setClearButtonEnabled(True)
+
+        self.horizontalLayout_7.addWidget(self.lineEdit_julia_project_path)
+
+        self.toolButton_browse_julia_project = QToolButton(self.groupBox_julia)
+        self.toolButton_browse_julia_project.setObjectName(u"toolButton_browse_julia_project")
+        self.toolButton_browse_julia_project.setIcon(icon4)
+
+        self.horizontalLayout_7.addWidget(self.toolButton_browse_julia_project)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_7)
+
+        self.radioButton_use_julia_console = QRadioButton(self.groupBox_julia)
+        self.radioButton_use_julia_console.setObjectName(u"radioButton_use_julia_console")
+
+        self.verticalLayout.addWidget(self.radioButton_use_julia_console)
+
+        self.horizontalLayout_9 = QHBoxLayout()
+        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.comboBox_julia_kernel = CustomQComboBox(self.groupBox_julia)
         self.comboBox_julia_kernel.setObjectName(u"comboBox_julia_kernel")
         sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -411,38 +446,44 @@ class Ui_SettingsForm(object):
         sizePolicy6.setHeightForWidth(self.comboBox_julia_kernel.sizePolicy().hasHeightForWidth())
         self.comboBox_julia_kernel.setSizePolicy(sizePolicy6)
 
-        self.gridLayout_5.addWidget(self.comboBox_julia_kernel, 7, 0, 1, 1)
-
-        self.radioButton_use_julia_executable = QRadioButton(self.groupBox_julia)
-        self.radioButton_use_julia_executable.setObjectName(u"radioButton_use_julia_executable")
-        self.radioButton_use_julia_executable.setChecked(True)
-
-        self.gridLayout_5.addWidget(self.radioButton_use_julia_executable, 2, 0, 1, 1)
-
-        self.lineEdit_julia_project_path = QLineEdit(self.groupBox_julia)
-        self.lineEdit_julia_project_path.setObjectName(u"lineEdit_julia_project_path")
-        self.lineEdit_julia_project_path.setMinimumSize(QSize(0, 20))
-        self.lineEdit_julia_project_path.setClearButtonEnabled(True)
-
-        self.gridLayout_5.addWidget(self.lineEdit_julia_project_path, 4, 0, 1, 1)
-
-        self.radioButton_use_julia_console = QRadioButton(self.groupBox_julia)
-        self.radioButton_use_julia_console.setObjectName(u"radioButton_use_julia_console")
-
-        self.gridLayout_5.addWidget(self.radioButton_use_julia_console, 6, 0, 1, 1)
-
-        self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
-        self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
-        self.toolButton_browse_julia.setIcon(icon4)
-
-        self.gridLayout_5.addWidget(self.toolButton_browse_julia, 3, 1, 1, 1)
+        self.horizontalLayout_9.addWidget(self.comboBox_julia_kernel)
 
         self.pushButton_open_kernel_editor_julia = QPushButton(self.groupBox_julia)
         self.pushButton_open_kernel_editor_julia.setObjectName(u"pushButton_open_kernel_editor_julia")
         sizePolicy5.setHeightForWidth(self.pushButton_open_kernel_editor_julia.sizePolicy().hasHeightForWidth())
         self.pushButton_open_kernel_editor_julia.setSizePolicy(sizePolicy5)
 
-        self.gridLayout_5.addWidget(self.pushButton_open_kernel_editor_julia, 7, 1, 1, 1)
+        self.horizontalLayout_9.addWidget(self.pushButton_open_kernel_editor_julia)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_9)
+
+        self.line = QFrame(self.groupBox_julia)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.HLine)
+        self.line.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout.addWidget(self.line)
+
+        self.horizontalLayout_12 = QHBoxLayout()
+        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
+        self.pushButton_install_julia = QPushButton(self.groupBox_julia)
+        self.pushButton_install_julia.setObjectName(u"pushButton_install_julia")
+
+        self.horizontalLayout_12.addWidget(self.pushButton_install_julia)
+
+        self.pushButton_add_up_spine_opt = QPushButton(self.groupBox_julia)
+        self.pushButton_add_up_spine_opt.setObjectName(u"pushButton_add_up_spine_opt")
+
+        self.horizontalLayout_12.addWidget(self.pushButton_add_up_spine_opt)
+
+        self.pushButton_troubleshooting_julia = QPushButton(self.groupBox_julia)
+        self.pushButton_troubleshooting_julia.setObjectName(u"pushButton_troubleshooting_julia")
+
+        self.horizontalLayout_12.addWidget(self.pushButton_troubleshooting_julia)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_12)
 
 
         self.verticalLayout_8.addWidget(self.groupBox_julia)
@@ -452,40 +493,45 @@ class Ui_SettingsForm(object):
         sizePolicy2.setHeightForWidth(self.groupBox_python.sizePolicy().hasHeightForWidth())
         self.groupBox_python.setSizePolicy(sizePolicy2)
         self.groupBox_python.setMinimumSize(QSize(0, 95))
-        self.gridLayout_2 = QGridLayout(self.groupBox_python)
-        self.gridLayout_2.setSpacing(6)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setContentsMargins(-1, -1, -1, 11)
+        self.verticalLayout_5 = QVBoxLayout(self.groupBox_python)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.radioButton_use_python_interpreter = QRadioButton(self.groupBox_python)
         self.radioButton_use_python_interpreter.setObjectName(u"radioButton_use_python_interpreter")
 
-        self.gridLayout_2.addWidget(self.radioButton_use_python_interpreter, 0, 0, 1, 1)
+        self.verticalLayout_5.addWidget(self.radioButton_use_python_interpreter)
 
+        self.horizontalLayout_10 = QHBoxLayout()
+        self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
         self.lineEdit_python_path = QLineEdit(self.groupBox_python)
         self.lineEdit_python_path.setObjectName(u"lineEdit_python_path")
         self.lineEdit_python_path.setMinimumSize(QSize(0, 20))
         self.lineEdit_python_path.setClearButtonEnabled(True)
 
-        self.gridLayout_2.addWidget(self.lineEdit_python_path, 1, 0, 1, 1)
+        self.horizontalLayout_10.addWidget(self.lineEdit_python_path)
 
         self.toolButton_browse_python = QToolButton(self.groupBox_python)
         self.toolButton_browse_python.setObjectName(u"toolButton_browse_python")
         self.toolButton_browse_python.setIcon(icon4)
 
-        self.gridLayout_2.addWidget(self.toolButton_browse_python, 1, 1, 1, 1)
+        self.horizontalLayout_10.addWidget(self.toolButton_browse_python)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_10)
 
         self.radioButton_use_python_console = QRadioButton(self.groupBox_python)
         self.radioButton_use_python_console.setObjectName(u"radioButton_use_python_console")
 
-        self.gridLayout_2.addWidget(self.radioButton_use_python_console, 2, 0, 1, 1)
+        self.verticalLayout_5.addWidget(self.radioButton_use_python_console)
 
+        self.horizontalLayout_11 = QHBoxLayout()
+        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
         self.comboBox_python_kernel = CustomQComboBox(self.groupBox_python)
         self.comboBox_python_kernel.setObjectName(u"comboBox_python_kernel")
         sizePolicy6.setHeightForWidth(self.comboBox_python_kernel.sizePolicy().hasHeightForWidth())
         self.comboBox_python_kernel.setSizePolicy(sizePolicy6)
         self.comboBox_python_kernel.setSizeAdjustPolicy(QComboBox.AdjustToContents)
 
-        self.gridLayout_2.addWidget(self.comboBox_python_kernel, 3, 0, 1, 1)
+        self.horizontalLayout_11.addWidget(self.comboBox_python_kernel)
 
         self.pushButton_open_kernel_editor_python = QPushButton(self.groupBox_python)
         self.pushButton_open_kernel_editor_python.setObjectName(u"pushButton_open_kernel_editor_python")
@@ -493,7 +539,10 @@ class Ui_SettingsForm(object):
         self.pushButton_open_kernel_editor_python.setSizePolicy(sizePolicy5)
         self.pushButton_open_kernel_editor_python.setMinimumSize(QSize(0, 0))
 
-        self.gridLayout_2.addWidget(self.pushButton_open_kernel_editor_python, 3, 1, 1, 1)
+        self.horizontalLayout_11.addWidget(self.pushButton_open_kernel_editor_python)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_11)
 
 
         self.verticalLayout_8.addWidget(self.groupBox_python)
@@ -618,7 +667,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -715,33 +764,36 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.groupBox_julia.setTitle(QCoreApplication.translate("SettingsForm", u"Julia", None))
 #if QT_CONFIG(tooltip)
-        self.toolButton_browse_julia_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia project using a file browser</p></body></html>", None))
+        self.radioButton_use_julia_executable.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When selected, Julia Tools and scripts will be executed in a terminal as an individual process. Select the Julia executable and Julia project below.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.toolButton_browse_julia_project.setText(QCoreApplication.translate("SettingsForm", u"...", None))
+        self.radioButton_use_julia_executable.setText(QCoreApplication.translate("SettingsForm", u"Use Julia executable", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_julia_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia executable. Leave blank to use Julia defined in your system path.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_julia_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Julia executable in system path", None))
 #if QT_CONFIG(tooltip)
-        self.comboBox_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Julia kernel for the embedded Julia Console.</p><p>Only valid Julia kernels are shown. Open Kernel editor to add kernels.</p></body></html>", None))
+        self.toolButton_browse_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia executable using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(tooltip)
-        self.radioButton_use_julia_executable.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When selected, Julia Tools and scripts will be executed in a terminal as an individual process. Select the Julia executable and Julia project below.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.radioButton_use_julia_executable.setText(QCoreApplication.translate("SettingsForm", u"Use Julia executable", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_julia_project_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia project</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_julia_project_path.setText("")
         self.lineEdit_julia_project_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Julia home project", None))
 #if QT_CONFIG(tooltip)
+        self.toolButton_browse_julia_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia project using a file browser</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.toolButton_browse_julia_project.setText(QCoreApplication.translate("SettingsForm", u"...", None))
+#if QT_CONFIG(tooltip)
         self.radioButton_use_julia_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). Select the kernel for Julia Console from the drop-down menu below.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.radioButton_use_julia_console.setText(QCoreApplication.translate("SettingsForm", u"Use embedded Julia Console", None))
 #if QT_CONFIG(tooltip)
-        self.toolButton_browse_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia executable using a file browser</p></body></html>", None))
+        self.comboBox_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Julia kernel for the embedded Julia Console.</p><p>Only valid Julia kernels are shown. Open Kernel editor to add kernels.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_open_kernel_editor_julia.setText(QCoreApplication.translate("SettingsForm", u"Kernel spec editor", None))
+        self.pushButton_install_julia.setText(QCoreApplication.translate("SettingsForm", u"Install Julia", None))
+        self.pushButton_add_up_spine_opt.setText(QCoreApplication.translate("SettingsForm", u"Add/Update SpineOpt", None))
+        self.pushButton_troubleshooting_julia.setText(QCoreApplication.translate("SettingsForm", u"Troubleshooting", None))
         self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python", None))
 #if QT_CONFIG(tooltip)
         self.radioButton_use_python_interpreter.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When selected, Python Tools and scripts are executed in a separate process in terminal. Select the python interpreter you want to use into the line edit below.</p></body></html>", None))

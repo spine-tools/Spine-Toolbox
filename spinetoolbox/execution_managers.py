@@ -155,7 +155,7 @@ class QProcessExecutionManager(ExecutionManager):
             arg_str = " ".join(self._args)
             self._logger.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
         elif new_state == QProcess.Running:
-            self._logger.msg_warning.emit("\tExecution is in progress. See Process Log for messages " "(stdout&stderr)")
+            self._logger.msg_warning.emit("\tExecution in progress...")
         elif new_state == QProcess.NotRunning:
             # logging.debug("Process is not running")
             pass

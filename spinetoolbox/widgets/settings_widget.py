@@ -22,6 +22,7 @@ from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QPixmap
 from spine_engine.utils.helpers import resolve_julia_executable_from_path, resolve_python_executable_from_path
 from .notification import Notification
+from .julia_wizards import InstallJuliaWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..graphics_items import Link
 from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
@@ -243,6 +244,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_use_julia_console.clicked.connect(self.toggle_julia_execution_mode)
         self.ui.radioButton_use_python_interpreter.clicked.connect(self.toggle_python_execution_mode)
         self.ui.radioButton_use_python_console.clicked.connect(self.toggle_python_execution_mode)
+        self.ui.pushButton_install_julia.clicked.connect(self._show_install_julia_wizard)
+
+    def _show_install_julia_wizard(self):
+        wizard = InstallJuliaWizard(self)
+        wizard.julia_exe_selected.connect(self.ui.lineEdit_julia_path.setText)
+        wizard.show()
 
     @Slot(bool)
     def set_auto_expand_objects(self, checked=False):
