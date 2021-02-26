@@ -93,6 +93,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v3_to_v4(project_dict)
             elif v == 4:
                 project_dict = self.upgrade_v4_to_v5(project_dict)
+            elif v == 5:
+                project_dict = self.upgrade_v5_to_v6(project_dict, project_dir)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -293,7 +295,7 @@ class ProjectUpgrader:
                                     existing_values.append(value)
                     if resource_filters:
                         new_conn["resource_filters"] = resource_filters
-                    if not set((from_name, to_name)).intersection(combiners_copy):
+                    if not {from_name, to_name}.intersection(combiners_copy):
                         conns_to_add.append(new_conn)
                     conns_to_item.setdefault(to_name, []).append(new_conn)
                     conns_from_item.setdefault(from_name, []).append(new_conn)
@@ -303,6 +305,63 @@ class ProjectUpgrader:
                 new["project"]["connections"].remove(conn)
             except ValueError:
                 pass
+        return new
+
+    @staticmethod
+    def upgrade_v5_to_v6(old, project_dir):
+        """Upgrades version 5 project dictionary to version 6.
+
+        Changes:
+            1. Data store URL labels do not have '{' and '}' anymore
+            2. Importer stores resource labels instead of serialized paths in "file_selection".
+            3. Gimlet's "selections" is now called "file_selection"
+            4. Gimlet stores resource labels instead of serialized paths in "file_selection".
+            5. Gimlet and Tool store command line arguments as serialized CmdLineArg objects, not serialized paths
+
+        Args:
+            old (dict): Version 5 project dictionary
+
+        Returns:
+            dict: Version 6 project dictionary
+        """
+
+        def fix_file_selection(item_dict):
+            old_selection = item_dict.get("file_selection", list())
+            new_selection = list()
+            for path, selected in old_selection:
+                deserialized = deserialize_path(path, project_dir)
+                if deserialized.startswith("{") and deserialized.endswith("}"):
+                    # Fix old-style data store resource labels '{db_url@item name}'.
+                    deserialized = deserialized[1:-1]
+                new_selection.append([deserialized, selected])
+            item_dict["file_selection"] = new_selection
+
+        def fix_cmd_line_args(item_dict):
+            old_args = item_dict.get("cmd_line_args", list())
+            new_args = list()
+            for arg in old_args:
+                deserialized = deserialize_path(arg, project_dir)
+                if deserialized.startswith("{") and deserialized.endswith("}"):
+                    # Fix old-style data store resource labels '{db_url@item name}'.
+                    deserialized = deserialized[1:-1]
+                # We assume all args are resource labels. This may not always be true, though, and needs to be
+                # fixed manually once the project has been loaded.
+                new_args.append({"type": "resource", "arg": deserialized})
+            item_dict["cmd_line_args"] = new_args
+
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 6
+        importer_dicts = [item_dict for item_dict in new["items"].values() if item_dict["type"] == "Importer"]
+        for import_dict in importer_dicts:
+            fix_file_selection(import_dict)
+        gimlet_dicts = [item_dict for item_dict in new["items"].values() if item_dict["type"] == "Gimlet"]
+        for gimlet_dict in gimlet_dicts:
+            gimlet_dict["file_selection"] = gimlet_dict.pop("selections", list())
+            fix_file_selection(gimlet_dict)
+            fix_cmd_line_args(gimlet_dict)
+        tool_dicts = [item_dict for item_dict in new["items"].values() if item_dict["type"] == "Tool"]
+        for tool_dict in tool_dicts:
+            fix_cmd_line_args(tool_dict)
         return new
 
     @staticmethod
@@ -349,8 +408,8 @@ class ProjectUpgrader:
         """Checks given project dict if it is valid for given version."""
         if v == 1:
             return self.is_valid_v1(p)
-        if v in (2, 3, 4, 5):
-            return self.is_valid_v2_to_5(p, v)
+        if 2 <= v <= 6:
+            return self.is_valid_v2_to_6(p, v)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -399,9 +458,9 @@ class ProjectUpgrader:
             return False
         return True
 
-    def is_valid_v2_to_5(self, p, v):
+    def is_valid_v2_to_6(self, p, v):
         """Checks that the given project JSON dictionary contains
-        a valid version 2 to 5 Spine Toolbox project. Valid meaning, that
+        a valid version 2 to 6 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct
         type.
 
