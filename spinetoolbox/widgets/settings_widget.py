@@ -245,10 +245,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_bg_tree.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
         self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
-        self.ui.radioButton_use_julia_executable.clicked.connect(self.toggle_julia_execution_mode)
-        self.ui.radioButton_use_julia_console.clicked.connect(self.toggle_julia_execution_mode)
-        self.ui.radioButton_use_python_interpreter.clicked.connect(self.toggle_python_execution_mode)
-        self.ui.radioButton_use_python_console.clicked.connect(self.toggle_python_execution_mode)
+        self.ui.radioButton_use_julia_executable.clicked.connect(self.update_julia_execution_mode)
+        self.ui.radioButton_use_julia_console.clicked.connect(self.update_julia_execution_mode)
+        self.ui.radioButton_use_python_interpreter.clicked.connect(self.update_python_execution_mode)
+        self.ui.radioButton_use_python_console.clicked.connect(self.update_python_execution_mode)
         self.ui.pushButton_install_julia.clicked.connect(self._show_install_julia_wizard)
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
 
@@ -262,16 +262,20 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.lineEdit_julia_path.setText(julia_exe)
         if not create_kernel:
             self.ui.radioButton_use_julia_executable.setChecked(True)
+            self.update_julia_execution_mode()
             return
         self.ui.radioButton_use_julia_console.setChecked(True)
+        self.update_julia_execution_mode()
         self._kernel_editor = KernelEditor(self, "", julia_exe, "julia", "")
         self._kernel_editor.finished.connect(self.julia_kernel_editor_closed)
-        self._kernel_editor.finished.connect(self._use_created_julia_kernel)
+        self._kernel_editor.finished.connect(self._call_update_julia_exec_mode)
         self._kernel_editor.open()
 
     @Slot(int)
-    def _use_created_julia_kernel(self, ret_code):
-        self.ui.radioButton_use_julia_console.setChecked(ret_code == 1)
+    def _call_update_julia_exec_mode(self, ret_code):
+        if ret_code != 1:  # Not Ok
+            self.ui.radioButton_use_julia_executable.setChecked(True)
+            self.update_julia_execution_mode()
 
     def _get_julia_settings(self):
         use_emb_julia = "2" if self.ui.radioButton_use_julia_console.isChecked() else "0"
@@ -364,7 +368,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Catches the selected Python kernel name when the editor is closed."""
         previous_python_kernel = self.ui.comboBox_python_kernel.currentText()
         self.ui.comboBox_python_kernel.clear()
-        python_kernel_cb_items = ["Select Python kernel spec..."] + [*find_python_kernels().keys()]
+        python_kernel_cb_items = ["Select Python kernel spec..."] + list(find_python_kernels())
         self.ui.comboBox_python_kernel.addItems(python_kernel_cb_items)
         if ret_code != 1:  # Editor closed with something else than clicking Ok.
             # Set previous kernel selected in Python kernel combobox if it still exists
@@ -398,7 +402,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Catches the selected Julia kernel name when the editor is closed."""
         previous_julia_kernel = self.ui.comboBox_julia_kernel.currentText()
         self.ui.comboBox_julia_kernel.clear()
-        julia_kernel_cb_items = ["Select Julia kernel spec..."] + [*find_julia_kernels().keys()]
+        julia_kernel_cb_items = ["Select Julia kernel spec..."] + list(find_julia_kernels())
         self.ui.comboBox_julia_kernel.addItems(julia_kernel_cb_items)
         if ret_code != 1:  # Editor closed with something else than clicking Ok.
             # Set previous kernel selected in combobox if it still exists
@@ -472,14 +476,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
                 item.update_geometry(curved_links=checked)
 
     @Slot(bool)
-    def toggle_julia_execution_mode(self, checked=False):
+    def update_julia_execution_mode(self, checked=False):
         """Toggles between console and non-console Julia execution
         modes depending on radiobutton states.
 
         Args:
             checked (boolean): Toggle state
         """
-        console_enabled = True
         if self.ui.radioButton_use_julia_executable.isChecked():
             console_enabled = False
         elif self.ui.radioButton_use_julia_console.isChecked():
@@ -491,7 +494,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.toolButton_browse_julia_project.setEnabled(not console_enabled)
 
     @Slot(bool)
-    def toggle_python_execution_mode(self, checked=False):
+    def update_python_execution_mode(self, checked=False):
         """Toggles between console and non-console Python execution
         modes depending on radiobutton states.
 
@@ -566,15 +569,15 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.update_bg_color()
         self.ui.lineEdit_gams_path.setText(gams_path)
         # Add Python and Julia kernels to comboBoxes
-        julia_k_cb_items = ["Select Julia kernel spec..."] + [*find_julia_kernels().keys()]  # Unpack to list literal
+        julia_k_cb_items = ["Select Julia kernel spec..."] + list(find_julia_kernels())  # Unpack to list literal
         self.ui.comboBox_julia_kernel.addItems(julia_k_cb_items)
-        python_k_cb_items = ["Select Python kernel spec..."] + [*find_python_kernels().keys()]
+        python_k_cb_items = ["Select Python kernel spec..."] + list(find_python_kernels())
         self.ui.comboBox_python_kernel.addItems(python_k_cb_items)
         if use_embedded_julia == 2:
             self.ui.radioButton_use_julia_console.setChecked(True)
         else:
             self.ui.radioButton_use_python_interpreter.setChecked(True)
-        self.toggle_julia_execution_mode()
+        self.update_julia_execution_mode()
         self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable_from_path())
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
@@ -587,7 +590,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_use_python_console.setChecked(True)
         else:
             self.ui.radioButton_use_python_interpreter.setChecked(True)
-        self.toggle_python_execution_mode()
+        self.update_python_execution_mode()
         self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_executable_from_path())
         self.ui.lineEdit_python_path.setText(python_path)
         ind = self.ui.comboBox_python_kernel.findText(python_kernel)

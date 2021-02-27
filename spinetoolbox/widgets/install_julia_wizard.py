@@ -249,17 +249,23 @@ class SuccessPage(QWizardPage):
         self._label = HyperTextLabel()
         layout = QVBoxLayout(self)
         use_julia_check_box = QCheckBox("Use this Julia with Spine Toolbox")
-        create_kernel_check_box = QCheckBox("Create a Jupyter kernel for this Julia")
+        self._create_kernel_check_box = QCheckBox("Create a Jupyter kernel for this Julia")
         use_julia_check_box.setChecked(True)
-        create_kernel_check_box.setChecked(True)
+        self._create_kernel_check_box.setChecked(True)
         self.registerField("use_julia", use_julia_check_box)
-        self.registerField("create_kernel", create_kernel_check_box)
+        self.registerField("create_kernel", self._create_kernel_check_box)
         layout.addWidget(self._label)
         layout.addStretch()
         layout.addWidget(use_julia_check_box)
-        layout.addWidget(create_kernel_check_box)
+        layout.addWidget(self._create_kernel_check_box)
         layout.addStretch()
         layout.addStretch()
+        use_julia_check_box.clicked.connect(self._handle_use_julia_clicked)
+
+    @Slot(bool)
+    def _handle_use_julia_clicked(self, checked=False):
+        self._create_kernel_check_box.setChecked(checked)
+        self._create_kernel_check_box.setEnabled(checked)
 
     def initializePage(self):
         self._label.setText(f"Julia executable created at <b>{self.wizard().julia_exe}</b>")

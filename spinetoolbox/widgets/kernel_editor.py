@@ -19,7 +19,7 @@ import os
 import shutil
 import json
 import subprocess
-from PySide2.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QApplication
+from PySide2.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QApplication, QDialogButtonBox
 from PySide2.QtCore import Slot, Qt, QModelIndex
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QIcon
 from jupyter_client.kernelspec import find_kernel_specs
@@ -103,6 +103,7 @@ class KernelEditor(QDialog):
         self._mouse_release_pos = None
         self._mouse_move_pos = None
         self.restore_dialog_dimensions()
+        self._update_ok_button_enabled()
 
     def setup_dialog_style(self):
         """Sets windows icon and stylesheet.
@@ -114,6 +115,7 @@ class KernelEditor(QDialog):
     def connect_signals(self):
         """Connects signals to slots."""
         # pylint: disable=unnecessary-lambda
+        self.ui.tableView_kernel_list.selectionModel().selectionChanged.connect(self._handle_kernel_selection_changed)
         self.ui.pushButton_make_python_kernel.clicked.connect(self.make_python_kernel)
         self.ui.pushButton_make_julia_kernel.clicked.connect(self.make_julia_kernel)
         self.ui.tableView_kernel_list.selectionModel().currentChanged.connect(self._check_kernel_is_ok)
@@ -134,6 +136,15 @@ class KernelEditor(QDialog):
         self._logger.msg_warning.connect(self.add_warning_message)
         self._logger.msg_proc.connect(self.add_process_message)
         self._logger.msg_error.connect(self.add_process_error_message)
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_kernel_selection_changed(self, _selected, _deselected):
+        self._update_ok_button_enabled()
+
+    def _update_ok_button_enabled(self):
+        self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(
+            self.ui.tableView_kernel_list.selectionModel().hasSelection()
+        )
 
     @Slot(str)
     def python_kernel_name_edited(self, txt):
@@ -927,8 +938,6 @@ class KernelEditor(QDialog):
         """
         message = format_event_message("msg", msg)
         self.ui.textBrowser_process.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_success_message(self, msg):
@@ -939,8 +948,6 @@ class KernelEditor(QDialog):
         """
         message = format_event_message("msg_success", msg)
         self.ui.textBrowser_process.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_error_message(self, msg):
@@ -951,8 +958,6 @@ class KernelEditor(QDialog):
         """
         message = format_event_message("msg_error", msg)
         self.ui.textBrowser_process.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_warning_message(self, msg):
@@ -963,8 +968,6 @@ class KernelEditor(QDialog):
         """
         message = format_event_message("msg_warning", msg)
         self.ui.textBrowser_process.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_process_message(self, msg):
@@ -975,8 +978,6 @@ class KernelEditor(QDialog):
         """
         message = format_process_message("msg", msg)
         self.ui.textBrowser_process.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_process_error_message(self, msg):
@@ -987,10 +988,13 @@ class KernelEditor(QDialog):
         """
         message = format_process_message("msg_error", msg)
         self.ui.textBrowser_process.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
-    @Slot()
+    def _save_ui(self):
+        self._app_settings.setValue("kernelEditor/windowSize", self.size())
+        self._app_settings.setValue("kernelEditor/windowPosition", self.pos())
+        self._app_settings.setValue("kernelEditor/windowMaximized", self.windowState() == Qt.WindowMaximized)
+        self._app_settings.setValue("kernelEditor/splitterState", self.ui.splitter.saveState())
+
     def done(self, r):
         """Overridden QDialog method. Sets the selected kernel instance attribute so
         that it can be read by the SettingsForm after this dialog has been closed.
@@ -998,10 +1002,7 @@ class KernelEditor(QDialog):
         Args:
             r (int) QDialog Accepted or Rejected
         """
-        self._app_settings.setValue("kernelEditor/windowSize", self.size())
-        self._app_settings.setValue("kernelEditor/windowPosition", self.pos())
-        self._app_settings.setValue("kernelEditor/windowMaximized", self.windowState() == Qt.WindowMaximized)
-        self._app_settings.setValue("kernelEditor/splitterState", self.ui.splitter.saveState())
+        self._save_ui()
         self.selected_kernel = None
         if r == QDialog.Accepted:
             ind = self.ui.tableView_kernel_list.selectedIndexes()
@@ -1015,6 +1016,7 @@ class KernelEditor(QDialog):
         Args:
             event (QCloseEvent): Close event
         """
+        self._save_ui()
         if event:
             event.accept()
 
@@ -1069,10 +1071,5 @@ def format_event_message(msg_type, message, show_datetime=True):
 
 
 def format_process_message(msg_type, message):
-    """Formats message for the kernel editor text browser.
-    This is a copy of helpers.format_process_message() but the colors
-    have been edited for a text browser with a white background.
-    """
-    color = {"msg": "black", "msg_error": "#ff3300"}[msg_type]
-    open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
-    return open_tag + message + "</span>"
+    """Formats process message for the kernel editor text browser."""
+    return format_event_message(msg_type, message, show_datetime=False)
