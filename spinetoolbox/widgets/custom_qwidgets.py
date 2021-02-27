@@ -396,3 +396,17 @@ class TitleWidgetAction(CustomWidgetAction):
 
     def isSeparator(self):  # pylint: disable=no-self-use
         return True
+
+
+class WrapLabel(QLabel):
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self.setWordWrap(True)
+
+
+class HyperTextLabel(WrapLabel):
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self.setTextFormat(Qt.RichText)
+        self.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.setOpenExternalLinks(True)

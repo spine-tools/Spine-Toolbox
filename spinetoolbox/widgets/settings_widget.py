@@ -18,11 +18,16 @@ Widget for controlling user settings.
 
 import os
 from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
-from PySide2.QtCore import Slot, Qt, QSize
+from PySide2.QtCore import Slot, Qt, QSize, QSettings
 from PySide2.QtGui import QPixmap
-from spine_engine.utils.helpers import resolve_julia_executable_from_path, resolve_python_executable_from_path
+from spine_engine.utils.helpers import (
+    resolve_julia_executable_from_path,
+    resolve_python_executable_from_path,
+    get_julia_env,
+)
 from .notification import Notification
-from .julia_wizards import InstallJuliaWizard
+from .install_julia_wizard import InstallJuliaWizard
+from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..graphics_items import Link
 from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
@@ -245,10 +250,36 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_use_python_interpreter.clicked.connect(self.toggle_python_execution_mode)
         self.ui.radioButton_use_python_console.clicked.connect(self.toggle_python_execution_mode)
         self.ui.pushButton_install_julia.clicked.connect(self._show_install_julia_wizard)
+        self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
 
     def _show_install_julia_wizard(self):
         wizard = InstallJuliaWizard(self)
         wizard.julia_exe_selected.connect(self.ui.lineEdit_julia_path.setText)
+        wizard.show()
+
+    def _get_julia_settings(self):
+        use_emb_julia = "2" if self.ui.radioButton_use_julia_console.isChecked() else "0"
+        julia_path = self.ui.lineEdit_julia_path.text().strip()
+        julia_project_path = self.ui.lineEdit_julia_project_path.text().strip()
+        if self.ui.comboBox_julia_kernel.currentIndex() == 0:
+            julia_kernel = ""
+        else:
+            julia_kernel = self.ui.comboBox_julia_kernel.currentText()
+        return use_emb_julia, julia_path, julia_project_path, julia_kernel
+
+    def _show_add_up_spine_opt_wizard(self):
+        use_emb_julia, julia_path, julia_project_path, julia_kernel = self._get_julia_settings()
+        julia_settings = QSettings()
+        julia_settings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
+        julia_settings.setValue("appSettings/juliaPath", julia_path)
+        julia_settings.setValue("appSettings/juliaProjectPath", julia_project_path)
+        julia_settings.setValue("appSettings/juliaKernel", julia_kernel)
+        julia_env = get_julia_env(julia_settings)
+        if julia_env is None:
+            julia_exe = julia_project = ""
+        else:
+            julia_exe, julia_project = julia_env
+        wizard = AddUpSpineOptWizard(self, julia_exe, julia_project)
         wizard.show()
 
     @Slot(bool)
@@ -605,21 +636,15 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             return False
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
         # Julia (str because Linux)
-        use_emb_julia = "2" if self.ui.radioButton_use_julia_console.isChecked() else "0"
+        use_emb_julia, julia_path, julia_project_path, julia_kernel = self._get_julia_settings()
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
-        julia_path = self.ui.lineEdit_julia_path.text().strip()
         # Check julia_path is a file, it exists, and file name starts with 'julia'
         if not file_is_valid(self, julia_path, "Invalid Julia Executable", extra_check="julia"):
             return False
         self._qsettings.setValue("appSettings/juliaPath", julia_path)
-        julia_project_path = self.ui.lineEdit_julia_project_path.text().strip()
         if not dir_is_valid(self, julia_project_path, "Invalid Julia Project"):  # Check it's a directory and it exists
             return False
         self._qsettings.setValue("appSettings/juliaProjectPath", julia_project_path)
-        if self.ui.comboBox_julia_kernel.currentIndex() == 0:
-            julia_kernel = ""
-        else:
-            julia_kernel = self.ui.comboBox_julia_kernel.currentText()
         self._qsettings.setValue("appSettings/juliaKernel", julia_kernel)
         # Python
         use_emb_python = "2" if self.ui.radioButton_use_python_console.isChecked() else "0"
