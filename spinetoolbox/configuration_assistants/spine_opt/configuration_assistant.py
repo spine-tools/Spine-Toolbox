@@ -57,7 +57,7 @@ class SpineOptConfigurationAssistant(StateMachineWidget):
         layout.insertWidget(3, self.process_log)
         self.button_left.clicked.connect(self.close)
         self._logger.msg_proc.connect(self.add_process_message)
-        self._logger.msg_error.connect(self.add_process_error_message)
+        self._logger.msg_proc_error.connect(self.add_process_error_message)
 
     @Slot(str)
     def add_process_message(self, msg):

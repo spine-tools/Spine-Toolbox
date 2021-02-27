@@ -1364,8 +1364,6 @@ class ToolboxUI(QMainWindow):
         """
         message = format_log_message("msg", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_success_message(self, msg):
@@ -1376,8 +1374,6 @@ class ToolboxUI(QMainWindow):
         """
         message = format_log_message("msg_success", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_error_message(self, msg):
@@ -1388,8 +1384,6 @@ class ToolboxUI(QMainWindow):
         """
         message = format_log_message("msg_error", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_warning_message(self, msg):
@@ -1400,8 +1394,6 @@ class ToolboxUI(QMainWindow):
         """
         message = format_log_message("msg_warning", msg, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_process_message(self, msg):
@@ -1412,8 +1404,6 @@ class ToolboxUI(QMainWindow):
         """
         message = format_log_message("msg", msg)
         self.ui.textBrowser_eventlog.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     @Slot(str)
     def add_process_error_message(self, msg):
@@ -1424,8 +1414,6 @@ class ToolboxUI(QMainWindow):
         """
         message = format_log_message("msg_error", msg)
         self.ui.textBrowser_eventlog.append(message)
-        # noinspection PyArgumentList
-        QApplication.processEvents()
 
     def restore_original_logs_and_consoles(self):
         self.restore_original_item_log_document()

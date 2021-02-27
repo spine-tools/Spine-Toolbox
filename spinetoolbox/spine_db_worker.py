@@ -18,7 +18,7 @@ The SpineDBWorker class
 
 import json
 import os
-from PySide2.QtCore import QObject, Signal, Slot, QEventLoop
+from PySide2.QtCore import Qt, QObject, Signal, Slot
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
     DiffDatabaseMapping,
@@ -39,7 +39,6 @@ class SpineDBWorker(QObject):
     """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
 
     _get_db_map_called = Signal()
-    _get_db_map_finished = Signal()
     _close_db_map_called = Signal(object)
     _add_or_update_items_called = Signal(object, str, str, str)
     _remove_items_called = Signal(object)
@@ -61,7 +60,7 @@ class SpineDBWorker(QObject):
         self._err = None
 
     def connect_signals(self):
-        self._get_db_map_called.connect(self._get_db_map)
+        self._get_db_map_called.connect(self._get_db_map, Qt.BlockingQueuedConnection)
         self._close_db_map_called.connect(self._close_db_map)
         self._add_or_update_items_called.connect(self._add_or_update_items)
         self._remove_items_called.connect(self._remove_items)
@@ -74,25 +73,19 @@ class SpineDBWorker(QObject):
         self._duplicate_object_called.connect(self._duplicate_object)
 
     def get_db_map(self, *args, **kwargs):
-        loop = QEventLoop()
-        self._get_db_map_finished.connect(loop.quit)
         self._db_map = None
         self._db_map_args = args
         self._db_map_kwargs = kwargs
         self._err = None
         self._get_db_map_called.emit()
-        if self._db_map is None and self._err is None:
-            loop.exec_()
         return self._db_map, self._err
 
     @Slot()
     def _get_db_map(self):
-        # FIXME: What to do in case of errors?
         try:
             self._db_map = DiffDatabaseMapping(*self._db_map_args, **self._db_map_kwargs)
         except (SpineDBVersionError, SpineDBAPIError) as err:
             self._err = err
-        self._get_db_map_finished.emit()
 
     def close_db_map(self, db_map):
         self._close_db_map_called.emit(db_map)
