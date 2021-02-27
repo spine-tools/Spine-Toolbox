@@ -72,8 +72,9 @@ class QProcessExecutionManager(ExecutionManager):
         self.user_stopped = False
         self._process = QProcess(self)
         self.process_output = None  # stdout when running silent
-        self.error_output = None  # stderr when running silent
-        self.data_to_inject = None
+        self.process_error = None  # stderr when running silent
+        self._out_chunks = []
+        self._err_chunks = []
 
     def program(self):
         """Program getter method."""
@@ -108,16 +109,7 @@ class QProcessExecutionManager(ExecutionManager):
             self.process_failed_to_start = True
             self._process.deleteLater()
             self._process = None
-            self.data_to_inject = None
             self.execution_finished.emit(-9998)
-        if self.data_to_inject is not None:
-            self.inject_data_to_write_channel()
-
-    def inject_data_to_write_channel(self):
-        """Writes data to process write channel and closes it afterwards."""
-        self._process.write(json.dumps(self.data_to_inject).encode("utf-8"))
-        self._process.write(b'\n')
-        self._process.closeWriteChannel()
 
     def wait_for_process_finished(self, msecs=30000):
         """Wait for subprocess to finish.
@@ -205,7 +197,6 @@ class QProcessExecutionManager(ExecutionManager):
                 self._logger.msg_proc.emit(errout.strip())
             self._process.deleteLater()
             self._process = None
-        self.data_to_inject = None
         self.execution_finished.emit(-9998)
 
     def stop_execution(self):
@@ -224,7 +215,6 @@ class QProcessExecutionManager(ExecutionManager):
             logging.exception("Exception in closing QProcess: %s", ex)
         finally:
             self._process = None
-            self.data_to_inject = None
 
     @Slot(int, int)
     def on_process_finished(self, exit_code, exit_status):
@@ -256,13 +246,12 @@ class QProcessExecutionManager(ExecutionManager):
                     self._logger.msg_proc.emit(out.strip())
                 else:
                     self.process_output = out.strip()
-                    self.error_output = errout.strip()
+                    self.process_error = errout.strip()
         else:
             self._logger.msg.emit("*** Terminating process ***")
         # Delete QProcess
         self._process.deleteLater()
         self._process = None
-        self.data_to_inject = None
         self.execution_finished.emit(exit_code)
 
     @Slot()
@@ -270,13 +259,27 @@ class QProcessExecutionManager(ExecutionManager):
         """Emit data from stdout."""
         if not self._process:
             return
-        out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
-        self._logger.msg_proc.emit(out.strip())
+        self._process.setReadChannel(QProcess.StandardOutput)
+        chunk = self._process.readLine().data()
+        self._out_chunks.append(chunk)
+        if not chunk.endswith(b"\n"):
+            return
+        line = b"".join(self._out_chunks)
+        line = str(line, "unicode_escape", errors="replace").strip()
+        self._logger.msg_proc.emit(line)
+        self._out_chunks.clear()
 
     @Slot()
     def on_ready_stderr(self):
         """Emit data from stderr."""
         if not self._process:
             return
-        err = str(self._process.readAllStandardError().data(), "utf-8", errors="replace")
-        self._logger.msg_proc_error.emit(err.strip())
+        self._process.setReadChannel(QProcess.StandardError)
+        chunk = self._process.readLine().data()
+        self._err_chunks.append(chunk)
+        if not chunk.endswith(b"\n"):
+            return
+        line = b"".join(self._err_chunks)
+        line = str(line, "utf-8", errors="replace").strip()
+        self._logger.msg_proc_error.emit(line)
+        self._err_chunks.clear()
