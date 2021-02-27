@@ -36,7 +36,7 @@ from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QCursor
 from ..execution_managers import QProcessExecutionManager
 from ..helpers import format_log_message
-from .custom_qtextbrowser import CustomQTextBrowser
+from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .custom_qwidgets import WrapLabel, HyperTextLabel
 
 
@@ -52,7 +52,7 @@ class InstallJuliaWizard(QWizard):
     """A wizard to install julia
     """
 
-    julia_exe_selected = Signal(str)
+    julia_exe_selected = Signal(str, bool)
 
     def __init__(self, parent):
         """Initialize class.
@@ -82,7 +82,7 @@ class InstallJuliaWizard(QWizard):
     def accept(self):
         super().accept()
         if self.field("use_julia"):
-            self.julia_exe_selected.emit(self.julia_exe)
+            self.julia_exe_selected.emit(self.julia_exe, self.field("create_kernel"))
 
 
 class IntroPage(QWizardPage):
@@ -164,7 +164,7 @@ class InstallJuliaPage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Installing Julia")
-        self._log = CustomQTextBrowser(self)
+        self._log = MonoSpaceFontTextBrowser(self)
         self._exec_mngr = None
         layout = QVBoxLayout(self)
         layout.addWidget(self._log)
@@ -209,7 +209,7 @@ class InstallJuliaPage(QWizardPage):
         self._exec_mngr.execution_finished.connect(self._handle_julia_install_finished)
         self.msg_success.emit("Julia installation started")
         cmd = sys.executable + " " + " ".join(args)
-        self.msg.emit(f"$ <b>{cmd}<b/>...")
+        self.msg.emit(f"$ <b>{cmd}<b/>")
         qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
@@ -244,20 +244,23 @@ class SuccessPage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Installation successful")
-        self._label = WrapLabel()
+        self._label = HyperTextLabel()
         layout = QVBoxLayout(self)
-        # FIXME: create kernel
-        check_box = QCheckBox("Use this Julia with Spine Toolbox")
-        check_box.setChecked(True)
-        self.registerField("use_julia", check_box)
+        use_julia_check_box = QCheckBox("Use this Julia with Spine Toolbox")
+        create_kernel_check_box = QCheckBox("Create a Jupyter kernel for this Julia")
+        use_julia_check_box.setChecked(True)
+        create_kernel_check_box.setChecked(True)
+        self.registerField("use_julia", use_julia_check_box)
+        self.registerField("create_kernel", create_kernel_check_box)
         layout.addWidget(self._label)
         layout.addStretch()
-        layout.addWidget(check_box)
+        layout.addWidget(use_julia_check_box)
+        layout.addWidget(create_kernel_check_box)
         layout.addStretch()
         layout.addStretch()
 
     def initializePage(self):
-        self._label.setText(f"Julia executable created at '{self.wizard().julia_exe}'")
+        self._label.setText(f"Julia executable created at <b>{self.wizard().julia_exe}</b>")
 
     def nextId(self):
         return -1

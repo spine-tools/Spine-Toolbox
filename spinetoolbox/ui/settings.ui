@@ -902,16 +902,22 @@ p, li { white-space: pre-wrap; }
                </widget>
               </item>
               <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
                <widget class="QPushButton" name="pushButton_add_up_spine_opt">
                 <property name="text">
                  <string>Add/Update SpineOpt</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton_troubleshooting_julia">
-                <property name="text">
-                 <string>Troubleshooting</string>
                 </property>
                </widget>
               </item>

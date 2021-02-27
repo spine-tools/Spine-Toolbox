@@ -472,15 +472,14 @@ class Ui_SettingsForm(object):
 
         self.horizontalLayout_12.addWidget(self.pushButton_install_julia)
 
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_12.addItem(self.horizontalSpacer)
+
         self.pushButton_add_up_spine_opt = QPushButton(self.groupBox_julia)
         self.pushButton_add_up_spine_opt.setObjectName(u"pushButton_add_up_spine_opt")
 
         self.horizontalLayout_12.addWidget(self.pushButton_add_up_spine_opt)
-
-        self.pushButton_troubleshooting_julia = QPushButton(self.groupBox_julia)
-        self.pushButton_troubleshooting_julia.setObjectName(u"pushButton_troubleshooting_julia")
-
-        self.horizontalLayout_12.addWidget(self.pushButton_troubleshooting_julia)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout_12)
@@ -793,7 +792,6 @@ class Ui_SettingsForm(object):
         self.pushButton_open_kernel_editor_julia.setText(QCoreApplication.translate("SettingsForm", u"Kernel spec editor", None))
         self.pushButton_install_julia.setText(QCoreApplication.translate("SettingsForm", u"Install Julia", None))
         self.pushButton_add_up_spine_opt.setText(QCoreApplication.translate("SettingsForm", u"Add/Update SpineOpt", None))
-        self.pushButton_troubleshooting_julia.setText(QCoreApplication.translate("SettingsForm", u"Troubleshooting", None))
         self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python", None))
 #if QT_CONFIG(tooltip)
         self.radioButton_use_python_interpreter.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When selected, Python Tools and scripts are executed in a separate process in terminal. Select the python interpreter you want to use into the line edit below.</p></body></html>", None))

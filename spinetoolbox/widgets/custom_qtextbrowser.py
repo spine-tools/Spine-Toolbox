@@ -17,7 +17,7 @@ Class for a custom QTextBrowser for showing the logs and tool output.
 """
 
 from PySide2.QtCore import Slot
-from PySide2.QtGui import QTextCursor, QTextDocument
+from PySide2.QtGui import QTextCursor, QTextDocument, QFontDatabase
 from PySide2.QtWidgets import QTextBrowser, QAction
 from spinetoolbox.helpers import add_message_to_document
 from ..config import TEXTBROWSER_OVERRIDE_SS, TEXTBROWSER_SS
@@ -118,3 +118,14 @@ class CustomQTextBrowser(QTextBrowser):
     @max_blocks.setter
     def max_blocks(self, new_max):
         self._max_blocks = new_max if new_max > 0 else 2000
+
+
+class MonoSpaceFontTextBrowser(CustomQTextBrowser):
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): Parent widget
+        """
+        super().__init__(parent=parent)
+        font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        self.setFont(font)

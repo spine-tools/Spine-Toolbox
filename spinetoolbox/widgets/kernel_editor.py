@@ -617,7 +617,6 @@ class KernelEditor(QDialog):
             QMessageBox.warning(self, "Removing kernel failed", msg)
             return
         self._logger.msg.emit(f"kernel {name} removed")
-        notification.show()
         self.populate_kernel_model()
         self.ui.tableView_kernel_list.resizeColumnsToContents()
 

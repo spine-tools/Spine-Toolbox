@@ -254,8 +254,24 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     def _show_install_julia_wizard(self):
         wizard = InstallJuliaWizard(self)
-        wizard.julia_exe_selected.connect(self.ui.lineEdit_julia_path.setText)
+        wizard.julia_exe_selected.connect(self._use_installed_julia)
         wizard.show()
+
+    @Slot(str, bool)
+    def _use_installed_julia(self, julia_exe, create_kernel):
+        self.ui.lineEdit_julia_path.setText(julia_exe)
+        if not create_kernel:
+            self.ui.radioButton_use_julia_executable.setChecked(True)
+            return
+        self.ui.radioButton_use_julia_console.setChecked(True)
+        self._kernel_editor = KernelEditor(self, "", julia_exe, "julia", "")
+        self._kernel_editor.finished.connect(self.julia_kernel_editor_closed)
+        self._kernel_editor.finished.connect(self._use_created_julia_kernel)
+        self._kernel_editor.open()
+
+    @Slot(int)
+    def _use_created_julia_kernel(self, ret_code):
+        self.ui.radioButton_use_julia_console.setChecked(ret_code == 1)
 
     def _get_julia_settings(self):
         use_emb_julia = "2" if self.ui.radioButton_use_julia_console.isChecked() else "0"
