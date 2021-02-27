@@ -37,7 +37,7 @@ from PySide2.QtGui import QCursor
 from ..execution_managers import QProcessExecutionManager
 from ..helpers import format_log_message
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
-from .custom_qwidgets import WrapLabel, HyperTextLabel
+from .custom_qwidgets import HyperTextLabel
 
 
 class _PageId(IntEnum):
@@ -204,6 +204,8 @@ class InstallJuliaPage(QWizardPage):
             "--symlink_dir",
             self.field("symlink_dir"),
         ]
+        # NOTE: sys.executable works for the development version, since `jill` has been added as dependency.
+        # But what about the frozen version?
         self._exec_mngr = QProcessExecutionManager(self, sys.executable, args, semisilent=True)
         self.completeChanged.emit()
         self._exec_mngr.execution_finished.connect(self._handle_julia_install_finished)

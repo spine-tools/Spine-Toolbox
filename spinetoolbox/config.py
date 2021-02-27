@@ -25,6 +25,7 @@ REQUIRED_SPINEDB_API_VERSION = "0.11.2"
 PREFERRED_SPINE_ITEMS_VERSION = "0.4.44"
 LATEST_PROJECT_VERSION = 5
 
+# For the Add/Update SpineOpt wizard
 REQUIRED_SPINE_OPT_VERSION = "0.5.3"
 
 # Invalid characters for directory names

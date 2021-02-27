@@ -17,10 +17,7 @@ Setup script for Python's setuptools.
 """
 
 from setuptools import setup, find_packages
-from spinetoolbox.config import (
-    REQUIRED_SPINEDB_API_VERSION,
-    REQUIRED_SPINE_ENGINE_VERSION,
-)
+from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
 
 with open("README.md", encoding="utf8") as readme_file:
     readme = readme_file.read()
@@ -46,6 +43,7 @@ install_requires = [
     "pymysql >= 0.9.2",
     "pyodbc >= 4.0.23",
     "psycopg2 >= 2.7.4",
+    "jill >= 0.8.1",
 ]
 
 setup(
