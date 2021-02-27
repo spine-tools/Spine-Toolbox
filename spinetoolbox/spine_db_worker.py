@@ -60,7 +60,8 @@ class SpineDBWorker(QObject):
         self._err = None
 
     def connect_signals(self):
-        self._get_db_map_called.connect(self._get_db_map, Qt.BlockingQueuedConnection)
+        connection = Qt.BlockingQueuedConnection if self.thread() != qApp.thread() else Qt.DirectConnection
+        self._get_db_map_called.connect(self._get_db_map, connection)
         self._close_db_map_called.connect(self._close_db_map)
         self._add_or_update_items_called.connect(self._add_or_update_items)
         self._remove_items_called.connect(self._remove_items)

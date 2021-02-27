@@ -37,17 +37,6 @@ class TestQProcessExecutionManager(unittest.TestCase):
         self.assertFalse(manager.process_failed_to_start)
         self.assertFalse(manager.process_failed)
 
-    def test_inject_data_to_process(self):
-        program = sys.executable
-        logger = MagicMock()
-        manager = QProcessExecutionManager(logger, program, args=["-c", "import sys; print(sys.stdin.readline())"])
-        manager.data_to_inject = "Hello world!"
-        manager.start_execution()
-        self.assertTrue(manager.wait_for_process_finished())
-        self.assertFalse(manager.process_failed_to_start)
-        self.assertFalse(manager.process_failed)
-        logger.msg_proc.emit.assert_any_call('"Hello world!"')
-
 
 if __name__ == "__main__":
     unittest.main()
