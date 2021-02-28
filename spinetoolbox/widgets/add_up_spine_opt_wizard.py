@@ -218,12 +218,14 @@ class CheckPreviousInstallPage(QWizardPage):
             )
             self.layout().addWidget(WrapLabel(msg))
             self.wizard().required_action = "update"
+            self.setFinalPage(False)
             self.setCommitPage(True)
             self.setButtonText(QWizard.CommitButton, "Update SpineOpt")
             self.completeChanged.emit()
             return
         self.layout().addWidget(QLabel("SpineOpt is not installed."))
         self.wizard().required_action = "add"
+        self.setFinalPage(False)
         self.setCommitPage(True)
         self.setButtonText(QWizard.CommitButton, "Install SpineOpt")
         self.completeChanged.emit()
