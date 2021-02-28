@@ -33,6 +33,7 @@ from PySide2.QtWidgets import (
     QFrame,
     QWizardPage,
     QToolButton,
+    QPushButton,
 )
 from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent
 from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont
@@ -423,12 +424,36 @@ class HyperTextLabel(WrapLabel):
 class QWizardProcessPage(QWizardPage):
     """A QWizards page with a log. Useful for pages that need to capture the output of a process."""
 
+    class _ExecutionManager:
+        """A descriptor that stores a QProcessExecutionManager.
+        When ``execution_finished`` is emitted, it shows the button to copy the process log.
+        """
+
+        public_name = None
+        private_name = None
+
+        def __set_name__(self, owner, name):
+            self.public_name = name
+            self.private_name = '_' + name
+
+        def __get__(self, obj, objtype=None):
+            return getattr(obj, self.private_name)
+
+        def __set__(self, obj, value):
+            setattr(obj, self.private_name, value)
+            try:
+                value.execution_finished.connect(obj.widget_copy.show)
+            except AttributeError:
+                pass
+
     msg = Signal(str)
     msg_warning = Signal(str)
     msg_error = Signal(str)
     msg_success = Signal(str)
     msg_proc = Signal(str)
     msg_proc_error = Signal(str)
+
+    _exec_mngr = _ExecutionManager()
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -437,6 +462,16 @@ class QWizardProcessPage(QWizardPage):
         self._successful = False
         layout = QVBoxLayout(self)
         layout.addWidget(self._log)
+        self.widget_copy = QWidget()
+        self.widget_copy.hide()
+        self._button_copy = QPushButton("Copy log")
+        self._label_copy = QLabel("Log copied to clipboard.")
+        self._label_copy.hide()
+        layout_copy = QHBoxLayout(self.widget_copy)
+        layout_copy.addWidget(self._button_copy)
+        layout_copy.addWidget(self._label_copy)
+        layout_copy.addStretch()
+        layout.addWidget(self.widget_copy)
         self._connect_signals()
 
     def _connect_signals(self):
@@ -446,6 +481,12 @@ class QWizardProcessPage(QWizardPage):
         self.msg_success.connect(self._add_msg_succes)
         self.msg_proc.connect(self._add_msg)
         self.msg_proc_error.connect(self._add_msg_error)
+        self._button_copy.clicked.connect(self._handle_copy_clicked)
+
+    @Slot(bool)
+    def _handle_copy_clicked(self, _=False):
+        self._label_copy.show()
+        qApp.clipboard().setText(self._log.toPlainText())  # pylint: disable=undefined-variable
 
     def _add_msg(self, msg):
         self._log.append(format_log_message("msg", msg, show_datetime=False))
