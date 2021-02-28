@@ -30,13 +30,12 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QRadioButton,
 )
-from PySide2.QtCore import Signal, Slot, Qt
+from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QCursor
 from ..execution_managers import QProcessExecutionManager
-from ..helpers import format_log_message
 from ..config import REQUIRED_SPINE_OPT_VERSION
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
-from .custom_qwidgets import WrapLabel, HyperTextLabel
+from .custom_qwidgets import WrapLabel, HyperTextLabel, QWizardProcessPage
 
 
 class _PageId(IntEnum):
@@ -234,55 +233,7 @@ class CheckPreviousInstallPage(QWizardPage):
         return _PageId.ADD_UP_SPINE_OPT
 
 
-class ProcessPage(QWizardPage):
-
-    msg = Signal(str)
-    msg_warning = Signal(str)
-    msg_error = Signal(str)
-    msg_success = Signal(str)
-    msg_proc = Signal(str)
-    msg_proc_error = Signal(str)
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self._log = MonoSpaceFontTextBrowser(self)
-        self._exec_mngr = None
-        self._successful = False
-        layout = QVBoxLayout(self)
-        layout.addWidget(self._log)
-        self._connect_signals()
-
-    def _connect_signals(self):
-        self.msg.connect(self._add_msg)
-        self.msg_warning.connect(self._add_msg_warning)
-        self.msg_error.connect(self._add_msg_error)
-        self.msg_success.connect(self._add_msg_succes)
-        self.msg_proc.connect(self._add_msg)
-        self.msg_proc_error.connect(self._add_msg_error)
-
-    def _add_msg(self, msg):
-        self._log.append(format_log_message("msg", msg, show_datetime=False))
-
-    def _add_msg_warning(self, msg):
-        self._log.append(format_log_message("msg_warning", msg, show_datetime=False))
-
-    def _add_msg_error(self, msg):
-        self._log.append(format_log_message("msg_error", msg, show_datetime=False))
-
-    def _add_msg_succes(self, msg):
-        self._log.append(format_log_message("msg_success", msg, show_datetime=False))
-
-    def isComplete(self):
-        return self._exec_mngr is None
-
-    def cleanupPage(self):
-        super().cleanupPage()
-        if self._exec_mngr is not None:
-            self._exec_mngr.stop_execution()
-        self.msg_error.emit("Aborted by the user")
-
-
-class AddUpSpineOptPage(ProcessPage):
+class AddUpSpineOptPage(QWizardProcessPage):
     def initializePage(self):
         processing, code, process = {
             "add": (
@@ -507,7 +458,7 @@ class TroubleshootSolutionPage(QWizardPage):
         return _PageId.ADD_UP_SPINE_OPT_AGAIN
 
 
-class ResetRegistryPage(ProcessPage):
+class ResetRegistryPage(QWizardProcessPage):
     def initializePage(self):
         code = (
             "using Pkg; "

@@ -19,7 +19,11 @@ Classes for custom QDialogs for julia setup.
 import sys
 import os
 from enum import IntEnum, auto
-from jill.install import default_symlink_dir, default_install_dir
+
+try:
+    import jill.install as jill_install
+except ModuleNotFoundError:
+    jill_install = None
 from PySide2.QtWidgets import (
     QWidget,
     QWizard,
@@ -35,9 +39,8 @@ from PySide2.QtWidgets import (
 from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QCursor
 from ..execution_managers import QProcessExecutionManager
-from ..helpers import format_log_message
-from .custom_qtextbrowser import MonoSpaceFontTextBrowser
-from .custom_qwidgets import HyperTextLabel
+from ..config import APPLICATION_PATH
+from .custom_qwidgets import HyperTextLabel, QWizardProcessPage, LabelWithCopyButton
 
 
 class _PageId(IntEnum):
@@ -61,6 +64,9 @@ class InstallJuliaWizard(QWizard):
             parent (QWidget): the parent widget (SettingsWidget)
         """
         super().__init__(parent)
+        if jill_install is None:
+            self.addPage(JillNotFoundPage(self))
+            return
         self.julia_exe = None
         self.setWindowTitle("Julia Installer")
         self.setPage(_PageId.INTRO, IntroPage(self))
@@ -81,8 +87,38 @@ class InstallJuliaWizard(QWizard):
 
     def accept(self):
         super().accept()
-        if self.field("use_julia"):
+        if jill_install is not None and self.field("use_julia"):
             self.julia_exe_selected.emit(self.julia_exe, self.field("create_kernel"))
+
+
+class JillNotFoundPage(QWizardPage):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setTitle("Unable to find jill")
+        conda_env = os.environ['CONDA_DEFAULT_ENV']
+        toolbox_dir = os.path.dirname(APPLICATION_PATH)
+        header = (
+            "<p>Spine Toolbox needs the <a href='https://pypi.org/project/jill/'>jill</a> package "
+            "to install Julia. "
+            "To get the right version of jill for Spine Toolbox, "
+            "please upgrade requirements as follows:</p>"
+        )
+        indent = 4 * "&nbsp;"
+        point1 = f"{indent}1. Open Anaconda prompt."
+        point2 = f"{indent}2. Activate the {conda_env} environment:"
+        point3 = f"{indent}3. Navigate to your Spine Toolbox directory:"
+        point4 = f"{indent}4. Upgrade requirements using <b>pip</b>:"
+        point5 = f"{indent}5. Restart Spine Toolbox."
+        layout = QVBoxLayout(self)
+        layout.addWidget(HyperTextLabel(header))
+        layout.addWidget(HyperTextLabel(point1))
+        layout.addWidget(HyperTextLabel(point2))
+        layout.addWidget(LabelWithCopyButton(f"conda activate {conda_env}"))
+        layout.addWidget(HyperTextLabel(point3))
+        layout.addWidget(LabelWithCopyButton(f"cd {toolbox_dir}"))
+        layout.addWidget(HyperTextLabel(point4))
+        layout.addWidget(LabelWithCopyButton("python -m pip install --upgrade -r requirements.txt"))
+        layout.addWidget(HyperTextLabel(point5))
 
 
 class IntroPage(QWizardPage):
@@ -129,8 +165,8 @@ class SelectDirsPage(QWizardPage):
         self.setButtonText(QWizard.CommitButton, "Install Julia")
 
     def initializePage(self):
-        self._install_dir_line_edit.setText(default_install_dir())
-        self._symlink_dir_line_edit.setText(default_symlink_dir())
+        self._install_dir_line_edit.setText(jill_install.default_install_dir())
+        self._symlink_dir_line_edit.setText(jill_install.default_symlink_dir())
 
     def _select_install_dir(self):
         install_dir = QFileDialog.getExistingDirectory(
@@ -152,46 +188,16 @@ class SelectDirsPage(QWizardPage):
         return _PageId.INSTALL
 
 
-class InstallJuliaPage(QWizardPage):
-
-    msg = Signal(str)
-    msg_warning = Signal(str)
-    msg_error = Signal(str)
-    msg_success = Signal(str)
-    msg_proc = Signal(str)
-    msg_proc_error = Signal(str)
-
+class InstallJuliaPage(QWizardProcessPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Installing Julia")
-        self._log = MonoSpaceFontTextBrowser(self)
-        self._exec_mngr = None
-        layout = QVBoxLayout(self)
-        layout.addWidget(self._log)
-        self._connect_signals()
 
-    def _connect_signals(self):
-        self.msg.connect(self._add_msg)
-        self.msg_warning.connect(self._add_msg_warning)
-        self.msg_error.connect(self._add_msg_error)
-        self.msg_success.connect(self._add_msg_succes)
-        self.msg_proc.connect(self._add_msg)
-        self.msg_proc_error.connect(self._add_msg_error)
-
-    def _add_msg(self, msg):
-        self._log.append(format_log_message("msg", msg, show_datetime=False))
-
-    def _add_msg_warning(self, msg):
-        self._log.append(format_log_message("msg_warning", msg, show_datetime=False))
-
-    def _add_msg_error(self, msg):
-        self._log.append(format_log_message("msg_error", msg, show_datetime=False))
-
-    def _add_msg_succes(self, msg):
-        self._log.append(format_log_message("msg_success", msg, show_datetime=False))
-
-    def isComplete(self):
-        return self._exec_mngr is None
+    def cleanupPage(self):
+        super().cleanupPage()
+        if self._exec_mngr is not None:
+            self._exec_mngr.stop_execution()
+        self.msg_error.emit("Aborted by the user")
 
     def initializePage(self):
         args = [
@@ -230,12 +236,6 @@ class InstallJuliaPage(QWizardPage):
             return
         self.msg_error.emit("Julia installation failed")
 
-    def cleanupPage(self):
-        super().cleanupPage()
-        if self._exec_mngr is not None:
-            self._exec_mngr.stop_execution()
-        self.msg_error.emit("Aborted by the user")
-
     def nextId(self):
         if self.wizard().julia_exe is not None:
             return _PageId.SUCCESS
@@ -250,8 +250,6 @@ class SuccessPage(QWizardPage):
         layout = QVBoxLayout(self)
         use_julia_check_box = QCheckBox("Use this Julia with Spine Toolbox")
         self._create_kernel_check_box = QCheckBox("Create a Jupyter kernel for this Julia")
-        use_julia_check_box.setChecked(True)
-        self._create_kernel_check_box.setChecked(True)
         self.registerField("use_julia", use_julia_check_box)
         self.registerField("create_kernel", self._create_kernel_check_box)
         layout.addWidget(self._label)
@@ -269,6 +267,8 @@ class SuccessPage(QWizardPage):
 
     def initializePage(self):
         self._label.setText(f"Julia executable created at <b>{self.wizard().julia_exe}</b>")
+        self.setField("use_julia", True)
+        self.setField("create_kernel", True)
 
     def nextId(self):
         return -1

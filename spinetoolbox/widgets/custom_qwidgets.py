@@ -31,10 +31,14 @@ from PySide2.QtWidgets import (
     QWidgetAction,
     QLabel,
     QFrame,
+    QWizardPage,
+    QToolButton,
 )
 from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent
-from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent
+from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont
 from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
+from .custom_qtextbrowser import MonoSpaceFontTextBrowser
+from ..helpers import format_log_message
 
 
 class FilterWidgetBase(QWidget):
@@ -399,14 +403,89 @@ class TitleWidgetAction(CustomWidgetAction):
 
 
 class WrapLabel(QLabel):
+    """A QLabel that always wraps text."""
+
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
         self.setWordWrap(True)
 
 
 class HyperTextLabel(WrapLabel):
+    """A QLabel that supports hyperlinks."""
+
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
         self.setTextFormat(Qt.RichText)
         self.setTextInteractionFlags(Qt.TextBrowserInteraction)
         self.setOpenExternalLinks(True)
+
+
+class QWizardProcessPage(QWizardPage):
+    """A QWizards page with a log. Useful for pages that need to capture the output of a process."""
+
+    msg = Signal(str)
+    msg_warning = Signal(str)
+    msg_error = Signal(str)
+    msg_success = Signal(str)
+    msg_proc = Signal(str)
+    msg_proc_error = Signal(str)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._log = MonoSpaceFontTextBrowser(self)
+        self._exec_mngr = None
+        self._successful = False
+        layout = QVBoxLayout(self)
+        layout.addWidget(self._log)
+        self._connect_signals()
+
+    def _connect_signals(self):
+        self.msg.connect(self._add_msg)
+        self.msg_warning.connect(self._add_msg_warning)
+        self.msg_error.connect(self._add_msg_error)
+        self.msg_success.connect(self._add_msg_succes)
+        self.msg_proc.connect(self._add_msg)
+        self.msg_proc_error.connect(self._add_msg_error)
+
+    def _add_msg(self, msg):
+        self._log.append(format_log_message("msg", msg, show_datetime=False))
+
+    def _add_msg_warning(self, msg):
+        self._log.append(format_log_message("msg_warning", msg, show_datetime=False))
+
+    def _add_msg_error(self, msg):
+        self._log.append(format_log_message("msg_error", msg, show_datetime=False))
+
+    def _add_msg_succes(self, msg):
+        self._log.append(format_log_message("msg_success", msg, show_datetime=False))
+
+    def isComplete(self):
+        return self._exec_mngr is None
+
+    def cleanupPage(self):
+        super().cleanupPage()
+        if self._exec_mngr is not None:
+            self._exec_mngr.stop_execution()
+        self.msg_error.emit("Aborted by the user")
+
+
+class LabelWithCopyButton(QWidget):
+    """A read only QLabel with a QToolButton that copies the text to clipboard."""
+
+    def __init__(self, text="", parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        line_edit = QLineEdit(text)
+        line_edit.setReadOnly(True)
+        font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        line_edit.setFont(font)
+        button = QToolButton()
+        font = QFont('Font Awesome 5 Free Solid')
+        button.setFont(font)
+        button.setText("\uf0c5")
+        button.setToolTip("Copy text")
+        layout.addSpacing(20)
+        layout.addWidget(line_edit)
+        layout.addWidget(button)
+        # pylint: disable=undefined-variable
+        button.clicked.connect(lambda _=False, le=line_edit: qApp.clipboard().setText(le.text()))

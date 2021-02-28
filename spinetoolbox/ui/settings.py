@@ -666,7 +666,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(2)
+        self.stackedWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
