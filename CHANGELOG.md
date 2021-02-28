@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Support for version 4 Spine Toolbox projects.
 - Support for version 5 Spine Toolbox projects.
 - Support to create sysimages for Julia tools.
+- New requirement: jill, for installing Julia.
+- The SpineOpt configuration assistant has been moved from File->Configuration assistants,
+  to File->Settings->Tools->Julia, and renamed to Add/Update SpineOpt Wizard
+- New wizard to install Julia, accessible from File->Settings->Tools->Julia
+
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
