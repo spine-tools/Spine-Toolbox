@@ -172,7 +172,8 @@ class CheckPreviousInstallPage(QWizardPage):
             f"--project={julia_project}",
             "-e",
             'import Pkg; '
-            'pkgs = Pkg.TOML.parsefile(joinpath(dirname(Base.active_project()), "Manifest.toml")); '
+            'manifest = joinpath(dirname(Base.active_project()), "Manifest.toml");'
+            'pkgs = isfile(manifest) ? Pkg.TOML.parsefile(manifest) : Dict(); '
             'spine_opt = get(pkgs, "SpineOpt", nothing); '
             'if spine_opt != nothing println(spine_opt[1]["version"]) end',
         ]
@@ -527,4 +528,4 @@ def _clear_layout(layout):
         child = layout.takeAt(0)
         if child is None:
             break
-        child.widget(layout).deleteLater()
+        child.widget().deleteLater()
