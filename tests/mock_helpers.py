@@ -122,3 +122,46 @@ def add_gdx_exporter(project, name, x=0, y=0):
     """Helper function to add an gdx exporter to given project."""
     item = {name: {"type": "GdxExporter", "description": "", "x": x, "y": y, "settings_packs": None}}
     project.add_project_items(item)
+
+
+class _FakeSignal:
+    """A fake Signal that just remembers all slots it's connected to."""
+
+    def __init__(self):
+        self.slots = []
+        self.connect = self.slots.append
+
+
+class _FakeQByteArray:
+    """A fake QByteArray."""
+
+    def __init__(self, data):
+        self._data = data
+
+    def data(self):
+        return self._data
+
+
+class MockInstantQProcess(mock.Mock):
+    """A mock QProcess that calls all slots connected to ``finished`` as soon as ``start()`` is called."""
+
+    def __init__(self, *args, finished_args=(), stdout=b"", stderr=b"", **kwargs):
+        """
+        Args:
+            finished_args (tuple): A tuple (exit_code, exit_status) to pass as arguments to ``finished`` slots
+        """
+        super().__init__(*args, **kwargs)
+        self._finished_args = finished_args
+        self._stdout = stdout
+        self._stderr = stderr
+        self.finished = _FakeSignal()
+
+    def readAllStandardOutput(self):
+        return _FakeQByteArray(self._stdout)
+
+    def readAllStandardError(self):
+        return _FakeQByteArray(self._stderr)
+
+    def start(self, *args, **kwargs):
+        for slot in self.finished.slots:
+            slot(*self._finished_args)
