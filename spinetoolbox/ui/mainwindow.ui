@@ -146,17 +146,6 @@
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
-    <widget class="QMenu" name="menuTool_configuration_assistants">
-     <property name="title">
-      <string>Tool configuration assistants...</string>
-     </property>
-     <property name="icon">
-      <iconset resource="resources/resources_icons.qrc">
-       <normaloff>:/icons/menu_icons/hands-helping.svg</normaloff>:/icons/menu_icons/hands-helping.svg</iconset>
-     </property>
-     <addaction name="separator"/>
-     <addaction name="separator"/>
-    </widget>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
     <addaction name="actionOpen_recent"/>
@@ -168,7 +157,6 @@
     <addaction name="actionNew_DB_editor"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
-    <addaction name="menuTool_configuration_assistants"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>

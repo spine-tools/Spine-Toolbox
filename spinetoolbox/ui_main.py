@@ -84,7 +84,6 @@ from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, RenameProjectItemCommand
 from .plugin_manager import PluginManager
-from .configuration_assistants import spine_opt
 
 
 class ToolboxUI(QMainWindow):
@@ -171,7 +170,6 @@ class ToolboxUI(QMainWindow):
         self.restore_ui()
         self.ui.dockWidget_executions.hide()
         self.parse_project_item_modules()
-        self.parse_assistant_modules()
         self.init_project_item_model()
         self.init_specification_model()
         self.make_item_properties_uis()
@@ -260,26 +258,6 @@ class ToolboxUI(QMainWindow):
         """Collects data from project item factories."""
         self._item_categories, self.item_factories = load_project_items()
         self._item_specification_factories = load_item_specification_factories()
-
-    def parse_assistant_modules(self):
-        """Makes actions to run assistants from assistant modules."""
-        menu = self.ui.menuTool_configuration_assistants
-        for module in (spine_opt,):  # NOTE: add others as needed
-            action = menu.addAction(module.assistant_name)
-            action.triggered.connect(
-                lambda checked=False, module=module, action=action: self.show_assistant(module, action)
-            )
-
-    def show_assistant(self, module, action):
-        """Creates and shows the assistant for the given module.
-        Disables the given action while the assistant is shown,
-        enables the action back when the assistant is destroyed.
-        This is to make sure we don't open the same assistant twice.
-        """
-        assistant = module.make_assistant(self)
-        action.setEnabled(False)
-        assistant.destroyed.connect(lambda obj=None: action.setEnabled(True))
-        assistant.show()
 
     def set_work_directory(self, new_work_dir=None):
         """Creates a work directory if it does not exist or changes the current work directory to given.
