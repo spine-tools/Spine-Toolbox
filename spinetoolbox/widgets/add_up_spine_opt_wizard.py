@@ -535,12 +535,16 @@ class ResetRegistryPage(ProcessPage):
             return
         self._exec_mngr = None
         self._successful = ret == 0
-        self.completeChanged.emit()
         if self._successful:
             self.msg_success.emit("Registry successfully reset")
-            return
-        self.msg_error.emit("Registry reset failed")
-        self.wizard().process_log = self._log.toHtml()
+            self.setCommitPage(True)
+            action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
+            self.setButtonText(QWizard.CommitButton, action)
+        else:
+            # FIXME: Rather, add a button to copy log to clipboard?
+            # self.wizard().process_log = self._log.toHtml()
+            self.msg_error.emit("Registry reset failed")
+        self.completeChanged.emit()
 
     def nextId(self):
         if self._successful:

@@ -55,6 +55,11 @@ class TestInstallJuliaWizard(unittest.TestCase):
         wizard.julia_exe = "path/to/julia"
         wizard.next()
         self.assertEqual("Installation successful", wizard.currentPage().title())
+        self.assertTrue(wizard.currentPage().isFinalPage())
+        wizard.julia_exe_selected = mock.Mock()
+        wizard.accept()
+        wizard.julia_exe_selected.emit.assert_called_once()
+        wizard.julia_exe_selected.emit.assert_called_with("path/to/julia", True)
 
     def test_julia_installation_fails(self):
         settings_widget = SettingsWidget(self.toolbox)
@@ -72,6 +77,10 @@ class TestInstallJuliaWizard(unittest.TestCase):
         mock_set_julia_exe.assert_not_called()
         wizard.next()
         self.assertEqual("Installation failed", wizard.currentPage().title())
+        self.assertTrue(wizard.currentPage().isFinalPage())
+        wizard.julia_exe_selected = mock.Mock()
+        wizard.accept()
+        wizard.julia_exe_selected.emit.assert_not_called()
 
     def test_julia_installation_crashes(self):
         settings_widget = SettingsWidget(self.toolbox)
@@ -89,3 +98,7 @@ class TestInstallJuliaWizard(unittest.TestCase):
         mock_set_julia_exe.assert_not_called()
         wizard.next()
         self.assertEqual("Installation failed", wizard.currentPage().title())
+        self.assertTrue(wizard.currentPage().isFinalPage())
+        wizard.julia_exe_selected = mock.Mock()
+        wizard.accept()
+        wizard.julia_exe_selected.emit.assert_not_called()
