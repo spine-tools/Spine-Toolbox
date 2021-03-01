@@ -32,7 +32,7 @@ from .project_commands import (
     SetProjectNameCommand,
     SetProjectDescriptionCommand,
     AddProjectItemsCommand,
-    RemoveProjectItemCommand,
+    RemoveProjectItemsCommand,
     RemoveAllProjectItemsCommand,
 )
 from .spine_engine_worker import SpineEngineWorker
@@ -388,16 +388,18 @@ class SpineToolboxProject(MetaObject):
             RemoveAllProjectItemsCommand(self, items_per_category, links, delete_data=delete_data)
         )
 
-    def remove_item(self, name, check_dialog=False):
-        """Pushes a RemoveProjectItemCommand to the toolbox undo stack.
+    def remove_project_items(self, *indexes, ask_confirmation=False):
+        """Pushes a RemoveProjectItemsCommand to the toolbox undo stack.
 
         Args:
-            name (str): Item's name
-            check_dialog (bool): If True, shows 'Are you sure?' message box
+            *indexes (QModelIndex): Indexes of the items in project item model
+            ask_confirmation (bool): If True, shows 'Are you sure?' message box
         """
+        indexes = list(indexes)
         delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
-        if check_dialog:
-            msg = "Remove item <b>{}</b> from project? ".format(name)
+        if ask_confirmation:
+            names = ", ".join(ind.data() for ind in indexes)
+            msg = f"Remove item(s) <b>{names}</b> from project? "
             if not delete_data:
                 msg += "Item data directory will still be available in the project directory after this operation."
             else:
@@ -415,37 +417,39 @@ class SpineToolboxProject(MetaObject):
             answer = message_box.exec_()
             if answer != QMessageBox.Ok:
                 return
-        self._toolbox.undo_stack.push(RemoveProjectItemCommand(self, name, delete_data=delete_data))
+        self._toolbox.undo_stack.push(RemoveProjectItemsCommand(self, *indexes, delete_data=delete_data))
 
-    def do_remove_item(self, category_ind, item, delete_data=False):
+    def do_remove_project_tree_items(self, category_ind, *items, delete_data=False):
         """Removes LeafProjectTreeItem from project.
 
         Args:
             category_ind (QModelIndex): The category index
-            item (LeafProjectTreeItem): the item to remove
+            *items (LeafProjectTreeItem): the items to remove
             delete_data (bool): If set to True, deletes the directories and data associated with the item
         """
-        # Remove item from project model
-        self._project_item_model.remove_item(item, parent=category_ind)
-        # Remove item icon and connected links (QGraphicsItems) from scene
-        icon = item.project_item.get_icon()
-        self._toolbox.ui.graphicsView.remove_icon(icon)
-        self.dag_handler.remove_node_from_graph(item.name)
-        item.project_item.tear_down()
-        if delete_data:
-            try:
-                data_dir = item.project_item.data_dir
-            except AttributeError:
-                data_dir = None
-            if data_dir:
-                # Remove data directory and all its contents
-                self._logger.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
+        items = list(items)
+        for item in items:
+            # Remove item from project model
+            self._project_item_model.remove_item(item, parent=category_ind)
+            # Remove item icon and connected links (QGraphicsItems) from scene
+            icon = item.project_item.get_icon()
+            self._toolbox.ui.graphicsView.remove_icon(icon)
+            self.dag_handler.remove_node_from_graph(item.name)
+            item.project_item.tear_down()
+            if delete_data:
                 try:
-                    if not erase_dir(data_dir):
-                        self._logger.msg_error.emit("Directory does not exist")
-                except OSError:
-                    self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
-            self._logger.msg.emit("Item <b>{0}</b> removed from project".format(item.name))
+                    data_dir = item.project_item.data_dir
+                except AttributeError:
+                    data_dir = None
+                if data_dir:
+                    # Remove data directory and all its contents
+                    self._logger.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
+                    try:
+                        if not erase_dir(data_dir):
+                            self._logger.msg_error.emit("Directory does not exist")
+                    except OSError:
+                        self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
+        self._logger.msg.emit(f"Item(s) <b>{', '.join(item.name for item in items)}</b> removed from project")
 
     def execute_dags(self, dags, execution_permits, msg):
         """Executes given dags.
@@ -710,8 +714,7 @@ class SpineToolboxProject(MetaObject):
     def tear_down(self):
         """Cleans up project."""
         for category_ind, project_tree_items in self._project_item_model.items_per_category().items():
-            for project_tree_item in project_tree_items:
-                self.do_remove_item(category_ind, project_tree_item, delete_data=False)
+            self.do_remove_project_tree_items(category_ind, *project_tree_items, delete_data=False)
 
 
 def _ranks(node_successors):

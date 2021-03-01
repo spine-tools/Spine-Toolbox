@@ -20,11 +20,11 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF, QPoint
+from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF
 from spine_engine import ExecutionDirection, SpineEngineState
 from spine_engine.project_item.connection import Connection
 from ..graphics_items import Link, ProjectItemIcon
-from ..project_commands import AddLinkCommand, RemoveLinkCommand
+from ..project_commands import AddLinkCommand, RemoveLinksCommand
 from .custom_qgraphicsscene import DesignGraphicsScene
 
 
@@ -401,19 +401,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 return replaced_link
         return None
 
-    def remove_link(self, link):
-        """Pushes a RemoveLinkCommand to the toolbox undo stack.
+    def remove_links(self, *links):
+        """Pushes a RemoveLinksCommand to the toolbox undo stack.
         """
-        self._toolbox.undo_stack.push(RemoveLinkCommand(self, link))
+        self._toolbox.undo_stack.push(RemoveLinksCommand(self, *links))
 
     def remove_selected_links(self):
-        for item in self.scene().selectedItems():
-            if isinstance(item, Link):
-                self.remove_link(item)
+        self.remove_links(*[item for item in self.scene().selectedItems() if isinstance(item, Link)])
 
     def take_link(self, link):
         """Remove link, then start drawing another one from the same source connector."""
-        self.remove_link(link)
+        self.remove_links(link)
         link_drawer = self.scene().link_drawer
         link_drawer.wake_up(link.src_connector)
         # noinspection PyArgumentList

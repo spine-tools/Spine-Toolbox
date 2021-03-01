@@ -82,7 +82,12 @@ from .helpers import (
 )
 from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
-from .project_commands import AddSpecificationCommand, RemoveSpecificationCommand, RenameProjectItemCommand
+from .project_commands import (
+    AddSpecificationCommand,
+    RemoveSpecificationCommand,
+    RenameProjectItemCommand,
+    SpineToolboxCommand,
+)
 from .plugin_manager import PluginManager
 
 
@@ -228,7 +233,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_project_directory.triggered.connect(self._open_project_directory)
         self.ui.actionOpen_item_directory.triggered.connect(self._open_project_item_directory)
         self.ui.actionRename_item.triggered.connect(self._rename_project_item)
-        self.ui.actionRemove.triggered.connect(self._remove_item)
+        self.ui.actionRemove.triggered.connect(self._remove_selected_items)
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
@@ -747,7 +752,13 @@ class ToolboxUI(QMainWindow):
         if self.undo_stack.isClean():
             return True
         commands = [self.undo_stack.command(ind) for ind in range(self.undo_stack.index())]
-        critical_commands = [cmd for cmd in commands if cmd.is_critical()]
+
+        def is_critical(cmd):
+            if isinstance(cmd, SpineToolboxCommand):
+                return cmd.is_critical()
+            return any(is_critical(cmd.child(i)) for i in range(cmd.childCount()))
+
+        critical_commands = [cmd for cmd in commands if is_critical(cmd)]
         if not critical_commands:
             return True
         for cmd in reversed(critical_commands):
@@ -1635,7 +1646,7 @@ class ToolboxUI(QMainWindow):
         self.link_context_menu = LinkContextMenu(self, pos, link)
         option = self.link_context_menu.get_action()
         if option == "Remove connection":
-            self.ui.graphicsView.remove_link(link)
+            self.ui.graphicsView.remove_links(link)
             return
         if option == "Take connection":
             self.ui.graphicsView.take_link(link)
@@ -2087,13 +2098,13 @@ class ToolboxUI(QMainWindow):
         item.project_item.open_directory()
 
     @Slot(bool)
-    def _remove_item(self, _):
+    def _remove_selected_items(self, _):
         """Removes selected project items and links."""
-        self.ui.graphicsView.remove_selected_links()
         selection_model = self.ui.treeView_project.selectionModel()
-        for index in selection_model.selection().indexes():
-            item = self.project_item_model.item(index)
-            self._project.remove_item(item.project_item.name)
+        self.undo_stack.beginMacro("remove selected items and links")
+        self._project.remove_project_items(*selection_model.selection().indexes())
+        self.ui.graphicsView.remove_selected_links()
+        self.undo_stack.endMacro()
 
     @Slot(bool)
     def _rename_project_item(self, _):
