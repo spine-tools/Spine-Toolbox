@@ -241,7 +241,8 @@ class AddUpSpineOptPage(QWizardProcessPage):
         processing, code, process = {
             "add": (
                 "Installing",
-                'using Pkg; pkg"registry add https://github.com/Spine-project/SpineJuliaRegistry.git"; pkg"add SpineOpt"',
+                'using Pkg; pkg"registry add General https://github.com/Spine-project/SpineJuliaRegistry.git"; '
+                'pkg"add SpineOpt"',
                 "installation",
             ),
             "update": ("Updating", 'using Pkg; pkg"up SpineOpt"', "update"),

@@ -2103,6 +2103,8 @@ class ToolboxUI(QMainWindow):
         if not self.ui.graphicsView.scene().selectedItems():
             return
         self.undo_stack.beginMacro("remove items and links")
+        # NOTE: Remove project items before links, otherwise funny things happen
+        # related to dag simulation
         selection_model = self.ui.treeView_project.selectionModel()
         self._project.remove_project_items(*selection_model.selection().indexes())
         self.ui.graphicsView.remove_selected_links()
