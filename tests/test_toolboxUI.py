@@ -570,7 +570,8 @@ class TestToolboxUI(unittest.TestCase):
         n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
         self.assertEqual(n_items_in_design_view, 1)
         # NOW REMOVE DC1
-        self.toolbox._project.remove_item(dc1)
+        dc1_ind = self.toolbox.project_item_model.find_item(dc1)
+        self.toolbox._project.remove_project_items(dc1_ind)
         self.assertEqual(self.toolbox.project_item_model.n_items(), 0)  # Check the number of project items
         dags = self.toolbox.project().dag_handler.dags()
         self.assertEqual(0, len(dags))  # Number of DAGs (DiGraph) objects in project

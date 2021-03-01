@@ -2101,7 +2101,7 @@ class ToolboxUI(QMainWindow):
     def _remove_selected_items(self, _):
         """Removes selected project items and links."""
         selection_model = self.ui.treeView_project.selectionModel()
-        self.undo_stack.beginMacro("remove selected items and links")
+        self.undo_stack.beginMacro("remove items and links")
         self._project.remove_project_items(*selection_model.selection().indexes())
         self.ui.graphicsView.remove_selected_links()
         self.undo_stack.endMacro()
