@@ -403,13 +403,13 @@ class SpineDBManager(QObject):
             # Commit session and don't show message box
             return QMessageBox.Save
 
-    def get_fetcher(self, listener):
-        """Fetches given db_map for given listener.
+    def get_fetcher(self):
+        """Returns a fetcher.
 
-        Args:
-            listener (SpineDBEditor)
+        Returns:
+           SpineDBFetcher
         """
-        fetcher = SpineDBFetcher(self, listener)
+        fetcher = SpineDBFetcher(self)
         # NOTE: The below connection style prevents segfaults when connecting to a slot that's being executed
         fetcher.finished.connect(lambda fetcher=fetcher: self._clean_up_fetcher(fetcher))
         self._fetchers.append(fetcher)

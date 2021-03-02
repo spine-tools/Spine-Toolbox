@@ -20,22 +20,19 @@ from PySide2.QtCore import Signal, Slot, QObject
 
 
 class SpineDBFetcher(QObject):
-    """Fetches content from a Spine database and 'sends' them to another thread (via a signal-slot mechanism of course),
-    so contents can be processed in that thread without affecting the UI."""
+    """Fetches content from a Spine database."""
 
     finished = Signal()
     _fetch_requested = Signal(object, object)
 
-    def __init__(self, db_mngr, listener):
+    def __init__(self, db_mngr):
         """Initializes the fetcher object.
 
         Args:
             db_mngr (SpineDBManager)
-            listener (SpineDBEditor)
         """
         super().__init__()
         self._db_mngr = db_mngr
-        self._listener = listener
         self.is_finished = False
         self.moveToThread(db_mngr.thread)
         self._fetch_requested.connect(self._do_fetch)
@@ -54,7 +51,7 @@ class SpineDBFetcher(QObject):
 
     @Slot(object, object)
     def _do_fetch(self, db_maps, tablenames):
-        getter_receiver_lookup = {
+        getter_signal_lookup = {
             "object_class": (self._db_mngr.get_object_classes, self._db_mngr.object_classes_added),
             "relationship_class": (self._db_mngr.get_relationship_classes, self._db_mngr.relationship_classes_added),
             "parameter_definition": (
@@ -86,14 +83,14 @@ class SpineDBFetcher(QObject):
             "tool_feature_method": (self._db_mngr.get_tool_feature_methods, self._db_mngr.tool_feature_methods_added),
         }
         if tablenames is None:
-            tablenames = getter_receiver_lookup.keys()
+            tablenames = getter_signal_lookup.keys()
         for tablename in tablenames:
-            getter_receiver = getter_receiver_lookup.get(tablename)
-            if getter_receiver is None:
+            getter_signal = getter_signal_lookup.get(tablename)
+            if getter_signal is None:
                 continue
-            getter, receiver = getter_receiver
+            getter, signal = getter_signal
             for db_map in db_maps:
                 for chunk in getter(db_map):
-                    receiver.emit({db_map: chunk})
+                    signal.emit({db_map: chunk})
         self.finished.emit()
         self.is_finished = True

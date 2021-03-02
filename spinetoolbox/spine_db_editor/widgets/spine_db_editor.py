@@ -147,7 +147,7 @@ class SpineDBEditorBase(QMainWindow):
     def fetch_db_maps(self, *db_maps):
         if not db_maps:
             db_maps = self.db_maps
-        fetcher = self.db_mngr.get_fetcher(self)
+        fetcher = self.db_mngr.get_fetcher()
         fetcher.finished.connect(self._make_iddle)
         self._make_busy()
         fetcher.fetch(db_maps)
