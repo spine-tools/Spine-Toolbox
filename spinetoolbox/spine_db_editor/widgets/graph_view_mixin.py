@@ -46,6 +46,7 @@ class GraphViewMixin:
         super().__init__(*args, **kwargs)
         QHBoxLayout(self.ui.graphicsView)
         self._persistent = False
+        self._owes_graph = False
         self.scene = None
         self.object_items = list()
         self.relationship_items = list()
@@ -186,10 +187,11 @@ class GraphViewMixin:
 
     @Slot(bool)
     def _handle_entity_graph_visibility_changed(self, visible):
-        if visible:
-            QTimer.singleShot(0, self.build_graph)
-        else:
+        if not visible:
             self._stop_layout_generators()
+            return
+        if self._owes_graph:
+            QTimer.singleShot(100, self.build_graph)
 
     @Slot(dict)
     def rebuild_graph(self, selected):
@@ -205,7 +207,11 @@ class GraphViewMixin:
             persistent (bool, optional): If True, elements in the current graph (if any) retain their position
                 in the new one.
         """
-        if not self.ui.dockWidget_entity_graph.isVisible() or len(self.layout_gens) > self._MAX_CONCURRENT_BUILDS:
+        if not self.ui.dockWidget_entity_graph.isVisible():
+            self._owes_graph = True
+            return
+        self._owes_graph = False
+        if len(self.layout_gens) > self._MAX_CONCURRENT_BUILDS:
             return
         self.ui.graphicsView.clear_cross_hairs_items()  # Needed
         self._persistent = persistent

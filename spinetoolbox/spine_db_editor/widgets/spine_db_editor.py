@@ -851,10 +851,10 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             db_url_codenames (dict): mapping url to codename.
         """
         super().__init__(db_mngr)
-        self._size = None
+        self._original_size = None
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
-        self._refresh_timer = QTimer(self)  # Used to limit refresh
-        self._refresh_timer.setSingleShot(True)
+        self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
+        self._timer_refresh_tab_order.setSingleShot(True)
         self.add_main_menu()
         self.connect_signals()
         self.apply_stacked_style()
@@ -865,16 +865,17 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
         self.pivot_action_group.triggered.connect(self.apply_pivot_style)
-        self._refresh_timer.timeout.connect(self._refresh_tab_order)
         for dock in self._dock_views:
-            dock.visibilityChanged.connect(self._restart_refresh_timer)
+            dock.visibilityChanged.connect(self._restart_timer_refresh_tab_order)
 
     @Slot(bool)
-    def _restart_refresh_timer(self, _visible=None):
-        self._refresh_timer.start(10)
+    def _restart_timer_refresh_tab_order(self, _visible=False):
+        self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.UniqueConnection)
+        self._timer_refresh_tab_order.start(100)
 
     @Slot()
     def _refresh_tab_order(self):
+        self._timer_refresh_tab_order.timeout.disconnect(self._refresh_tab_order)
         visible_docks = []
         for dock, view in self._dock_views.items():
             if view is None:
@@ -916,25 +917,20 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
     def restore_dock_widgets(self):
         """Docks all floating and or hidden QDockWidgets back to the window."""
         for dock in self._dock_views:
-            dock.setVisible(True)
             dock.setFloating(False)
+            dock.setVisible(True)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
     def begin_style_change(self):
         """Begins a style change operation."""
-        for dock in self._dock_views:
-            dock.visibilityChanged.disconnect(self._restart_refresh_timer)
-        self._size = self.size()
+        self._original_size = self.size()
         self.restore_dock_widgets()
 
     def end_style_change(self):
         """Ends a style change operation."""
         qApp.processEvents()  # pylint: disable=undefined-variable
         self.ui.dockWidget_exports.hide()
-        self.resize(self._size)
-        for dock in self._dock_views:
-            dock.visibilityChanged.connect(self._restart_refresh_timer)
-        self._restart_refresh_timer()
+        self.resize(self._original_size)
 
     @Slot(bool)
     def apply_stacked_style(self, checked=False):

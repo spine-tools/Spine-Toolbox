@@ -49,6 +49,7 @@ class TabularViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._pending_index = None
         # current state of ui
         self.current_class_item = None  # Current QModelIndex selected in one of the entity tree views
         self.current_class_type = None
@@ -138,9 +139,11 @@ class TabularViewMixin:
 
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
-        if visible:
-            self.reload_pivot_table()
-            self.ui.dockWidget_frozen_table.setVisible(True)
+        if not visible:
+            return
+        self.ui.dockWidget_frozen_table.setVisible(True)
+        if self._pending_index is not None:
+            QTimer.singleShot(100, lambda: self.reload_pivot_table(self._pending_index))
 
     @Slot(bool)
     def _handle_frozen_table_visibility_changed(self, visible):
@@ -160,8 +163,12 @@ class TabularViewMixin:
         self._handle_entity_tree_current_changed(current)
 
     def _handle_entity_tree_current_changed(self, current_index):
-        if self.ui.dockWidget_pivot_table.isVisible() and self.current_input_type != self._SCENARIO_ALTERNATIVE:
-            self.reload_pivot_table(current_index=current_index)
+        if self.current_input_type == self._SCENARIO_ALTERNATIVE:
+            return
+        if not self.ui.dockWidget_pivot_table.isVisible():
+            self._pending_index = current_index
+            return
+        self.reload_pivot_table(current_index=current_index)
 
     @staticmethod
     def _make_get_id(action):
@@ -461,6 +468,7 @@ class TabularViewMixin:
 
     def reload_pivot_table(self, current_index=None):
         """Updates current class (type and id) and reloads pivot table for it."""
+        self._pending_index = None
         if current_index is not None:
             self.current_class_item = self._get_current_class_item(current_index)
         if self.current_class_item is None:
