@@ -127,7 +127,6 @@ class GraphLayoutGenerator(QObject):
         self._state = _State.SLEEPING
         self._thread = QThread()
         self.moveToThread(self._thread)
-        self._thread.start()
         qApp.aboutToQuit.connect(self._thread.quit)  # pylint: disable=undefined-variable
         self.started.connect(self.get_coordinates)
         self.finished.connect(self.clean_up)
@@ -160,6 +159,7 @@ class GraphLayoutGenerator(QObject):
         self.finished.emit(x, y)
 
     def start(self):
+        self._thread.start()
         self.started.emit()
 
     def shortest_path_matrix(self):

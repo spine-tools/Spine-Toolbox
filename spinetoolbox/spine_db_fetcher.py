@@ -55,35 +55,35 @@ class SpineDBFetcher(QObject):
     @Slot(object, object)
     def _do_fetch(self, db_maps, tablenames):
         getter_receiver_lookup = {
-            "object_class": (self._db_mngr.get_object_classes, self._receive_object_classes_added),
-            "relationship_class": (self._db_mngr.get_relationship_classes, self._receive_relationship_classes_added),
+            "object_class": (self._db_mngr.get_object_classes, self._db_mngr.object_classes_added),
+            "relationship_class": (self._db_mngr.get_relationship_classes, self._db_mngr.relationship_classes_added),
             "parameter_definition": (
                 self._db_mngr.get_parameter_definitions,
-                self._receive_parameter_definitions_added,
+                self._db_mngr.parameter_definitions_added,
             ),
             "parameter_definition_tag": (
                 self._db_mngr.get_parameter_definition_tags,
-                self._receive_parameter_definition_tags_added,
+                self._db_mngr.parameter_definition_tags_added,
             ),
-            "object": (self._db_mngr.get_objects, self._receive_objects_added),
-            "relationship": (self._db_mngr.get_relationships, self._receive_relationships_added),
-            "entity_group": (self._db_mngr.get_entity_groups, self._receive_entity_groups_added),
-            "parameter_value": (self._db_mngr.get_parameter_values, self._receive_parameter_values_added),
+            "object": (self._db_mngr.get_objects, self._db_mngr.objects_added),
+            "relationship": (self._db_mngr.get_relationships, self._db_mngr.relationships_added),
+            "entity_group": (self._db_mngr.get_entity_groups, self._db_mngr.entity_groups_added),
+            "parameter_value": (self._db_mngr.get_parameter_values, self._db_mngr.parameter_values_added),
             "parameter_value_list": (
                 self._db_mngr.get_parameter_value_lists,
-                self._receive_parameter_value_lists_added,
+                self._db_mngr.parameter_value_lists_added,
             ),
-            "parameter_tag": (self._db_mngr.get_parameter_tags, self._receive_parameter_tags_added),
-            "alternative": (self._db_mngr.get_alternatives, self._receive_alternatives_added),
-            "scenario": (self._db_mngr.get_scenarios, self._receive_scenarios_added),
+            "parameter_tag": (self._db_mngr.get_parameter_tags, self._db_mngr.parameter_tags_added),
+            "alternative": (self._db_mngr.get_alternatives, self._db_mngr.alternatives_added),
+            "scenario": (self._db_mngr.get_scenarios, self._db_mngr.scenarios_added),
             "scenario_alternative": (
                 self._db_mngr.get_scenario_alternatives,
-                self._receive_scenario_alternatives_added,
+                self._db_mngr.scenario_alternatives_added,
             ),
-            "feature": (self._db_mngr.get_features, self._receive_features_added),
-            "tool": (self._db_mngr.get_tools, self._receive_tools_added),
-            "tool_feature": (self._db_mngr.get_tool_features, self._receive_tool_features_added),
-            "tool_feature_method": (self._db_mngr.get_tool_feature_methods, self._receive_tool_feature_methods_added),
+            "feature": (self._db_mngr.get_features, self._db_mngr.features_added),
+            "tool": (self._db_mngr.get_tools, self._db_mngr.tools_added),
+            "tool_feature": (self._db_mngr.get_tool_features, self._db_mngr.tool_features_added),
+            "tool_feature_method": (self._db_mngr.get_tool_feature_methods, self._db_mngr.tool_feature_methods_added),
         }
         if tablenames is None:
             tablenames = getter_receiver_lookup.keys()
@@ -94,73 +94,6 @@ class SpineDBFetcher(QObject):
             getter, receiver = getter_receiver
             for db_map in db_maps:
                 for chunk in getter(db_map):
-                    receiver({db_map: chunk})
+                    receiver.emit({db_map: chunk})
         self.finished.emit()
         self.is_finished = True
-
-    def _receive_alternatives_added(self, db_map_data):
-        self._db_mngr.cache_items("alternative", db_map_data)
-        self._listener.receive_alternatives_added(db_map_data)
-
-    def _receive_scenarios_added(self, db_map_data):
-        self._db_mngr.cache_items("scenario", db_map_data)
-        self._listener.receive_scenarios_added(db_map_data)
-
-    def _receive_scenario_alternatives_added(self, db_map_data):
-        self._db_mngr.cache_items("scenario_alternative", db_map_data)
-
-    def _receive_object_classes_added(self, db_map_data):
-        self._db_mngr.cache_items("object_class", db_map_data)
-        self._db_mngr.update_icons(db_map_data)
-        self._listener.receive_object_classes_added(db_map_data)
-
-    def _receive_objects_added(self, db_map_data):
-        self._db_mngr.cache_items("object", db_map_data)
-        self._listener.receive_objects_added(db_map_data)
-
-    def _receive_relationship_classes_added(self, db_map_data):
-        self._db_mngr.cache_items("relationship_class", db_map_data)
-        self._listener.receive_relationship_classes_added(db_map_data)
-
-    def _receive_relationships_added(self, db_map_data):
-        self._db_mngr.cache_items("relationship", db_map_data)
-        self._listener.receive_relationships_added(db_map_data)
-
-    def _receive_entity_groups_added(self, db_map_data):
-        self._db_mngr.cache_items("entity_group", db_map_data)
-        self._listener.receive_entity_groups_added(db_map_data)
-
-    def _receive_parameter_definitions_added(self, db_map_data):
-        self._db_mngr.cache_items("parameter_definition", db_map_data)
-        self._listener.receive_parameter_definitions_added(db_map_data)
-
-    def _receive_parameter_definition_tags_added(self, db_map_data):
-        self._db_mngr.cache_items("parameter_definition_tag", db_map_data)
-
-    def _receive_parameter_values_added(self, db_map_data):
-        self._db_mngr.cache_items("parameter_value", db_map_data)
-        self._listener.receive_parameter_values_added(db_map_data)
-
-    def _receive_parameter_value_lists_added(self, db_map_data):
-        self._db_mngr.cache_items("parameter_value_list", db_map_data)
-        self._listener.receive_parameter_value_lists_added(db_map_data)
-
-    def _receive_parameter_tags_added(self, db_map_data):
-        self._db_mngr.cache_items("parameter_tag", db_map_data)
-        self._listener.receive_parameter_tags_added(db_map_data)
-
-    def _receive_features_added(self, db_map_data):
-        self._db_mngr.cache_items("feature", db_map_data)
-        self._listener.receive_features_added(db_map_data)
-
-    def _receive_tools_added(self, db_map_data):
-        self._db_mngr.cache_items("tool", db_map_data)
-        self._listener.receive_tools_added(db_map_data)
-
-    def _receive_tool_features_added(self, db_map_data):
-        self._db_mngr.cache_items("tool_feature", db_map_data)
-        self._listener.receive_tool_features_added(db_map_data)
-
-    def _receive_tool_feature_methods_added(self, db_map_data):
-        self._db_mngr.cache_items("tool_feature_method", db_map_data)
-        self._listener.receive_tool_feature_methods_added(db_map_data)
