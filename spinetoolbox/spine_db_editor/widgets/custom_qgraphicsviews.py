@@ -16,6 +16,7 @@ Classes for custom QGraphicsViews for the Entity graph view.
 :date:   6.2.2018
 """
 
+import sys
 from PySide2.QtCore import Qt, QTimeLine, Signal, Slot, QRectF
 from PySide2.QtWidgets import QMenu
 from PySide2.QtGui import QCursor, QPainter, QIcon
@@ -557,8 +558,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         e.accept()
         self._menu.exec_(e.globalPos())
 
-    def _compute_min_zoom(self):
-        return 0.5 * self.zoom_factor * self._items_fitting_zoom
+    def _compute_max_zoom(self):
+        return sys.maxsize
 
     def _use_smooth_zoom(self):
         return self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false") == "true"

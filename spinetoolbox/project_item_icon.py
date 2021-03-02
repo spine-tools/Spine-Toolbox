@@ -27,7 +27,6 @@ from PySide2.QtWidgets import (
     QGraphicsDropShadowEffect,
     QApplication,
     QToolTip,
-    QStyle,
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QTextCursor, QPalette, QTextBlockFormat, QFont
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer

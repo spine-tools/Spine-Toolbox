@@ -18,7 +18,7 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 
 import logging
 import math
-from PySide2.QtWidgets import QGraphicsView
+from PySide2.QtWidgets import QGraphicsView, QGraphicsRectItem
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF
 from spine_engine import ExecutionDirection, SpineEngineState
@@ -177,11 +177,11 @@ class CustomQGraphicsView(QGraphicsView):
         x_factor = viewport_scene_rect.width() / rect.width()
         y_factor = viewport_scene_rect.height() / rect.height()
         self._items_fitting_zoom = 0.9 * min(x_factor, y_factor)
-        self._min_zoom = self._compute_min_zoom()
-        self._max_zoom = 10 * self._min_zoom
+        self._min_zoom = 0.5 * self.zoom_factor * self._items_fitting_zoom
+        self._max_zoom = self._compute_max_zoom()
 
-    def _compute_min_zoom(self):
-        return min(0.5, self.zoom_factor * self._items_fitting_zoom)
+    def _compute_max_zoom(self):
+        raise NotImplementedError()
 
     def _handle_zoom_time_line_advanced(self, pos):
         """Performs zoom whenever the smooth zoom time line advances."""
@@ -306,6 +306,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if factor < 1:
             self._zoom(factor)
         self._set_preferred_scene_rect()
+
+    def _compute_max_zoom(self):
+        # The max zoom is the one that fits one item into the view
+        # We don't allow to zoom any further than this
+        item = QGraphicsRectItem(0, 0, ProjectItemIcon.ITEM_EXTENT, 0)
+        self.scene().addItem(item)
+        self.scene().removeItem(item)
+        item_scene_rect = item.boundingRegion(item.sceneTransform()).boundingRect()
+        item_view_rect = self.mapFromScene(item_scene_rect).boundingRect()
+        viewport_extent = min(self.viewport().width(), self.viewport().height())
+        return viewport_extent / item_view_rect.width()
 
     def remove_icon(self, icon):
         """Removes icon and all connected links from scene."""
