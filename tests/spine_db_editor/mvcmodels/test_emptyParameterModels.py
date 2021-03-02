@@ -54,7 +54,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         ) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._db_mngr = SpineDBManager(app_settings, None)
-            fetcher = self._db_mngr.get_fetcher(mock.MagicMock())
+            fetcher = self._db_mngr.get_fetcher()
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="mock_db", create=True)
         import_object_classes(self._db_map, ("dog", "fish"))
         import_object_parameters(self._db_map, (("dog", "breed"),))
