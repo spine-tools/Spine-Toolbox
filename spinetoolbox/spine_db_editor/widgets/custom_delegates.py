@@ -19,11 +19,12 @@ Custom item delegates.
 from numbers import Number
 from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal
 from PySide2.QtWidgets import QStyledItemDelegate
-from PySide2.QtGui import QIcon, QFontMetrics
+from PySide2.QtGui import QFontMetrics
 from spinedb_api import to_database
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
+from ...helpers import object_icon
 
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
@@ -709,8 +710,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'display icon':
-            pixmap = self.parent().create_object_pixmap(index)
-            icon = QIcon(pixmap)
+            icon = object_icon(index.data())
             icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
         else:
             super().paint(painter, option, index)

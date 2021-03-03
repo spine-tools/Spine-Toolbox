@@ -122,9 +122,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         rect_w = self.rect().width()  # Parent rect width
         margin = 32
         self.svg_item.setScale((rect_w - margin) / dim_max)
-        x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
-        y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
-        self.svg_item.setPos(self.rect().x() + x_offset, self.rect().y() + y_offset)
+        self.svg_item.setPos(self.rect().center() - self.svg_item.sceneBoundingRect().center())
         self.svg_item.setGraphicsEffect(self.colorizer)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)

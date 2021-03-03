@@ -15,23 +15,37 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QLineF, QSize
+from PySide2.QtCore import Qt, Signal, Slot, QLineF, QBuffer, QRect
+from PySide2.QtSvg import QGraphicsSvgItem, QSvgGenerator, QSvgRenderer
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
     QGraphicsRectItem,
     QGraphicsEllipseItem,
-    QGraphicsPixmapItem,
     QGraphicsPathItem,
     QStyle,
     QApplication,
     QMenu,
 )
-from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication
+from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QPainter
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
 from spinetoolbox.helpers import CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
+
+
+def _renderer_from_icon(icon, rect):
+    buffer = QBuffer()
+    generator = QSvgGenerator()
+    generator.setOutputDevice(buffer)
+    generator.setSize(rect.size())
+    generator.setViewBox(rect)
+    painter = QPainter(generator)
+    icon.paint(painter, rect)
+    painter.end()
+    buffer.open(QBuffer.ReadOnly)
+    renderer = QSvgRenderer(buffer.readAll())
+    return renderer
 
 
 def make_figure_graphics_item(scene, z=0, static=True):
@@ -61,7 +75,7 @@ def make_figure_graphics_item(scene, z=0, static=True):
     return proxy_widget, figure
 
 
-class EntityItem(QGraphicsPixmapItem):
+class EntityItem(QGraphicsRectItem):
     """Base class for ObjectItem and RelationshipItem."""
 
     def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id=None):
@@ -80,10 +94,13 @@ class EntityItem(QGraphicsPixmapItem):
         self.db_map_entity_id = db_map_entity_id
         self.arc_items = list()
         self._extent = extent
+        self._renderer = None
+        self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
+        self.setPen(Qt.NoPen)
+        self._svg_item = QGraphicsSvgItem(self)
+        self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
         self.refresh_icon()
         self.setPos(x, y)
-        rect = self.boundingRect()
-        self.setOffset(-rect.width() / 2, -rect.height() / 2)
         self._moved_on_scene = False
         self._bg = None
         self._bg_brush = Qt.NoBrush
@@ -166,10 +183,13 @@ class EntityItem(QGraphicsPixmapItem):
 
     def refresh_icon(self):
         """Refreshes the icon."""
-        pixmap = self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id).pixmap(
-            self._extent
-        )
-        self.setPixmap(pixmap)
+        icon = self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
+        self._set_icon(icon)
+
+    def _set_icon(self, icon):
+        self._renderer = _renderer_from_icon(icon, QRect(0, 0, self._extent, self._extent))
+        self._svg_item.setSharedRenderer(self._renderer)
+        self._svg_item.setPos(self.rect().center() - self._svg_item.boundingRect().center())
 
     def shape(self):
         """Returns a shape containing the entire bounding rect, to work better with icon transparency."""
@@ -595,8 +615,8 @@ class CrossHairsItem(RelationshipItem):
         return "<p>Click on an object to add it to the relationship.</p>"
 
     def refresh_icon(self):
-        pixmap = CharIconEngine("\uf05b", 0).pixmap(QSize(self._extent, self._extent))
-        self.setPixmap(pixmap)
+        icon = CharIconEngine("\uf05b", 0)
+        self._set_icon(icon)
 
     def set_plus_icon(self):
         self.set_icon("\uf067", Qt.blue)
@@ -614,8 +634,8 @@ class CrossHairsItem(RelationshipItem):
         """Refreshes the icon."""
         if (unicode, color) == self._current_icon:
             return
-        pixmap = CharIconEngine(unicode, color).pixmap(QSize(self._extent, self._extent))
-        self.setPixmap(pixmap)
+        icon = CharIconEngine(unicode, color)
+        self._set_icon(icon)
         self._current_icon = (unicode, color)
 
     def mouseMoveEvent(self, event):
@@ -649,12 +669,8 @@ class CrossHairsRelationshipItem(RelationshipItem):
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         ]
         object_class_name_list = ",".join(object_class_name_list)
-        pixmap = (
-            self.db_mngr.icon_mngr[self.db_map]
-            .relationship_pixmap(object_class_name_list)
-            .scaled(self._extent, self._extent)
-        )
-        self.setPixmap(pixmap)
+        icon = self.db_mngr.icon_mngr[self.db_map].relationship_icon(object_class_name_list)
+        self._set_icon(icon)
 
     def contextMenuEvent(self, e):
         e.accept()
@@ -698,8 +714,6 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
-        self._cursor = self.textCursor()
-        self._text_backup = None
 
     def setPlainText(self, text):
         """Set texts and resets position.

@@ -38,7 +38,8 @@ from spinedb_api import (
     TimePattern,
     Map,
 )
-from .helpers import IconManager, busy_effect
+from .spine_db_icon_manager import SpineDBIconManager
+from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
@@ -540,10 +541,10 @@ class SpineDBManager(QObject):
             db_map (DiffDatabaseMapping)
 
         Returns:
-            IconManager
+            SpineDBIconManager
         """
         if db_map not in self.icon_mngr:
-            self.icon_mngr[db_map] = IconManager()
+            self.icon_mngr[db_map] = SpineDBIconManager()
         return self.icon_mngr[db_map]
 
     def update_icons(self, db_map_data):
@@ -553,7 +554,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
         for db_map, object_classes in db_map_data.items():
-            self.get_icon_mngr(db_map).setup_object_pixmaps(object_classes)
+            self.get_icon_mngr(db_map).update_icon_caches(object_classes)
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an appropriate icon for a given entity class.
@@ -572,7 +573,7 @@ class SpineDBManager(QObject):
             return None
         if entity_type == "object_class":
             if for_group:
-                return self.get_icon_mngr(db_map).group_object_icon(entity_class["name"])
+                return self.get_icon_mngr(db_map).object_group_icon(entity_class["name"])
             return self.get_icon_mngr(db_map).object_icon(entity_class["name"])
         if entity_type == "relationship_class":
             return self.get_icon_mngr(db_map).relationship_icon(entity_class["object_class_name_list"])
