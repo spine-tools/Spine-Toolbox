@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 5,
+        "version": 6,
         "name": "UnitTest Project",
         "description": "Project for unit tests.",
         "specifications": {
@@ -62,7 +62,8 @@
             "y": 101.0,
             "execute_in_work": true,
             "type": "Tool",
-            "specification": ""
+            "specification": "",
+            "cmd_line_args": []
         },
         "d": {
             "description": "",
