@@ -572,10 +572,10 @@ class SpineDBManager(QObject):
             return None
         if entity_type == "object_class":
             if for_group:
-                return self.icon_mngr[db_map].group_object_icon(entity_class["name"])
-            return self.icon_mngr[db_map].object_icon(entity_class["name"])
+                return self.get_icon_mngr(db_map).group_object_icon(entity_class["name"])
+            return self.get_icon_mngr(db_map).object_icon(entity_class["name"])
         if entity_type == "relationship_class":
-            return self.icon_mngr[db_map].relationship_icon(entity_class["object_class_name_list"])
+            return self.get_icon_mngr(db_map).relationship_icon(entity_class["object_class_name_list"])
 
     def get_item(self, db_map, item_type, id_):
         """Returns the item of the given type in the given db map that has the given id,
