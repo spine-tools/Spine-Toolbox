@@ -131,7 +131,7 @@ class SelectJuliaPage(QWizardPage):
         self._julia_project_line_edit.setText(self._julia_project)
 
     def _select_julia_exe(self):
-        julia_exe = QFileDialog.getOpenFileName(self, "Select Julia executable", self.field("julia_exe"))
+        julia_exe, _ = QFileDialog.getOpenFileName(self, "Select Julia executable", self.field("julia_exe"))
         if not julia_exe:
             return
         self.setField("julia_exe", julia_exe)

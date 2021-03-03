@@ -95,7 +95,7 @@ class JillNotFoundPage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Unable to find jill")
-        conda_env = os.environ['CONDA_DEFAULT_ENV']
+        conda_env = os.environ.get('CONDA_DEFAULT_ENV', 'base')
         toolbox_dir = os.path.dirname(APPLICATION_PATH)
         header = (
             "<p>Spine Toolbox needs the <a href='https://pypi.org/project/jill/'>jill</a> package "
