@@ -250,9 +250,10 @@ class EntityTreeView(CopyTreeView):
         self._add_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
         self._manage_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
         self._show_entity_metadata_action.setEnabled(item.item_type in ("object", "relationship"))
-        self._export_action.setEnabled(item.item_type not in ("root", "member_object_class"))
-        self._edit_action.setEnabled(item.item_type not in ("root", "member_object_class"))
-        self._remove_action.setEnabled(item.item_type not in ("root", "member_object_class"))
+        read_only = item.item_type in ("root", "members")
+        self._export_action.setEnabled(not read_only)
+        self._edit_action.setEnabled(not read_only)
+        self._remove_action.setEnabled(not read_only)
 
     def edit_selected(self):
         """Edits all selected indexes using the connected Spine db editor."""
@@ -279,7 +280,7 @@ class ObjectTreeView(EntityTreeView):
         self._add_objects_action.setEnabled(item.item_type in ("root", "object_class"))
         self._add_object_group_action.setEnabled(item.item_type == "object_class")
         self._add_relationship_classes_action.setEnabled(item.item_type in ("root", "object_class"))
-        self._manage_members_action.setEnabled(item.item_type == "member_object_class")
+        self._manage_members_action.setEnabled(item.item_type == "members")
         self._duplicate_object_action.setEnabled(item.item_type == "object" and not item.is_group())
         self._find_next_action.setEnabled(item.item_type == "relationship")
 

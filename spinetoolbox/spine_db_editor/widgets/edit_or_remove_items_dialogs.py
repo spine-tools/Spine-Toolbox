@@ -102,13 +102,11 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
-                for db_map in item.db_maps:
-                    if db_map.codename == database:
-                        db_maps.append(db_map)
-                        break
-                else:
+                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
+                if db_map is None:
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
+                db_maps.append(db_map)
             if not name:
                 self.parent().msg_error.emit("Object class name missing at row {}".format(i + 1))
                 return
@@ -170,13 +168,11 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
-                for db_map in item.db_maps:
-                    if db_map.codename == database:
-                        db_maps.append(db_map)
-                        break
-                else:
+                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
+                if db_map is None:
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
+                db_maps.append(db_map)
             if not name:
                 self.parent().msg_error.emit("Object name missing at row {}".format(i + 1))
                 return
@@ -236,13 +232,11 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
-                for db_map in item.db_maps:
-                    if db_map.codename == database:
-                        db_maps.append(db_map)
-                        break
-                else:
+                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
+                if db_map is None:
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
+                db_maps.append(db_map)
             if not name:
                 self.parent().msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
@@ -318,13 +312,11 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
                 db_names = ""
             db_maps = []
             for database in db_names.split(","):
-                for db_map in item.db_maps:
-                    if db_map.codename == database:
-                        db_maps.append(db_map)
-                        break
-                else:
+                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
+                if db_map is None:
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
+                db_maps.append(db_map)
             if not name:
                 self.parent().msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
@@ -405,13 +397,11 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
-                for db_map in item.db_maps:
-                    if db_map.codename == database:
-                        db_maps.append(db_map)
-                        break
-                else:
+                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
+                if db_map is None:
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
+                db_maps.append(db_map)
             for db_map in db_maps:
                 id_ = item.db_map_id(db_map)
                 db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, set()).add(id_)

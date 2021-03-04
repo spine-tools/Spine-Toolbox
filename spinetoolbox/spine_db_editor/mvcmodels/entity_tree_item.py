@@ -240,7 +240,7 @@ class ObjectRelationshipClassItem(RelationshipClassItemBase):
 class MemberObjectClassItem(ObjectClassItem):
     """A member object class item."""
 
-    item_type = "member_object_class"
+    item_type = "members"
 
     @property
     def display_id(self):
@@ -297,10 +297,7 @@ class EntityItem(MultiDBTreeItem):
     @property
     def display_icon(self):
         """Returns corresponding class icon."""
-        return self._display_icon(for_group=self.is_group())
-
-    def _display_icon(self, for_group=False):
-        return self.parent_item._display_icon(for_group=for_group)
+        return self.parent_item._display_icon(for_group=self.is_group())
 
     def db_map_member_ids(self, db_map):
         return [x["member_id"] for x in self.db_map_entity_groups(db_map)]
