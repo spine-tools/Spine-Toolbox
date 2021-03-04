@@ -219,20 +219,22 @@ def supported_img_formats():
 
 
 def pyside2_version_check():
-    """Check that PySide2 version is at least 5.14 but not 5.15, since
-     we don't want to support 5.15 yet because user's may need to update
-     their VC++ runtime libraries on Windows.
+    """Check that PySide2 version is 5.14 or 5.15.
+    Version 5.15 is allowed but it is not promoted yet
+    because user's may need to update their VC++ runtime
+    libraries on Windows.
 
     qt_version is the Qt version used to compile PySide2 as string. E.g. "5.14.2"
     qt_version_info is a tuple with each version component of Qt used to compile PySide2. E.g. (5, 14, 2)
     """
     # print("Your QT version info is:{0} version string:{1}".format(qt_version_info, qt_version))
-    if not (qt_version_info[0] == 5 and qt_version_info[1] == 14):
+    if not (qt_version_info[0] == 5 and qt_version_info[1] == 14) and \
+            not (qt_version_info[0] == 5 and qt_version_info[1] == 15):
         print(
             """Sorry for the inconvenience but,
 
             Spine Toolbox does not support PySide2 version {0}.
-            At the moment, supported PySide2 version is 5.14.
+            At the moment, supported PySide2 versions are 5.14 & 5.15.
 
             To upgrade PySide2 to latest supported version, run
 
