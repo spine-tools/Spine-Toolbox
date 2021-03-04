@@ -15,7 +15,7 @@ Contains the TreeViewMixin class.
 :author: M. Marin (KTH)
 :date:   26.11.2018
 """
-from PySide2.QtCore import Signal, Slot, QTimer
+from PySide2.QtCore import Signal, Slot
 from PySide2.QtWidgets import QInputDialog
 from .add_items_dialogs import (
     AddObjectClassesDialog,
@@ -24,7 +24,7 @@ from .add_items_dialogs import (
     AddRelationshipsDialog,
     AddObjectGroupDialog,
     ManageRelationshipsDialog,
-    ManageObjectGroupDialog,
+    ManageMembersDialog,
 )
 from .edit_or_remove_items_dialogs import (
     EditObjectClassesDialog,
@@ -212,9 +212,9 @@ class TreeViewMixin:
         dialog = AddObjectGroupDialog(self, object_class_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_manage_object_group_form(self, object_item):
+    def show_manage_members_form(self, object_item):
         """Shows dialog to manage an object group."""
-        dialog = ManageObjectGroupDialog(self, object_item, self.db_mngr, *self.db_maps)
+        dialog = ManageMembersDialog(self, object_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     @Slot(bool)
@@ -345,8 +345,7 @@ class TreeViewMixin:
 
     def receive_entity_groups_added(self, db_map_data):
         super().receive_entity_groups_added(db_map_data)
-        self.object_tree_model.raise_entity_groups(db_map_data)
-        self.ui.treeView_object.refresh_active_member_indexes()
+        self.object_tree_model.add_entity_groups(db_map_data)
 
     def receive_parameter_value_lists_added(self, db_map_data):
         super().receive_parameter_value_lists_added(db_map_data)
@@ -442,7 +441,7 @@ class TreeViewMixin:
 
     def receive_entity_groups_removed(self, db_map_data):
         super().receive_entity_groups_removed(db_map_data)
-        QTimer.singleShot(0, self.ui.treeView_object.refresh_active_member_indexes)
+        self.object_tree_model.remove_entity_groups(db_map_data)
 
     def receive_parameter_value_lists_removed(self, db_map_data):
         super().receive_parameter_value_lists_removed(db_map_data)

@@ -839,9 +839,9 @@ class SpineDBManager(QObject):
             Alias: database subquery
         """
         sq = getattr(db_map, sq_name)
-        query = db_map.query(sq)
+        query = db_map.query(sq).order_by(*[getattr(sq.c, k) for k in key])
         if ids:
-            query = query.filter(db_map.in_(sq.c.id, ids)).order_by(*[getattr(sq.c, k) for k in key])
+            query = query.filter(db_map.in_(sq.c.id, ids))
         return query
 
     def get_alternatives(self, db_map, ids=()):
@@ -933,7 +933,7 @@ class SpineDBManager(QObject):
         Returns:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "entity_group_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "ext_entity_group_sq", ids=ids, key=["member_name"]))
 
     def get_object_parameter_definitions(self, db_map, ids=()):
         """Returns object parameter definitions from database.

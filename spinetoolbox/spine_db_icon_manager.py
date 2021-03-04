@@ -56,6 +56,7 @@ class SpineDBIconManager:
         self.display_icons = {}  # A mapping from object_class name to display icon code
         self.rel_cls_scenes = {}  # A mapping from object_class name list to associated scene
         self.obj_group_scenes = {}  # A mapping from class name to associated group scene
+        self.obj_cls_scenes = {}  # A mapping from class name to associated group scene
 
     def update_icon_caches(self, object_classes):
         """Called after adding or updating object classes.
@@ -69,11 +70,24 @@ class SpineDBIconManager:
             del self.rel_cls_scenes[k]
         for name in object_class_names:
             self.obj_group_scenes.pop(name, None)
+            self.obj_cls_scenes.pop(name, None)
+
+    def _create_obj_cls_scene(self, object_class_name):
+        scene = QGraphicsScene()
+        font = QFont('Font Awesome 5 Free Solid')
+        display_icon = self.display_icons.get(object_class_name, -1)
+        icon_code, color_code = interpret_icon_id(display_icon)
+        text_item = scene.addText(chr(icon_code), font)
+        text_item.setDefaultTextColor(color_code)
+        _align_text_in_item(text_item)
+        self.obj_cls_scenes[object_class_name] = scene
 
     def object_icon(self, object_class_name):
         """An icon for the given object_class."""
-        display_icon = self.display_icons.get(object_class_name, -1)
-        return object_icon(display_icon)
+        if object_class_name not in self.obj_cls_scenes:
+            self._create_obj_cls_scene(object_class_name)
+        scene = self.obj_cls_scenes[object_class_name]
+        return QIcon(SceneIconEngine(scene))
 
     def _create_rel_cls_scene(self, object_class_names):
         font = QFont('Font Awesome 5 Free Solid')

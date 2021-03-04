@@ -123,9 +123,6 @@ class EntityTreeView(CopyTreeView):
         self._refresh_selected_indexes()
         if not self.selectionModel().hasSelection():
             return
-        self.refresh_active_member_indexes()
-        parents = set(ind.parent() for ind in deselected)
-        self.model().emit_data_changed_for_column(0, parents)
         self.tree_selection_changed.emit(self._selected_indexes)
 
     def _refresh_selected_indexes(self):
@@ -137,14 +134,6 @@ class EntityTreeView(CopyTreeView):
                 continue
             item = model.item_from_index(index)
             self._selected_indexes.setdefault(item.item_type, {})[index] = None
-
-    def refresh_active_member_indexes(self):
-        active_member_indexes = set(
-            index.sibling(row, 0)
-            for index in self._selected_indexes.get("object", ())
-            for row in index.internalPointer().member_rows
-        )
-        self.model().set_active_member_indexes(active_member_indexes)
 
     def clear_any_selections(self):
         """Clears the selection if any."""
@@ -261,9 +250,9 @@ class EntityTreeView(CopyTreeView):
         self._add_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
         self._manage_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
         self._show_entity_metadata_action.setEnabled(item.item_type in ("object", "relationship"))
-        self._export_action.setEnabled(item.item_type != "root")
-        self._edit_action.setEnabled(item.item_type != "root")
-        self._remove_action.setEnabled(item.item_type != "root")
+        self._export_action.setEnabled(item.item_type not in ("root", "member_object_class"))
+        self._edit_action.setEnabled(item.item_type not in ("root", "member_object_class"))
+        self._remove_action.setEnabled(item.item_type not in ("root", "member_object_class"))
 
     def edit_selected(self):
         """Edits all selected indexes using the connected Spine db editor."""
@@ -278,8 +267,8 @@ class ObjectTreeView(EntityTreeView):
         super().__init__(parent=parent)
         self._add_objects_action = None
         self._add_object_classes_action = None
-        self._create_object_group_action = None
-        self._manage_object_group_action = None
+        self._add_object_group_action = None
+        self._manage_members_action = None
         self._duplicate_object_action = None
         self._find_next_action = None
 
@@ -288,9 +277,9 @@ class ObjectTreeView(EntityTreeView):
         item = self._context_item
         self._add_object_classes_action.setEnabled(item.item_type == "root")
         self._add_objects_action.setEnabled(item.item_type in ("root", "object_class"))
-        self._create_object_group_action.setEnabled(item.item_type == "object_class")
+        self._add_object_group_action.setEnabled(item.item_type == "object_class")
         self._add_relationship_classes_action.setEnabled(item.item_type in ("root", "object_class"))
-        self._manage_object_group_action.setEnabled(item.item_type == "object" and item.is_group())
+        self._manage_members_action.setEnabled(item.item_type == "member_object_class")
         self._duplicate_object_action.setEnabled(item.item_type == "object" and not item.is_group())
         self._find_next_action.setEnabled(item.item_type == "relationship")
 
@@ -304,12 +293,10 @@ class ObjectTreeView(EntityTreeView):
         self._find_next_action = self._menu.addAction(
             QIcon(CharIconEngine("\uf141")), "Find next relationship", self.find_next_relationship
         )
-        self._create_object_group_action = self._menu.addAction(
-            self._cube_plus_icon, "Create object group", self.add_object_group
+        self._add_object_group_action = self._menu.addAction(
+            self._cube_plus_icon, "Add object group", self.add_object_group
         )
-        self._manage_object_group_action = self._menu.addAction(
-            self._cube_pen_icon, "Manage object group", self.manage_object_group
-        )
+        self._manage_members_action = self._menu.addAction(self._cube_pen_icon, "Manage members", self.manage_members)
         self._duplicate_object_action = self._menu.addAction(
             self._cube_plus_icon, "Duplicate object", self.duplicate_object
         )
@@ -364,10 +351,10 @@ class ObjectTreeView(EntityTreeView):
         item = index.internalPointer()
         self._spine_db_editor.show_add_object_group_form(item)
 
-    def manage_object_group(self):
+    def manage_members(self):
         index = self.currentIndex()
-        item = index.internalPointer()
-        self._spine_db_editor.show_manage_object_group_form(item)
+        item = index.internalPointer().parent_item
+        self._spine_db_editor.show_manage_members_form(item)
 
 
 class RelationshipTreeView(EntityTreeView):

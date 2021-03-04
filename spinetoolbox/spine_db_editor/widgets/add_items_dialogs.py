@@ -56,6 +56,7 @@ from .manage_items_dialogs import (
     ManageItemsDialogBase,
 )
 from ...helpers import default_icon_id
+from ...spine_db_commands import AgedUndoCommand, AddItemsCommand, RemoveItemsCommand
 
 
 class AddReadyRelationshipsDialog(ManageItemsDialogBase):
@@ -795,7 +796,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         super().accept()
 
 
-class AddOrManageObjectGroupDialog(QDialog):
+class ObjectGroupDialogBase(QDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps, object_item=None):
         """
         Args:
@@ -922,7 +923,7 @@ class AddOrManageObjectGroupDialog(QDialog):
         return True
 
 
-class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
+class AddObjectGroupDialog(ObjectGroupDialogBase):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
         """
         Args:
@@ -975,7 +976,7 @@ class AddObjectGroupDialog(AddOrManageObjectGroupDialog):
         super().accept()
 
 
-class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
+class ManageMembersDialog(ObjectGroupDialogBase):
     def __init__(self, parent, object_item, db_mngr, *db_maps):
         """
         Args:
@@ -985,12 +986,12 @@ class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
             *db_maps: database mappings
         """
         super().__init__(parent, object_item.parent_item, db_mngr, *db_maps, object_item=object_item)
-        self.setWindowTitle("Manage object group")
+        self.setWindowTitle("Manage members")
         self.group_name_line_edit.setReadOnly(True)
         self.group_name_line_edit.setText(object_item.display_data)
 
     def initial_member_ids(self):
-        return self.object_item.db_map_member_ids(self.db_map)
+        return set(self.object_item.db_map_member_ids(self.db_map))
 
     def initial_entity_id(self):
         return self.object_item.db_map_id(self.db_map)
@@ -1006,19 +1007,16 @@ class ManageObjectGroupDialog(AddOrManageObjectGroupDialog):
         }
         added = current_member_ids - self.initial_member_ids()
         removed = self.initial_member_ids() - current_member_ids
-        db_map_data_to_add = {
-            self.db_map: [
-                {"entity_id": obj["id"], "entity_class_id": obj["class_id"], "member_id": member_id}
-                for member_id in added
-            ]
-        }
-        db_map_typed_data_to_remove = {
-            self.db_map: {
-                "entity_group": [
-                    x["id"] for x in self.object_item.db_map_entity_groups(self.db_map) if x["member_id"] in removed
-                ]
-            }
-        }
-        self.db_mngr.add_entity_groups(db_map_data_to_add)
-        self.db_mngr.remove_items(db_map_typed_data_to_remove)
+        items_to_add = [
+            {"entity_id": obj["id"], "entity_class_id": obj["class_id"], "member_id": member_id} for member_id in added
+        ]
+        ids_to_remove = [
+            x["id"] for x in self.object_item.db_map_entity_groups(self.db_map) if x["member_id"] in removed
+        ]
+        if items_to_add or ids_to_remove:
+            macro = AgedUndoCommand()
+            macro.setText(f"manage {self.object_item.display_data}'s members")
+            AddItemsCommand(self.db_mngr, self.db_map, items_to_add, "entity_group", parent=macro)
+            RemoveItemsCommand(self.db_mngr, self.db_map, {"entity_group": ids_to_remove}, parent=macro)
+            self.db_mngr.undo_stack[self.db_map].push(macro)
         super().accept()

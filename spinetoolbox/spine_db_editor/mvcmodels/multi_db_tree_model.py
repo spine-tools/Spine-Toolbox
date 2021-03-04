@@ -34,7 +34,6 @@ class MultiDBTreeModel(MinimalTreeModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._root_item = None
-        self.active_member_indexes = dict()
 
     @property
     def root_item_type(self):
@@ -81,18 +80,3 @@ class MultiDBTreeModel(MinimalTreeModel):
                     if self.canFetchMore(parent):
                         self.fetchMore(parent)
         return parent_items
-
-    def is_active_member_index(self, index):
-        return index in self.active_member_indexes.get(index.parent(), set())
-
-    def set_active_member_indexes(self, indexes):
-        self.active_member_indexes.clear()
-        for ind in indexes:
-            self.active_member_indexes.setdefault(ind.parent(), set()).add(ind)
-        self.emit_data_changed_for_column(0, self.active_member_indexes)
-
-    def emit_data_changed_for_column(self, column, parents):
-        for parent in parents:
-            top_left = self.index(0, column, parent)
-            bottom_right = self.index(self.rowCount(parent), column, parent)
-            self.dataChanged.emit(top_left, bottom_right)

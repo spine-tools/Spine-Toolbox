@@ -60,6 +60,13 @@ def _cache_to_db_parameter_value_list(item):
     return item
 
 
+def _cache_to_db_entity_group(item):
+    item = deepcopy(item)
+    item["entity_class_id"] = item["class_id"]
+    item["entity_id"] = item["group_id"]
+    return item
+
+
 def _cache_to_db_item(item_type, item):
     return {
         "relationship_class": _cache_to_db_relationship_class,
@@ -67,6 +74,7 @@ def _cache_to_db_item(item_type, item):
         "parameter_definition": _cache_to_db_parameter_definition,
         "parameter_value": _cache_to_db_parameter_value,
         "parameter_value_list": _cache_to_db_parameter_value_list,
+        "entity_group": _cache_to_db_entity_group,
     }.get(item_type, lambda x: x)(item)
 
 
@@ -340,6 +348,8 @@ class AddItemsCommand(SpineDBCommand):
             parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
         super().__init__(db_mngr, db_map, parent=parent)
+        if not data:
+            self.setObsolete(True)
         self.redo_db_map_data = {db_map: data}
         self.item_type = item_type
         self.method_name = self._add_method_name[item_type]
@@ -391,6 +401,8 @@ class UpdateItemsCommand(SpineDBCommand):
             parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
         super().__init__(db_mngr, db_map, parent=parent)
+        if not data:
+            self.setObsolete(True)
         self.item_type = item_type
         self.redo_db_map_data = {db_map: data}
         self.undo_db_map_data = {db_map: [self._undo_item(db_map, item) for item in data]}
@@ -436,6 +448,8 @@ class RemoveItemsCommand(SpineDBCommand):
             parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
         super().__init__(db_mngr, db_map, parent=parent)
+        if not any(typed_data.values()):
+            self.setObsolete(True)
         self.redo_db_map_typed_data = {db_map: typed_data}
         self.undo_typed_db_map_data = {}
         self.setText(f"remove items from '{db_map.codename}'")

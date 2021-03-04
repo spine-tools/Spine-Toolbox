@@ -237,31 +237,80 @@ class ObjectRelationshipClassItem(RelationshipClassItemBase):
         ]
 
 
+class MemberObjectClassItem(ObjectClassItem):
+    """A member object class item."""
+
+    item_type = "member_object_class"
+
+    @property
+    def display_id(self):
+        return "members"
+
+    @property
+    def display_data(self):
+        return "members"
+
+    def db_map_data(self, db_map):
+        """Returns data for this item as if it was indeed an object class."""
+        id_ = self.db_map_id(db_map)
+        return self.db_mngr.get_item(db_map, super().item_type, id_)
+
+    def _display_icon(self, for_group=False):
+        """Returns icon for this item as if it was indeed an object class."""
+        return self.db_mngr.entity_class_icon(
+            self.first_db_map, super().item_type, self.db_map_id(self.first_db_map), for_group=for_group
+        )
+
+    def has_children(self):
+        """Returns True, this item always has children."""
+        return True
+
+    def _get_children_ids(self, db_map):
+        """See base class."""
+        return self.parent_item.db_map_member_ids(db_map)
+
+    @property
+    def child_item_type(self):
+        """Returns MemberObjectItem."""
+        return MemberObjectItem
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict()
+
+    def data(self, column, role=Qt.DisplayRole):
+        """Returns data for given column and role."""
+        if role == Qt.FontRole and column == 0:
+            bold_font = QFont()
+            bold_font.setBold(True)
+            return bold_font
+        return super().data(column, role)
+
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
+
+
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
     @property
     def display_icon(self):
         """Returns corresponding class icon."""
-        return self.parent_item._display_icon(for_group=self.is_group())
+        return self._display_icon(for_group=self.is_group())
+
+    def _display_icon(self, for_group=False):
+        return self.parent_item._display_icon(for_group=for_group)
 
     def db_map_member_ids(self, db_map):
-        return set(x["member_id"] for x in self.db_map_entity_groups(db_map))
+        return [x["member_id"] for x in self.db_map_entity_groups(db_map)]
 
     def db_map_entity_groups(self, db_map):
-        return self.db_mngr.get_items_by_field(db_map, "entity_group", "entity_id", self.db_map_id(db_map))
+        return self.db_mngr.get_items_by_field(db_map, "entity_group", "group_id", self.db_map_id(db_map))
 
     @property
     def member_ids(self):
         return {db_map: self.db_map_member_ids(db_map) for db_map in self.db_maps}
-
-    @property
-    def member_rows(self):
-        return set(
-            row
-            for db_map in self.db_maps
-            for row in self.parent_item.find_rows_by_id(db_map, *self.db_map_member_ids(db_map))
-        )
 
     def is_group(self):
         return any(self.member_ids.values())
@@ -269,10 +318,6 @@ class EntityItem(MultiDBTreeItem):
     def data(self, column, role=Qt.DisplayRole):
         if role == Qt.ToolTipRole:
             return self.db_map_data_field(self.first_db_map, "description")
-        if role == Qt.BackgroundRole and column == 0 and self.model.is_active_member_index(self.index()):
-            color = qApp.palette().highlight().color()  # pylint: disable=undefined-variable
-            color.setAlphaF(0.2)
-            return color
         return super().data(column, role)
 
     def _get_children_ids(self, db_map):
@@ -293,7 +338,7 @@ class ObjectItem(EntityItem):
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
-            object_class_name=self.parent_item.display_data,
+            object_class_name=self.db_map_data_field(self.first_db_map, "class_name"),
             object_name=self.display_data,
             database=self.first_db_map.codename,
         )
@@ -310,6 +355,33 @@ class ObjectItem(EntityItem):
             for items in self.db_mngr.find_cascading_relationship_classes({db_map: {object_class_id}}).values()
             for x in items
         ]
+
+    def fetch_more(self):
+        """Fetches children from all associated databases."""
+        super().fetch_more()
+        if not self.is_group():
+            return
+        # Insert member class item. Note that we pass the db_map_ids of the parent object class item
+        db_map_ids = {db_map: self.parent_item.db_map_id(db_map) for db_map in self.db_maps}
+        self.insert_children(0, MemberObjectClassItem(self.model, db_map_ids))
+
+
+class MemberObjectItem(ObjectItem):
+    """A member object item."""
+
+    item_type = "object"
+
+    @property
+    def display_icon(self):
+        return self.parent_item.display_icon
+
+    def has_children(self):
+        """Returns false, this item never has children."""
+        return False
+
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()
 
 
 class RelationshipItem(EntityItem):

@@ -204,25 +204,25 @@ class SpineDBWorker(QObject):
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
                 db_map_error_log.setdefault(db_map, []).append(msg)
                 continue
-            command = AgedUndoCommand()
-            command.setText(command_text)
+            macro = AgedUndoCommand()
+            macro.setText(command_text)
             child_cmds = []
-            # NOTE: we push the import command before adding the children,
+            # NOTE: we push the import macro before adding the children,
             # because we *need* to call redo() on the children one by one so the data gets in gradually
-            self._db_mngr.undo_stack[db_map].push(command)
+            self._db_mngr.undo_stack[db_map].push(macro)
             for item_type, (to_add, to_update, import_error_log) in data_for_import:
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_add:
-                    add_cmd = AddItemsCommand(self._db_mngr, db_map, to_add, item_type, parent=command)
+                    add_cmd = AddItemsCommand(self._db_mngr, db_map, to_add, item_type, parent=macro)
                     add_cmd.redo()
                     child_cmds.append(add_cmd)
                 if to_update:
-                    upd_cmd = UpdateItemsCommand(self._db_mngr, db_map, to_update, item_type, parent=command)
+                    upd_cmd = UpdateItemsCommand(self._db_mngr, db_map, to_update, item_type, parent=macro)
                     upd_cmd.redo()
                     child_cmds.append(upd_cmd)
             if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
-                # Nothing imported. Set the command obsolete and call undo() on the stack to removed it
-                command.setObsolete(True)
+                # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
+                macro.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
@@ -340,23 +340,23 @@ class SpineDBWorker(QObject):
     @Slot(object)
     def _set_scenario_alternatives(self, db_map_data):
         for db_map, data in db_map_data.items():
-            command = AgedUndoCommand()
-            command.setText(f"set scenario alternatives in {db_map.codename}")
-            self._db_mngr.undo_stack[db_map].push(command)
+            macro = AgedUndoCommand()
+            macro.setText(f"set scenario alternatives in {db_map.codename}")
+            self._db_mngr.undo_stack[db_map].push(macro)
             child_cmds = []
             items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data)
             if ids_to_remove:
                 rm_cmd = RemoveItemsCommand(
-                    self._db_mngr, db_map, {"scenario_alternative": ids_to_remove}, parent=command
+                    self._db_mngr, db_map, {"scenario_alternative": ids_to_remove}, parent=macro
                 )
                 rm_cmd.redo()
                 child_cmds.append(rm_cmd)
             if items_to_add:
-                add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "scenario_alternative", parent=command)
+                add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "scenario_alternative", parent=macro)
                 add_cmd.redo()
                 child_cmds.append(add_cmd)
             if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
-                command.setObsolete(True)
+                macro.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
 
     def set_parameter_definition_tags(self, db_map_data):
@@ -365,25 +365,23 @@ class SpineDBWorker(QObject):
     @Slot(object)
     def _set_parameter_definition_tags(self, db_map_data):
         for db_map, data in db_map_data.items():
-            command = AgedUndoCommand()
-            command.setText(f"set parameter definition tags in {db_map.codename}")
-            self._db_mngr.undo_stack[db_map].push(command)
+            macro = AgedUndoCommand()
+            macro.setText(f"set parameter definition tags in {db_map.codename}")
+            self._db_mngr.undo_stack[db_map].push(macro)
             child_cmds = []
             items_to_add, ids_to_remove = db_map.get_data_to_set_parameter_definition_tags(*data)
             if ids_to_remove:
                 rm_cmd = RemoveItemsCommand(
-                    self._db_mngr, db_map, {"parameter_definition_tag": ids_to_remove}, parent=command
+                    self._db_mngr, db_map, {"parameter_definition_tag": ids_to_remove}, parent=macro
                 )
                 rm_cmd.redo()
                 child_cmds.append(rm_cmd)
             if items_to_add:
-                add_cmd = AddItemsCommand(
-                    self._db_mngr, db_map, items_to_add, "parameter_definition_tag", parent=command
-                )
+                add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "parameter_definition_tag", parent=macro)
                 add_cmd.redo()
                 child_cmds.append(add_cmd)
             if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
-                command.setObsolete(True)
+                macro.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
 
     def _refresh(self, signal_name, db_map_data):
