@@ -289,12 +289,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     def _show_add_up_spine_opt_wizard(self):
         use_emb_julia, julia_path, julia_project_path, julia_kernel = self._get_julia_settings()
-        julia_settings = QSettings()
-        julia_settings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
-        julia_settings.setValue("appSettings/juliaPath", julia_path)
-        julia_settings.setValue("appSettings/juliaProjectPath", julia_project_path)
-        julia_settings.setValue("appSettings/juliaKernel", julia_kernel)
-        julia_env = get_julia_env(julia_settings)
+        self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
+        self._qsettings.setValue("appSettings/juliaPath", julia_path)
+        self._qsettings.setValue("appSettings/juliaProjectPath", julia_project_path)
+        self._qsettings.setValue("appSettings/juliaKernel", julia_kernel)
+        julia_env = get_julia_env(self._qsettings)
         if julia_env is None:
             julia_exe = julia_project = ""
         else:
