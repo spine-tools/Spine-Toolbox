@@ -93,13 +93,13 @@ class AgedUndoStack(QUndoStack):
     def redo_age(self):
         if self.canRedo():
             return self.command(self.index()).age
-        return None
+        return -1
 
     @property
     def undo_age(self):
         if self.canUndo():
             return self.command(self.index() - 1).age
-        return None
+        return -1
 
     def commands(self):
         return [self.command(idx) for idx in range(self.index())]
@@ -112,7 +112,7 @@ class AgedUndoCommand(QUndoCommand):
             parent (QUndoCommand, optional): The parent command, used for defining macros.
         """
         super().__init__(parent=parent)
-        self._age = None
+        self._age = -1
 
     def redo(self):
         super().redo()
@@ -283,18 +283,6 @@ class SpineDBCommand(AgedUndoCommand):
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.completed_signal = None
-        self._completed = False
-
-    def run_quietly(self, func):
-        """Calls given function while silencing the listener Spine db editors.
-        This is so undo() and subsequent redo() calls don't trigger the same notifications over and over.
-        """
-        listeners = self.db_mngr.signaller.db_map_listeners(self.db_map)
-        for listener in listeners:
-            listener.silenced = True
-        func(self)
-        for listener in listeners:
-            listener.silenced = False
 
     @staticmethod
     def redomethod(func):
@@ -306,9 +294,7 @@ class SpineDBCommand(AgedUndoCommand):
         """
 
         def redo(self):
-            if self._completed:
-                self.run_quietly(func)
-                return
+            super().redo()
             self.completed_signal.connect(self.receive_items_changed)
             func(self)
 
@@ -320,7 +306,8 @@ class SpineDBCommand(AgedUndoCommand):
         """
 
         def undo(self):
-            self.run_quietly(func)
+            super().undo()
+            func(self)
 
         return undo
 
@@ -328,9 +315,6 @@ class SpineDBCommand(AgedUndoCommand):
     def receive_items_changed(self, _db_map_data):
         """Marks the command as completed."""
         self.completed_signal.disconnect(self.receive_items_changed)
-        self._completed = True
-        if not self._completed:
-            self.setObsolete(True)
 
     def data(self):
         """Returns data to present this command in a DBHistoryDialog."""

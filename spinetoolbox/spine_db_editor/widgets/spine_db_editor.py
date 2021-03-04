@@ -301,12 +301,10 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(int)
     def update_undo_redo_actions(self, index):
-        undo_ages = {db_map: self.db_mngr.undo_stack[db_map].undo_age for db_map in self.db_maps}
-        redo_ages = {db_map: self.db_mngr.undo_stack[db_map].redo_age for db_map in self.db_maps}
-        undo_ages = {db_map: age for db_map, age in undo_ages.items() if age is not None}
-        redo_ages = {db_map: age for db_map, age in redo_ages.items() if age is not None}
-        new_undo_action = self.db_mngr.undo_action[max(undo_ages, key=undo_ages.get, default=self.first_db_map)]
-        new_redo_action = self.db_mngr.redo_action[max(redo_ages, key=redo_ages.get, default=self.first_db_map)]
+        undo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].undo_age)
+        redo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].redo_age)
+        new_undo_action = self.db_mngr.undo_action[undo_db_map]
+        new_redo_action = self.db_mngr.redo_action[redo_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
 
     def _replace_undo_redo_actions(self, new_undo_action, new_redo_action):
