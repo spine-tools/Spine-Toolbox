@@ -276,11 +276,31 @@ class TestSpineDBFetcher(unittest.TestCase):
         while not self._fetcher_semaphore.can_continue:
             QApplication.processEvents()
         self._listener.receive_entity_groups_added.assert_called_once_with(
-            {self._db_map: [{'id': 1, 'entity_id': 2, 'entity_class_id': 1, 'member_id': 1}]}
+            {
+                self._db_map: [
+                    {
+                        'id': 1,
+                        'class_id': 1,
+                        'group_id': 2,
+                        'member_id': 1,
+                        'class_name': 'oc',
+                        'group_name': 'group',
+                        'member_name': 'obj',
+                    }
+                ]
+            }
         )
         self.assertEqual(
             self._db_mngr.get_item(self._db_map, "entity_group", 1),
-            {'entity_class_id': 1, 'entity_id': 2, 'id': 1, 'member_id': 1},
+            {
+                'id': 1,
+                'class_id': 1,
+                'group_id': 2,
+                'member_id': 1,
+                'class_name': 'oc',
+                'group_name': 'group',
+                'member_name': 'obj',
+            },
         )
 
     def test_fetch_parameter_definitions(self):
