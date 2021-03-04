@@ -104,7 +104,7 @@ class SelectJuliaPage(QWizardPage):
         self._julia_exe_line_edit = QLineEdit()
         self._julia_project_line_edit = QLineEdit()
         self._julia_project_line_edit.setPlaceholderText("Use Julia's default project")
-        self.registerField("julia_exe", self._julia_exe_line_edit)
+        self.registerField("julia_exe*", self._julia_exe_line_edit)
         self.registerField("julia_project", self._julia_project_line_edit)
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Julia executable:"))
