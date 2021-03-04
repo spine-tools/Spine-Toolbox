@@ -15,8 +15,8 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QLineF, QBuffer, QRect
-from PySide2.QtSvg import QGraphicsSvgItem, QSvgGenerator, QSvgRenderer
+from PySide2.QtCore import Qt, Signal, Slot, QLineF, QPointF
+from PySide2.QtSvg import QGraphicsSvgItem
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -27,25 +27,10 @@ from PySide2.QtWidgets import (
     QApplication,
     QMenu,
 )
-from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QPainter
+from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
-from spinetoolbox.helpers import CharIconEngine
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
-
-
-def _renderer_from_icon(icon, rect):
-    buffer = QBuffer()
-    generator = QSvgGenerator()
-    generator.setOutputDevice(buffer)
-    generator.setSize(rect.size())
-    generator.setViewBox(rect)
-    painter = QPainter(generator)
-    icon.paint(painter, rect)
-    painter.end()
-    buffer.open(QBuffer.ReadOnly)
-    renderer = QSvgRenderer(buffer.readAll())
-    return renderer
 
 
 def make_figure_graphics_item(scene, z=0, static=True):
@@ -94,7 +79,6 @@ class EntityItem(QGraphicsRectItem):
         self.db_map_entity_id = db_map_entity_id
         self.arc_items = list()
         self._extent = extent
-        self._renderer = None
         self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
         self.setPen(Qt.NoPen)
         self._svg_item = QGraphicsSvgItem(self)
@@ -183,13 +167,15 @@ class EntityItem(QGraphicsRectItem):
 
     def refresh_icon(self):
         """Refreshes the icon."""
-        icon = self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
-        self._set_icon(icon)
+        renderer = self.db_mngr.entity_class_renderer(self.db_map, self.entity_class_type, self.entity_class_id)
+        self._set_renderer(renderer)
 
-    def _set_icon(self, icon):
-        self._renderer = _renderer_from_icon(icon, QRect(0, 0, self._extent, self._extent))
-        self._svg_item.setSharedRenderer(self._renderer)
-        self._svg_item.setPos(self.rect().center() - self._svg_item.boundingRect().center())
+    def _set_renderer(self, renderer):
+        self._svg_item.setSharedRenderer(renderer)
+        size = renderer.defaultSize()
+        scale = self._extent / max(size.width(), size.height())
+        self._svg_item.setScale(scale)
+        self._svg_item.setPos(self.rect().center() - 0.5 * scale * QPointF(size.width(), size.height()))
 
     def shape(self):
         """Returns a shape containing the entire bounding rect, to work better with icon transparency."""
@@ -615,8 +601,8 @@ class CrossHairsItem(RelationshipItem):
         return "<p>Click on an object to add it to the relationship.</p>"
 
     def refresh_icon(self):
-        icon = CharIconEngine("\uf05b", 0)
-        self._set_icon(icon)
+        renderer = self.db_mngr.icon_mngr[self.db_map].icon_renderer("\uf05b", 0)
+        self._set_renderer(renderer)
 
     def set_plus_icon(self):
         self.set_icon("\uf067", Qt.blue)
@@ -634,8 +620,8 @@ class CrossHairsItem(RelationshipItem):
         """Refreshes the icon."""
         if (unicode, color) == self._current_icon:
             return
-        icon = CharIconEngine(unicode, color)
-        self._set_icon(icon)
+        renderer = self.db_mngr.icon_mngr[self.db_map].icon_renderer(unicode, color)
+        self._set_renderer(renderer)
         self._current_icon = (unicode, color)
 
     def mouseMoveEvent(self, event):
@@ -669,8 +655,8 @@ class CrossHairsRelationshipItem(RelationshipItem):
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         ]
         object_class_name_list = ",".join(object_class_name_list)
-        icon = self.db_mngr.icon_mngr[self.db_map].relationship_icon(object_class_name_list)
-        self._set_icon(icon)
+        renderer = self.db_mngr.icon_mngr[self.db_map].relationship_renderer(object_class_name_list)
+        self._set_renderer(renderer)
 
     def contextMenuEvent(self, e):
         e.accept()

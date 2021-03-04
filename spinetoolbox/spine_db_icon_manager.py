@@ -16,10 +16,11 @@ Provides SpineDBIconManager.
 :date:   3.2.2021
 """
 
-from PySide2.QtCore import QSize, Qt, QPointF, QRectF
+from PySide2.QtCore import Qt, QPointF, QRectF, QBuffer
 from PySide2.QtWidgets import QGraphicsScene
-from PySide2.QtGui import QIcon, QFont, QTextOption
-from .helpers import TransparentIconEngine, CharIconEngine, interpret_icon_id, object_icon
+from PySide2.QtGui import QIcon, QFont, QTextOption, QPainter
+from PySide2.QtSvg import QSvgGenerator, QSvgRenderer
+from .helpers import TransparentIconEngine, interpret_icon_id
 
 
 def _align_text_in_item(item):
@@ -47,49 +48,77 @@ def _center_scene(scene):
     rect_item.setPen(Qt.NoPen)
 
 
+class _SceneSvgRenderer(QSvgRenderer):
+    scene = None
+
+    @classmethod
+    def from_scene(cls, scene):
+        buffer = QBuffer()
+        generator = QSvgGenerator()
+        generator.setOutputDevice(buffer)
+        scene_rect = scene.sceneRect()
+        generator.setViewBox(scene_rect)
+        painter = QPainter(generator)
+        scene.render(painter, scene_rect, scene_rect)
+        painter.end()
+        buffer.open(QBuffer.ReadOnly)
+        renderer = cls(buffer.readAll())
+        buffer.close()
+        renderer.scene = scene
+        return renderer
+
+
 class SpineDBIconManager:
     """A class to manage object_class icons for spine db editors."""
 
-    ICON_SIZE = QSize(512, 512)
-
     def __init__(self):
         self.display_icons = {}  # A mapping from object_class name to display icon code
-        self.rel_cls_scenes = {}  # A mapping from object_class name list to associated scene
-        self.obj_group_scenes = {}  # A mapping from class name to associated group scene
-        self.obj_cls_scenes = {}  # A mapping from class name to associated group scene
+        self.rel_cls_renderers = {}  # A mapping from object_class name list to associated renderer
+        self.obj_group_renderers = {}  # A mapping from class name to associated group renderer
+        self.obj_cls_renderers = {}  # A mapping from class name to associated renderer
+        self.icon_renderers = {}
 
     def update_icon_caches(self, object_classes):
         """Called after adding or updating object classes.
         Stores display_icons and clears obsolete entries
-        from the relationship class and entity group scene caches."""
+        from the relationship class and entity group renderer caches."""
         for object_class in object_classes:
             self.display_icons[object_class["name"]] = object_class["display_icon"]
         object_class_names = [x["name"] for x in object_classes]
-        dirty_keys = [k for k in self.rel_cls_scenes if any(x in object_class_names for x in k)]
+        dirty_keys = [k for k in self.rel_cls_renderers if any(x in object_class_names for x in k)]
         for k in dirty_keys:
-            del self.rel_cls_scenes[k]
+            del self.rel_cls_renderers[k]
         for name in object_class_names:
-            self.obj_group_scenes.pop(name, None)
-            self.obj_cls_scenes.pop(name, None)
+            self.obj_group_renderers.pop(name, None)
+            self.obj_cls_renderers.pop(name, None)
 
-    def _create_obj_cls_scene(self, object_class_name):
+    def _create_icon_renderer(self, icon_code, color_code):
         scene = QGraphicsScene()
         font = QFont('Font Awesome 5 Free Solid')
-        display_icon = self.display_icons.get(object_class_name, -1)
-        icon_code, color_code = interpret_icon_id(display_icon)
-        text_item = scene.addText(chr(icon_code), font)
+        text_item = scene.addText(icon_code, font)
         text_item.setDefaultTextColor(color_code)
         _align_text_in_item(text_item)
-        self.obj_cls_scenes[object_class_name] = scene
+        self.icon_renderers[icon_code, color_code] = _SceneSvgRenderer.from_scene(scene)
 
-    def object_icon(self, object_class_name):
-        """An icon for the given object_class."""
-        if object_class_name not in self.obj_cls_scenes:
-            self._create_obj_cls_scene(object_class_name)
-        scene = self.obj_cls_scenes[object_class_name]
-        return QIcon(SceneIconEngine(scene))
+    def icon_renderer(self, icon_code, color_code):
+        if (icon_code, color_code) not in self.icon_renderers:
+            self._create_icon_renderer(icon_code, color_code)
+        return self.icon_renderers[icon_code, color_code]
 
-    def _create_rel_cls_scene(self, object_class_names):
+    def _create_obj_cls_renderer(self, object_class_name):
+        display_icon = self.display_icons.get(object_class_name, -1)
+        icon_code, color_code = interpret_icon_id(display_icon)
+        self.obj_cls_renderers[object_class_name] = self.icon_renderer(chr(icon_code), color_code)
+
+    def object_renderer(self, object_class_name):
+        if object_class_name not in self.obj_cls_renderers:
+            self._create_obj_cls_renderer(object_class_name)
+        return self.obj_cls_renderers[object_class_name]
+
+    def _create_rel_cls_renderer(self, object_class_names):
+        if not any(object_class_names):
+            self.rel_cls_renderers[object_class_names] = self.icon_renderer("\uf1b3", 0)
+            return
         font = QFont('Font Awesome 5 Free Solid')
         scene = QGraphicsScene()
         x = 0
@@ -107,18 +136,15 @@ class SpineDBIconManager:
             text_item.setPos(x, y)
             x += 0.875 * 0.5 * text_item.boundingRect().width()
         _center_scene(scene)
-        self.rel_cls_scenes[object_class_names] = scene
+        self.rel_cls_renderers[object_class_names] = _SceneSvgRenderer.from_scene(scene)
 
-    def relationship_icon(self, str_object_class_name_list):
-        if not str_object_class_name_list:
-            return QIcon(CharIconEngine("\uf1b3", 0))
+    def relationship_renderer(self, str_object_class_name_list):
         object_class_names = tuple(str_object_class_name_list.split(","))
-        if object_class_names not in self.rel_cls_scenes:
-            self._create_rel_cls_scene(object_class_names)
-        scene = self.rel_cls_scenes[object_class_names]
-        return QIcon(SceneIconEngine(scene))
+        if object_class_names not in self.rel_cls_renderers:
+            self._create_rel_cls_renderer(object_class_names)
+        return self.rel_cls_renderers[object_class_names]
 
-    def _create_obj_group_scene(self, object_class_name):
+    def _create_obj_group_renderer(self, object_class_name):
         display_icon = self.display_icons.get(object_class_name, -1)
         icon_code, color_code = interpret_icon_id(display_icon)
         font = QFont('Font Awesome 5 Free Solid')
@@ -133,13 +159,16 @@ class SpineDBIconManager:
                 y += 0.875 * text_item.boundingRect().height()
             x += 0.875 * text_item.boundingRect().width()
         scene.addRect(scene.itemsBoundingRect())
-        self.obj_group_scenes[object_class_name] = scene
+        self.obj_group_renderers[object_class_name] = _SceneSvgRenderer.from_scene(scene)
 
-    def object_group_icon(self, object_class_name):
-        if object_class_name not in self.obj_group_scenes:
-            self._create_obj_group_scene(object_class_name)
-        scene = self.obj_group_scenes[object_class_name]
-        return QIcon(SceneIconEngine(scene))
+    def object_group_renderer(self, object_class_name):
+        if object_class_name not in self.obj_group_renderers:
+            self._create_obj_group_renderer(object_class_name)
+        return self.obj_group_renderers[object_class_name]
+
+    @staticmethod
+    def icon_from_renderer(renderer):
+        return QIcon(SceneIconEngine(renderer.scene))
 
 
 class SceneIconEngine(TransparentIconEngine):
@@ -151,5 +180,5 @@ class SceneIconEngine(TransparentIconEngine):
 
     def paint(self, painter, rect, mode=None, state=None):
         painter.save()
-        self.scene.render(painter, rect, self.scene.itemsBoundingRect())
+        self.scene.render(painter, rect, self.scene.sceneRect())
         painter.restore()

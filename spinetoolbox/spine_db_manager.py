@@ -556,7 +556,7 @@ class SpineDBManager(QObject):
         for db_map, object_classes in db_map_data.items():
             self.get_icon_mngr(db_map).update_icon_caches(object_classes)
 
-    def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
+    def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an appropriate icon for a given entity class.
 
         Args:
@@ -573,10 +573,15 @@ class SpineDBManager(QObject):
             return None
         if entity_type == "object_class":
             if for_group:
-                return self.get_icon_mngr(db_map).object_group_icon(entity_class["name"])
-            return self.get_icon_mngr(db_map).object_icon(entity_class["name"])
+                return self.get_icon_mngr(db_map).object_group_renderer(entity_class["name"])
+            return self.get_icon_mngr(db_map).object_renderer(entity_class["name"])
         if entity_type == "relationship_class":
-            return self.get_icon_mngr(db_map).relationship_icon(entity_class["object_class_name_list"])
+            return self.get_icon_mngr(db_map).relationship_renderer(entity_class["object_class_name_list"])
+
+    def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
+        return SpineDBIconManager.icon_from_renderer(
+            self.entity_class_renderer(db_map, entity_type, entity_class_id, for_group=for_group)
+        )
 
     def get_item(self, db_map, item_type, id_):
         """Returns the item of the given type in the given db map that has the given id,
