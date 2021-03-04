@@ -222,7 +222,7 @@ class SpineConsoleWidget(RichJupyterWidget):
             return
         if kernel_execution_state == "idle" and self._kernel_starting:
             self._kernel_starting = False
-            self._toolbox.msg_success.emit(f"{self._name} ready for action")
+            self._toolbox.msg_success.emit(f"{self._name} for {self.owner_names} ready for action")
             self._control.viewport().setCursor(self.normal_cursor)
 
     def enterEvent(self, event):
