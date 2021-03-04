@@ -475,7 +475,7 @@ class ToolboxUI(QMainWindow):
         project_items = project_info["items"]
         # Init project item model
         if self._project is not None:
-            self._project.tear_down()
+            self._project.tear_down(silent=True)
             self._project.deleteLater()
             self._project = None
         self.clear_ui()

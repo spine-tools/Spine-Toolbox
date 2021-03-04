@@ -419,13 +419,14 @@ class SpineToolboxProject(MetaObject):
                 return
         self._toolbox.undo_stack.push(RemoveProjectItemsCommand(self, *indexes, delete_data=delete_data))
 
-    def do_remove_project_tree_items(self, category_ind, *items, delete_data=False):
+    def do_remove_project_tree_items(self, category_ind, *items, delete_data=False, silent=False):
         """Removes LeafProjectTreeItem from project.
 
         Args:
             category_ind (QModelIndex): The category index
             *items (LeafProjectTreeItem): the items to remove
             delete_data (bool): If set to True, deletes the directories and data associated with the item
+            silent (bool): Used to prevent unnecessary log messages when switching projects
         """
         items = list(items)
         for item in items:
@@ -449,7 +450,8 @@ class SpineToolboxProject(MetaObject):
                             self._logger.msg_error.emit("Directory does not exist")
                     except OSError:
                         self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
-        self._logger.msg.emit(f"Item(s) <b>{', '.join(item.name for item in items)}</b> removed from project")
+        if not silent:
+            self._logger.msg.emit(f"Item(s) <b>{', '.join(item.name for item in items)}</b> removed from project")
 
     def execute_dags(self, dags, execution_permits, msg):
         """Executes given dags.
@@ -711,10 +713,10 @@ class SpineToolboxProject(MetaObject):
         project_item.set_properties_ui(properties_ui)
         project_item.set_up()
 
-    def tear_down(self):
+    def tear_down(self, silent=False):
         """Cleans up project."""
         for category_ind, project_tree_items in self._project_item_model.items_per_category().items():
-            self.do_remove_project_tree_items(category_ind, *project_tree_items, delete_data=False)
+            self.do_remove_project_tree_items(category_ind, *project_tree_items, delete_data=False, silent=silent)
 
 
 def _ranks(node_successors):
