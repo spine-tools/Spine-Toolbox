@@ -73,15 +73,20 @@ class ResourceFilterModel(QStandardItemModel):
             self.appendRow(root_item)
             for name, type_ in self._FILTER_TYPES.items():
                 filter_parent = QStandardItem(name)
+                if not filters_by_type.get(type_):
+                    no_filters_item = QStandardItem("None available")
+                    no_filters_item.setFlags(Qt.ItemIsSelectable)
+                    filter_parent.appendRow(no_filters_item)
+                    root_item.appendRow(filter_parent)
+                    continue
                 filter_parent.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
                 select_all_item = QStandardItem(self._SELECT_ALL)
                 select_all_item.setData(False, Qt.CheckStateRole)
                 select_all_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 filter_parent.appendRow(select_all_item)
                 root_item.appendRow(filter_parent)
-                if type_ in filters_by_type:
-                    append_filter_items(filter_parent, filters_by_type, type_)
-                    self._set_all_selected_item(resource_label, filter_parent)
+                append_filter_items(filter_parent, filters_by_type, type_)
+                self._set_all_selected_item(resource_label, filter_parent)
 
     def setData(self, index, value, role=Qt.EditRole):
         if role != Qt.CheckStateRole:
