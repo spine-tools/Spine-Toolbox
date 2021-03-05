@@ -55,6 +55,11 @@ if os.name == "nt":
 matplotlib.use('Qt5Agg')
 matplotlib.rcParams.update({"font.size": 8})
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
+_matplotlib_version = [int(x) for x in matplotlib.__version__.split(".")]
+if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
+    from pandas.plotting import register_matplotlib_converters
+
+    register_matplotlib_converters()
 
 
 def format_log_message(msg_type, message, show_datetime=True):
