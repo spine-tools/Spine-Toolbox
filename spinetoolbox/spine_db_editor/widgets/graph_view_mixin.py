@@ -16,7 +16,8 @@ Contains the GraphViewMixin class.
 :date:   26.11.2018
 """
 import itertools
-from PySide2.QtCore import Slot, QTimer
+from time import monotonic
+from PySide2.QtCore import Slot, QTimer, QThreadPool
 from PySide2.QtWidgets import QHBoxLayout
 from spinedb_api import from_database
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
@@ -40,7 +41,6 @@ class GraphViewMixin:
     VERTEX_EXTENT = 64
     _ARC_WIDTH = 0.15 * VERTEX_EXTENT
     _ARC_LENGTH_HINT = 1.5 * VERTEX_EXTENT
-    _MAX_CONCURRENT_BUILDS = 4
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -58,7 +58,9 @@ class GraphViewMixin:
         self.dst_inds = list()
         self._relationships_being_added = False
         self.added_relationship_ids = set()
-        self.layout_gens = list()
+        self._thread_pool = QThreadPool()
+        self.layout_gens = dict()
+        self._layout_gen_id = None
         self.ui.graphicsView.connect_spine_db_editor(self)
 
     def init_models(self):
@@ -211,31 +213,30 @@ class GraphViewMixin:
             self._owes_graph = True
             return
         self._owes_graph = False
-        if len(self.layout_gens) > self._MAX_CONCURRENT_BUILDS:
-            return
         self.ui.graphicsView.clear_cross_hairs_items()  # Needed
         self._persistent = persistent
         self._stop_layout_generators()
         self._update_graph_data()
-        layout_gen = self._make_layout_generator()
-        self.layout_gens.append(layout_gen)
+        self._layout_gen_id = monotonic()
+        self.layout_gens[self._layout_gen_id] = layout_gen = self._make_layout_generator()
         layout_gen.show_progress_widget(self.ui.graphicsView)
-        layout_gen.finished.connect(lambda x, y, layout_gen=layout_gen: self._complete_graph(x, y, layout_gen))
-        layout_gen.destroyed.connect(lambda obj=None, layout_gen=layout_gen: self.layout_gens.remove(layout_gen))
-        layout_gen.start()
+        layout_gen.layout_available.connect(self._complete_graph)
+        layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_))
+        self._thread_pool.start(layout_gen)
 
     def _stop_layout_generators(self):
-        for layout_gen in self.layout_gens:
-            if layout_gen.is_running():
-                layout_gen.stop()
+        for layout_gen in self.layout_gens.values():
+            layout_gen.stop()
 
-    def _complete_graph(self, x, y, layout_gen):
+    def _complete_graph(self, layout_gen_id, x, y):
         """
         Args:
+            layout_gen_id (object)
             x (list): Horizontal coordinates
             y (list): Vertical coordinates
         """
-        if layout_gen != self.layout_gens[-1]:
+        # Ignore layouts from obsolete generators
+        if layout_gen_id != self._layout_gen_id:
             return
         self.ui.graphicsView.removed_items.clear()
         self.ui.graphicsView.selected_items.clear()
@@ -356,7 +357,12 @@ class GraphViewMixin:
         entity_ids = self.object_ids + self.relationship_ids
         heavy_positions = {ind: fixed_positions[id_] for ind, id_ in enumerate(entity_ids) if id_ in fixed_positions}
         return GraphLayoutGenerator(
-            len(entity_ids), self.src_inds, self.dst_inds, self._ARC_LENGTH_HINT, heavy_positions=heavy_positions
+            self._layout_gen_id,
+            len(entity_ids),
+            self.src_inds,
+            self.dst_inds,
+            self._ARC_LENGTH_HINT,
+            heavy_positions=heavy_positions,
         )
 
     def _make_new_items(self, x, y):

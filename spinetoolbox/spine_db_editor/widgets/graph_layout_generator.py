@@ -17,11 +17,10 @@ Contains the GraphViewMixin class.
 """
 
 import math
-import enum
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtCore import Signal, Slot, QObject, QThread, Qt
+from PySide2.QtCore import Signal, Slot, QObject, Qt, QRunnable
 from PySide2.QtWidgets import QProgressBar, QDialogButtonBox, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PySide2.QtGui import QPainter, QColor
 from spinetoolbox.helpers import busy_effect
@@ -47,14 +46,6 @@ def make_heat_map(x, y, values):
         interpolator = tri.CubicTriInterpolator(triang, values)
         heat_map = interpolator(xv, yv)
     return heat_map, xv, yv, min_x, min_y, max_x, max_y
-
-
-class _State(enum.Enum):
-    """State of GraphLayoutGenerator."""
-
-    SLEEPING = enum.auto()
-    STOPPED = enum.auto()
-    RUNNING = enum.auto()
 
 
 class ProgressBarWidget(QWidget):
@@ -88,7 +79,7 @@ class ProgressBarWidget(QWidget):
         inner_layout.addWidget(progress_bar)
         inner_layout.addWidget(button_box)
         inner_layout.addStretch()
-        layout_generator.stopped.connect(self.close)
+        layout_generator.finished.connect(self.close)
         layout_generator.progressed.connect(progress_bar.setValue)
         layout_generator.msg.connect(label.setText)
 
@@ -99,22 +90,24 @@ class ProgressBarWidget(QWidget):
         super().paintEvent(event)
 
 
-class GraphLayoutGenerator(QObject):
+class GraphLayoutGenerator(QRunnable):
     """Computes the layout for the Entity Graph View."""
 
-    finished = Signal(object, object)
-    started = Signal()
-    progressed = Signal(int)
-    stopped = Signal()
-    blocked = Signal(bool)
-    msg = Signal(str)
+    class Signals(QObject):
+        finished = Signal(object)
+        layout_available = Signal(object, object, object)
+        progressed = Signal(int)
+        msg = Signal(str)
 
-    def __init__(self, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=12, weight_exp=-2):
+    def __init__(
+        self, identifier, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=12, weight_exp=-2
+    ):
         super().__init__()
         if vertex_count == 0:
             vertex_count = 1
         if heavy_positions is None:
             heavy_positions = dict()
+        self._id = identifier
         self._show_previews = False
         self.vertex_count = vertex_count
         self.src_inds = src_inds
@@ -124,43 +117,36 @@ class GraphLayoutGenerator(QObject):
         self.iterations = max(3, round(iterations * (1 - len(heavy_positions) / self.vertex_count)))
         self.weight_exp = weight_exp
         self.initial_diameter = (self.vertex_count ** (0.5)) * self.spread
-        self._state = _State.SLEEPING
-        self._thread = QThread()
-        self.moveToThread(self._thread)
-        qApp.aboutToQuit.connect(self._thread.quit)  # pylint: disable=undefined-variable
-        self.started.connect(self.get_coordinates)
-        self.finished.connect(self.clean_up)
+        self._signals = self.Signals()
+        self.finished = self._signals.finished
+        self.layout_available = self._signals.layout_available
+        self.progressed = self._signals.progressed
+        self.msg = self._signals.msg
+        self._progress_bar = None
+        self._stopped = False
 
     def show_progress_widget(self, parent):
-        widget = ProgressBarWidget(self)
-        parent.layout().addWidget(widget)
-        widget.show()
-
-    def clean_up(self):
-        self.deleteLater()
-        self._thread.quit()
-
-    def is_running(self):
-        return self._state == _State.RUNNING
+        self._progress_bar = ProgressBarWidget(self)
+        parent.layout().addWidget(self._progress_bar)
+        self._progress_bar.show()
 
     @Slot(bool)
     def stop(self, _checked=False):
-        self._state = _State.STOPPED
-        self.clean_up()
-        self.stopped.emit()
+        self._stopped = True
+        try:
+            self._progress_bar.close()
+        except RuntimeError:
+            pass
 
     @Slot(bool)
     def set_show_previews(self, checked):
         self._show_previews = checked
 
-    def emit_finished(self, x, y):
-        if self._state == _State.STOPPED:
-            return
-        self.finished.emit(x, y)
+    def emit_layout_available(self, x, y):
+        self.layout_available.emit(self._id, x, y)
 
-    def start(self):
-        self._thread.start()
-        self.started.emit()
+    def emit_finished(self):
+        self.finished.emit(self._id)
 
     def shortest_path_matrix(self):
         """Returns the shortest-path matrix.
@@ -182,8 +168,8 @@ class GraphLayoutGenerator(QObject):
         iteration = 0
         self.msg.emit("Step 1 of 2: Computing shortest-path matrix...")
         while start < self.vertex_count:
-            if self._state == _State.STOPPED:
-                return
+            if self._stopped:
+                return None
             self.progressed.emit(iteration)
             stop = min(self.vertex_count, start + math.ceil(self.vertex_count / 10))
             slice_ = dijkstra(dist, directed=False, indices=range(start, stop))
@@ -213,16 +199,17 @@ class GraphLayoutGenerator(QObject):
                 sets.append(s2)
         return sets
 
-    @Slot()
-    def get_coordinates(self):
+    def run(self):
         """Computes and returns x and y coordinates for each vertex in the graph, using VSGD-MS."""
-        self._state = _State.RUNNING
         if self.vertex_count <= 1:
             x, y = np.array([0.0]), np.array([0.0])
-            self.emit_finished(x, y)
-            self.stop()
+            self.emit_layout_available(x, y)
+            self.emit_finished()
             return
         matrix = self.shortest_path_matrix()
+        if matrix is None:
+            self.emit_finished()
+            return
         mask = np.ones((self.vertex_count, self.vertex_count)) == 1 - np.tril(
             np.ones((self.vertex_count, self.vertex_count))
         )  # Upper triangular except diagonal
@@ -244,11 +231,11 @@ class GraphLayoutGenerator(QObject):
         sets = self.sets()  # construct sets of bus pairs
         self.msg.emit("Step 2 of 2: Generating layout...")
         for iteration in range(self.iterations):
-            if self._state == _State.STOPPED:
-                return
+            if self._stopped:
+                break
             if self._show_previews:
                 x, y = layout[:, 0], layout[:, 1]
-                self.emit_finished(x, y)
+                self.emit_layout_available(x, y)
             self.progressed.emit(iteration)
             step = maxstep * np.exp(lambda_ * iteration)  # how big adjustments are allowed?
             rand_order = np.random.permutation(
@@ -266,5 +253,5 @@ class GraphLayoutGenerator(QObject):
                 if heavy_ind.any():
                     layout[heavy_ind, :] = heavy_pos
         x, y = layout[:, 0], layout[:, 1]
-        self.emit_finished(x, y)
-        self.stop()
+        self.emit_layout_available(x, y)
+        self.emit_finished()
