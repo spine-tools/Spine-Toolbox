@@ -60,6 +60,7 @@ class TabularViewMixin:
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
         self.pivot_action_group = QActionGroup(self)
+        self.pivot_actions = {}
         self.populate_pivot_action_group()
         self.pivot_table_proxy = PivotTableSortFilterProxy()
         self.pivot_table_model = None
@@ -70,7 +71,7 @@ class TabularViewMixin:
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
 
     def populate_pivot_action_group(self):
-        actions = {
+        self.pivot_actions = {
             input_type: self.pivot_action_group.addAction(QIcon(CharIconEngine(icon_code)), input_type)
             for input_type, icon_code in (
                 (self._PARAMETER_VALUE, "\uf292"),
@@ -79,9 +80,8 @@ class TabularViewMixin:
                 (self._SCENARIO_ALTERNATIVE, "\uf008"),
             )
         }
-        for action in actions.values():
+        for action in self.pivot_actions.values():
             action.setCheckable(True)
-        actions[self.current_input_type].setChecked(True)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -90,7 +90,7 @@ class TabularViewMixin:
         self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
-        self.pivot_action_group.triggered.connect(self.do_reload_pivot_table)
+        self.pivot_action_group.triggered.connect(self._handle_pivot_action_triggered)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
 
@@ -140,7 +140,10 @@ class TabularViewMixin:
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
         if not visible:
+            for action in self.pivot_actions.values():
+                action.setChecked(False)
             return
+        self.pivot_actions[self.current_input_type].setChecked(True)
         self.ui.dockWidget_frozen_table.setVisible(True)
         if self._pending_index is not None:
             QTimer.singleShot(100, lambda: self.reload_pivot_table(self._pending_index))
@@ -493,15 +496,16 @@ class TabularViewMixin:
             item = item.parent_item
         return None
 
-    @busy_effect
     @Slot("QAction")
-    def do_reload_pivot_table(self, action=None):
-        """Reloads pivot table.
-        """
-        qApp.processEvents()  # pylint: disable=undefined-variable
-        if action is None:
-            action = self.pivot_action_group.checkedAction()
+    def _handle_pivot_action_triggered(self, action):
         self.current_input_type = action.text()
+        if self.ui.pivot_table.isVisible():
+            self.do_reload_pivot_table()
+
+    @busy_effect
+    def do_reload_pivot_table(self):
+        """Reloads pivot table. """
+        qApp.processEvents()  # pylint: disable=undefined-variable
         if not self._can_build_pivot_table():
             return
         self.pivot_table_model = {

@@ -975,8 +975,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.3 * height, 0.1 * height], Qt.Vertical)
         self.end_style_change()
 
-    @Slot(bool)
-    def apply_pivot_style(self, checked=False):
+    @Slot("QAction")
+    def apply_pivot_style(self, _action):
         """Applies the pivot style, inspired in the former tabular view."""
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Horizontal)
