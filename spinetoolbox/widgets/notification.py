@@ -39,6 +39,7 @@ class Notification(QFrame):
             word_count = len(txt.split(" "))
             mspw = 60000 / 140  # Assume people can read ~140 words per minute
             life_span = mspw * word_count
+        self._focus_widget = parent.focusWidget()
         self.setWindowFlags(Qt.Popup)
         self.setParent(parent)
         self._parent = parent
@@ -132,6 +133,10 @@ class Notification(QFrame):
         if self.fade_out_anim.state() == QPropertyAnimation.Running:
             return 0
         return self.timer.interval()
+
+    def closeEvent(self, ev):
+        super().closeEvent(ev)
+        self._focus_widget.setFocus()
 
     opacity = Property(float, get_opacity, set_opacity)
 
