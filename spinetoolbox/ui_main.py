@@ -55,6 +55,7 @@ from .widgets.spine_console_widget import SpineConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.link_properties_widget import LinkPropertiesWidget
+from .widgets.console_window import ConsoleWindow
 from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
@@ -234,6 +235,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_item_directory.triggered.connect(self._open_project_item_directory)
         self.ui.actionRename_item.triggered.connect(self._rename_project_item)
         self.ui.actionRemove.triggered.connect(self._remove_selected_items)
+        self.ui.actionStartJuliaConsole.triggered.connect(self.start_julia_console)
+        self.ui.actionStartPythonConsole.triggered.connect(self.start_python_console)
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
@@ -2165,6 +2168,18 @@ class ToolboxUI(QMainWindow):
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
         return menu
+
+    @Slot()
+    def start_julia_console(self):
+        self._project.julia_console = SpineConsoleWidget(self, "Julia Console", owner=None)
+        self.julia_window = ConsoleWindow(self, self._project.julia_console)
+        self._project.julia_console.start_console()
+
+    @Slot()
+    def start_python_console(self):
+        console = SpineConsoleWidget(self, "Python Console", owner=None)
+        self.python_window = ConsoleWindow(self, console)
+        self.python_window.start()
 
     def make_console(self, name, item, kernel_name, connection_file):
         """Creates a new SpineConsoleWidget for given connection file if none exists yet, and returns it.

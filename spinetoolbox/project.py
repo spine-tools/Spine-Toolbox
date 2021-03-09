@@ -62,6 +62,8 @@ class SpineToolboxProject(MetaObject):
         """
         super().__init__(name, description)
         self._toolbox = toolbox
+        self.python_console = None
+        self.julia_console = None
         self._project_item_model = project_item_model
         self._connections = list()
         self._logger = logger
