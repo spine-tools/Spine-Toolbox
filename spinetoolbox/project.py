@@ -326,8 +326,11 @@ class SpineToolboxProject(MetaObject):
         Args:
             connection (Connection): connection to add
         """
-        self._connections.append(connection)
-        self.dag_handler.add_graph_edge(connection.source, connection.destination)
+        if connection in self._connections:
+            # Ignore dupes
+            return
+        if self.dag_handler.add_graph_edge(connection.source, connection.destination):
+            self._connections.append(connection)
 
     def remove_connection(self, connection):
         self._connections.remove(connection)
