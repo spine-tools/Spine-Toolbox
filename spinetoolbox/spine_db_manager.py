@@ -17,7 +17,7 @@ The SpineDBManager class
 """
 
 import itertools
-from PySide2.QtCore import Qt, QObject, Signal, QThread
+from PySide2.QtCore import Qt, QObject, Signal, Slot, QThread
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (
@@ -411,20 +411,29 @@ class SpineDBManager(QObject):
            SpineDBFetcher
         """
         fetcher = SpineDBFetcher(self)
-        # NOTE: The below connection style prevents segfaults when connecting to a slot that's being executed
-        fetcher.finished.connect(lambda fetcher=fetcher: self._clean_up_fetcher(fetcher))
+        if not self._fetchers:
+            fetcher.finished.connect(self._handle_fetcher_finished)
         self._fetchers.append(fetcher)
         return fetcher
 
-    def _clean_up_fetcher(self, fetcher):
+    def next_fetcher(self):
+        if not self._fetchers:
+            return None
+        return self._fetchers[0]
+
+    @Slot()
+    def _handle_fetcher_finished(self):
         """
         Cleans up things after fetcher has finished working.
-
-        Args:
-            fetcher (SpineDBFetcher): the fetcher to clean up
         """
-        self._fetchers.remove(fetcher)
-        fetcher.close()
+        fetcher = self._fetchers.pop(0)
+        fetcher.deleteLater()
+        next_fetcher = self.next_fetcher()
+        if not next_fetcher:
+            return
+        next_fetcher.finished.connect(self._handle_fetcher_finished)
+        if next_fetcher.queued:
+            next_fetcher.start()
 
     def clean_up(self):
         self._thread.quit()

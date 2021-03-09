@@ -23,7 +23,7 @@ class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
     finished = Signal()
-    _fetch_requested = Signal(object, object)
+    _started = Signal()
 
     def __init__(self, db_mngr):
         """Initializes the fetcher object.
@@ -33,9 +33,11 @@ class SpineDBFetcher(QObject):
         """
         super().__init__()
         self._db_mngr = db_mngr
-        self.is_finished = False
         self.moveToThread(db_mngr.thread)
-        self._fetch_requested.connect(self._do_fetch)
+        self._started.connect(self._do_fetch)
+        self._db_maps = None
+        self._tablenames = None
+        self.queued = False
 
     def fetch(self, db_maps, tablenames=None):
         """Fetches items from the database and emit added signals.
@@ -44,13 +46,18 @@ class SpineDBFetcher(QObject):
             db_maps (Iterable of DatabaseMappingBase): database maps to fetch
             tablenames (list, optional): If given, only fetches tables in this list, otherwise fetches them all
         """
-        self._fetch_requested.emit(db_maps, tablenames)
+        self._db_maps = db_maps
+        self._tablenames = tablenames
+        if self is self._db_mngr.next_fetcher():
+            self.start()
+        else:
+            self.queued = True
 
-    def close(self):
-        self.deleteLater()
+    def start(self):
+        self._started.emit()
 
-    @Slot(object, object)
-    def _do_fetch(self, db_maps, tablenames):
+    @Slot()
+    def _do_fetch(self):
         getter_signal_lookup = {
             "object_class": (self._db_mngr.get_object_classes, self._db_mngr.object_classes_added),
             "relationship_class": (self._db_mngr.get_relationship_classes, self._db_mngr.relationship_classes_added),
@@ -82,15 +89,14 @@ class SpineDBFetcher(QObject):
             "tool_feature": (self._db_mngr.get_tool_features, self._db_mngr.tool_features_added),
             "tool_feature_method": (self._db_mngr.get_tool_feature_methods, self._db_mngr.tool_feature_methods_added),
         }
-        if tablenames is None:
-            tablenames = getter_signal_lookup.keys()
-        for tablename in tablenames:
+        if self._tablenames is None:
+            self._tablenames = getter_signal_lookup.keys()
+        for tablename in self._tablenames:
             getter_signal = getter_signal_lookup.get(tablename)
             if getter_signal is None:
                 continue
             getter, signal = getter_signal
-            for db_map in db_maps:
+            for db_map in self._db_maps:
                 for chunk in getter(db_map):
                     signal.emit({db_map: chunk})
         self.finished.emit()
-        self.is_finished = True
