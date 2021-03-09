@@ -246,6 +246,7 @@ class ChangeNotifier(QObject):
         self._parent = parent
         self._notification_stack = NotificationStack(self._parent)
         self._undo_stack.indexChanged.connect(self._push_notification)
+        self._notified_commands = set()
 
     @Slot(int)
     def _push_notification(self, index):
@@ -255,8 +256,11 @@ class ChangeNotifier(QObject):
             return
         if cmd is not None:
             return
-        button_slot = self._undo_stack.undo
         cmd = self._undo_stack.command(index - 1)
+        if cmd in self._notified_commands:
+            return
+        self._notified_commands.add(cmd)
+        button_slot = self._undo_stack.undo
         notification_text = cmd.actionText() + " successful"
         button_text = "undo"
         notification = ButtonNotification(
