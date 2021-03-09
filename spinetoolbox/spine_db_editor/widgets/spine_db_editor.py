@@ -246,7 +246,8 @@ class SpineDBEditorBase(QMainWindow):
         view_action.tool_bar.addActions([self.ui.actionStacked_style, self.ui.actionGraph_style])
         view_action.tool_bar.addSeparator()
         docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "Doc&ks...")
-        docks_menu_action.setMenu(self._make_docks_menu())
+        docks_menu = self._make_docks_menu()
+        docks_menu_action.setMenu(docks_menu)
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
         docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
         pivot_action = ToolBarWidgetAction("Pivot", menu)
@@ -269,22 +270,28 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.actionSettings)
         menu.aboutToShow.connect(self.refresh_copy_paste_actions)
         menu_action = self.url_toolbar.add_main_menu(menu)
+        actions = [
+            self.ui.actionNew_db_file,
+            self.ui.actionOpen_db_file,
+            self.ui.actionImport,
+            self.ui.actionExport,
+            self.ui.actionExport_session,
+            self.ui.actionUndo,
+            self.ui.actionRedo,
+            self.ui.actionCopy,
+            self.ui.actionPaste,
+            self.ui.actionStacked_style,
+            self.ui.actionGraph_style,
+            *docks_menu.actions(),
+            *self.pivot_action_group.actions(),
+            self.ui.actionCommit,
+            self.ui.actionRollback,
+            self.ui.actionView_history,
+        ]
+        for action in actions:
+            action.triggered.connect(menu.hide)
         # Add actions to activate shortcuts
-        self.addActions(
-            [
-                self.ui.actionNew_db_file,
-                self.ui.actionOpen_db_file,
-                self.ui.actionImport,
-                self.ui.actionExport,
-                self.ui.actionUndo,
-                self.ui.actionRedo,
-                self.ui.actionCopy,
-                self.ui.actionPaste,
-                self.ui.actionCommit,
-                self.ui.actionRollback,
-                menu_action,
-            ]
-        )
+        self.addActions([menu_action, *actions])
 
     def connect_signals(self):
         """Connects signals to slots."""
