@@ -1016,19 +1016,33 @@
    </property>
   </action>
   <action name="actionStartJuliaConsole">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/julia-dots.svg</normaloff>:/icons/julia-dots.svg</iconset>
+   </property>
    <property name="text">
     <string>Start Julia Console</string>
    </property>
    <property name="toolTip">
     <string>Start Julia Console using the kernel selected in Settings-&gt;Tools</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
+   </property>
   </action>
   <action name="actionStartPythonConsole">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/python.svg</normaloff>:/icons/python.svg</iconset>
+   </property>
    <property name="text">
     <string>Start Python Console</string>
    </property>
    <property name="toolTip">
     <string>Start Python Console using the kernel selected in Settings-&gt;Tools</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
    </property>
   </action>
  </widget>
