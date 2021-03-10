@@ -72,7 +72,7 @@ def _grouper(iterable, n):
         yield chunk
 
 
-class SpineDBManager(QObject):
+class SpineDBManagerBase(QObject):
     """Class to manage DBs within a project.
 
     TODO: Expand description, how it works, the cache, the signals, etc.
@@ -143,6 +143,90 @@ class SpineDBManager(QObject):
 
     _GROUP_SEP = " \u01C0 "
 
+    def __init__(self, parent, cache, icon_mngr):
+        """Initializes the instance.
+
+        Args:
+            parent (QObject, optional): parent object
+        """
+        super().__init__(parent)
+        self._cache = cache
+        self._icon_mngr = icon_mngr
+        self.signaller = SpineDBSignaller(self)
+
+    def connect_signals(self):
+        """Connects signals."""
+        # Cache
+        ordered_signals = {
+            "object_class": (self.object_classes_added, self.object_classes_updated),
+            "relationship_class": (self.relationship_classes_added, self.relationship_classes_updated),
+            "parameter_tag": (self.parameter_tags_added, self.parameter_tags_updated),
+            "parameter_value_list": (self.parameter_value_lists_added, self.parameter_value_lists_updated),
+            "parameter_definition": (self.parameter_definitions_added, self.parameter_definitions_updated),
+            "parameter_definition_tag": (self.parameter_definition_tags_added,),
+            "alternative": (self.alternatives_added, self.alternatives_updated),
+            "scenario": (self.scenarios_added, self.scenarios_updated),
+            "scenario_alternative": (self.scenario_alternatives_added, self.scenario_alternatives_updated),
+            "object": (self.objects_added, self.objects_updated),
+            "relationship": (self.relationships_added, self.relationships_updated),
+            "entity_group": (self.entity_groups_added,),
+            "parameter_value": (self.parameter_values_added, self.parameter_values_updated),
+            "feature": (self.features_added, self.features_updated),
+            "tool": (self.tools_added, self.tools_updated),
+            "tool_feature": (self.tool_features_added, self.tool_features_updated),
+            "tool_feature_method": (self.tool_feature_methods_added, self.tool_feature_methods_updated),
+        }
+        for item_type, signals in ordered_signals.items():
+            for signal in signals:
+                signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        # Signaller (after caching, so items are there when listeners receive signals)
+        self.signaller.connect_signals()
+        # Icons
+        self.object_classes_added.connect(self.update_icons)
+        self.object_classes_updated.connect(self.update_icons)
+
+    def cache_items(self, item_type, db_map_data):
+        """Caches data for a given type.
+        It works for both insert and update operations.
+
+        Args:
+            item_type (str)
+            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
+        """
+        for db_map, items in db_map_data.items():
+            for item in items:
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
+
+    def get_icon_mngr(self, db_map):
+        """Returns an icon manager for given db_map.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            SpineDBIconManager
+        """
+        if db_map not in self._icon_mngr:
+            self._icon_mngr[db_map] = SpineDBIconManager()
+        return self._icon_mngr[db_map]
+
+    def update_icons(self, db_map_data):
+        """Runs when object classes are added or updated. Setups icons for those classes.
+
+        Args:
+            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
+        """
+        for db_map, object_classes in db_map_data.items():
+            self.get_icon_mngr(db_map).update_icon_caches(object_classes)
+
+
+class MiniSpineDBManager(SpineDBManagerBase):
+    def __init__(self, parent, cache, icon_mngr):
+        super().__init__(parent, cache, icon_mngr)
+        self.connect_signals()
+
+
+class SpineDBManager(SpineDBManagerBase):
     def __init__(self, settings, parent):
         """Initializes the instance.
 
@@ -150,18 +234,15 @@ class SpineDBManager(QObject):
             settings (QSettings): Toolbox settings
             parent (QObject, optional): parent object
         """
-        super().__init__(parent)
-        self._db_maps = {}
-        self._cache = {}
+        super().__init__(parent, cache={}, icon_mngr={})
         self.qsettings = settings
-        self.undo_stack = {}
-        self.undo_action = {}
-        self.redo_action = {}
-        self.icon_mngr = {}
-        self.signaller = SpineDBSignaller(self)
+        self._db_maps = {}
         self._thread = QThread()
         self._worker = SpineDBWorker(self)
         self._fetchers = []
+        self.undo_stack = {}
+        self.undo_action = {}
+        self.redo_action = {}
         self.connect_signals()
 
     @property
@@ -410,7 +491,8 @@ class SpineDBManager(QObject):
         Returns:
            SpineDBFetcher
         """
-        fetcher = SpineDBFetcher(self)
+        mini = MiniSpineDBManager(self.parent(), self._cache, self._icon_mngr)
+        fetcher = SpineDBFetcher(self, mini)
         self._fetchers.append(fetcher)
         return fetcher
 
@@ -432,7 +514,7 @@ class SpineDBManager(QObject):
         Cleans up things after fetcher has finished working.
         """
         fetcher = self._fetchers.pop(0)
-        fetcher.deleteLater()
+        fetcher.clean_up()
         self.fetch_next()
 
     def clean_up(self):
@@ -499,71 +581,9 @@ class SpineDBManager(QObject):
         return answer == QMessageBox.Ok
 
     def connect_signals(self):
-        """Connects signals."""
-        # Cache
-        ordered_signals = {
-            "object_class": (self.object_classes_added, self.object_classes_updated),
-            "relationship_class": (self.relationship_classes_added, self.relationship_classes_updated),
-            "parameter_tag": (self.parameter_tags_added, self.parameter_tags_updated),
-            "parameter_value_list": (self.parameter_value_lists_added, self.parameter_value_lists_updated),
-            "parameter_definition": (self.parameter_definitions_added, self.parameter_definitions_updated),
-            "parameter_definition_tag": (self.parameter_definition_tags_added,),
-            "alternative": (self.alternatives_added, self.alternatives_updated),
-            "scenario": (self.scenarios_added, self.scenarios_updated),
-            "scenario_alternative": (self.scenario_alternatives_added, self.scenario_alternatives_updated),
-            "object": (self.objects_added, self.objects_updated),
-            "relationship": (self.relationships_added, self.relationships_updated),
-            "entity_group": (self.entity_groups_added,),
-            "parameter_value": (self.parameter_values_added, self.parameter_values_updated),
-            "feature": (self.features_added, self.features_updated),
-            "tool": (self.tools_added, self.tools_updated),
-            "tool_feature": (self.tool_features_added, self.tool_features_updated),
-            "tool_feature_method": (self.tool_feature_methods_added, self.tool_feature_methods_updated),
-        }
-        for item_type, signals in ordered_signals.items():
-            for signal in signals:
-                signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
-        # Signaller (after caching, so items are there when listeners receive signals)
-        self.signaller.connect_signals()
+        super().connect_signals()
         self._worker.connect_signals()
-        # Icons
-        self.object_classes_added.connect(self.update_icons)
-        self.object_classes_updated.connect(self.update_icons)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
-
-    def cache_items(self, item_type, db_map_data):
-        """Caches data for a given type.
-        It works for both insert and update operations.
-
-        Args:
-            item_type (str)
-            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
-        """
-        for db_map, items in db_map_data.items():
-            for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
-
-    def get_icon_mngr(self, db_map):
-        """Returns an icon manager for given db_map.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Returns:
-            SpineDBIconManager
-        """
-        if db_map not in self.icon_mngr:
-            self.icon_mngr[db_map] = SpineDBIconManager()
-        return self.icon_mngr[db_map]
-
-    def update_icons(self, db_map_data):
-        """Runs when object classes are added or updated. Setups icons for those classes.
-
-        Args:
-            db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
-        """
-        for db_map, object_classes in db_map_data.items():
-            self.get_icon_mngr(db_map).update_icon_caches(object_classes)
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an appropriate icon for a given entity class.

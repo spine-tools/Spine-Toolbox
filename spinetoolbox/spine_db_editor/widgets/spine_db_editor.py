@@ -157,7 +157,7 @@ class SpineDBEditorBase(QMainWindow):
         fetcher = self.db_mngr.get_fetcher()
         fetcher.finished.connect(self._make_iddle)
         self._make_busy()
-        fetcher.fetch(db_maps)
+        fetcher.fetch(self, db_maps)
         self.setWindowTitle(f"{self.db_names}")
 
     def _make_busy(self):

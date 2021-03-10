@@ -601,7 +601,7 @@ class CrossHairsItem(RelationshipItem):
         return "<p>Click on an object to add it to the relationship.</p>"
 
     def refresh_icon(self):
-        renderer = self.db_mngr.icon_mngr[self.db_map].icon_renderer("\uf05b", 0)
+        renderer = self.db_mngr.get_icon_mngr(self.db_map).icon_renderer("\uf05b", 0)
         self._set_renderer(renderer)
 
     def set_plus_icon(self):
@@ -620,7 +620,7 @@ class CrossHairsItem(RelationshipItem):
         """Refreshes the icon."""
         if (unicode, color) == self._current_icon:
             return
-        renderer = self.db_mngr.icon_mngr[self.db_map].icon_renderer(unicode, color)
+        renderer = self.db_mngr.get_icon_mngr(self.db_map).icon_renderer(unicode, color)
         self._set_renderer(renderer)
         self._current_icon = (unicode, color)
 
@@ -655,7 +655,7 @@ class CrossHairsRelationshipItem(RelationshipItem):
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         ]
         object_class_name_list = ",".join(object_class_name_list)
-        renderer = self.db_mngr.icon_mngr[self.db_map].relationship_renderer(object_class_name_list)
+        renderer = self.db_mngr.get_icon_mngr(self.db_map).relationship_renderer(object_class_name_list)
         self._set_renderer(renderer)
 
     def contextMenuEvent(self, e):
