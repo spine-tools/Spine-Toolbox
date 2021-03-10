@@ -133,7 +133,7 @@
      <x>0</x>
      <y>0</y>
      <width>1326</width>
-     <height>27</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -211,10 +211,18 @@
     <addaction name="separator"/>
     <addaction name="actionCreate_plugin"/>
    </widget>
+   <widget class="QMenu" name="menuConsoles">
+    <property name="title">
+     <string>Consoles</string>
+    </property>
+    <addaction name="actionStartPythonConsole"/>
+    <addaction name="actionStartJuliaConsole"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
    <addaction name="menuView"/>
    <addaction name="menuPlugins"/>
+   <addaction name="menuConsoles"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -462,8 +470,11 @@
      </property>
      <item>
       <widget class="QLabel" name="label_no_julia_console">
+       <property name="contextMenuPolicy">
+        <enum>Qt::DefaultContextMenu</enum>
+       </property>
        <property name="text">
-        <string>Select and execute a Julia Tool to see  its console</string>
+        <string>Select and execute a Julia Tool to see its console</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -572,8 +583,11 @@
      </property>
      <item>
       <widget class="QLabel" name="label_no_python_console">
+       <property name="contextMenuPolicy">
+        <enum>Qt::DefaultContextMenu</enum>
+       </property>
        <property name="text">
-        <string>Select and execute a Python Tool to see  its console</string>
+        <string>Select and execute a Python Tool to see its console</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -999,6 +1013,36 @@
    </property>
    <property name="visible">
     <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionStartJuliaConsole">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/julia-dots.svg</normaloff>:/icons/julia-dots.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Start Julia Console</string>
+   </property>
+   <property name="toolTip">
+    <string>Start Julia Console using the kernel selected in Settings-&gt;Tools</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
+   </property>
+  </action>
+  <action name="actionStartPythonConsole">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/python.svg</normaloff>:/icons/python.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Start Python Console</string>
+   </property>
+   <property name="toolTip">
+    <string>Start Python Console using the kernel selected in Settings-&gt;Tools</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
    </property>
   </action>
  </widget>

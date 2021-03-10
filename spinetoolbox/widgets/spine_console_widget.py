@@ -70,7 +70,7 @@ class SpineConsoleWidget(RichJupyterWidget):
 
     @property
     def owner_names(self):
-        return "&".join(x.name for x in self.owners)
+        return "&".join(x.name for x in self.owners if x is not None)
 
     @Slot(bool)
     def start_console(self, checked=False):
@@ -194,7 +194,6 @@ class SpineConsoleWidget(RichJupyterWidget):
         """Shut down Julia/Python kernel."""
         if not self.kernel_manager or not self.kernel_manager.is_alive():
             return
-        self._toolbox.msg.emit(f"Shutting down {self._name}...")
         if self.kernel_client is not None:
             self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
@@ -202,6 +201,7 @@ class SpineConsoleWidget(RichJupyterWidget):
         self.kernel_manager = None
         self.kernel_client.deleteLater()
         self.kernel_client = None
+        self._toolbox.msg.emit(f"{self._name} kernel <b>{self.kernel_name}</b> shut down")
 
     def dragEnterEvent(self, e):
         """Don't accept project item drops."""
@@ -222,7 +222,7 @@ class SpineConsoleWidget(RichJupyterWidget):
             return
         if kernel_execution_state == "idle" and self._kernel_starting:
             self._kernel_starting = False
-            self._toolbox.msg_success.emit(f"{self._name} for {self.owner_names} ready for action")
+            self._toolbox.msg_success.emit(f"{self._name} ready for action")
             self._control.viewport().setCursor(self.normal_cursor)
 
     def enterEvent(self, event):

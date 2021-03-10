@@ -12,6 +12,8 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>julia-dots.svg</file>
+    <file>python.svg</file>
     <file>database.svg</file>
     <file>menu_icons/eye.svg</file>
     <file>menu_icons/file-alt.svg</file>

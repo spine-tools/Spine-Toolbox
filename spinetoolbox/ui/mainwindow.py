@@ -13,16 +13,13 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.15.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+from PySide2.QtCore import *
+from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
@@ -152,6 +149,16 @@ class Ui_MainWindow(object):
         self.actionCreate_plugin.setObjectName(u"actionCreate_plugin")
         self.actionCreate_plugin.setEnabled(False)
         self.actionCreate_plugin.setVisible(False)
+        self.actionStartJuliaConsole = QAction(MainWindow)
+        self.actionStartJuliaConsole.setObjectName(u"actionStartJuliaConsole")
+        icon13 = QIcon()
+        icon13.addFile(u":/icons/julia-dots.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionStartJuliaConsole.setIcon(icon13)
+        self.actionStartPythonConsole = QAction(MainWindow)
+        self.actionStartPythonConsole.setObjectName(u"actionStartPythonConsole")
+        icon14 = QIcon()
+        icon14.addFile(u":/icons/python.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionStartPythonConsole.setIcon(icon14)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout_10 = QVBoxLayout(self.centralwidget)
@@ -199,7 +206,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1326, 27))
+        self.menubar.setGeometry(QRect(0, 0, 1326, 21))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
@@ -216,6 +223,8 @@ class Ui_MainWindow(object):
         self.menuDock_Widgets.setObjectName(u"menuDock_Widgets")
         self.menuPlugins = QMenu(self.menubar)
         self.menuPlugins.setObjectName(u"menuPlugins")
+        self.menuConsoles = QMenu(self.menubar)
+        self.menuConsoles.setObjectName(u"menuConsoles")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -321,6 +330,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
         self.label_no_julia_console = QLabel(self.dockWidgetContents_julia_console)
         self.label_no_julia_console.setObjectName(u"label_no_julia_console")
+        self.label_no_julia_console.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.label_no_julia_console.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout_9.addWidget(self.label_no_julia_console)
@@ -364,6 +374,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_20.setContentsMargins(0, 0, 0, 0)
         self.label_no_python_console = QLabel(self.dockWidgetContents_python_console)
         self.label_no_python_console.setObjectName(u"label_no_python_console")
+        self.label_no_python_console.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.label_no_python_console.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout_20.addWidget(self.label_no_python_console)
@@ -395,6 +406,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuPlugins.menuAction())
+        self.menubar.addAction(self.menuConsoles.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
@@ -430,6 +442,8 @@ class Ui_MainWindow(object):
         self.menuPlugins.addAction(self.actionManage_plugins)
         self.menuPlugins.addSeparator()
         self.menuPlugins.addAction(self.actionCreate_plugin)
+        self.menuConsoles.addAction(self.actionStartPythonConsole)
+        self.menuConsoles.addAction(self.actionStartJuliaConsole)
 
         self.retranslateUi(MainWindow)
 
@@ -606,6 +620,20 @@ class Ui_MainWindow(object):
         self.actionInstall_plugin.setText(QCoreApplication.translate("MainWindow", u"Install plugin...", None))
         self.actionManage_plugins.setText(QCoreApplication.translate("MainWindow", u"Manage plugins...", None))
         self.actionCreate_plugin.setText(QCoreApplication.translate("MainWindow", u"Create plugin...", None))
+        self.actionStartJuliaConsole.setText(QCoreApplication.translate("MainWindow", u"Start Julia Console", None))
+#if QT_CONFIG(tooltip)
+        self.actionStartJuliaConsole.setToolTip(QCoreApplication.translate("MainWindow", u"Start Julia Console using the kernel selected in Settings->Tools", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(shortcut)
+        self.actionStartJuliaConsole.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+2", None))
+#endif // QT_CONFIG(shortcut)
+        self.actionStartPythonConsole.setText(QCoreApplication.translate("MainWindow", u"Start Python Console", None))
+#if QT_CONFIG(tooltip)
+        self.actionStartPythonConsole.setToolTip(QCoreApplication.translate("MainWindow", u"Start Python Console using the kernel selected in Settings->Tools", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(shortcut)
+        self.actionStartPythonConsole.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+1", None))
+#endif // QT_CONFIG(shortcut)
         self.label.setText(QCoreApplication.translate("MainWindow", u"Design View", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
@@ -614,6 +642,7 @@ class Ui_MainWindow(object):
         self.menuToolbars.setTitle(QCoreApplication.translate("MainWindow", u"Toolbars", None))
         self.menuDock_Widgets.setTitle(QCoreApplication.translate("MainWindow", u"Dock widgets", None))
         self.menuPlugins.setTitle(QCoreApplication.translate("MainWindow", u"Plugins", None))
+        self.menuConsoles.setTitle(QCoreApplication.translate("MainWindow", u"Consoles", None))
         self.dockWidget_eventlog.setWindowTitle(QCoreApplication.translate("MainWindow", u"Event Log", None))
         self.dockWidget_itemlog.setWindowTitle(QCoreApplication.translate("MainWindow", u"Item Execution Log", None))
         self.label_no_itemlog.setText(QCoreApplication.translate("MainWindow", u"Select and execute a project item to view its execution log", None))
@@ -621,10 +650,10 @@ class Ui_MainWindow(object):
         self.label_no_selection.setText(QCoreApplication.translate("MainWindow", u"Select a project item to view its properties", None))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_no_selection), QCoreApplication.translate("MainWindow", u"No Selection", None))
         self.dockWidget_julia_console.setWindowTitle(QCoreApplication.translate("MainWindow", u"Julia Console", None))
-        self.label_no_julia_console.setText(QCoreApplication.translate("MainWindow", u"Select and execute a Julia Tool to see  its console", None))
+        self.label_no_julia_console.setText(QCoreApplication.translate("MainWindow", u"Select and execute a Julia Tool to see its console", None))
         self.dockWidget_project.setWindowTitle(QCoreApplication.translate("MainWindow", u"Project", None))
         self.dockWidget_python_console.setWindowTitle(QCoreApplication.translate("MainWindow", u"Python Console", None))
-        self.label_no_python_console.setText(QCoreApplication.translate("MainWindow", u"Select and execute a Python Tool to see  its console", None))
+        self.label_no_python_console.setText(QCoreApplication.translate("MainWindow", u"Select and execute a Python Tool to see its console", None))
         self.dockWidget_executions.setWindowTitle(QCoreApplication.translate("MainWindow", u"Executions", None))
     # retranslateUi
 

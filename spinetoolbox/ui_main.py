@@ -55,6 +55,7 @@ from .widgets.spine_console_widget import SpineConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.link_properties_widget import LinkPropertiesWidget
+from .widgets.console_window import ConsoleWindow
 from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
@@ -156,6 +157,8 @@ class ToolboxUI(QMainWindow):
         # Make and initialize toolbars
         self.main_toolbar = toolbars.MainToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
+        self._base_python_console = None  # 'base' Python console, independent of project items
+        self._base_julia_console = None  # 'base' Julia console, independent of project items
         # Additional consoles for item execution. See ``ToolboxUI.make_console()``
         self._extra_consoles = {}
         # Setup main window menu
@@ -234,6 +237,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_item_directory.triggered.connect(self._open_project_item_directory)
         self.ui.actionRename_item.triggered.connect(self._rename_project_item)
         self.ui.actionRemove.triggered.connect(self._remove_selected_items)
+        self.ui.actionStartJuliaConsole.triggered.connect(self._start_base_julia_console)
+        self.ui.actionStartPythonConsole.triggered.connect(self._start_base_python_console)
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
@@ -1693,6 +1698,13 @@ class ToolboxUI(QMainWindow):
         if self._project is not None:
             self._project.tear_down()
 
+    def tear_down_consoles(self):
+        """CLoses the 'base' Python and Juliö Consoles if running."""
+        if self._base_julia_console is not None:
+            self._base_julia_console.close()
+        if self._base_python_console is not None:
+            self._base_python_console.close()
+
     def _tasks_before_exit(self):
         """
         Returns a list of tasks to perform before exiting the application.
@@ -1872,6 +1884,7 @@ class ToolboxUI(QMainWindow):
         # Save number of screens
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
+        self.tear_down_consoles()
         self.tear_down_items_and_factories()
         event.accept()
 
@@ -2165,6 +2178,43 @@ class ToolboxUI(QMainWindow):
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
         return menu
+
+    @Slot()
+    def _start_base_julia_console(self):
+        """Shows and starts the 'base' Julia Console if not running or activates the window if running."""
+        if not self._base_julia_console:
+            c = SpineConsoleWidget(self, "Julia Console", owner=None)
+            self._base_julia_console = ConsoleWindow(self, c)
+            self._base_julia_console.start()
+        else:
+            if self._base_julia_console.isMinimized():
+                self._base_julia_console.showNormal()
+            self._base_julia_console.activateWindow()
+
+    @Slot()
+    def _start_base_python_console(self):
+        """Shows and starts the 'base' Python Console if not running or activates the window if running."""
+        if not self._base_python_console:
+            c = SpineConsoleWidget(self, "Python Console", owner=None)
+            self._base_python_console = ConsoleWindow(self, c)
+            self._base_python_console.start()
+        else:
+            if self._base_python_console.isMinimized():
+                self._base_python_console.showNormal()
+            self._base_python_console.activateWindow()
+
+    def destroy_base_console(self, console_window_title):
+        """Destroys the Python or Julia Console window reference.
+
+        Args:
+            console_window_title (str): Used in determining which console ref to destroy
+        """
+        if "python" in console_window_title.lower():
+            self._base_python_console.deleteLater()  # Not strictly necessary because of the Qt.WA_DeleteOnClose attr.
+            self._base_python_console = None
+        else:
+            self._base_julia_console.deleteLater()
+            self._base_julia_console = None
 
     def make_console(self, name, item, kernel_name, connection_file):
         """Creates a new SpineConsoleWidget for given connection file if none exists yet, and returns it.
