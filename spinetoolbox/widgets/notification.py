@@ -136,7 +136,8 @@ class Notification(QFrame):
 
     def closeEvent(self, ev):
         super().closeEvent(ev)
-        self._focus_widget.setFocus()
+        if self._focus_widget is not None:
+            self._focus_widget.setFocus()
 
     opacity = Property(float, get_opacity, set_opacity)
 
@@ -259,7 +260,7 @@ class ChangeNotifier(QObject):
             cmd = self._undo_stack.command(index)
         except RuntimeError:
             return
-        if cmd is not None:
+        if cmd is not None or index == 0:
             return
         cmd = self._undo_stack.command(index - 1)
         if cmd in self._notified_commands:
