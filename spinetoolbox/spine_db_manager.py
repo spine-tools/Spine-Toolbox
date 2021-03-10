@@ -411,15 +411,20 @@ class SpineDBManager(QObject):
            SpineDBFetcher
         """
         fetcher = SpineDBFetcher(self)
-        if not self._fetchers:
-            fetcher.finished.connect(self._handle_fetcher_finished)
         self._fetchers.append(fetcher)
         return fetcher
 
-    def next_fetcher(self):
+    def fetch_next(self):
+        """Starts the next fetcher in line."""
         if not self._fetchers:
-            return None
-        return self._fetchers[0]
+            return
+        fetcher = self._fetchers[0]
+        if fetcher.started:
+            # The fecther was started and is not finished
+            return
+        if fetcher.prepared:
+            fetcher.finished.connect(self._handle_fetcher_finished)
+            fetcher.start()
 
     @Slot()
     def _handle_fetcher_finished(self):
@@ -428,12 +433,7 @@ class SpineDBManager(QObject):
         """
         fetcher = self._fetchers.pop(0)
         fetcher.deleteLater()
-        next_fetcher = self.next_fetcher()
-        if not next_fetcher:
-            return
-        next_fetcher.finished.connect(self._handle_fetcher_finished)
-        if next_fetcher.queued:
-            next_fetcher.start()
+        self.fetch_next()
 
     def clean_up(self):
         self._thread.quit()

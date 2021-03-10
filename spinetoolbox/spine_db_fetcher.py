@@ -37,7 +37,8 @@ class SpineDBFetcher(QObject):
         self._started.connect(self._do_fetch)
         self._db_maps = None
         self._tablenames = None
-        self.queued = False
+        self.prepared = False
+        self.started = False
 
     def fetch(self, db_maps, tablenames=None):
         """Fetches items from the database and emit added signals.
@@ -48,12 +49,11 @@ class SpineDBFetcher(QObject):
         """
         self._db_maps = db_maps
         self._tablenames = tablenames
-        if self is self._db_mngr.next_fetcher():
-            self.start()
-        else:
-            self.queued = True
+        self.prepared = True
+        self._db_mngr.fetch_next()
 
     def start(self):
+        self.started = True
         self._started.emit()
 
     @Slot()
