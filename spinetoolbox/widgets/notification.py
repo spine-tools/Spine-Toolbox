@@ -19,6 +19,7 @@ Contains a notification widget.
 from PySide2.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
 from PySide2.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
 from PySide2.QtGui import QFont, QColor
+import shiboken2
 from spinetoolbox.helpers import color_from_index
 
 
@@ -40,6 +41,8 @@ class Notification(QFrame):
             mspw = 60000 / 140  # Assume people can read ~140 words per minute
             life_span = mspw * word_count
         self._focus_widget = parent.focusWidget()
+        if self._focus_widget is not None:
+            self._focus_widget.destroyed.connect(self._forget_focus_widget)
         self.setWindowFlags(Qt.Popup)
         self.setParent(parent)
         self._parent = parent
@@ -133,6 +136,15 @@ class Notification(QFrame):
         if self.fade_out_anim.state() == QPropertyAnimation.Running:
             return 0
         return self.timer.interval()
+
+    @Slot(QObject)
+    def _forget_focus_widget(self, _):
+        """Sets focus widget to None.
+
+        Args:
+            _ (QObject): focus widget, ignored
+        """
+        self._focus_widget = None
 
     def closeEvent(self, ev):
         super().closeEvent(ev)

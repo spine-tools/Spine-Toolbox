@@ -61,6 +61,7 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
 
     register_matplotlib_converters()
 
+
 def format_log_message(msg_type, message, show_datetime=True):
     color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
@@ -227,8 +228,9 @@ def pyside2_version_check():
     qt_version_info is a tuple with each version component of Qt used to compile PySide2. E.g. (5, 14, 2)
     """
     # print("Your QT version info is:{0} version string:{1}".format(qt_version_info, qt_version))
-    if not (qt_version_info[0] == 5 and qt_version_info[1] == 14) and \
-            not (qt_version_info[0] == 5 and qt_version_info[1] == 15):
+    if not (qt_version_info[0] == 5 and qt_version_info[1] == 14) and not (
+        qt_version_info[0] == 5 and qt_version_info[1] == 15
+    ):
         print(
             """Sorry for the inconvenience but,
 
