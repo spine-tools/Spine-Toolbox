@@ -328,8 +328,11 @@ class SpineToolboxProject(MetaObject):
         Args:
             connection (Connection): connection to add
         """
-        self._connections.append(connection)
-        self.dag_handler.add_graph_edge(connection.source, connection.destination)
+        if connection in self._connections:
+            # Ignore dupes
+            return
+        if self.dag_handler.add_graph_edge(connection.source, connection.destination):
+            self._connections.append(connection)
 
     def remove_connection(self, connection):
         self._connections.remove(connection)
@@ -437,7 +440,9 @@ class SpineToolboxProject(MetaObject):
             # Remove item icon and connected links (QGraphicsItems) from scene
             icon = item.project_item.get_icon()
             self._toolbox.ui.graphicsView.remove_icon(icon)
-            self.dag_handler.remove_node_from_graph(item.name)
+            item_name = item.name
+            self.dag_handler.remove_node_from_graph(item_name)
+            self._connections = [c for c in self._connections if item_name not in (c.source, c.destination)]
             item.project_item.tear_down()
             if delete_data:
                 try:

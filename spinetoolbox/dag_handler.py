@@ -75,9 +75,15 @@ class DirectedGraphHandler(QObject):
         Args:
             src_node (str): Source project item node name
             dst_node (str): Destination project item node name
+
+        Returns:
+            bool: True if edge established, False if not (e.g. any of the nodes doesn't really exist)
         """
         src_graph = self.dag_with_node(src_node)
         dst_graph = self.dag_with_node(dst_node)
+        if src_graph is None or dst_graph is None:
+            # Ignore ghost connections (typically from corrupted project.json)
+            return False
         if src_graph == dst_graph:
             # src and dst are already in same graph. Just add edge to src_graph and return
             src_graph.add_edge(src_node, dst_node)
@@ -91,6 +97,7 @@ class DirectedGraphHandler(QObject):
             self.remove_dag(dst_graph)
             # Add union graph
             self.add_dag(union_dag)
+        return True
 
     def remove_graph_edge(self, src_node, dst_node):
         """Removes edge from a directed graph.

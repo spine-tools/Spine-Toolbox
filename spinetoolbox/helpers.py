@@ -55,7 +55,7 @@ if os.name == "nt":
 matplotlib.use('Qt5Agg')
 matplotlib.rcParams.update({"font.size": 8})
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
-_matplotlib_version = [int(x) for x in matplotlib.__version__.split(".")]
+_matplotlib_version = [int(x) for x in matplotlib.__version__.split(".") if x.isdigit()]
 if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     from pandas.plotting import register_matplotlib_converters
 
@@ -228,8 +228,9 @@ def pyside2_version_check():
     qt_version_info is a tuple with each version component of Qt used to compile PySide2. E.g. (5, 14, 2)
     """
     # print("Your QT version info is:{0} version string:{1}".format(qt_version_info, qt_version))
-    if not (qt_version_info[0] == 5 and qt_version_info[1] == 14) and \
-            not (qt_version_info[0] == 5 and qt_version_info[1] == 15):
+    if not (qt_version_info[0] == 5 and qt_version_info[1] == 14) and not (
+        qt_version_info[0] == 5 and qt_version_info[1] == 15
+    ):
         print(
             """Sorry for the inconvenience but,
 

@@ -32,6 +32,7 @@ from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .db_session_history_dialog import DBSessionHistoryDialog
 from .url_toolbar import UrlToolBar
+from ...widgets.notification import ChangeNotifier
 from ...widgets.notification import NotificationStack
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
@@ -69,6 +70,8 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr = db_mngr
         self.db_maps = []
         self.db_urls = []
+        self._change_notifiers = []
+        self._changelog = []
         self.db_url = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
@@ -122,12 +125,16 @@ class SpineDBEditorBase(QMainWindow):
         if not self.tear_down():
             return
         self.db_maps = []
+        self._changelog.clear()
+        while self._change_notifiers:
+            self._change_notifiers.pop(0).deleteLater()
         for url, codename in db_url_codenames.items():
             db_map = self.db_mngr.get_db_map(url, self, codename=codename, create=create)
             if db_map is not None:
                 self.db_maps.append(db_map)
         if not self.db_maps:
             return
+        self._change_notifiers = [ChangeNotifier(self.db_mngr.undo_stack[db_map], self) for db_map in self.db_maps]
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.url_toolbar.set_current_urls(self.db_urls)
         self.db_url = self.db_urls[0]
@@ -150,7 +157,7 @@ class SpineDBEditorBase(QMainWindow):
         fetcher = self.db_mngr.get_fetcher()
         fetcher.finished.connect(self._make_iddle)
         self._make_busy()
-        fetcher.fetch(db_maps)
+        fetcher.fetch(self, db_maps)
         self.setWindowTitle(f"{self.db_names}")
 
     def _make_busy(self):
@@ -239,7 +246,8 @@ class SpineDBEditorBase(QMainWindow):
         view_action.tool_bar.addActions([self.ui.actionStacked_style, self.ui.actionGraph_style])
         view_action.tool_bar.addSeparator()
         docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "Doc&ks...")
-        docks_menu_action.setMenu(self._make_docks_menu())
+        docks_menu = self._make_docks_menu()
+        docks_menu_action.setMenu(docks_menu)
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
         docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
         pivot_action = ToolBarWidgetAction("Pivot", menu)
@@ -262,22 +270,28 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.actionSettings)
         menu.aboutToShow.connect(self.refresh_copy_paste_actions)
         menu_action = self.url_toolbar.add_main_menu(menu)
+        actions = [
+            self.ui.actionNew_db_file,
+            self.ui.actionOpen_db_file,
+            self.ui.actionImport,
+            self.ui.actionExport,
+            self.ui.actionExport_session,
+            self.ui.actionUndo,
+            self.ui.actionRedo,
+            self.ui.actionCopy,
+            self.ui.actionPaste,
+            self.ui.actionStacked_style,
+            self.ui.actionGraph_style,
+            *docks_menu.actions(),
+            *self.pivot_action_group.actions(),
+            self.ui.actionCommit,
+            self.ui.actionRollback,
+            self.ui.actionView_history,
+        ]
+        for action in actions:
+            action.triggered.connect(menu.hide)
         # Add actions to activate shortcuts
-        self.addActions(
-            [
-                self.ui.actionNew_db_file,
-                self.ui.actionOpen_db_file,
-                self.ui.actionImport,
-                self.ui.actionExport,
-                self.ui.actionUndo,
-                self.ui.actionRedo,
-                self.ui.actionCopy,
-                self.ui.actionPaste,
-                self.ui.actionCommit,
-                self.ui.actionRollback,
-                menu_action,
-            ]
-        )
+        self.addActions([menu_action, *actions])
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -660,146 +674,146 @@ class SpineDBEditorBase(QMainWindow):
             msgs.append(msg)
         self.msg_error.emit(format_string_list(msgs))
 
-    def notify_items_changed(self, action, item_type, db_map_data):
+    def log_changes(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully {action} {count} {item_type} item(s)"
-        self.msg.emit(msg)
+        self._changelog.append(msg)
 
     def receive_scenarios_added(self, db_map_data):
-        self.notify_items_changed("added", "scenario", db_map_data)
+        self.log_changes("added", "scenario", db_map_data)
 
     def receive_alternatives_added(self, db_map_data):
-        self.notify_items_changed("added", "alternative", db_map_data)
+        self.log_changes("added", "alternative", db_map_data)
 
     def receive_object_classes_added(self, db_map_data):
-        self.notify_items_changed("added", "object_class", db_map_data)
+        self.log_changes("added", "object_class", db_map_data)
 
     def receive_objects_added(self, db_map_data):
-        self.notify_items_changed("added", "object", db_map_data)
+        self.log_changes("added", "object", db_map_data)
 
     def receive_relationship_classes_added(self, db_map_data):
-        self.notify_items_changed("added", "relationship_class", db_map_data)
+        self.log_changes("added", "relationship_class", db_map_data)
 
     def receive_relationships_added(self, db_map_data):
-        self.notify_items_changed("added", "relationship", db_map_data)
+        self.log_changes("added", "relationship", db_map_data)
 
     def receive_entity_groups_added(self, db_map_data):
-        self.notify_items_changed("added", "entity_group", db_map_data)
+        self.log_changes("added", "entity_group", db_map_data)
 
     def receive_parameter_definitions_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter_definition", db_map_data)
+        self.log_changes("added", "parameter_definition", db_map_data)
 
     def receive_parameter_values_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter_value", db_map_data)
+        self.log_changes("added", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter_value_list", db_map_data)
+        self.log_changes("added", "parameter_value_list", db_map_data)
 
     def receive_parameter_tags_added(self, db_map_data):
-        self.notify_items_changed("added", "parameter_tag", db_map_data)
+        self.log_changes("added", "parameter_tag", db_map_data)
 
     def receive_features_added(self, db_map_data):
-        self.notify_items_changed("added", "feature", db_map_data)
+        self.log_changes("added", "feature", db_map_data)
 
     def receive_tools_added(self, db_map_data):
-        self.notify_items_changed("added", "tool", db_map_data)
+        self.log_changes("added", "tool", db_map_data)
 
     def receive_tool_features_added(self, db_map_data):
-        self.notify_items_changed("added", "tool_feature", db_map_data)
+        self.log_changes("added", "tool_feature", db_map_data)
 
     def receive_tool_feature_methods_added(self, db_map_data):
-        self.notify_items_changed("added", "tool_feature_method", db_map_data)
+        self.log_changes("added", "tool_feature_method", db_map_data)
 
     def receive_scenarios_updated(self, db_map_data):
-        self.notify_items_changed("updated", "scenario", db_map_data)
+        self.log_changes("updated", "scenario", db_map_data)
 
     def receive_alternatives_updated(self, db_map_data):
-        self.notify_items_changed("updated", "alternative", db_map_data)
+        self.log_changes("updated", "alternative", db_map_data)
 
     def receive_object_classes_updated(self, db_map_data):
-        self.notify_items_changed("updated", "object_class", db_map_data)
+        self.log_changes("updated", "object_class", db_map_data)
 
     def receive_objects_updated(self, db_map_data):
-        self.notify_items_changed("updated", "object", db_map_data)
+        self.log_changes("updated", "object", db_map_data)
 
     def receive_relationship_classes_updated(self, db_map_data):
-        self.notify_items_changed("updated", "relationship_class", db_map_data)
+        self.log_changes("updated", "relationship_class", db_map_data)
 
     def receive_relationships_updated(self, db_map_data):
-        self.notify_items_changed("updated", "relationship", db_map_data)
+        self.log_changes("updated", "relationship", db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter_definition", db_map_data)
+        self.log_changes("updated", "parameter_definition", db_map_data)
 
     def receive_parameter_values_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter_value", db_map_data)
+        self.log_changes("updated", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter_value_list", db_map_data)
+        self.log_changes("updated", "parameter_value_list", db_map_data)
 
     def receive_parameter_tags_updated(self, db_map_data):
-        self.notify_items_changed("updated", "parameter_tag", db_map_data)
+        self.log_changes("updated", "parameter_tag", db_map_data)
 
     def receive_features_updated(self, db_map_data):
-        self.notify_items_changed("updated", "feature", db_map_data)
+        self.log_changes("updated", "feature", db_map_data)
 
     def receive_tools_updated(self, db_map_data):
-        self.notify_items_changed("updated", "tool", db_map_data)
+        self.log_changes("updated", "tool", db_map_data)
 
     def receive_tool_features_updated(self, db_map_data):
-        self.notify_items_changed("updated", "tool_feature", db_map_data)
+        self.log_changes("updated", "tool_feature", db_map_data)
 
     def receive_tool_feature_methods_updated(self, db_map_data):
-        self.notify_items_changed("updated", "tool_feature_method", db_map_data)
+        self.log_changes("updated", "tool_feature_method", db_map_data)
 
     def receive_parameter_definition_tags_set(self, db_map_data):
-        self.notify_items_changed("set", "parameter_definition tag", db_map_data)
+        self.log_changes("set", "parameter_definition tag", db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
-        self.notify_items_changed("removed", "scenarios", db_map_data)
+        self.log_changes("removed", "scenarios", db_map_data)
 
     def receive_alternatives_removed(self, db_map_data):
-        self.notify_items_changed("removed", "alternatives", db_map_data)
+        self.log_changes("removed", "alternatives", db_map_data)
 
     def receive_object_classes_removed(self, db_map_data):
-        self.notify_items_changed("removed", "object_class", db_map_data)
+        self.log_changes("removed", "object_class", db_map_data)
 
     def receive_objects_removed(self, db_map_data):
-        self.notify_items_changed("removed", "object", db_map_data)
+        self.log_changes("removed", "object", db_map_data)
 
     def receive_relationship_classes_removed(self, db_map_data):
-        self.notify_items_changed("removed", "relationship_class", db_map_data)
+        self.log_changes("removed", "relationship_class", db_map_data)
 
     def receive_relationships_removed(self, db_map_data):
-        self.notify_items_changed("removed", "relationship", db_map_data)
+        self.log_changes("removed", "relationship", db_map_data)
 
     def receive_entity_groups_removed(self, db_map_data):
-        self.notify_items_changed("removed", "entity_group", db_map_data)
+        self.log_changes("removed", "entity_group", db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter_definition", db_map_data)
+        self.log_changes("removed", "parameter_definition", db_map_data)
 
     def receive_parameter_values_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter_value", db_map_data)
+        self.log_changes("removed", "parameter_value", db_map_data)
 
     def receive_parameter_value_lists_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter_value_list", db_map_data)
+        self.log_changes("removed", "parameter_value_list", db_map_data)
 
     def receive_parameter_tags_removed(self, db_map_data):
-        self.notify_items_changed("removed", "parameter_tag", db_map_data)
+        self.log_changes("removed", "parameter_tag", db_map_data)
 
     def receive_features_removed(self, db_map_data):
-        self.notify_items_changed("removed", "feature", db_map_data)
+        self.log_changes("removed", "feature", db_map_data)
 
     def receive_tools_removed(self, db_map_data):
-        self.notify_items_changed("removed", "tool", db_map_data)
+        self.log_changes("removed", "tool", db_map_data)
 
     def receive_tool_features_removed(self, db_map_data):
-        self.notify_items_changed("removed", "tool_feature", db_map_data)
+        self.log_changes("removed", "tool_feature", db_map_data)
 
     def receive_tool_feature_methods_removed(self, db_map_data):
-        self.notify_items_changed("removed", "tool_feature_method", db_map_data)
+        self.log_changes("removed", "tool_feature_method", db_map_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -975,8 +989,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.3 * height, 0.1 * height], Qt.Vertical)
         self.end_style_change()
 
-    @Slot(bool)
-    def apply_pivot_style(self, checked=False):
+    @Slot("QAction")
+    def apply_pivot_style(self, _action):
         """Applies the pivot style, inspired in the former tabular view."""
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Horizontal)

@@ -16,12 +16,14 @@ Contains a notification widget.
 :date: 12.12.2019
 """
 
-from PySide2.QtWidgets import QWidget, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy
+from PySide2.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
 from PySide2.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
-from PySide2.QtGui import QFont
+from PySide2.QtGui import QFont, QColor
+import shiboken2
+from spinetoolbox.helpers import color_from_index
 
 
-class Notification(QWidget):
+class Notification(QFrame):
     """Custom pop-up notification widget with fade-in and fade-out effect."""
 
     def __init__(self, parent, txt, anim_duration=500, life_span=None, alignment=Qt.AlignCenter):
@@ -38,6 +40,9 @@ class Notification(QWidget):
             word_count = len(txt.split(" "))
             mspw = 60000 / 140  # Assume people can read ~140 words per minute
             life_span = mspw * word_count
+        self._focus_widget = parent.focusWidget()
+        if self._focus_widget is not None:
+            self._focus_widget.destroyed.connect(self._forget_focus_widget)
         self.setWindowFlags(Qt.Popup)
         self.setParent(parent)
         self._parent = parent
@@ -53,13 +58,15 @@ class Notification(QWidget):
         layout = QHBoxLayout()
         layout.addWidget(self.label)
         layout.setSizeConstraint(QLayout.SetMinimumSize)
-        layout.setContentsMargins(1, 0, 1, 0)
+        layout.setContentsMargins(3, 3, 3, 3)
         self.setLayout(layout)
         self.adjustSize()
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setObjectName("Notification")
+        self._background_color = "#e6ffc2b3"
         ss = (
-            "QWidget{background-color: rgba(255, 194, 179, 0.9);"
+            "QFrame#Notification{"
+            f"background-color: {self._background_color};"
             "border-width: 2px;"
             "border-color: #ffebe6;"
             "border-style: groove; border-radius: 8px;}"
@@ -94,7 +101,8 @@ class Notification(QWidget):
         # Move to the top right corner of the parent
         super().show()
         x = self._parent.size().width() - self.width() - 2
-        self.move(x, self.pos().y())
+        y = self.pos().y()
+        self.move(x, y)
 
     def get_opacity(self):
         """opacity getter."""
@@ -129,10 +137,71 @@ class Notification(QWidget):
             return 0
         return self.timer.interval()
 
+    @Slot(QObject)
+    def _forget_focus_widget(self, _):
+        """Sets focus widget to None.
+
+        Args:
+            _ (QObject): focus widget, ignored
+        """
+        self._focus_widget = None
+
+    def closeEvent(self, ev):
+        super().closeEvent(ev)
+        if self._focus_widget is not None:
+            self._focus_widget.setFocus()
+
     opacity = Property(float, get_opacity, set_opacity)
 
 
-class LinkNotification(Notification):
+class InteractiveNotification(Notification):
+    """A notification that doesn't dissapear when the cursor is on it."""
+
+    def enterEvent(self, e):
+        """Pauses timer as the mouse hovers the notification."""
+        QFrame.enterEvent(self, e)
+        if self.remaining_time():
+            self.timer.stop()
+
+    def leaveEvent(self, e):
+        """Starts self destruction after the mouse leaves the notification."""
+        QFrame.leaveEvent(self, e)
+        self.start_self_destruction()
+
+
+class ButtonNotification(InteractiveNotification):
+    """A notification with a button."""
+
+    def __init__(self, *args, button_text="", button_slot=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        button = QPushButton(button_text, self)
+        self.layout().addWidget(button)
+        button.clicked.connect(button_slot)
+        button.clicked.connect(self.start_self_destruction)
+        # Style button: We try hard to programmatically find good contrasting colors
+        label_bg_color = QColor(self._background_color)
+        base_hue = label_bg_color.hsvHueF()
+        saturation = label_bg_color.hsvSaturationF()
+        bg_color = color_from_index(1, 2, base_hue=base_hue, saturation=saturation)
+        pressed_bg_color = bg_color.darker(110)
+        hover_bg_color = bg_color.lighter(110)
+        border_color = QColor("#F0F0F0")
+        pressed_border_color = border_color.darker(110)
+        ss = (
+            "QPushButton{"
+            f"background-color: {bg_color.name()}; color: #0F0F0F; "
+            f"border: 2px solid {border_color.name()}; border-style: groove; border-radius: 4px;}}"
+            f"QPushButton:hover{{background-color: {hover_bg_color.name()};}}"
+            f"QPushButton:pressed{{background-color: {pressed_bg_color.name()};"
+            f"border: 2px solid {pressed_border_color.name()};}}"
+        )
+        button.setStyleSheet(ss)
+        font = QFont()
+        font.setBold(True)
+        button.setFont(font)
+
+
+class LinkNotification(InteractiveNotification):
     """A notification that may have a link."""
 
     def __init__(self, *args, open_link=None, **kwargs):
@@ -142,19 +211,6 @@ class LinkNotification(Notification):
             self.label.setOpenExternalLinks(True)
         else:
             self.label.linkActivated.connect(open_link)
-
-    def enterEvent(self, e):
-        """Pauses timer as the mouse hovers the notification."""
-        QWidget.enterEvent(self, e)
-        if self.remaining_time():
-            self.timer.stop()
-
-    def leaveEvent(self, e):
-        """Resumes timer after the mouse leaves the notification."""
-        QWidget.leaveEvent(self, e)
-        remaining_time = self.remaining_time()
-        if remaining_time:
-            self.timer.start(remaining_time)
 
 
 class NotificationStack(QObject):
@@ -174,6 +230,8 @@ class NotificationStack(QObject):
         notification.destroyed.connect(
             lambda obj=None, n=notification, h=notification.height(): self.handle_notification_destroyed(n, h)
         )
+        for existing in self.notifications:
+            existing.start_self_destruction()
         self.notifications.append(notification)
         notification.show()
 
@@ -195,3 +253,35 @@ class NotificationStack(QObject):
         self.notifications.remove(notification)
         for n in self.notifications[i:]:
             n.move(n.pos().x(), n.pos().y() - height)
+
+
+class ChangeNotifier(QObject):
+    def __init__(self, undo_stack, parent=None):
+        super().__init__(undo_stack)
+        if parent is None:
+            parent = undo_stack.parent()
+        self._undo_stack = undo_stack
+        self._parent = parent
+        self._notification_stack = NotificationStack(self._parent)
+        self._undo_stack.indexChanged.connect(self._push_notification)
+        self._notified_commands = set()
+
+    @Slot(int)
+    def _push_notification(self, index):
+        try:
+            cmd = self._undo_stack.command(index)
+        except RuntimeError:
+            return
+        if cmd is not None or index == 0:
+            return
+        cmd = self._undo_stack.command(index - 1)
+        if cmd in self._notified_commands:
+            return
+        self._notified_commands.add(cmd)
+        button_slot = self._undo_stack.undo
+        notification_text = cmd.actionText() + " successful"
+        button_text = "undo"
+        notification = ButtonNotification(
+            self._parent, notification_text, life_span=5000, button_text=button_text, button_slot=button_slot
+        )
+        self._notification_stack.push_notification(notification)

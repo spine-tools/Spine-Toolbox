@@ -310,9 +310,9 @@ class TreeViewMixin:
     def update_export_enabled(self):
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
-    def notify_items_changed(self, action, item_type, db_map_data):
+    def log_changes(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        super().notify_items_changed(action, item_type, db_map_data)
+        super().log_changes(action, item_type, db_map_data)
         self.update_export_enabled()
 
     def receive_alternatives_added(self, db_map_data):
