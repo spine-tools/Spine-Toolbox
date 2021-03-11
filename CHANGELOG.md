@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New wizard to install Julia, accessible from File->Settings->Tools->Julia.
 - New Exporter project item, a general-purpose tabular data exporter. The old .gdx exporter has been
   renamed to GdxExporter.
-
+- File->Close project option
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 

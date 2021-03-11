@@ -175,6 +175,7 @@ class ToolboxUI(QMainWindow):
         self._proposed_item_name_counts = dict()
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setDisabled(True)
+        self.ui.actionClose.setDisabled(True)
         self.restore_ui()
         self.ui.dockWidget_executions.hide()
         self.parse_project_item_modules()
@@ -209,6 +210,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
+        self.ui.actionClose.triggered.connect(self.close_project)
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
@@ -299,6 +301,10 @@ class ToolboxUI(QMainWindow):
         return self._qsettings
 
     def update_window_title(self):
+        """Updates main window title."""
+        if not self._project:
+            self.setWindowTitle("Spine Toolbox")
+            return
         self.setWindowTitle("{0} [{1}][*] - Spine Toolbox".format(self._project.name, self._project.project_dir))
 
     @Slot()
@@ -390,6 +396,7 @@ class ToolboxUI(QMainWindow):
         self.populate_specification_model(list())  # Start project with no specifications
         self.update_window_title()
         self.ui.actionSave_As.setEnabled(True)
+        self.ui.actionClose.setEnabled(True)
         self.ui.graphicsView.reset_zoom()
         # Update recentProjects
         self.update_recent_projects()
@@ -494,6 +501,7 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setEnabled(True)
+        self.ui.actionClose.setEnabled(True)
         # Init tool spec model. We don't use the information on the item type in spec_paths_per_type, but we could...
         deserialized_paths = [
             deserialize_path(path, self._project.project_dir)
@@ -553,7 +561,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def save_project(self):
-        """Save project."""
+        """Saves project."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
@@ -577,7 +585,9 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def save_project_as(self):
-        """Ask user for a new project name and save. Creates a duplicate of the open project."""
+        """Asks user for a new project directory and duplicates the current project there.
+        The name of the duplicated project will be the new directory name. The duplicated
+        project is activated."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
@@ -620,6 +630,30 @@ class ToolboxUI(QMainWindow):
         self.save_project()  # Save to update project name in project.json, must be done after restore_project()
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
+
+    @Slot()
+    def close_project(self):
+        """Closes the current project."""
+        if not self._project:
+            return
+        if self.isWindowModified():
+            QMessageBox.information(
+                self,
+                f"Project {self._project.name} has changed",
+                f"There are unsaved changes in your project, please save the project before closing")
+            return
+        self._project.tear_down()
+        self._project.deleteLater()
+        self._project = None
+        self.clear_ui()
+        self.ui.textBrowser_eventlog.clear()
+        self.ui.textBrowser_itemlog.clear()
+        self._disable_project_actions()
+        self.ui.actionSave.setDisabled(True)
+        self.ui.actionSave_As.setDisabled(True)
+        self.ui.actionClose.setDisabled(True)
+        self.undo_stack.setClean()
+        self.update_window_title()
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and add them to the model."""

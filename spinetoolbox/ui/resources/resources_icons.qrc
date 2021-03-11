@@ -12,6 +12,7 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>menu_icons/door-closed.svg</file>
     <file>julia-dots.svg</file>
     <file>python.svg</file>
     <file>database.svg</file>

@@ -151,6 +151,7 @@
     <addaction name="actionOpen_recent"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
+    <addaction name="actionClose"/>
     <addaction name="separator"/>
     <addaction name="actionExport_project_to_GraphML"/>
     <addaction name="separator"/>
@@ -1024,7 +1025,7 @@
     <string>Start Julia Console</string>
    </property>
    <property name="toolTip">
-    <string>Start Julia Console using the kernel selected in Settings-&gt;Tools</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Start Julia Console using the kernel selected in Settings-&amp;gt;Tools&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+2</string>
@@ -1039,10 +1040,22 @@
     <string>Start Python Console</string>
    </property>
    <property name="toolTip">
-    <string>Start Python Console using the kernel selected in Settings-&gt;Tools</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Start Python Console using the kernel selected in Settings-&amp;gt;Tools&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+1</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/door-closed.svg</normaloff>:/icons/menu_icons/door-closed.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Close project</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Close current project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>
