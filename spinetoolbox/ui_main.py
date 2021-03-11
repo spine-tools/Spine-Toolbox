@@ -333,6 +333,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit(
                 "Cannot open previous project. Directory <b>{0}</b> may have been moved.".format(project_dir)
             )
+            self.remove_path_from_recent_projects(project_dir)
             return
         self.open_project(project_dir, clear_logs=False)
 
@@ -611,11 +612,14 @@ class ToolboxUI(QMainWindow):
         except OSError:
             self.msg_error.emit("[OSError] Opening project file <b>{0}</b> failed".format(config_file_path))
             return
+        # Change name of the duplicated project to the new project directory name
+        _, new_name = os.path.split(answer)
+        proj_info["project"]["name"] = new_name
         if not self.restore_project(proj_info, answer, clear_logs=False):
             return
+        self.save_project()  # Save to update project name in project.json, must be done after restore_project()
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
-        self.undo_stack.setClean()
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and add them to the model."""
