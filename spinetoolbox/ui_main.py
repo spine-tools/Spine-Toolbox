@@ -1833,7 +1833,7 @@ class ToolboxUI(QMainWindow):
         self._qsettings.sync()  # Commit change immediately
 
     def update_recent_projects(self):
-        """Adds a new entry to QSettings variable that remembers the five most recent project paths."""
+        """Adds a new entry to QSettings variable that remembers twenty most recent project paths."""
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
         entry = self.project().name + "<>" + self.project().project_dir
         if not recents:
@@ -1847,7 +1847,7 @@ class ToolboxUI(QMainWindow):
             except ValueError:
                 # Add path only if it's not in the list already
                 recents_list.insert(0, entry)
-                if len(recents_list) > 5:
+                if len(recents_list) > 20:
                     recents_list.pop()
             else:
                 # If entry was on the list, move it as the first item
