@@ -646,14 +646,19 @@ class ToolboxUI(QMainWindow):
         self._project.deleteLater()
         self._project = None
         self.clear_ui()
-        self.ui.textBrowser_eventlog.clear()
-        self.ui.textBrowser_itemlog.clear()
         self._disable_project_actions()
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setDisabled(True)
         self.ui.actionClose.setDisabled(True)
         self.undo_stack.setClean()
         self.update_window_title()
+        # Close all QMainWindows, except ToolboxUI
+        main_windows = [w for w in QApplication.topLevelWidgets() if isinstance(w, QMainWindow)]
+        main_windows.remove(self)  # Remove ToolboxUI
+        for main_window in main_windows:
+            main_window.close()
+        self.ui.textBrowser_eventlog.clear()
+        self.ui.textBrowser_itemlog.clear()
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and add them to the model."""
