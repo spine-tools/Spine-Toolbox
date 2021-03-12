@@ -72,11 +72,6 @@ Definitions
 Spine Installation
 -------------------
 
-.. note:: This tutorial is written for `Spine Toolbox 
-   <https://github.com/Spine-project/Spine-Toolbox/>`_ and `SpineOpt 
-   <https://github.com/Spine-project/SpineOpt.jl>`_ development version on |Revised|.
-   If you are using a later version, the steps in this setup guide may be outdated.   
-
 Follow the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_ 
 to install Spine Toolbox and SpineOpt in your system.
    
@@ -179,7 +174,7 @@ Configure SpineOpt
 #. To use SpineOpt in your project, you need to create a Tool specification for it.
    Click on the small arrow next to the Tool icon |tool_icon| (in the *Items* section of the tool bar),
    and select **Create new Tool Specification...** from the drop-down menu.
-   The `Tool Specificaiton Editor`_ form will popup.
+   The `Tool Specification Editor`_ form will popup.
 
 #. Type **SpineOpt** as the name of the specification and select **Julia** as the type.
    Unselect **Execute in work directory**. 
@@ -187,7 +182,7 @@ Configure SpineOpt
 #. Click on |new| (marked with a red square in the image below) to create a new Julia file.
    Enter a file name, e.g. **run_spineopt.jl**, and click **Save**.
 
-#. Back in the `Tool Specificaiton Editor`_ form, you should now see a small text editor
+#. Back in the `Tool Specification Editor`_ form, you should now see a small text editor
    with the legend *Create main program file here...*
    Go ahead and enter the following text in it: 
 
@@ -197,10 +192,10 @@ Configure SpineOpt
       run_spineopt(ARGS...)
 
 #. In order to save the changes in the main program file that you just typed, you need to 
-   click |save| (marked with a blue circle in the image below), see `Tool Specificaiton Editor`_.  
+   click |save| (marked with a blue circle in the image below), see `Tool Specification Editor`_.  
    Then click on **Ok** to save the data in the specification form, which closes the window.   
 
-   ..  _Tool Specificaiton Editor:
+   ..  _Tool Specification Editor:
 
    .. image:: img/case_study_a5_tool_specification_editor_1.png
          :align: center
@@ -686,11 +681,13 @@ The *Parameter value editor* will pop up. You should see something like this:
  
 Notes
 -------
-  
-.. _copy-paste on several cells in Spine DataBase:
    
-   *Copy-paste* feature. To enter the same text on several cells, copy the text into the clipboard, then select all
-   target cells and press **Ctrl+V**.   
+.. note:: *Copy-paste* feature. To enter the same text on several cells, copy the text into the clipboard, then select all target cells and press **Ctrl+V**.   
+   
+.. note:: This tutorial has been updated on |Revised| for `Spine Toolbox 
+   <https://github.com/Spine-project/Spine-Toolbox/>`_ and `SpineOpt 
+   <https://github.com/Spine-project/SpineOpt.jl>`_ development versions.
+   If you are using a later version, the steps in this setup guide may be outdated.      
    
 
 
