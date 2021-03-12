@@ -152,6 +152,7 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="actionClose"/>
+    <addaction name="actionRename_project"/>
     <addaction name="separator"/>
     <addaction name="actionExport_project_to_GraphML"/>
     <addaction name="separator"/>
@@ -1056,6 +1057,18 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Close current project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionRename_project">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/exchange-alt.svg</normaloff>:/icons/menu_icons/exchange-alt.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Rename project...</string>
+   </property>
+   <property name="toolTip">
+    <string>Rename project</string>
    </property>
   </action>
  </widget>

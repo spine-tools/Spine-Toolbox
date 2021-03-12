@@ -211,6 +211,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(self.close_project)
+        self.ui.actionRename_project.triggered.connect(self.rename_project)
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
@@ -659,6 +660,26 @@ class ToolboxUI(QMainWindow):
             main_window.close()
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_itemlog.clear()
+
+    @Slot()
+    def rename_project(self):
+        """Opens a dialog where the user can enter a new name for the project."""
+        if not self._project:
+            return
+        answer = QInputDialog.getText(
+            self,
+            "Rename Project",
+            "New name:",
+            text=self._project.name,
+            flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+            )
+        if not answer[1]:
+            return
+        new_name = answer[0].strip()
+        # Check that new name is valid project name and not empty
+        if not new_name or new_name == self._project.name:
+            return
+        self._project.call_set_name(new_name)
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and add them to the model."""
