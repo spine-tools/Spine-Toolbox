@@ -59,8 +59,6 @@ def create_toolboxui_with_project(project_dir):
 def clean_up_toolbox(toolbox):
     """Cleans up toolbox and project."""
     if toolbox.project():
-        while toolbox.project().is_busy():
-            QApplication.processEvents()
         toolbox.project().tear_down()
         toolbox.project().deleteLater()
     toolbox.db_mngr.close_all_sessions()

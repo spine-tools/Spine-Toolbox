@@ -18,11 +18,11 @@ Custom QGraphicsScene used in the Design View.
 
 import math
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEvent
-from PySide2.QtWidgets import QGraphicsScene
+from PySide2.QtWidgets import QGraphicsItem, QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
-from spinetoolbox.graphics_items import ProjectItemIcon, Link
+from ..project_item_icon import ProjectItemIcon
+from ..link import Link, LinkDrawer
 from .project_item_drag import ProjectItemDragMixin
-from ..graphics_items import LinkDrawer
 
 
 class CustomGraphicsScene(QGraphicsScene):
@@ -33,10 +33,10 @@ class CustomGraphicsScene(QGraphicsScene):
     At the moment it's used by DesignGraphicsScene and the GraphViewMixin
     """
 
-    item_move_finished = Signal("QGraphicsItem")
+    item_move_finished = Signal(QGraphicsItem)
     """Emitted when an item has finished moving."""
 
-    item_removed = Signal("QGraphicsItem")
+    item_removed = Signal(QGraphicsItem)
     """Emitted when an item has been removed."""
 
     def center_items(self):
@@ -219,6 +219,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         factory = self._toolbox.item_factories[item_type]
         self.item_shadow = factory.make_icon(self._toolbox)
         self.item_shadow.finalize("", x, y)
+        self.addItem(self.item_shadow)
         self._toolbox.show_add_project_item_form(item_type, x, y, spec=spec)
 
     def event(self, event):

@@ -15,9 +15,8 @@ QUndoCommand subclasses for modifying the project.
 :authors: M. Marin (KTH)
 :date:   12.2.2020
 """
-
-
 from PySide2.QtWidgets import QUndoCommand
+from spine_engine.project_item.connection import Connection
 
 
 class SpineToolboxCommand(QUndoCommand):
@@ -53,32 +52,39 @@ class SetItemSpecificationCommand(SpineToolboxCommand):
 
 
 class MoveIconCommand(SpineToolboxCommand):
-    def __init__(self, graphics_item):
+    def __init__(self, icon, project):
         """Command to move icons in the Design view.
 
         Args:
-            graphics_item (ProjectItemIcon): the icon
+            icon (ProjectItemIcon): the icon
+            project (SpineToolboxProject): project
         """
         super().__init__()
-        self.graphics_item = graphics_item
-        self.previous_pos = {x: x._previous_pos for x in graphics_item.icon_group}
-        self.current_pos = {x: x._current_pos for x in graphics_item.icon_group}
-        if len(graphics_item.icon_group) == 1:
-            self.setText(f"move {list(graphics_item.icon_group)[0].name()}")
+        self._project = project
+        self._previous_pos = {x.name(): x.previous_pos for x in icon.icon_group}
+        self._current_pos = {x.name(): x.current_pos for x in icon.icon_group}
+        if len(icon.icon_group) == 1:
+            self.setText(f"move {next(iter(icon.icon_group)).name()}")
         else:
             self.setText("move multiple items")
 
     def redo(self):
-        for item, current_post in self.current_pos.items():
-            item.setPos(current_post)
-        self.graphics_item.update_links_geometry()
-        self.graphics_item.notify_item_move()
+        self._move_to(self._current_pos)
 
     def undo(self):
-        for item, previous_pos in self.previous_pos.items():
-            item.setPos(previous_pos)
-        self.graphics_item.update_links_geometry()
-        self.graphics_item.notify_item_move()
+        self._move_to(self._previous_pos)
+
+    def _move_to(self, positions):
+        icon_group = set()
+        for item_name, position in positions.items():
+            icon = self._project.get_item(item_name).get_icon()
+            icon.setPos(position)
+            icon_group.add(icon)
+        for icon in icon_group:
+            icon.icon_group = icon_group
+        representative = next(iter(icon_group))
+        representative.update_links_geometry()
+        representative.notify_item_move()
 
 
 class SetProjectNameCommand(SpineToolboxCommand):
@@ -134,10 +140,10 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             verbosity (bool): If True, prints message
         """
         super().__init__()
-        self.project = project
-        self.project_tree_items = project.make_project_tree_items(items_dict)
-        self.set_selected = set_selected
-        self.verbosity = verbosity
+        self._project = project
+        self._items_dict = items_dict
+        self._set_selected = set_selected
+        self._verbosity = verbosity
         if not items_dict:
             self.setObsolete(True)
         elif len(items_dict) == 1:
@@ -146,18 +152,15 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             self.setText("add multiple items")
 
     def redo(self):
-        for category_ind, project_tree_items in self.project_tree_items.items():
-            self.project.do_add_project_tree_items(
-                category_ind, *project_tree_items, set_selected=self.set_selected, verbosity=self.verbosity
-            )
+        self._project.make_and_add_project_items(self._items_dict, self._set_selected, self._verbosity)
 
     def undo(self):
-        for category_ind, project_tree_items in self.project_tree_items.items():
-            self.project.do_remove_project_tree_items(category_ind, *project_tree_items, delete_data=True)
+        for item_name in self._items_dict:
+            self._project.remove_item_by_name(item_name, delete_data=True)
 
 
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, items_per_category, links, delete_data=False):
+    def __init__(self, project, delete_data=False):
         """Command to remove all items from project.
 
         Args:
@@ -165,69 +168,54 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
             delete_data (bool): If True, deletes the directories and data associated with the items
         """
         super().__init__()
-        self.project = project
-        self.items_per_category = items_per_category
-        self.links = links
-        self.delete_data = delete_data
+        self._project = project
+        self._items_dict = {i.name: i.item_dict() for i in self._project.get_items()}
+        self._connection_dicts = [c.to_dict() for c in self._project.connections]
+        self._delete_data = delete_data
         self.setText("remove all items")
 
     def redo(self):
-        for category_ind, project_tree_items in self.items_per_category.items():
-            self.project.do_remove_project_tree_items(category_ind, *project_tree_items, delete_data=self.delete_data)
-        self.project._logger.msg.emit("All items removed from project")
+        for name in self._items_dict:
+            self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self.project.dag_handler.blockSignals(True)
-        for category_ind, project_tree_items in self.items_per_category.items():
-            self.project.do_add_project_tree_items(category_ind, *project_tree_items)
-        for link in self.links:
-            self.project._toolbox.ui.graphicsView.do_add_or_replace_link(link)
-        self.project.dag_handler.blockSignals(False)
-        self.project.notify_changes_in_all_dags()
+        self._project.make_and_add_project_items(self._items_dict, verbosity=False)
+        for connection_dict in self._connection_dicts:
+            self._project.add_connection(Connection.from_dict(connection_dict))
 
 
 class RemoveProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, *indexes, delete_data=False):
+    def __init__(self, project, item_names, delete_data=False):
         """Command to remove items.
 
         Args:
-            project (SpineToolboxProject): the project
-            *indexes (QModelIndex): Indexes of the items in project item model
+            project (SpineToolboxProject): The project
+            item_names (list of str): Item names
             delete_data (bool): If True, deletes the directories and data associated with the item
         """
         super().__init__()
-        indexes = list(indexes)
-        self.project = project
-        self.names = [ind.data() for ind in indexes]
-        self.delete_data = delete_data
-        self.project_tree_items = {}
-        self.links = set()
-        for index in indexes:
-            category_ind = index.parent()
-            project_tree_item = project._project_item_model.item(index)
-            self.project_tree_items.setdefault(category_ind, []).append(project_tree_item)
-            icon = project_tree_item.project_item.get_icon()
-            self.links.update(link for conn in icon.connectors.values() for link in conn.links)
-        if not self.names:
+        self._project = project
+        items = [self._project.get_item(name) for name in item_names]
+        self._items_dict = {i.name: i.item_dict() for i in items}
+        self._delete_data = delete_data
+        connections = sum((self._project.connections_for_item(name) for name in item_names), [])
+        unique_connections = {(c.source, c.destination): c for c in connections}.values()
+        self._connection_dicts = [c.to_dict() for c in unique_connections]
+        if not item_names:
             self.setObsolete(True)
-        elif len(self.names) == 1:
-            self.setText(f"remove {self.names[0]}")
+        elif len(item_names) == 1:
+            self.setText(f"remove {item_names[0]}")
         else:
             self.setText("remove multiple items")
 
     def redo(self):
-        for category_ind, project_tree_items in self.project_tree_items.items():
-            self.project.do_remove_project_tree_items(category_ind, *project_tree_items, delete_data=self.delete_data)
+        for name in self._items_dict:
+            self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self.project.dag_handler.blockSignals(True)
-        for category_ind, project_tree_items in self.project_tree_items.items():
-            self.project.do_add_project_tree_items(category_ind, *project_tree_items)
-        for link in self.links:
-            self.project._toolbox.ui.graphicsView.do_add_or_replace_link(link)
-        self.project.dag_handler.blockSignals(False)
-        for name in self.names:
-            self.project.notify_changes_in_containing_dag(name)
+        self._project.make_and_add_project_items(self._items_dict, verbosity=False)
+        for connection_dict in self._connection_dicts:
+            self._project.add_connection(Connection.from_dict(connection_dict))
 
 
 class RenameProjectItemCommand(SpineToolboxCommand):
@@ -259,57 +247,76 @@ class RenameProjectItemCommand(SpineToolboxCommand):
         return True
 
 
-class AddLinkCommand(SpineToolboxCommand):
-    def __init__(self, graphics_view, src_connector, dst_connector):
-        """Command to add link.
+class AddConnectionCommand(SpineToolboxCommand):
+    def __init__(self, project, source_name, source_position, destination_name, destination_position):
+        """Command to add connection between project items.
 
         Args:
-            graphics_view (DesignQGraphicsView): the view
-            src_connector (ConnectorButton): the source connector
-            dst_connector (ConnectorButton): the destination connector
+            project (SpineToolboxProject): project
+            source_name (str): source item's name
+            source_position (str): link's position on source item's icon
+            destination_name (str): destination item's name
+            destination_position (str): link's position on destination item's icon
         """
         super().__init__()
-        self.graphics_view = graphics_view
-        self.link = graphics_view.make_link(src_connector, dst_connector)
-        self.replaced_link = None
-        self.link_name = f"link from {src_connector.parent_name()} to {dst_connector.parent_name()}"
+        self._project = project
+        self._source_name = source_name
+        self._destination_name = destination_name
+        self._connection_dict = Connection(
+            source_name, source_position, destination_name, destination_position
+        ).to_dict()
+        replaced_connection = self._project.find_connection(source_name, destination_name)
+        self._replaced_connection_dict = replaced_connection.to_dict() if replaced_connection is not None else None
+        self._connection_name = f"link from {source_name} to {destination_name}"
 
     def redo(self):
-        self.replaced_link = self.graphics_view.do_add_or_replace_link(self.link)
-        action = "add" if self.replaced_link is None else "replace"
-        self.setText(f"{action} {self.link_name}")
+        if self._replaced_connection_dict is None:
+            success = self._project.add_connection(Connection.from_dict(self._connection_dict))
+            if not success:
+                self.setObsolete(True)
+        else:
+            self._project.replace_connection(
+                Connection.from_dict(self._replaced_connection_dict), Connection.from_dict(self._connection_dict)
+            )
+        action = "add" if self._replaced_connection_dict is None else "replace"
+        self.setText(f"{action} {self._connection_name}")
 
     def undo(self):
-        self.link.wipe_out()
-        if self.replaced_link is not None:
-            self.graphics_view.do_add_or_replace_link(self.replaced_link)
+        if self._replaced_connection_dict is None:
+            connection = self._project.find_connection(self._source_name, self._destination_name)
+            self._project.remove_connection(connection)
+        else:
+            connection = self._project.find_connection(self._source_name, self._destination_name)
+            self._project.replace_connection(connection, Connection.from_dict(self._replaced_connection_dict))
 
 
-class RemoveLinksCommand(SpineToolboxCommand):
-    def __init__(self, graphics_view, *links):
+class RemoveConnectionsCommand(SpineToolboxCommand):
+    def __init__(self, project, connections):
         """Command to remove links.
 
         Args:
-            graphics_view (DesignQGraphicsView): the view
-            *links (Link): the links
+            project (SpineToolboxProject): project
+            connections (list of Connection): the connections
         """
         super().__init__()
-        self.graphics_view = graphics_view
-        self.links = list(links)
-        if not self.links:
+        self._project = project
+        self._connections_dict = {(c.source, c.destination): c.to_dict() for c in connections}
+        if not connections:
             self.setObsolete(True)
-        elif len(self.links) == 1:
-            self.setText(f"remove link {self.links[0].name}")
+        elif len(connections) == 1:
+            c = connections[0]
+            self.setText(f"remove link from {c.source} to {c.destination}")
         else:
             self.setText("remove multiple links")
 
     def redo(self):
-        for link in self.links:
-            link.wipe_out()
+        for source, destination in self._connections_dict:
+            connection = self._project.find_connection(source, destination)
+            self._project.remove_connection(connection)
 
     def undo(self):
-        for link in self.links:
-            self.graphics_view.do_add_or_replace_link(link)
+        for connection_dict in self._connections_dict.values():
+            self._project.add_connection(Connection.from_dict(connection_dict))
 
 
 class SetFiltersOnlineCommand(SpineToolboxCommand):

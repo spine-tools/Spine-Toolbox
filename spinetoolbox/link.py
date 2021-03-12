@@ -315,14 +315,6 @@ class Link(LinkBase):
         self._exec_color = None
         self.resource_filter_model = ResourceFilterModel(self._connection, toolbox.undo_stack, toolbox)
 
-    def handle_dag_changed(self, upstream_resources):
-        """Handles changes in dag.
-
-        Args:
-            upstream_resources (list(ProjectItemResource)): Resources advertised by predecessor.
-        """
-        self.resource_filter_model.set_item_resources(upstream_resources)
-
     def refresh_resource_filter_model(self):
         """Makes resource filter mode fetch filter data from database."""
         self.resource_filter_model.build_tree()
@@ -430,13 +422,8 @@ class Link(LinkBase):
             return value
         return super().itemChange(change, value)
 
-    def establish_connection(self):
-        """Adds link's connection back to the project."""
-        self._toolbox.project().add_connection(self._connection)
-
     def wipe_out(self):
         """Removes any trace of this item from the system."""
-        self._toolbox.project().remove_connection(self._connection)
         self.src_connector.links.remove(self)
         self.dst_connector.links.remove(self)
         scene = self.scene()

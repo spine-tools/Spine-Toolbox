@@ -29,7 +29,7 @@ from .notification import Notification
 from .install_julia_wizard import InstallJuliaWizard
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
-from ..graphics_items import Link
+from ..link import Link
 from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
 from ..helpers import (
     select_python_interpreter,

@@ -46,14 +46,6 @@ class ResourceFilterModel(QStandardItemModel):
     def connection(self):
         return self._connection
 
-    def set_item_resources(self, resources):
-        """Sets project item resources for the model.
-
-        Args:
-            resources (Iterable of ProjectItemResource): item's resources
-        """
-        self._connection.receive_resources_from_source(resources)
-
     def build_tree(self):
         """Rebuilds model's contents."""
 

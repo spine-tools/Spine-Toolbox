@@ -15,13 +15,14 @@ Spine Toolbox project class.
 :authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   10.1.2018
 """
-
+from itertools import takewhile
 import os
 import json
 import logging
-from PySide2.QtCore import Slot, Signal, QTimer
+from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine.project_item.connection import Connection
+from spine_engine.spine_engine import ExecutionDirection
 from spine_engine.utils.helpers import shorten
 from spinetoolbox.metaobject import MetaObject
 from spinetoolbox.helpers import create_dir, inverted, erase_dir, make_settings_dict_for_engine
@@ -42,15 +43,24 @@ class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
     dag_execution_finished = Signal()
+    """Emitted after a single DAG execution has finished."""
     project_execution_about_to_start = Signal()
     """Emitted just before the entire project is executed."""
     project_execution_finished = Signal()
-    """Emitted when the execution finishes."""
+    """Emitted after the entire project execution finishes."""
+    connection_established = Signal(object)
+    """Emitted after new connection has been added to project."""
+    connection_about_to_be_removed = Signal(object)
+    """Emitted before connection removal."""
+    connection_replaced = Signal(object, object)
+    """Emitted after a connection has been replaced by another."""
+    item_added = Signal(str)
+    """Emitted after a project item has been added."""
+    item_about_to_be_removed = Signal(str)
+    """Emitted before project item removal."""
 
     def __init__(self, toolbox, name, description, p_dir, project_item_model, settings, logger):
-
         """
-
         Args:
             toolbox (ToolboxUI): toolbox of this project
             name (str): Project name
@@ -66,7 +76,6 @@ class SpineToolboxProject(MetaObject):
         self._connections = list()
         self._logger = logger
         self._settings = settings
-        self._dags_about_to_be_notified = set()
         self.dag_handler = DirectedGraphHandler()
         self._engine_workers = []
         self._execution_stopped = True
@@ -81,12 +90,12 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg_error.emit("Creating project directory structure in <b>{0}</b> failed".format(p_dir))
 
     def toolbox(self):
-        """Called by ProjectItem to use the toolbox as logger for 'box' messages."""
-        return self._toolbox
+        """Returns Toolbox main window.
 
-    def connect_signals(self):
-        """Connect signals to slots."""
-        self.dag_handler.dag_simulation_requested.connect(self.notify_changes_in_dag)
+        Returns:
+            ToolboxUI: main window
+        """
+        return self._toolbox
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -181,6 +190,7 @@ class SpineToolboxProject(MetaObject):
         if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
         self.make_and_add_project_items(items_dict, verbosity=False)
+        self._logger.msg.emit("Restoring connections...")
         for connection in map(Connection.from_dict, connection_dicts):
             self.add_connection(connection)
 
@@ -194,6 +204,14 @@ class SpineToolboxProject(MetaObject):
             ProjectItem: project item
         """
         return self._project_item_model.get_item(name).project_item
+
+    def get_items(self):
+        """ Returns all project items.
+
+        Returns:
+            list of ProjectItem: all project items
+        """
+        return [item.project_item for item in self._project_item_model.items()]
 
     def add_project_items(self, items_dict, set_selected=False, verbosity=True):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.
@@ -253,7 +271,7 @@ class SpineToolboxProject(MetaObject):
             ]
         return project_tree_items
 
-    def do_add_project_tree_items(self, category_ind, *project_tree_items, set_selected=False, verbosity=True):
+    def _do_add_project_tree_items(self, category_ind, *project_tree_items, set_selected=False, verbosity=True):
         """Adds LeafProjectTreeItem instances to project.
 
         Args:
@@ -265,9 +283,9 @@ class SpineToolboxProject(MetaObject):
         for project_tree_item in project_tree_items:
             project_item = project_tree_item.project_item
             self._project_item_model.insert_item(project_tree_item, category_ind)
-            self._finish_project_item_construction(project_item)
-            # Append new node to networkx graph
-            self.add_to_dag(project_item.name)
+            self.dag_handler.add_dag_node(project_item.name)
+            self.item_added.emit(project_item.name)
+            project_item.set_up()
             if verbosity:
                 self._logger.msg.emit(
                     "{0} <b>{1}</b> added to project".format(project_item.item_type(), project_item.name)
@@ -320,21 +338,90 @@ class SpineToolboxProject(MetaObject):
     def connections(self):
         return self._connections
 
+    def find_connection(self, source_name, destination_name):
+        """Searches for a connection between given items.
+
+        Args:
+            source_name (str): source item's name
+            destination_name (str): destination item's name
+
+        Returns:
+            Connection: connection instance or None if there is no connection
+        """
+        i = len(
+            list(takewhile(lambda c: source_name != c.source or destination_name != c.destination, self._connections))
+        )
+        if i == len(self._connections):
+            return None
+        return self._connections[i]
+
+    def connections_for_item(self, item_name):
+        """Returns connections that have given item as source or destination.
+
+        Args:
+            item_name (str): item's name
+
+        Returns:
+            list of Connection: connections connected to item
+        """
+        return [c for c in self._connections if c.source == item_name or c.destination == item_name]
+
     def add_connection(self, connection):
         """Adds a connection to the project.
 
         Args:
             connection (Connection): connection to add
+
+        Returns:
+            bool: True if connection was added successfully, False otherwise
         """
         if connection in self._connections:
-            # Ignore dupes
-            return
-        if self.dag_handler.add_graph_edge(connection.source, connection.destination):
-            self._connections.append(connection)
+            return False
+        if not self.dag_handler.add_graph_edge(connection.source, connection.destination):
+            return False
+        self._connections.append(connection)
+        dag = self.dag_handler.dag_with_node(connection.source)
+        self.connection_established.emit(connection)
+        if not self._is_dag_valid(dag):
+            return True  # Connection was added successfully even though DAG is not valid.
+        destination = self._project_item_model.get_item(connection.destination).project_item
+        self.notify_resource_changes_to_predecessors(destination)
+        source = self._project_item_model.get_item(connection.source).project_item
+        self.notify_resource_changes_to_successors(source)
+        destination.notify_destination(source)
+        self._update_ranks(dag)
+        return True
 
     def remove_connection(self, connection):
+        """Removes a connection from the project.
+
+        Args:
+            connection (Connection): connection to remove
+        """
+        self.connection_about_to_be_removed.emit(connection)
         self._connections.remove(connection)
-        self.dag_handler.remove_graph_edge(connection.source, connection.destination)
+        dags = self.dag_handler.remove_graph_edge(connection.source, connection.destination)
+        for dag in dags:
+            if not self._is_dag_valid(dag):
+                continue
+            destination = self._project_item_model.get_item(connection.destination).project_item
+            self._update_item_resources(destination, ExecutionDirection.FORWARD)
+            source = self._project_item_model.get_item(connection.source).project_item
+            self._update_item_resources(source, ExecutionDirection.BACKWARD)
+            self._update_ranks(dag)
+
+    def replace_connection(self, existing_connection, new_connection):
+        """Replaces an existing connection between items.
+
+        Replacing does not trigger any updates to the DAG or project items.
+
+        Args:
+            existing_connection (Connection): an established connection
+            new_connection (Connection): connection to replace by
+        """
+        self._connections.remove(existing_connection)
+        self._connections.append(new_connection)
+        self.connection_replaced.emit(existing_connection, new_connection)
 
     def set_item_selected(self, item):
         """
@@ -355,16 +442,12 @@ class SpineToolboxProject(MetaObject):
             verbosity (bool): If True, prints message
         """
         for category_ind, project_tree_items in self.make_project_tree_items(items_dict).items():
-            self.do_add_project_tree_items(
+            self._do_add_project_tree_items(
                 category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity
             )
 
-    def add_to_dag(self, item_name):
-        """Add new node (project item) to the directed graph."""
-        self.dag_handler.add_dag_node(item_name)
-
     def remove_all_items(self):
-        """Pushes a RemoveAllProjectItemsCommand to the toolbox undo stack."""
+        """Pushes a RemoveAllProjectItemsCommand to the Toolbox undo stack."""
         items_per_category = self._project_item_model.items_per_category()
         if not any(v for v in items_per_category.values()):
             self._logger.msg.emit("No project items to remove")
@@ -386,10 +469,7 @@ class SpineToolboxProject(MetaObject):
         answer = message_box.exec_()
         if answer != QMessageBox.Ok:
             return
-        links = self._toolbox.ui.graphicsView.links()
-        self._toolbox.undo_stack.push(
-            RemoveAllProjectItemsCommand(self, items_per_category, links, delete_data=delete_data)
-        )
+        self._toolbox.undo_stack.push(RemoveAllProjectItemsCommand(self, delete_data=delete_data))
 
     def remove_project_items(self, *indexes, ask_confirmation=False):
         """Pushes a RemoveProjectItemsCommand to the toolbox undo stack.
@@ -398,11 +478,10 @@ class SpineToolboxProject(MetaObject):
             *indexes (QModelIndex): Indexes of the items in project item model
             ask_confirmation (bool): If True, shows 'Are you sure?' message box
         """
-        indexes = list(indexes)
+        names = [i.data() for i in indexes]
         delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
         if ask_confirmation:
-            names = ", ".join(ind.data() for ind in indexes)
-            msg = f"Remove item(s) <b>{names}</b> from project? "
+            msg = f"Remove item(s) <b>{', '.join(names)}</b> from project? "
             if not delete_data:
                 msg += "Item data directory will still be available in the project directory after this operation."
             else:
@@ -420,41 +499,50 @@ class SpineToolboxProject(MetaObject):
             answer = message_box.exec_()
             if answer != QMessageBox.Ok:
                 return
-        self._toolbox.undo_stack.push(RemoveProjectItemsCommand(self, *indexes, delete_data=delete_data))
+        self._toolbox.undo_stack.push(RemoveProjectItemsCommand(self, names, delete_data=delete_data))
 
-    def do_remove_project_tree_items(self, category_ind, *items, delete_data=False, silent=False):
-        """Removes LeafProjectTreeItem from project.
+    def remove_item_by_name(self, item_name, delete_data=False):
+        """Removes project item by its name.
 
         Args:
-            category_ind (QModelIndex): The category index
+            item_name (str): Item's name
+            delete_data (bool): If set to True, deletes the directories and data associated with the item
+        """
+        for c in self.connections_for_item(item_name):
+            self.remove_connection(c)
+        self.dag_handler.remove_node_from_graph(item_name)
+        index = self._project_item_model.find_item(item_name)
+        self.item_about_to_be_removed.emit(item_name)
+        tree_item = self._project_item_model.item(index)
+        self._project_item_model.remove_item(tree_item, parent=index.parent())
+        item = tree_item.project_item
+        item.tear_down()
+        if delete_data:
+            try:
+                data_dir = item.data_dir
+            except AttributeError:
+                data_dir = None
+            if data_dir:
+                # Remove data directory and all its contents
+                self._logger.msg.emit(f"Removing directory <b>{data_dir}</b>")
+                try:
+                    if not erase_dir(data_dir):
+                        self._logger.msg_error.emit("Directory does not exist")
+                except OSError:
+                    self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
+        if self._project_item_model.n_items() == 0:
+            self._logger.msg.emit("All items removed from project.")
+
+    def do_remove_project_tree_items(self, *items, delete_data=False, silent=False):
+        """Removes LeafProjectTreeItem instances from project.
+
+        Args:
             *items (LeafProjectTreeItem): the items to remove
             delete_data (bool): If set to True, deletes the directories and data associated with the item
             silent (bool): Used to prevent unnecessary log messages when switching projects
         """
-        items = list(items)
         for item in items:
-            # Remove item from project model
-            self._project_item_model.remove_item(item, parent=category_ind)
-            # Remove item icon and connected links (QGraphicsItems) from scene
-            icon = item.project_item.get_icon()
-            self._toolbox.ui.graphicsView.remove_icon(icon)
-            item_name = item.name
-            self.dag_handler.remove_node_from_graph(item_name)
-            self._connections = [c for c in self._connections if item_name not in (c.source, c.destination)]
-            item.project_item.tear_down()
-            if delete_data:
-                try:
-                    data_dir = item.project_item.data_dir
-                except AttributeError:
-                    data_dir = None
-                if data_dir:
-                    # Remove data directory and all its contents
-                    self._logger.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
-                    try:
-                        if not erase_dir(data_dir):
-                            self._logger.msg_error.emit("Directory does not exist")
-                    except OSError:
-                        self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
+            self.remove_item_by_name(item.name, delete_data)
         if not silent:
             self._logger.msg.emit(f"Item(s) <b>{', '.join(item.name for item in items)}</b> removed from project")
 
@@ -549,7 +637,6 @@ class SpineToolboxProject(MetaObject):
         # being acquired by threads from different processes or maybe even different QThreads.
         # Can't say I really understand the whole extent of it.
         for finished_worker in self._engine_workers:
-            self.notify_changes_in_dag(finished_worker.dag)
             for item, direction, state in finished_worker.successful_executions:
                 item.handle_execution_successful(direction, state)
             finished_worker.clean_up()
@@ -613,100 +700,158 @@ class SpineToolboxProject(MetaObject):
         for worker in self._engine_workers:
             worker.stop_engine()
 
-    @Slot(object)
-    def notify_changes_in_dag(self, dag):
-        """Notifies the items in given dag that the dag has changed."""
-        # We wait 100 msecs before do the notification. This is to avoid notifying multiple
-        # times the same dag, when multiple items in that dag change.
-        if dag in self._dags_about_to_be_notified:
-            return
-        self._dags_about_to_be_notified.add(dag)
-        QTimer.singleShot(100, lambda dag=dag: self._do_notify_changes_in_dag(dag))
+    def notify_resource_changes_to_predecessors(self, item):
+        """Updates resources for direct predecessors of given item.
 
-    def _do_notify_changes_in_dag(self, dag):
-        self._dags_about_to_be_notified.remove(dag)
+        Args:
+            item (ProjectItem): item whose resources have changed
+        """
+        self._notify_resource_changes(item, ExecutionDirection.BACKWARD)
+
+    def notify_resource_changes_to_successors(self, item):
+        """Updates resources for direct successors and outgoing connections of given item.
+
+        Args:
+            item (ProjectItem): item whose resources have changed
+        """
+        self._notify_resource_changes(item, ExecutionDirection.FORWARD)
+
+    def _notify_resource_changes(self, item, direction):
+        """Updates resources in given direction for immediate neighbours of an item.
+
+        Updates connections' resources too if needed.
+
+         Args:
+             item (ProjectItem): item whose resources have changed
+             direction (ExecutionDirection): FORWARD notifies direct successors, BACKWARD direct predecessors
+         """
+        trigger_name = item.name
+        target_names = (
+            self.successor_names(trigger_name)
+            if direction == ExecutionDirection.FORWARD
+            else self._predecessor_names(trigger_name)
+        )
+        provider_names = self._predecessor_names if ExecutionDirection.FORWARD else self.successor_names
+        update_resources = (
+            self._update_successor if direction == ExecutionDirection.FORWARD else self._update_predecessor
+        )
+        trigger_resources = (
+            item.resources_for_direct_successors
+            if direction == ExecutionDirection.FORWARD
+            else item.resources_for_direct_predecessors
+        )
+        resource_cache = {trigger_name: trigger_resources()}
+        for target_name in target_names:
+            target_item = self._project_item_model.get_item(target_name).project_item
+            provider_items = [
+                self._project_item_model.get_item(name).project_item for name in provider_names(target_name)
+            ]
+            update_resources(target_item, provider_items, resource_cache)
+        if direction == ExecutionDirection.FORWARD:
+            outgoing_connections = [c for c in self._connections if c.source == trigger_name]
+            resources = resource_cache[trigger_name]
+            for connection in outgoing_connections:
+                connection.receive_resources_from_source(resources)
+
+    def _update_item_resources(self, target_item, direction):
+        """Updates up or downstream resources for a single project item.
+
+        Args:
+            target_item (ProjectItem): item whose resource need update
+            direction (ExecutionDirection): FORWARD updates resources from upstream, BACKWARD from downstream
+        """
+        target_name = target_item.name
+        connected_names = (
+            self.successor_names(target_name)
+            if direction == ExecutionDirection.FORWARD
+            else self._predecessor_names(target_name)
+        )
+        provider_items = [self._project_item_model.get_item(name).project_item for name in connected_names]
+        if direction == ExecutionDirection.FORWARD:
+            self._update_successor(target_item, provider_items, resource_cache={})
+        else:
+            self._update_predecessor(target_item, provider_items, resource_cache={})
+
+    def successor_names(self, name):
+        """Collects direct successor item names.
+
+        Args:
+            name (str): name of the project item whose successors to collect
+
+        Returns:
+            set of str: direct successor names
+        """
+        return {c.destination for c in self._connections if c.source == name}
+
+    def _predecessor_names(self, name):
+        """Collects direct predecessor item names.
+
+        Args:
+            name (str): name of the project item whose predecessors to collect
+
+        Returns:
+            set of str: direct predecessor names
+        """
+        return {c.source for c in self._connections if c.destination == name}
+
+    @staticmethod
+    def _update_successor(successor, predecessors, resource_cache):
+        combined_resources = list()
+        for item in predecessors:
+            resources = resource_cache.get(item.name)
+            if resources is None:
+                resources = item.resources_for_direct_successors()
+                resource_cache[item.name] = resources
+            combined_resources += resources
+        successor.upstream_resources_updated(combined_resources)
+
+    @staticmethod
+    def _update_successor(successor, predecessors, resource_cache):
+        combined_resources = list()
+        for item in predecessors:
+            resources = resource_cache.get(item.name)
+            if resources is None:
+                resources = item.resources_for_direct_successors()
+                resource_cache[item.name] = resources
+            combined_resources += resources
+        successor.upstream_resources_updated(combined_resources)
+
+    @staticmethod
+    def _update_predecessor(predecessor, successors, resource_cache):
+        combined_resources = list()
+        for item in successors:
+            resources = resource_cache.get(item.name)
+            if resources is None:
+                resources = item.resources_for_direct_predecessors()
+                resource_cache[item.name] = resources
+            combined_resources += resources
+        predecessor.downstream_resources_updated(combined_resources)
+
+    def _is_dag_valid(self, dag):
         node_successors = self.dag_handler.node_successors(dag)
         items = {item.name: item.project_item for item in self._project_item_model.items()}
         if not node_successors:
-            # Not a dag, invalidate workflow
             edges = self.dag_handler.edges_causing_loops(dag)
             for node in dag.nodes():
                 items[node].invalidate_workflow(edges)
-            return
-        # Make resource map and run simulation
-        node_predecessors = inverted(node_successors)
+            return False
+        return True
+
+    def _update_ranks(self, dag):
+        node_successors = self.dag_handler.node_successors(dag)
         ranks = _ranks(node_successors)
-        # Memoize resources, so we don't call multiple times the same function
-        resources_for_direct_successors = {}
-        resources_for_direct_predecessors = {}
-        for item_name, child_names in node_successors.items():
-            item = items[item_name]
-            upstream_resources = []
-            downstream_resources = []
-            for parent_name in node_predecessors.get(item_name, set()):
-                parent_item = items[parent_name]
-                if parent_item not in resources_for_direct_successors:
-                    resources_for_direct_successors[parent_item] = parent_item.resources_for_direct_successors()
-                upstream_resources += resources_for_direct_successors[parent_item]
-            for child_name in child_names:
-                child_item = items[child_name]
-                if child_item not in resources_for_direct_predecessors:
-                    resources_for_direct_predecessors[child_item] = child_item.resources_for_direct_predecessors()
-                downstream_resources += resources_for_direct_predecessors[child_item]
-            item.handle_dag_changed(ranks[item_name], upstream_resources, downstream_resources)
-            if item_name not in resources_for_direct_successors:
-                resources_for_direct_successors[item_name] = item.resources_for_direct_successors()
-            for link in item.get_icon().outgoing_links():
-                link.handle_dag_changed(resources_for_direct_successors[item_name])
-
-    def notify_changes_in_all_dags(self):
-        """Notifies all items of changes in all dags in the project."""
-        for g in self.dag_handler.dags():
-            self.notify_changes_in_dag(g)
-
-    def notify_changes_in_containing_dag(self, item):
-        """Notifies items in dag containing the given item that the dag has changed."""
-        dag = self.dag_handler.dag_with_node(item)
-        # Some items trigger this method while they are being initialized
-        # but before they have been added to any DAG.
-        # In those cases we don't need to notify other items.
-        if dag:
-            self.notify_changes_in_dag(dag)
-
-    def is_busy(self):
-        """Queries if project is busy processing something.
-
-        Returns:
-            bool: True if project is busy, False otherwise
-        """
-        return bool(self._dags_about_to_be_notified)
+        for item_name in node_successors:
+            item = self._project_item_model.get_item(item_name).project_item
+            item.set_rank(ranks[item_name])
 
     @property
     def settings(self):
         return self._settings
 
-    def _finish_project_item_construction(self, project_item):
-        """
-        Activates the given project item so it works with the given toolbox.
-        This is mainly intended to facilitate adding items back with redo.
-
-        Args:
-            project_item (ProjectItem)
-        """
-        icon = project_item.get_icon()
-        if icon is not None:
-            icon.activate()
-        else:
-            icon = self._toolbox.project_item_icon(project_item.item_type())
-            project_item.set_icon(icon)
-        properties_ui = self._toolbox.project_item_properties_ui(project_item.item_type())
-        project_item.set_properties_ui(properties_ui)
-        project_item.set_up()
-
     def tear_down(self, silent=False):
         """Cleans up project."""
-        for category_ind, project_tree_items in self._project_item_model.items_per_category().items():
-            self.do_remove_project_tree_items(category_ind, *project_tree_items, delete_data=False, silent=silent)
+        for project_tree_items in self._project_item_model.items_per_category().values():
+            self.do_remove_project_tree_items(*project_tree_items, delete_data=False, silent=silent)
 
 
 def _ranks(node_successors):

@@ -25,8 +25,6 @@ import networkx as nx
 class DirectedGraphHandler(QObject):
     """Class for manipulating graphs according to user's actions."""
 
-    dag_simulation_requested = Signal("QVariant")
-
     def __init__(self):
         super().__init__()
         self._dags = list()
@@ -35,16 +33,13 @@ class DirectedGraphHandler(QObject):
         """Returns a list of graphs (DiGraph) in the project."""
         return self._dags
 
-    def add_dag(self, dag, request_simulation=True):
+    def add_dag(self, dag):
         """Add graph to list.
 
         Args:
             dag (DiGraph): Graph to add
-            request_simulation (bool): if True, emits dag_simulation_requested
         """
         self._dags.append(dag)
-        if request_simulation:
-            self.dag_simulation_requested.emit(dag)
 
     def remove_dag(self, dag):
         """Remove graph from instance variable list.
@@ -87,7 +82,6 @@ class DirectedGraphHandler(QObject):
         if src_graph == dst_graph:
             # src and dst are already in same graph. Just add edge to src_graph and return
             src_graph.add_edge(src_node, dst_node)
-            self.dag_simulation_requested.emit(src_graph)
         else:
             # Unify graphs
             union_dag = nx.union(src_graph, dst_graph)
@@ -105,15 +99,17 @@ class DirectedGraphHandler(QObject):
         Args:
             src_node (str): Source project item node name
             dst_node (str): Destination project item node name
+
+        Returns:
+            list of DiGraph: One or two DAGs containing source and destination nodes.
         """
         dag = self.dag_with_edge(src_node, dst_node)
         dag.remove_edge(src_node, dst_node)
         components = list(nx.weakly_connected_components(dag))
         if len(components) == 1:
-            # Graph wasn't splitted, we're fine
-            self.dag_simulation_requested.emit(dag)
-            return
-        # Graph was splitted into two
+            # Graph wasn't split, we're fine
+            return [dag]
+        # Graph was split into two
         left_nodes, right_nodes = components
         left_edges = nx.edges(dag, left_nodes)
         right_edges = nx.edges(dag, right_nodes)
@@ -129,6 +125,7 @@ class DirectedGraphHandler(QObject):
         self.remove_dag(dag)
         self.add_dag(left_graph)
         self.add_dag(right_graph)
+        return [left_graph, right_graph]
 
     def remove_node_from_graph(self, node_name):
         """Removes node from a graph that contains it. Called when project item is removed from project.
@@ -158,8 +155,6 @@ class DirectedGraphHandler(QObject):
         g.remove_nodes_from(nodes_to_remove)
         if not g.nodes():
             self.remove_dag(g)
-        else:
-            self.dag_simulation_requested.emit(g)
 
     def rename_node(self, old_name, new_name):
         """Handles renaming the node and edges in a graph when a project item is renamed.

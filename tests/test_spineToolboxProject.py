@@ -247,10 +247,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         add_view(project, destination_name)
         source_item = project.get_item("source")
         project.add_connection(Connection(source_name, "left", destination_name, "right"))
-        while project.is_busy():
-            # Make sure we process all pending signals related to changes in DAG.
-            # Otherwise me may rename the item while the old name is still in use.
-            QApplication.processEvents()
         project.rename_item("source", "renamed source", "")
         self.assertTrue(bool(project.get_item("renamed source")))
         self.assertEqual(source_item.name, "renamed source")

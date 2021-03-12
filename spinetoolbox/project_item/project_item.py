@@ -17,7 +17,7 @@ Contains base classes for project items and item factories.
 
 import os
 import logging
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import Slot
 from spine_engine.utils.helpers import shorten
 from ..helpers import create_dir, open_url
 from ..metaobject import MetaObject
@@ -34,11 +34,6 @@ class ProjectItem(MetaObject):
         x (float): horizontal position in the screen
         y (float): vertical position in the screen
     """
-
-    item_executed = Signal(object, object)
-    """Emitted when the item has been successfully executed."""
-    item_changed = Signal()
-    """Request DAG update. Emitted when a change affects other items in the DAG."""
 
     def __init__(self, name, description, x, y, project):
         """
@@ -59,8 +54,6 @@ class ProjectItem(MetaObject):
         self._sigs = None
         self._active = False
         self._actions = list()
-        self.item_changed.connect(lambda: self._project.notify_changes_in_containing_dag(self.name))
-        self.item_executed.connect(self.handle_execution_successful)
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
@@ -214,6 +207,9 @@ class ProjectItem(MetaObject):
         """Returns the graphics item representing this item in the scene."""
         return self._icon
 
+    def _check_notifications(self):
+        """Checks if exclamation icon notifications need to be set or cleared."""
+
     def clear_notifications(self):
         """Clear all notifications from the exclamation icon."""
         self.get_icon().exclamation_icon.clear_notifications()
@@ -233,9 +229,13 @@ class ProjectItem(MetaObject):
     def executable_class(self):
         raise NotImplementedError()
 
-    @Slot(object, object)
     def handle_execution_successful(self, execution_direction, engine_state):
-        """Performs item dependent actions after the execution item has finished successfully."""
+        """Performs item dependent actions after the execution item has finished successfully.
+
+        Args:
+            execution_direction (str): "FORWARD" or "BACKWARD"
+            engine_state: engine state after item's execution
+        """
 
     # pylint: disable=no-self-use
     def resources_for_direct_successors(self):
@@ -262,31 +262,26 @@ class ProjectItem(MetaObject):
         """
         return list()
 
-    def handle_dag_changed(self, rank, upstream_resources, downstream_resources):
-        """
-        Handles changes in the DAG.
+    def _resources_to_predecessors_changed(self):
+        """Notifies direct predecessors that item's resources have changed."""
+        self._project.notify_resource_changes_to_predecessors(self)
 
-        Subclasses should reimplement the _do_handle_dag_changed() method.
-
-        Args:
-            rank (int): item's execution order
-            upstream_resources (list): resources available from upstream
-            downstream_resources (list, optional): resources available from downstream
-        """
-        self.clear_notifications()
-        self.set_rank(rank)
-        self._do_handle_dag_changed(upstream_resources, downstream_resources)
-
-    def _do_handle_dag_changed(self, upstream_resources, downstream_resources):
-        """
-        Handles changes in the DAG.
-
-        Usually this entails validating the input resources and populating file references etc.
-        The default implementation does nothing.
+    def upstream_resources_updated(self, resources):
+        """Notifies item that resources from direct predecessors have changed.
 
         Args:
-            upstream_resources (list): resources available from upstream
-            downstream_resources (list, optional): resources available from downstream
+            resources (list of ProjectItemResource): new resources from upstream
+        """
+
+    def _resources_to_successors_changed(self):
+        """Notifies direct successors that item's resources have changed."""
+        self._project.notify_resource_changes_to_successors(self)
+
+    def downstream_resources_updated(self, resources):
+        """Notifies item that resources from direct successors have changed.
+
+        Args:
+            resources (list of ProjectItemResource): new resources from downstream
         """
 
     def invalidate_workflow(self, edges):
@@ -406,6 +401,8 @@ class ProjectItem(MetaObject):
         """Sets up this item. Called when adding the item to the project.
         Implement in subclasses to eg recreate attributes destroyed by tear_down.
         """
+        self.set_rank(0)
+        self._check_notifications()
         self.create_data_dir()
         self.do_set_specification(self._specification)
 

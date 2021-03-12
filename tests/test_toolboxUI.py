@@ -27,10 +27,10 @@ from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import Qt, QPoint, QItemSelectionModel, QPointF, QMimeData
 from PySide2.QtTest import QTest
 from PySide2.QtGui import QDropEvent
-from spinetoolbox.graphics_items import ProjectItemIcon
+from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
-from spinetoolbox.graphics_items import Link
+from spinetoolbox.link import Link
 from spinetoolbox.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
 from .mock_helpers import clean_up_toolbox, create_toolboxui, create_project, add_ds, add_dc

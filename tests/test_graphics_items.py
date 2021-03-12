@@ -25,7 +25,8 @@ from PySide2.QtWidgets import QApplication, QGraphicsSceneMouseEvent
 from spinedb_api import DiffDatabaseMapping, import_scenarios, import_tools
 from spine_engine.project_item.connection import Connection
 from spine_engine.project_item.project_item_resource import database_resource
-from spinetoolbox.graphics_items import ExclamationIcon, Link, ProjectItemIcon, RankIcon
+from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
+from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
 from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
@@ -49,7 +50,6 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(icon.name(), "")
         self.assertEqual(icon.x(), 0)
         self.assertEqual(icon.y(), 0)
-        self.assertIn(icon, self._toolbox.ui.graphicsView.scene().items())
         self.assertEqual(icon.incoming_links(), [])
         self.assertEqual(icon.outgoing_links(), [])
 
@@ -81,6 +81,7 @@ class TestProjectItemIcon(unittest.TestCase):
 
     def test_drag_icon(self):
         icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
+        self._toolbox.ui.graphicsView.scene().addItem(icon)
         self.assertEqual(icon.x(), 0.0)
         self.assertEqual(icon.y(), 0.0)
         icon.mousePressEvent(QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMousePress))
@@ -175,7 +176,7 @@ class TestLink(unittest.TestCase):
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.handle_dag_changed([database_resource("provider", url)])
+        self._link.connection.receive_resources_from_source([database_resource("provider", url)])
         self._link.refresh_resource_filter_model()
         self.assertTrue(self._link.connection.has_filters())
         filter_model = self._link.resource_filter_model
@@ -201,7 +202,7 @@ class TestLink(unittest.TestCase):
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.handle_dag_changed([database_resource("provider", url)])
+        self._link.connection.receive_resources_from_source([database_resource("provider", url)])
         self._link.refresh_resource_filter_model()
         self.assertTrue(self._link.connection.has_filters())
         filter_model = self._link.resource_filter_model
@@ -227,7 +228,7 @@ class TestLink(unittest.TestCase):
         import_scenarios(db_map, (("scenario", True),))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.handle_dag_changed([database_resource("provider", url)])
+        self._link.connection.receive_resources_from_source([database_resource("provider", url)])
         self._link.refresh_resource_filter_model()
         filter_model = self._link.resource_filter_model
         filter_model.set_online(url, "scenario_filter", {1: True})
@@ -239,7 +240,7 @@ class TestLink(unittest.TestCase):
         import_tools(db_map, ("tool",))
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        self._link.handle_dag_changed([database_resource("provider", url)])
+        self._link.connection.receive_resources_from_source([database_resource("provider", url)])
         self._link.refresh_resource_filter_model()
         filter_model = self._link.resource_filter_model
         filter_model.set_online(url, "tool_filter", {1: True})

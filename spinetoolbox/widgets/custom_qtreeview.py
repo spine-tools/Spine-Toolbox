@@ -18,8 +18,7 @@ Classes for custom QTreeView.
 
 import os
 from PySide2.QtWidgets import QTreeView, QApplication
-from PySide2.QtCore import Signal, Qt, QMimeData, QUrl
-from PySide2.QtGui import QDrag
+from PySide2.QtCore import Signal, Qt
 
 
 class CopyTreeView(QTreeView):
@@ -51,8 +50,8 @@ class SourcesTreeView(QTreeView):
         parent (QWidget): The parent of this view
     """
 
-    files_dropped = Signal("QVariant", name="files_dropped")
-    del_key_pressed = Signal(name="del_key_pressed")
+    files_dropped = Signal(list)
+    del_key_pressed = Signal()
 
     def __init__(self, parent):
         """Initialize the view."""

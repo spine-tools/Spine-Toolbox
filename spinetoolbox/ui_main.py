@@ -41,7 +41,7 @@ from PySide2.QtWidgets import (
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from spine_engine.utils.helpers import shorten
-from .graphics_items import ProjectItemIcon
+from .project_item_icon import ProjectItemIcon
 from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
@@ -391,7 +391,6 @@ class ToolboxUI(QMainWindow):
         )
         self._enable_project_actions()
         self.ui.actionSave.setDisabled(True)  # Disable in a clean project
-        self._project.connect_signals()
         self._connect_project_signals()
         self.populate_specification_model(list())  # Start project with no specifications
         self.update_window_title()
@@ -508,12 +507,6 @@ class ToolboxUI(QMainWindow):
         # Populate project model with project items
         self._project.load(project_items, connections)
         self.ui.treeView_project.expandAll()
-        # Restore connections
-        self.msg.emit("Restoring connections...")
-        self.ui.graphicsView.restore_links(self._project.connections)
-        # Simulate project execution after restoring links
-        self._project.notify_changes_in_all_dags()
-        self._project.connect_signals()
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
@@ -693,7 +686,6 @@ class ToolboxUI(QMainWindow):
             self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
-        self.ui.graphicsView.set_project_item_model(self.project_item_model)
 
     def init_specification_model(self):
         """Initializes specification model."""
@@ -1717,7 +1709,7 @@ class ToolboxUI(QMainWindow):
         self.link_context_menu = LinkContextMenu(self, pos, link)
         option = self.link_context_menu.get_action()
         if option == "Remove connection":
-            self.ui.graphicsView.remove_links(link)
+            self.ui.graphicsView.remove_links([link])
             return
         if option == "Take connection":
             self.ui.graphicsView.take_link(link)
@@ -2127,6 +2119,12 @@ class ToolboxUI(QMainWindow):
         self._project.project_execution_about_to_start.connect(self.ui.textBrowser_eventlog.scroll_to_bottom)
         self._project.project_execution_about_to_start.connect(self._handle_project_execution_about_to_start)
         self._project.project_execution_finished.connect(self._handle_project_execution_finished)
+        self._project.item_added.connect(self.set_icon_and_properties_ui)
+        self._project.item_added.connect(self.ui.graphicsView.add_icon)
+        self._project.item_about_to_be_removed.connect(self.ui.graphicsView.remove_icon)
+        self._project.connection_established.connect(self.ui.graphicsView.do_add_link)
+        self._project.connection_replaced.connect(self.ui.graphicsView.do_replace_link)
+        self._project.connection_about_to_be_removed.connect(self.ui.graphicsView.do_remove_link)
 
     @Slot()
     def _handle_project_execution_about_to_start(self):
@@ -2142,6 +2140,19 @@ class ToolboxUI(QMainWindow):
         inds = self.ui.treeView_project.selectedIndexes()
         self.main_toolbar.execute_selection_button.setEnabled(bool(inds))
         self.main_toolbar.stop_execution_button.setEnabled(False)
+
+    @Slot(str)
+    def set_icon_and_properties_ui(self, item_name):
+        """Adds properties UI to given project item.
+
+        Args:
+            item_name (str): item's name
+        """
+        project_item = self._project.get_item(item_name)
+        icon = self.project_item_icon(project_item.item_type())
+        project_item.set_icon(icon)
+        properties_ui = self.project_item_properties_ui(project_item.item_type())
+        project_item.set_properties_ui(properties_ui)
 
     def project_item_properties_ui(self, item_type):
         """Returns the properties tab widget's ui.
@@ -2181,8 +2192,6 @@ class ToolboxUI(QMainWindow):
         if not self.ui.graphicsView.scene().selectedItems():
             return
         self.undo_stack.beginMacro("remove items and links")
-        # NOTE: Remove project items before links, otherwise funny things happen
-        # related to dag simulation
         selection_model = self.ui.treeView_project.selectionModel()
         self._project.remove_project_items(*selection_model.selection().indexes())
         self.ui.graphicsView.remove_selected_links()

@@ -50,8 +50,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox = toolbox
         self.icon_file = icon_file
         self._moved_on_scene = False
-        self._previous_pos = QPointF()
-        self._current_pos = QPointF()
+        self.previous_pos = QPointF()
+        self.current_pos = QPointF()
         self.icon_group = {self}
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem(self)
@@ -74,7 +74,10 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.rank_icon = RankIcon(self)
         brush = QBrush(background_color)
         self._setup(brush, icon_file, icon_color)
-        self.activate()
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setOffset(1)
+        shadow_effect.setEnabled(False)
+        self.setGraphicsEffect(shadow_effect)
 
     def finalize(self, name, x, y):
         """
@@ -87,17 +90,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         self.update_name_item(name)
         self.moveBy(x, y)
-
-    def activate(self):
-        """Adds items to scene and setup graphics effect.
-        Called in the constructor and when re-adding the item to the project in the context of undo/redo.
-        """
-        scene = self._toolbox.ui.graphicsView.scene()
-        scene.addItem(self)
-        shadow_effect = QGraphicsDropShadowEffect()
-        shadow_effect.setOffset(1)
-        shadow_effect.setEnabled(False)
-        self.setGraphicsEffect(shadow_effect)
 
     def _setup(self, brush, svg, svg_color):
         """Setup item's attributes.
@@ -232,7 +224,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         super().mousePressEvent(event)
         self.icon_group = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)) | {self}
         for icon in self.icon_group:
-            icon._previous_pos = icon.scenePos()
+            icon.previous_pos = icon.scenePos()
 
     def mouseMoveEvent(self, event):
         """Moves icon(s) while the mouse button is pressed.
@@ -256,10 +248,10 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def mouseReleaseEvent(self, event):
         for icon in self.icon_group:
-            icon._current_pos = icon.scenePos()
+            icon.current_pos = icon.scenePos()
         # pylint: disable=undefined-variable
-        if (self._current_pos - self._previous_pos).manhattanLength() > qApp.startDragDistance():
-            self._toolbox.undo_stack.push(MoveIconCommand(self))
+        if (self.current_pos - self.previous_pos).manhattanLength() > qApp.startDragDistance():
+            self._toolbox.undo_stack.push(MoveIconCommand(self, self._toolbox.project()))
         super().mouseReleaseEvent(event)
 
     def notify_item_move(self):
@@ -364,7 +356,7 @@ class ConnectorButton(QGraphicsRectItem):
         Returns:
             ProjectItem: project item
         """
-        return self._toolbox.project_item_model.get_item(self._parent.name()).project_item
+        return self._toolbox.project().get_item(self._parent.name())
 
     def mousePressEvent(self, event):
         """Connector button mouse press event. Either starts or closes a link.

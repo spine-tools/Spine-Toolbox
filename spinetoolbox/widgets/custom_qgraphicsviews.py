@@ -16,15 +16,14 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 :date:   6.2.2018
 """
 
-import logging
 import math
-from PySide2.QtWidgets import QGraphicsView, QGraphicsRectItem
+from PySide2.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF
-from spine_engine import ExecutionDirection, SpineEngineState
 from spine_engine.project_item.connection import Connection
-from ..graphics_items import Link, ProjectItemIcon
-from ..project_commands import AddLinkCommand, RemoveLinksCommand
+from ..project_item_icon import ProjectItemIcon
+from ..project_commands import AddConnectionCommand, RemoveConnectionsCommand
+from ..link import Link
 from .custom_qgraphicsscene import DesignGraphicsScene
 
 
@@ -161,7 +160,7 @@ class CustomQGraphicsView(QGraphicsView):
         scene.item_removed.connect(lambda _item: self._set_preferred_scene_rect())
         self.viewport().setCursor(Qt.ArrowCursor)
 
-    @Slot("QGraphicsItem")
+    @Slot(QGraphicsItem)
     def _handle_item_move_finished(self, item):
         self._ensure_item_visible(item)
         self._update_zoom_limits()
@@ -288,16 +287,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._scene = None
         self._toolbox = None
-        self._project_item_model = None
 
     def set_ui(self, toolbox):
         """Set a new scene into the Design View when app is started."""
         self._toolbox = toolbox
         self.setScene(DesignGraphicsScene(self, toolbox))
-
-    def set_project_item_model(self, model):
-        """Set project item model."""
-        self._project_item_model = model
 
     def reset_zoom(self):
         super().reset_zoom()
@@ -318,21 +312,35 @@ class DesignQGraphicsView(CustomQGraphicsView):
         viewport_extent = min(self.viewport().width(), self.viewport().height())
         return viewport_extent / item_view_rect.width()
 
-    def remove_icon(self, icon):
-        """Removes icon and all connected links from scene."""
-        links = set(link for conn in icon.connectors.values() for link in conn.links)
-        for link in links:
-            self.scene().removeItem(link)
-            # Remove Link from connectors
-            link.src_connector.links.remove(link)
-            link.dst_connector.links.remove(link)
+    @Slot(str)
+    def add_icon(self, item_name):
+        """Adds project item's icon to the scene.
+
+        Args:
+            item_name (str): project item's name
+        """
+        project_item = self._toolbox.project().get_item(item_name)
+        icon = project_item.get_icon()
+        self.scene().addItem(icon)
+
+    @Slot(str)
+    def remove_icon(self, item_name):
+        """Removes project item's icon from scene.
+
+        Args:
+            item_name (str): name of the icon to remove
+        """
+        icon = self._toolbox.project().get_item(item_name).get_icon()
         scene = self.scene()
         scene.removeItem(icon)
         self._set_preferred_scene_rect()
 
     def links(self):
         """Returns all Links in the scene.
-        Used for saving the project."""
+
+        Returns:
+            list of Link: scene's links
+        """
         return [item for item in self.items() if isinstance(item, Link)]
 
     def add_link(self, src_connector, dst_connector):
@@ -343,8 +351,15 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_connector (ConnectorButton): source connector button
             dst_connector (ConnectorButton): destination connector button
         """
-        self._toolbox.undo_stack.push(AddLinkCommand(self, src_connector, dst_connector))
-        self.notify_destination_items(src_connector, dst_connector)
+        self._toolbox.undo_stack.push(
+            AddConnectionCommand(
+                self._toolbox.project(),
+                src_connector.parent_name(),
+                src_connector.position,
+                dst_connector.parent_name(),
+                dst_connector.position,
+            )
+        )
 
     def make_link(self, src_connector, dst_connector, connection=None):
         """Constructs a Link between given connectors.
@@ -366,129 +381,74 @@ class DesignQGraphicsView(CustomQGraphicsView):
             )
         return Link(self._toolbox, src_connector, dst_connector, connection)
 
-    def restore_link(self, src_connector, dst_connector, connection):
-        """Restores a Link between given source and destination connectors.
+    @Slot(object)
+    def do_add_link(self, connection):
+        """Adds given connection to the Design view.
 
         Args:
-            src_connector (ConnectorButton): Source connector button
-            dst_connector (ConnectorButton): Destination connector button
-            connection (connection, optional): connection between source and destination
+            connection (Connection): the connection to add
         """
-        link = self.make_link(src_connector, dst_connector, connection)
-        self.do_add_or_replace_link(link, False)
-
-    def do_add_or_replace_link(self, link, establish_connection=True):
-        """Adds given Link to or replaces existing parallel link on the Design view.
-
-        Args:
-            link (Link): the link to add
-            establish_connection (bool): if True, link's connection is added to the project
-
-        Returns:
-            Link: replaced link or None if no link was replaced
-        """
-        replaced_link = self._remove_redundant_link(link)
+        project = self._toolbox.project()
+        source_connector = project.get_item(connection.source).get_icon().conn_button(connection.source_position)
+        destination_connector = (
+            project.get_item(connection.destination).get_icon().conn_button(connection.destination_position)
+        )
+        link = self.make_link(source_connector, destination_connector, connection)
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
         self.scene().addItem(link)
-        if establish_connection:
-            link.establish_connection()
-        return replaced_link
 
-    @staticmethod
-    def _remove_redundant_link(link):
-        """Checks if there's a link with the same source and destination as the given one,
-        wipes it out and returns it.
+    @Slot(object, object)
+    def do_replace_link(self, original_connection, new_connection):
+        """Replaces a link on the Design view.
 
         Args:
-            link (Link): a new link being added to the project.
-
-        Returns
-            Link, NoneType
+            original_connection (Connection): connection that was replaced
+            new_connection (Connection): replacing connection
         """
-        for replaced_link in link.src_connector.parent.outgoing_links():
-            if replaced_link.dst_connector.parent == link.dst_connector.parent:
-                replaced_link.wipe_out()
-                return replaced_link
-        return None
+        self.do_remove_link(original_connection)
+        self.do_add_link(new_connection)
 
-    def remove_links(self, *links):
-        """Pushes a RemoveLinksCommand to the toolbox undo stack.
+    def remove_links(self, links):
+        """Pushes a RemoveConnectionsCommand to the Toolbox undo stack.
+
+        Args:
+            links (list of Link): links to remove
         """
-        self._toolbox.undo_stack.push(RemoveLinksCommand(self, *links))
+        connections = list()
+        for link in links:
+            source = link.src_connector
+            destination = link.dst_connector
+            connections.append(
+                Connection(source.parent_name(), source.position, destination.parent_name(), destination.position)
+            )
+        self._toolbox.undo_stack.push(RemoveConnectionsCommand(self._toolbox.project(), connections))
+
+    @Slot(object)
+    def do_remove_link(self, connection):
+        """Removes a link from the scene.
+
+        Args:
+            connection (Connection): link's connection
+        """
+        for link in self.links():
+            source_name = link.src_connector.parent_name()
+            destination_name = link.dst_connector.parent_name()
+            if source_name == connection.source and destination_name == connection.destination:
+                link.wipe_out()
+                break
 
     def remove_selected_links(self):
-        self.remove_links(*[item for item in self.scene().selectedItems() if isinstance(item, Link)])
+        self.remove_links([item for item in self.scene().selectedItems() if isinstance(item, Link)])
 
     def take_link(self, link):
         """Remove link, then start drawing another one from the same source connector."""
-        self.remove_links(link)
+        self.remove_links([link])
         link_drawer = self.scene().link_drawer
         link_drawer.wake_up(link.src_connector)
         # noinspection PyArgumentList
         link_drawer.tip = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
         link_drawer.update_geometry()
-
-    def restore_links(self, connections):
-        """Creates Links from the given connections list.
-
-        Args:
-            connections (list of Connection): List of connections.
-        """
-        for conn in connections:
-            source_item = self._project_item_model.get_item(conn.source).project_item
-            src_connector = source_item.get_icon().conn_button(conn.source_position)
-            destination_item = self._project_item_model.get_item(conn.destination).project_item
-            dst_connector = destination_item.get_icon().conn_button(conn.destination_position)
-            self.restore_link(src_connector, dst_connector, conn)
-
-    def notify_destination_items(self, src_connector, dst_connector):
-        """Notify destination items that they have been connected to a source item."""
-        src_item_name = src_connector.parent_name()
-        dst_item_name = dst_connector.parent_name()
-        src_leaf_item = self._project_item_model.get_item(src_item_name)
-        if src_leaf_item is None:
-            logging.error("Item %s not found", src_item_name)
-            return
-        dst_leaf_item = self._project_item_model.get_item(dst_item_name)
-        if dst_leaf_item is None:
-            logging.error("Item %s not found", dst_item_name)
-            return
-        src_item = src_leaf_item.project_item
-        dst_item = dst_leaf_item.project_item
-        dst_item.notify_destination(src_item)
-
-    @Slot(str, "QVariant")
-    def _start_animation(self, item_name, direction):
-        """Starts item icon animation when executing forward."""
-        if direction == ExecutionDirection.BACKWARD:
-            return
-        item = self._project_item_model.get_item(item_name).project_item
-        icon = item.get_icon()
-        if hasattr(icon, "animation_signaller"):
-            icon.animation_signaller.animation_started.emit()
-
-    @Slot(str, "QVariant", "QVariant")
-    def _stop_animation(self, item_name, direction, _):
-        """Stops item icon animation when executing forward."""
-        if direction == ExecutionDirection.BACKWARD:
-            return
-        item = self._project_item_model.get_item(item_name).project_item
-        icon = item.get_icon()
-        if hasattr(icon, "animation_signaller"):
-            icon.animation_signaller.animation_stopped.emit()
-
-    @Slot(str, "QVariant", "QVariant")
-    def _run_leave_animation(self, item_name, direction, engine_state):
-        """
-        Runs the animation that represents execution leaving this item.
-        Blocks until the animation is finished.
-        """
-        if direction == ExecutionDirection.BACKWARD or engine_state != SpineEngineState.RUNNING:
-            return
-        item = self._project_item_model.get_item(item_name).project_item
-        icon = item.get_icon()
-        icon.run_execution_leave_animation(False)
 
     def contextMenuEvent(self, event):
         """Shows context menu for the blank view
