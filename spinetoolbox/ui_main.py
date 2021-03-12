@@ -173,9 +173,6 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
         self._proposed_item_name_counts = dict()
-        self.ui.actionSave.setDisabled(True)
-        self.ui.actionSave_As.setDisabled(True)
-        self.ui.actionClose.setDisabled(True)
         self.restore_ui()
         self.ui.dockWidget_executions.hide()
         self.parse_project_item_modules()
@@ -392,12 +389,11 @@ class ToolboxUI(QMainWindow):
             self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
         )
         self._enable_project_actions()
+        self.ui.actionSave.setDisabled(True)  # Disable in a clean project
         self._project.connect_signals()
         self._connect_project_signals()
         self.populate_specification_model(list())  # Start project with no specifications
         self.update_window_title()
-        self.ui.actionSave_As.setEnabled(True)
-        self.ui.actionClose.setEnabled(True)
         self.ui.graphicsView.reset_zoom()
         # Update recentProjects
         self.update_recent_projects()
@@ -498,11 +494,9 @@ class ToolboxUI(QMainWindow):
             self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
         )
         self._enable_project_actions()
+        self.ui.actionSave.setDisabled(True)  # Save is disabled in a clean project
         self._connect_project_signals()
         self.update_window_title()
-        self.ui.actionSave.setDisabled(True)
-        self.ui.actionSave_As.setEnabled(True)
-        self.ui.actionClose.setEnabled(True)
         # Init tool spec model. We don't use the information on the item type in spec_paths_per_type, but we could...
         deserialized_paths = [
             deserialize_path(path, self._project.project_dir)
@@ -531,18 +525,31 @@ class ToolboxUI(QMainWindow):
         yield from self._plugin_manager.plugin_toolbars.values()
 
     def _disable_project_actions(self):
-        """Disables all project-related actions. Called in the constructor."""
+        """Disables all project-related actions, except
+        New project, Open project and Open recent. Called
+        in the constructor and when closing a project."""
         for toolbar in self._toolbars():
             for button in toolbar.findChildren(QAbstractButton):
-                button.setEnabled(False)
-        self.ui.actionOpen_project_directory.setEnabled(False)
+                button.setDisabled(True)
+        self.ui.actionOpen_project_directory.setDisabled(True)
+        self.ui.actionSave.setDisabled(True)
+        self.ui.actionSave_As.setDisabled(True)
+        self.ui.actionClose.setDisabled(True)
+        self.ui.actionRename_project.setDisabled(True)
+        self.ui.actionExport_project_to_GraphML.setDisabled(True)
 
     def _enable_project_actions(self):
-        """Enables all project-related actions. Called right after a project is loaded."""
+        """Enables all project-related actions. Called when a
+        new project is created and when a project is opened."""
         for toolbar in self._toolbars():
             for action in toolbar.findChildren(QAbstractButton):
                 action.setEnabled(True)
         self.ui.actionOpen_project_directory.setEnabled(True)
+        self.ui.actionSave.setEnabled(True)
+        self.ui.actionSave_As.setEnabled(True)
+        self.ui.actionClose.setEnabled(True)
+        self.ui.actionRename_project.setEnabled(True)
+        self.ui.actionExport_project_to_GraphML.setEnabled(True)
 
     def refresh_toolbars(self):
         """Set toolbars' color using highest possible contrast."""
@@ -648,9 +655,6 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self.clear_ui()
         self._disable_project_actions()
-        self.ui.actionSave.setDisabled(True)
-        self.ui.actionSave_As.setDisabled(True)
-        self.ui.actionClose.setDisabled(True)
         self.undo_stack.setClean()
         self.update_window_title()
         # Close all QMainWindows, except ToolboxUI
