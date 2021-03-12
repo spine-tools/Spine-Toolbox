@@ -657,11 +657,6 @@ class ToolboxUI(QMainWindow):
         self._disable_project_actions()
         self.undo_stack.setClean()
         self.update_window_title()
-        # Close all QMainWindows, except ToolboxUI
-        main_windows = [w for w in QApplication.topLevelWidgets() if isinstance(w, QMainWindow)]
-        main_windows.remove(self)  # Remove ToolboxUI
-        for main_window in main_windows:
-            main_window.close()
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_itemlog.clear()
 
