@@ -67,6 +67,42 @@ class TestArrayModel(unittest.TestCase):
         index = model.index(0, 0)
         self.assertIsNone(index.data())
 
+    def test_batch_set_data(self):
+        model = ArrayModel()
+        model.reset(Array([5.0]))
+        model.batch_set_data([model.index(0, 0)], ["2.3"])
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.index(0, 0).data(), 2.3)
+
+    def test_batch_set_data_on_last_row_extends_table(self):
+        model = ArrayModel()
+        model.reset(Array([5.0]))
+        model.batch_set_data([model.index(1, 0)], ["2.3"])
+        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.index(0, 0).data(), 5.0)
+
+    def test_set_array_type_converts_existing_data(self):
+        model = ArrayModel()
+        model.reset(Array([5.0]))
+        model.set_array_type(str)
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.index(0, 0).data(), "5.0")
+
+    def test_setData(self):
+        model = ArrayModel()
+        model.reset(Array([5.0]))
+        self.assertTrue(model.setData(model.index(0, 0), 2.3))
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.index(0, 0).data(), 2.3)
+
+    def test_setData_on_last_row_extends_array(self):
+        model = ArrayModel()
+        model.reset(Array([5.0]))
+        self.assertTrue(model.setData(model.index(1, 0), 2.3))
+        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.index(0, 0).data(), 5.0)
+        self.assertEqual(model.index(1, 0).data(), 2.3)
+
 
 if __name__ == '__main__':
     unittest.main()

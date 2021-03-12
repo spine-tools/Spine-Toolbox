@@ -42,10 +42,20 @@ class CustomLineEditor(QLineEdit):
     """
 
     def set_data(self, data):
+        """Sets editor's text.
+
+        Args:
+            data (Any): anything convertible to string
+        """
         if data is not None:
             self.setText(str(data))
 
     def data(self):
+        """Returns editor's text.
+
+        Returns:
+            str: editor's text
+        """
         return self.text()
 
     def keyPressEvent(self, event):
@@ -62,25 +72,6 @@ class ParameterValueLineEditor(CustomLineEditor):
 
     def data(self):
         return try_number_from_string(super().data())
-
-
-class CustomComboEditor(QComboBox):
-    """A custom QComboBox to handle data from models.
-    """
-
-    data_committed = Signal()
-
-    def set_data(self, current_text, items):
-        self.addItems(items)
-        if current_text and current_text in items:
-            self.setCurrentText(current_text)
-        else:
-            self.setCurrentIndex(-1)
-        self.activated.connect(lambda: self.data_committed.emit())  # pylint: disable=unnecessary-lambda
-        self.showPopup()
-
-    def data(self):
-        return self.currentText()
 
 
 class _CustomLineEditDelegate(QStyledItemDelegate):
@@ -128,7 +119,7 @@ class SearchBarEditor(QTableView):
 
         Args:
             parent (QWidget): parent widget
-            tutor (QWidget, NoneType): another widget used for positioning.
+            tutor (QWidget, optional): another widget used for positioning.
         """
         super().__init__(parent)
         self._tutor = tutor
@@ -155,8 +146,8 @@ class SearchBarEditor(QTableView):
         """Populates model.
 
         Args:
-            current (str)
-            items (Sequence(str))
+            current (str): item that is currently selected from given items
+            items (Sequence(str)): items to show in the list
         """
         item_list = [QStandardItem(current)]
         for item in items:
@@ -197,7 +188,7 @@ class SearchBarEditor(QTableView):
     def data(self):
         return self.first_index.data(Qt.EditRole)
 
-    @Slot("QString")
+    @Slot(str)
     def _handle_delegate_text_edited(self, text):
         """Filters model as the first row is being edited."""
         self._original_text = text
@@ -303,7 +294,7 @@ class CheckListEditor(QTableView):
         """Adds or removes given index from selected items.
 
         Args:
-            index (QModelIndex)
+            index (QModelIndex): index to toggle
         """
         item = self.model.itemFromIndex(index).text()
         qitem = self._items[item]
@@ -406,7 +397,7 @@ class IconColorEditor(QDialog):
 
     def __init__(self, parent):
         """Init class."""
-        super().__init__(parent)  # , Qt.Popup)
+        super().__init__(parent)
         icon_size = QSize(32, 32)
         self.icon_mngr = IconListManager(icon_size)
         self.setWindowTitle("Select icon and color")
@@ -445,7 +436,7 @@ class IconColorEditor(QDialog):
         self.connect_signals()
 
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        """Overridden method to filter icons according to search terms.
+        """Filters icons according to search terms.
         """
         text = self.line_edit.text()
         if not text:
@@ -454,7 +445,7 @@ class IconColorEditor(QDialog):
         return any([text in term for term in searchterms])
 
     def connect_signals(self):
-        """Connect signals to slots."""
+        """Connects signals to slots."""
         self.line_edit.textEdited.connect(self.proxy_model.invalidateFilter)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)

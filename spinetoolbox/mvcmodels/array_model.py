@@ -41,7 +41,12 @@ class ArrayModel(QAbstractTableModel):
         return Array(self._data, self._data_type)
 
     def batch_set_data(self, indexes, values):
-        """Sets data at multiple indexes at once."""
+        """Sets data at multiple indexes at once.
+
+        Args:
+            indexes (list of QModelIndex): indexes to set
+            values (list of str): values corresponding to the indexes
+        """
         if not indexes:
             return
         top_row = indexes[0].row()
@@ -214,7 +219,11 @@ class ArrayModel(QAbstractTableModel):
         return len(self._data) + 1
 
     def set_array_type(self, new_type):
-        """Changes the data type of array's elements."""
+        """Changes the data type of array's elements.
+
+        Args:
+            new_type (Type): new element type
+        """
         if new_type == self._data_type:
             return
         self.beginResetModel()

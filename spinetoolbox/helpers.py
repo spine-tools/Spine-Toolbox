@@ -580,12 +580,27 @@ class CharIconEngine(TransparentIconEngine):
 
 
 def make_icon_id(icon_code, color_code):
-    """Take icon and color codes, and return equivalent integer."""
+    """Takes icon and color codes, and return equivalent integer.
+
+    Args:
+        icon_code (int):icon's code
+        color_code (int): color code
+
+    Returns:
+        int: icon id
+    """
     return icon_code + (color_code << 16)
 
 
 def interpret_icon_id(display_icon):
-    """Take a display icon integer and return an equivalent tuple of icon and color code."""
+    """Takes a display icon id and returns an equivalent tuple of icon and color code.
+
+    Args:
+        display_icon (int): icon id
+
+    Returns:
+        tuple: icon's code, color code
+    """
     if not isinstance(display_icon, int) or display_icon < 0:
         return 0xF1B2, 0
     icon_code = display_icon & 65535
@@ -597,6 +612,11 @@ def interpret_icon_id(display_icon):
 
 
 def default_icon_id():
+    """Creates a default icon id.
+
+    Returns:
+        int: default icon's id
+    """
     return make_icon_id(*interpret_icon_id(None))
 
 

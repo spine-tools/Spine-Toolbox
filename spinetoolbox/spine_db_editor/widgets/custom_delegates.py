@@ -211,13 +211,17 @@ class ParameterDelegate(QStyledItemDelegate):
     """Base class for all custom parameter delegates.
 
     Attributes:
-        parent (SpineDBEditor): tree or graph view form
-        db_mngr (SpineDBManager)
+        db_mngr (SpineDBManager): database manager
     """
 
     data_committed = Signal("QModelIndex", "QVariant")
 
     def __init__(self, parent, db_mngr):
+        """
+        Args:
+            parent (QWidget): parent widget
+            db_mngr (SpineDBManager): database manager
+        """
         super().__init__(parent)
         self.db_mngr = db_mngr
 
@@ -633,9 +637,6 @@ class ParameterValueListDelegate(QStyledItemDelegate):
 
 class ManageItemsDelegate(QStyledItemDelegate):
     """A custom delegate for the model in {Add/Edit}ItemDialogs.
-
-    Attributes:
-        parent (ManageItemsDialog): parent dialog
     """
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
@@ -685,9 +686,6 @@ class ManageItemsDelegate(QStyledItemDelegate):
 
 class ManageObjectClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectClassesDialog.
-
-    Attributes:
-        parent (ManageItemsDialog): parent dialog
     """
 
     icon_color_editor_requested = Signal("QModelIndex")
@@ -718,9 +716,6 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
 
 class ManageObjectsDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectsDialog.
-
-    Attributes:
-        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
@@ -741,9 +736,6 @@ class ManageObjectsDelegate(ManageItemsDelegate):
 
 class ManageRelationshipClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}RelationshipClassesDialog.
-
-    Attributes:
-        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
@@ -764,9 +756,6 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
 
 class ManageRelationshipsDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}RelationshipsDialog.
-
-    Attributes:
-        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
@@ -788,9 +777,6 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
 
 class RemoveEntitiesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in RemoveEntitiesDialog.
-
-    Attributes:
-        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
