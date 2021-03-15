@@ -116,6 +116,7 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.takeCentralWidget()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
         self.ui.graphicsView.set_ui(self)
@@ -173,6 +174,7 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
         self._proposed_item_name_counts = dict()
+        self.restore_dock_widgets()
         self.restore_ui()
         self.ui.dockWidget_executions.hide()
         self.parse_project_item_modules()
@@ -1367,6 +1369,11 @@ class ToolboxUI(QMainWindow):
                 dock.setVisible(True)
             if dock.isFloating():
                 dock.setFloating(False)
+        docks = (self.ui.dockWidget_project, self.ui.dockWidget_design_view, self.ui.dockWidget_item)
+        self.splitDockWidget(*docks[:-1], Qt.Horizontal)
+        self.splitDockWidget(*docks[1:], Qt.Horizontal)
+        width = sum(d.size().width() for d in docks)
+        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.3 * width], Qt.Horizontal)
 
     def set_debug_qactions(self):
         """Set shortcuts for QActions that may be needed in debugging."""

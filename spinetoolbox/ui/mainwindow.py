@@ -13,13 +13,16 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.14.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
@@ -31,7 +34,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1326, 700)
+        MainWindow.resize(1322, 700)
         self.actionQuit = QAction(MainWindow)
         self.actionQuit.setObjectName(u"actionQuit")
         icon = QIcon()
@@ -175,48 +178,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.setSpacing(0)
         self.verticalLayout_10.setObjectName(u"verticalLayout_10")
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
-        self.label = QLabel(self.centralwidget)
-        self.label.setObjectName(u"label")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy)
-        self.label.setMinimumSize(QSize(0, 20))
-        self.label.setMaximumSize(QSize(16777215, 20))
-        self.label.setAutoFillBackground(False)
-        self.label.setFrameShape(QFrame.NoFrame)
-        self.label.setFrameShadow(QFrame.Plain)
-        self.label.setLineWidth(1)
-        self.label.setMargin(0)
-        self.label.setIndent(5)
-
-        self.verticalLayout_10.addWidget(self.label)
-
-        self.graphicsView = DesignQGraphicsView(self.centralwidget)
-        self.graphicsView.setObjectName(u"graphicsView")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
-        self.graphicsView.setSizePolicy(sizePolicy1)
-        self.graphicsView.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.graphicsView.setFrameShape(QFrame.NoFrame)
-        self.graphicsView.setFrameShadow(QFrame.Raised)
-        self.graphicsView.setMidLineWidth(0)
-        self.graphicsView.setAlignment(Qt.AlignCenter)
-        self.graphicsView.setRenderHints(QPainter.Antialiasing|QPainter.TextAntialiasing)
-        self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.graphicsView.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
-        self.graphicsView.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-        self.graphicsView.setRubberBandSelectionMode(Qt.ContainsItemBoundingRect)
-
-        self.verticalLayout_10.addWidget(self.graphicsView)
-
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1326, 21))
+        self.menubar.setGeometry(QRect(0, 0, 1322, 27))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
@@ -241,15 +206,18 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         self.dockWidget_eventlog = QDockWidget(MainWindow)
         self.dockWidget_eventlog.setObjectName(u"dockWidget_eventlog")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.dockWidget_eventlog.sizePolicy().hasHeightForWidth())
-        self.dockWidget_eventlog.setSizePolicy(sizePolicy2)
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.dockWidget_eventlog.sizePolicy().hasHeightForWidth())
+        self.dockWidget_eventlog.setSizePolicy(sizePolicy)
         self.dockWidget_eventlog.setMinimumSize(QSize(174, 184))
         self.dockWidget_eventlog.setFeatures(QDockWidget.AllDockWidgetFeatures)
         self.dockWidgetContents = QWidget()
         self.dockWidgetContents.setObjectName(u"dockWidgetContents")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.dockWidgetContents.sizePolicy().hasHeightForWidth())
         self.dockWidgetContents.setSizePolicy(sizePolicy1)
         self.verticalLayout_5 = QVBoxLayout(self.dockWidgetContents)
@@ -258,8 +226,8 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
         self.textBrowser_eventlog = CustomQTextBrowser(self.dockWidgetContents)
         self.textBrowser_eventlog.setObjectName(u"textBrowser_eventlog")
-        sizePolicy2.setHeightForWidth(self.textBrowser_eventlog.sizePolicy().hasHeightForWidth())
-        self.textBrowser_eventlog.setSizePolicy(sizePolicy2)
+        sizePolicy.setHeightForWidth(self.textBrowser_eventlog.sizePolicy().hasHeightForWidth())
+        self.textBrowser_eventlog.setSizePolicy(sizePolicy)
         self.textBrowser_eventlog.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.textBrowser_eventlog.setOpenLinks(False)
 
@@ -269,8 +237,8 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_eventlog)
         self.dockWidget_itemlog = QDockWidget(MainWindow)
         self.dockWidget_itemlog.setObjectName(u"dockWidget_itemlog")
-        sizePolicy2.setHeightForWidth(self.dockWidget_itemlog.sizePolicy().hasHeightForWidth())
-        self.dockWidget_itemlog.setSizePolicy(sizePolicy2)
+        sizePolicy.setHeightForWidth(self.dockWidget_itemlog.sizePolicy().hasHeightForWidth())
+        self.dockWidget_itemlog.setSizePolicy(sizePolicy)
         self.dockWidget_itemlog.setMinimumSize(QSize(382, 178))
         self.dockWidgetContents_2 = QWidget()
         self.dockWidgetContents_2.setObjectName(u"dockWidgetContents_2")
@@ -288,8 +256,8 @@ class Ui_MainWindow(object):
 
         self.textBrowser_itemlog = CustomQTextBrowser(self.dockWidgetContents_2)
         self.textBrowser_itemlog.setObjectName(u"textBrowser_itemlog")
-        sizePolicy2.setHeightForWidth(self.textBrowser_itemlog.sizePolicy().hasHeightForWidth())
-        self.textBrowser_itemlog.setSizePolicy(sizePolicy2)
+        sizePolicy.setHeightForWidth(self.textBrowser_itemlog.sizePolicy().hasHeightForWidth())
+        self.textBrowser_itemlog.setSizePolicy(sizePolicy)
         font = QFont()
         font.setFamily(u"Segoe UI")
         self.textBrowser_itemlog.setFont(font)
@@ -408,7 +376,33 @@ class Ui_MainWindow(object):
 
         self.dockWidget_executions.setWidget(self.dockWidgetContents_executions)
         MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_executions)
-        QWidget.setTabOrder(self.graphicsView, self.textBrowser_eventlog)
+        self.dockWidget_design_view = QDockWidget(MainWindow)
+        self.dockWidget_design_view.setObjectName(u"dockWidget_design_view")
+        self.dockWidgetContents_5 = QWidget()
+        self.dockWidgetContents_5.setObjectName(u"dockWidgetContents_5")
+        self.verticalLayout_2 = QVBoxLayout(self.dockWidgetContents_5)
+        self.verticalLayout_2.setSpacing(0)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.graphicsView = DesignQGraphicsView(self.dockWidgetContents_5)
+        self.graphicsView.setObjectName(u"graphicsView")
+        sizePolicy1.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
+        self.graphicsView.setSizePolicy(sizePolicy1)
+        self.graphicsView.setContextMenuPolicy(Qt.DefaultContextMenu)
+        self.graphicsView.setFrameShape(QFrame.NoFrame)
+        self.graphicsView.setFrameShadow(QFrame.Raised)
+        self.graphicsView.setMidLineWidth(0)
+        self.graphicsView.setAlignment(Qt.AlignCenter)
+        self.graphicsView.setRenderHints(QPainter.Antialiasing|QPainter.TextAntialiasing)
+        self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.graphicsView.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.graphicsView.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.graphicsView.setRubberBandSelectionMode(Qt.ContainsItemBoundingRect)
+
+        self.verticalLayout_2.addWidget(self.graphicsView)
+
+        self.dockWidget_design_view.setWidget(self.dockWidgetContents_5)
+        MainWindow.addDockWidget(Qt.TopDockWidgetArea, self.dockWidget_design_view)
         QWidget.setTabOrder(self.textBrowser_eventlog, self.textBrowser_itemlog)
         QWidget.setTabOrder(self.textBrowser_itemlog, self.tabWidget_item_properties)
 
@@ -654,7 +648,6 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionRename_project.setToolTip(QCoreApplication.translate("MainWindow", u"Rename project", None))
 #endif // QT_CONFIG(tooltip)
-        self.label.setText(QCoreApplication.translate("MainWindow", u"Design View", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"Edit", None))
@@ -675,5 +668,6 @@ class Ui_MainWindow(object):
         self.dockWidget_python_console.setWindowTitle(QCoreApplication.translate("MainWindow", u"Python Console", None))
         self.label_no_python_console.setText(QCoreApplication.translate("MainWindow", u"Select and execute a Python Tool to see its console", None))
         self.dockWidget_executions.setWindowTitle(QCoreApplication.translate("MainWindow", u"Executions", None))
+        self.dockWidget_design_view.setWindowTitle(QCoreApplication.translate("MainWindow", u"Design View", None))
     # retranslateUi
 
