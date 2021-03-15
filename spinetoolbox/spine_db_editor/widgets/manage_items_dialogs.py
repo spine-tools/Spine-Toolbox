@@ -37,6 +37,7 @@ class ManageItemsDialogBase(QDialog):
         self.table_view = self.make_table_view()
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.horizontalHeader().setMinimumSectionSize(120)
         self.table_view.verticalHeader().setDefaultSectionSize(parent.default_row_height)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)

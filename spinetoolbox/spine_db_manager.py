@@ -674,7 +674,7 @@ class SpineDBManager(SpineDBManagerBase):
         return self.get_item(db_map, item_type, id_).get(field)
 
     @staticmethod
-    def _display_data(parsed_data):
+    def display_data_from_parsed(parsed_data):
         """Returns the value's database representation formatted for Qt.DisplayRole."""
         if isinstance(parsed_data, TimeSeries):
             display_data = "Time series"
@@ -696,7 +696,7 @@ class SpineDBManager(SpineDBManagerBase):
         return display_data
 
     @staticmethod
-    def _tool_tip_data(parsed_data):
+    def tool_tip_data_from_parsed(parsed_data):
         """Returns the value's database representation formatted for Qt.ToolTipRole."""
         if isinstance(parsed_data, TimeSeriesFixedResolution):
             resolution = [relativedelta_to_duration(r) for r in parsed_data.resolution]
@@ -752,9 +752,9 @@ class SpineDBManager(SpineDBManagerBase):
             role (int, optional)
         """
         if role == Qt.DisplayRole:
-            return self._display_data(parsed_value)
+            return self.display_data_from_parsed(parsed_value)
         if role == Qt.ToolTipRole:
-            return self._tool_tip_data(parsed_value)
+            return self.tool_tip_data_from_parsed(parsed_value)
         if role == Qt.TextAlignmentRole:
             if isinstance(parsed_value, str):
                 return Qt.AlignLeft
@@ -792,9 +792,9 @@ class SpineDBManager(SpineDBManagerBase):
         if role == Qt.EditRole:
             return to_database(parsed_value)
         if role == Qt.DisplayRole:
-            return self._display_data(parsed_value)
+            return self.display_data_from_parsed(parsed_value)
         if role == Qt.ToolTipRole:
-            return self._tool_tip_data(parsed_value)
+            return self.tool_tip_data_from_parsed(parsed_value)
         if role == PARSED_ROLE:
             return parsed_value
         return None

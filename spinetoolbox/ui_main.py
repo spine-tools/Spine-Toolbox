@@ -648,7 +648,8 @@ class ToolboxUI(QMainWindow):
             QMessageBox.information(
                 self,
                 f"Project {self._project.name} has changed",
-                f"There are unsaved changes in your project, please save the project before closing")
+                f"There are unsaved changes in your project, please save the project before closing",
+            )
             return
         self._project.tear_down()
         self._project.deleteLater()
@@ -670,8 +671,8 @@ class ToolboxUI(QMainWindow):
             "Rename Project",
             "New name:",
             text=self._project.name,
-            flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
-            )
+            flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint,
+        )
         if not answer[1]:
             return
         new_name = answer[0].strip()
