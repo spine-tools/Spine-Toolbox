@@ -644,12 +644,7 @@ class ToolboxUI(QMainWindow):
         """Closes the current project."""
         if not self._project:
             return
-        if self.isWindowModified():
-            QMessageBox.information(
-                self,
-                f"Project {self._project.name} has changed",
-                f"There are unsaved changes in your project, please save the project before closing",
-            )
+        if not self._perform_pre_exit_tasks():
             return
         self._project.tear_down()
         self._project.deleteLater()
@@ -1733,9 +1728,9 @@ class ToolboxUI(QMainWindow):
         menus are shown to user."""
         clipboard = QApplication.clipboard()
         byte_data = clipboard.mimeData().data("application/vnd.spinetoolbox.ProjectItem")
-        can_paste = False if byte_data.isNull() else True
+        can_paste = not byte_data.isNull()
         can_copy = any(isinstance(x, ProjectItemIcon) for x in self.ui.graphicsView.scene().selectedItems())
-        has_items = True if self.project_item_model.n_items() > 0 else False
+        has_items = self.project_item_model.n_items() > 0
         self.ui.actionCopy.setEnabled(can_copy)
         self.ui.actionPaste.setEnabled(can_paste)
         self.ui.actionPasteAndDuplicateFiles.setEnabled(can_paste)
