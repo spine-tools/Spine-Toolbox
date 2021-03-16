@@ -53,7 +53,7 @@
      <x>0</x>
      <y>0</y>
      <width>1322</width>
-     <height>27</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -73,8 +73,6 @@
     <addaction name="actionSave_As"/>
     <addaction name="actionClose"/>
     <addaction name="actionRename_project"/>
-    <addaction name="separator"/>
-    <addaction name="actionExport_project_to_GraphML"/>
     <addaction name="separator"/>
     <addaction name="actionNew_DB_editor"/>
     <addaction name="separator"/>
@@ -823,18 +821,6 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all project items&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-  </action>
-  <action name="actionExport_project_to_GraphML">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/file-export.svg</normaloff>:/icons/menu_icons/file-export.svg</iconset>
-   </property>
-   <property name="text">
-    <string>Export project to GraphML</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export project to GraphML&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionGetting_started">

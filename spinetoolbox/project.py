@@ -613,21 +613,6 @@ class SpineToolboxProject(MetaObject):
         for worker in self._engine_workers:
             worker.stop_engine()
 
-    def export_graphs(self):
-        """Exports all valid directed acyclic graphs in project to GraphML files."""
-        if not self.dag_handler.dags():
-            self._logger.msg_warning.emit("Project has no graphs to export")
-            return
-        i = 0
-        for g in self.dag_handler.dags():
-            fn = str(i) + ".graphml"
-            path = os.path.join(self.project_dir, fn)
-            if not self.dag_handler.export_to_graphml(g, path):
-                self._logger.msg_warning.emit("Exporting graph nr. {0} failed. Not a directed acyclic graph".format(i))
-            else:
-                self._logger.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
-            i += 1
-
     @Slot(object)
     def notify_changes_in_dag(self, dag):
         """Notifies the items in given dag that the dag has changed."""

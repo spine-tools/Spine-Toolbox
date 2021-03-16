@@ -13,16 +13,13 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.15.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+from PySide2.QtCore import *
+from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
@@ -104,19 +101,14 @@ class Ui_MainWindow(object):
         icon9 = QIcon()
         icon9.addFile(u":/icons/menu_icons/trash-alt.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionRemove_all.setIcon(icon9)
-        self.actionExport_project_to_GraphML = QAction(MainWindow)
-        self.actionExport_project_to_GraphML.setObjectName(u"actionExport_project_to_GraphML")
-        icon10 = QIcon()
-        icon10.addFile(u":/icons/menu_icons/file-export.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionExport_project_to_GraphML.setIcon(icon10)
         self.actionGetting_started = QAction(MainWindow)
         self.actionGetting_started.setObjectName(u"actionGetting_started")
         self.actionGetting_started.setIcon(icon7)
         self.actionOpen_recent = QAction(MainWindow)
         self.actionOpen_recent.setObjectName(u"actionOpen_recent")
-        icon11 = QIcon()
-        icon11.addFile(u":/icons/menu_icons/history.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionOpen_recent.setIcon(icon11)
+        icon10 = QIcon()
+        icon10.addFile(u":/icons/menu_icons/history.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionOpen_recent.setIcon(icon10)
         self.actionCopy = QAction(MainWindow)
         self.actionCopy.setObjectName(u"actionCopy")
         self.actionPaste = QAction(MainWindow)
@@ -138,9 +130,9 @@ class Ui_MainWindow(object):
         self.actionRename_item.setObjectName(u"actionRename_item")
         self.actionNew_DB_editor = QAction(MainWindow)
         self.actionNew_DB_editor.setObjectName(u"actionNew_DB_editor")
-        icon12 = QIcon()
-        icon12.addFile(u":/icons/database-edit.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionNew_DB_editor.setIcon(icon12)
+        icon11 = QIcon()
+        icon11.addFile(u":/icons/database-edit.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionNew_DB_editor.setIcon(icon11)
         self.actionPasteAndDuplicateFiles = QAction(MainWindow)
         self.actionPasteAndDuplicateFiles.setObjectName(u"actionPasteAndDuplicateFiles")
         self.actionDuplicateAndDuplicateFiles = QAction(MainWindow)
@@ -155,24 +147,24 @@ class Ui_MainWindow(object):
         self.actionCreate_plugin.setVisible(False)
         self.actionStartJuliaConsole = QAction(MainWindow)
         self.actionStartJuliaConsole.setObjectName(u"actionStartJuliaConsole")
-        icon13 = QIcon()
-        icon13.addFile(u":/icons/julia-dots.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionStartJuliaConsole.setIcon(icon13)
+        icon12 = QIcon()
+        icon12.addFile(u":/icons/julia-dots.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionStartJuliaConsole.setIcon(icon12)
         self.actionStartPythonConsole = QAction(MainWindow)
         self.actionStartPythonConsole.setObjectName(u"actionStartPythonConsole")
-        icon14 = QIcon()
-        icon14.addFile(u":/icons/python.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionStartPythonConsole.setIcon(icon14)
+        icon13 = QIcon()
+        icon13.addFile(u":/icons/python.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionStartPythonConsole.setIcon(icon13)
         self.actionClose = QAction(MainWindow)
         self.actionClose.setObjectName(u"actionClose")
-        icon15 = QIcon()
-        icon15.addFile(u":/icons/menu_icons/door-closed.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionClose.setIcon(icon15)
+        icon14 = QIcon()
+        icon14.addFile(u":/icons/menu_icons/door-closed.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionClose.setIcon(icon14)
         self.actionRename_project = QAction(MainWindow)
         self.actionRename_project.setObjectName(u"actionRename_project")
-        icon16 = QIcon()
-        icon16.addFile(u":/icons/menu_icons/exchange-alt.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.actionRename_project.setIcon(icon16)
+        icon15 = QIcon()
+        icon15.addFile(u":/icons/menu_icons/exchange-alt.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionRename_project.setIcon(icon15)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout_10 = QVBoxLayout(self.centralwidget)
@@ -182,7 +174,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1322, 27))
+        self.menubar.setGeometry(QRect(0, 0, 1322, 21))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
@@ -421,8 +413,6 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionClose)
         self.menuFile.addAction(self.actionRename_project)
         self.menuFile.addSeparator()
-        self.menuFile.addAction(self.actionExport_project_to_GraphML)
-        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionNew_DB_editor)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionSettings)
@@ -545,10 +535,6 @@ class Ui_MainWindow(object):
         self.actionRemove_all.setText(QCoreApplication.translate("MainWindow", u"Remove all", None))
 #if QT_CONFIG(tooltip)
         self.actionRemove_all.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Remove all project items</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.actionExport_project_to_GraphML.setText(QCoreApplication.translate("MainWindow", u"Export project to GraphML", None))
-#if QT_CONFIG(tooltip)
-        self.actionExport_project_to_GraphML.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Export project to GraphML</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.actionGetting_started.setText(QCoreApplication.translate("MainWindow", u"Getting started", None))
 #if QT_CONFIG(shortcut)

@@ -211,7 +211,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(self.close_project)
         self.ui.actionRename_project.triggered.connect(self.rename_project)
-        self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.close)
@@ -538,7 +537,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave_As.setDisabled(True)
         self.ui.actionClose.setDisabled(True)
         self.ui.actionRename_project.setDisabled(True)
-        self.ui.actionExport_project_to_GraphML.setDisabled(True)
 
     def _enable_project_actions(self):
         """Enables all project-related actions. Called when a
@@ -551,7 +549,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave_As.setEnabled(True)
         self.ui.actionClose.setEnabled(True)
         self.ui.actionRename_project.setEnabled(True)
-        self.ui.actionExport_project_to_GraphML.setEnabled(True)
 
     def refresh_toolbars(self):
         """Set toolbars' color using highest possible contrast."""
@@ -1332,14 +1329,6 @@ class ToolboxUI(QMainWindow):
                 "files are associated with a text editor. For example on Windows "
                 "10, go to Control Panel -> Default Programs to do this.".format(file_path)
             )
-
-    @Slot()
-    def export_as_graphml(self):
-        """Exports all DAGs in project to separate GraphML files."""
-        if not self.project():
-            self.msg.emit("Please open or create a project first")
-            return
-        self.project().export_graphs()
 
     @Slot(bool)
     def new_db_editor(self):
