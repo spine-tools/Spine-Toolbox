@@ -641,12 +641,19 @@ class ToolboxUI(QMainWindow):
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
 
-    @Slot()
-    def close_project(self):
+    @Slot(bool)
+    def close_project(self, _checked=False):
         """Closes the current project."""
         if not self._project:
             return
-        if not self._perform_pre_exit_tasks():
+        save_at_exit = (
+            int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
+            if not self.undo_stack.isClean()
+            else 0
+        )
+        if save_at_exit == 1 and not self._confirm_save_and_exit():
+            return
+        if save_at_exit == 2 and not self.save_project():
             return
         self._project.tear_down()
         self._project.deleteLater()
@@ -658,8 +665,8 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_itemlog.clear()
 
-    @Slot()
-    def rename_project(self):
+    @Slot(bool)
+    def rename_project(self, _checked=False):
         """Opens a dialog where the user can enter a new name for the project."""
         if not self._project:
             return
@@ -1791,15 +1798,14 @@ class ToolboxUI(QMainWindow):
             else 0
         )
         if save_at_exit == 1:
+            # Ignore show_confirm_exit...
             return ["prompt save"]
-        if show_confirm_exit != 2:
-            # Don't prompt for exit
-            if save_at_exit == 0:
-                return []
-            return ["save"]
-        if save_at_exit == 0:
-            return ["prompt exit"]
-        return ["prompt exit", "save"]
+        tasks = []
+        if show_confirm_exit == 2:
+            tasks.append("prompt exit")
+        if save_at_exit == 2:
+            tasks.append("save")
+        return tasks
 
     def _perform_pre_exit_tasks(self):
         """

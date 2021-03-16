@@ -25,6 +25,9 @@
   <property name="windowTitle">
    <string>Spine Toolbox</string>
   </property>
+  <property name="dockNestingEnabled">
+   <bool>true</bool>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_10">
     <property name="spacing">
