@@ -718,9 +718,11 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("Loading specifications...")
         specs = []
         for path in specification_paths:
-            if not path:
+            if not path:  # TODO: Does this ever happen?
                 continue
             spec = self.load_specification_from_file(path)
+            if not spec:
+                continue
             specs.append(spec)
         # Add specs to model
         for spec in specs:
