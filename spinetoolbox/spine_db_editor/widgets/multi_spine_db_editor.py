@@ -269,6 +269,12 @@ class MultiSpineDBEditor(QMainWindow):
         db_editor.load_db_urls(db_url_codenames, create=True)
         self.tab_widget.setCurrentIndex(index)
 
+    def set_current_db_editor(self, db_editor):
+        index = self.tab_widget.indexOf(db_editor)
+        if index is None:
+            return
+        self.tab_widget.setCurrentIndex(index)
+
     @Slot(int)
     def _close_tab(self, index):
         """Closes the tab at index.

@@ -158,7 +158,7 @@ class SpineDBEditorBase(QMainWindow):
         fetcher.finished.connect(self._make_iddle)
         self._make_busy()
         fetcher.fetch(self, db_maps)
-        self.setWindowTitle(f"{self.db_names}")
+        self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
 
     def _make_busy(self):
         self.silenced = True

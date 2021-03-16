@@ -419,9 +419,7 @@ class SpineDBManager(SpineDBManagerBase):
             db_maps (DiffDatabaseMapping)
         """
         is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        is_orphan = lambda db_map: not any(
-            isinstance(x, SpineDBEditor) for x in self.signaller.db_map_listeners(db_map) - {listener}
-        )
+        is_orphan = lambda db_map: not set(self.signaller.db_map_listeners(db_map)) - {listener}
         dirty_orphan_db_maps = [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
         if dirty_orphan_db_maps:
             answer = self._prompt_to_commit_changes()
@@ -1701,6 +1699,12 @@ class SpineDBManager(SpineDBManagerBase):
             ]
         return db_map_cascading_data
 
+    def export_data(self, caller, db_map_item_ids, file_path, file_filter):
+        self._worker.export_data(caller, db_map_item_ids, file_path, file_filter)
+
+    def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
+        self._worker.duplicate_object(db_maps, object_data, orig_name, dup_name)
+
     @staticmethod
     def get_all_multi_spine_db_editors():
         """Yields all instances of MultiSpineDBEditor currently open.
@@ -1713,19 +1717,46 @@ class SpineDBManager(SpineDBManagerBase):
             if isinstance(widget, MultiSpineDBEditor):
                 yield widget
 
-    @staticmethod
-    def get_all_spine_db_editors():
+    def get_all_spine_db_editors(self):
         """Yields all instances of SpineDBEditor currently open.
 
         Returns:
             Generator
         """
-        for w in SpineDBManager.get_all_multi_spine_db_editors():
+        for w in self.get_all_multi_spine_db_editors():
             for k in range(w.tab_widget.count()):
                 yield w.tab_widget.widget(k)
 
-    def export_data(self, caller, db_map_item_ids, file_path, file_filter):
-        self._worker.export_data(caller, db_map_item_ids, file_path, file_filter)
+    def _get_existing_spine_db_editor(self, db_url_codenames):
+        db_url_codenames = {str(url): codename for url, codename in db_url_codenames.items()}
+        for multi_db_editor in self.get_all_multi_spine_db_editors():
+            for k in range(multi_db_editor.tab_widget.count()):
+                db_editor = multi_db_editor.tab_widget.widget(k)
+                if db_editor.db_url_codenames == db_url_codenames:
+                    return multi_db_editor, db_editor
+        return None
 
-    def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
-        self._worker.duplicate_object(db_maps, object_data, orig_name, dup_name)
+    def open_db_editor(self, db_url_codenames):
+        """Opens a SpineDBEditor with given urls. Uses an existing MultiSpineDBEditor if any.
+        Also, if the same urls are open in an existing SpineDBEditor, just raises that one
+        instead of creating another.
+
+        Args:
+            db_url_codenames (dict): mapping url to codename
+        """
+        multi_db_editor = next(self.get_all_multi_spine_db_editors(), None)
+        if multi_db_editor is None:
+            multi_db_editor = MultiSpineDBEditor(self, db_url_codenames)
+            multi_db_editor.show()
+            return
+        existing = self._get_existing_spine_db_editor(db_url_codenames)
+        if existing is None:
+            multi_db_editor.add_new_tab(db_url_codenames)
+        else:
+            multi_db_editor, db_editor = existing
+            multi_db_editor.set_current_db_editor(db_editor)
+        if multi_db_editor.windowState() & Qt.WindowMinimized:
+            multi_db_editor.setWindowState(multi_db_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+            multi_db_editor.activateWindow()
+        else:
+            multi_db_editor.raise_()
