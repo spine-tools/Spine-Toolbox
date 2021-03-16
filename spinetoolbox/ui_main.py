@@ -652,6 +652,8 @@ class ToolboxUI(QMainWindow):
             return
         if save_at_exit == 2 and not self.save_project():
             return
+        if not self.undo_critical_commands():
+            return
         self._project.tear_down()
         self._project.deleteLater()
         self._project = None
