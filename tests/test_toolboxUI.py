@@ -217,6 +217,16 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(g.has_edge("b", "c"))
         self.assertTrue(g.has_edge("c", "d"))
 
+    def test_close_project(self):
+        self.assertIsNone(self.toolbox.project())
+        self.assertTrue(self.toolbox.close_project())
+        self.assertIsNone(self.toolbox.project())
+        with TemporaryDirectory() as project_dir:
+            create_project(self.toolbox, project_dir)
+            self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
+            self.assertTrue(self.toolbox.close_project())
+        self.assertIsNone(self.toolbox.project())
+
     def test_selection_in_project_item_list_1(self):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).

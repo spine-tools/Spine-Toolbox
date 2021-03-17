@@ -380,12 +380,9 @@ class ToolboxUI(QMainWindow):
             description (str): Project description
             location (str): Path to project directory
         """
-        if not self.undo_critical_commands():
-            return
         if self._project is not None:
-            self._project.tear_down()
-            self._project = None
-        self.clear_ui()
+            if not self.close_project():
+                return
         self._project = SpineToolboxProject(
             self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
         )
@@ -400,9 +397,6 @@ class ToolboxUI(QMainWindow):
         # Update recentProjectStorages
         OpenProjectDialog.update_recents(os.path.abspath(os.path.join(location, os.path.pardir)), self.qsettings())
         self.save_project()
-        # Clear text browsers
-        self.ui.textBrowser_eventlog.clear()
-        self.ui.textBrowser_itemlog.clear()
         self.msg.emit("New project <b>{0}</b> is now open".format(self._project.name))
 
     @Slot()
@@ -464,12 +458,8 @@ class ToolboxUI(QMainWindow):
         Returns:
             bool: True when restoring project succeeded, False otherwise
         """
-        if not self.undo_critical_commands():
+        if not self.close_project():
             return False
-        # Clear text browsers
-        if clear_logs:
-            self.ui.textBrowser_eventlog.clear()
-            self.ui.textBrowser_itemlog.clear()
         # Check if project dictionary needs to be upgraded
         project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
         if not project_info:
@@ -483,12 +473,6 @@ class ToolboxUI(QMainWindow):
         spec_paths_per_type = project_info["project"]["specifications"]
         connections = project_info["project"]["connections"]
         project_items = project_info["items"]
-        # Init project item model
-        if self._project is not None:
-            self._project.tear_down(silent=True)
-            self._project.deleteLater()
-            self._project = None
-        self.clear_ui()
         # Create project
         self._project = SpineToolboxProject(
             self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
@@ -633,20 +617,24 @@ class ToolboxUI(QMainWindow):
 
     @Slot(bool)
     def close_project(self, _checked=False):
-        """Closes the current project."""
+        """Closes the current project.
+
+        Returns:
+            bool: True when no project open or when it's closed successfully, False otherwise.
+        """
         if not self._project:
-            return
+            return True
         save_at_exit = (
             int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
             if not self.undo_stack.isClean()
             else 0
         )
         if save_at_exit == 1 and not self._confirm_save_and_exit():
-            return
+            return False
         if save_at_exit == 2 and not self.save_project():
-            return
+            return False
         if not self.undo_critical_commands():
-            return
+            return False
         self._project.tear_down()
         self._project.deleteLater()
         self._project = None
@@ -656,6 +644,7 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_itemlog.clear()
+        return True
 
     @Slot(bool)
     def rename_project(self, _checked=False):
