@@ -26,7 +26,7 @@ from spinetoolbox.helpers import color_from_index
 class Notification(QFrame):
     """Custom pop-up notification widget with fade-in and fade-out effect."""
 
-    def __init__(self, parent, txt, anim_duration=500, life_span=None, alignment=Qt.AlignCenter):
+    def __init__(self, parent, txt, anim_duration=500, life_span=None, word_wrap=True, corner=Qt.TopRightCorner):
         """
 
         Args:
@@ -34,22 +34,23 @@ class Notification(QFrame):
             txt (str): Text to display in notification
             anim_duration (int): Duration of the animation in msecs
             life_span (int): How long does the notification stays in place in msecs
+            word_wrap (bool)
+            corner (Qt.Corner)
         """
         super().__init__()
         if life_span is None:
             word_count = len(txt.split(" "))
             mspw = 60000 / 140  # Assume people can read ~140 words per minute
             life_span = mspw * word_count
-        self._focus_widget = parent.focusWidget()
-        if self._focus_widget is not None:
-            self._focus_widget.destroyed.connect(self._forget_focus_widget)
+        self.setFocusPolicy(Qt.NoFocus)
         self.setWindowFlags(Qt.Popup)
         self.setParent(parent)
         self._parent = parent
+        self._corner = corner
         self.label = QLabel(txt)
         self.label.setMaximumSize(parent.size())
-        self.label.setAlignment(alignment)
-        self.label.setWordWrap(True)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setWordWrap(word_wrap)
         self.label.setMargin(8)
         self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         font = QFont()
@@ -100,8 +101,14 @@ class Notification(QFrame):
     def show(self):
         # Move to the top right corner of the parent
         super().show()
-        x = self._parent.size().width() - self.width() - 2
-        y = self.pos().y()
+        if self._corner in (Qt.TopRightCorner, Qt.BottomRightCorner):
+            x = self._parent.size().width() - self.width() - 2
+        else:
+            x = self.pos().x()
+        if self._corner in (Qt.BottomLeftCorner, Qt.BottomRightCorner):
+            y = self._parent.size().height() - self.height() - 2
+        else:
+            y = self.pos().y()
         self.move(x, y)
 
     def get_opacity(self):
@@ -136,20 +143,6 @@ class Notification(QFrame):
         if self.fade_out_anim.state() == QPropertyAnimation.Running:
             return 0
         return self.timer.interval()
-
-    @Slot(QObject)
-    def _forget_focus_widget(self, _):
-        """Sets focus widget to None.
-
-        Args:
-            _ (QObject): focus widget, ignored
-        """
-        self._focus_widget = None
-
-    def closeEvent(self, ev):
-        super().closeEvent(ev)
-        if self._focus_widget is not None:
-            self._focus_widget.setFocus()
 
     opacity = Property(float, get_opacity, set_opacity)
 
@@ -256,18 +249,25 @@ class NotificationStack(QObject):
 
 
 class ChangeNotifier(QObject):
-    def __init__(self, undo_stack, parent=None):
+    def __init__(self, undo_stack, parent=None, corner=Qt.BottomLeftCorner):
         super().__init__(undo_stack)
         if parent is None:
             parent = undo_stack.parent()
         self._undo_stack = undo_stack
         self._parent = parent
-        self._notification_stack = NotificationStack(self._parent)
+        self._corner = corner
+        self._notification = None
         self._undo_stack.indexChanged.connect(self._push_notification)
         self._notified_commands = set()
 
     @Slot(int)
     def _push_notification(self, index):
+        if self._notification is not None:
+            try:
+                self._notification.start_self_destruction()
+            except RuntimeError:
+                # Already destroyed
+                pass
         try:
             cmd = self._undo_stack.command(index)
         except RuntimeError:
@@ -278,10 +278,16 @@ class ChangeNotifier(QObject):
         if cmd in self._notified_commands:
             return
         self._notified_commands.add(cmd)
-        button_slot = self._undo_stack.undo
         notification_text = cmd.actionText() + " successful"
         button_text = "undo"
-        notification = ButtonNotification(
-            self._parent, notification_text, life_span=5000, button_text=button_text, button_slot=button_slot
+        button_slot = self._undo_stack.undo
+        self._notification = ButtonNotification(
+            self._parent,
+            notification_text,
+            life_span=5000,
+            word_wrap=False,
+            corner=self._corner,
+            button_text=button_text,
+            button_slot=button_slot,
         )
-        self._notification_stack.push_notification(notification)
+        self._notification.show()
