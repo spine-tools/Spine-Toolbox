@@ -762,9 +762,9 @@ class SpineToolboxProject(MetaObject):
         """
         target_name = target_item.name
         connected_names = (
-            self.successor_names(target_name)
+            self._predecessor_names(target_name)
             if direction == ExecutionDirection.FORWARD
-            else self._predecessor_names(target_name)
+            else self.successor_names(target_name)
         )
         provider_items = [self._project_item_model.get_item(name).project_item for name in connected_names]
         if direction == ExecutionDirection.FORWARD:
