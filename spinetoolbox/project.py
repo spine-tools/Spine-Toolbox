@@ -806,17 +806,6 @@ class SpineToolboxProject(MetaObject):
         successor.upstream_resources_updated(combined_resources)
 
     @staticmethod
-    def _update_successor(successor, predecessors, resource_cache):
-        combined_resources = list()
-        for item in predecessors:
-            resources = resource_cache.get(item.name)
-            if resources is None:
-                resources = item.resources_for_direct_successors()
-                resource_cache[item.name] = resources
-            combined_resources += resources
-        successor.upstream_resources_updated(combined_resources)
-
-    @staticmethod
     def _update_predecessor(predecessor, successors, resource_cache):
         combined_resources = list()
         for item in successors:
