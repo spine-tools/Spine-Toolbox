@@ -17,6 +17,7 @@ Unit tests for SpineToolboxProject class.
 """
 import os.path
 from tempfile import TemporaryDirectory
+from pathlib import Path
 import unittest
 from unittest import mock
 from PySide2.QtCore import QVariantAnimation, QEventLoop
@@ -258,6 +259,31 @@ class TestSpineToolboxProject(unittest.TestCase):
         )
         self.assertEqual(source_item.get_icon().name(), "renamed source")
         self.assertEqual(os.path.split(source_item.data_dir)[1], shorten("renamed source"))
+
+    def test_remove_connection(self):
+        """Tests issue #1310"""
+        # Make two DC's connected to a tool and provide a resource from both to Tool.
+        # Remove one connection, and test that the other one still provides the resource to Tool
+        project = self.toolbox.project()
+        add_dc(project, "dc1")
+        add_dc(project, "dc2")
+        add_tool(project, "t")
+        dc1 = project.get_item("dc1")
+        dc2 = project.get_item("dc2")
+        t = project.get_item("t")
+        with TemporaryDirectory() as temp_dir:
+            a = Path(temp_dir, "a.txt")
+            a.touch()
+            b = Path(temp_dir, "b.txt")
+            b.touch()
+            dc1.add_data_files([a])
+            dc2.add_data_files([b])
+            project.add_connection(Connection("dc1", "right", "t", "left"))
+            project.add_connection(Connection("dc2", "right", "t", "left"))
+            self.assertTrue(t._input_file_model.rowCount() == 2)  # There should 2 files in Available resources
+            connection = project.find_connection("dc2", "t")
+            project.remove_connection(connection)
+            self.assertTrue(t._input_file_model.rowCount() == 1)  # There should 1 resource left
 
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
