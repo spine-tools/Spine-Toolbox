@@ -1,10 +1,9 @@
 <RCC>
   <qresource prefix="partner_logos">
-    <file>VTT_logo_2018.png</file>
+    <file>VTT_Multicolour_Logo.jpg</file>
     <file>Energy_Reform_logo.png</file>
     <file>KU_Leuven_logo.png</file>
     <file>UCD_Dublin_logo.png</file>
     <file>KTH_logo.png</file>
-    <file>VTT_RGB.png</file>
   </qresource>
 </RCC>

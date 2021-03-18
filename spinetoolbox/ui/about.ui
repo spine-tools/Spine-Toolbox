@@ -342,6 +342,7 @@
              <pointsize>6</pointsize>
              <weight>50</weight>
              <bold>false</bold>
+             <stylestrategy>PreferDefault</stylestrategy>
             </font>
            </property>
            <property name="styleSheet">
@@ -383,6 +384,7 @@
             <font>
              <family>Arial Black</family>
              <pointsize>6</pointsize>
+             <stylestrategy>PreferDefault</stylestrategy>
             </font>
            </property>
            <property name="styleSheet">
@@ -408,6 +410,7 @@
             <font>
              <family>Arial Black</family>
              <pointsize>6</pointsize>
+             <stylestrategy>PreferDefault</stylestrategy>
             </font>
            </property>
            <property name="styleSheet">
@@ -433,6 +436,7 @@
             <font>
              <family>Arial Black</family>
              <pointsize>6</pointsize>
+             <stylestrategy>PreferDefault</stylestrategy>
             </font>
            </property>
            <property name="styleSheet">
@@ -585,6 +589,7 @@
         <property name="font">
          <font>
           <pointsize>7</pointsize>
+          <stylestrategy>PreferDefault</stylestrategy>
          </font>
         </property>
         <property name="frameShape">
@@ -929,16 +934,28 @@ p, li { white-space: pre-wrap; }
                </size>
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_2">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
                <item>
                 <widget class="QLabel" name="label_5">
                  <property name="maximumSize">
                   <size>
-                   <width>140</width>
-                   <height>39</height>
+                   <width>16777215</width>
+                   <height>16777215</height>
                   </size>
                  </property>
                  <property name="pixmap">
-                  <pixmap resource="resources/resources_logos.qrc">:/partner_logos/VTT_logo_2018.png</pixmap>
+                  <pixmap resource="resources/resources_logos.qrc">:/partner_logos/VTT_Multicolour_Logo.jpg</pixmap>
                  </property>
                  <property name="scaledContents">
                   <bool>true</bool>
@@ -1291,6 +1308,7 @@ p, li { white-space: pre-wrap; }
                    <pointsize>8</pointsize>
                    <weight>75</weight>
                    <bold>true</bold>
+                   <stylestrategy>PreferDefault</stylestrategy>
                   </font>
                  </property>
                  <property name="styleSheet">
