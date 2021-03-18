@@ -28,7 +28,7 @@ from spine_engine.project_item.project_item_resource import database_resource
 from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
-from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from .mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestProjectItemIcon(unittest.TestCase):
@@ -80,8 +80,8 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(target_icon.incoming_links(), [link])
 
     def test_drag_icon(self):
-        icon = ProjectItemIcon(self._toolbox, "", QColor(Qt.gray), QColor(Qt.green))
-        self._toolbox.ui.graphicsView.scene().addItem(icon)
+        item = add_view(self._toolbox.project(), "View")
+        icon = item.get_icon()
         self.assertEqual(icon.x(), 0.0)
         self.assertEqual(icon.y(), 0.0)
         icon.mousePressEvent(QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMousePress))
@@ -90,8 +90,8 @@ class TestProjectItemIcon(unittest.TestCase):
         icon.mouseReleaseEvent(QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMouseRelease))
         self.assertEqual(icon.x(), 99.0)
         self.assertEqual(icon.y(), 88.0)
-        self.assertEqual(self._toolbox.undo_stack.count(), 1)
-        move_command = self._toolbox.undo_stack.command(0)
+        self.assertEqual(self._toolbox.undo_stack.count(), 2)  # First in the stack is Add item command
+        move_command = self._toolbox.undo_stack.command(1)
         self.assertIsInstance(move_command, MoveIconCommand)
 
 

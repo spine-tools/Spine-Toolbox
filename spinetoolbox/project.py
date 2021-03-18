@@ -203,7 +203,10 @@ class SpineToolboxProject(MetaObject):
         Returns:
             ProjectItem: project item
         """
-        return self._project_item_model.get_item(name).project_item
+        try:
+            return self._project_item_model.get_item(name).project_item
+        except AttributeError as e:
+            raise
 
     def get_items(self):
         """ Returns all project items.

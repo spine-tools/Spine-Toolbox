@@ -227,7 +227,7 @@ class ProjectItemModel(QAbstractItemModel):
         return retval
 
     def remove_item(self, item, parent=QModelIndex()):
-        """Removes item from model.
+        """Removes item from project.
 
         Args:
             item (BaseProjectTreeItem): Project item to remove
