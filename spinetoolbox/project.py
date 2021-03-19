@@ -364,7 +364,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             list of Connection: connections connected to item
         """
-        return [c for c in self._connections if c.source == item_name or c.destination == item_name]
+        return [c for c in self._connections if item_name in (c.source, c.destination)]
 
     def add_connection(self, connection):
         """Adds a connection to the project.
@@ -721,17 +721,17 @@ class SpineToolboxProject(MetaObject):
 
         Updates connections' resources too if needed.
 
-         Args:
-             item (ProjectItem): item whose resources have changed
-             direction (ExecutionDirection): FORWARD notifies direct successors, BACKWARD direct predecessors
-         """
+        Args:
+            item (ProjectItem): item whose resources have changed
+            direction (ExecutionDirection): FORWARD notifies direct successors, BACKWARD direct predecessors
+        """
         trigger_name = item.name
         target_names = (
             self.successor_names(trigger_name)
             if direction == ExecutionDirection.FORWARD
             else self._predecessor_names(trigger_name)
         )
-        provider_names = self._predecessor_names if ExecutionDirection.FORWARD else self.successor_names
+        provider_names = self._predecessor_names if direction == ExecutionDirection.FORWARD else self.successor_names
         update_resources = (
             self._update_successor if direction == ExecutionDirection.FORWARD else self._update_predecessor
         )
@@ -755,6 +755,7 @@ class SpineToolboxProject(MetaObject):
 
     def _update_item_resources(self, target_item, direction):
         """Updates up or downstream resources for a single project item.
+        Called in both directions after removing a Connection.
 
         Args:
             target_item (ProjectItem): item whose resource need update
