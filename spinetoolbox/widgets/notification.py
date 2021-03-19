@@ -159,7 +159,8 @@ class InteractiveNotification(Notification):
     def leaveEvent(self, e):
         """Starts self destruction after the mouse leaves the notification."""
         QFrame.leaveEvent(self, e)
-        self.start_self_destruction()
+        if self.remaining_time():
+            self.timer.start()
 
 
 class ButtonNotification(InteractiveNotification):
