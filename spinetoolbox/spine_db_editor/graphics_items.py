@@ -234,8 +234,7 @@ class EntityItem(QGraphicsRectItem):
         self.moveBy(dx, dy)
 
     def mouseMoveEvent(self, event):
-        """Moves the item and all connected arcs. Also checks for a merge target
-        and sets an appropriate mouse cursor.
+        """Moves the item and all connected arcs.
 
         Args:
             event (QGraphicsSceneMouseEvent)

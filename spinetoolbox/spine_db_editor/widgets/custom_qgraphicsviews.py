@@ -70,6 +70,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._arc_length_action = None
         self._restore_pruned_menu = None
         self._parameter_heat_map_menu = None
+        self._previous_mouse_pos = None
 
     @property
     def entity_items(self):
@@ -506,10 +507,15 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def mouseMoveEvent(self, event):
         """Updates the hovered object item if we're in relationship creation mode."""
-        if not self.cross_hairs_items:
-            super().mouseMoveEvent(event)
+        if self.cross_hairs_items:
+            self._update_cross_hairs_pos(event.pos())
             return
-        self._update_cross_hairs_pos(event.pos())
+        super().mouseMoveEvent(event)
+        if not self.itemAt(event.pos()) and (event.buttons() & Qt.LeftButton != 0):
+            if self._previous_mouse_pos is not None:
+                delta = event.pos() - self._previous_mouse_pos
+                self._scroll_scene_by(delta.x(), delta.y())
+            self._previous_mouse_pos = event.pos()
 
     def _update_cross_hairs_pos(self, pos):
         """Updates the hovered object item and sets the 'cross_hairs' icon accordingly.
@@ -538,6 +544,24 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def mouseReleaseEvent(self, event):
         if not self.cross_hairs_items:
             super().mouseReleaseEvent(event)
+
+    def _scroll_scene_by(self, dx, dy):
+        if dx == dy == 0:
+            return
+        scene_rect = self.sceneRect()
+        view_scene_rect = self.mapFromScene(scene_rect).boundingRect()
+        view_rect = self.viewport().rect()
+        scene_dx = abs((self.mapToScene(0, 0) - self.mapToScene(dx, 0)).x())
+        scene_dy = abs((self.mapToScene(0, 0) - self.mapToScene(0, dy)).y())
+        if dx < 0 and view_rect.right() - dx >= view_scene_rect.right():
+            scene_rect.adjust(0, 0, scene_dx, 0)
+        elif dx > 0 and view_rect.left() - dx <= view_scene_rect.left():
+            scene_rect.adjust(-scene_dx, 0, 0, 0)
+        if dy < 0 and view_rect.bottom() - dy >= view_scene_rect.bottom():
+            scene_rect.adjust(0, 0, 0, scene_dy)
+        elif dy > 0 and view_rect.top() - dy <= view_scene_rect.top():
+            scene_rect.adjust(0, -scene_dy, 0, 0)
+        self.scene().setSceneRect(scene_rect)
 
     def keyPressEvent(self, event):
         """Aborts relationship creation if user presses ESC."""
