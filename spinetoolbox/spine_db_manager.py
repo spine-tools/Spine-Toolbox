@@ -500,7 +500,7 @@ class SpineDBManager(SpineDBManagerBase):
             return
         fetcher = self._fetchers[0]
         if fetcher.started:
-            # The fecther was started and is not finished
+            # The fetcher was started and is not finished
             return
         if fetcher.prepared:
             fetcher.finished.connect(self._handle_fetcher_finished)
@@ -848,7 +848,7 @@ class SpineDBManager(SpineDBManagerBase):
     def get_db_items(query, chunk_size=1000):
         """Runs the given query and yield results by chunks of given size.
 
-        Returns:
+        Yields:
             generator(list)
         """
         it = (x._asdict() for x in query.yield_per(chunk_size).enable_eagerloads(False))
@@ -883,7 +883,7 @@ class SpineDBManager(SpineDBManagerBase):
             db_map (DatabaseMappingBase): database map
             ids (Iterable of int): ids by which the alternatives should be filtered
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "alternative_sq", ids=ids, key=["name"]))
@@ -894,7 +894,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "wide_scenario_sq", ids=ids, key=["name"]))
@@ -905,7 +905,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "scenario_alternative_sq", ids=ids))
@@ -916,7 +916,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "object_class_sq", ids=ids, key=["name"]))
@@ -927,7 +927,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "ext_object_sq", ids=ids, key=["class_id", "name"]))
@@ -938,7 +938,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "wide_relationship_class_sq", ids=ids, key=["name"]))
@@ -949,7 +949,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -962,7 +962,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "ext_entity_group_sq", ids=ids, key=["member_name"]))
@@ -973,7 +973,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -988,7 +988,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -1006,7 +1006,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_object_parameter_definitions(db_map, ids=ids)
@@ -1018,7 +1018,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "parameter_definition_tag_sq", ids=ids))
@@ -1029,7 +1029,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -1044,7 +1044,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -1062,7 +1062,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_object_parameter_values(db_map, ids=ids)
@@ -1074,7 +1074,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "wide_parameter_value_list_sq", ids=ids, key=["name"]))
@@ -1085,7 +1085,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "parameter_tag_sq", ids=ids, key=["tag"]))
@@ -1096,7 +1096,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -1109,7 +1109,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "tool_sq", ids=ids, key=["name"]))
@@ -1120,7 +1120,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "tool_feature_sq", ids=ids))
@@ -1131,7 +1131,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "tool_feature_method_sq", ids=ids))
