@@ -56,6 +56,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.cross_hairs_items = []
         self.auto_expand_objects = None
         self._auto_expand_objects_action = None
+        self._add_objects_action = None
         self._save_pos_action = None
         self._clear_pos_action = None
         self._hide_action = None
@@ -71,6 +72,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._restore_pruned_menu = None
         self._parameter_heat_map_menu = None
         self._previous_mouse_pos = None
+        self._context_menu_pos = None
 
     @property
     def entity_items(self):
@@ -103,6 +105,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         )
         self._auto_expand_objects_action.setChecked(self.auto_expand_objects)
         self._auto_expand_objects_action.toggled.connect(self.set_auto_expand_objects)
+        self._menu.addSeparator()
+        self._add_objects_action = self._menu.addAction("Add objects", self.add_objects_at_position)
         self._menu.addSeparator()
         self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
         self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
@@ -193,6 +197,16 @@ class EntityQGraphicsView(CustomQGraphicsView):
         return menu
 
     @Slot(bool)
+    def set_auto_expand_objects(self, checked=False):
+        self.auto_expand_objects = checked
+        self._auto_expand_objects_action.setChecked(checked)
+        self._spine_db_editor.build_graph()
+
+    @Slot(bool)
+    def add_objects_at_position(self, checked=False):
+        self._spine_db_editor.add_objects_at_position(self._context_menu_pos)
+
+    @Slot(bool)
     def edit_selected(self, _=False):
         """Edits selected items."""
         obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
@@ -210,12 +224,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
             db_map, entity_id = item.db_map_entity_id
             db_map_typed_data.setdefault(db_map, {}).setdefault(item.entity_type, set()).add(entity_id)
         self._spine_db_editor.db_mngr.remove_items(db_map_typed_data)
-
-    @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
-        self.auto_expand_objects = checked
-        self._auto_expand_objects_action.setChecked(checked)
-        self._spine_db_editor.build_graph()
 
     @Slot(bool)
     def hide_selected_items(self, checked=False):
@@ -580,6 +588,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if e.isAccepted():
             return
         e.accept()
+        self._context_menu_pos = self.mapToScene(e.pos())
         self._menu.exec_(e.globalPos())
 
     def _compute_max_zoom(self):

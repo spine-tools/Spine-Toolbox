@@ -100,7 +100,15 @@ class GraphLayoutGenerator(QRunnable):
         msg = Signal(str)
 
     def __init__(
-        self, identifier, vertex_count, src_inds, dst_inds, spread, heavy_positions=None, iterations=12, weight_exp=-2
+        self,
+        identifier,
+        vertex_count,
+        src_inds=(),
+        dst_inds=(),
+        spread=0,
+        heavy_positions=None,
+        iterations=12,
+        weight_exp=-2,
     ):
         super().__init__()
         if vertex_count == 0:
@@ -124,6 +132,8 @@ class GraphLayoutGenerator(QRunnable):
         self.msg = self._signals.msg
         self._progress_bar = None
         self._stopped = False
+        self.x = None
+        self.y = None
 
     def show_progress_widget(self, parent):
         self._progress_bar = ProgressBarWidget(self)
@@ -143,6 +153,8 @@ class GraphLayoutGenerator(QRunnable):
         self._show_previews = checked
 
     def emit_layout_available(self, x, y):
+        self.x = x
+        self.y = y
         self.layout_available.emit(self._id, x, y)
 
     def emit_finished(self):

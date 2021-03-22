@@ -32,7 +32,7 @@ from ..graphics_items import (
     CrossHairsArcItem,
 )
 from .graph_layout_generator import GraphLayoutGenerator
-from .add_items_dialogs import AddReadyRelationshipsDialog
+from .add_items_dialogs import AddObjectsDialog, AddReadyRelationshipsDialog
 
 
 class GraphViewMixin:
@@ -57,6 +57,7 @@ class GraphViewMixin:
         self.src_inds = list()
         self.dst_inds = list()
         self._relationships_being_added = False
+        self._adding_objects_at_pos = None
         self.added_relationship_ids = set()
         self._thread_pool = QThreadPool()
         self.layout_gens = dict()
@@ -84,7 +85,19 @@ class GraphViewMixin:
         """
         super().receive_objects_added(db_map_data)
         added_ids = {(db_map, x["id"]) for db_map, objects in db_map_data.items() for x in objects}
-        self.restore_removed_entities(added_ids)
+        restored_ids = self.restore_removed_entities(added_ids)
+        added_ids -= restored_ids
+        if added_ids and self._adding_objects_at_pos is not None:
+            spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
+            gen = GraphLayoutGenerator(None, len(added_ids), spread=spread)
+            gen.run()
+            x = self._adding_objects_at_pos.x()
+            y = self._adding_objects_at_pos.y()
+            for dx, dy, object_id in zip(gen.x, gen.y, added_ids):
+                object_item = ObjectItem(self, x + dx, y + dy, self.VERTEX_EXTENT, object_id)
+                self.scene.addItem(object_item)
+                object_item.apply_zoom(self.ui.graphicsView.zoom_factor)
+            self._adding_objects_at_pos = None
 
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added to the db.
@@ -440,6 +453,11 @@ class GraphViewMixin:
 
     def _end_add_relationships(self):
         self._relationships_being_added = False
+
+    def add_objects_at_position(self, pos):
+        self._adding_objects_at_pos = pos
+        dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps)
+        dialog.show()
 
     def get_pdf_file_path(self):
         self.qsettings.beginGroup(self.settings_group)
