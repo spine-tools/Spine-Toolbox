@@ -27,6 +27,7 @@ from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
 from spinetoolbox.spine_engine_manager import make_engine_manager
+from spinetoolbox.cksm import CondaKernelSpecManager
 
 # Set logging level for jupyter loggers
 traitlets_logger = logging.getLogger("traitlets")
@@ -142,8 +143,11 @@ class SpineConsoleWidget(RichJupyterWidget):
                 )
                 return
         kernels = find_kernels()
+        # kernels["calliope"] = "C:/Users/ttepsa/AppData/Roaming/jupyter/kernels/calliope"
+        kernels["calliope"] = "C:/Users/ttepsa/.julia/conda/3/envs/calliope/share/jupyter/kernels/python3"
         try:
             kernel_path = kernels[k_name]
+            print(kernel_path)
         except KeyError:
             self._toolbox.msg_error.emit(
                 f"Kernel {k_name} not found. Go to Settings->Tools and select another {language} kernel."
@@ -172,9 +176,13 @@ class SpineConsoleWidget(RichJupyterWidget):
         self._toolbox.msg.emit(f"*** Starting {self._name} (kernel {new_k_name_anchor}) ***")
         self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
         km = QtKernelManager(kernel_name=self.kernel_name)
+        km = QtKernelManager(kernel_name="conda-env-calliope-py")
+        self.conda_spec_manager = CondaKernelSpecManager()
         try:
             blackhole = open(os.devnull, 'w')
-            km.start_kernel(stdout=blackhole, stderr=blackhole)
+            # km.start_kernel(stdout=blackhole, stderr=blackhole)
+            km.kernel_spec_manager = self.conda_spec_manager
+            km.start_kernel()
             kc = km.client()
             kc.hb_channel.time_to_dead = JUPYTER_KERNEL_TIME_TO_DEAD
             kc.start_channels()

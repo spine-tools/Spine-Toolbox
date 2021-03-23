@@ -292,6 +292,27 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_6.addWidget(self.groupBox_general)
 
+        self.groupBox = QGroupBox(self.General)
+        self.groupBox.setObjectName(u"groupBox")
+        self.verticalLayout_11 = QVBoxLayout(self.groupBox)
+        self.verticalLayout_11.setObjectName(u"verticalLayout_11")
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.pushButton_conda = QPushButton(self.groupBox)
+        self.pushButton_conda.setObjectName(u"pushButton_conda")
+
+        self.horizontalLayout_3.addWidget(self.pushButton_conda)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_2)
+
+
+        self.verticalLayout_11.addLayout(self.horizontalLayout_3)
+
+
+        self.verticalLayout_6.addWidget(self.groupBox)
+
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout_6.addItem(self.verticalSpacer)
@@ -736,6 +757,8 @@ class Ui_SettingsForm(object):
         self.checkBox_use_smooth_zoom.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_use_smooth_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth zoom", None))
+        self.groupBox.setTitle(QCoreApplication.translate("SettingsForm", u"Conda", None))
+        self.pushButton_conda.setText(QCoreApplication.translate("SettingsForm", u"Conda Environments", None))
         self.groupBox_project.setTitle(QCoreApplication.translate("SettingsForm", u"Project", None))
         self.label_2.setText(QCoreApplication.translate("SettingsForm", u"Name", None))
 #if QT_CONFIG(tooltip)

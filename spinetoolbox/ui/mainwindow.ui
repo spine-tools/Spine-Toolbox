@@ -725,7 +725,7 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open application and project settings&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+,</string>
+    <string>§</string>
    </property>
   </action>
   <action name="actionItem_Toolbar">

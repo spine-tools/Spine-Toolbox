@@ -31,6 +31,7 @@ from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..link import Link
 from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
+from ..widgets.conda_envs import CondaEnv
 from ..helpers import (
     select_python_interpreter,
     select_julia_executable,
@@ -220,6 +221,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self._kernel_editor = None
+        self._conda_env_window = None
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
@@ -239,6 +241,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.toolButton_browse_python.clicked.connect(self.browse_python_button_clicked)
         self.ui.pushButton_open_kernel_editor_python.clicked.connect(self.show_python_kernel_editor)
         self.ui.pushButton_open_kernel_editor_julia.clicked.connect(self.show_julia_kernel_editor)
+        self.ui.pushButton_conda.clicked.connect(self.show_conda_envs)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
@@ -352,6 +355,15 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def browse_python_button_clicked(self, checked=False):
         """Calls static method that shows a file browser for selecting Python interpreter."""
         select_python_interpreter(self, self.ui.lineEdit_python_path)
+
+    @Slot(bool)
+    def show_conda_envs(self, _checked=False):
+        """Opens Conda envs 'editor'."""
+        self._conda_env_window = CondaEnv(self)
+        self._conda_env_window.show()
+
+    def conda_env_window_closed(self):
+        self._conda_env_window = None
 
     @Slot(bool)
     def show_python_kernel_editor(self, checked=False):

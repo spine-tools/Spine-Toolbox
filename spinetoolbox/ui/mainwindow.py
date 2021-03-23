@@ -497,7 +497,7 @@ class Ui_MainWindow(object):
         self.actionSettings.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open application and project settings</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
-        self.actionSettings.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+,", None))
+        self.actionSettings.setShortcut(QCoreApplication.translate("MainWindow", u"\u00a7", None))
 #endif // QT_CONFIG(shortcut)
         self.actionItem_Toolbar.setText(QCoreApplication.translate("MainWindow", u"Item Toolbar", None))
         self.actionAdd_Item_Toolbar.setText(QCoreApplication.translate("MainWindow", u"Add Item Toolbar", None))

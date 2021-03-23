@@ -79,6 +79,7 @@ class KernelEditor(QDialog):
         # Set up
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.populate_kernel_model()
+        self.add_conda_envs_to_model()
         if python_or_julia == "python":
             self.ui.stackedWidget.setCurrentIndex(0)
             self.setWindowTitle("Python Kernel Specification Editor")
@@ -259,11 +260,29 @@ class KernelEditor(QDialog):
                 return column
         return -1
 
+    def make_conda_kernel_spec(self):
+        prgm = self.ui.lineEdit_python_interpreter.text()
+        if self._ipykernel_install_failed:
+            # Makes sure that there's no never-ending loop if ipykernel installation fails for some reason
+            self._logger.msg_error.emit(f"Installing package iPyKernel for {prgm} failed. Please install it manually.")
+            self._ipykernel_install_failed = False
+            return
+        kernel_name = self.ui.lineEdit_python_kernel_name.text()
+        kernel_display_name = self.ui.lineEdit_python_kernel_display_name.text()
+        if kernel_display_name == "":
+            kernel_display_name = kernel_name + "conda_spinetoolbox"  # Default display name if not given
+        if not self.check_options(prgm, kernel_name, kernel_display_name, "python"):
+            return
+        self.do_conda_kernel()
+
     @Slot(bool)
     def make_python_kernel(self, checked=False):
         """Makes a new Python kernel. Offers to install ipykernel package if it is
         missing from the selected Python environment. Overwrites existing kernel
         with the same name if this is ok by user."""
+        if self.ui.radioButton_conda.isChecked():
+            self.make_conda_kernel_spec()
+            return
         prgm = self.ui.lineEdit_python_interpreter.text()
         if self._ipykernel_install_failed:
             # Makes sure that there's no never-ending loop if ipykernel installation fails for some reason
@@ -412,7 +431,7 @@ class KernelEditor(QDialog):
 
     def populate_kernel_model(self):
         """Populates the kernel model with kernels found in user's system
-        either with Python or Julia kernels. Unknows, invalid, and
+        either with Python or Julia kernels. Unknonw, invalid, and
         unsupported kernels are appended to the end."""
         self.ui.tableView_kernel_list.setCurrentIndex(QModelIndex())  # To prevent unneeded currentChanged signals
         if self.python_or_julia == "python":  # Add Python kernels
@@ -495,6 +514,10 @@ class KernelEditor(QDialog):
             return
         [n] = new_kernel  # Unpack the set
         self.set_kernel_selected(n)
+
+    def add_conda_envs_to_model(self):
+        """Find all conda envs and add their kernels to the model"""
+        pass
 
     @staticmethod
     def get_kernel_deats(kernel_path):
