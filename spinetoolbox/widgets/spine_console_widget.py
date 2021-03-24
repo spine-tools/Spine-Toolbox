@@ -175,7 +175,7 @@ class SpineConsoleWidget(RichJupyterWidget):
         new_k_name_anchor = "<a style='color:#99CCFF;' title='{0}' href='#'>{1}</a>".format(k_path, self.kernel_name)
         self._toolbox.msg.emit(f"*** Starting {self._name} (kernel {new_k_name_anchor}) ***")
         self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
-        km = QtKernelManager(kernel_name=self.kernel_name)
+        # km = QtKernelManager(kernel_name=self.kernel_name)
         km = QtKernelManager(kernel_name="conda-env-calliope-py")
         self.conda_spec_manager = CondaKernelSpecManager()
         try:
