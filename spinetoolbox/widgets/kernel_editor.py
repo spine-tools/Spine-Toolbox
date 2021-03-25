@@ -670,7 +670,6 @@ class KernelEditor(QDialog):
         self.move(newpos)
         self._mouse_move_pos = globalpos
 
-    @busy_effect
     @staticmethod
     def is_package_installed(python_path, package_name):
         """Checks if given package is installed to given Python environment.
