@@ -14,7 +14,8 @@ class ScenarioFilters(unittest.TestCase):
         if self._tool_output_path.exists():
             shutil.rmtree(self._tool_output_path)
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
-        self._database_path.unlink()
+        if self._database_path.exists():
+            self._database_path.unlink()
         url = "sqlite:///" + str(self._database_path)
         db_map = DiffDatabaseMapping(url, create=True)
         import_alternatives(db_map, ("alternative_1", "alternative_2"))
