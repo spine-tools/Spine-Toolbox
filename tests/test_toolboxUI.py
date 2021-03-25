@@ -217,6 +217,48 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(g.has_edge("b", "c"))
         self.assertTrue(g.has_edge("c", "d"))
 
+    def test_init_project(self):
+        project_dir = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "Project Directory"))
+        self.assertIsNone(self.toolbox.project())
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
+            "spinetoolbox.project.create_dir"
+        ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
+            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        ):
+            self.toolbox.init_project(project_dir)
+        self.assertIsNotNone(self.toolbox.project())
+        self.assertEqual(self.toolbox.project().name, "UnitTest Project")
+
+    def test_new_project(self):
+        self._temp_dir = TemporaryDirectory()
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
+            "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.remove_directory_from_recents"
+        ), mock.patch("PySide2.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+            mock_dir_getter.return_value = self._temp_dir.name
+            self.toolbox.new_project()
+        self.assertIsNotNone(self.toolbox.project())
+        self.assertEquals(self.toolbox.project().name, os.path.basename(self._temp_dir.name))
+
+    def test_save_project(self):
+        self._temp_dir = TemporaryDirectory()
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), mock.patch(
+            "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.remove_directory_from_recents"
+        ), mock.patch("PySide2.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+            mock_dir_getter.return_value = self._temp_dir.name
+            self.toolbox.new_project()
+        add_dc(self.toolbox.project(), "DC")
+        self.toolbox.save_project()
+        self.assertTrue(self.toolbox.undo_stack.isClean())
+        self.assertTrue(self.toolbox.close_project())
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
+            "spinetoolbox.project.create_dir"
+        ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
+            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        ):
+            self.toolbox.open_project(self._temp_dir.name)
+        self.assertIsNotNone(self.toolbox.project())
+        self.assertEqual(self.toolbox.project().get_item("DC").name, "DC")
+
     def test_close_project(self):
         self.assertIsNone(self.toolbox.project())
         self.assertTrue(self.toolbox.close_project())

@@ -308,8 +308,13 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def init_project(self, project_dir):
-        """Initializes project at application start-up. Opens the last project that was open
-        when app was closed (if enabled in Settings) or starts the app without a project.
+        """Initializes project at application start-up.
+
+        Opens the last project that was open when app was closed
+        (if enabled in Settings) or starts the app without a project.
+
+        Args:
+            project_dir (str): project directory
         """
         p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
         getting_started_anchor = (
@@ -340,7 +345,7 @@ class ToolboxUI(QMainWindow):
             )
             self.remove_path_from_recent_projects(project_dir)
             return
-        self.open_project(project_dir, clear_logs=False)
+        self.open_project(project_dir)
 
     @Slot()
     def new_project(self):
@@ -400,14 +405,13 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("New project <b>{0}</b> is now open".format(self._project.name))
 
     @Slot()
-    def open_project(self, load_dir=None, clear_logs=True):
+    def open_project(self, load_dir=None):
         """Opens project from a selected or given directory.
 
         Args:
             load_dir (str, optional): Path to project base directory. If default value is used,
                 a file explorer dialog is opened where the user can select the
                 project to open.
-            clear_logs (bool): True clears Event and Process Log, False does not
 
         Returns:
             bool: True when opening the project succeeded, False otherwise
@@ -445,15 +449,14 @@ class ToolboxUI(QMainWindow):
             self.remove_path_from_recent_projects(load_dir)
             self.msg_error.emit("Project file <b>{0}</b> missing".format(load_path))
             return False
-        return self.restore_project(proj_info, load_dir, clear_logs)
+        return self.restore_project(proj_info, load_dir)
 
-    def restore_project(self, project_info, project_dir, clear_logs):
+    def restore_project(self, project_info, project_dir):
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
 
         Args:
             project_info (dict): Project information dictionary
             project_dir (str): Project directory
-            clear_logs (bool): True clears Event and Process Log, False does not
 
         Returns:
             bool: True when restoring project succeeded, False otherwise
@@ -555,13 +558,13 @@ class ToolboxUI(QMainWindow):
                 self.msg_error.emit("Project saving failed")
                 return
         # Put project's specification definition files into a dict by item type
-        serialized_tool_spec_paths = dict()
+        serialized_spec_paths = dict()
         for spec in self.specification_model.specifications():
             if spec.plugin:
                 continue
             serialized_path = serialize_path(spec.definition_file_path, self._project.project_dir)
-            serialized_tool_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
-        if not self._project.save(serialized_tool_spec_paths):
+            serialized_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
+        if not self._project.save(serialized_spec_paths):
             self.msg_error.emit("Project saving failed")
             return
         self.msg.emit(f"Project <b>{self._project.name}</b> saved")
@@ -609,7 +612,7 @@ class ToolboxUI(QMainWindow):
         # Change name of the duplicated project to the new project directory name
         _, new_name = os.path.split(answer)
         proj_info["project"]["name"] = new_name
-        if not self.restore_project(proj_info, answer, clear_logs=False):
+        if not self.restore_project(proj_info, answer):
             return
         self.save_project()  # Save to update project name in project.json, must be done after restore_project()
         # noinspection PyCallByClass, PyArgumentList
