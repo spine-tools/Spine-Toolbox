@@ -2,6 +2,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import unittest
+from spinedb_api import DiffDatabaseMapping, import_alternatives, import_scenario_alternatives, import_scenarios
 
 
 class ScenarioFilters(unittest.TestCase):
@@ -12,12 +13,17 @@ class ScenarioFilters(unittest.TestCase):
     def setUp(self):
         if self._tool_output_path.exists():
             shutil.rmtree(self._tool_output_path)
-        pristine_database = self._root_path / "database.sqlite.backup"
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(pristine_database, self._database_path)
-
-    def tearDown(self):
         self._database_path.unlink()
+        url = "sqlite:///" + str(self._database_path)
+        db_map = DiffDatabaseMapping(url, create=True)
+        import_alternatives(db_map, ("alternative_1", "alternative_2"))
+        import_scenarios(db_map, (("scenario_1", True), ("scenario_2", True)))
+        import_scenario_alternatives(
+            db_map, (("scenario_1", "alternative_1"), ("scenario_2", "alternative_2"))
+        )
+        db_map.commit_session("Add test data.")
+        db_map.connection.close()
 
     def test_execution(self):
         this_file = Path(__file__)
