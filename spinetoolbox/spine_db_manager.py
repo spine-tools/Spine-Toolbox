@@ -584,16 +584,16 @@ class SpineDBManager(SpineDBManagerBase):
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
-        """Returns an appropriate icon for a given entity class.
+        """Returns an icon renderer for a given entity class.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DiffDatabaseMapping): database map
             entity_type (str): either 'object_class' or 'relationship_class'
             entity_class_id (int): entity class' id
             for_group (bool): if True, return the group object icon instead
 
         Returns:
-            QIcon: requested icon
+            QSvgRenderer: requested renderer or None if no entity class was found
         """
         entity_class = self.get_item(db_map, entity_type, entity_class_id)
         if not entity_class:
@@ -606,9 +606,19 @@ class SpineDBManager(SpineDBManagerBase):
             return self.get_icon_mngr(db_map).relationship_renderer(entity_class["object_class_name_list"])
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
-        return SpineDBIconManager.icon_from_renderer(
-            self.entity_class_renderer(db_map, entity_type, entity_class_id, for_group=for_group)
-        )
+        """Returns an appropriate icon for a given entity class.
+
+        Args:
+            db_map (DiffDatabaseMapping): database map
+            entity_type (str): either 'object_class' or 'relationship_class'
+            entity_class_id (int): entity class' id
+            for_group (bool): if True, return the group object icon instead
+
+        Returns:
+            QIcon: requested icon or None if no entity class was found
+        """
+        renderer = self.entity_class_renderer(db_map, entity_type, entity_class_id, for_group=for_group)
+        return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
     def get_item(self, db_map, item_type, id_):
         """Returns the item of the given type in the given db map that has the given id,
