@@ -367,6 +367,7 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         indexes_to_set, values_to_set = self._paste_to_values_column(pasted_table, first_row, paste_length)
         model.batch_set_data(indexes_to_set, values_to_set)
         self._select_pasted(indexes_to_set)
+        return True
 
     @staticmethod
     def _read_pasted_text(text):
@@ -453,6 +454,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             )
         model.batch_set_data(indexes_to_set, values_to_set)
         self._select_pasted(indexes_to_set)
+        return True
 
     def _paste_two_columns(self, data_indexes, data_values, first_row, paste_length):
         """
@@ -590,6 +592,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
             indexes_to_set.append(create_model_index(row, 0))
         model.batch_set_data(indexes_to_set, values_to_set)
         self._select_pasted(indexes_to_set)
+        return True
 
     @staticmethod
     def _read_pasted_text(text):
@@ -673,16 +676,16 @@ class MapTableView(CopyPasteTableView):
         selection_length = last_row - first_row + 1
         selection_width = last_column - first_column + 1
         model = self.model()
-        model_column_count = model.columnCount()
-        model_row_count = model.rowCount()
         if (
             (selection_length == 1 and selection_width == 1)
             or model.is_expanse_row(last_row)
             or model.is_expanse_column(last_column)
         ):
             # If a single cell or expanse is selected, we paste everything.
+            model_row_count = model.rowCount()
             if model_row_count <= first_row + paste_length:
                 model.insertRows(model_row_count, paste_length - (model_row_count - 1 - first_row))
+            model_column_count = model.columnCount()
             if model_column_count <= first_column + paste_width:
                 model.insertColumns(model_column_count, paste_width - (model_column_count - 1 - first_column))
             capped_length = paste_length

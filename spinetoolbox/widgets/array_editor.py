@@ -33,7 +33,7 @@ class ArrayEditor(QWidget):
     def __init__(self, parent=None):
         """
         Args:
-            parent (QWidget): parent widget
+            parent (QWidget, optional): parent widget
         """
         from ..ui.array_editor import Ui_Form  # pylint: disable=import-outside-toplevel
 
@@ -56,7 +56,11 @@ class ArrayEditor(QWidget):
             self._ui.splitter.setCollapsible(i, False)
 
     def set_value(self, value):
-        """Sets the parameter_value for editing in this widget."""
+        """Sets the parameter_value for editing in this widget.
+
+        Args:
+            value (Array): value for editing
+        """
         type_name = {float: "Float", DateTime: "Datetime", Duration: "Duration", str: "String"}[value.value_type]
         self._ui.value_type_combo_box.blockSignals(True)
         self._ui.value_type_combo_box.setCurrentText(type_name)
@@ -65,9 +69,19 @@ class ArrayEditor(QWidget):
         self._check_if_plotting_enabled(type_name)
 
     def value(self):
+        """Returns the array currently being edited.
+
+        Returns:
+            Array: array
+        """
         return self._model.array()
 
     def _check_if_plotting_enabled(self, type_name):
+        """Checks is array's data type allows the array to be plotted.
+
+        Args:
+            type_name (str): data type's name
+        """
         if type_name == "Float":
             self._ui.plot_widget_stack.setCurrentIndex(1)
         else:
