@@ -50,6 +50,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._fetcher_semaphore.deleteLater()
         self._import_semaphore.deleteLater()
         self._commit_semaphore.deleteLater()
+        QApplication.processEvents()
 
     def test_fetch_empty_database(self):
         self._fetcher.fetch(self._listener, [self._db_map])

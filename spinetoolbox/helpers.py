@@ -63,6 +63,16 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
 
 
 def format_log_message(msg_type, message, show_datetime=True):
+    """Adds color tags and optional time stamp to message.
+
+    Args:
+        msg_type (str): message's type; accepts only 'msg', 'msg_success', 'msg_warning', or 'msg_error'
+        message (str): message to format
+        show_datetime (bool): True to add time stamp, False to omit it
+
+    Returns:
+        str: formatted message
+    """
     color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
@@ -137,6 +147,9 @@ def rename_dir(old_dir, new_dir, toolbox, box_title):
         new_dir (str): Absolute path to new directory
         toolbox (ToolboxUI): A toolbox to log messages and ask questions.
         box_title (str): The title of the message boxes, (e.g. "Undoing 'rename DC1 to DC2'")
+
+    Returns:
+        bool: True if operation was successful, False otherwise
     """
     if os.path.exists(new_dir):
         msg = "Directory <b>{0}</b> already exists.<br/><br/>Would you like to overwrite its contents?".format(new_dir)
@@ -212,7 +225,7 @@ def set_taskbar_icon():
 
 @Slot()
 def supported_img_formats():
-    """Function to check if reading .ico files is supported."""
+    """Checks if reading .ico files is supported."""
     img_formats = QImageReader().supportedImageFormats()
     img_formats_str = '\n'.join(str(x) for x in img_formats)
     logging.debug("Supported Image formats:\n%s", img_formats_str)
@@ -251,7 +264,11 @@ def pyside2_version_check():
 
 
 def spine_engine_version_check():
-    """Check if spine engine package is the correct version and explain how to upgrade if it is not."""
+    """Check if spine engine package is the correct version and explain how to upgrade if it is not.
+
+    Returns:
+        bool: True if Spine Engine is of correct version, False otherwise
+    """
     try:
         current_version = spine_engine.__version__
         current_split = [int(x) for x in current_version.split(".")]
@@ -287,6 +304,9 @@ def get_datetime(show, date=True):
     Args:
         show (bool): True returns date and time string. False returns empty string.
         date (bool): Whether or not the date should be included in the result
+
+    Returns:
+        str: datetime string or empty string if show is False
     """
     if show:
         t = datetime.datetime.now()
@@ -305,8 +325,8 @@ def copy_files(src_dir, dst_dir, includes=None, excludes=None):
     Args:
         src_dir (str): Source directory
         dst_dir (str): Destination directory
-        includes (list): Included files (wildcards accepted)
-        excludes (list): Excluded files (wildcards accepted)
+        includes (list, optional): Included files (wildcards accepted)
+        excludes (list, optional): Excluded files (wildcards accepted)
 
     Returns:
         count (int): Number of files copied
@@ -338,6 +358,9 @@ def erase_dir(path, verbosity=False):
     Args:
         path (str): Path to directory
         verbosity (bool): Print logging messages or not
+
+    Returns:
+        bool: True if operation was successful, False otherwise
     """
     if not os.path.exists(path):
         if verbosity:
@@ -358,6 +381,9 @@ def copy_dir(widget, src_dir, dst_dir):
         widget (QWidget): Parent widget for QMessageBoxes
         src_dir (str): Absolute path to directory that will be copied
         dst_dir (str): Absolute path to new directory
+
+    Returns:
+        bool: True if operation was successful, False otherwise
     """
     try:
         shutil.copytree(src_dir, dst_dir)
@@ -406,7 +432,7 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
         widget (QWidget): Enables e.g. printing to Event Log
         src (str): Source directory
         dst (str): Destination directory
-        ignore: Ignore function
+        ignore (Callable, optional): Ignore function
         silent (bool): If False, messages are sent to Event Log, If True, copying is done in silence
     """
     if os.path.isdir(src):
@@ -454,7 +480,10 @@ def format_string_list(str_list):
     Intended to print error logs as returned by spinedb_api.
 
     Args:
-        str_list (list(str))
+        str_list (list of str): list of strings to format
+
+    Returns:
+        str: formatted list
     """
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
@@ -462,6 +491,12 @@ def format_string_list(str_list):
 def rows_to_row_count_tuples(rows):
     """Breaks a list of rows into a list of (row, count) tuples corresponding
     to chunks of successive rows.
+
+    Args:
+        rows (list): rows
+
+    Returns:
+        list of tuple: row count tuples
     """
     if not rows:
         return []
@@ -475,6 +510,12 @@ def rows_to_row_count_tuples(rows):
 def inverted(input_):
     """Inverts a dictionary that maps keys to a list of values.
     The output maps values to a list of keys that include the value in the input.
+
+    Args:
+        input_ (dict): dictionary to invert
+
+    Returns:
+        dict: inverted dictionary
     """
     output = dict()
     for key, value_list in input_.items():
@@ -498,6 +539,10 @@ class IconListManager:
     """A class to manage icons for icon list widgets."""
 
     def __init__(self, icon_size):
+        """
+        Args:
+            icon_size (QSize): icon's size
+        """
         self._icon_size = icon_size
         self.searchterms = {}
         self.model = QStandardItemModel()
@@ -523,8 +568,14 @@ class IconListManager:
         self.model.invisibleRootItem().appendRows(items)
 
     def _model_data(self, index, role):
-        """Replacement method for model.data().
-        Create pixmaps as they're requested by the data() method, to reduce loading time.
+        """Creates pixmaps as they're requested by the data() method, to reduce loading time.
+
+        Args:
+            index (QModelIndex): index to the model
+            role (int): data role
+
+        Returns:
+            Any: role-dependent model data
         """
         if role == Qt.DisplayRole:
             return None
@@ -535,7 +586,14 @@ class IconListManager:
 
 
 def object_icon(display_icon):
-    """Create and return a QIcon corresponding to display_icon."""
+    """Creates and returns a QIcon corresponding to display_icon.
+
+    Args:
+        display_icon (int): icon id
+
+    Returns:
+        QIcon: requested icon
+    """
     icon_code, color_code = interpret_icon_id(display_icon)
     engine = CharIconEngine(chr(icon_code), color_code)
     return QIcon(engine)
@@ -555,6 +613,11 @@ class CharIconEngine(TransparentIconEngine):
     """Specialization of QIconEngine used to draw font-based icons."""
 
     def __init__(self, char, color=None):
+        """
+        Args:
+            char (str): character to use as the icon
+            color (QColor, optional):
+        """
         super().__init__()
         self.char = char
         self.color = color

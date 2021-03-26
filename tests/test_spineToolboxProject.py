@@ -16,8 +16,8 @@ Unit tests for SpineToolboxProject class.
 :date:   14.11.2018
 """
 import os.path
-from tempfile import TemporaryDirectory
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide2.QtCore import QVariantAnimation, QEventLoop
@@ -218,6 +218,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         loop = QEventLoop()
         self.toolbox.project().project_execution_finished.connect(loop.quit)
         loop.exec_()
+        loop.deleteLater()
 
     def test_execute_project_with_single_item(self):
         view = add_view(self.toolbox.project(), "View")
@@ -378,7 +379,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         data_file = Path(self._temp_dir.name, "a.txt")
         data_file.touch()
         dc.add_data_files([data_file])
-        QApplication.processEvents()  # DC's file system watcher updates DC here
+        while dc.data_model.rowCount() == 0:
+            QApplication.processEvents()  # DC's file system watcher updates DC here
         self.assertEqual(tool._input_file_model.rowCount(), 1)
 
     def test_remove_connection(self):

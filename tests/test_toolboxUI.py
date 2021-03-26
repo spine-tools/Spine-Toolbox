@@ -237,7 +237,7 @@ class TestToolboxUI(unittest.TestCase):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         self.assertIsNotNone(self.toolbox.project())
-        self.assertEquals(self.toolbox.project().name, os.path.basename(self._temp_dir.name))
+        self.assertEqual(self.toolbox.project().name, os.path.basename(self._temp_dir.name))
 
     def test_save_project(self):
         self._temp_dir = TemporaryDirectory()

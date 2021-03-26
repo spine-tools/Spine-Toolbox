@@ -255,4 +255,5 @@ class SpineEngineWorker(QObject):
             self._node_execution_finished.emit(item, None, None, False, False)
         self._thread.quit()
         self._thread.wait()
+        self._thread.deleteLater()
         self.deleteLater()

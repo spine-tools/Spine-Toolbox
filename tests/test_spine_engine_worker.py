@@ -15,7 +15,6 @@ Unit tests for ``spine_engine_worker`` module.
 :authors: A. Soininen (VTT)
 :date:    3.12.2020
 """
-from tempfile import TemporaryDirectory
 import time
 import unittest
 from PySide2.QtCore import QObject, Slot
@@ -59,9 +58,10 @@ class _Receiver(QObject):
 
     @Slot()
     def _mark_worker_finished(self):
-        self.finished = True
         self.outcome = self._worker.engine_final_state()
         self._worker.clean_up()
+        QApplication.processEvents()
+        self.finished = True
 
 
 if __name__ == '__main__':

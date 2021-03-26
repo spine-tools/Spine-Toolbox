@@ -104,7 +104,8 @@ class SpineDatapackageWidget(QMainWindow):
         return os.path.join(self.datapackage.base_path, "datapackage.json")
 
     def load_datapackage(self):
-        self._file_watcher.addPaths(self.datapackage.sources)
+        if self.datapackage.sources:
+            self._file_watcher.addPaths(self.datapackage.sources)
         self.append_save_resource_actions()
         self.resources_model.refresh_model()
         first_index = self.resources_model.index(0, 0)
@@ -191,7 +192,8 @@ class SpineDatapackageWidget(QMainWindow):
             self.load_datapackage()
             return
         self.datapackage.difference_infer(os.path.join(self.datapackage.base_path, '*.csv'))
-        self._file_watcher.addPaths(self.datapackage.sources)
+        if self.datapackage.sources:
+            self._file_watcher.addPaths(self.datapackage.sources)
         self.append_save_resource_actions()
         self.resources_model.refresh_model()
         self.refresh_models()
@@ -275,7 +277,7 @@ class SpineDatapackageWidget(QMainWindow):
             writer.writerow(headers)
             for row in self.datapackage.resource_data(resource_index):
                 writer.writerow(row)
-        self.msg.emit(f"'{os.path.basename(filepath)}' succesfully saved")
+        self.msg.emit(f"'{os.path.basename(filepath)}' successfully saved")
         self._file_watcher.addPath(filepath)
         self._changed_source_indexes.discard(resource_index)
         stack = self.undo_stacks.get(resource_index)
