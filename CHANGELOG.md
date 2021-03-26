@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - New Exporter project item, a general-purpose tabular data exporter. The old .gdx exporter has been
   renamed to GdxExporter.
 - File->Close project option
+- Support for Python 3.8
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
@@ -36,6 +37,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Removed
 - Combiner project item. The same functionality can be achieved by connecting a Data Store to another Data Store.
 - Upgrade support for original (.proj file based) Spine Toolbox projects.
+- Python 3.6 is no longer supported.
 
 ### Fixed
 ### Security
