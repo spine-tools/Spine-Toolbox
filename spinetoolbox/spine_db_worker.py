@@ -298,10 +298,11 @@ class SpineDBWorker(QObject):
         import_data(db_map, **data_for_export)
         file_name = os.path.split(file_path)[1]
         try:
+            os.remove(file_path)
             export_spine_database_to_xlsx(db_map, file_path)
         except PermissionError:
             error_msg = {
-                None: [f"Unable to export file <b>{file_name}</b>.<br/>" "Close the file in Excel and try again."]
+                None: [f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."]
             }
             caller.msg_error.emit(error_msg)
         except OSError:
