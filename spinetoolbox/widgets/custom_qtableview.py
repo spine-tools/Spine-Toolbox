@@ -17,6 +17,7 @@ Custom QTableView classes that support copy-paste and the like.
 """
 
 import csv
+import ctypes
 import io
 import locale
 from numbers import Number
@@ -33,6 +34,9 @@ from spinedb_api import (
     to_database,
 )
 from ..helpers import busy_effect
+
+
+_ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
 class CopyPasteTableView(QTableView):
