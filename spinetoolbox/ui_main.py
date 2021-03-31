@@ -257,7 +257,11 @@ class ToolboxUI(QMainWindow):
 
     def _update_execute_enabled(self):
         first_index = next(self.project_item_model.leaf_indexes(), None)
-        self.main_toolbar.execute_project_button.setEnabled(first_index is not None)
+        self.main_toolbar.execute_project_button.setEnabled(first_index is not None and not self.execution_in_progress)
+
+    def _update_execute_selected_enabled(self):
+        inds = self.ui.treeView_project.selectedIndexes()
+        self.main_toolbar.execute_selection_button.setEnabled(bool(inds) and not self.execution_in_progress)
 
     @Slot(bool)
     def update_window_modified(self, clean):
@@ -529,6 +533,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave_As.setEnabled(True)
         self.ui.actionClose.setEnabled(True)
         self.ui.actionRename_project.setEnabled(True)
+        self._unset_execution_in_progress()
 
     def refresh_toolbars(self):
         """Set toolbars' color using highest possible contrast."""
@@ -873,7 +878,7 @@ class ToolboxUI(QMainWindow):
         """Synchronizes selection with scene. The scene handles item/link de/activation.
         """
         inds = self.ui.treeView_project.selectedIndexes()
-        self.main_toolbar.execute_selection_button.setEnabled(bool(inds) and not self.execution_in_progress)
+        self._update_execute_selected_enabled()
         if not self.sync_item_selection_with_scene:
             return
         project_items = [self.project_item_model.item(i).project_item for i in inds]
@@ -2109,8 +2114,8 @@ class ToolboxUI(QMainWindow):
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
         self._project.project_execution_about_to_start.connect(self.ui.textBrowser_eventlog.scroll_to_bottom)
-        self._project.project_execution_about_to_start.connect(self._handle_project_execution_about_to_start)
-        self._project.project_execution_finished.connect(self._handle_project_execution_finished)
+        self._project.project_execution_about_to_start.connect(self._set_execution_in_progress)
+        self._project.project_execution_finished.connect(self._unset_execution_in_progress)
         self._project.item_added.connect(self.set_icon_and_properties_ui)
         self._project.item_added.connect(self.ui.graphicsView.add_icon)
         self._project.item_about_to_be_removed.connect(self.ui.graphicsView.remove_icon)
@@ -2119,18 +2124,17 @@ class ToolboxUI(QMainWindow):
         self._project.connection_about_to_be_removed.connect(self.ui.graphicsView.do_remove_link)
 
     @Slot()
-    def _handle_project_execution_about_to_start(self):
+    def _set_execution_in_progress(self):
         self.execution_in_progress = True
         self.main_toolbar.execute_project_button.setEnabled(False)
         self.main_toolbar.execute_selection_button.setEnabled(False)
         self.main_toolbar.stop_execution_button.setEnabled(True)
 
     @Slot()
-    def _handle_project_execution_finished(self):
+    def _unset_execution_in_progress(self):
         self.execution_in_progress = False
-        self.main_toolbar.execute_project_button.setEnabled(True)
-        inds = self.ui.treeView_project.selectedIndexes()
-        self.main_toolbar.execute_selection_button.setEnabled(bool(inds))
+        self._update_execute_enabled()
+        self._update_execute_selected_enabled()
         self.main_toolbar.stop_execution_button.setEnabled(False)
 
     @Slot(str)
