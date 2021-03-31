@@ -25,6 +25,7 @@ import logging
 import datetime
 import shutil
 import matplotlib
+import re
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
@@ -1019,3 +1020,28 @@ def color_from_index(i, count, base_hue=0.0, saturation=1.0):
     h = ((base_hue + h) % 360) / 360
     # return QColor.fromHsvF(217 / 360, 0.60, 1.0, 1.0)
     return QColor.fromHsvF(h, saturation, 1.0, 1.0)
+
+
+def unique_name(prefix, existing):
+    """
+    Creates a unique name in the form "prefix X" where X is a number.
+
+    Args:
+        prefix (str): name prefix
+        existing (Iterable of str): existing names
+
+    Returns:
+        str: unique name
+    """
+    pattern = re.compile(fr"^{prefix} [0-9]+$")
+    reserved = set()
+    for name in existing:
+        if pattern.fullmatch(name) is not None:
+            _, _, number = name.partition(" ")
+            reserved.add(int(number))
+    free = len(reserved) + 1
+    for i in range(len(reserved)):
+        if i + 1 not in reserved:
+            free = i + 1
+            break
+    return f"{prefix} {free}"

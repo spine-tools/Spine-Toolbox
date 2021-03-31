@@ -19,8 +19,8 @@ import os
 import shutil
 import json
 import subprocess
-from PySide2.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QApplication, QDialogButtonBox
-from PySide2.QtCore import Slot, Qt, QModelIndex
+from PySide2.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QDialogButtonBox, QWidget
+from PySide2.QtCore import Slot, Qt, QModelIndex, QTimer
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QIcon
 from jupyter_client.kernelspec import find_kernel_specs
 from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable_from_path
@@ -38,23 +38,11 @@ from spinetoolbox.helpers import (
 )
 from spinetoolbox.config import MAINWINDOW_SS
 from spinetoolbox.logger_interface import LoggerInterface
+from spinetoolbox.helpers import unique_name
 
 
-class KernelEditor(QDialog):
-    """Class for a Python and Julia kernel editor."""
-
+class KernelEditorBase(QDialog):
     def __init__(self, parent, python, julia, python_or_julia, current_kernel):
-        """
-
-        Args:
-            parent (QWidget): Parent widget (Settings widget)
-            python (str): Python interpreter, may be empty string
-            julia (str): Julia executable, may be empty string
-            python_or_julia (str): Setup KernelEditor according to selected mode
-            current_kernel (str): Current selected Python or Julia kernel name
-        """
-        from ..ui import kernel_editor_dialog  # pylint: disable=import-outside-toplevel
-
         super().__init__(parent=parent)  # Inherits stylesheet from SettingsWindow
         self.setWindowFlags(Qt.Window)
         self.setup_dialog_style()
@@ -62,11 +50,6 @@ class KernelEditor(QDialog):
         self._parent = parent  # QSettingsWidget
         self._app_settings = self._parent._qsettings
         self._logger = LoggerInterface()
-        self.ui = kernel_editor_dialog.Ui_Dialog()
-        self.ui.setupUi(self)
-        self.kernel_list_model = QStandardItemModel()
-        self._kernel_list_context_menu = QMenu(self)
-        self.selected_kernel = None
         self._install_kernel_process = None
         self._install_package_process = None
         self._ipykernel_install_failed = False
@@ -78,32 +61,6 @@ class KernelEditor(QDialog):
         self.python_or_julia = python_or_julia
         # Set up
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.populate_kernel_model()
-        if python_or_julia == "python":
-            self.ui.stackedWidget.setCurrentIndex(0)
-            self.setWindowTitle("Python Kernel Specification Editor")
-            self.ui.label.setText("Available Python kernel specs")
-            if python == "":
-                python = resolve_python_interpreter(python)
-            self.ui.lineEdit_python_interpreter.setText(python)
-            self.update_python_cmd_tooltip()
-        else:
-            self.ui.stackedWidget.setCurrentIndex(1)
-            self.setWindowTitle("Julia Kernel Specification Editor")
-            self.ui.label.setText("Available Julia kernel specs")
-            if julia == "":
-                julia = resolve_julia_executable_from_path()
-            self.ui.lineEdit_julia_executable.setText(julia)
-            self.update_julia_cmd_tooltip()
-        self.ui.tableView_kernel_list.setModel(self.kernel_list_model)
-        self.ui.tableView_kernel_list.resizeColumnsToContents()
-        self.set_kernel_selected(current_kernel)
-        self.connect_signals()
-        self._mouse_press_pos = None
-        self._mouse_release_pos = None
-        self._mouse_move_pos = None
-        self.restore_dialog_dimensions()
-        self._update_ok_button_enabled()
 
     def setup_dialog_style(self):
         """Sets windows icon and stylesheet.
@@ -114,249 +71,11 @@ class KernelEditor(QDialog):
 
     def connect_signals(self):
         """Connects signals to slots."""
-        # pylint: disable=unnecessary-lambda
-        self.ui.tableView_kernel_list.selectionModel().selectionChanged.connect(self._handle_kernel_selection_changed)
-        self.ui.pushButton_make_python_kernel.clicked.connect(self.make_python_kernel)
-        self.ui.pushButton_make_julia_kernel.clicked.connect(self.make_julia_kernel)
-        self.ui.tableView_kernel_list.selectionModel().currentChanged.connect(self._check_kernel_is_ok)
-        self.ui.tableView_kernel_list.customContextMenuRequested.connect(self.show_kernel_list_context_menu)
-        self._kernel_list_context_menu.addAction("Open kernel.json", self._open_kernel_json)
-        self._kernel_list_context_menu.addAction("Open containing folder", self._open_kernel_dir)
-        self._kernel_list_context_menu.addSeparator()
-        self._kernel_list_context_menu.addAction("Remove kernel", self._remove_kernel)
-        self.ui.toolButton_select_python.clicked.connect(self.select_python_clicked)
-        self.ui.toolButton_select_julia.clicked.connect(self.select_julia_clicked)
-        self.ui.toolButton_select_julia_project.clicked.connect(self.select_julia_project_clicked)
-        self.ui.lineEdit_python_kernel_name.textEdited.connect(self.python_kernel_name_edited)
-        self.ui.lineEdit_python_kernel_display_name.textEdited.connect(lambda: self.update_python_cmd_tooltip())
-        self.ui.lineEdit_julia_kernel_name.textEdited.connect(lambda: self.update_julia_cmd_tooltip())
-        self.ui.lineEdit_julia_project.textEdited.connect(lambda: self.update_julia_cmd_tooltip())
         self._logger.msg.connect(self.add_message)
         self._logger.msg_success.connect(self.add_success_message)
         self._logger.msg_warning.connect(self.add_warning_message)
         self._logger.msg_proc.connect(self.add_process_message)
         self._logger.msg_error.connect(self.add_process_error_message)
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_kernel_selection_changed(self, _selected, _deselected):
-        self._update_ok_button_enabled()
-
-    def _update_ok_button_enabled(self):
-        self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(
-            self.ui.tableView_kernel_list.selectionModel().hasSelection()
-        )
-
-    @Slot(str)
-    def python_kernel_name_edited(self, txt):
-        """Updates the display name place holder text and the command QCustomLabel tool tip."""
-        self.ui.lineEdit_python_kernel_display_name.setPlaceholderText(txt + "_spinetoolbox")
-        self.update_python_cmd_tooltip()
-
-    @Slot(bool)
-    def select_julia_clicked(self, checked=False):
-        """Opens file browser where user can select a Julia executable for the new kernel."""
-        select_julia_executable(self, self.ui.lineEdit_julia_executable)
-        self.update_julia_cmd_tooltip()
-
-    @Slot(bool)
-    def select_julia_project_clicked(self, checked=False):
-        """Opens file browser where user can select a Julia project path for the new kernel."""
-        select_julia_project(self, self.ui.lineEdit_julia_project)
-        self.update_julia_cmd_tooltip()
-
-    @Slot(bool)
-    def select_python_clicked(self, checked=False):
-        """Opens file browser where user can select the python interpreter for the new kernel."""
-        select_python_interpreter(self, self.ui.lineEdit_python_interpreter)
-        self.update_python_cmd_tooltip()
-
-    def update_python_cmd_tooltip(self):
-        """Updates Python command (CustomQLabel) tooltip according to selections."""
-        interpreter = self.ui.lineEdit_python_interpreter.text()
-        kernel_name = self.ui.lineEdit_python_kernel_name.text()
-        if kernel_name == "":
-            kernel_name = "NA"
-            kernel_display_name = "NA"
-        else:
-            if self.ui.lineEdit_python_kernel_display_name.text() == "":
-                kernel_display_name = self.ui.lineEdit_python_kernel_display_name.placeholderText()
-            else:
-                kernel_display_name = self.ui.lineEdit_python_kernel_display_name.text()
-        tip = (
-            interpreter
-            + " -m ipykernel install --user --name "
-            + kernel_name
-            + " --display-name "
-            + kernel_display_name
-        )
-        self.ui.label_python_cmd.setToolTip(tip)
-
-    def update_julia_cmd_tooltip(self):
-        """Updates Julia command (CustomQLabel) tooltip according to selections."""
-        kernel_name = self.ui.lineEdit_julia_kernel_name.text().strip()
-        project = self.ui.lineEdit_julia_project.text().strip()
-        if kernel_name == "":
-            kernel_name = "NA"
-        tip = f"IJulia.installkernel({kernel_name}, --project={project})"
-        self.ui.label_julia_cmd.setToolTip(tip)
-
-    def set_kernel_selected(self, k_name):
-        """Finds row index of given kernel name from the model,
-        sets it selected and scrolls the view so that it's visible.
-
-        Args:
-            k_name (str): Kernel name to find and select
-        """
-        index = QModelIndex()  # Just in case it's not found
-        if not k_name:
-            self.ui.tableView_kernel_list.setCurrentIndex(index)
-            return
-        name_column = self.find_column("Name")
-        for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
-            row_index = self.kernel_list_model.index(row, name_column, self.ui.tableView_kernel_list.rootIndex())
-            if k_name == row_index.data(Qt.DisplayRole):
-                index = row_index
-                break
-        self.ui.tableView_kernel_list.setCurrentIndex(index)
-        self.ui.tableView_kernel_list.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtTop)
-
-    @Slot("QModelIndex", "QModelIndex")
-    def _check_kernel_is_ok(self, current, previous):
-        """Shows a notification if there are any known problems with selected kernel.
-
-        Args:
-            current (QModelIndex): Currently selected index
-            previous (QModelIndex): Previously selected index
-        """
-        if not current.isValid():
-            return
-        d = current.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
-        kernel_json = os.path.join(d, "kernel.json")
-        if not os.path.exists(kernel_json):
-            self._logger.msg_error.emit(f"Path {kernel_json} does not exist")
-            return
-        if os.stat(kernel_json).st_size == 0:
-            self._logger.msg_error.emit(f"{kernel_json} is empty")
-            return
-        with open(kernel_json, "r") as fh:
-            try:
-                json.load(fh)
-            except json.decoder.JSONDecodeError:
-                self._logger.msg_error.emit("Error in kernel.json file. Invalid JSON.")
-                return
-
-    def find_column(self, label):
-        """Returns the column number from the kernel model with the given label.
-
-        Args:
-            label (str): Header column label
-
-        Returns:
-            int: Column number or -1 if label not found
-        """
-        for column in range(self.kernel_list_model.columnCount()):
-            if self.kernel_list_model.headerData(column, Qt.Horizontal) == label:
-                return column
-        return -1
-
-    @Slot(bool)
-    def make_python_kernel(self, checked=False):
-        """Makes a new Python kernel. Offers to install ipykernel package if it is
-        missing from the selected Python environment. Overwrites existing kernel
-        with the same name if this is ok by user."""
-        prgm = self.ui.lineEdit_python_interpreter.text()
-        if self._ipykernel_install_failed:
-            # Makes sure that there's no never-ending loop if ipykernel installation fails for some reason
-            self._logger.msg_error.emit(f"Installing package iPyKernel for {prgm} failed. Please install it manually.")
-            self._ipykernel_install_failed = False
-            return
-        kernel_name = self.ui.lineEdit_python_kernel_name.text()
-        kernel_display_name = self.ui.lineEdit_python_kernel_display_name.text()
-        if kernel_display_name == "":
-            kernel_display_name = kernel_name + "_spinetoolbox"  # Default display name if not given
-        if not self.check_options(prgm, kernel_name, kernel_display_name, "python"):
-            return
-        # Check if ipykernel is installed
-        if not self.is_package_installed(prgm, "ipykernel"):
-            message = (
-                f"Python environment<br><br><b>{prgm}</b><br><br>is missing the <b>ipykernel</b> package, "
-                f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
-            )
-            message_box = QMessageBox(
-                QMessageBox.Question, "ipykernel Missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
-            )
-            message_box.button(QMessageBox.Ok).setText("Install ipykernel")
-            answer = message_box.exec_()
-            if answer == QMessageBox.Cancel:
-                return
-            # Install ipykernel
-            self.start_package_install_process(prgm, "ipykernel")
-            return
-        self.start_kernelspec_install_process(prgm, kernel_name, kernel_display_name)
-
-    @busy_effect
-    def start_kernelspec_install_process(self, prgm, k_name, d_name):
-        r"""Installs kernel specifications for the given Python environment.
-        Runs e.g. this command in QProcess
-
-        python -m ipykernel install --user --name python-X.Y --display-name PythonX.Y
-
-        Creates new kernel specs into %APPDATA%\jupyter\kernels. Existing directory will be overwritten.
-
-        Note: We cannot use --sys.prefix here because if we have selected to create a kernel for some other
-        python that was used in launching the app, the kernel will be created into a location that is not discoverable
-        by jupyter and hence not by Spine Toolbox. E.g. when sys.executable is C:\Python36\python.exe, and we have
-        selected that as the python for Spine Toolbox (Settings->Tools->Python interpreter is empty), creating a
-        kernel with --sys-prefix creates kernel specs into C:\Python36\share\jupyter\kernels\python-3.6. This is ok and
-        the kernel spec is discoverable by jupyter and Spine Toolbox.
-
-        BUT when sys.executable is C:\Python36\python.exe, and we have selected another python for Spine
-        Toolbox (Settings->Tools->Python interpreter is C:\Python38\python.exe), creating a
-        kernel with --sys-prefix creates a kernel into C:\Python38\share\jupyter\kernels\python-3.8-sys-prefix. This
-        is not discoverable by jupyter nor Spine Toolbox. You would need to start the app using C:\Python38\python.exe
-        to see and use that kernel spec.
-
-        Using --user option instead, creates kernel specs that are discoverable by any python that was used in starting
-        Spine Toolbox.
-
-        Args:
-            prgm (str): Full path to Python interpreter for which the kernel is created
-            k_name (str): Kernel name
-            d_name (str): Kernel display name
-        """
-        self.old_kernel_names = find_python_kernels().keys()
-        self._logger.msg.emit("Starting Python kernel spec install process")
-        args = list()
-        args.append("-m")
-        args.append("ipykernel")
-        args.append("install")
-        args.append("--user")
-        args.append("--name")
-        args.append(k_name)
-        args.append("--display-name")
-        args.append(d_name)
-        self._install_kernel_process = QProcessExecutionManager(self._logger, prgm, args, semisilent=True)
-        self._install_kernel_process.execution_finished.connect(self.handle_kernelspec_install_process_finished)
-        self._install_kernel_process.start_execution()
-
-    @busy_effect
-    @Slot(int)
-    def handle_kernelspec_install_process_finished(self, retval):
-        """Handles case when the process for installing the kernel has finished.
-
-        Args:
-            retval (int): Process return value. 0: success, !0: failure
-        """
-        self._install_kernel_process.execution_finished.disconnect()
-        self._install_kernel_process.deleteLater()
-        self._install_kernel_process = None
-        if retval != 0:
-            self._logger.msg_error.emit("Installing kernel specs failed. Please install them manually.")
-            self._logger.msg_error.emit("Failed")
-            return
-        self._logger.msg_success.emit("New kernel installed")
-        self.populate_kernel_model()
-        self.ui.tableView_kernel_list.resizeColumnsToContents()
 
     def check_options(self, prgm, kernel_name, display_name, python_or_julia):
         """Checks that user options are valid before advancing with kernel making.
@@ -376,299 +95,56 @@ class KernelEditor(QDialog):
             else:
                 self._logger.msg_error.emit("Julia executable missing")
             return False
-        if not file_is_valid(self, prgm, "Invalid Python Interpreter", extra_check=python_or_julia):
+        if not file_is_valid(
+            self,
+            prgm,
+            f"Invalid {'Python Interpreter' if python_or_julia == 'python' else 'Julia Executable'}",
+            extra_check=python_or_julia,
+        ):
             return False
-        if not kernel_name:
-            self._logger.msg_error.emit("Kernel name missing")
-            return False
-        name_taken = False
-        display_name_taken = False
-        # Ask permission to overwrite if kernel name is taken
-        for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
-            row_index = self.kernel_list_model.index(row, 0, self.ui.tableView_kernel_list.rootIndex())
-            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole):  # Name column
-                name_taken = True
-            elif display_name == row_index.siblingAtColumn(self.find_column("Display Name")).data(
-                Qt.DisplayRole
-            ):  # Display name column
-                display_name_taken = True
-        if display_name_taken:
-            # This now terminates the whole kernel making if display name is taken. We could just overwrite the kernel.
-            self._logger.msg_error.emit(
-                f"Display name {display_name} already exists." f"Please provide a new name or remove the other kernel."
-            )
-            return False
-        if name_taken:
-            msg = f"Kernel <b>{kernel_name}</b> already exists.<br><br>Would you like to overwrite it?"
-            # noinspection PyCallByClass, PyTypeChecker
-            message_box = QMessageBox(
-                QMessageBox.Question, "Overwrite kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
-            )
-            message_box.button(QMessageBox.Ok).setText("Overwrite kernel")
-            answer = message_box.exec_()
-            if answer != QMessageBox.Ok:
-                return False
         return True
 
-    def populate_kernel_model(self):
-        """Populates the kernel model with kernels found in user's system
-        either with Python or Julia kernels. Unknows, invalid, and
-        unsupported kernels are appended to the end."""
-        self.ui.tableView_kernel_list.setCurrentIndex(QModelIndex())  # To prevent unneeded currentChanged signals
-        if self.python_or_julia == "python":  # Add Python kernels
-            kernels = find_python_kernels()
-            self.kernel_list_model.clear()
-            self.kernel_list_model.setHorizontalHeaderItem(0, QStandardItem("Language"))
-            self.kernel_list_model.setHorizontalHeaderItem(1, QStandardItem("Name"))
-            self.kernel_list_model.setHorizontalHeaderItem(2, QStandardItem("Display Name"))
-            self.kernel_list_model.setHorizontalHeaderItem(3, QStandardItem("Interpreter"))
-            self.kernel_list_model.setHorizontalHeaderItem(4, QStandardItem("Location"))
-            for name, location in kernels.items():
-                d = self.get_kernel_deats(location)
-                language = d["language"]
-                display_name = d["display_name"]
-                interpreter = d["exe"]
-                row = [
-                    QStandardItem(language),
-                    QStandardItem(name),
-                    QStandardItem(display_name),
-                    QStandardItem(interpreter),
-                    QStandardItem(location),
-                ]
-                for item in row:  # Set items non-editable
-                    item.setFlags(~Qt.ItemIsEditable)
-                self.kernel_list_model.appendRow(row)
-            # Add unknown/invalid kernels
-            unknowns = find_unknown_kernels()
-            for n, l in unknowns.items():
-                unknown_row = [QStandardItem(), QStandardItem(n), QStandardItem(), QStandardItem(), QStandardItem(l)]
-                for item in unknown_row:  # Set items non-editable and paint bg red
-                    item.setFlags(~Qt.ItemIsEditable)
-                    item.setBackground(Qt.red)
-                self.kernel_list_model.appendRow(unknown_row)
-        else:  # Add Julia kernels
-            kernels = find_julia_kernels()
-            self.kernel_list_model.clear()
-            self.kernel_list_model.setHorizontalHeaderItem(0, QStandardItem("Language"))
-            self.kernel_list_model.setHorizontalHeaderItem(1, QStandardItem("Name"))
-            self.kernel_list_model.setHorizontalHeaderItem(2, QStandardItem("Display Name"))
-            self.kernel_list_model.setHorizontalHeaderItem(3, QStandardItem("Executable"))
-            self.kernel_list_model.setHorizontalHeaderItem(4, QStandardItem("Project"))
-            self.kernel_list_model.setHorizontalHeaderItem(5, QStandardItem("Location"))
-            for name, location in kernels.items():
-                d = self.get_kernel_deats(location)
-                language = d["language"]
-                display_name = d["display_name"]
-                executable = d["exe"]
-                project = d["project"]
-                row = [
-                    QStandardItem(language),
-                    QStandardItem(name),
-                    QStandardItem(display_name),
-                    QStandardItem(executable),
-                    QStandardItem(project),
-                    QStandardItem(location),
-                ]
-                for item in row:  # Set items non-editable
-                    item.setFlags(~Qt.ItemIsEditable)
-                self.kernel_list_model.appendRow(row)
-            # Add unknown/invalid kernels
-            unknowns = find_unknown_kernels()
-            for n, l in unknowns.items():
-                unknown_row = [
-                    QStandardItem(),
-                    QStandardItem(n),
-                    QStandardItem(),
-                    QStandardItem(),
-                    QStandardItem(),
-                    QStandardItem(l),
-                ]
-                for item in unknown_row:  # Set items non-editable and paint bg red
-                    item.setFlags(~Qt.ItemIsEditable)
-                    item.setBackground(Qt.red)
-                self.kernel_list_model.appendRow(unknown_row)
-        # If a new kernel was added, set it selected
-        if not self.old_kernel_names:
-            return
-        new_kernel = set(kernels.keys()) ^ set(self.old_kernel_names)
-        if not new_kernel or len(new_kernel) > 1:
-            return
-        [n] = new_kernel  # Unpack the set
-        self.set_kernel_selected(n)
+    def _python_kernel_name(self):
+        return self.ui.lineEdit_python_kernel_name.text()
 
-    @staticmethod
-    def get_kernel_deats(kernel_path):
-        """Reads kernel.json from given kernel path and returns the details in a dictionary.
-
-        Args:
-            kernel_path (str): Full path to kernel directory
-
-        Returns:
-            dict: language (str), path to interpreter (str), display name (str), project (str) (NA for Python kernels)
-        """
-        deats = {"language": "", "exe": "", "display_name": "", "project": ""}
-        kernel_json = os.path.join(kernel_path, "kernel.json")
-        if not os.path.exists(kernel_json):
-            return deats
-        if os.stat(kernel_json).st_size == 0:  # File is empty
-            return deats
-        with open(kernel_json, "r") as fh:
-            try:
-                kernel_dict = json.load(fh)
-            except json.decoder.JSONDecodeError:
-                return deats
-            try:
-                language = kernel_dict["language"]
-            except KeyError:
-                language = ""
-            try:
-                interp = kernel_dict["argv"][0]
-            except KeyError:
-                interp = ""
-            except IndexError:
-                interp = ""
-            try:
-                display_name = kernel_dict["display_name"]
-            except KeyError:
-                display_name = ""
-            try:
-                # loop argv and find a string that starts with --project=
-                project = ""
-                for arg in kernel_dict["argv"]:
-                    if arg.startswith("--project="):
-                        project = arg[10:]
-            except KeyError:
-                project = ""
-            except IndexError:
-                project = ""
-            deats["language"] = language
-            deats["exe"] = interp
-            deats["display_name"] = display_name
-            deats["project"] = project
-            return deats
-
-    @Slot("QPoint")
-    def show_kernel_list_context_menu(self, pos):
-        """Shows the context-menu in the kernel list table view."""
-        index = self.ui.tableView_kernel_list.indexAt(pos)
-        if not index.isValid():
-            return
-        global_pos = self.ui.tableView_kernel_list.viewport().mapToGlobal(pos)
-        self._kernel_list_context_menu.popup(global_pos)
+    def _python_kernel_display_name(self):
+        return self.ui.lineEdit_python_kernel_display_name.text()
 
     @Slot(bool)
-    def _open_kernel_json(self, checked=False):
-        """Opens kernel.json file using the default application for .json files."""
-        index = self.ui.tableView_kernel_list.currentIndex()
-        if not index.isValid():
-            return
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
-        kernel_json = os.path.join(d, "kernel.json")
-        if not os.path.exists(kernel_json):
-            msg = f"Path <br><br>{kernel_json}<br><br>does not exist.<br>Consider removing the kernel manually."
-            QMessageBox.warning(self, "Opening kernel.json failed", msg)
-            return
-        url = "file:///" + kernel_json
-        res = open_url(url)
-        if not res:
-            msg = f"Opening file {kernel_json} failed."
-            QMessageBox.warning(self, "Opening kernel.json failed", msg)
-            return
-        return
-
-    @Slot(bool)
-    def _open_kernel_dir(self, checked=False):
-        """Opens kernel directory in OS file browser."""
-        index = self.ui.tableView_kernel_list.currentIndex()
-        if not index.isValid():
-            return
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
-        if not os.path.exists(d):
-            msg = "Path does not exist. Consider removing the kernel manually."
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Opening directory failed", msg)
-            return
-        url = "file:///" + d
-        res = open_url(url)
-        if not res:
-            msg = f"Opening directory {d} failed."
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Opening file browser failed", msg)
-            return
-        return
-
-    @Slot(bool)
-    def _remove_kernel(self, checked=False):
-        """Removes selected kernel by deleting the kernel directory."""
-        index = self.ui.tableView_kernel_list.currentIndex()
-        if not index.isValid():
-            return
-        name = index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole)  # Name column
-        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
-        if not os.path.exists(d):
-            msg = "Path does not exist. Please remove it manually."
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Removing kernel failed", msg)
-            return
-        msg = f"Are you sure you want to remove kernel <b>{name}</b>"
-        msg += f"<br><br>Directory<br><br><b>{d}</b><br><br>will be deleted."
-        # noinspection PyCallByClass, PyTypeChecker
-        message_box = QMessageBox(
-            QMessageBox.Question, "Remove kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
-        )
-        message_box.button(QMessageBox.Ok).setText("Remove kernel")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
-            return
-        try:
-            shutil.rmtree(d)
-        except OSError as os_err:
-            msg = f"<b>{os_err}</b><br><br>Please edit permissions and try again or remove the directory manually."
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Removing kernel failed", msg)
-            return
-        self._logger.msg.emit(f"kernel {name} removed")
-        self.populate_kernel_model()
-        self.ui.tableView_kernel_list.resizeColumnsToContents()
-
-    def mousePressEvent(self, e):
-        """Saves mouse position at the start of dragging.
-
-        Args:
-            e (QMouseEvent): Mouse event
-        """
-        self._mouse_press_pos = e.globalPos()
-        self._mouse_move_pos = e.globalPos()
-        super().mousePressEvent(e)
-
-    def mouseReleaseEvent(self, e):
-        """Saves mouse position at the end of dragging.
-
-        Args:
-            e (QMouseEvent): Mouse event
-        """
-        if self._mouse_press_pos is not None:
-            self._mouse_release_pos = e.globalPos()
-            moved = self._mouse_release_pos - self._mouse_press_pos
-            if moved.manhattanLength() > 3:
-                e.ignore()
-                return
-
-    def mouseMoveEvent(self, e):
-        """Moves the window when mouse button is pressed and mouse cursor is moved.
-
-        Args:
-            e (QMouseEvent): Mouse event
-        """
-        currentpos = self.pos()
-        globalpos = e.globalPos()
-        if not self._mouse_move_pos:
-            e.ignore()
-            return
-        diff = globalpos - self._mouse_move_pos
-        newpos = currentpos + diff
-        self.move(newpos)
-        self._mouse_move_pos = globalpos
+    def make_python_kernel(self, checked=False):
+        """Makes a new Python kernel. Offers to install ipykernel package if it is
+        missing from the selected Python environment. Overwrites existing kernel
+        with the same name if this is ok by user."""
+        prgm = self.ui.lineEdit_python_interpreter.text()
+        if self._ipykernel_install_failed:
+            # Makes sure that there's no never-ending loop if ipykernel installation fails for some reason
+            self._logger.msg_error.emit(f"Installing package iPyKernel for {prgm} failed. Please install it manually.")
+            self._ipykernel_install_failed = False
+            return False
+        kernel_name = self._python_kernel_name()
+        kernel_display_name = self._python_kernel_display_name()
+        if kernel_display_name == "":
+            kernel_display_name = kernel_name + "_spinetoolbox"  # Default display name if not given
+        if not self.check_options(prgm, kernel_name, kernel_display_name, "python"):
+            return False
+        # Check if ipykernel is installed
+        if not self.is_package_installed(prgm, "ipykernel"):
+            message = (
+                f"Python environment<br><br><b>{prgm}</b><br><br>is missing the <b>ipykernel</b> package, "
+                f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
+            )
+            message_box = QMessageBox(
+                QMessageBox.Question, "ipykernel Missing", message, QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            )
+            message_box.button(QMessageBox.Ok).setText("Install ipykernel")
+            answer = message_box.exec_()
+            if answer == QMessageBox.Cancel:
+                return False
+            # Install ipykernel
+            self.start_package_install_process(prgm, "ipykernel")
+            return True
+        self.start_kernelspec_install_process(prgm, kernel_name, kernel_display_name)
+        return True
 
     @staticmethod
     def is_package_installed(python_path, package_name):
@@ -722,6 +198,71 @@ class KernelEditor(QDialog):
             self._logger.msg_success.emit("ipykernel installation succeeded")
         self.make_python_kernel()  # Try installing kernel specs now
 
+    @busy_effect
+    def start_kernelspec_install_process(self, prgm, k_name, d_name):
+        r"""Installs kernel specifications for the given Python environment.
+        Runs e.g. this command in QProcess
+
+        python -m ipykernel install --user --name python-X.Y --display-name PythonX.Y
+
+        Creates new kernel specs into %APPDATA%\jupyter\kernels. Existing directory will be overwritten.
+
+        Note: We cannot use --sys.prefix here because if we have selected to create a kernel for some other
+        python that was used in launching the app, the kernel will be created into a location that is not discoverable
+        by jupyter and hence not by Spine Toolbox. E.g. when sys.executable is C:\Python36\python.exe, and we have
+        selected that as the python for Spine Toolbox (Settings->Tools->Python interpreter is empty), creating a
+        kernel with --sys-prefix creates kernel specs into C:\Python36\share\jupyter\kernels\python-3.6. This is ok and
+        the kernel spec is discoverable by jupyter and Spine Toolbox.
+
+        BUT when sys.executable is C:\Python36\python.exe, and we have selected another python for Spine
+        Toolbox (Settings->Tools->Python interpreter is C:\Python38\python.exe), creating a
+        kernel with --sys-prefix creates a kernel into C:\Python38\share\jupyter\kernels\python-3.8-sys-prefix. This
+        is not discoverable by jupyter nor Spine Toolbox. You would need to start the app using C:\Python38\python.exe
+        to see and use that kernel spec.
+
+        Using --user option instead, creates kernel specs that are discoverable by any python that was used in starting
+        Spine Toolbox.
+
+        Args:
+            prgm (str): Full path to Python interpreter for which the kernel is created
+            k_name (str): Kernel name
+            d_name (str): Kernel display name
+        """
+        self.old_kernel_names = find_python_kernels().keys()
+        self._logger.msg.emit("Starting Python kernel spec install process")
+        args = list()
+        args.append("-m")
+        args.append("ipykernel")
+        args.append("install")
+        args.append("--user")
+        args.append("--name")
+        args.append(k_name)
+        args.append("--display-name")
+        args.append(d_name)
+        self._install_kernel_process = QProcessExecutionManager(self._logger, prgm, args)  # , semisilent=True)
+        self._install_kernel_process.execution_finished.connect(self.handle_kernelspec_install_process_finished)
+        self._install_kernel_process.start_execution()
+
+    @busy_effect
+    @Slot(int)
+    def handle_kernelspec_install_process_finished(self, retval):
+        """Handles case when the process for installing the kernel has finished.
+
+        Args:
+            retval (int): Process return value. 0: success, !0: failure
+        """
+        self._install_kernel_process.execution_finished.disconnect()
+        self._install_kernel_process.deleteLater()
+        self._install_kernel_process = None
+        if retval != 0:
+            self._logger.msg_error.emit("Installing kernel specs failed. Please install them manually.")
+            self._logger.msg_error.emit("Failed")
+            return
+        self._logger.msg_success.emit("New kernel installed")
+
+    def _julia_kernel_name(self):
+        return self.ui.lineEdit_julia_kernel_name.text()
+
     @Slot(bool)
     def make_julia_kernel(self, checked=False):
         """Makes a new Julia kernel. Offers to install IJulia package if it is
@@ -729,27 +270,28 @@ class KernelEditor(QDialog):
         with the same name if this is ok by user."""
         julia = self.ui.lineEdit_julia_executable.text()
         project = self.ui.lineEdit_julia_project.text()
-        if not dir_is_valid(self, project, "Invalid Julia Project directory"):
-            return
-        kernel_name = self.ui.lineEdit_julia_kernel_name.text()
+        if project != "@." and not dir_is_valid(self, project, "Invalid Julia Project directory"):
+            return False
+        kernel_name = self._julia_kernel_name()
         if not self.check_options(julia, kernel_name, kernel_name, "julia"):  # Julia display name cannot be chosen
-            return
+            return False
         if self._ready_to_install_kernel:
             self.start_ijulia_installkernel_process(julia, project, kernel_name)
-            return
+            return True
         # Check if IJulia is installed to selected Julia project
         retval = self.is_ijulia_installed(julia, project)
         if retval == 0:  # Julia is not configured correctly
-            return
+            return False
         if retval == 1:  # IJulia is installed
-            if self.ui.checkBox_rebuild_ijulia.isChecked():
+            if self._is_rebuild_ijulia_needed():
                 self.start_ijulia_rebuild_process(julia, project)
             else:
                 self.start_ijulia_installkernel_process(julia, project, kernel_name)
-            return
+            return True
         if retval == 2:  # IJulia is not installed
+            project_ = project if project else "default"
             message = (
-                f"Julia project <br><br><b>{project}</b><br><br>is missing the <b>IJulia</b> package, "
+                f"Julia project <br><br><b>{project_}</b><br><br>is missing the <b>IJulia</b> package, "
                 f"which is required for creating a kernel.<br><br>Do you want to install the package now?"
             )
             message_box = QMessageBox(
@@ -758,8 +300,12 @@ class KernelEditor(QDialog):
             message_box.button(QMessageBox.Ok).setText("Install IJulia")
             answer = message_box.exec_()
             if answer == QMessageBox.Cancel:
-                return
+                return False
             self.start_ijulia_install_process(julia, project)
+        return True
+
+    def _is_rebuild_ijulia_needed(self):
+        return True
 
     @busy_effect
     def is_ijulia_installed(self, program, project):
@@ -900,8 +446,6 @@ class KernelEditor(QDialog):
             self._logger.msg_error.emit("Installing kernel failed")
         else:
             self._logger.msg_success.emit("New kernel installed")
-        self.populate_kernel_model()
-        self.ui.tableView_kernel_list.resizeColumnsToContents()
 
     def restore_dialog_dimensions(self):
         """Restore widget location, dimensions, and state from previous session."""
@@ -994,6 +538,507 @@ class KernelEditor(QDialog):
         self._app_settings.setValue("kernelEditor/windowMaximized", self.windowState() == Qt.WindowMaximized)
         self._app_settings.setValue("kernelEditor/splitterState", self.ui.splitter.saveState())
 
+
+class KernelEditor(KernelEditorBase):
+    """Class for a Python and Julia kernel editor."""
+
+    def __init__(self, parent, python, julia, python_or_julia, current_kernel):
+        """
+
+        Args:
+            parent (QWidget): Parent widget (Settings widget)
+            python (str): Python interpreter, may be empty string
+            julia (str): Julia executable, may be empty string
+            python_or_julia (str): Setup KernelEditor according to selected mode
+            current_kernel (str): Current selected Python or Julia kernel name
+        """
+        from ..ui import kernel_editor_dialog  # pylint: disable=import-outside-toplevel
+
+        super().__init__(parent, python, julia, python_or_julia, current_kernel)
+        self.ui = kernel_editor_dialog.Ui_Dialog()
+        self.ui.setupUi(self)
+        self.kernel_list_model = QStandardItemModel()
+        self._kernel_list_context_menu = QMenu(self)
+        self.selected_kernel = None
+        self.populate_kernel_model()
+        if self.python_or_julia == "python":
+            self.ui.stackedWidget.setCurrentIndex(0)
+            self.setWindowTitle("Python Kernel Specification Editor")
+            self.ui.label.setText("Available Python kernel specs")
+            if python == "":
+                python = resolve_python_interpreter(python)
+            self.ui.lineEdit_python_interpreter.setText(python)
+            self.update_python_cmd_tooltip()
+        else:
+            self.ui.stackedWidget.setCurrentIndex(1)
+            self.setWindowTitle("Julia Kernel Specification Editor")
+            self.ui.label.setText("Available Julia kernel specs")
+            if julia == "":
+                julia = resolve_julia_executable_from_path()
+            self.ui.lineEdit_julia_executable.setText(julia)
+            self.update_julia_cmd_tooltip()
+        self.ui.tableView_kernel_list.setModel(self.kernel_list_model)
+        self.ui.tableView_kernel_list.resizeColumnsToContents()
+        self.set_kernel_selected(current_kernel)
+        self.connect_signals()
+        self._mouse_press_pos = None
+        self._mouse_release_pos = None
+        self._mouse_move_pos = None
+        self.restore_dialog_dimensions()
+        self._update_ok_button_enabled()
+
+    def connect_signals(self):
+        # pylint: disable=unnecessary-lambda
+        super().connect_signals()
+        self.ui.tableView_kernel_list.selectionModel().selectionChanged.connect(self._handle_kernel_selection_changed)
+        self.ui.pushButton_make_python_kernel.clicked.connect(self.make_python_kernel)
+        self.ui.pushButton_make_julia_kernel.clicked.connect(self.make_julia_kernel)
+        self.ui.tableView_kernel_list.selectionModel().currentChanged.connect(self._check_kernel_is_ok)
+        self.ui.tableView_kernel_list.customContextMenuRequested.connect(self.show_kernel_list_context_menu)
+        self._kernel_list_context_menu.addAction("Open kernel.json", self._open_kernel_json)
+        self._kernel_list_context_menu.addAction("Open containing folder", self._open_kernel_dir)
+        self._kernel_list_context_menu.addSeparator()
+        self._kernel_list_context_menu.addAction("Remove kernel", self._remove_kernel)
+        self.ui.toolButton_select_python.clicked.connect(self.select_python_clicked)
+        self.ui.toolButton_select_julia.clicked.connect(self.select_julia_clicked)
+        self.ui.toolButton_select_julia_project.clicked.connect(self.select_julia_project_clicked)
+        self.ui.lineEdit_python_kernel_name.textEdited.connect(self.python_kernel_name_edited)
+        self.ui.lineEdit_python_kernel_display_name.textEdited.connect(lambda: self.update_python_cmd_tooltip())
+        self.ui.lineEdit_julia_kernel_name.textEdited.connect(lambda: self.update_julia_cmd_tooltip())
+        self.ui.lineEdit_julia_project.textEdited.connect(lambda: self.update_julia_cmd_tooltip())
+
+    @Slot("QItemSelection", "QItemSelection")
+    def _handle_kernel_selection_changed(self, _selected, _deselected):
+        self._update_ok_button_enabled()
+
+    def _update_ok_button_enabled(self):
+        self.ui.buttonBox.button(QDialogButtonBox.Ok).setEnabled(
+            self.ui.tableView_kernel_list.selectionModel().hasSelection()
+        )
+
+    @Slot(str)
+    def python_kernel_name_edited(self, txt):
+        """Updates the display name place holder text and the command QCustomLabel tool tip."""
+        self.ui.lineEdit_python_kernel_display_name.setPlaceholderText(txt + "_spinetoolbox")
+        self.update_python_cmd_tooltip()
+
+    @Slot(bool)
+    def select_julia_clicked(self, checked=False):
+        """Opens file browser where user can select a Julia executable for the new kernel."""
+        select_julia_executable(self, self.ui.lineEdit_julia_executable)
+        self.update_julia_cmd_tooltip()
+
+    @Slot(bool)
+    def select_julia_project_clicked(self, checked=False):
+        """Opens file browser where user can select a Julia project path for the new kernel."""
+        select_julia_project(self, self.ui.lineEdit_julia_project)
+        self.update_julia_cmd_tooltip()
+
+    @Slot(bool)
+    def select_python_clicked(self, checked=False):
+        """Opens file browser where user can select the python interpreter for the new kernel."""
+        select_python_interpreter(self, self.ui.lineEdit_python_interpreter)
+        self.update_python_cmd_tooltip()
+
+    def update_python_cmd_tooltip(self):
+        """Updates Python command (CustomQLabel) tooltip according to selections."""
+        interpreter = self.ui.lineEdit_python_interpreter.text()
+        kernel_name = self.ui.lineEdit_python_kernel_name.text()
+        if kernel_name == "":
+            kernel_name = "NA"
+            kernel_display_name = "NA"
+        else:
+            if self.ui.lineEdit_python_kernel_display_name.text() == "":
+                kernel_display_name = self.ui.lineEdit_python_kernel_display_name.placeholderText()
+            else:
+                kernel_display_name = self.ui.lineEdit_python_kernel_display_name.text()
+        tip = (
+            interpreter
+            + " -m ipykernel install --user --name "
+            + kernel_name
+            + " --display-name "
+            + kernel_display_name
+        )
+        self.ui.label_python_cmd.setToolTip(tip)
+
+    def update_julia_cmd_tooltip(self):
+        """Updates Julia command (CustomQLabel) tooltip according to selections."""
+        kernel_name = self.ui.lineEdit_julia_kernel_name.text().strip()
+        project = self.ui.lineEdit_julia_project.text().strip()
+        if kernel_name == "":
+            kernel_name = "NA"
+        tip = f"IJulia.installkernel({kernel_name}, --project={project})"
+        self.ui.label_julia_cmd.setToolTip(tip)
+
+    def set_kernel_selected(self, k_name):
+        """Finds row index of given kernel name from the model,
+        sets it selected and scrolls the view so that it's visible.
+
+        Args:
+            k_name (str): Kernel name to find and select
+        """
+        index = QModelIndex()  # Just in case it's not found
+        if not k_name:
+            self.ui.tableView_kernel_list.setCurrentIndex(index)
+            return
+        name_column = self.find_column("Name")
+        for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
+            row_index = self.kernel_list_model.index(row, name_column, self.ui.tableView_kernel_list.rootIndex())
+            if k_name == row_index.data(Qt.DisplayRole):
+                index = row_index
+                break
+        self.ui.tableView_kernel_list.setCurrentIndex(index)
+        self.ui.tableView_kernel_list.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtTop)
+
+    @Slot("QModelIndex", "QModelIndex")
+    def _check_kernel_is_ok(self, current, previous):
+        """Shows a notification if there are any known problems with selected kernel.
+
+        Args:
+            current (QModelIndex): Currently selected index
+            previous (QModelIndex): Previously selected index
+        """
+        if not current.isValid():
+            return
+        d = current.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        kernel_json = os.path.join(d, "kernel.json")
+        if not os.path.exists(kernel_json):
+            self._logger.msg_error.emit(f"Path {kernel_json} does not exist")
+            return
+        if os.stat(kernel_json).st_size == 0:
+            self._logger.msg_error.emit(f"{kernel_json} is empty")
+            return
+        with open(kernel_json, "r") as fh:
+            try:
+                json.load(fh)
+            except json.decoder.JSONDecodeError:
+                self._logger.msg_error.emit("Error in kernel.json file. Invalid JSON.")
+                return
+
+    def find_column(self, label):
+        """Returns the column number from the kernel model with the given label.
+
+        Args:
+            label (str): Header column label
+
+        Returns:
+            int: Column number or -1 if label not found
+        """
+        for column in range(self.kernel_list_model.columnCount()):
+            if self.kernel_list_model.headerData(column, Qt.Horizontal) == label:
+                return column
+        return -1
+
+    def check_options(self, prgm, kernel_name, display_name, python_or_julia):
+        if not super().check_options(prgm, kernel_name, display_name, python_or_julia):
+            return False
+        if not kernel_name:
+            self._logger.msg_error.emit("Kernel name missing")
+            return False
+        name_taken = False
+        display_name_taken = False
+        # Ask permission to overwrite if kernel name is taken
+        for row in range(self.kernel_list_model.rowCount(self.ui.tableView_kernel_list.rootIndex())):
+            row_index = self.kernel_list_model.index(row, 0, self.ui.tableView_kernel_list.rootIndex())
+            if kernel_name == row_index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole):  # Name column
+                name_taken = True
+            elif display_name == row_index.siblingAtColumn(self.find_column("Display Name")).data(
+                Qt.DisplayRole
+            ):  # Display name column
+                display_name_taken = True
+        if display_name_taken:
+            # This now terminates the whole kernel making if display name is taken. We could just overwrite the kernel.
+            self._logger.msg_error.emit(
+                f"Display name {display_name} already exists." f"Please provide a new name or remove the other kernel."
+            )
+            return False
+        if name_taken:
+            msg = f"Kernel <b>{kernel_name}</b> already exists.<br><br>Would you like to overwrite it?"
+            # noinspection PyCallByClass, PyTypeChecker
+            message_box = QMessageBox(
+                QMessageBox.Question, "Overwrite kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            )
+            message_box.button(QMessageBox.Ok).setText("Overwrite kernel")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
+                return False
+        return True
+
+    def _is_rebuild_ijulia_needed(self):
+        return self.ui.checkBox_rebuild_ijulia.isChecked()
+
+    @busy_effect
+    @Slot(int)
+    def handle_kernelspec_install_process_finished(self, retval):
+        super().handle_kernelspec_install_process_finished(retval)
+        self.populate_kernel_model()
+        self.ui.tableView_kernel_list.resizeColumnsToContents()
+
+    @busy_effect
+    @Slot(int)
+    def handle_installkernel_process_finished(self, retval):
+        super().handle_installkernel_process_finished(retval)
+        self.populate_kernel_model()
+        self.ui.tableView_kernel_list.resizeColumnsToContents()
+
+    def populate_kernel_model(self):
+        """Populates the kernel model with kernels found in user's system
+        either with Python or Julia kernels. Unknows, invalid, and
+        unsupported kernels are appended to the end."""
+        self.ui.tableView_kernel_list.setCurrentIndex(QModelIndex())  # To prevent unneeded currentChanged signals
+        if self.python_or_julia == "python":  # Add Python kernels
+            kernels = find_python_kernels()
+            self.kernel_list_model.clear()
+            self.kernel_list_model.setHorizontalHeaderItem(0, QStandardItem("Language"))
+            self.kernel_list_model.setHorizontalHeaderItem(1, QStandardItem("Name"))
+            self.kernel_list_model.setHorizontalHeaderItem(2, QStandardItem("Display Name"))
+            self.kernel_list_model.setHorizontalHeaderItem(3, QStandardItem("Interpreter"))
+            self.kernel_list_model.setHorizontalHeaderItem(4, QStandardItem("Location"))
+            for name, location in kernels.items():
+                d = self.get_kernel_deats(location)
+                language = d["language"]
+                display_name = d["display_name"]
+                interpreter = d["exe"]
+                row = [
+                    QStandardItem(language),
+                    QStandardItem(name),
+                    QStandardItem(display_name),
+                    QStandardItem(interpreter),
+                    QStandardItem(location),
+                ]
+                for item in row:  # Set items non-editable
+                    item.setFlags(~Qt.ItemIsEditable)
+                self.kernel_list_model.appendRow(row)
+            # Add unknown/invalid kernels
+            unknowns = find_unknown_kernels()
+            for n, l in unknowns.items():
+                unknown_row = [QStandardItem(), QStandardItem(n), QStandardItem(), QStandardItem(), QStandardItem(l)]
+                for item in unknown_row:  # Set items non-editable and paint bg red
+                    item.setFlags(~Qt.ItemIsEditable)
+                    item.setBackground(Qt.red)
+                self.kernel_list_model.appendRow(unknown_row)
+        else:  # Add Julia kernels
+            kernels = find_julia_kernels()
+            self.kernel_list_model.clear()
+            self.kernel_list_model.setHorizontalHeaderItem(0, QStandardItem("Language"))
+            self.kernel_list_model.setHorizontalHeaderItem(1, QStandardItem("Name"))
+            self.kernel_list_model.setHorizontalHeaderItem(2, QStandardItem("Display Name"))
+            self.kernel_list_model.setHorizontalHeaderItem(3, QStandardItem("Executable"))
+            self.kernel_list_model.setHorizontalHeaderItem(4, QStandardItem("Project"))
+            self.kernel_list_model.setHorizontalHeaderItem(5, QStandardItem("Location"))
+            for name, location in kernels.items():
+                d = self.get_kernel_deats(location)
+                language = d["language"]
+                display_name = d["display_name"]
+                executable = d["exe"]
+                project = d["project"]
+                row = [
+                    QStandardItem(language),
+                    QStandardItem(name),
+                    QStandardItem(display_name),
+                    QStandardItem(executable),
+                    QStandardItem(project),
+                    QStandardItem(location),
+                ]
+                for item in row:  # Set items non-editable
+                    item.setFlags(~Qt.ItemIsEditable)
+                self.kernel_list_model.appendRow(row)
+            # Add unknown/invalid kernels
+            unknowns = find_unknown_kernels()
+            for n, l in unknowns.items():
+                unknown_row = [
+                    QStandardItem(),
+                    QStandardItem(n),
+                    QStandardItem(),
+                    QStandardItem(),
+                    QStandardItem(),
+                    QStandardItem(l),
+                ]
+                for item in unknown_row:  # Set items non-editable and paint bg red
+                    item.setFlags(~Qt.ItemIsEditable)
+                    item.setBackground(Qt.red)
+                self.kernel_list_model.appendRow(unknown_row)
+        # If a new kernel was added, set it selected
+        if not self.old_kernel_names:
+            return
+        new_kernel = set(kernels.keys()) ^ set(self.old_kernel_names)
+        if not new_kernel or len(new_kernel) > 1:
+            return
+        [n] = new_kernel  # Unpack the set
+        self.set_kernel_selected(n)
+
+    @staticmethod
+    def get_kernel_deats(kernel_path):
+        """Reads kernel.json from given kernel path and returns the details in a dictionary.
+
+        Args:
+            kernel_path (str): Full path to kernel directory
+
+        Returns:
+            dict: language (str), path to interpreter (str), display name (str), project (str) (NA for Python kernels)
+        """
+        deats = {"language": "", "exe": "", "display_name": "", "project": ""}
+        kernel_json = os.path.join(kernel_path, "kernel.json")
+        if not os.path.exists(kernel_json):
+            return deats
+        if os.stat(kernel_json).st_size == 0:  # File is empty
+            return deats
+        with open(kernel_json, "r") as fh:
+            try:
+                kernel_dict = json.load(fh)
+            except json.decoder.JSONDecodeError:
+                return deats
+            try:
+                language = kernel_dict["language"]
+            except KeyError:
+                language = ""
+            try:
+                exe = kernel_dict["argv"][0]
+            except KeyError:
+                exe = ""
+            except IndexError:
+                exe = ""
+            try:
+                display_name = kernel_dict["display_name"]
+            except KeyError:
+                display_name = ""
+            try:
+                # loop argv and find a string that starts with --project=
+                project = ""
+                for arg in kernel_dict["argv"]:
+                    if arg.startswith("--project="):
+                        project = arg[10:]
+            except (KeyError, IndexError):
+                project = ""
+            deats["language"] = language
+            deats["exe"] = exe
+            deats["display_name"] = display_name
+            deats["project"] = project
+            return deats
+
+    @Slot("QPoint")
+    def show_kernel_list_context_menu(self, pos):
+        """Shows the context-menu in the kernel list table view."""
+        index = self.ui.tableView_kernel_list.indexAt(pos)
+        if not index.isValid():
+            return
+        global_pos = self.ui.tableView_kernel_list.viewport().mapToGlobal(pos)
+        self._kernel_list_context_menu.popup(global_pos)
+
+    @Slot(bool)
+    def _open_kernel_json(self, checked=False):
+        """Opens kernel.json file using the default application for .json files."""
+        index = self.ui.tableView_kernel_list.currentIndex()
+        if not index.isValid():
+            return
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        kernel_json = os.path.join(d, "kernel.json")
+        if not os.path.exists(kernel_json):
+            msg = f"Path <br><br>{kernel_json}<br><br>does not exist.<br>Consider removing the kernel manually."
+            QMessageBox.warning(self, "Opening kernel.json failed", msg)
+            return
+        url = "file:///" + kernel_json
+        res = open_url(url)
+        if not res:
+            msg = f"Opening file {kernel_json} failed."
+            QMessageBox.warning(self, "Opening kernel.json failed", msg)
+            return
+        return
+
+    @Slot(bool)
+    def _open_kernel_dir(self, checked=False):
+        """Opens kernel directory in OS file browser."""
+        index = self.ui.tableView_kernel_list.currentIndex()
+        if not index.isValid():
+            return
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        if not os.path.exists(d):
+            msg = "Path does not exist. Consider removing the kernel manually."
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Opening directory failed", msg)
+            return
+        url = "file:///" + d
+        res = open_url(url)
+        if not res:
+            msg = f"Opening directory {d} failed."
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Opening file browser failed", msg)
+            return
+        return
+
+    @Slot(bool)
+    def _remove_kernel(self, checked=False):
+        """Removes selected kernel by deleting the kernel directory."""
+        index = self.ui.tableView_kernel_list.currentIndex()
+        if not index.isValid():
+            return
+        name = index.siblingAtColumn(self.find_column("Name")).data(Qt.DisplayRole)  # Name column
+        d = index.siblingAtColumn(self.find_column("Location")).data(Qt.DisplayRole)  # Location column
+        if not os.path.exists(d):
+            msg = "Path does not exist. Please remove it manually."
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Removing kernel failed", msg)
+            return
+        msg = f"Are you sure you want to remove kernel <b>{name}</b>"
+        msg += f"<br><br>Directory<br><br><b>{d}</b><br><br>will be deleted."
+        # noinspection PyCallByClass, PyTypeChecker
+        message_box = QMessageBox(
+            QMessageBox.Question, "Remove kernel?", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+        )
+        message_box.button(QMessageBox.Ok).setText("Remove kernel")
+        answer = message_box.exec_()
+        if answer != QMessageBox.Ok:
+            return
+        try:
+            shutil.rmtree(d)
+        except OSError as os_err:
+            msg = f"<b>{os_err}</b><br><br>Please edit permissions and try again or remove the directory manually."
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Removing kernel failed", msg)
+            return
+        self._logger.msg.emit(f"kernel {name} removed")
+        self.populate_kernel_model()
+        self.ui.tableView_kernel_list.resizeColumnsToContents()
+
+    def mousePressEvent(self, e):
+        """Saves mouse position at the start of dragging.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        self._mouse_press_pos = e.globalPos()
+        self._mouse_move_pos = e.globalPos()
+        super().mousePressEvent(e)
+
+    def mouseReleaseEvent(self, e):
+        """Saves mouse position at the end of dragging.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        if self._mouse_press_pos is not None:
+            self._mouse_release_pos = e.globalPos()
+            moved = self._mouse_release_pos - self._mouse_press_pos
+            if moved.manhattanLength() > 3:
+                e.ignore()
+                return
+
+    def mouseMoveEvent(self, e):
+        """Moves the window when mouse button is pressed and mouse cursor is moved.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        currentpos = self.pos()
+        globalpos = e.globalPos()
+        if not self._mouse_move_pos:
+            e.ignore()
+            return
+        diff = globalpos - self._mouse_move_pos
+        newpos = currentpos + diff
+        self.move(newpos)
+        self._mouse_move_pos = globalpos
+
     def done(self, r):
         """Overridden QDialog method. Sets the selected kernel instance attribute so
         that it can be read by the SettingsForm after this dialog has been closed.
@@ -1018,6 +1063,99 @@ class KernelEditor(QDialog):
         self._save_ui()
         if event:
             event.accept()
+
+
+class MiniKernelEditorBase(KernelEditorBase):
+    def __init__(self, parent, python_exe, julia_exe, python_or_julia):
+        super().__init__(parent, python_exe, julia_exe, python_or_julia, "")
+        from ..ui import mini_kernel_editor_dialog  # pylint: disable=import-outside-toplevel
+
+        self.ui = mini_kernel_editor_dialog.Ui_Dialog()
+        self.ui.setupUi(self)
+        self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
+        for widget in self._cursors:
+            widget.setCursor(Qt.BusyCursor)
+        self.ui.buttonBox.button(QDialogButtonBox.Close).setVisible(False)
+
+    def _show_close_button(self, failed=False):
+        self.ui.buttonBox.button(QDialogButtonBox.Close).setVisible(True)
+        self.ui.buttonBox.button(QDialogButtonBox.Cancel).setVisible(False)
+        for widget, cursor in self._cursors.items():
+            widget.setCursor(cursor)
+        msg = "Done" if not failed else "Failed"
+        self.ui.label_message.setText(self.ui.label_message.text() + msg)
+
+    def make_kernel(self):
+        QTimer.singleShot(0, self._do_make_kernel)
+        self.exec_()
+
+
+class MiniPythonKernelEditor(MiniKernelEditorBase):
+    """A reduced version of KernelEditor that basically just takes care of installing one Python kernel.
+    The python exe is passed in the constructor, then calling ``make_kernel`` starts the process.
+    """
+
+    def __init__(self, parent, python_exe):
+        super().__init__(parent, python_exe, "", "python")
+        self.ui.label_message.setText("Finalizing Python configuration... ")
+        self.ui.stackedWidget.setCurrentIndex(0)
+        self.setWindowTitle("Python Kernel Specification Creator")
+        if python_exe == "":
+            python_exe = resolve_python_interpreter(python_exe)
+        self.ui.lineEdit_python_interpreter.setText(python_exe)
+        prefix = os.path.basename(python_exe)
+        existing = find_python_kernels().keys()
+        self._kernel_name = unique_name(prefix, existing)
+        self.connect_signals()
+
+    def _python_kernel_name(self):
+        return self._kernel_name
+
+    def _python_kernel_display_name(self):
+        return ""
+
+    def _do_make_kernel(self):
+        if not self.make_python_kernel():
+            self._show_close_button(failed=True)
+
+    @busy_effect
+    @Slot(int)
+    def handle_kernelspec_install_process_finished(self, retval):
+        super().handle_kernelspec_install_process_finished(retval)
+        self._show_close_button(failed=retval != 0)
+
+
+class MiniJuliaKernelEditor(MiniKernelEditorBase):
+    """A reduced version of KernelEditor that basically just takes care of installing one Julia kernel.
+    The julia exe and project are passed in the constructor, then calling ``make_kernel`` starts the process.
+    """
+
+    def __init__(self, parent, julia_exe, julia_project):
+        super().__init__(parent, "", julia_exe, "julia")
+        self.ui.label_message.setText("Finalizing Julia configuration... ")
+        self.ui.stackedWidget.setCurrentIndex(1)
+        self.setWindowTitle("Julia Kernel Specification Creator")
+        if julia_exe == "":
+            julia_exe = resolve_julia_executable_from_path()
+        self.ui.lineEdit_julia_executable.setText(julia_exe)
+        self.ui.lineEdit_julia_project.setText(julia_project)
+        prefix = os.path.basename(julia_exe)
+        existing = find_julia_kernels().keys()
+        self._kernel_name = unique_name(prefix, existing)
+        self.connect_signals()
+
+    def _julia_kernel_name(self):
+        return self._kernel_name
+
+    def _do_make_kernel(self):
+        if not self.make_julia_kernel():
+            self._show_close_button(failed=True)
+
+    @busy_effect
+    @Slot(int)
+    def handle_installkernel_process_finished(self, retval):
+        super().handle_installkernel_process_finished(retval)
+        self._show_close_button(failed=retval != 0)
 
 
 def find_kernels():

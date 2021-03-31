@@ -55,7 +55,7 @@ class InstallJuliaWizard(QWizard):
     """A wizard to install julia
     """
 
-    julia_exe_selected = Signal(str, bool)
+    julia_exe_selected = Signal(str)
 
     def __init__(self, parent):
         """Initialize class.
@@ -88,7 +88,7 @@ class InstallJuliaWizard(QWizard):
     def accept(self):
         super().accept()
         if jill_install is not None and self.field("use_julia"):
-            self.julia_exe_selected.emit(self.julia_exe, self.field("create_kernel"))
+            self.julia_exe_selected.emit(self.julia_exe)
 
 
 class JillNotFoundPage(QWizardPage):
@@ -249,26 +249,16 @@ class SuccessPage(QWizardPage):
         self._label = HyperTextLabel()
         layout = QVBoxLayout(self)
         use_julia_check_box = QCheckBox("Use this Julia with Spine Toolbox")
-        self._create_kernel_check_box = QCheckBox("Create a Jupyter kernel for this Julia")
         self.registerField("use_julia", use_julia_check_box)
-        self.registerField("create_kernel", self._create_kernel_check_box)
         layout.addWidget(self._label)
         layout.addStretch()
         layout.addWidget(use_julia_check_box)
-        layout.addWidget(self._create_kernel_check_box)
         layout.addStretch()
         layout.addStretch()
-        use_julia_check_box.clicked.connect(self._handle_use_julia_clicked)
-
-    @Slot(bool)
-    def _handle_use_julia_clicked(self, checked=False):
-        self._create_kernel_check_box.setChecked(checked)
-        self._create_kernel_check_box.setEnabled(checked)
 
     def initializePage(self):
         self._label.setText(f"Julia executable created at <b>{self.wizard().julia_exe}</b>")
         self.setField("use_julia", True)
-        self.setField("create_kernel", True)
 
     def nextId(self):
         return -1

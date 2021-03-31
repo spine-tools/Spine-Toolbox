@@ -59,7 +59,7 @@ class TestInstallJuliaWizard(unittest.TestCase):
         wizard.julia_exe_selected = mock.Mock()
         wizard.accept()
         wizard.julia_exe_selected.emit.assert_called_once()
-        wizard.julia_exe_selected.emit.assert_called_with("path/to/julia", True)
+        wizard.julia_exe_selected.emit.assert_called_with("path/to/julia")
 
     def test_julia_installation_fails(self):
         settings_widget = SettingsWidget(self.toolbox)
