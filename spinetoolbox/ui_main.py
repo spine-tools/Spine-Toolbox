@@ -209,7 +209,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
-        self.ui.actionClose.triggered.connect(self.close_project)
+        self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
         self.ui.actionRename_project.triggered.connect(self.rename_project)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
@@ -455,17 +455,18 @@ class ToolboxUI(QMainWindow):
             return False
         return self.restore_project(proj_info, load_dir)
 
-    def restore_project(self, project_info, project_dir):
+    def restore_project(self, project_info, project_dir, ask_confirmation=True):
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
 
         Args:
             project_info (dict): Project information dictionary
             project_dir (str): Project directory
+            ask_confirmation (bool): True closes the previous project with a confirmation box if user has enabled this
 
         Returns:
             bool: True when restoring project succeeded, False otherwise
         """
-        if not self.close_project():
+        if not self.close_project(ask_confirmation):
             return False
         # Check if project dictionary needs to be upgraded
         project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
@@ -600,6 +601,8 @@ class ToolboxUI(QMainWindow):
         # Check and ask what to do if selected directory is not empty
         if not self.overwrite_check(answer):
             return
+        if not self.undo_stack.isClean():
+            self.save_project()   # Save before copying the project, so the changes are not discarded
         self.msg.emit("Saving project to directory {0}".format(answer))
         recursive_overwrite(self, self._project.project_dir, answer, silent=False)
         # Get the project info from the new directory and restore project
@@ -617,14 +620,13 @@ class ToolboxUI(QMainWindow):
         # Change name of the duplicated project to the new project directory name
         _, new_name = os.path.split(answer)
         proj_info["project"]["name"] = new_name
-        if not self.restore_project(proj_info, answer):
+        if not self.restore_project(proj_info, answer, ask_confirmation=False):
             return
         self.save_project()  # Save to update project name in project.json, must be done after restore_project()
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.information(self, f"Project {self._project.name} saved", f"Project directory is now\n\n{answer}")
 
-    @Slot(bool)
-    def close_project(self, _checked=False):
+    def close_project(self, ask_confirmation=True):
         """Closes the current project.
 
         Returns:
@@ -632,15 +634,16 @@ class ToolboxUI(QMainWindow):
         """
         if not self._project:
             return True
-        save_at_exit = (
-            int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
-            if not self.undo_stack.isClean()
-            else 0
-        )
-        if save_at_exit == 1 and not self._confirm_save_and_exit():
-            return False
-        if save_at_exit == 2 and not self.save_project():
-            return False
+        if ask_confirmation:
+            save_at_exit = (
+                int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
+                if not self.undo_stack.isClean()
+                else 0
+            )
+            if save_at_exit == 1 and not self._confirm_save_and_exit():
+                return False
+            if save_at_exit == 2 and not self.save_project():
+                return False
         if not self.undo_critical_commands():
             return False
         self._project.tear_down()
