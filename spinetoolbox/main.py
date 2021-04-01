@@ -56,7 +56,9 @@ if not _skip_project_items_upgrade and upgrade_project_items():
     import subprocess
 
     try:
-        subprocess.run([sys.executable, *sys.argv, "--skip-project-items-upgrade"], check=True)
+        subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "__main__.py"),
+                        "--skip-project-items-upgrade"],
+                       check=True)
     except subprocess.CalledProcessError as err:
         sys.exit(err.returncode)
     sys.exit(0)
