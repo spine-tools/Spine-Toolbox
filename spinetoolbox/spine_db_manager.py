@@ -518,6 +518,7 @@ class SpineDBManager(SpineDBManagerBase):
     def clean_up(self):
         self._thread.quit()
         self._thread.wait()
+        self._thread.deleteLater()
         self.deleteLater()
 
     def refresh_session(self, *db_maps):

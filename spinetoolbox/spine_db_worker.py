@@ -52,7 +52,9 @@ class SpineDBWorker(QObject):
 
     def __init__(self, db_mngr):
         super().__init__()
+        thread = db_mngr.thread
         self.moveToThread(db_mngr.thread)
+        thread.finished.connect(self.deleteLater)
         self._db_mngr = db_mngr
         self._db_map = None
         self._db_map_args = None
@@ -60,7 +62,7 @@ class SpineDBWorker(QObject):
         self._err = None
 
     def connect_signals(self):
-        connection = Qt.BlockingQueuedConnection if self.thread() != qApp.thread() else Qt.DirectConnection
+        connection = Qt.BlockingQueuedConnection if self.thread() is not qApp.thread() else Qt.DirectConnection
         self._get_db_map_called.connect(self._get_db_map, connection)
         self._close_db_map_called.connect(self._close_db_map)
         self._add_or_update_items_called.connect(self._add_or_update_items)
