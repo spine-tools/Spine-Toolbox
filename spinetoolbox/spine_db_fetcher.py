@@ -38,11 +38,12 @@ class SpineDBFetcher(QObject):
         self._db_mngr = db_mngr
         self._mini = mini
         self.moveToThread(db_mngr.thread)
-        self._started.connect(self._do_fetch)
+        self._started.connect(self._do_work)
         self._db_maps = None
         self._tablenames = None
         self.prepared = False
         self.started = False
+        self._stopped = False
 
     def clean_up(self):
         self.deleteLater()
@@ -66,8 +67,12 @@ class SpineDBFetcher(QObject):
         self.started = True
         self._started.emit()
 
+    def stop(self):
+        self._stopped = True
+        self.finished.emit()
+
     @Slot()
-    def _do_fetch(self):
+    def _do_work(self):
         getter_signal_lookup = {
             "object_class": (self._db_mngr.get_object_classes, self._mini.object_classes_added),
             "relationship_class": (self._db_mngr.get_relationship_classes, self._mini.relationship_classes_added),
@@ -99,5 +104,7 @@ class SpineDBFetcher(QObject):
             getter, signal = getter_signal
             for db_map in self._db_maps:
                 for chunk in getter(db_map):
+                    if self._stopped:
+                        return
                     signal.emit({db_map: chunk})
         self.finished.emit()

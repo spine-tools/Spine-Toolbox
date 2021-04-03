@@ -73,6 +73,7 @@ class SpineDBEditorBase(QMainWindow):
         self._change_notifiers = []
         self._changelog = []
         self.db_url = None
+        self._fetcher = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -158,10 +159,10 @@ class SpineDBEditorBase(QMainWindow):
     def fetch_db_maps(self, *db_maps):
         if not db_maps:
             db_maps = self.db_maps
-        fetcher = self.db_mngr.get_fetcher()
-        fetcher.finished.connect(self._make_iddle)
+        self._fetcher = self.db_mngr.get_fetcher()
+        self._fetcher.finished.connect(self._make_iddle)
         self._make_busy()
-        fetcher.fetch(self, db_maps)
+        self._fetcher.fetch(self, db_maps)
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
 
     def _make_busy(self):
@@ -171,6 +172,7 @@ class SpineDBEditorBase(QMainWindow):
     def _make_iddle(self):
         self.silenced = False
         self.unsetCursor()
+        self._fetcher = None
 
     @Slot(bool)
     def load_previous_urls(self, _=False):
@@ -838,6 +840,8 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
 
     def tear_down(self):
+        if self._fetcher is not None:
+            self._fetcher.stop()
         if not self.db_mngr.unregister_listener(self, *self.db_maps):
             return False
         # Save UI form state
