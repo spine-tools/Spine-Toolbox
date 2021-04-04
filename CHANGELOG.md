@@ -23,6 +23,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   renamed to GdxExporter.
 - File->Close project option
 - Support for Python 3.8
+- Automated kernel creation, if the user selects to run tools in console without having created a kernel.
+- Option to pack CSV resource files into one datapackage.json file for advertising, available from Link properties.
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
@@ -38,6 +40,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Combiner project item. The same functionality can be achieved by connecting a Data Store to another Data Store.
 - Upgrade support for original (.proj file based) Spine Toolbox projects.
 - Python 3.6 is no longer supported.
+- The Spine Datapackage Editor is gone. There wasn't enough reason to keep this widget
 
 ### Fixed
 ### Security
