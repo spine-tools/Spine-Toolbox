@@ -282,29 +282,30 @@ class _LinkIcon(QGraphicsEllipseItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self._block_updates = False
 
-    def update_icon(self, force=False):
-        if self._block_updates and not force:
-            return
-        self._block_updates = True
+    def update_icon(self):
+        """Sets the icon (filter, datapkg, or none), depending on Connection state."""
         connection = self._parent.connection
-        self.setVisible(False)
-        self._text_item.setVisible(False)
-        self._svg_item.setVisible(False)
         if connection.use_datapackage:
-            self._svg_item.setVisible(True)
             self.setVisible(True)
+            self._svg_item.setVisible(True)
             self._svg_item.setSharedRenderer(self._datapkg_renderer)
             scale = 0.8 * self.rect().width() / self._datapkg_renderer.defaultSize().width()
             self._svg_item.setScale(scale)
+            self._svg_item.setPos(0, 0)
             self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
+            self._text_item.setVisible(False)
             return
         if connection.has_filters():
+            self.setVisible(True)
             self._text_item.setVisible(True)
             self._text_item.setPlainText("\uf0b0")
+            self._svg_item.setPos(0, 0)
             self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
-            self.setVisible(True)
+            self._svg_item.setVisible(False)
             return
-        self._block_updates = False
+        self.setVisible(False)
+        self._text_item.setVisible(False)
+        self._svg_item.setVisible(False)
 
 
 class Link(LinkBase):
@@ -327,6 +328,7 @@ class Link(LinkBase):
         self._link_icon_extent = 4 * self.magic_number
         self._link_icon = _LinkIcon(0, 0, self._link_icon_extent, self._link_icon_extent, self)
         self._link_icon.setPen(self.normal_pen)
+        self._link_icon.update_icon()
         self.setToolTip(
             "<html><p>Connection from <b>{0}</b>'s output "
             "to <b>{1}</b>'s input</html>".format(self._connection.source, self._connection.destination)
@@ -349,7 +351,7 @@ class Link(LinkBase):
         if options == self.connection.options:
             return
         self.connection.options = options
-        self._link_icon.update_icon(force=True)
+        self._link_icon.update_icon()
         item = self._toolbox.project_item_model.get_item(self.connection.source).project_item
         self._toolbox.project().notify_resource_changes_to_successors(item)
         if self is self._toolbox.active_link:
@@ -432,7 +434,6 @@ class Link(LinkBase):
 
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
-        self._link_icon.update_icon()
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self.setPen(self.selected_pen)
