@@ -58,6 +58,7 @@ class ResourceFilterModel(QStandardItemModel):
                 parent_item.appendRow(filter_item)
 
         self.clear()
+        self.setHorizontalHeaderItem(0, QStandardItem("DB resource filters"))
         self._connection.fetch_database_items()
         for resource_label, filters_by_type in self._connection.resource_filters.items():
             root_item = QStandardItem(resource_label)

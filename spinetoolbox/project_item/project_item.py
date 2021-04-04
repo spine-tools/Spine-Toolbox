@@ -218,6 +218,9 @@ class ProjectItem(MetaObject):
         """Add a notification to the exclamation icon."""
         self.get_icon().exclamation_icon.add_notification(text)
 
+    def remove_notification(self, text):
+        self.get_icon().exclamation_icon.remove_notification(text)
+
     def set_rank(self, rank):
         """Set rank of this item for displaying in the design view."""
         if rank is not None:
@@ -290,13 +293,16 @@ class ProjectItem(MetaObject):
         Args:
             edges (list): A list of edges that make the graph acyclic after removing them.
         """
-        edges = ["{0} -> {1}".format(*edge) for edge in edges]
+        edges = ", ".join("{0} -> {1}".format(*edge) for edge in edges)
         self.clear_notifications()
         self.set_rank(None)
         self.add_notification(
             "The workflow defined for this item has loops and thus cannot be executed. "
-            "Possible fix: remove link(s) {0}.".format(", ".join(edges))
+            f"Possible fix: remove link(s) {edges}."
         )
+
+    def revalidate_workflow(self):
+        self.remove_notification("The workflow defined for this item has loops and thus cannot be executed.")
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""

@@ -346,6 +346,28 @@ class SetFiltersOnlineCommand(SpineToolboxCommand):
         self._resource_filter_model.set_online(self._resource, self._filter_type, negated_online)
 
 
+class SetConnectionOptionsCommand(SpineToolboxCommand):
+    def __init__(self, link, options):
+        """Command to set connection options.
+
+        Args:
+            link (Link)
+            options (dict): containing options to be set
+        """
+        super().__init__()
+        self._link = link
+        self._new_options = link.connection.options.copy()
+        self._new_options.update(options)
+        self._old_options = link.connection.options.copy()
+        self.setText(f"change options in link {link.name}")
+
+    def redo(self):
+        self._link.set_connection_options(self._new_options)
+
+    def undo(self):
+        self._link.set_connection_options(self._old_options)
+
+
 class AddSpecificationCommand(SpineToolboxCommand):
     def __init__(self, toolbox, specification):
         """Command to add item specs to a project.

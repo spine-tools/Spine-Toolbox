@@ -13,6 +13,7 @@
   </qresource>
   <qresource prefix="/icons">
     <file>menu_icons/exchange-alt.svg</file>
+    <file>datapkg.svg</file>
     <file>menu_icons/door-closed.svg</file>
     <file>julia-dots.svg</file>
     <file>python.svg</file>

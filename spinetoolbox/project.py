@@ -203,10 +203,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             ProjectItem: project item
         """
-        try:
-            return self._project_item_model.get_item(name).project_item
-        except AttributeError as e:
-            raise
+        return self._project_item_model.get_item(name).project_item
 
     def get_items(self):
         """ Returns all project items.
@@ -650,7 +647,7 @@ class SpineToolboxProject(MetaObject):
         dag = self.dag_handler.dag_with_node(item_name)
         if not dag:
             self._logger.msg_error.emit(
-                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item_name)
+                "[BUG] Could not find a graph containing {0}. <b>Please reopen the project.</b>".format(item_name)
             )
         return dag
 
@@ -709,7 +706,14 @@ class SpineToolboxProject(MetaObject):
         Args:
             item (ProjectItem): item whose resources have changed
         """
-        self._notify_resource_changes(item, ExecutionDirection.BACKWARD)
+        item_name = item.name
+        predecessor_names = {c.source for c in self._incoming_connections(item_name)}
+        succesor_connections = self._outgoing_connections
+        update_resources = self._update_predecessor
+        trigger_resources = item.resources_for_direct_predecessors()
+        self._notify_resource_changes(
+            item_name, predecessor_names, succesor_connections, update_resources, trigger_resources
+        )
 
     def notify_resource_changes_to_successors(self, item):
         """Updates resources for direct successors and outgoing connections of given item.
@@ -717,44 +721,36 @@ class SpineToolboxProject(MetaObject):
         Args:
             item (ProjectItem): item whose resources have changed
         """
-        self._notify_resource_changes(item, ExecutionDirection.FORWARD)
+        item_name = item.name
+        sucessor_names = {c.destination for c in self._outgoing_connections(item_name)}
+        predecessor_connections = self._incoming_connections
+        update_resources = self._update_successor
+        trigger_resources = item.resources_for_direct_successors()
+        self._notify_resource_changes(
+            item_name, sucessor_names, predecessor_connections, update_resources, trigger_resources
+        )
+        for connection in self._outgoing_connections(item_name):
+            connection.receive_resources_from_source(trigger_resources)
 
-    def _notify_resource_changes(self, item, direction):
+    def _notify_resource_changes(
+        self, trigger_name, target_names, provider_connections, update_resources, trigger_resources
+    ):
         """Updates resources in given direction for immediate neighbours of an item.
 
-        Updates connections' resources too if needed.
-
         Args:
-            item (ProjectItem): item whose resources have changed
-            direction (ExecutionDirection): FORWARD notifies direct successors, BACKWARD direct predecessors
+            trigger_name (str): item whose resources have changed
+            target_names (list(str)): items to be notified
+            provider_connections (function): function that receives a target item name and returns a list of
+                Connections from resource providers
+            update_resources (function): function that takes an item name, a list of provider names, and a dictionary
+                of resources, and does the updating
+            trigger_resources (list(ProjectItemResources)): resources from the trigger item
         """
-        trigger_name = item.name
-        target_names = (
-            self.successor_names(trigger_name)
-            if direction == ExecutionDirection.FORWARD
-            else self._predecessor_names(trigger_name)
-        )
-        provider_names = self._predecessor_names if direction == ExecutionDirection.FORWARD else self.successor_names
-        update_resources = (
-            self._update_successor if direction == ExecutionDirection.FORWARD else self._update_predecessor
-        )
-        trigger_resources = (
-            item.resources_for_direct_successors
-            if direction == ExecutionDirection.FORWARD
-            else item.resources_for_direct_predecessors
-        )
-        resource_cache = {trigger_name: trigger_resources()}
+        resource_cache = {trigger_name: trigger_resources}
         for target_name in target_names:
             target_item = self._project_item_model.get_item(target_name).project_item
-            provider_items = [
-                self._project_item_model.get_item(name).project_item for name in provider_names(target_name)
-            ]
-            update_resources(target_item, provider_items, resource_cache)
-        if direction == ExecutionDirection.FORWARD:
-            outgoing_connections = [c for c in self._connections if c.source == trigger_name]
-            resources = resource_cache[trigger_name]
-            for connection in outgoing_connections:
-                connection.receive_resources_from_source(resources)
+            connections = provider_connections(target_name)
+            update_resources(target_item, connections, resource_cache)
 
     def _update_item_resources(self, target_item, direction):
         """Updates up or downstream resources for a single project item.
@@ -765,16 +761,12 @@ class SpineToolboxProject(MetaObject):
             direction (ExecutionDirection): FORWARD updates resources from upstream, BACKWARD from downstream
         """
         target_name = target_item.name
-        connected_names = (
-            self._predecessor_names(target_name)
-            if direction == ExecutionDirection.FORWARD
-            else self.successor_names(target_name)
-        )
-        provider_items = [self._project_item_model.get_item(name).project_item for name in connected_names]
         if direction == ExecutionDirection.FORWARD:
-            self._update_successor(target_item, provider_items, resource_cache={})
+            connections = self._incoming_connections(target_name)
+            self._update_successor(target_item, connections, resource_cache={})
         else:
-            self._update_predecessor(target_item, provider_items, resource_cache={})
+            connections = self._outgoing_connections(target_name)
+            self._update_predecessor(target_item, connections, resource_cache={})
 
     def successor_names(self, name):
         """Collects direct successor item names.
@@ -785,38 +777,52 @@ class SpineToolboxProject(MetaObject):
         Returns:
             set of str: direct successor names
         """
-        return {c.destination for c in self._connections if c.source == name}
+        return {c.destination for c in self._outgoing_connections(name)}
 
-    def _predecessor_names(self, name):
-        """Collects direct predecessor item names.
+    def _outgoing_connections(self, name):
+        """Collects outgoing connections.
 
         Args:
-            name (str): name of the project item whose predecessors to collect
+            name (str): name of the project item whose connections to collect
 
         Returns:
-            set of str: direct predecessor names
+            set of Connection: outgoing connections
         """
-        return {c.source for c in self._connections if c.destination == name}
+        return [c for c in self._connections if c.source == name]
 
-    @staticmethod
-    def _update_successor(successor, predecessors, resource_cache):
+    def _incoming_connections(self, name):
+        """Collects incoming connections.
+
+        Args:
+            name (str): name of the project item whose connections to collect
+
+        Returns:
+            set of Connection: incoming connections
+        """
+        return [c for c in self._connections if c.destination == name]
+
+    def _update_successor(self, successor, incoming_connections, resource_cache):
         combined_resources = list()
-        for item in predecessors:
-            resources = resource_cache.get(item.name)
+        for conn in incoming_connections:
+            item_name = conn.source
+            predecessor = self._project_item_model.get_item(item_name).project_item
+            resources = resource_cache.get(item_name)
             if resources is None:
-                resources = item.resources_for_direct_successors()
-                resource_cache[item.name] = resources
+                resources = predecessor.resources_for_direct_successors()
+                resource_cache[item_name] = resources
+            resources = conn.convert_resources(resources)
             combined_resources += resources
         successor.upstream_resources_updated(combined_resources)
 
-    @staticmethod
-    def _update_predecessor(predecessor, successors, resource_cache):
+    def _update_predecessor(self, predecessor, outgoing_connections, resource_cache):
         combined_resources = list()
-        for item in successors:
-            resources = resource_cache.get(item.name)
+        for conn in outgoing_connections:
+            item_name = conn.destination
+            successor = self._project_item_model.get_item(item_name).project_item
+            resources = resource_cache.get(item_name)
             if resources is None:
-                resources = item.resources_for_direct_predecessors()
-                resource_cache[item.name] = resources
+                resources = successor.resources_for_direct_predecessors()
+                resource_cache[item_name] = resources
             combined_resources += resources
         predecessor.downstream_resources_updated(combined_resources)
 
@@ -828,6 +834,8 @@ class SpineToolboxProject(MetaObject):
             for node in dag.nodes():
                 items[node].invalidate_workflow(edges)
             return False
+        for node in dag.nodes():
+            items[node].revalidate_workflow()
         return True
 
     def _update_ranks(self, dag):

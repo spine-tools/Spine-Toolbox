@@ -523,6 +523,14 @@ class ExclamationIcon(QGraphicsTextItem):
         self._notifications.append(text)
         self.show()
 
+    def remove_notification(self, subtext):
+        """Remove the first notification that includes given subtext."""
+        k = next((i for i, text in enumerate(self._notifications) if subtext in text), None)
+        if k is not None:
+            self._notifications.pop(k)
+            if not self._notifications:
+                self.hide()
+
     def hoverEnterEvent(self, event):
         """Shows notifications as tool tip.
 

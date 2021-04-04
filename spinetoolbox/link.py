@@ -20,6 +20,7 @@ from math import atan2, sin, cos, pi
 from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, QGraphicsEllipseItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont
+from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
 from .project_item_icon import ConnectorButton
 
@@ -263,8 +264,8 @@ class LinkBase(QGraphicsPathItem):
         return atan2(-line.dy(), line.dx())
 
 
-class FilterIcon(QGraphicsEllipseItem):
-    """An icon to show that a Link has filters."""
+class _LinkIcon(QGraphicsEllipseItem):
+    """An icon to show over a Link."""
 
     def __init__(self, x, y, w, h, parent):
         super().__init__(x, y, w, h, parent)
@@ -274,11 +275,36 @@ class FilterIcon(QGraphicsEllipseItem):
         self._text_item = QGraphicsTextItem(self)
         font = QFont('Font Awesome 5 Free Solid')
         self._text_item.setFont(font)
-        self._text_item.setPos(0, 0)
-        self._text_item.setPlainText("\uf0b0")
         self._text_item.setDefaultTextColor(color)
-        self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+        self._svg_item = QGraphicsSvgItem(self)
+        self._datapkg_renderer = QSvgRenderer()
+        self._datapkg_renderer.load(":/icons/datapkg.svg")
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self._block_updates = False
+
+    def update_icon(self, force=False):
+        if self._block_updates and not force:
+            return
+        self._block_updates = True
+        connection = self._parent.connection
+        self.setVisible(False)
+        self._text_item.setVisible(False)
+        self._svg_item.setVisible(False)
+        if connection.use_datapackage:
+            self._svg_item.setVisible(True)
+            self.setVisible(True)
+            self._svg_item.setSharedRenderer(self._datapkg_renderer)
+            scale = 0.8 * self.rect().width() / self._datapkg_renderer.defaultSize().width()
+            self._svg_item.setScale(scale)
+            self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
+            return
+        if connection.has_filters():
+            self._text_item.setVisible(True)
+            self._text_item.setPlainText("\uf0b0")
+            self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+            self.setVisible(True)
+            return
+        self._block_updates = False
 
 
 class Link(LinkBase):
@@ -298,9 +324,9 @@ class Link(LinkBase):
         self.dst_connector = dst_connector
         self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
-        self._filter_icon_extent = 4 * self.magic_number
-        self._filter_icon = FilterIcon(0, 0, self._filter_icon_extent, self._filter_icon_extent, self)
-        self._filter_icon.setPen(self.normal_pen)
+        self._link_icon_extent = 4 * self.magic_number
+        self._link_icon = _LinkIcon(0, 0, self._link_icon_extent, self._link_icon_extent, self)
+        self._link_icon.setPen(self.normal_pen)
         self.setToolTip(
             "<html><p>Connection from <b>{0}</b>'s output "
             "to <b>{1}</b>'s input</html>".format(self._connection.source, self._connection.destination)
@@ -319,9 +345,19 @@ class Link(LinkBase):
         """Makes resource filter mode fetch filter data from database."""
         self.resource_filter_model.build_tree()
 
+    def set_connection_options(self, options):
+        if options == self.connection.options:
+            return
+        self.connection.options = options
+        self._link_icon.update_icon(force=True)
+        item = self._toolbox.project_item_model.get_item(self.connection.source).project_item
+        self._toolbox.project().notify_resource_changes_to_successors(item)
+        if self is self._toolbox.active_link:
+            self._toolbox.link_properties_widget.load_connection_options()
+
     @property
     def name(self):
-        return f"from {self._connection.source} to {self._connection.destination}"
+        return self._connection.name
 
     @property
     def connection(self):
@@ -331,7 +367,7 @@ class Link(LinkBase):
         """See base class."""
         super().do_update_geometry(guide_path)
         center = guide_path.pointAtPercent(0.5)
-        self._filter_icon.setPos(center - 0.5 * QPointF(self._filter_icon_extent, self._filter_icon_extent))
+        self._link_icon.setPos(center - 0.5 * QPointF(self._link_icon_extent, self._link_icon_extent))
 
     def make_execution_animation(self, skipped):
         """Returns an animation to play when execution 'passes' through this link.
@@ -396,20 +432,20 @@ class Link(LinkBase):
 
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
-        self._filter_icon.setVisible(self._connection.has_filters())
+        self._link_icon.update_icon()
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self.setPen(self.selected_pen)
-            self._filter_icon.setPen(self.selected_pen)
+            self._link_icon.setPen(self.selected_pen)
         else:
             self.setPen(self.normal_pen)
-            self._filter_icon.setPen(self.normal_pen)
+            self._link_icon.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
     def shape(self):
         shape = super().shape()
-        if self._filter_icon.isVisible():
-            shape.addEllipse(self._filter_icon.sceneBoundingRect())
+        if self._link_icon.isVisible():
+            shape.addEllipse(self._link_icon.sceneBoundingRect())
         return shape
 
     def itemChange(self, change, value):
