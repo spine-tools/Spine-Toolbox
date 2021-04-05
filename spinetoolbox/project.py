@@ -19,13 +19,13 @@ from itertools import takewhile
 import os
 import json
 import logging
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Signal
 from PySide2.QtWidgets import QMessageBox
 from spine_engine.project_item.connection import Connection
 from spine_engine.spine_engine import ExecutionDirection
 from spine_engine.utils.helpers import shorten
 from spinetoolbox.metaobject import MetaObject
-from spinetoolbox.helpers import create_dir, inverted, erase_dir, make_settings_dict_for_engine
+from spinetoolbox.helpers import create_dir, erase_dir, make_settings_dict_for_engine
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME, INVALID_CHARS
 from .dag_handler import DirectedGraphHandler
 from .project_tree_item import LeafProjectTreeItem

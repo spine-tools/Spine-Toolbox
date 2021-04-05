@@ -22,6 +22,7 @@ from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextIte
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
+from spinetoolbox.helpers import busy_effect
 from .project_item_icon import ConnectorButton
 
 
@@ -102,10 +103,6 @@ class LinkBase(QGraphicsPathItem):
         return ellipse_path
 
     def _get_src_offset(self):
-        if self.src_connector == self.dst_connector:
-            return {"left": QPointF(0, 1), "bottom": QPointF(1, 0), "right": QPointF(0, -1)}[
-                self.src_connector.position
-            ]
         return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.src_connector.position]
 
     def _get_dst_offset(self, c1):
@@ -149,41 +146,10 @@ class LinkBase(QGraphicsPathItem):
             list(QPointF): points
             list(float): angles
         """
-        max_incr = 0.05
-        min_incr = 0.01
-        max_angle_change = 0.001
-        percents = list()
-        angles = list()
-        t = path.percentAtLength(self.src_rect.width() / 2)
-        a = path.angleAtPercent(t)
-        while t < 0.5:
-            percents.append(t)
-            angles.append(a)
-            t_ref = t
-            a_ref = a
-            incr = max_incr
-            while incr > min_incr:
-                t = t_ref + incr
-                a = path.angleAtPercent(t)
-                try:
-                    angle_change = abs((a - a_ref) / (a_ref + a) / 2)
-                except ZeroDivisionError:
-                    incr = min_incr
-                    break
-                if angle_change < max_angle_change:
-                    break
-                incr /= 2
-            t += incr
-        t = 0.5
-        a = path.angleAtPercent(t)
-        percents.append(t)
-        angles.append(a)
+        count = int(100 * (1.0 - path.percentAtLength(self.src_rect.width() / 2))) + 2
+        percents = [k / 100 for k in range(count)]
         points = list(map(path.pointAtPercent, percents))
-        for t in reversed(percents):
-            p = path.pointAtPercent(1.0 - t)
-            a = path.angleAtPercent(1.0 - t)
-            points.append(p)
-            angles.append(a)
+        angles = list(map(path.angleAtPercent, percents))
         return points, angles
 
     def _make_connecting_path(self, guide_path):
@@ -218,7 +184,9 @@ class LinkBase(QGraphicsPathItem):
     def _follow_points(curve_path, points):
         points = iter(points)
         for p0 in points:
-            p1 = next(points)
+            p1 = next(points, None)
+            if p1 is None:
+                break
             curve_path.quadTo(p0, p1)
 
     def _radius_from_point_and_angle(self, point, angle):
@@ -347,6 +315,7 @@ class Link(LinkBase):
         """Makes resource filter mode fetch filter data from database."""
         self.resource_filter_model.build_tree()
 
+    @busy_effect
     def set_connection_options(self, options):
         if options == self.connection.options:
             return
