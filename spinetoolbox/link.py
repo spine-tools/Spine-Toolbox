@@ -146,7 +146,7 @@ class LinkBase(QGraphicsPathItem):
             list(QPointF): points
             list(float): angles
         """
-        count = int(100 * (1.0 - path.percentAtLength(self.src_rect.width() / 2))) + 2
+        count = min(int(100 * (1.0 - path.percentAtLength(self.src_rect.width() / 2))) + 2, 100)
         percents = [k / 100 for k in range(count)]
         points = list(map(path.pointAtPercent, percents))
         angles = list(map(path.angleAtPercent, percents))
@@ -297,10 +297,7 @@ class Link(LinkBase):
         self._link_icon = _LinkIcon(0, 0, self._link_icon_extent, self._link_icon_extent, self)
         self._link_icon.setPen(self.normal_pen)
         self._link_icon.update_icon()
-        self.setToolTip(
-            "<html><p>Connection from <b>{0}</b>'s output "
-            "to <b>{1}</b>'s input</html>".format(self._connection.source, self._connection.destination)
-        )
+        self.setToolTip(f"<html><p>Connection {self._connection.name}</p></html>")
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
