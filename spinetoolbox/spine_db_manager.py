@@ -54,7 +54,6 @@ from .spine_db_commands import (
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 
 
 @busy_effect
@@ -417,6 +416,9 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             listener (object)
             db_maps (DiffDatabaseMapping)
+
+        Returns:
+            bool: True if operation was successful, False otherwise
         """
         is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
         is_orphan = lambda db_map: not set(self.signaller.db_map_listeners(db_map)) - {listener}
@@ -445,9 +447,6 @@ class SpineDBManager(SpineDBManagerBase):
         for db_map in db_maps:
             if not self.signaller.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
-                del self.undo_stack[db_map]
-                del self.undo_action[db_map]
-                del self.redo_action[db_map]
         return True
 
     def _prompt_to_commit_changes(self):
@@ -857,7 +856,7 @@ class SpineDBManager(SpineDBManagerBase):
 
     @staticmethod
     def get_db_items(query, chunk_size=1000):
-        """Runs the given query and yield results by chunks of given size.
+        """Runs the given query and yields results by chunks of given size.
 
         Yields:
             generator(list)

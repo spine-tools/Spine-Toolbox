@@ -97,6 +97,9 @@ class SpineDBWorker(QObject):
     def _close_db_map(self, db_map):  # pylint: disable=no-self-use
         if not db_map.connection.closed:
             db_map.connection.close()
+        self._db_mngr.undo_stack.pop(db_map, None)
+        self._db_mngr.undo_action.pop(db_map, None)
+        self._db_mngr.redo_action.pop(db_map, None)
 
     def add_or_update_items(self, db_map_data, method_name, getter_name, signal_name):
         self._add_or_update_items_called.emit(db_map_data, method_name, getter_name, signal_name)
