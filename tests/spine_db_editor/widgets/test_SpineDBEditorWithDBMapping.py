@@ -69,6 +69,7 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
         self.db_mngr.close_all_sessions()
         self.db_mngr.clean_up()
+        self.db_mngr = None  # Ensure the database file is closed to allow the temporary directory to be removed.
         self.spine_db_editor.deleteLater()
         self.spine_db_editor = None
         self._temp_dir.cleanup()
