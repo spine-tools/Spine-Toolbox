@@ -909,7 +909,9 @@ def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
     In addition, can be used to check if the file name in given file path starts with
     the given extra_check string. Needed in SettingsWidget and KernelEditor because
     the QLineEdits are editable. Returns True when file_path is an empty string so that
-    we can use default values (e.g. from line edit place holder text)
+    we can use default values (e.g. from line edit place holder text). Returns also True
+    when file_path is just 'python' or 'julia' so that user's can use the python or julia
+    in PATH.
 
     Args:
         parent (QWidget): Parent widget for the message boxes
@@ -921,6 +923,8 @@ def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
         bool: True if given path is an empty string or if path is valid, False otherwise
     """
     if file_path == "":
+        return True
+    if file_path.lower() == "python" or file_path.lower() == "python3" or file_path.lower() == "julia":
         return True
     if os.path.isdir(file_path):
         msg = "Please select a file and not a directory"
