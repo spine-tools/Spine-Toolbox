@@ -402,6 +402,7 @@ class ProjectItem(MetaObject):
         """
         for action in self._actions:
             action.deleteLater()
+        self.deleteLater()
 
     def set_up(self):
         """Sets up this item. Called when adding the item to the project.

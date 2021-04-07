@@ -111,16 +111,16 @@ class ToolboxUI(QMainWindow):
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)
-        self._qsettings = QSettings("SpineProject", "Spine Toolbox")
+        self._qsettings = QSettings("SpineProject", "Spine Toolbox", self)
         locale.setlocale(locale.LC_NUMERIC, 'C')
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.takeCentralWidget()
+        self.takeCentralWidget().deleteLater()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
         self.ui.graphicsView.set_ui(self)
-        self.key_press_filter = ChildCyclingKeyPressFilter()
+        self.key_press_filter = ChildCyclingKeyPressFilter(self)
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._share_item_edit_actions()
         self.ui.listView_executions.setModel(FilterExecutionModel(self))
@@ -647,7 +647,6 @@ class ToolboxUI(QMainWindow):
         if not self.undo_critical_commands():
             return False
         self._project.tear_down()
-        self._project.deleteLater()
         self._project = None
         self.clear_ui()
         self._disable_project_actions()
@@ -680,7 +679,7 @@ class ToolboxUI(QMainWindow):
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and add them to the model."""
         root_item = RootProjectTreeItem()
-        self.project_item_model = ProjectItemModel(root_item)
+        self.project_item_model = ProjectItemModel(root_item, self)
         for category in CATEGORIES:
             category_item = CategoryProjectTreeItem(str(category), CATEGORY_DESCRIPTIONS[category])
             self.project_item_model.insert_item(category_item)

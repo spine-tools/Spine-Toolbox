@@ -22,13 +22,14 @@ from PySide2.QtGui import QIcon, QFont
 
 
 class ProjectItemModel(QAbstractItemModel):
-    def __init__(self, root):
+    def __init__(self, root, parent=None):
         """Class to store project tree items and ultimately project items in a tree structure.
 
         Args:
             root (RootProjectTreeItem): Root item for the project item tree
+            parent (QObject): parent object
         """
-        super().__init__()
+        super().__init__(parent)
         self._root = root
 
     def root(self):

@@ -64,6 +64,7 @@ def clean_up_toolbox(toolbox):
     toolbox.db_mngr.clean_up()
     toolbox.db_mngr = None
     toolbox.project_item_model.remove_leaves()
+    # Delete undo stack explicitly to prevent emitting certain signals well after ToolboxUI has been destroyed.
     toolbox.undo_stack.deleteLater()
     toolbox.deleteLater()
 

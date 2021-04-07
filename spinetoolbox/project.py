@@ -853,6 +853,7 @@ class SpineToolboxProject(MetaObject):
         """Cleans up project."""
         for project_tree_items in self._project_item_model.items_per_category().values():
             self.do_remove_project_tree_items(*project_tree_items, delete_data=False, silent=silent)
+        self.deleteLater()
 
 
 def _ranks(node_successors):

@@ -25,6 +25,7 @@ from PySide2.QtWidgets import QApplication
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.connection import Connection
 from spine_engine.utils.helpers import shorten
+from spinetoolbox.helpers import SignalWaiter
 from .mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
@@ -214,19 +215,26 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(view1_name, view.name)
         self.assertTrue(project.dag_handler.node_is_isolated(view1_name))
 
-    def _wait_for_execution_finished(self):
-        loop = QEventLoop()
-        self.toolbox.project().project_execution_finished.connect(loop.quit)
-        loop.exec_()
-        loop.deleteLater()
+    def _execute_project(self):
+        waiter = SignalWaiter()
+        self.toolbox.project().project_execution_finished.connect(waiter.trigger)
+        self.toolbox.project().execute_project()
+        waiter.wait()
+        self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
+
+    def _execute_selected(self):
+        waiter = SignalWaiter()
+        self.toolbox.project().project_execution_finished.connect(waiter.trigger)
+        self.toolbox.project().execute_selected()
+        waiter.wait()
+        self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
 
     def test_execute_project_with_single_item(self):
         view = add_view(self.toolbox.project(), "View")
         view_executable = self._make_mock_executable(view)
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.return_value = view_executable
-            self.toolbox.project().execute_project()
-            self._wait_for_execution_finished()
+            self._execute_project()
         self.assertTrue(view_executable.execute_called)
 
     def test_execute_project_with_two_dags(self):
@@ -239,8 +247,7 @@ class TestSpineToolboxProject(unittest.TestCase):
                 item1.name: item1_executable,
                 item2.name: item2_executable,
             }[name]
-            self.toolbox.project().execute_project()
-            self._wait_for_execution_finished()
+            self._execute_project()
         self.assertTrue(item1_executable.execute_called)
         self.assertTrue(item2_executable.execute_called)
 
@@ -255,8 +262,7 @@ class TestSpineToolboxProject(unittest.TestCase):
                 item1.name: item1_executable,
                 item2.name: item2_executable,
             }[name]
-            self.toolbox.project().execute_selected()
-            self._wait_for_execution_finished()
+            self._execute_selected()
         self.assertFalse(item1_executable.execute_called)
         self.assertTrue(item2_executable.execute_called)
 
@@ -291,8 +297,7 @@ class TestSpineToolboxProject(unittest.TestCase):
                 data_connection.name: data_connection_executable,
                 view.name: view_executable,
             }[name]
-            self.toolbox.project().execute_selected()
-            self._wait_for_execution_finished()
+            self._execute_selected()
         self.assertFalse(data_store_executable.execute_called)
         self.assertTrue(data_connection_executable.execute_called)
         self.assertFalse(view_executable.execute_called)
