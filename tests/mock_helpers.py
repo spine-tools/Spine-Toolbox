@@ -62,6 +62,7 @@ def clean_up_toolbox(toolbox):
         toolbox.project().deleteLater()
     toolbox.db_mngr.close_all_sessions()
     toolbox.db_mngr.clean_up()
+    toolbox.db_mngr = None
     toolbox.project_item_model.remove_leaves()
     toolbox.undo_stack.deleteLater()
     toolbox.deleteLater()

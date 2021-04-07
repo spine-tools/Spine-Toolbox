@@ -1045,3 +1045,19 @@ def unique_name(prefix, existing):
             free = i + 1
             break
     return f"{prefix} {free}"
+
+
+class SignalWaiter:
+    """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
+    def __init__(self):
+        self._triggered = False
+
+    @Slot()
+    def trigger(self):
+        """Signal receiving slot."""
+        self._triggered = True
+
+    def wait(self):
+        """Wait for signal to be received."""
+        while not self._triggered:
+            QApplication.processEvents()

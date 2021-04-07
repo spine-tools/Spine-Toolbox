@@ -39,7 +39,7 @@ from spinedb_api import (
     Map,
 )
 from .spine_db_icon_manager import SpineDBIconManager
-from .helpers import busy_effect
+from .helpers import busy_effect, SignalWaiter
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
@@ -302,15 +302,19 @@ class SpineDBManager(SpineDBManagerBase):
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
-        self._close_db_map(db_map)
+        waiter = SignalWaiter()
+        self._worker.connection_closed.connect(waiter.trigger)
+        self._worker.close_db_map(db_map)
+        waiter.wait()
+        self._worker.connection_closed.disconnect(waiter.trigger)
+        del self.undo_stack[db_map]
+        del self.undo_action[db_map]
+        del self.redo_action[db_map]
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
-        for db_map in self._db_maps.values():
-            self._close_db_map(db_map)
-
-    def _close_db_map(self, db_map):
-        self._worker.close_db_map(db_map)
+        for url in list(self._db_maps):
+            self.close_session(url)
 
     def get_db_map(self, url, logger, codename=None, upgrade=False, create=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.

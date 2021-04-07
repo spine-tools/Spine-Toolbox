@@ -47,7 +47,6 @@ class SpineDBFetcher(QObject):
 
     def clean_up(self):
         self.deleteLater()
-        self._mini.deleteLater()
 
     def fetch(self, listener, db_maps, tablenames=None):
         """Fetches items from the database and emit added signals.
