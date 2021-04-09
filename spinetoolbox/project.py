@@ -15,7 +15,7 @@ Spine Toolbox project class.
 :authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   10.1.2018
 """
-from itertools import takewhile
+from itertools import takewhile, chain
 import os
 import json
 import logging
@@ -401,13 +401,15 @@ class SpineToolboxProject(MetaObject):
         self.connection_about_to_be_removed.emit(connection)
         self._connections.remove(connection)
         dags = self.dag_handler.remove_graph_edge(connection.source, connection.destination)
-        for dag in dags:
-            if not self._is_dag_valid(dag):
-                continue
-            destination = self._project_item_model.get_item(connection.destination).project_item
+        valid_dags = [dag for dag in dags if self._is_dag_valid(dag)]
+        updateable_nodes = set(chain(*(dag.nodes() for dag in valid_dags)))
+        destination = self._project_item_model.get_item(connection.destination).project_item
+        if destination.name in updateable_nodes:
             self._update_item_resources(destination, ExecutionDirection.FORWARD)
-            source = self._project_item_model.get_item(connection.source).project_item
+        source = self._project_item_model.get_item(connection.source).project_item
+        if source.name in updateable_nodes:
             self._update_item_resources(source, ExecutionDirection.BACKWARD)
+        for dag in valid_dags:
             self._update_ranks(dag)
 
     def replace_connection(self, existing_connection, new_connection):

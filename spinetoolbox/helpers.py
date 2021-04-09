@@ -1053,6 +1053,7 @@ def unique_name(prefix, existing):
 
 class SignalWaiter:
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
+
     def __init__(self):
         self._triggered = False
 
