@@ -1,12 +1,12 @@
 .. Executing Projects documentation
    Created 16.1.2019
 
-.. _Executing Projects:
-
 .. |play-all| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
             :width: 16
 .. |play-selected| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-regular.svg
             :width: 16
+
+.. _Executing Projects:
 
 ******************
 Executing Projects
