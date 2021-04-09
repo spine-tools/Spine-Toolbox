@@ -1,7 +1,7 @@
 .. Setting up External Tools
    Created 2.4.2020
 
-.. _Setting Up External Tools:
+.. _Setting up External Tools:
 
 .. |browse| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
             :width: 16
