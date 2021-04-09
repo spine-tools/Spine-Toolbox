@@ -16,8 +16,6 @@
 .. |tool_specification_options| image:: ../../spinetoolbox/ui/resources/wrench.svg
              :width: 16
 
-.. Missing images for tool_specification_options, tool_icon and file_link.
-
 .. _SpineData.jl: https://gitlab.vtt.fi/spine/data/tree/manuelma
 .. _SpineOpt.jl: https://github.com/Spine-project/SpineOpt.jl
 .. _Jupyter: http://jupyter.org/
