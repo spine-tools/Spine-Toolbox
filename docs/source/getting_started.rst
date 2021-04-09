@@ -1,7 +1,7 @@
 ..  Getting Started
     Created: 18.6.2018
 
-.. |dc_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-alt.svg
+.. |dc_icon| image:: ../../spinetoolbox/ui/resources/menu_icons/file-alt.svg
             :width: 16
 .. |file| image:: ../../spinetoolbox/ui/resources/file.svg
           :width: 16
@@ -9,14 +9,14 @@
           :width: 16
 .. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
              :width: 16
-.. |execute| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-solid.svg
+.. |execute| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
              :width: 16
 .. |add_tool_specification| image:: ../../spinetoolbox/ui/resources/wrench_plus.svg
               :width: 16
 .. |tool_specification_options| image:: ../../spinetoolbox/ui/resources/wrench.svg
              :width: 16
 
-
+.. Missing images for tool_specification_options, tool_icon and file_link.
 
 .. _SpineData.jl: https://gitlab.vtt.fi/spine/data/tree/manuelma
 .. _SpineOpt.jl: https://github.com/Spine-project/SpineOpt.jl
@@ -36,7 +36,6 @@ The following topics are touched (although not exhaustively covered):
 
 .. contents::
    :local:
-
 
 Spine Toolbox Interface
 -----------------------
@@ -102,6 +101,8 @@ After this, the *Edit Tool specification* form should be looking similar to this
 
 .. image:: img/hello_world_tool_specification_editor.png
   :align: center
+  
+|
 
 Click **Ok** at the bottom of the form. A new system dialog will appear, allowing you to
 select a file name and location to save the Tool specification we've just created.
@@ -109,7 +110,7 @@ Don't change the default file name, which should be *hello_world.json*.
 Just select a folder from your system (it can be the same where you saved the main program file)
 and click **Save**.
 
-Now you should see the new tool specification in the *Project* widget, *Tools* list.
+Now you should see the new tool in the *Project* widget, *Tools* list.
 
 .. tip:: Saving the Tool specification into a file allows you to add and use the same Tool specification in
    another project. To do this, you just need to click on the add tool button (|add_tool_specification|),
@@ -133,14 +134,13 @@ Save the file.
 Now, whenever *hello_world.py* is executed, the sentence 'Hello, World!'
 will be printed to the standard output.
 
-
 Adding a Tool item to the project
 ---------------------------------
 
 .. note:: The **Tool** item is used to run Tool specifications.
 
 Let's add a Tool item to our project, so that we're able to run the Tool specification we created above.
-To add a Tool item drag-and-drop the Tool icon (|tool_icon|) from the toolbar onto the *Design View*.
+To add a Tool item drag-and-drop the Tool icon from the toolbar onto the *Design View*.
 
 The *Add Tool* form will popup.
 Type 'say hello world' in the name field, select 'hello_world' from the dropdown list just below, and click **Ok**.
@@ -150,7 +150,8 @@ look similar to this:
 
 .. image:: img/say_hello_world_tool.png
    :align: center
-
+   
+|
 
 Executing a Tool
 ----------------
@@ -160,6 +161,8 @@ of the window, looking similar to this:
 
 .. image:: img/say_hello_world_tool_properties.png
    :align: center
+   
+|
 
 Press *execute project* |execute| button on the toolbar. This will execute the Tool specification 'hello world',
 which in turn will run the main program file *hello_world.py* in a dedicated process.
@@ -169,7 +172,8 @@ the *Process Log* or in the *Python Console* depending on your settings (See :re
 
 .. image:: img/hello_world_event_process_log.png
    :align: center
-
+   
+|
 
 .. note:: If you encounter the message **Couldn't determine Python version. Please check the Python interpreter option in Settings.**
    in the *Event Log* when trying to execute a Python Tool, check :ref:`Setting Up External Tools` for help.
@@ -196,6 +200,8 @@ should now look like this:
 
 .. image:: img/hello_world_input_tool_specification_editor.png
   :align: center
+  
+|
 
 Click **Ok** at the bottom of the form.
 
@@ -222,8 +228,8 @@ made available for the Tool:
 
 .. image:: img/hello_world_failed.png
   :align: center
-
-
+  
+|
 
 Adding a Data Connection item to the project
 --------------------------------------------
@@ -243,7 +249,8 @@ look similar to this:
 
 .. image:: img/pass_input_txt_dc_and_say_hello_world_tool.png
    :align: center
-
+   
+|
 
 Adding data files to a Data Connection
 --------------------------------------
@@ -254,6 +261,8 @@ of the window, looking similar to this:
 
 .. image:: img/pass_input_txt_dc_properties.png
    :align: center
+   
+|
 
 Right click anywhere within the *Data* box and select **New file...** from the context menu.
 When prompted to enter a name for the new file, type 'input.txt' and click **Ok**.
@@ -262,6 +271,8 @@ Now you should see the newly created file in the *Data* list:
 
 .. image:: img/pass_input_txt_dc_properties_with_file.png
    :align: center
+   
+|
 
 Double click on this file to open it in your default text editor. Then enter the following into the file's content::
 
@@ -282,10 +293,14 @@ as seen below:
 
 .. image:: img/pass_input_txt_dc_to_say_hello_world_tool.png
    :align: center
+   
+|
 
 Press |execute| on the toolbar. The Tool will run successfully this time:
 
 .. image:: img/hello_again_world_event_process_log.png
    :align: center
+   
+|
 
 That's all for now. I hope you've enjoyed following this guide as much as I enjoyed writing it. See you next time.
