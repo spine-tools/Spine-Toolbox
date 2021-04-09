@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QDialog, QMenu, QMessageBox, QAbstractItemView, QD
 from PySide2.QtCore import Slot, Qt, QModelIndex, QTimer
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QGuiApplication, QIcon
 from jupyter_client.kernelspec import find_kernel_specs
-from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable_from_path
+from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.helpers import (
     open_url,
@@ -565,16 +565,14 @@ class KernelEditor(KernelEditorBase):
             self.ui.stackedWidget.setCurrentIndex(0)
             self.setWindowTitle("Python Kernel Specification Editor")
             self.ui.label.setText("Available Python kernel specs")
-            if python == "":
-                python = resolve_python_interpreter(python)
+            python = resolve_python_interpreter(python)
             self.ui.lineEdit_python_interpreter.setText(python)
             self.update_python_cmd_tooltip()
         else:
             self.ui.stackedWidget.setCurrentIndex(1)
             self.setWindowTitle("Julia Kernel Specification Editor")
             self.ui.label.setText("Available Julia kernel specs")
-            if julia == "":
-                julia = resolve_julia_executable_from_path()
+            julia = resolve_julia_executable(julia)
             self.ui.lineEdit_julia_executable.setText(julia)
             self.update_julia_cmd_tooltip()
         self.ui.tableView_kernel_list.setModel(self.kernel_list_model)
@@ -1100,8 +1098,7 @@ class MiniPythonKernelEditor(MiniKernelEditorBase):
         self.ui.label_message.setText("Finalizing Python configuration... ")
         self.ui.stackedWidget.setCurrentIndex(0)
         self.setWindowTitle("Python Kernel Specification Creator")
-        if python_exe == "":
-            python_exe = resolve_python_interpreter(python_exe)
+        python_exe = resolve_python_interpreter(python_exe)
         self.ui.lineEdit_python_interpreter.setText(python_exe)
         prefix = os.path.basename(python_exe)
         existing = find_python_kernels().keys()
@@ -1135,8 +1132,7 @@ class MiniJuliaKernelEditor(MiniKernelEditorBase):
         self.ui.label_message.setText("Finalizing Julia configuration... ")
         self.ui.stackedWidget.setCurrentIndex(1)
         self.setWindowTitle("Julia Kernel Specification Creator")
-        if julia_exe == "":
-            julia_exe = resolve_julia_executable_from_path()
+        julia_exe = resolve_julia_executable(julia_exe)
         self.ui.lineEdit_julia_executable.setText(julia_exe)
         self.ui.lineEdit_julia_project.setText(julia_project)
         prefix = os.path.basename(julia_exe)

@@ -21,8 +21,10 @@ from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt, QSize, QSettings
 from PySide2.QtGui import QPixmap
 from spine_engine.utils.helpers import (
-    resolve_julia_executable_from_path,
+    resolve_python_interpreter,
     resolve_python_executable_from_path,
+    resolve_julia_executable,
+    resolve_julia_executable_from_path,
     get_julia_env,
 )
 from .notification import Notification
@@ -638,8 +640,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             if not julia_kernel:
                 MiniJuliaKernelEditor(self, julia_exe, julia_project).make_kernel()
                 julia_kernel = _get_julia_kernel_name_by_env(julia_exe, julia_project)
-                if not julia_kernel:
-                    return False
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
         # Check julia_path is a file, it exists, and file name starts with 'julia'
         if not file_is_valid(self, julia_exe, "Invalid Julia Executable", extra_check="julia"):
@@ -662,8 +662,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             if not python_kernel:
                 MiniPythonKernelEditor(self, python_exe).make_kernel()
                 python_kernel = _get_python_kernel_name_by_exe(python_exe)
-                if not python_kernel:
-                    return False
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
         # Check python_path is a file, it exists, and file name starts with 'python'
         if not file_is_valid(self, python_exe, "Invalid Python Interpreter", extra_check="python"):
@@ -745,6 +743,7 @@ def _get_python_exe_by_kernel_name(kernel_name):
 
 
 def _get_python_kernel_name_by_exe(python_exe):
+    python_exe = resolve_python_interpreter(python_exe)
     for name, location in find_python_kernels().items():
         deats = KernelEditor.get_kernel_deats(location)
         if _samefile(deats["exe"], python_exe):
@@ -761,6 +760,7 @@ def _get_julia_env_by_kernel_name(kernel_name):
 
 
 def _get_julia_kernel_name_by_env(julia_exe, julia_project):
+    julia_exe = resolve_julia_executable(julia_exe)
     for name, location in find_julia_kernels().items():
         deats = KernelEditor.get_kernel_deats(location)
         if _samefile(deats["exe"], julia_exe) and _samefile(deats["project"], julia_project):
