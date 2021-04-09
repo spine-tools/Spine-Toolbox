@@ -5,9 +5,9 @@
 
 .. |browse| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
             :width: 16
-.. |play| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-solid.svg
+.. |play| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
             :width: 16
-.. |stop| image:: ../../spinetoolbox/ui/resources/project_item_icons/stop-circle-regular.svg
+.. |stop| image:: ../../spinetoolbox/ui/resources/menu_icons/stop-circle-regular.svg
             :width: 16
 
 .. note::

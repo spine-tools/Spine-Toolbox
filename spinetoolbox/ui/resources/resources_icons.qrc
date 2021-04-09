@@ -12,6 +12,20 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>double-at.svg</file>
+    <file>file-link.svg</file>
+    <file>wrench.svg</file>
+    <file>project_item_icons/binoculars.svg</file>
+    <file>project_item_icons/blender.svg</file>
+    <file>project_item_icons/database.svg</file>
+    <file>project_item_icons/database-export.svg</file>
+    <file>project_item_icons/database-export-gdx.svg</file>
+    <file>project_item_icons/database-import.svg</file>
+    <file>project_item_icons/exclamation-circle.svg</file>
+    <file>project_item_icons/file-alt.svg</file>
+    <file>project_item_icons/hammer.svg</file>
+    <file>project_item_icons/paint-brush-solid.svg</file>
+    <file>project_item_icons/screwdriver.svg</file>
     <file>menu_icons/exchange-alt.svg</file>
     <file>datapkg.svg</file>
     <file>menu_icons/door-closed.svg</file>
