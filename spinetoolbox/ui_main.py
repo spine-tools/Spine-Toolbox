@@ -770,7 +770,10 @@ class ToolboxUI(QMainWindow):
             ProjectItemSpecification or NoneType: specification or None if factory isn't found.
         """
         # NOTE: If the spec doesn't have the "item_type" key, we can assume it's a tool spec
-        item_type = definition.get("item_type", "Tool")
+        if "notebook_type" in definition:
+            item_type = "Notebook"
+        else:
+            item_type = definition.get("item_type", "Tool")
         spec_factory = self._item_specification_factories.get(item_type)
         if spec_factory is None:
             return None
