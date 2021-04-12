@@ -748,6 +748,7 @@ def _get_python_kernel_name_by_exe(python_exe):
         deats = KernelEditor.get_kernel_deats(location)
         if _samefile(deats["exe"], python_exe):
             return name
+    return ""
 
 
 def _get_julia_env_by_kernel_name(kernel_name):
@@ -765,6 +766,7 @@ def _get_julia_kernel_name_by_env(julia_exe, julia_project):
         deats = KernelEditor.get_kernel_deats(location)
         if _samefile(deats["exe"], julia_exe) and _samefile(deats["project"], julia_project):
             return name
+    return ""
 
 
 def _samefile(a, b):
