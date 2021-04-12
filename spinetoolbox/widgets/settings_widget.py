@@ -768,4 +768,7 @@ def _get_julia_kernel_name_by_env(julia_exe, julia_project):
 
 
 def _samefile(a, b):
-    return os.path.normcase(a) == os.path.normcase(b)
+    try:
+        return os.path.samefile(os.path.realpath(a), os.path.realpath(b))
+    except FileNotFoundError:
+        return False

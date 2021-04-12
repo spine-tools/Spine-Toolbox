@@ -602,7 +602,7 @@ class ToolboxUI(QMainWindow):
         if not self.overwrite_check(answer):
             return
         if not self.undo_stack.isClean():
-            self.save_project()   # Save before copying the project, so the changes are not discarded
+            self.save_project()  # Save before copying the project, so the changes are not discarded
         self.msg.emit("Saving project to directory {0}".format(answer))
         recursive_overwrite(self, self._project.project_dir, answer, silent=False)
         # Get the project info from the new directory and restore project
