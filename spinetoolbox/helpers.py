@@ -24,8 +24,8 @@ import json
 import logging
 import datetime
 import shutil
-import matplotlib
 import re
+import matplotlib
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
@@ -924,7 +924,7 @@ def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
     """
     if file_path == "":
         return True
-    if file_path.lower() == "python" or file_path.lower() == "python3" or file_path.lower() == "julia":
+    if file_path.lower() in ("python", "python3", "julia"):
         return True
     if os.path.isdir(file_path):
         msg = "Please select a file and not a directory"
