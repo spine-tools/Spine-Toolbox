@@ -111,24 +111,29 @@ class TestToolboxUI(unittest.TestCase):
             item3.parent(), RootProjectTreeItem, "Parent item of category item on row 2 should be root"
         )
         item4 = self.toolbox.project_item_model.root().child(3)
-        self.assertEqual(item4.name, "Views", "Item on row 3 is not 'Views'")
+        self.assertEqual(item4.name, "Notebooks", "Item on row 3 is not 'Notebooks'")
         self.assertIsInstance(
             item4.parent(), RootProjectTreeItem, "Parent item of category item on row 3 should be root"
         )
         item5 = self.toolbox.project_item_model.root().child(4)
-        self.assertEqual(item5.name, "Importers", "Item on row 4 is not 'Importers'")
+        self.assertEqual(item5.name, "Views", "Item on row 4 is not 'Views'")
         self.assertIsInstance(
             item5.parent(), RootProjectTreeItem, "Parent item of category item on row 4 should be root"
         )
         item6 = self.toolbox.project_item_model.root().child(5)
-        self.assertEqual(item6.name, "Exporters", "Item on row 5 is not 'Exporters'")
+        self.assertEqual(item6.name, "Importers", "Item on row 5 is not 'Importers'")
         self.assertIsInstance(
             item6.parent(), RootProjectTreeItem, "Parent item of category item on row 5 should be root"
         )
         item7 = self.toolbox.project_item_model.root().child(6)
-        self.assertEqual(item7.name, "Manipulators", "Item on row 6 is not 'Manipulators'")
+        self.assertEqual(item7.name, "Exporters", "Item on row 6 is not 'Exporters'")
         self.assertIsInstance(
             item7.parent(), RootProjectTreeItem, "Parent item of category item on row 6 should be root"
+        )
+        item8 = self.toolbox.project_item_model.root().child(7)
+        self.assertEqual(item8.name, "Manipulators", "Item on row 7 is not 'Manipulators'")
+        self.assertIsInstance(
+            item8.parent(), RootProjectTreeItem, "Parent item of category item on row 7 should be root"
         )
 
     def test_init_specification_model(self):
