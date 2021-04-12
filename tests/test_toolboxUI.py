@@ -90,8 +90,8 @@ class TestToolboxUI(unittest.TestCase):
     def check_init_project_item_model(self):
         """Checks that category items are created as expected."""
         n = self.toolbox.project_item_model.rowCount()
-        # Data Stores, Data Connections, Tools, Views, Importers, Exporters, Manipulators
-        self.assertEqual(n, 7)
+        # Data Stores, Data Connections, Tools, Notebooks, Views, Importers, Exporters, Manipulators
+        self.assertEqual(n, 8)
         # Check that there's only one column
         self.assertEqual(self.toolbox.project_item_model.columnCount(), 1)
         # Check that the items DisplayRoles are (In this particular order)
