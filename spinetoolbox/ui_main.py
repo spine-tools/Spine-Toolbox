@@ -41,8 +41,8 @@ from PySide2.QtWidgets import (
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from spine_engine.utils.helpers import shorten
+from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .project_item_icon import ProjectItemIcon
-from .category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .load_project_items import load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
