@@ -192,7 +192,7 @@ class SpineToolboxProject(MetaObject):
         self.make_and_add_project_items(items_dict, verbosity=False)
         self._logger.msg.emit("Restoring connections...")
         for connection in map(Connection.from_dict, connection_dicts):
-            self.add_connection(connection)
+            self.add_connection(connection, silent=True)
 
     def get_item(self, name):
         """Returns project item.
@@ -366,11 +366,12 @@ class SpineToolboxProject(MetaObject):
         """
         return [c for c in self._connections if item_name in (c.source, c.destination)]
 
-    def add_connection(self, connection):
+    def add_connection(self, connection, silent=False):
         """Adds a connection to the project.
 
         Args:
             connection (Connection): connection to add
+            silent (bool): If False, prints 'Link establ...' msg to Event Log
 
         Returns:
             bool: True if connection was added successfully, False otherwise
@@ -388,7 +389,8 @@ class SpineToolboxProject(MetaObject):
         self.notify_resource_changes_to_predecessors(destination)
         source = self._project_item_model.get_item(connection.source).project_item
         self.notify_resource_changes_to_successors(source)
-        destination.notify_destination(source)
+        if not silent:
+            destination.notify_destination(source)
         self._update_ranks(dag)
         return True
 
