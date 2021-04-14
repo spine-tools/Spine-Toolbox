@@ -16,12 +16,10 @@ Classes for custom QListView.
 :date:   14.11.2018
 """
 
-from PySide2.QtWidgets import QListView, QListWidget
-from PySide2.QtCore import Qt, QSize, Signal, Slot, QMimeData, QModelIndex
-from PySide2.QtGui import QDrag, QResizeEvent, QIcon
-from PySide2.QtWidgets import QMenu, QToolButton, QApplication
-from .custom_qwidgets import CustomWidgetAction
-from ..helpers import make_icon_background
+from PySide2.QtCore import Qt, Signal, Slot, QMimeData
+from PySide2.QtGui import QDrag, QIcon
+from PySide2.QtWidgets import QToolButton, QApplication
+from ..helpers import CharIconEngine
 
 
 class ProjectItemDragMixin:
@@ -66,6 +64,7 @@ class ProjectItemDragMixin:
 class ProjectItemButtonBase(ProjectItemDragMixin, QToolButton):
     def __init__(self, toolbox, icon, item_type, parent=None):
         super().__init__(parent=parent)
+        self._toolbox = toolbox
         self.item_type = item_type
         self.setIcon(icon)
         self.setMouseTracking(True)
@@ -89,7 +88,7 @@ class ProjectItemButtonBase(ProjectItemDragMixin, QToolButton):
         raise NotImplementedError()
 
 
-class PluginProjectItemSpecButton(ProjectItemButtonBase):
+class ProjectItemSpecButton(ProjectItemButtonBase):
     def __init__(self, toolbox, icon, item_type, spec_name, parent=None):
         super().__init__(toolbox, icon, item_type, parent=parent)
         self._spec_name = spec_name
@@ -101,165 +100,127 @@ class PluginProjectItemSpecButton(ProjectItemButtonBase):
         self.setToolTip(
             f"<p>Drag-and-drop this onto the Design View to create a new <b>{self._spec_name}</b> item.</p>"
         )
+        self._index = self._toolbox.specification_model.specification_index(self._spec_name)
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, self._spec_name])
+
+    def contextMenuEvent(self, event):
+        self._toolbox.show_specification_context_menu(self._index, event.globalPos())
+
+    def mouseDoubleClickEvent(self, event):
+        self._toolbox.edit_specification(self._index, None)
+
+
+class ProjectItemSpecArray:
+    """An array of ProjectItemSpecButton that can be expanded/collapsed."""
+
+    def __init__(self, toolbox, toolbar, model, item_type):
+        """
+        Args:
+            toolbox (ToolboxUI)
+            toolbar (MainToolBar)
+            model (FilteredSpecificationModel)
+            item_type (str)
+        """
+        self._toolbar = toolbar
+        self._model = model
+        self._toolbox = toolbox
+        self._item_type = item_type
+        self._visible = False
+        self._separator = self._toolbar.addSeparator()
+        self._separator.setVisible(self._visible)
+        self._button_visible = QToolButton()
+        self._button_visible.setCheckable(True)
+        self._toolbar.insertWidget(self._separator, self._button_visible)
+        self._button_new = QToolButton()
+        self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))
+        self._button_new.setText("New...")
+        font = self._button_new.font()
+        font.setPointSize(9)
+        self._button_new.setFont(font)
+        self._button_new.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self._action_new = self._toolbar.insertWidget(self._separator, self._button_new)
+        self._action_new.setVisible(self._visible)
+        self._actions = {}
+        self._update_button_icon()
+        self._model.rowsInserted.connect(self._insert_specs)
+        self._model.rowsRemoved.connect(self._remove_specs)
+        self._model.modelReset.connect(self._reset_specs)
+        self._button_visible.clicked.connect(self._toggle_visibility)
+        self._button_new.clicked.connect(self._show_spec_form)
+        self._toolbar.orientationChanged.connect(self._update_button_icon)
+
+    def _update_button_icon(self, orientation=None):
+        if orientation is None:
+            orientation = self._toolbar.orientation()
+        style = self._toolbar.style()
+        if orientation == Qt.Horizontal:
+            icon = style.standardIcon(style.SP_ToolBarHorizontalExtensionButton)
+            width = style.pixelMetric(style.PM_ToolBarExtensionExtent)
+            height = max(
+                (self._toolbar.widgetForAction(a).height() for a in self._actions.values()),
+                default=self._button_new.height(),
+            )
+        elif orientation == Qt.Vertical:
+            icon = style.standardIcon(style.SP_ToolBarVerticalExtensionButton)
+            width = max(
+                (self._toolbar.widgetForAction(a).width() for a in self._actions.values()),
+                default=self._button_new.width(),
+            )
+            height = style.pixelMetric(style.PM_ToolBarExtensionExtent)
+        self._button_visible.setIcon(icon)
+        self._button_visible.setMaximumWidth(width)
+        self._button_visible.setMaximumHeight(height)
+
+    @Slot(bool)
+    def _show_spec_form(self, _checked=False):
+        self._toolbox.show_specification_form(self._item_type)
+
+    @Slot(bool)
+    def _toggle_visibility(self, _checked=False):
+        self.set_visible(not self._visible)
+
+    def set_visible(self, visible):
+        self._visible = visible
+        for action in self._actions.values():
+            action.setVisible(self._visible)
+        self._separator.setVisible(self._visible)
+        self._action_new.setVisible(self._visible)
+
+    def _insert_specs(self, parent, first, last):
+        for row in range(first, last + 1):
+            self._add_spec(row)
+
+    def _remove_specs(self, parent, first, last):
+        for row in range(first, last + 1):
+            action = self._actions.pop(row)
+            self._toolbar.removeAction(action)
+
+    def _reset_specs(self):
+        for action in self._actions.values():
+            self._toolbar.removeAction(action)
+        self._actions.clear()
+        for row in range(self._model.rowCount()):
+            self._add_spec(row)
+
+    def _add_spec(self, row):
+        index = self._model.index(row, 0)
+        source_index = self._model.mapToSource(index)
+        spec = self._model.sourceModel().specification(source_index.row())
+        factory = self._toolbox.item_factories[spec.item_type]
+        icon = QIcon(factory.icon())
+        button = ProjectItemSpecButton(self._toolbox, icon, spec.item_type, spec.name)
+        button.setIconSize(self._toolbar.iconSize())
+        action = self._toolbar.insertWidget(self._separator, button)
+        action.setVisible(self._visible)
+        self._actions[row] = action
 
 
 class ProjectItemButton(ProjectItemButtonBase):
     def __init__(self, toolbox, icon, item_type, parent=None):
         super().__init__(toolbox, icon, item_type, parent=parent)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
-        if not toolbox.supports_specification(item_type):
-            self._list_view = None
-            self._menu = None
-            return
-        self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        self._list_view = ProjectItemDragListView()
-        self._list_view.doubleClicked.connect(toolbox.edit_specification)
-        self._list_view.context_menu_requested.connect(toolbox.show_specification_context_menu)
-        self._list_widget = _CreateNewSpecListWidget(item_type)
-        self._list_widget.itemClicked.connect(lambda _, item_type=item_type: toolbox.show_specification_form(item_type))
-        self._menu = QMenu(self)  # Drop-down menu
-        widget_action = CustomWidgetAction(self._menu)
-        widget_action.setDefaultWidget(self._list_view)
-        self._menu.addAction(widget_action)
-        widget_action = CustomWidgetAction(self._menu)
-        widget_action.setDefaultWidget(self._list_widget)
-        self._menu.addAction(widget_action)
-        self.setMenu(self._menu)
-        self.setPopupMode(QToolButton.MenuButtonPopup)
-        self._resize()
-        model = toolbox.filtered_spec_factory_models.get(self.item_type)
-        self._list_view.setModel(model)
-        model.rowsInserted.connect(lambda *args: self._resize())
-        model.rowsRemoved.connect(lambda *args: self._resize())
-        model.modelReset.connect(lambda *args: self._resize())
-        self._list_view.drag_about_to_start.connect(self._menu.hide)
-
-    def set_menu_color(self, color):
-        if self._menu:
-            self._menu.setStyleSheet(f"QMenu{{background: {make_icon_background(color)};}}")
-
-    def setIconSize(self, size):
-        super().setIconSize(size)
-        if self._list_view:
-            self._list_view.setIconSize(size)
-
-    def _resize(self):
-        self._list_view._set_preferred_height()
-        self._list_widget._set_preferred_height()
-        width = max(self._list_view._get_preferred_width(), self._list_widget._get_preferred_width())
-        self._list_view.setFixedWidth(width)
-        self._list_widget.setFixedWidth(width)
-        event = QResizeEvent(QSize(), self.menu().size())
-        QApplication.sendEvent(self.menu(), event)
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, ""])
-
-
-_VIEW_STYLE_SHEET = "QListView{background: transparent; border: 1px solid gray;} QListView::item{padding: 5px;}"
-_VIEW_HOVER_STYLE_SHEET_ADDENDUM = (
-    "QListView::item:hover{background: white; padding-left: -1px; border: 1px solid lightGray; border-radius: 1px}"
-)
-
-
-class _CreateNewSpecListWidget(QListWidget):
-    """A list widget with only one item, to create a new spec.
-    Used as widget action for the last entry in ProjectItemButton's menu
-    """
-
-    def __init__(self, item_type):
-        super().__init__(None)
-        self.setStyleSheet(_VIEW_STYLE_SHEET + _VIEW_HOVER_STYLE_SHEET_ADDENDUM)
-        self.setResizeMode(QListView.Adjust)
-        self.addItem(f"Create new {item_type} Specification...")
-        item = self.item(0)
-        item.setIcon(QIcon(":/icons/wrench_plus.svg"))
-        item.setFlags(Qt.ItemIsEnabled)
-
-    def paintEvent(self, event):
-        self.setCurrentIndex(QModelIndex())
-        super().paintEvent(event)
-
-    def _set_preferred_height(self):
-        item = self.item(0)
-        rect = self.visualItemRect(item)
-        height = rect.height() + 2 * self.frameWidth()
-        self.setFixedHeight(height)
-
-    def _get_preferred_width(self):
-        return self.sizeHintForColumn(0) + 2 * self.frameWidth()
-
-
-class ProjectItemDragListView(ProjectItemDragMixin, QListView):
-
-    context_menu_requested = Signal("QModelIndex", "QPoint")
-
-    def __init__(self):
-        super().__init__(None)
-        self._hover = True
-        self._main_style_sheet = _VIEW_STYLE_SHEET
-        self._hover_addendum = _VIEW_HOVER_STYLE_SHEET_ADDENDUM
-        self.setStyleSheet(self._main_style_sheet + self._hover_addendum)
-        self.setSelectionRectVisible(False)
-        self.setResizeMode(QListView.Adjust)
-        self.setUniformItemSizes(True)
-        self.setMouseTracking(True)
-
-    def _set_hover(self, hover):
-        if hover == self._hover:
-            return
-        self._hover = hover
-        style_sheet = self._main_style_sheet
-        if hover:
-            style_sheet += self._hover_addendum
-        self.setStyleSheet(style_sheet)
-
-    def hideEvent(self, event):
-        super().hideEvent(event)
-        self._set_hover(False)
-
-    def mouseMoveEvent(self, event):
-        if self.indexAt(event.pos()).isValid():
-            self._set_hover(True)
-        super().mouseMoveEvent(event)
-
-    def paintEvent(self, event):
-        self.setCurrentIndex(QModelIndex())
-        super().paintEvent(event)
-
-    def contextMenuEvent(self, event):
-        index = self.indexAt(event.pos())
-        if not index.isValid():
-            return
-        source_index = self.model().mapToSource(index)
-        self.context_menu_requested.emit(source_index, event.globalPos())
-
-    def mousePressEvent(self, event):
-        """Register drag start position"""
-        super().mousePressEvent(event)
-        if event.button() == Qt.LeftButton:
-            index = self.indexAt(event.pos())
-            if not index.isValid():
-                self.drag_start_pos = None
-                self.pixmap = None
-                self.mime_data = None
-                return
-            self.drag_start_pos = event.pos()
-            self.pixmap = index.data(Qt.DecorationRole).pixmap(self.iconSize())
-            mime_data_text = self.model().get_mime_data_text(index)
-            self.mime_data = QMimeData()
-            self.mime_data.setText(mime_data_text)
-
-    def _set_preferred_height(self):
-        model = self.model()
-        if not model:
-            self.setFixedHeight(0)
-            return
-        height = self.visualRect(model.index(0, 0)).height() * model.rowCount() + 2 * self.frameWidth()
-        self.setFixedHeight(height)
-
-    def _get_preferred_width(self):
-        return self.sizeHintForColumn(0) + 2 * self.frameWidth()

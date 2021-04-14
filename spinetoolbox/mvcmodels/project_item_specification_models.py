@@ -158,7 +158,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
     def specification_row(self, name):
         """Returns the row on which the given specification is located or -1 if it is not found."""
         for i in range(len(self._specs)):
-            if name == self._specs[i].name:
+            if name.lower() == self._specs[i].name.lower():
                 return i
         return -1
 

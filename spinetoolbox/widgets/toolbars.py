@@ -20,7 +20,7 @@ from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
 from PySide2.QtGui import QIcon
 from ..helpers import make_icon_toolbar_ss
-from .project_item_drag import ProjectItemButton, PluginProjectItemSpecButton
+from .project_item_drag import ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
 
 
 class PluginToolBar(QToolBar):
@@ -42,7 +42,7 @@ class PluginToolBar(QToolBar):
         for spec in plugin_specs:
             factory = self._toolbox.item_factories[spec.item_type]
             icon = QIcon(factory.icon())
-            button = PluginProjectItemSpecButton(self._toolbox, icon, spec.item_type, spec.name)
+            button = ProjectItemSpecButton(self._toolbox, icon, spec.item_type, spec.name)
             button.setIconSize(self.iconSize())
             self.addWidget(button)
 
@@ -65,27 +65,26 @@ class MainToolBar(QToolBar):
         self.execute_project_button = None
         self.execute_selection_button = None
         self.stop_execution_button = None
-        self._project_item_buttons = []
+        self._spec_arrays = []
 
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
-        for button in self._project_item_buttons:
-            button.set_menu_color(color)
 
     def setup(self):
         self.add_project_item_buttons()
         self.add_execute_buttons()
 
     def add_project_item_buttons(self):
-        self._project_item_buttons = []
+        self._spec_arrays = []
         self.addWidget(QLabel("Main"))
         for item_type, factory in self._toolbox.item_factories.items():
             icon = QIcon(factory.icon())
             button = ProjectItemButton(self._toolbox, icon, item_type)
-            button.setIconSize(self.iconSize())
             self.addWidget(button)
-            self._project_item_buttons.append(button)
-        self.addSeparator()
+            if self._toolbox.supports_specification(item_type):
+                model = self._toolbox.filtered_spec_factory_models.get(item_type)
+                spec_array = ProjectItemSpecArray(self._toolbox, self, model, item_type)
+                self._spec_arrays.append(spec_array)
         self._add_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
         )
