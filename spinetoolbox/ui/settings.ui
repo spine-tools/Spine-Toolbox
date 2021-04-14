@@ -94,16 +94,10 @@
      <item>
       <widget class="QListWidget" name="listWidget">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>112</width>
-         <height>16777215</height>
-        </size>
        </property>
        <property name="sizeAdjustPolicy">
         <enum>QAbstractScrollArea::AdjustIgnored</enum>
@@ -183,7 +177,7 @@
         </property>
         <property name="icon">
          <iconset resource="resources/resources_icons.qrc">
-          <normaloff>:/icons/tools.svg</normaloff>:/icons/tools.svg</iconset>
+          <normaloff>:/icons/project_item_icons/hammer.svg</normaloff>:/icons/project_item_icons/hammer.svg</iconset>
         </property>
        </item>
        <item>
@@ -193,6 +187,15 @@
         <property name="icon">
          <iconset resource="resources/resources_icons.qrc">
           <normaloff>:/icons/database.svg</normaloff>:/icons/database.svg</iconset>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Spec. editors</string>
+        </property>
+        <property name="icon">
+         <iconset resource="resources/resources_icons.qrc">
+          <normaloff>:/icons/wrench.svg</normaloff>:/icons/wrench.svg</iconset>
         </property>
        </item>
       </widget>
@@ -206,7 +209,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -243,47 +246,59 @@
             <property name="spacing">
              <number>6</number>
             </property>
-            <item row="7" column="0">
-             <layout class="QHBoxLayout" name="horizontalLayout_6">
-              <item>
-               <widget class="QLineEdit" name="lineEdit_work_dir">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>20</height>
-                 </size>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="placeholderText">
-                 <string>Using default directory</string>
-                </property>
-                <property name="clearButtonEnabled">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QToolButton" name="toolButton_browse_work">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Work directory with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="icon">
-                 <iconset resource="resources/resources_icons.qrc">
-                  <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-                </property>
-               </widget>
-              </item>
-             </layout>
+            <item row="3" column="0">
+             <widget class="QCheckBox" name="checkBox_datetime">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, date and time string is appended into Event Log messages&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Show date and time in Event Log messages</string>
+              </property>
+             </widget>
             </item>
-            <item row="14" column="0">
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="checkBox_open_previous_project">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, application opens the project at startup that was open the last time the application was quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Open previous project at startup</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QCheckBox" name="checkBox_exit_prompt">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Checking this shows the 'confirm exit' question box when quitting the app&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Confirm exit</string>
+              </property>
+              <property name="tristate">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QCheckBox" name="checkBox_save_project_before_closing">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select what to do if there are unsaved changes when closing a project or when quitting the app.&lt;/p&gt;&lt;p&gt;Unchecked: Don't save project and don't show question box&lt;/p&gt;&lt;p&gt;Partially checked: Show question box&lt;/p&gt;&lt;p&gt;Checked: Save project and don't show question box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Save project before closing</string>
+              </property>
+              <property name="tristate">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="16" column="0">
              <layout class="QVBoxLayout" name="verticalLayout_3">
               <property name="spacing">
                <number>0</number>
@@ -365,7 +380,7 @@
               </property>
              </widget>
             </item>
-            <item row="6" column="0">
+            <item row="8" column="0">
              <widget class="QLabel" name="label">
               <property name="font">
                <font>
@@ -377,67 +392,7 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="0">
-             <widget class="QCheckBox" name="checkBox_datetime">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, date and time string is appended into Event Log messages&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Show date and time in Event Log messages</string>
-              </property>
-             </widget>
-            </item>
-            <item row="13" column="0">
-             <widget class="QLabel" name="label_4">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Data flow animation speed</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QCheckBox" name="checkBox_open_previous_project">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, application opens the project at startup that was open the last time the application was quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Open previous project at startup</string>
-              </property>
-             </widget>
-            </item>
-            <item row="9" column="0">
-             <widget class="QCheckBox" name="checkBox_use_curved_links">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Curved links</string>
-              </property>
-             </widget>
-            </item>
-            <item row="11" column="0">
-             <widget class="QLabel" name="label_7">
-              <property name="font">
-               <font>
-                <pointsize>10</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string>Design View background</string>
-              </property>
-             </widget>
-            </item>
-            <item row="12" column="0">
+            <item row="14" column="0">
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
                <widget class="QRadioButton" name="radioButton_bg_grid">
@@ -498,32 +453,6 @@
               </item>
              </layout>
             </item>
-            <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_exit_prompt">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Checking this shows the 'confirm exit' question box when quitting the app&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Confirm exit</string>
-              </property>
-              <property name="tristate">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QCheckBox" name="checkBox_save_at_exit">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select what to do if there are unsaved changes when closing a project or when quitting the app.&lt;/p&gt;&lt;p&gt;Unchecked: Does not save project and does not show question box&lt;/p&gt;&lt;p&gt;Partially checked: Shows question box&lt;/p&gt;&lt;p&gt;Checked: Saves project and does not show question box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Save project before closing</string>
-              </property>
-              <property name="tristate">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
             <item row="5" column="0">
              <widget class="QCheckBox" name="checkBox_custom_open_project_dialog">
               <property name="toolTip">
@@ -537,13 +466,87 @@
               </property>
              </widget>
             </item>
-            <item row="8" column="0">
+            <item row="15" column="0">
+             <widget class="QLabel" name="label_4">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Data flow animation speed</string>
+              </property>
+             </widget>
+            </item>
+            <item row="13" column="0">
+             <widget class="QLabel" name="label_7">
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Design View background</string>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="0">
+             <layout class="QHBoxLayout" name="horizontalLayout_6">
+              <item>
+               <widget class="QLineEdit" name="lineEdit_work_dir">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>20</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="placeholderText">
+                 <string>Using default directory</string>
+                </property>
+                <property name="clearButtonEnabled">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="toolButton_browse_work">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Work directory with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="icon">
+                 <iconset resource="resources/resources_icons.qrc">
+                  <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="6" column="0">
              <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string>Smooth zoom</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QCheckBox" name="checkBox_use_curved_links">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or straight connectors are used in Design View.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Curved links</string>
               </property>
              </widget>
             </item>
@@ -1072,7 +1075,7 @@ p, li { white-space: pre-wrap; }
        <widget class="QWidget" name="SpineDBEditor">
         <layout class="QVBoxLayout" name="verticalLayout_9">
          <item>
-          <widget class="QGroupBox" name="groupBox_data_store">
+          <widget class="QGroupBox" name="groupBox_spine_db_editor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
              <horstretch>0</horstretch>
@@ -1089,10 +1092,10 @@ p, li { white-space: pre-wrap; }
             <item>
              <widget class="QCheckBox" name="checkBox_commit_at_exit">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Does not commit session and does not show message box&lt;/p&gt;&lt;p&gt;Partially checked: Shows message box (default)&lt;/p&gt;&lt;p&gt;Checked: Commits session and does not show message box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Don't commit session and don't show message box&lt;/p&gt;&lt;p&gt;Partially checked: Show message box (default)&lt;/p&gt;&lt;p&gt;Checked: Commit session and don't show message box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Commit session when editor is closed</string>
+               <string>Commit session before closing</string>
               </property>
               <property name="tristate">
                <bool>true</bool>
@@ -1143,6 +1146,13 @@ p, li { white-space: pre-wrap; }
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QCheckBox" name="checkBox_db_editor_show_undo">
+              <property name="text">
+               <string>Show undo notifications</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>
@@ -1158,6 +1168,52 @@ p, li { white-space: pre-wrap; }
             </size>
            </property>
           </spacer>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="SpecificationEditors">
+        <layout class="QVBoxLayout" name="verticalLayout_11">
+         <item>
+          <widget class="QGroupBox" name="groupBox">
+           <property name="title">
+            <string>Specification editors</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_12">
+            <item>
+             <widget class="QCheckBox" name="checkBox_save_spec_before_closing">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Don't save specification and don't show message box&lt;/p&gt;&lt;p&gt;Partially checked: Show message box (default)&lt;/p&gt;&lt;p&gt;Checked: Save specification and don't show message box&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Save specification before closing</string>
+              </property>
+              <property name="tristate">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBox_spec_show_undo">
+              <property name="text">
+               <string>Show undo notifications</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_3">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -1200,14 +1256,12 @@ p, li { white-space: pre-wrap; }
  <tabstops>
   <tabstop>checkBox_open_previous_project</tabstop>
   <tabstop>checkBox_exit_prompt</tabstop>
-  <tabstop>checkBox_save_at_exit</tabstop>
+  <tabstop>checkBox_save_project_before_closing</tabstop>
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
   <tabstop>checkBox_custom_open_project_dialog</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
-  <tabstop>checkBox_use_smooth_zoom</tabstop>
-  <tabstop>checkBox_use_curved_links</tabstop>
   <tabstop>radioButton_bg_grid</tabstop>
   <tabstop>radioButton_bg_tree</tabstop>
   <tabstop>radioButton_bg_solid</tabstop>

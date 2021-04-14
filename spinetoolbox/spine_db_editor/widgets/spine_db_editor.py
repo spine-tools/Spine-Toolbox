@@ -143,7 +143,10 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionExport.setEnabled(True)
         self.ui.actionMass_remove_items.setEnabled(True)
         self.url_toolbar.reload_action.setEnabled(True)
-        self._change_notifiers = [ChangeNotifier(self.db_mngr.undo_stack[db_map], self) for db_map in self.db_maps]
+        self._change_notifiers = [
+            ChangeNotifier(self, self.db_mngr.undo_stack[db_map], self.qsettings, "appSettings/dbEditorShowUndo")
+            for db_map in self.db_maps
+        ]
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.url_toolbar.set_current_urls(self.db_urls)
         self.db_url = self.db_urls[0]

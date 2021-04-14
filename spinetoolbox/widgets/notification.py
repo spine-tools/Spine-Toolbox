@@ -250,11 +250,18 @@ class NotificationStack(QObject):
 
 
 class ChangeNotifier(QObject):
-    def __init__(self, undo_stack, parent=None, corner=Qt.BottomLeftCorner):
+    def __init__(self, parent, undo_stack, settings, settings_key, corner=Qt.BottomLeftCorner):
+        """
+        Args:
+            parent (QWidget)
+            undo_stack (QUndoStack)
+            settings (QSettings)
+            settings_key (str)
+        """
         super().__init__(undo_stack)
-        if parent is None:
-            parent = undo_stack.parent()
         self._undo_stack = undo_stack
+        self._settings = settings
+        self._settings_key = settings_key
         self._parent = parent
         self._corner = corner
         self._notification = None
@@ -263,6 +270,8 @@ class ChangeNotifier(QObject):
 
     @Slot(int)
     def _push_notification(self, index):
+        if self._settings.value(self._settings_key, default="2") != "2":
+            return
         if self._notification is not None:
             try:
                 self._notification.start_self_destruction()

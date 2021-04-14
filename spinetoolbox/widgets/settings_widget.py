@@ -157,6 +157,7 @@ class SpineDBEditorSettingsMixin:
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
         auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
+        db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
         elif commit_at_exit == 1:
@@ -168,6 +169,8 @@ class SpineDBEditorSettingsMixin:
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
         self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
         self.ui.checkBox_auto_expand_objects.setChecked(auto_expand_objects == "true")
+        if db_editor_show_undo == 2:
+            self.ui.checkBox_db_editor_show_undo.setChecked(True)
 
     def save_settings(self):
         """Get selections and save them to persistent memory."""
@@ -185,6 +188,8 @@ class SpineDBEditorSettingsMixin:
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
         auto_expand_objects = "true" if int(self.ui.checkBox_auto_expand_objects.checkState()) else "false"
         self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
+        db_editor_show_undo = str(int(self.ui.checkBox_db_editor_show_undo.checkState()))
+        self._qsettings.setValue("appSettings/dbEditorShowUndo", db_editor_show_undo)
         return True
 
     def update_ui(self):
@@ -516,16 +521,18 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         python_kernel = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
+        save_spec = int(self._qsettings.value("appSettings/saveSpecBeforeClosing", defaultValue="1"))  # tri-state
+        spec_show_undo = int(self._qsettings.value("appSettings/specShowUndo", defaultValue="2"))
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt == 2:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
         if save_at_exit == 0:  # Not needed but makes the code more readable.
-            self.ui.checkBox_save_at_exit.setCheckState(Qt.Unchecked)
+            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.Unchecked)
         elif save_at_exit == 1:
-            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.PartiallyChecked)
         else:  # save_at_exit == 2:
-            self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
+            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.Checked)
         if datetime == 2:
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
         if delete_data == 2:
@@ -579,6 +586,14 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_python_kernel.setCurrentIndex(ind)
         self.ui.lineEdit_work_dir.setText(work_dir)
         self.orig_work_dir = work_dir
+        if save_spec == 0:
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.Unchecked)
+        elif save_spec == 1:
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.PartiallyChecked)
+        else:  # save_spec == 2:
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.Checked)
+        if spec_show_undo == 2:
+            self.ui.checkBox_spec_show_undo.setChecked(True)
 
     def read_project_settings(self):
         """Get project name and description and update widgets accordingly."""
@@ -605,7 +620,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
         exit_prompt = str(int(self.ui.checkBox_exit_prompt.checkState()))
         self._qsettings.setValue("appSettings/showExitPrompt", exit_prompt)
-        save_at_exit = str(int(self.ui.checkBox_save_at_exit.checkState()))
+        save_at_exit = str(int(self.ui.checkBox_save_project_before_closing.checkState()))
         self._qsettings.setValue("appSettings/saveAtExit", save_at_exit)
         datetime = str(int(self.ui.checkBox_datetime.checkState()))
         self._qsettings.setValue("appSettings/dateTime", datetime)
@@ -627,6 +642,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             bg_choice = "solid"
         self._qsettings.setValue("appSettings/bgChoice", bg_choice)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
+        save_spec = str(int(self.ui.checkBox_save_spec_before_closing.checkState()))
+        self._qsettings.setValue("appSettings/saveSpecBeforeClosing", save_spec)
+        spec_show_undo = str(int(self.ui.checkBox_spec_show_undo.checkState()))
+        self._qsettings.setValue("appSettings/specShowUndo", spec_show_undo)
         # GAMS
         gams_path = self.ui.lineEdit_gams_path.text().strip()
         # Check gams_path is a file, it exists, and file name starts with 'gams'
