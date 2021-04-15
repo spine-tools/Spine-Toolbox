@@ -17,7 +17,7 @@ Classes for custom QListView.
 """
 
 from PySide2.QtCore import Qt, Signal, Slot, QMimeData
-from PySide2.QtGui import QDrag, QIcon
+from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor
 from PySide2.QtWidgets import QToolButton, QApplication
 from ..helpers import CharIconEngine
 
@@ -88,6 +88,16 @@ class ProjectItemButtonBase(ProjectItemDragMixin, QToolButton):
         raise NotImplementedError()
 
 
+class ProjectItemButton(ProjectItemButtonBase):
+    def __init__(self, toolbox, icon, item_type, parent=None):
+        super().__init__(toolbox, icon, item_type, parent=parent)
+        self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
+        self.setStyleSheet("QToolButton{padding: 6px}")
+
+    def _make_mime_data_text(self):
+        return ",".join([self.item_type, ""])
+
+
 class ProjectItemSpecButton(ProjectItemButtonBase):
     def __init__(self, toolbox, icon, item_type, spec_name, parent=None):
         super().__init__(toolbox, icon, item_type, parent=parent)
@@ -101,6 +111,7 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
             f"<p>Drag-and-drop this onto the Design View to create a new <b>{self._spec_name}</b> item.</p>"
         )
         self._index = self._toolbox.specification_model.specification_index(self._spec_name)
+        self.setStyleSheet("QToolButton{padding: 3px;}")
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, self._spec_name])
@@ -110,6 +121,23 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
 
     def mouseDoubleClickEvent(self, event):
         self._toolbox.edit_specification(self._index, None)
+
+
+class ShadeMixin:
+    def paintEvent(self, ev):
+        painter = QPainter(self)
+        brush = QBrush(QColor(255, 255, 255, a=96))
+        painter.fillRect(ev.rect(), brush)
+        painter.end()
+        super().paintEvent(ev)
+
+
+class ProjectItemSpecShadeButton(ShadeMixin, ProjectItemSpecButton):
+    pass
+
+
+class QToolShadeButton(ShadeMixin, QToolButton):
+    pass
 
 
 class ProjectItemSpecArray:
@@ -133,7 +161,7 @@ class ProjectItemSpecArray:
         self._button_visible = QToolButton()
         self._button_visible.setCheckable(True)
         self._toolbar.insertWidget(self._separator, self._button_visible)
-        self._button_new = QToolButton()
+        self._button_new = QToolShadeButton()
         self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))
         self._button_new.setText("New...")
         font = self._button_new.font()
@@ -143,32 +171,33 @@ class ProjectItemSpecArray:
         self._action_new = self._toolbar.insertWidget(self._separator, self._button_new)
         self._action_new.setVisible(self._visible)
         self._actions = {}
-        self._update_button_icon()
+        self._update_button_geom()
         self._model.rowsInserted.connect(self._insert_specs)
         self._model.rowsRemoved.connect(self._remove_specs)
         self._model.modelReset.connect(self._reset_specs)
         self._button_visible.clicked.connect(self._toggle_visibility)
         self._button_new.clicked.connect(self._show_spec_form)
-        self._toolbar.orientationChanged.connect(self._update_button_icon)
+        self._toolbar.orientationChanged.connect(self._update_button_geom)
 
-    def _update_button_icon(self, orientation=None):
+    def _update_button_geom(self, orientation=None):
         if orientation is None:
             orientation = self._toolbar.orientation()
         style = self._toolbar.style()
+        widgets = [self._toolbar.widgetForAction(a) for a in self._actions.values()]
         if orientation == Qt.Horizontal:
             icon = style.standardIcon(style.SP_ToolBarHorizontalExtensionButton)
             width = style.pixelMetric(style.PM_ToolBarExtensionExtent)
-            height = max(
-                (self._toolbar.widgetForAction(a).height() for a in self._actions.values()),
-                default=self._button_new.height(),
-            )
+            height = max((w.height() for w in widgets), default=self._button_new.height())
+            self._button_new.setMaximumHeight(height)
+            for w in widgets:
+                w.setMaximumHeight(height)
         elif orientation == Qt.Vertical:
             icon = style.standardIcon(style.SP_ToolBarVerticalExtensionButton)
-            width = max(
-                (self._toolbar.widgetForAction(a).width() for a in self._actions.values()),
-                default=self._button_new.width(),
-            )
+            width = max((w.width() for w in widgets), default=self._button_new.width())
             height = style.pixelMetric(style.PM_ToolBarExtensionExtent)
+            self._button_new.setMaximumWidth(width)
+            for w in widgets:
+                w.setMaximumWidth(width)
         self._button_visible.setIcon(icon)
         self._button_visible.setMaximumWidth(width)
         self._button_visible.setMaximumHeight(height)
@@ -185,7 +214,6 @@ class ProjectItemSpecArray:
         self._visible = visible
         for action in self._actions.values():
             action.setVisible(self._visible)
-        self._separator.setVisible(self._visible)
         self._action_new.setVisible(self._visible)
 
     def _insert_specs(self, parent, first, last):
@@ -210,17 +238,8 @@ class ProjectItemSpecArray:
         spec = self._model.sourceModel().specification(source_index.row())
         factory = self._toolbox.item_factories[spec.item_type]
         icon = QIcon(factory.icon())
-        button = ProjectItemSpecButton(self._toolbox, icon, spec.item_type, spec.name)
+        button = ProjectItemSpecShadeButton(self._toolbox, icon, spec.item_type, spec.name)
         button.setIconSize(self._toolbar.iconSize())
         action = self._toolbar.insertWidget(self._separator, button)
         action.setVisible(self._visible)
         self._actions[row] = action
-
-
-class ProjectItemButton(ProjectItemButtonBase):
-    def __init__(self, toolbox, icon, item_type, parent=None):
-        super().__init__(toolbox, icon, item_type, parent=parent)
-        self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
-
-    def _make_mime_data_text(self):
-        return ",".join([self.item_type, ""])
