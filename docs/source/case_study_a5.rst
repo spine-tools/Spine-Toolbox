@@ -384,7 +384,7 @@ Creating objects
    b. ``unit_flow``, ``connection_flow``, and ``node_state`` of class ``output``.
 
 
-.. note:: To modify an object after you enter it, right click on it and select **Edit...* from the context menu. 
+.. note:: To modify an object after you enter it, right click on it and select **Edit...** from the context menu.
 
 
 .. _Specifying object parameter values:
