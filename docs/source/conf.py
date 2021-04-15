@@ -24,8 +24,8 @@ from spinetoolbox.version import __version__, __version_info__
 # -- Project information -----------------------------------------------------
 
 project = 'Spine Toolbox'
-author = 'P. Savolainen, M. Marin, E. Rinne, P. Vennström, A. Soininen'
-copyright = '2021, {}'.format(author)
+author = 'Spine project consortium'
+copyright = '2017-2021 {}'.format(author)
 
 
 # The short X.Y version
@@ -152,7 +152,7 @@ latex_documents = [
         master_doc,
         'SpineToolbox.tex',
         'Spine Toolbox Documentation',
-        'Pekka Savolainen, Manuel Marin, Erkka Rinne',
+        'Spine project consortium',
         'manual',
     )
 ]
