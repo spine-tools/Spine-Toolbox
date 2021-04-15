@@ -158,14 +158,16 @@ class ProjectItemSpecArray:
         self._visible = False
         self._separator = self._toolbar.addSeparator()
         self._separator.setVisible(self._visible)
-        font = QFont()
-        font.setPointSize(9)
         self._button_visible = QToolButton()
         self._button_visible.setCheckable(True)
+        self._button_visible.setFont(QFont("Font Awesome 5 Free Solid"))
         self._toolbar.insertWidget(self._separator, self._button_visible)
         self._button_new = QToolShadeButton()
         self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))
         self._button_new.setText("New...")
+        self._button_new.setToolTip(f"<p>Create new <b>{item_type}</b> specification...</p>")
+        font = QFont()
+        font.setPointSize(9)
         self._button_new.setFont(font)
         self._button_new.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self._action_new = self._toolbar.insertWidget(self._separator, self._button_new)
@@ -185,20 +187,20 @@ class ProjectItemSpecArray:
         style = self._toolbar.style()
         widgets = [self._toolbar.widgetForAction(a) for a in self._actions.values()]
         if orientation == Qt.Horizontal:
-            icon = style.standardIcon(style.SP_ToolBarHorizontalExtensionButton)
+            icon = "\uf0da" if not self._visible else "\uf0d9"
             width = style.pixelMetric(style.PM_ToolBarExtensionExtent)
             height = max((w.height() for w in widgets), default=self._button_new.height())
             self._button_new.setMaximumHeight(height)
             for w in widgets:
                 w.setMaximumHeight(height)
         elif orientation == Qt.Vertical:
-            icon = style.standardIcon(style.SP_ToolBarVerticalExtensionButton)
+            icon = "\uf0d7" if not self._visible else "\uf0d8"
             width = max((w.width() for w in widgets), default=self._button_new.width())
             height = style.pixelMetric(style.PM_ToolBarExtensionExtent)
             self._button_new.setMaximumWidth(width)
             for w in widgets:
                 w.setMaximumWidth(width)
-        self._button_visible.setIcon(icon)
+        self._button_visible.setText(icon)
         self._button_visible.setMaximumWidth(width)
         self._button_visible.setMaximumHeight(height)
 
@@ -209,6 +211,7 @@ class ProjectItemSpecArray:
     @Slot(bool)
     def _toggle_visibility(self, _checked=False):
         self.set_visible(not self._visible)
+        self._update_button_geom()
 
     def set_visible(self, visible):
         self._visible = visible
