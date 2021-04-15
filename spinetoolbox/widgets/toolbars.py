@@ -65,7 +65,6 @@ class MainToolBar(QToolBar):
         self.execute_project_button = None
         self.execute_selection_button = None
         self.stop_execution_button = None
-        self._spec_arrays = []
 
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
@@ -75,7 +74,6 @@ class MainToolBar(QToolBar):
         self.add_execute_buttons()
 
     def add_project_item_buttons(self):
-        self._spec_arrays = []
         self.addWidget(PaddingLabel("Main"))
         for item_type, factory in self._toolbox.item_factories.items():
             icon = QIcon(factory.icon())
@@ -83,8 +81,7 @@ class MainToolBar(QToolBar):
             self.addWidget(button)
             if self._toolbox.supports_specification(item_type):
                 model = self._toolbox.filtered_spec_factory_models.get(item_type)
-                spec_array = ProjectItemSpecArray(self._toolbox, self, model, item_type)
-                self._spec_arrays.append(spec_array)
+                button.spec_array = ProjectItemSpecArray(self._toolbox, self, model, item_type)
         self._add_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
         )

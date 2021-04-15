@@ -91,11 +91,16 @@ class ProjectItemButtonBase(ProjectItemDragMixin, QToolButton):
 class ProjectItemButton(ProjectItemButtonBase):
     def __init__(self, toolbox, icon, item_type, parent=None):
         super().__init__(toolbox, icon, item_type, parent=parent)
+        self.spec_array = None
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
         self.setStyleSheet("QToolButton{padding: 6px}")
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, ""])
+
+    def mouseDoubleClickEvent(self, event):
+        if self.spec_array:
+            self.spec_array.toggle_visibility()
 
 
 class ProjectItemSpecButton(ProjectItemButtonBase):
@@ -177,7 +182,7 @@ class ProjectItemSpecArray:
         self._model.rowsInserted.connect(self._insert_specs)
         self._model.rowsRemoved.connect(self._remove_specs)
         self._model.modelReset.connect(self._reset_specs)
-        self._button_visible.clicked.connect(self._toggle_visibility)
+        self._button_visible.clicked.connect(self.toggle_visibility)
         self._button_new.clicked.connect(self._show_spec_form)
         self._toolbar.orientationChanged.connect(self._update_button_geom)
 
@@ -209,7 +214,7 @@ class ProjectItemSpecArray:
         self._toolbox.show_specification_form(self._item_type)
 
     @Slot(bool)
-    def _toggle_visibility(self, _checked=False):
+    def toggle_visibility(self, _checked=False):
         self.set_visible(not self._visible)
         self._update_button_geom()
 
