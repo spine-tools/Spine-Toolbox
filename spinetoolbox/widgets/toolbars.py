@@ -38,7 +38,7 @@ class PluginToolBar(QToolBar):
         self.setObjectName(name.replace(" ", "_"))
 
     def setup(self, plugin_specs):
-        self.addWidget(QLabel(self._name))
+        self.addWidget(PaddingLabel(self._name))
         for spec in plugin_specs:
             factory = self._toolbox.item_factories[spec.item_type]
             icon = QIcon(factory.icon())
@@ -76,7 +76,7 @@ class MainToolBar(QToolBar):
 
     def add_project_item_buttons(self):
         self._spec_arrays = []
-        self.addWidget(QLabel("Main"))
+        self.addWidget(PaddingLabel("Main"))
         for item_type, factory in self._toolbox.item_factories.items():
             icon = QIcon(factory.icon())
             button = ProjectItemButton(self._toolbox, icon, item_type)
@@ -94,12 +94,13 @@ class MainToolBar(QToolBar):
         button.setIcon(icon)
         button.setToolTip(f"<p>{tip}</p>")
         button.clicked.connect(slot)
+        button.setStyleSheet("QToolButton{padding: 6px}")
         self.addWidget(button)
         return button
 
     def add_execute_buttons(self):
         self.addSeparator()
-        self.addWidget(QLabel("Execute"))
+        self.addWidget(PaddingLabel("Execute"))
         self.execute_project_button = self._add_tool_button(
             QIcon(":/icons/menu_icons/play-circle-solid.svg"), "Execute project", self.execute_project
         )
@@ -138,3 +139,9 @@ class MainToolBar(QToolBar):
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().stop()
+
+
+class PaddingLabel(QLabel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setStyleSheet("QLabel{padding: 3px}")

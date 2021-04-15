@@ -17,7 +17,7 @@ Classes for custom QListView.
 """
 
 from PySide2.QtCore import Qt, Signal, Slot, QMimeData
-from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor
+from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont
 from PySide2.QtWidgets import QToolButton, QApplication
 from ..helpers import CharIconEngine
 
@@ -158,14 +158,14 @@ class ProjectItemSpecArray:
         self._visible = False
         self._separator = self._toolbar.addSeparator()
         self._separator.setVisible(self._visible)
+        font = QFont()
+        font.setPointSize(9)
         self._button_visible = QToolButton()
         self._button_visible.setCheckable(True)
         self._toolbar.insertWidget(self._separator, self._button_visible)
         self._button_new = QToolShadeButton()
         self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))
         self._button_new.setText("New...")
-        font = self._button_new.font()
-        font.setPointSize(9)
         self._button_new.setFont(font)
         self._button_new.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self._action_new = self._toolbar.insertWidget(self._separator, self._button_new)
