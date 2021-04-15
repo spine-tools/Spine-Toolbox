@@ -164,7 +164,6 @@ class ProjectItemSpecArray:
         self._separator = self._toolbar.addSeparator()
         self._separator.setVisible(self._visible)
         self._button_visible = QToolButton()
-        self._button_visible.setCheckable(True)
         self._button_visible.setFont(QFont("Font Awesome 5 Free Solid"))
         self._toolbar.insertWidget(self._separator, self._button_visible)
         self._button_new = QToolShadeButton()
@@ -191,15 +190,16 @@ class ProjectItemSpecArray:
             orientation = self._toolbar.orientation()
         style = self._toolbar.style()
         widgets = [self._toolbar.widgetForAction(a) for a in self._actions.values()]
+        up, down, right, left = "\uf0d8", "\uf0d7", "\uf0da", "\uf0d9"
         if orientation == Qt.Horizontal:
-            icon = "\uf0da" if not self._visible else "\uf0d9"
+            icon = right if not self._visible else left
             width = style.pixelMetric(style.PM_ToolBarExtensionExtent)
             height = max((w.height() for w in widgets), default=self._button_new.height())
             self._button_new.setMaximumHeight(height)
             for w in widgets:
                 w.setMaximumHeight(height)
         elif orientation == Qt.Vertical:
-            icon = "\uf0d7" if not self._visible else "\uf0d8"
+            icon = down if not self._visible else up
             width = max((w.width() for w in widgets), default=self._button_new.width())
             height = style.pixelMetric(style.PM_ToolBarExtensionExtent)
             self._button_new.setMaximumWidth(width)
