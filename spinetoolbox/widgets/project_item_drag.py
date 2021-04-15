@@ -236,6 +236,8 @@ class ProjectItemSpecArray:
         index = self._model.index(row, 0)
         source_index = self._model.mapToSource(index)
         spec = self._model.sourceModel().specification(source_index.row())
+        if spec.plugin:
+            return
         factory = self._toolbox.item_factories[spec.item_type]
         icon = QIcon(factory.icon())
         button = ProjectItemSpecShadeButton(self._toolbox, icon, spec.item_type, spec.name)

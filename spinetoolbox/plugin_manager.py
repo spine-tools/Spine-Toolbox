@@ -85,6 +85,11 @@ class PluginManager:
     def plugin_toolbars(self):
         return self._plugin_toolbars
 
+    @property
+    def plugin_specs(self):
+        for specs in self._plugin_specs.values():
+            yield from specs
+
     def load_plugins(self):
         search_paths = {PLUGINS_PATH}
         search_paths |= set(
@@ -136,8 +141,6 @@ class PluginManager:
                 continue
             spec.plugin = name
             plugin_specs.append(spec)
-        for spec in plugin_specs:
-            self._toolbox.do_add_specification(spec)
         toolbar = self._plugin_toolbars[name] = PluginToolBar(name, parent=self._toolbox)
         toolbar.setup(plugin_specs)
         self._toolbox.addToolBar(Qt.TopToolBarArea, toolbar)

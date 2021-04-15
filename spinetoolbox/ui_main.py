@@ -714,6 +714,7 @@ class ToolboxUI(QMainWindow):
             if not spec:
                 continue
             specs.append(spec)
+        specs += list(self._plugin_manager.plugin_specs)
         # Add specs to model
         for spec in specs:
             self.do_add_specification(spec)
