@@ -18,7 +18,7 @@ Classes for custom QListView.
 
 from itertools import chain
 from PySide2.QtCore import Qt, Signal, Slot, QMimeData, QRect
-from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont
+from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QFontMetrics
 from PySide2.QtWidgets import QToolButton, QApplication
 from ..helpers import CharIconEngine
 
@@ -108,15 +108,28 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
     def __init__(self, toolbox, icon, item_type, spec_name, parent=None):
         super().__init__(toolbox, icon, item_type, parent=parent)
         self._spec_name = spec_name
-        font = self.font()
-        font.setPointSize(9)
-        self.setFont(font)
-        self.setText(spec_name)
+        self._set_text()
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self.setToolTip(
             f"<p>Drag-and-drop this onto the Design View to create a new <b>{self._spec_name}</b> item.</p>"
         )
         self._index = self._toolbox.specification_model.specification_index(self._spec_name)
+
+    def _set_text(self):
+        font = self.font()
+        row_count = 0
+        while True:
+            row_count += 1
+            chunk_size = len(self._spec_name) // row_count + 1
+            chunks = [self._spec_name[i : i + chunk_size] for i in range(0, len(self._spec_name), chunk_size)]
+            for point_size in range(9, 7, -1):
+                font.setPointSize(point_size)
+                fm = QFontMetrics(font)
+                if all(fm.horizontalAdvance(chunk) <= 80 for chunk in chunks):
+                    text = "\n".join(chunks)
+                    self.setFont(font)
+                    self.setText(text)
+                    return
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, self._spec_name])
