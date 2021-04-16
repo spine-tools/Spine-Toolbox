@@ -69,6 +69,7 @@ class ProjectItemButtonBase(ProjectItemDragMixin, QToolButton):
         self.setIcon(icon)
         self.setMouseTracking(True)
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
+        self.setStyleSheet("QToolButton{padding: 2px}")
 
     @Slot()
     def _handle_drag_about_to_start(self):
@@ -93,7 +94,6 @@ class ProjectItemButton(ProjectItemButtonBase):
         super().__init__(toolbox, icon, item_type, parent=parent)
         self.spec_array = None
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
-        self.setStyleSheet("QToolButton{padding: 6px}")
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, ""])
@@ -116,7 +116,6 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
             f"<p>Drag-and-drop this onto the Design View to create a new <b>{self._spec_name}</b> item.</p>"
         )
         self._index = self._toolbox.specification_model.specification_index(self._spec_name)
-        self.setStyleSheet("QToolButton{padding: 3px;}")
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, self._spec_name])
@@ -164,7 +163,8 @@ class ProjectItemSpecArray:
         self._separator = self._toolbar.addSeparator()
         self._separator.setVisible(self._visible)
         self._button_visible = QToolButton()
-        self._button_visible.setFont(QFont("Font Awesome 5 Free Solid"))
+        font = QFont("Font Awesome 5 Free Solid")
+        self._button_visible.setFont(font)
         self._toolbar.insertWidget(self._separator, self._button_visible)
         self._button_new = QToolShadeButton()
         self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))

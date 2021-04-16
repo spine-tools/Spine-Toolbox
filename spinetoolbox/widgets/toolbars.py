@@ -82,16 +82,22 @@ class MainToolBar(QToolBar):
             if self._toolbox.supports_specification(item_type):
                 model = self._toolbox.filtered_spec_factory_models.get(item_type)
                 button.spec_array = ProjectItemSpecArray(self._toolbox, self, model, item_type)
+            self._add_invisible_separator()
         self._add_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
         )
+
+    def _add_invisible_separator(self):
+        sep = self.addSeparator()
+        wg = self.widgetForAction(sep)
+        wg.setStyleSheet("QWidget{background: rgba(0,0,0,0);}")
 
     def _add_tool_button(self, icon, tip, slot):
         button = QToolButton()
         button.setIcon(icon)
         button.setToolTip(f"<p>{tip}</p>")
         button.clicked.connect(slot)
-        button.setStyleSheet("QToolButton{padding: 6px}")
+        button.setStyleSheet("QToolButton{padding: 2px}")
         self.addWidget(button)
         return button
 
@@ -141,4 +147,4 @@ class MainToolBar(QToolBar):
 class PaddingLabel(QLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setStyleSheet("QLabel{padding: 3px}")
+        self.setStyleSheet("QLabel{padding: 2px}")
