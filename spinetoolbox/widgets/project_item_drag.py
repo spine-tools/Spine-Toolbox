@@ -323,11 +323,13 @@ class ProjectItemSpecArray:
     def _insert_specs(self, parent, first, last):
         for row in range(first, last + 1):
             self._add_spec(row)
+        self._update_button_geom()
 
     def _remove_specs(self, parent, first, last):
         for row in range(first, last + 1):
             action = self._actions.pop(row)
             self._toolbar.removeAction(action)
+        self._update_button_geom()
 
     def _reset_specs(self):
         for action in self._actions.values():
@@ -335,6 +337,7 @@ class ProjectItemSpecArray:
         self._actions.clear()
         for row in range(self._model.rowCount()):
             self._add_spec(row)
+        self._update_button_geom()
 
     def _add_spec(self, row):
         index = self._model.index(row, 0)
