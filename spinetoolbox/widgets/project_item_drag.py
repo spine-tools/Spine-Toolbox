@@ -113,7 +113,6 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
         self.setFont(font)
         self.setText(self.spec_name)
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{self.spec_name}</b> item.</p>")
         self._index = self._toolbox.specification_model.specification_index(self.spec_name)
 
     @property
@@ -124,6 +123,7 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
     def spec_name(self, spec_name):
         self._spec_name = spec_name
         self.setText(self._spec_name)
+        self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{self.spec_name}</b> item.</p>")
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, self.spec_name])
@@ -177,9 +177,13 @@ class ProjectItemSpecArray(QToolBar):
         self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self._item_type, self._icon)
         self._button_filling.setParent(self)
         self._button_filling.setVisible(False)
+        self._button_base_item = ProjectItemButton(self._toolbox, self._item_type, self._icon)
+        self._button_base_item.double_clicked.connect(self.toggle_visibility)
+        self.addWidget(self._button_base_item)
         self._button_visible = QToolButton()
         font = QFont("Font Awesome 5 Free Solid")
         self._button_visible.setFont(font)
+        self._button_visible.setToolTip(f"<p>Show/hide {self._item_type} specifications</p>")
         self.addWidget(self._button_visible)
         self._button_new = ShadeButton()
         self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))
@@ -314,6 +318,10 @@ class ProjectItemSpecArray(QToolBar):
             action.setDefaultWidget(button)
             menu.addAction(action)
 
+    def showEvent(self, ev):
+        super().showEvent(ev)
+        self._update_button_geom()
+
     def _update_button_geom(self, orientation=None):
         """Updates geometry of buttons given the orientation
 
@@ -329,41 +337,37 @@ class ProjectItemSpecArray(QToolBar):
         if orientation == Qt.Horizontal:
             icon = right if not self._visible else left
             width = extent
-            height = max((w.height() for w in widgets), default=self._button_new.height())
+            min_width = self._button_visible.frameGeometry().right() + extent / 2
+            min_visible_width = min_width + self._button_new.sizeHint().width() + self._margin - extent / 2
+            if widgets:
+                min_visible_width += extent
+            min_height = self._button_new.sizeHint().height()
+            min_size = (min_width, min_height)
+            min_visible_size = (min_visible_width, min_height)
+            height = max((w.height() for w in widgets), default=min_height)
             self._button_new.setMaximumHeight(height)
             for w in widgets:
                 w.setMaximumHeight(height)
-            min_visible_width = (
-                self._button_visible.frameGeometry().right()
-                + self._button_new.sizeHint().width()
-                + self._margin
-                + extent
-            )
-            min_visible_size = (min_visible_width, 0)
-        else:  # orientation == Qt.Vertical
+        else:
             icon = down if not self._visible else up
-            width = max((w.width() for w in widgets), default=self._button_new.width())
             height = extent
+            min_width = self._button_new.sizeHint().height()
+            min_height = self._button_visible.frameGeometry().bottom() + extent / 2
+            min_visible_height = min_height + self._button_new.sizeHint().height() + self._margin - extent / 2
+            if widgets:
+                min_visible_height += extent
+            min_size = (min_width, min_height)
+            min_visible_size = (min_width, min_visible_height)
+            width = max((w.width() for w in widgets), default=min_width)
             self._button_new.setMaximumWidth(width)
             for w in widgets:
                 w.setMaximumWidth(width)
-            min_visible_height = (
-                self._button_visible.frameGeometry().bottom()
-                + self._button_new.sizeHint().height()
-                + self._margin
-                + extent
-            )
-            min_visible_size = (0, min_visible_height)
         self._button_visible.setText(icon)
-        self._button_visible.setMaximumWidth(width)
-        self._button_visible.setMaximumHeight(height)
+        self._button_visible.setMaximumSize(width, height)
         if not self._visible:
-            self.layout().setMargin(0)
-            self.setMaximumSize(2 * self._button_visible.maximumSize())
-            self.setMinimumSize(0, 0)
+            self.setFixedSize(*min_size)
             self.setStyleSheet("QToolBar {background: transparent}")
         else:
-            self.layout().setMargin(self._margin)
             self.setMaximumSize(self._maximum_size)
             self.setMinimumSize(*min_visible_size)
             self.setStyleSheet("")

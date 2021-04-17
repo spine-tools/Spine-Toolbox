@@ -79,16 +79,16 @@ class MainToolBar(QToolBar):
     def add_project_item_buttons(self):
         self.addWidget(PaddingLabel("Main"))
         for item_type, factory in self._toolbox.item_factories.items():
-            icon = QIcon(factory.icon())
-            button = ProjectItemButton(self._toolbox, item_type, icon)
-            self.addWidget(button)
-            if self._toolbox.supports_specification(item_type):
+            if not self._toolbox.supports_specification(item_type):
+                icon = QIcon(factory.icon())
+                button = ProjectItemButton(self._toolbox, item_type, icon)
+                self.addWidget(button)
+            else:
                 model = self._toolbox.filtered_spec_factory_models.get(item_type)
                 spec_array = ProjectItemSpecArray(self._toolbox, model, item_type)
                 spec_array.setOrientation(self.orientation())
                 self._spec_arrays.append(spec_array)
                 self.addWidget(spec_array)
-                button.double_clicked.connect(spec_array.toggle_visibility)
                 self.orientationChanged.connect(spec_array.setOrientation)
         self._add_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
