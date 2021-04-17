@@ -42,7 +42,7 @@ class PluginToolBar(QToolBar):
         for spec in plugin_specs:
             factory = self._toolbox.item_factories[spec.item_type]
             icon = QIcon(factory.icon())
-            button = ProjectItemSpecButton(self._toolbox, icon, spec.item_type, spec.name)
+            button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
             button.setIconSize(self.iconSize())
             self.addWidget(button)
 
@@ -80,7 +80,7 @@ class MainToolBar(QToolBar):
         self.addWidget(PaddingLabel("Main"))
         for item_type, factory in self._toolbox.item_factories.items():
             icon = QIcon(factory.icon())
-            button = ProjectItemButton(self._toolbox, icon, item_type)
+            button = ProjectItemButton(self._toolbox, item_type, icon)
             self.addWidget(button)
             if self._toolbox.supports_specification(item_type):
                 model = self._toolbox.filtered_spec_factory_models.get(item_type)
