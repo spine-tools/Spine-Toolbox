@@ -66,20 +66,11 @@ class MainToolBar(QToolBar):
         self.execute_selection_button = None
         self.stop_execution_button = None
         self._spec_arrays = []
-        self.extension_button = next(iter(self.findChildren(QToolButton)))
-        self.expanded = False
-        self.extension_button.toggled.connect(self._set_expanded)
-
-    def _set_expanded(self, expanded):
-        self.expanded = expanded
-
-    def paintEvent(self, ev):
-        super().paintEvent(ev)
-        for arr in self._spec_arrays:
-            arr.add_filling()
 
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
+        for arr in self._spec_arrays:
+            arr.set_color(color)
 
     def setup(self):
         self.add_project_item_buttons()
@@ -93,17 +84,15 @@ class MainToolBar(QToolBar):
             self.addWidget(button)
             if self._toolbox.supports_specification(item_type):
                 model = self._toolbox.filtered_spec_factory_models.get(item_type)
-                button.spec_array = ProjectItemSpecArray(self._toolbox, self, model, item_type)
-                self._spec_arrays.append(button.spec_array)
-            self._add_invisible_separator()
+                spec_array = ProjectItemSpecArray(self._toolbox, model, item_type)
+                spec_array.setOrientation(self.orientation())
+                self._spec_arrays.append(spec_array)
+                self.addWidget(spec_array)
+                button.double_clicked.connect(spec_array.toggle_visibility)
+                self.orientationChanged.connect(spec_array.setOrientation)
         self._add_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
         )
-
-    def _add_invisible_separator(self):
-        sep = self.addSeparator()
-        wg = self.widgetForAction(sep)
-        wg.setStyleSheet("QWidget{background: rgba(0,0,0,0);}")
 
     def _add_tool_button(self, icon, tip, slot):
         button = QToolButton()
