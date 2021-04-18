@@ -832,7 +832,7 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox.python_console = mock.NonCallableMagicMock()
         self.toolbox.closeEvent(mock.MagicMock())
         qsettings_save_calls = self.toolbox._qsettings.setValue.call_args_list
-        self.assertEqual(len(qsettings_save_calls), 6)
+        self.assertEqual(len(qsettings_save_calls), 7)
         saved_dict = {saved[0][0]: saved[0][1] for saved in qsettings_save_calls}
         self.assertIn("appSettings/previousProject", saved_dict)
         self.assertIn("mainWindow/windowSize", saved_dict)
@@ -840,6 +840,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIn("mainWindow/windowState", saved_dict)
         self.assertIn("mainWindow/windowMaximized", saved_dict)
         self.assertIn("mainWindow/n_screens", saved_dict)
+        self.assertIn("appSettings/toolbarIconOrdering", saved_dict)
 
     @staticmethod
     def find_click_point_of_pi(pi, gv):
