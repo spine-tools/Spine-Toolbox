@@ -17,7 +17,7 @@ Classes for custom QListView.
 """
 
 from PySide2.QtCore import Qt, Signal, Slot, QMimeData
-from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont
+from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
 from PySide2.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction
 from ..helpers import CharIconEngine, make_icon_background
 
@@ -107,13 +107,13 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
     def __init__(self, toolbox, item_type, icon, spec_name=None, parent=None):
         super().__init__(toolbox, item_type, icon, parent=parent)
         self._spec_name = None
+        self._index = None
         self.spec_name = spec_name
         font = self.font()
         font.setPointSize(9)
         self.setFont(font)
         self.setText(self.spec_name)
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        self._index = self._toolbox.specification_model.specification_index(self.spec_name)
 
     @property
     def spec_name(self):
@@ -122,6 +122,7 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
     @spec_name.setter
     def spec_name(self, spec_name):
         self._spec_name = spec_name
+        self._index = self._toolbox.specification_model.specification_index(self.spec_name)
         self.setText(self._spec_name)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{self.spec_name}</b> item.</p>")
 
@@ -152,6 +153,16 @@ class ShadeProjectItemSpecButton(ShadeMixin, ProjectItemSpecButton):
 
 class ShadeButton(ShadeMixin, QToolButton):
     pass
+
+
+class ChoppedIconEngine(QIconEngine):
+    def __init__(self, file_name, size):
+        super().__init__()
+        icon = QIcon(file_name)
+        self._pixmap = icon.pixmap(icon.actualSize(size))
+
+    def pixmap(self, size, mode, state):
+        return self._pixmap
 
 
 class ProjectItemSpecArray(QToolBar):
@@ -194,7 +205,9 @@ class ProjectItemSpecArray(QToolBar):
         self._action_new = self.addWidget(self._button_new)
         self._action_new.setVisible(self._visible)
         self._actions = {}
-        self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self._item_type, self._icon)
+        engine = ChoppedIconEngine(factory.icon(), self.iconSize())
+        chopped_icon = QIcon(engine)
+        self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self._item_type, chopped_icon)
         self._button_filling.setParent(self)
         self._button_filling.setVisible(False)
         self._model.rowsInserted.connect(self._insert_specs)
