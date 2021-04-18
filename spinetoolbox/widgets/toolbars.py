@@ -74,6 +74,7 @@ class MainToolBar(QToolBar):
 
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
+        self.layout().setSpacing(1)
         for arr in self._spec_arrays:
             arr.set_color(color)
 
@@ -83,7 +84,7 @@ class MainToolBar(QToolBar):
 
     def add_project_item_buttons(self):
         self.addWidget(PaddingLabel("Main"))
-        icon_ordering = self._toolbox.qsettings().value("appSettings/toolbarIconOrdering", default="")
+        icon_ordering = self._toolbox.qsettings().value("appSettings/toolbarIconOrdering", defaultValue="")
         ordered_item_types = icon_ordering.split(self._SEPARATOR)
         for item_type in ordered_item_types:
             factory = self._toolbox.item_factories.get(item_type)
@@ -231,9 +232,9 @@ class MainToolBar(QToolBar):
         geom = widget.geometry()
         margin = self.layout().margin()
         if self.orientation() == Qt.Horizontal:
-            x = geom.left()
+            x = geom.left() - 1
             return x, margin, x, self.height() - margin
-        y = geom.top()
+        y = geom.top() - 1
         return margin, y, self.width() - margin, y
 
     def icon_ordering(self):
