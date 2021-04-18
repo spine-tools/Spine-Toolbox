@@ -155,7 +155,7 @@ class ShadeButton(ShadeMixin, QToolButton):
     pass
 
 
-class ChoppedIconEngine(QIconEngine):
+class _ChoppedIconEngine(QIconEngine):
     def __init__(self, file_name, size):
         super().__init__()
         icon = QIcon(file_name)
@@ -191,6 +191,7 @@ class ProjectItemSpecArray(QToolBar):
         self.addWidget(self._button_base_item)
         self._button_visible = QToolButton()
         font = QFont("Font Awesome 5 Free Solid")
+        font.setPointSize(8)
         self._button_visible.setFont(font)
         self._button_visible.setToolTip(f"<p>Show/hide {self.item_type} specifications</p>")
         self.addWidget(self._button_visible)
@@ -205,7 +206,7 @@ class ProjectItemSpecArray(QToolBar):
         self._action_new = self.addWidget(self._button_new)
         self._action_new.setVisible(self._visible)
         self._actions = {}
-        engine = ChoppedIconEngine(factory.icon(), self.iconSize())
+        engine = _ChoppedIconEngine(factory.icon(), self.iconSize())
         chopped_icon = QIcon(engine)
         self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self.item_type, chopped_icon)
         self._button_filling.setParent(self)
@@ -339,13 +340,13 @@ class ProjectItemSpecArray(QToolBar):
         Args:
             orientation (Qt.Orientation)
         """
-        spacing = 4  # additional space till next toolbar icon when collapsed
+        spacing = 2  # additional space till next toolbar icon when collapsed
         if orientation is None:
             orientation = self.orientation()
         style = self.style()
         extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
         widgets = [self.widgetForAction(a) for a in self._actions.values()]
-        up, down, right, left = "\uf0d8", "\uf0d7", "\uf0da", "\uf0d9"
+        up, down, right, left = "\uf102", "\uf103", "\uf101", "\uf100"
         if orientation == Qt.Horizontal:
             icon = right if not self._visible else left
             width = extent
