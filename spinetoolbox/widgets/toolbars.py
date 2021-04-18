@@ -16,9 +16,9 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
-from PySide2.QtGui import QIcon
+from PySide2.QtGui import QIcon, QPainter
 from ..helpers import make_icon_toolbar_ss
 from .project_item_drag import ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
 
@@ -53,6 +53,8 @@ class PluginToolBar(QToolBar):
 class MainToolBar(QToolBar):
     """The main application toolbar: Items | Execute"""
 
+    _SEPARATOR = ";;"
+
     def __init__(self, parent):
         """
 
@@ -66,6 +68,9 @@ class MainToolBar(QToolBar):
         self.execute_selection_button = None
         self.stop_execution_button = None
         self._spec_arrays = []
+        self._drop_source_action = None
+        self._drop_target_action = None
+        self.setAcceptDrops(True)
 
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
@@ -78,21 +83,33 @@ class MainToolBar(QToolBar):
 
     def add_project_item_buttons(self):
         self.addWidget(PaddingLabel("Main"))
+        icon_ordering = self._toolbox.qsettings().value("appSettings/toolbarIconOrdering", default="")
+        ordered_item_types = icon_ordering.split(self._SEPARATOR)
+        for item_type in ordered_item_types:
+            factory = self._toolbox.item_factories.get(item_type)
+            if factory is None:
+                continue
+            self._add_project_item_button(item_type, factory)
         for item_type, factory in self._toolbox.item_factories.items():
-            if not self._toolbox.supports_specification(item_type):
-                icon = QIcon(factory.icon())
-                button = ProjectItemButton(self._toolbox, item_type, icon)
-                self.addWidget(button)
-            else:
-                model = self._toolbox.filtered_spec_factory_models.get(item_type)
-                spec_array = ProjectItemSpecArray(self._toolbox, model, item_type)
-                spec_array.setOrientation(self.orientation())
-                self._spec_arrays.append(spec_array)
-                self.addWidget(spec_array)
-                self.orientationChanged.connect(spec_array.setOrientation)
+            if item_type in ordered_item_types:
+                continue
+            self._add_project_item_button(item_type, factory)
         self._add_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
         )
+
+    def _add_project_item_button(self, item_type, factory):
+        if not self._toolbox.supports_specification(item_type):
+            icon = QIcon(factory.icon())
+            button = ProjectItemButton(self._toolbox, item_type, icon)
+            self.addWidget(button)
+        else:
+            model = self._toolbox.filtered_spec_factory_models.get(item_type)
+            spec_array = ProjectItemSpecArray(self._toolbox, model, item_type)
+            spec_array.setOrientation(self.orientation())
+            self._spec_arrays.append(spec_array)
+            self.addWidget(spec_array)
+            self.orientationChanged.connect(spec_array.setOrientation)
 
     def _add_tool_button(self, icon, tip, slot):
         button = QToolButton()
@@ -144,6 +161,89 @@ class MainToolBar(QToolBar):
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().stop()
+
+    def dragLeaveEvent(self, event):
+        event.accept()
+        self._drop_source_action = None
+        self._drop_target_action = None
+        self.update()
+
+    def dragEnterEvent(self, event):
+        source = event.source()
+        event.setAccepted(isinstance(source, ProjectItemButton))
+
+    def dragMoveEvent(self, event):
+        self._update_drop_actions(event)
+        event.setAccepted(self._drop_source_action is not None)
+        self.update()
+
+    def dropEvent(self, event):
+        if self._drop_target_action != self._drop_source_action:
+            self.insertAction(self._drop_target_action, self._drop_source_action)
+        self._drop_source_action = None
+        self._drop_target_action = None
+        self.update()
+
+    def _update_drop_actions(self, event):
+        """Updates source and target actions for drop operation:
+
+        Args:
+            event (QDragMoveEvent)
+        """
+        self._drop_source_action = None
+        self._drop_target_action = None
+        source = event.source()
+        if not isinstance(source, ProjectItemButton):
+            return
+        target = self.childAt(event.pos())
+        if target is None:
+            return
+        while target.parent() != self:
+            target = target.parent()
+        if not isinstance(target, (ProjectItemButton, ProjectItemSpecArray)):
+            return
+        while source.parent() != self:
+            source = source.parent()
+        if self.orientation() == Qt.Horizontal:
+            after = target.geometry().center().x() < event.pos().x()
+        else:
+            after = target.geometry().center().y() < event.pos().y()
+        actions = self.actions()
+        source_action = next((a for a in actions if self.widgetForAction(a) == source))
+        target_index = next((i for i, a in enumerate(actions) if self.widgetForAction(a) == target))
+        if after:
+            target_index += 1
+        target_action = actions[target_index]
+        self._drop_source_action = source_action
+        self._drop_target_action = target_action
+
+    def paintEvent(self, ev):
+        """Draw a line as drop indicator."""
+        super().paintEvent(ev)
+        if self._drop_target_action is None:
+            return
+        painter = QPainter(self)
+        painter.drawLine(*self._drop_line())
+        painter.end()
+
+    def _drop_line(self):
+        widget = self.widgetForAction(self._drop_target_action)
+        geom = widget.geometry()
+        margin = self.layout().margin()
+        if self.orientation() == Qt.Horizontal:
+            x = geom.left()
+            return x, margin, x, self.height() - margin
+        y = geom.top()
+        return margin, y, self.width() - margin, y
+
+    def icon_ordering(self):
+        item_types = []
+        for a in self.actions():
+            w = self.widgetForAction(a)
+            if not isinstance(w, (ProjectItemButton, ProjectItemSpecArray)):
+                continue
+            item_types.append(w.item_type)
+        return self._SEPARATOR.join(item_types)
 
 
 class PaddingLabel(QLabel):

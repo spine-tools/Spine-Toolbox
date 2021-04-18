@@ -173,12 +173,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
         """
         self.bg_choice = bg_choice
 
-    @staticmethod
-    def _is_project_item_drag(source):
-        """Checks whether or not source corresponds to a project item being dragged into the scene.
-        """
-        return isinstance(source, ProjectItemDragMixin)
-
     def dragLeaveEvent(self, event):
         """Accept event."""
         event.accept()
@@ -186,26 +180,21 @@ class DesignGraphicsScene(CustomGraphicsScene):
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
         only if drag source is not a ProjectItemDragMixin."""
-        event.accept()
         source = event.source()
-        if not self._is_project_item_drag(source):
-            super().dragEnterEvent(event)
+        event.setAccepted(isinstance(source, ProjectItemDragMixin))
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
         only if drag source is not a ProjectItemDragMixin."""
-        event.accept()
         source = event.source()
-        if not self._is_project_item_drag(source):
-            super().dragMoveEvent(event)
+        event.setAccepted(isinstance(source, ProjectItemDragMixin))
 
     def dropEvent(self, event):
         """Only accept drops when the source is an instance of ProjectItemDragMixin.
         Capture text from event's mimedata and show the appropriate 'Add Item form.'
         """
         source = event.source()
-        if not self._is_project_item_drag(source):
-            super().dropEvent(event)
+        if not isinstance(source, ProjectItemDragMixin):
             return
         if not self._toolbox.project():
             self._toolbox.msg.emit("Please open or create a project first")

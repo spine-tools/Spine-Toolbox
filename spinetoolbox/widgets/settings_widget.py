@@ -229,6 +229,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             toolbox (ToolboxUI): Parent widget.
         """
         super().__init__(toolbox.qsettings())
+        self.ui.stackedWidget.setCurrentIndex(0)
         self._toolbox = toolbox  # QWidget parent
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened

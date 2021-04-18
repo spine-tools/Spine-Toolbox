@@ -1934,6 +1934,7 @@ class ToolboxUI(QMainWindow):
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
+        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.main_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))

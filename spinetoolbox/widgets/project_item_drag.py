@@ -182,17 +182,17 @@ class ProjectItemSpecArray(QToolBar):
         self._maximum_size = self.maximumSize()
         self._model = model
         self._toolbox = toolbox
-        self._item_type = item_type
-        factory = self._toolbox.item_factories[self._item_type]
+        self.item_type = item_type
+        factory = self._toolbox.item_factories[self.item_type]
         self._icon = QIcon(factory.icon())
         self._visible = False
-        self._button_base_item = ProjectItemButton(self._toolbox, self._item_type, self._icon)
+        self._button_base_item = ProjectItemButton(self._toolbox, self.item_type, self._icon)
         self._button_base_item.double_clicked.connect(self.toggle_visibility)
         self.addWidget(self._button_base_item)
         self._button_visible = QToolButton()
         font = QFont("Font Awesome 5 Free Solid")
         self._button_visible.setFont(font)
-        self._button_visible.setToolTip(f"<p>Show/hide {self._item_type} specifications</p>")
+        self._button_visible.setToolTip(f"<p>Show/hide {self.item_type} specifications</p>")
         self.addWidget(self._button_visible)
         self._button_new = ShadeButton()
         self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))
@@ -207,7 +207,7 @@ class ProjectItemSpecArray(QToolBar):
         self._actions = {}
         engine = ChoppedIconEngine(factory.icon(), self.iconSize())
         chopped_icon = QIcon(engine)
-        self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self._item_type, chopped_icon)
+        self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self.item_type, chopped_icon)
         self._button_filling.setParent(self)
         self._button_filling.setVisible(False)
         self._model.rowsInserted.connect(self._insert_specs)
@@ -386,7 +386,7 @@ class ProjectItemSpecArray(QToolBar):
 
     @Slot(bool)
     def _show_spec_form(self, _checked=False):
-        self._toolbox.show_specification_form(self._item_type)
+        self._toolbox.show_specification_form(self.item_type)
 
     @Slot(bool)
     def toggle_visibility(self, _checked=False):
