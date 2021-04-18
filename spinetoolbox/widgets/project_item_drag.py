@@ -166,7 +166,8 @@ class ProjectItemSpecArray(QToolBar):
         """
         super().__init__()
         self._extension_button = next(iter(self.findChildren(QToolButton)))
-        self._margin = self.layout().margin()
+        self._margin = 4
+        self.layout().setMargin(self._margin)
         self._maximum_size = self.maximumSize()
         self._model = model
         self._toolbox = toolbox
@@ -174,9 +175,6 @@ class ProjectItemSpecArray(QToolBar):
         factory = self._toolbox.item_factories[self._item_type]
         self._icon = QIcon(factory.icon())
         self._visible = False
-        self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self._item_type, self._icon)
-        self._button_filling.setParent(self)
-        self._button_filling.setVisible(False)
         self._button_base_item = ProjectItemButton(self._toolbox, self._item_type, self._icon)
         self._button_base_item.double_clicked.connect(self.toggle_visibility)
         self.addWidget(self._button_base_item)
@@ -196,6 +194,9 @@ class ProjectItemSpecArray(QToolBar):
         self._action_new = self.addWidget(self._button_new)
         self._action_new.setVisible(self._visible)
         self._actions = {}
+        self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self._item_type, self._icon)
+        self._button_filling.setParent(self)
+        self._button_filling.setVisible(False)
         self._model.rowsInserted.connect(self._insert_specs)
         self._model.rowsRemoved.connect(self._remove_specs)
         self._model.modelReset.connect(self._reset_specs)
@@ -227,19 +228,17 @@ class ProjectItemSpecArray(QToolBar):
             int or NoneType
         """
         if self.orientation() == Qt.Horizontal:
-            f = lambda ref_geom: (ref_geom.right() + 1, ref_geom.top())
+            get_point = lambda ref_geom: (ref_geom.right() + 1, ref_geom.top())
         else:
-            f = lambda ref_geom: (ref_geom.left(), ref_geom.bottom() + 1)
+            get_point = lambda ref_geom: (ref_geom.left(), ref_geom.bottom() + 1)
         ref_widget = self._button_new
-        ind = None
         for i, act in enumerate(actions):
             ref_geom = ref_widget.geometry()
-            x, y = f(ref_geom)
+            x, y = get_point(ref_geom)
             if not self.actionAt(x, y):
-                ind = i
-                break
+                return i
             ref_widget = self.widgetForAction(act)
-        return ind
+        return None
 
     def _add_filling(self, actions, ind):
         """Adds a button to fill empty space after the last visible action.
@@ -280,13 +279,12 @@ class ProjectItemSpecArray(QToolBar):
         geom = previous.geometry()
         style = self.style()
         extension_extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
-        margin = self.layout().margin()
         if self.orientation() == Qt.Horizontal:
-            toolbar_size = self.width() - extension_extent - 2 * margin + 2
+            toolbar_size = self.width() - extension_extent - 2 * self._margin + 2
             x, y = geom.right() + 1, geom.top()
             w, h = toolbar_size - geom.right(), geom.height()
         else:
-            toolbar_size = self.height() - extension_extent - 2 * margin + 2
+            toolbar_size = self.height() - extension_extent - 2 * self._margin + 2
             x, y = geom.left(), geom.bottom() + 1
             w, h = geom.width(), toolbar_size - geom.bottom()
         return x, y, w, h
@@ -328,6 +326,7 @@ class ProjectItemSpecArray(QToolBar):
         Args:
             orientation (Qt.Orientation)
         """
+        spacing = 4  # additional space till next toolbar icon when collapsed
         if orientation is None:
             orientation = self.orientation()
         style = self.style()
@@ -337,14 +336,14 @@ class ProjectItemSpecArray(QToolBar):
         if orientation == Qt.Horizontal:
             icon = right if not self._visible else left
             width = extent
-            min_width = self._button_visible.frameGeometry().right() + extent / 2
-            min_visible_width = min_width + self._button_new.sizeHint().width() + self._margin - extent / 2
+            min_width = self._button_visible.frameGeometry().right() + self._margin + spacing
+            min_visible_width = min_width + self._button_new.sizeHint().width() - spacing
             if widgets:
                 min_visible_width += extent
             min_height = self._button_new.sizeHint().height()
             min_size = (min_width, min_height)
             min_visible_size = (min_visible_width, min_height)
-            height = max((w.height() for w in widgets), default=min_height)
+            height = max((w.sizeHint().height() for w in widgets), default=min_height)
             self._button_new.setMaximumHeight(height)
             for w in widgets:
                 w.setMaximumHeight(height)
@@ -352,13 +351,13 @@ class ProjectItemSpecArray(QToolBar):
             icon = down if not self._visible else up
             height = extent
             min_width = self._button_new.sizeHint().height()
-            min_height = self._button_visible.frameGeometry().bottom() + extent / 2
-            min_visible_height = min_height + self._button_new.sizeHint().height() + self._margin - extent / 2
+            min_height = self._button_visible.frameGeometry().bottom() + self._margin + spacing
+            min_visible_height = min_height + self._button_new.sizeHint().height() - spacing
             if widgets:
                 min_visible_height += extent
             min_size = (min_width, min_height)
             min_visible_size = (min_width, min_visible_height)
-            width = max((w.width() for w in widgets), default=min_width)
+            width = max((w.sizeHint().width() for w in widgets), default=min_width)
             self._button_new.setMaximumWidth(width)
             for w in widgets:
                 w.setMaximumWidth(width)

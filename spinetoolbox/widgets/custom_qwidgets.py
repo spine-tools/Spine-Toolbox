@@ -303,7 +303,7 @@ class _MenuToolBar(QToolBar):
 
     def _setup_action_button(self, action):
         """Customizes the QToolButton associated with given action:
-            1. Makes sure that the text honores the action's mnemonics.
+            1. Makes sure that the text honors the action's mnemonics.
             2. Installs this as event filter on the button (see ``self.eventFilter()``).
 
         Must be called everytime an action is added to the tool bar.
