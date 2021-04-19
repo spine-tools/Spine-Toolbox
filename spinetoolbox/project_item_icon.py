@@ -38,13 +38,12 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     ITEM_EXTENT = 64
 
-    def __init__(self, toolbox, icon_file, icon_color, background_color):
+    def __init__(self, toolbox, icon_file, icon_color):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             icon_file (str): Path to icon resource
             icon_color (QColor): Icon's color
-            background_color (QColor): Background color
         """
         super().__init__()
         self._toolbox = toolbox
@@ -72,6 +71,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.exclamation_icon = ExclamationIcon(self)
         self.execution_icon = ExecutionIcon(self)
         self.rank_icon = RankIcon(self)
+        h, s, _, a = icon_color.getHsl()
+        background_color = QColor.fromHsl(h, s, 240, a)
         brush = QBrush(background_color)
         self._setup(brush, icon_file, icon_color)
         shadow_effect = QGraphicsDropShadowEffect()
