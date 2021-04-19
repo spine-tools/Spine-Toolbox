@@ -361,7 +361,6 @@ class ProjectItemSpecArray(QToolBar):
             button.setIconSize(self.iconSize())
             button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
             button.setStyleSheet(ss)
-            button.drag_about_to_start.connect(menu.hide)
             action = QWidgetAction(menu)
             action.setDefaultWidget(button)
             menu.addAction(action)
