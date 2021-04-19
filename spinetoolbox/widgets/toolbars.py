@@ -19,7 +19,7 @@ Functions to make and handle QToolBars.
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
 from PySide2.QtGui import QIcon, QPainter
-from ..helpers import make_icon_toolbar_ss
+from ..helpers import make_icon_toolbar_ss, ColoredIcon
 from .project_item_drag import ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
 
 
@@ -67,6 +67,7 @@ class MainToolBar(QToolBar):
         self.execute_project_button = None
         self.execute_selection_button = None
         self.stop_execution_button = None
+        self._buttons = []
         self._spec_arrays = []
         self._drop_source_action = None
         self._drop_target_action = None
@@ -84,33 +85,42 @@ class MainToolBar(QToolBar):
 
     def add_project_item_buttons(self):
         self.addWidget(PaddingLabel("Main"))
+        colored = self._toolbox.qsettings().value("appSettings/colorToolbarIcons", defaultValue="false") == "true"
         icon_ordering = self._toolbox.qsettings().value("appSettings/toolbarIconOrdering", defaultValue="")
         ordered_item_types = icon_ordering.split(self._SEPARATOR)
         for item_type in ordered_item_types:
             factory = self._toolbox.item_factories.get(item_type)
             if factory is None:
                 continue
-            self._add_project_item_button(item_type, factory)
+            self._add_project_item_button(item_type, factory, colored)
         for item_type, factory in self._toolbox.item_factories.items():
             if item_type in ordered_item_types:
                 continue
-            self._add_project_item_button(item_type, factory)
+            self._add_project_item_button(item_type, factory, colored)
         self._add_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
         )
 
-    def _add_project_item_button(self, item_type, factory):
+    def _add_project_item_button(self, item_type, factory, colored):
+        icon_file_type = factory.icon()
+        icon_color = factory.icon_color().darker(120)
+        icon = ColoredIcon(icon_file_type, icon_color, self.iconSize(), colored=colored)
         if not self._toolbox.supports_specification(item_type):
-            icon = QIcon(factory.icon())
             button = ProjectItemButton(self._toolbox, item_type, icon)
             self.addWidget(button)
+            self._buttons.append(button)
         else:
             model = self._toolbox.filtered_spec_factory_models.get(item_type)
-            spec_array = ProjectItemSpecArray(self._toolbox, model, item_type)
+            spec_array = ProjectItemSpecArray(self._toolbox, model, item_type, icon)
             spec_array.setOrientation(self.orientation())
             self._spec_arrays.append(spec_array)
             self.addWidget(spec_array)
             self.orientationChanged.connect(spec_array.setOrientation)
+
+    def set_colored_icons(self, colored):
+        for w in self._buttons + self._spec_arrays:
+            w.set_colored_icons(colored)
+        self.update()
 
     def _add_tool_button(self, icon, tip, slot):
         button = QToolButton()

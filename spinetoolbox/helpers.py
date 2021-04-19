@@ -643,6 +643,47 @@ class CharIconEngine(TransparentIconEngine):
         painter.restore()
 
 
+class ColoredIcon(QIcon):
+    def __init__(self, icon_file_name, icon_color, icon_size, colored=None):
+        self._engine = ColoredIconEngine(icon_file_name, icon_color, icon_size, colored=colored)
+        super().__init__(self._engine)
+
+    def set_colored(self, colored):
+        self._engine.set_colored(colored)
+
+
+class ColoredIconEngine(QIconEngine):
+    def __init__(self, icon_file_name, icon_color, icon_size, colored=None):
+        super().__init__()
+        self._icon = QIcon(icon_file_name)
+        self._icon_color = icon_color
+        self._base_pixmap = self._icon.pixmap(icon_size)
+        self._pixmap = None
+        self._colored = None
+        self.set_colored(colored)
+
+    def set_colored(self, colored):
+        if self._colored == colored:
+            return
+        self._colored = colored
+        if colored:
+            self._pixmap = color_pixmap(self._base_pixmap, self._icon_color)
+        else:
+            self._pixmap = self._base_pixmap
+
+    def pixmap(self, size, mode, state):
+        return self._pixmap.scaled(self._icon.actualSize(size), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+
+def color_pixmap(pixmap, color):
+    img = pixmap.toImage()
+    for y in range(img.height()):
+        for x in range(img.width()):
+            color.setAlpha(img.pixelColor(x, y).alpha())
+            img.setPixelColor(x, y, color)
+    return QPixmap.fromImage(img)
+
+
 def make_icon_id(icon_code, color_code):
     """Takes icon and color codes, and return equivalent integer.
 

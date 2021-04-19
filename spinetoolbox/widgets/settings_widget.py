@@ -258,6 +258,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_tree.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
+        self.ui.checkBox_color_toolbar_icons.clicked.connect(self.set_toolbar_colored_icons)
         self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
         self.ui.pushButton_install_julia.clicked.connect(self._show_install_julia_wizard)
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
@@ -497,6 +498,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             if isinstance(item, Link):
                 item.update_geometry(curved_links=checked)
 
+    @Slot(bool)
+    def set_toolbar_colored_icons(self, checked=False):
+        self._toolbox.main_toolbar.set_colored_icons(checked)
+
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
@@ -509,6 +514,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         custom_open_project_dialog = self._qsettings.value("appSettings/customOpenProjectDialog", defaultValue="true")
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
+        color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
@@ -542,6 +548,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_custom_open_project_dialog.setCheckState(Qt.Checked)
         if smooth_zoom == "true":
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
+        if color_toolbar_icons == "true":
+            self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
@@ -631,6 +639,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/customOpenProjectDialog", custom_open_project_dial)
         smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
+        color_toolbar_icons = "true" if int(self.ui.checkBox_color_toolbar_icons.checkState()) else "false"
+        self._qsettings.setValue("appSettings/colorToolbarIcons", color_toolbar_icons)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
@@ -736,6 +746,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
+        color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
+        self.set_toolbar_colored_icons(color_toolbar_icons == "true")
         self.update_links_geometry(curved_links == "true")
         if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)

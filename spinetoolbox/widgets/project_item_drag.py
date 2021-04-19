@@ -66,10 +66,14 @@ class ProjectItemButtonBase(ProjectItemDragMixin, QToolButton):
         super().__init__(parent=parent)
         self._toolbox = toolbox
         self.item_type = item_type
+        self._icon = icon
         self.setIcon(icon)
         self.setMouseTracking(True)
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
         self.setStyleSheet("QToolButton{padding: 2px}")
+
+    def set_colored_icons(self, colored):
+        self._icon.set_colored(colored)
 
     @Slot()
     def _handle_drag_about_to_start(self):
@@ -155,11 +159,25 @@ class ShadeButton(ShadeMixin, QToolButton):
     pass
 
 
+class _ChoppedIcon(QIcon):
+    def __init__(self, icon, size):
+        self._engine = _ChoppedIconEngine(icon, size)
+        super().__init__(self._engine)
+
+    def update(self):
+        self._engine.update()
+
+
 class _ChoppedIconEngine(QIconEngine):
-    def __init__(self, file_name, size):
+    def __init__(self, icon, size):
         super().__init__()
-        icon = QIcon(file_name)
-        self._pixmap = icon.pixmap(icon.actualSize(size))
+        self._pixmap = None
+        self._icon = icon
+        self._size = size
+        self.update()
+
+    def update(self):
+        self._pixmap = self._icon.pixmap(self._icon.actualSize(self._size))
 
     def pixmap(self, size, mode, state):
         return self._pixmap
@@ -168,12 +186,13 @@ class _ChoppedIconEngine(QIconEngine):
 class ProjectItemSpecArray(QToolBar):
     """An array of ProjectItemSpecButton that can be expanded/collapsed."""
 
-    def __init__(self, toolbox, model, item_type):
+    def __init__(self, toolbox, model, item_type, icon):
         """
         Args:
             toolbox (ToolboxUI)
             model (FilteredSpecificationModel)
             item_type (str)
+            icon (ColoredIcon)
         """
         super().__init__()
         self._extension_button = next(iter(self.findChildren(QToolButton)))
@@ -183,8 +202,7 @@ class ProjectItemSpecArray(QToolBar):
         self._model = model
         self._toolbox = toolbox
         self.item_type = item_type
-        factory = self._toolbox.item_factories[self.item_type]
-        self._icon = QIcon(factory.icon())
+        self._icon = icon
         self._visible = False
         self._button_base_item = ProjectItemButton(self._toolbox, self.item_type, self._icon)
         self._button_base_item.double_clicked.connect(self.toggle_visibility)
@@ -206,9 +224,8 @@ class ProjectItemSpecArray(QToolBar):
         self._action_new = self.addWidget(self._button_new)
         self._action_new.setVisible(self._visible)
         self._actions = {}
-        engine = _ChoppedIconEngine(factory.icon(), self.iconSize())
-        chopped_icon = QIcon(engine)
-        self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self.item_type, chopped_icon)
+        self._chopped_icon = _ChoppedIcon(self._icon, self.iconSize())
+        self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self.item_type, self._chopped_icon)
         self._button_filling.setParent(self)
         self._button_filling.setVisible(False)
         self._model.rowsInserted.connect(self._insert_specs)
@@ -217,6 +234,10 @@ class ProjectItemSpecArray(QToolBar):
         self._button_visible.clicked.connect(self.toggle_visibility)
         self._button_new.clicked.connect(self._show_spec_form)
         self.orientationChanged.connect(self._update_button_geom)
+
+    def set_colored_icons(self, colored):
+        self._icon.set_colored(colored)
+        self._chopped_icon.update()
 
     def set_color(self, color):
         bg = make_icon_background(color)
@@ -325,7 +346,7 @@ class ProjectItemSpecArray(QToolBar):
             button.setIconSize(self.iconSize())
             button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
             button.setStyleSheet(ss)
-            # button.drag_about_to_start.connect(menu.hide)
+            button.drag_about_to_start.connect(menu.hide)
             action = QWidgetAction(menu)
             action.setDefaultWidget(button)
             menu.addAction(action)
