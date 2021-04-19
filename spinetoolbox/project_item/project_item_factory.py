@@ -40,6 +40,16 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
+    def icon_color():
+        """
+        Returns the icon color.
+
+        Returns:
+            QIcon
+        """
+        raise NotImplementedError()
+
+    @staticmethod
     def make_add_item_widget(toolbox, x, y, specification):
         """
         Returns an appropriate Add project item widget.
