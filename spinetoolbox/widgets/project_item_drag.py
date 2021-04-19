@@ -16,6 +16,7 @@ Classes for custom QListView.
 :date:   14.11.2018
 """
 
+import textwrap
 from PySide2.QtCore import Qt, Signal, Slot, QMimeData
 from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
 from PySide2.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction
@@ -108,7 +109,7 @@ class ProjectItemButton(ProjectItemButtonBase):
 
 
 class ProjectItemSpecButton(ProjectItemButtonBase):
-    def __init__(self, toolbox, item_type, icon, spec_name=None, parent=None):
+    def __init__(self, toolbox, item_type, icon, spec_name="", parent=None):
         super().__init__(toolbox, item_type, icon, parent=parent)
         self._spec_name = None
         self._index = None
@@ -118,6 +119,13 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
         self.setFont(font)
         self.setText(self.spec_name)
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+
+    def set_orientation(self, orientation):
+        if orientation == Qt.Horizontal:
+            new_text = self.spec_name
+        else:
+            new_text = textwrap.fill(self.spec_name, width=8)
+        self.setText(new_text)
 
     @property
     def spec_name(self):
@@ -244,7 +252,7 @@ class ProjectItemSpecArray(QToolBar):
     def _update_button_visible_icon_color(self):
         color = self._icon.color()
         if color is not None:
-            self._button_visible.setStyleSheet(f"color: {color.name()}")
+            self._button_visible.setStyleSheet(f"QToolButton{{ color: {color.name()};}}")
         else:
             self._button_visible.setStyleSheet("")
 
@@ -257,20 +265,18 @@ class ProjectItemSpecArray(QToolBar):
         super().paintEvent(ev)
         if not self._visible:
             return
-        actions = [*self._actions.values()]
-        ind = self._get_first_chopped_index(actions)
+        actions, ind = self._get_first_chopped_index()
         self._add_filling(actions, ind)
         self._populate_extension_menu(actions, ind)
 
-    def _get_first_chopped_index(self, actions):
-        """Returns the index of the first chopped action in the given list (chopped = not drawn because of space).
-
-        Args:
-            actions (list(QAction)): actions
+    def _get_first_chopped_index(self):
+        """Returns the index of the first chopped action (chopped = not drawn because of space).
 
         Returns:
+            list(QAction)
             int or NoneType
         """
+        actions = [*self._actions.values()]
         if self.orientation() == Qt.Horizontal:
             get_point = lambda ref_geom: (ref_geom.right() + 1, ref_geom.top())
         else:
@@ -280,9 +286,9 @@ class ProjectItemSpecArray(QToolBar):
             ref_geom = ref_widget.geometry()
             x, y = get_point(ref_geom)
             if not self.actionAt(x, y):
-                return i
+                return actions, i
             ref_widget = self.widgetForAction(act)
-        return None
+        return actions, None
 
     def _add_filling(self, actions, ind):
         """Adds a button to fill empty space after the last visible action.
@@ -373,9 +379,11 @@ class ProjectItemSpecArray(QToolBar):
         spacing = 2  # additional space till next toolbar icon when collapsed
         if orientation is None:
             orientation = self.orientation()
+        widgets = [self.widgetForAction(a) for a in self._actions.values()]
+        for w in widgets:
+            w.set_orientation(orientation)
         style = self.style()
         extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
-        widgets = [self.widgetForAction(a) for a in self._actions.values()]
         up, down, right, left = "\uf102", "\uf103", "\uf101", "\uf100"
         if orientation == Qt.Horizontal:
             icon = right if not self._visible else left
@@ -390,6 +398,7 @@ class ProjectItemSpecArray(QToolBar):
             height = max((w.sizeHint().height() for w in widgets), default=min_height)
             self._button_new.setMaximumHeight(height)
             for w in widgets:
+                w.setMaximumWidth(w.sizeHint().width())
                 w.setMaximumHeight(height)
         else:
             icon = down if not self._visible else up
@@ -405,6 +414,7 @@ class ProjectItemSpecArray(QToolBar):
             self._button_new.setMaximumWidth(width)
             for w in widgets:
                 w.setMaximumWidth(width)
+                w.setMaximumHeight(w.sizeHint().height())
         self._button_visible.setText(icon)
         self._button_visible.setMaximumSize(width, height)
         if not self._visible:
@@ -457,6 +467,7 @@ class ProjectItemSpecArray(QToolBar):
             return
         button = ShadeProjectItemSpecButton(self._toolbox, spec.item_type, self._icon, spec.name)
         button.setIconSize(self.iconSize())
+        button.set_orientation(self.orientation())
         action = self.addWidget(button)
         action.setVisible(self._visible)
         self._actions[row] = action
