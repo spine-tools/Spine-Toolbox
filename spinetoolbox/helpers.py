@@ -651,6 +651,9 @@ class ColoredIcon(QIcon):
     def set_colored(self, colored):
         self._engine.set_colored(colored)
 
+    def color(self):
+        return self._engine.color()
+
 
 class ColoredIconEngine(QIconEngine):
     def __init__(self, icon_file_name, icon_color, icon_size, colored=None):
@@ -661,6 +664,11 @@ class ColoredIconEngine(QIconEngine):
         self._pixmap = None
         self._colored = None
         self.set_colored(colored)
+
+    def color(self):
+        if not self._colored:
+            return None
+        return self._icon_color
 
     def set_colored(self, colored):
         if self._colored == colored:

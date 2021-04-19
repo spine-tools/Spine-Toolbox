@@ -212,6 +212,7 @@ class ProjectItemSpecArray(QToolBar):
         font.setPointSize(8)
         self._button_visible.setFont(font)
         self._button_visible.setToolTip(f"<p>Show/hide {self.item_type} specifications</p>")
+        self._update_button_visible_icon_color()
         self.addWidget(self._button_visible)
         self._button_new = ShadeButton()
         self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))
@@ -238,6 +239,14 @@ class ProjectItemSpecArray(QToolBar):
     def set_colored_icons(self, colored):
         self._icon.set_colored(colored)
         self._chopped_icon.update()
+        self._update_button_visible_icon_color()
+
+    def _update_button_visible_icon_color(self):
+        color = self._icon.color()
+        if color is not None:
+            self._button_visible.setStyleSheet(f"color: {color.name()}")
+        else:
+            self._button_visible.setStyleSheet("")
 
     def set_color(self, color):
         bg = make_icon_background(color)
