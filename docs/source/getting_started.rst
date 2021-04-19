@@ -9,7 +9,7 @@
           :width: 16
 .. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
              :width: 16
-.. |execute| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-solid.svg
+.. |execute| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
              :width: 16
 .. |add_tool_specification| image:: ../../spinetoolbox/ui/resources/wrench_plus.svg
               :width: 16

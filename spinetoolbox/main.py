@@ -43,10 +43,11 @@ if not spine_engine_version_check():
 
 from .load_project_items import upgrade_project_items
 
-_skip_project_items_upgrade = False
 if sys.argv[-1] == "--skip-project-items-upgrade":
     _skip_project_items_upgrade = True
     sys.argv.pop()
+else:
+    _skip_project_items_upgrade = False
 
 if not _skip_project_items_upgrade and upgrade_project_items():
     # Restart, otherwise the newer version is not picked.
