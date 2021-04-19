@@ -249,7 +249,6 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
                 ]
             }
         )
-        values = self._db_map.query(self._db_map.parameter_value_sq).all()
         value_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [2]}, "parameter_value")
         model.receive_parameter_data_added(value_data)
         self.assertEqual(model.rowCount(), 1)

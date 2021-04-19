@@ -18,6 +18,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 from PySide2.QtCore import Qt, Signal, Slot, QLineF, QPointF
 from PySide2.QtSvg import QGraphicsSvgItem
 from PySide2.QtWidgets import (
+    QAction,
     QGraphicsItem,
     QGraphicsTextItem,
     QGraphicsRectItem,
@@ -63,9 +64,8 @@ def make_figure_graphics_item(scene, z=0, static=True):
 class EntityItem(QGraphicsRectItem):
     """Base class for ObjectItem and RelationshipItem."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id=None):
-        """Initializes item
-
+    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id):
+        """
         Args:
             spine_db_editor (SpineDBEditor): 'owner'
             x (float): x-coordinate of central point
@@ -87,9 +87,8 @@ class EntityItem(QGraphicsRectItem):
         self.setPos(x, y)
         self._moved_on_scene = False
         self._bg = None
-        self._bg_brush = Qt.NoBrush
         self._init_bg()
-        self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
+        self._bg_brush = Qt.NoBrush
         self.setZValue(0)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
@@ -164,6 +163,7 @@ class EntityItem(QGraphicsRectItem):
     def _init_bg(self):
         self._bg = QGraphicsRectItem(self.boundingRect(), self)
         self._bg.setPen(Qt.NoPen)
+        self._bg.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
 
     def refresh_icon(self):
         """Refreshes the icon."""
@@ -223,7 +223,7 @@ class EntityItem(QGraphicsRectItem):
 
         Args:
             angle (float): The angle in degrees.
-            center (QPoint): Rotates around this point.
+            center (QPointF): Rotates around this point.
         """
         line = QLineF(center, self.pos())
         line.setAngle(line.angle() + angle)
@@ -298,7 +298,7 @@ class EntityItem(QGraphicsRectItem):
 class RelationshipItem(EntityItem):
     """Represents a relationship in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id=None):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id):
         """Initializes the item.
 
         Args:
@@ -362,7 +362,7 @@ class RelationshipItem(EntityItem):
 class ObjectItem(EntityItem):
     """Represents an object in the Entity graph."""
 
-    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id=None):
+    def __init__(self, spine_db_editor, x, y, extent, db_map_entity_id):
         """Initializes the item.
 
         Args:
@@ -488,19 +488,19 @@ class ObjectItem(EntityItem):
             return rel_cls["relationship_ids"]
         return {id_ for rel_cls in self._relationship_classes.values() for id_ in rel_cls["relationship_ids"]}
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _expand(self, action):
         relationship_ids = self._get_relationship_ids_to_expand_or_collapse(action)
         self._spine_db_editor.added_relationship_ids.update(relationship_ids)
         self._spine_db_editor.build_graph(persistent=True)
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _collapse(self, action):
         relationship_ids = self._get_relationship_ids_to_expand_or_collapse(action)
         self._spine_db_editor.added_relationship_ids.difference_update(relationship_ids)
         self._spine_db_editor.build_graph(persistent=True)
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _start_relationship(self, action):
         self._spine_db_editor.start_relationship(self._relationship_classes[action.text()], self)
 

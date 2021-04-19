@@ -276,11 +276,11 @@ class TestSpineDBEditor(
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of SpineDBEditor classes."""
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
-        ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        ):
             mock_settings = mock.Mock()
-            mock_settings.value.side_effect = lambda *args, **kwards: 0
+            mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self.db_mngr = SpineDBManager(mock_settings, None)
             self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
