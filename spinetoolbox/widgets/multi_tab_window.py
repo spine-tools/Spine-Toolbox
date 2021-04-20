@@ -70,6 +70,24 @@ class MultiTabWindow(QMainWindow):
                 name += "s"
         return name
 
+    @Slot()
+    def add_new_tab(self, *args, **kwargs):
+        """Creates a new tab and adds it at the end of the tab bar.
+        """
+        tab = self._make_new_tab()
+        self._add_connect_tab(tab, "New Tab")
+        self._init_tab(tab, *args, **kwargs)
+
+    def insert_new_tab(self, index, *args, **kwargs):
+        """Creates a new tab and inserts it at the given index.
+
+        Args:
+            index (int)
+        """
+        tab = self._make_new_tab()
+        self._insert_connect_tab(index, tab, "New Tab")
+        self._init_tab(tab, *args, **kwargs)
+
     def _add_connect_tab(self, tab, text):
         self.tab_widget.addTab(tab, text)
         self._connect_tab_signals(tab)

@@ -29,27 +29,23 @@ from ...widgets.settings_widget import SpineDBEditorSettingsWidget
 
 
 class MultiSpineDBEditor(MultiTabWindow):
-    def __init__(self, db_mngr, db_url_codenames):
+    def __init__(self, db_mngr, db_url_codenames=None):
         super().__init__(db_mngr.qsettings, "spineDBEditor")
         self.db_mngr = db_mngr
-        self._db_url_codenames = db_url_codenames
         self.settings_form = SpineDBEditorSettingsWidget(self)
         self.setWindowTitle("Spine DB Editor")
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self._file_open_toolbar = _FileOpenToolBar(self)
         self._file_open_toolbar.hide()
         self.addToolBar(Qt.BottomToolBarArea, self._file_open_toolbar)
+        if db_url_codenames is not None:
+            self.add_new_tab(db_url_codenames)
 
     def _make_other(self):
-        return MultiSpineDBEditor(self.db_mngr, None)
+        return MultiSpineDBEditor(self.db_mngr)
 
     def others(self):
         return [w for w in self.db_mngr.get_all_multi_spine_db_editors() if w is not self]
-
-    def show(self):
-        super().show()
-        if self._db_url_codenames is not None:
-            self.add_new_tab(self._db_url_codenames)
 
     def _connect_tab_signals(self, tab):
         if not super()._connect_tab_signals(tab):
@@ -72,24 +68,6 @@ class MultiSpineDBEditor(MultiTabWindow):
 
     def _make_new_tab(self):
         return SpineDBEditor(self.db_mngr)
-
-    @Slot()
-    def add_new_tab(self, *args, **kwargs):
-        """Creates a new tab and adds it at the end of the tab bar.
-        """
-        tab = self._make_new_tab()
-        self._add_connect_tab(tab, "New Tab")
-        self._init_tab(tab, *args, **kwargs)
-
-    def insert_new_tab(self, index, *args, **kwargs):
-        """Creates a new tab and inserts it at the given index.
-
-        Args:
-            index (int)
-        """
-        tab = self._make_new_tab()
-        self._insert_connect_tab(index, tab, "New Tab")
-        self._init_tab(tab, *args, **kwargs)
 
     def _init_tab(self, tab, db_url_codenames=None):  # pylint: disable=arguments-differ
         tab.load_db_urls(db_url_codenames, create=True)
