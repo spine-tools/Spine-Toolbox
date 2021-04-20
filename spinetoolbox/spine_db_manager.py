@@ -1768,7 +1768,7 @@ class SpineDBManager(SpineDBManagerBase):
             multi_db_editor.add_new_tab(db_url_codenames)
         else:
             multi_db_editor, db_editor = existing
-            multi_db_editor.set_current_db_editor(db_editor)
+            multi_db_editor.set_current_tab(db_editor)
         if multi_db_editor.windowState() & Qt.WindowMinimized:
             multi_db_editor.setWindowState(multi_db_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
             multi_db_editor.activateWindow()

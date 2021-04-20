@@ -870,12 +870,11 @@ class SpineDBEditorBase(QMainWindow):
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
 
-    def __init__(self, db_mngr, db_url_codenames=None, create=False):
+    def __init__(self, db_mngr):
         """Initializes everything.
 
         Args:
             db_mngr (SpineDBManager): The manager to use
-            db_url_codenames (dict): mapping url to codename.
         """
         super().__init__(db_mngr)
         self._original_size = None
@@ -885,7 +884,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.add_main_menu()
         self.connect_signals()
         self.apply_stacked_style()
-        self.load_db_urls(db_url_codenames, create=create)
 
     def connect_signals(self):
         super().connect_signals()

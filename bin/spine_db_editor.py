@@ -36,7 +36,7 @@ def main(argv):
     locale.setlocale(locale.LC_NUMERIC, 'C')
     settings = QSettings("SpineProject", "Spine Toolbox")
     db_mngr = SpineDBManager(settings, None)
-    editor = MultiSpineDBEditor(db_mngr, {url: None for url in urls}, create=True)
+    editor = MultiSpineDBEditor(db_mngr, {url: None for url in urls})
     editor.show()
     return_code = app.exec_()
     return return_code
