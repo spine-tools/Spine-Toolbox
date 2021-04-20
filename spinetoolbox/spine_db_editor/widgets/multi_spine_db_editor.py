@@ -28,30 +28,6 @@ from ...config import ONLINE_DOCUMENTATION_URL
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
 
 
-class _FileOpenToolBar(QToolBar):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setObjectName("multi_spine_db_editor_file_open_toolbar")
-        empty = QWidget()
-        empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        self.addWidget(empty)
-        self.addAction(QIcon(CharIconEngine("\uf00d")), "Close", self.hide)
-        self.setMovable(False)
-        self.setIconSize(QSize(20, 20))
-
-    def preppend_widget(self, widget):
-        first_action = next(iter(self.actions()), None)
-        if first_action:
-            self.insertWidget(first_action, widget)
-        else:
-            self.addWidget(widget)
-
-    def remove_widget(self, widget):
-        action = next(iter(a for a in self.actions() if self.widgetForAction(a) is widget), None)
-        if action:
-            self.removeAction(action)
-
-
 class MultiSpineDBEditor(MultiTabWindow):
     def __init__(self, db_mngr, db_url_codenames):
         super().__init__(db_mngr.qsettings, "spineDBEditor")
@@ -198,3 +174,27 @@ class MultiSpineDBEditor(MultiTabWindow):
                 event.ignore()
                 return
         super().closeEvent(event)
+
+
+class _FileOpenToolBar(QToolBar):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("multi_spine_db_editor_file_open_toolbar")
+        empty = QWidget()
+        empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.addWidget(empty)
+        self.addAction(QIcon(CharIconEngine("\uf00d")), "Close", self.hide)
+        self.setMovable(False)
+        self.setIconSize(QSize(20, 20))
+
+    def preppend_widget(self, widget):
+        first_action = next(iter(self.actions()), None)
+        if first_action:
+            self.insertWidget(first_action, widget)
+        else:
+            self.addWidget(widget)
+
+    def remove_widget(self, widget):
+        action = next(iter(a for a in self.actions() if self.widgetForAction(a) is widget), None)
+        if action:
+            self.removeAction(action)

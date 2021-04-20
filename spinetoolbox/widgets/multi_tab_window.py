@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains the MultiSpineDBEditor class.
+Contains the MultiTabWindow and TabBarPlus classes.
 
 :author: M. Marin (KTH)
 :date:   12.12.2020
