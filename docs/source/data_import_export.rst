@@ -100,12 +100,12 @@ that are not part of the item's specification.
 .. image:: img/exporter_properties.png
    :align: center
 
-Specification used by the active Exporter item can be selected from the *Specification* combo box.
+Specification used by the active Exporter item can be selected from the *Specification* combobox.
 The |wrench| button opens *Exporter specification editor*
 where it is possible to edit the specification.
 
 Databases available for export from connected project items such as Data stores are listed in
-separate boxes below the Specification combo box. An output filename is required for each database.
+separate boxes below the Specification combobox. An output filename is required for each database.
 
 Checking the *Time stamp output directories* box adds a time stamp to the item's output directories
 preventing output files from being overwritten. This may be useful for debugging purposes.
@@ -138,7 +138,7 @@ The only requirement for a specification is a name.
 This can be given on the *Name* field field on the top bar.
 The *Description* field allows for an additional explanatory text.
 
-The current output format can be changed by the *Format* combo box on *Export options* dock.
+The current output format can be changed by the *Format* combobox on *Export options* dock.
 
 Specification's mappings are listed in the *Mappings* dock.
 The *Add* button adds a new mapping while the *Remove* button removes selected mappings.
@@ -156,6 +156,27 @@ Currently selected mapping is edited using the controls in *Mapping options* and
 The *Mapping options* dock contains controls that apply to the mapping as a whole,
 e.g. what data the output tables contain. *Mapping specification*, on the other hand,
 contains a table which defines the structure of the mapping's output tables.
+
+What database items the mapping outputs is chosen using the *Item type* combobox in *Mapping options* dock.
+For instance, the *Object classes* option outputs object classes, objects
+and, optionally, object parameters and related items
+while the *Relationship classes* option outputs relationship classes and relationships.
+Checking the *Always export header* checkbox outputs a table that has fixed headers
+even if the table is otherwise empty.
+If *Item type* is Relationship class,
+the *Number of dimensions* spinbox can be used to specify the maximum number
+of relationships' dimensions that the mapping is able to handle.
+Parameters can be outputted by choosing their value type using the *Parameter type* combobox.
+The *Value* choice adds rows to *Mapping specification* for parameter values associated with
+individual entities while *Default value* allows outputting parameters' default values.
+The maximum number of value dimensions in case of indexed values
+(time series, maps, time patterns, arrays)
+the mapping can handle is controlled by the *Parameter dimensions* spinbox.
+The *Fixed table name* checkbox inserts a special row to *Mapping specification*
+which can be used to give a fixed table name to mapping's output table.
+In case the mapping is pivoted and *Mapping specification* contains items that are *hidden*,
+it is possible that a number of data elements end up in the same output table cell.
+The *Group function* combobox offers some basic functions to aggregate such data into the cells.
 
 The contents of the table on the *Mapping specification* dock depends on choices on *Mapping options*,
 e.g. the item type, parameter type or if the mapping has a fixed table name.
@@ -191,8 +212,7 @@ even if there is no other data in a table.
 
 The *Mapping specification* dock's *Filter* column provides refined control on which database items the mapping maps.
 The column uses `regular expressions <https://en.wikipedia.org/wiki/Regular_expression>`_
-to filter what gets outputted.
-For example, to make a mapping apply to a single object class only, write the class name on the *Filter* column.
+to filter what gets outputted. See _`Basic regular expression for filtering`.
 
 A preview of what will be written to the output is available in the preview dock widgets.
 A database connection is needed to generate the preview.
@@ -200,6 +220,29 @@ The *Preview controls* dock provides widgets to choose an existing database or t
 Once a database is available and the preview is enabled the mappings and the tables they would output
 are listed on the *Preview tables* dock.
 Selecting a table from the list shows the table's contents on the *Preview contents* dock.
+
+Basic regular expressions for filtering
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The *Filter* field in *Mapping specification* accepts
+`regular expressions <https://en.wikipedia.org/wiki/Regular_expression>`_
+to filter what data gets outputted by that mapping item.
+Below are examples on how to create some basic filters.
+
+*Single item*
+
+Writing the item's name to the field filters out all other items.
+For example, to output the object class called 'node' only, write :literal:`node` to the *Filter* field.
+
+*OR operator*
+
+The vertical bar :literal:`|` serves as the OR operator.
+:literal:`node|unit` as a filter for object classes would output classes named 'node' and 'unit'.
+
+*Excluding an item*
+
+While perhaps not the most suitable task for regular expressions it is still possible to 'negate' a filter.
+`^(?!node).` would exclude all items names of which start with 'node'.
 
 Csv and multiple tables
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -364,7 +407,7 @@ accessible from the *Indexed Parameters...* button.
 The above figure shows the indexing settings when an existing GAMS set is used to replace the original
 time stamps of a time series in a parameter called 'size'. The choice between using an existing set or
 creating a new one can be changed by the *Use existing domain* and *Create new index domain* radio buttons.
-When using an existing set it is selected by the combo box.
+When using an existing set it is selected by the combobox.
 In the above figure, *ALL TS* set is used for indexing.
 
 In case of existing set it is possible that not all the set's contents are used for indexing.
