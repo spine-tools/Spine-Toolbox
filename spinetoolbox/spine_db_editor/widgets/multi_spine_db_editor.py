@@ -144,14 +144,6 @@ class MultiSpineDBEditor(MultiTabWindow):
         if not open_url(doc_url):
             self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
 
-    def closeEvent(self, event):
-        for k in range(self.tab_widget.count()):
-            db_editor = self.tab_widget.widget(k)
-            if not db_editor.tear_down():
-                event.ignore()
-                return
-        super().closeEvent(event)
-
 
 class _FileOpenToolBar(QToolBar):
     def __init__(self, parent=None):

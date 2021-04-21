@@ -115,8 +115,11 @@ class SpecificationEditorWindowBase(QMainWindow):
         """Restores dockWidgets to some default state. Called in the constructor, before restoring the ui from settings.
         Reimplement in subclasses if needed."""
 
-    def _make_new_specification(self):
+    def _make_new_specification(self, spec_name):
         """Returns a ProjectItemSpecification from current form settings.
+
+        Args:
+            spec_name (str): Name of the spec
 
         Returns:
             ProjectItemSpecification
@@ -176,15 +179,10 @@ class SpecificationEditorWindowBase(QMainWindow):
         return True
 
     def closeEvent(self, event):
-        """Handles close window.
-
-        Args:
-            event (QEvent): Closing event if 'X' is clicked.
-        """
         if not self.tear_down():
             event.ignore()
             return
-        event.accept()
+        super().closeEvent(event)
 
 
 class _SpecNameDescriptionToolbar(QToolBar):

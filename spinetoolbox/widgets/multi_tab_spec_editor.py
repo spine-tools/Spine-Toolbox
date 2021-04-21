@@ -43,11 +43,3 @@ class MultiTabSpecEditor(MultiTabWindow):
 
     def show_plus_button_context_menu(self, global_pos):
         pass
-
-    def closeEvent(self, event):
-        for k in range(self.tab_widget.count()):
-            editor = self.tab_widget.widget(k)
-            if not editor.tear_down():
-                event.ignore()
-                return
-        super().closeEvent(event)
