@@ -44,15 +44,15 @@ class MultiTabSpecEditor(MultiTabWindow):
 
     def show_plus_button_context_menu(self, global_pos):
         model = self._toolbox.filtered_spec_factory_models[self.item_type]
-        this_specs = {tab.specification for tab in self.all_tabs()}
+        specs = set(model.specifications()) - {tab.specification for tab in self.all_tabs()}
+        if not specs:
+            return
         other_index_by_spec = {}
         for other in self.others():
             for index, tab in enumerate(other.all_tabs()):
                 other_index_by_spec[tab.specification] = (other, index)
         menu = QMenu(self)
-        for spec in model.specifications():
-            if spec in this_specs:
-                continue
+        for spec in specs:
             other_index = other_index_by_spec.get(spec)
             if other_index is None:
                 # Spec is not open on another multi tab editor, so open it here
@@ -62,8 +62,5 @@ class MultiTabSpecEditor(MultiTabWindow):
                 other, index = other_index
                 slot = lambda other=other, index=index: other.move_tab(index, self)
             menu.addAction(spec.name, slot)
-        if not menu.actions():
-            menu.deleteLater()
-            return
         menu.popup(global_pos)
         menu.aboutToHide.connect(menu.deleteLater)
