@@ -67,7 +67,7 @@ class ChangeSpecPropertyCommand(QUndoCommand):
 
 class SpecificationEditorWindowBase(QMainWindow):
     def __init__(self, toolbox, specification=None, item=None):
-        """A widget to view/edit/create ProjectItemSpecifications.
+        """Base class for spec editors.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
@@ -106,9 +106,19 @@ class SpecificationEditorWindowBase(QMainWindow):
 
     @property
     def settings_group(self):
+        """Returns the settings group for this spec type.
+
+        Returns
+            str
+        """
         raise NotImplementedError()
 
     def _make_ui(self):
+        """Returns the ui object from Qt designer.
+
+        Returns
+            object
+        """
         raise NotImplementedError()
 
     def _restore_dock_widgets(self):

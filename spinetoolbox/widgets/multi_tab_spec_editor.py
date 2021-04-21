@@ -23,7 +23,7 @@ from .multi_tab_window import MultiTabWindow
 
 class MultiTabSpecEditor(MultiTabWindow):
     def __init__(self, toolbox, item_type):
-        super().__init__(toolbox.qsettings(), f"{item_type}SpecEditor")
+        super().__init__(toolbox.qsettings(), f"{item_type}SpecEditor", parent=toolbox)
         self._toolbox = toolbox
         self.item_type = item_type
         self.setWindowTitle(f"{item_type} specification editor".capitalize())

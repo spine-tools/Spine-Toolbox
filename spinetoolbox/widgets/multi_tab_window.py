@@ -25,11 +25,11 @@ from ..helpers import ensure_window_is_on_screen, CharIconEngine
 class MultiTabWindow(QMainWindow):
     _tab_slots = {}
 
-    def __init__(self, qsettings, settings_group):
-        super().__init__(flags=Qt.Window)
+    def __init__(self, qsettings, settings_group, parent=None):
+        super().__init__(parent=parent, flags=Qt.Window)
         self.qsettings = qsettings
         self.settings_group = settings_group
-        self.tab_widget = QTabWidget()
+        self.tab_widget = QTabWidget(self)
         self.tab_bar = TabBarPlus(self)
         self.tab_widget.setTabBar(self.tab_bar)
         self.setCentralWidget(self.tab_widget)
