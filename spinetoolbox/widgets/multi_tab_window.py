@@ -67,6 +67,10 @@ class MultiTabWindow(QMainWindow):
                 name += "s"
         return name
 
+    def all_tabs(self):
+        for k in range(self.tab_widget.count()):
+            yield self.tab_widget.widget(k)
+
     @Slot()
     def add_new_tab(self, *args, **kwargs):
         """Creates a new tab and adds it at the end of the tab bar.

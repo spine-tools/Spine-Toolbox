@@ -18,6 +18,7 @@ Contains the MultiTabSpecEditor class.
 
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
+from PySide2.QtWidgets import QMenu
 from .multi_tab_window import MultiTabWindow
 
 
@@ -42,4 +43,27 @@ class MultiTabSpecEditor(MultiTabWindow):
         return tab
 
     def show_plus_button_context_menu(self, global_pos):
-        pass
+        model = self._toolbox.filtered_spec_factory_models[self.item_type]
+        this_specs = {tab.specification for tab in self.all_tabs()}
+        other_index_by_spec = {}
+        for other in self.others():
+            for index, tab in enumerate(other.all_tabs()):
+                other_index_by_spec[tab.specification] = (other, index)
+        menu = QMenu(self)
+        for spec in model.specifications():
+            if spec in this_specs:
+                continue
+            other_index = other_index_by_spec.get(spec)
+            if other_index is None:
+                # Spec is not open on another multi tab editor, so open it here
+                slot = lambda spec=spec: self.add_new_tab(spec)
+            else:
+                # Spec is open on another multi tab editor, so bring it here
+                other, index = other_index
+                slot = lambda other=other, index=index: other.move_tab(index, self)
+            menu.addAction(spec.name, slot)
+        if not menu.actions():
+            menu.deleteLater()
+            return
+        menu.popup(global_pos)
+        menu.aboutToHide.connect(menu.deleteLater)

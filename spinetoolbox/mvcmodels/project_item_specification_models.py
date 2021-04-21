@@ -183,3 +183,9 @@ class FilteredSpecificationModel(QSortFilterProxyModel):
     def get_mime_data_text(self, index):
         row = self.mapToSource(index).row()
         return ",".join([self.item_type, self.sourceModel().specification(row).name])
+
+    def specifications(self):
+        """Yields all specs."""
+        for row in range(self.rowCount()):
+            source_row = self.mapToSource(self.index(row, 0)).row()
+            yield self.sourceModel().specification(source_row)
