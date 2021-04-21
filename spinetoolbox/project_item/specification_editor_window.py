@@ -149,7 +149,11 @@ class SpecificationEditorWindowBase(QMainWindow):
 
     def _save(self):
         """Saves spec."""
-        new_spec = self._make_new_specification()
+        name = self._spec_toolbar.name()
+        if not name:
+            self._show_error("Please enter a name for the specification.")
+            return False
+        new_spec = self._make_new_specification(name)
         if new_spec is None:
             return False
         update_existing = new_spec.name == self._original_spec_name
@@ -177,7 +181,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
-        if not self._tear_down():
+        if not self.tear_down():
             event.ignore()
             return
         event.accept()
