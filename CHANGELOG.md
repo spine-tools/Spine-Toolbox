@@ -25,6 +25,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Support for Python 3.8
 - Automated kernel creation, if the user selects to run tools in console without having created a kernel.
 - Option to pack CSV resource files into one datapackage.json file for advertising, available from Link properties.
+- Option to color project item icons in the toolbar, available frm File->Settings->General.
+- Reorganize project item icons in the toolbar with drag and drop.
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
