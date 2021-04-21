@@ -209,6 +209,14 @@ One or more items on the table can be set as pivoted.
 They then act as a pivot header for the data item which is the last non-hidden item on the list.
 Once checked as pivoted, an item's position column defines a pivot header row instead of output column.
 
+By default a row ends up in the output table only when all mapping items yield some data.
+For example, when exporting object classes and objects, only classes that have objects get written to output.
+However, sometimes it is useful to export 'empty' object classes as well.
+For this purpose a mapping can be set as **nullable** in the *Nullable* column.
+Continuing the example, checking the *Nullable* checkbox for *Objects* would produce an output table with
+all object classes including ones without objects.
+The position where objects would normally be outputted are left empty for those classes.
+
 Besides the *column header* position it is possible give fixed column headers to items
 using the *Header* column in *Mapping specification* dock.
 Note that checking the *Always export header* option in the *Mapping options* dock outputs the fixed headers
