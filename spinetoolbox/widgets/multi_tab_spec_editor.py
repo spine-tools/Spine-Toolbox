@@ -26,7 +26,7 @@ class MultiTabSpecEditor(MultiTabWindow):
         super().__init__(toolbox.qsettings(), f"{item_type}SpecEditor")
         self._toolbox = toolbox
         self.item_type = item_type
-        self.setWindowTitle(f"{item_type} specification editor window".capitalize())
+        self.setWindowTitle(f"{item_type} specification editor".capitalize())
         icon = QIcon(self._toolbox.item_factories[item_type].icon())
         self.setWindowIcon(icon)
 
@@ -43,3 +43,11 @@ class MultiTabSpecEditor(MultiTabWindow):
 
     def show_plus_button_context_menu(self, global_pos):
         pass
+
+    def closeEvent(self, event):
+        for k in range(self.tab_widget.count()):
+            editor = self.tab_widget.widget(k)
+            if not editor.tear_down():
+                event.ignore()
+                return
+        super().closeEvent(event)

@@ -290,8 +290,8 @@ class MultiTabWindow(QMainWindow):
         self.qsettings.endGroup()
 
     def closeEvent(self, event):
-        self.save_window_state()
         super().closeEvent(event)
+        self.save_window_state()
 
 
 class TabBarPlus(QTabBar):
