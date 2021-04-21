@@ -19,12 +19,13 @@ Contains SpineEngineWorker.
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from .spine_engine_manager import make_engine_manager
+from spine_engine.spine_engine import ItemExecutionFinishState
 
 
 @Slot(list)
 def _handle_dag_execution_started(project_items):
     for item in project_items:
-        item.get_icon().execution_icon.mark_execution_wating()
+        item.get_icon().execution_icon.mark_execution_waiting()
 
 
 @Slot(object, object)
@@ -36,15 +37,16 @@ def _handle_node_execution_started(item, direction):
             icon.animation_signaller.animation_started.emit()
 
 
-@Slot(object, object, object, bool, bool)
-def _handle_node_execution_finished(item, direction, state, success, skipped):
+@Slot(object, object, object, object)
+def _handle_node_execution_finished(item, direction, state, item_state):
     icon = item.get_icon()
     if direction == "FORWARD":
-        icon.execution_icon.mark_execution_finished(success, skipped)
+        icon.execution_icon.mark_execution_finished(item_state)
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_stopped.emit()
         if state == "RUNNING":
-            icon.run_execution_leave_animation(skipped)
+            excluded = True if item_state == ItemExecutionFinishState.EXCLUDED else False
+            icon.run_execution_leave_animation(excluded)
 
 
 @Slot(object, str, str)
@@ -62,7 +64,7 @@ class SpineEngineWorker(QObject):
     finished = Signal()
     _dag_execution_started = Signal(list)
     _node_execution_started = Signal(object, object)
-    _node_execution_finished = Signal(object, object, object, bool, bool)
+    _node_execution_finished = Signal(object, object, object, object)
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
 
@@ -243,16 +245,16 @@ class SpineEngineWorker(QObject):
     def _handle_node_execution_finished(self, data):
         self._do_handle_node_execution_finished(**data)
 
-    def _do_handle_node_execution_finished(self, item_name, direction, state, success, skipped):
+    def _do_handle_node_execution_finished(self, item_name, direction, state, item_state):
         item = self._project_items[item_name]
-        if success and not skipped:
+        if item_state == ItemExecutionFinishState.SUCCESS:
             self.successful_executions.append((item, direction, state))
         self._executing_items.remove(item)
-        self._node_execution_finished.emit(item, direction, state, success, skipped)
+        self._node_execution_finished.emit(item, direction, state, item_state)
 
     def clean_up(self):
         for item in self._executing_items:
-            self._node_execution_finished.emit(item, None, None, False, False)
+            self._node_execution_finished.emit(item, None, None, None)
         self._thread.quit()
         self._thread.wait()
         self._thread.deleteLater()

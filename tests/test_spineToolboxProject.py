@@ -22,6 +22,7 @@ import unittest
 from unittest import mock
 from PySide2.QtCore import QVariantAnimation, QEventLoop
 from PySide2.QtWidgets import QApplication
+from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.connection import Connection
 from spine_engine.utils.helpers import shorten
@@ -452,7 +453,7 @@ class _MockExecutableItem(ExecutableItemBase):
 
     def execute(self, _forward_resources, _backward_resources):
         self.execute_called = True
-        return True
+        return ItemExecutionFinishState.SUCCESS
 
     @classmethod
     def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):

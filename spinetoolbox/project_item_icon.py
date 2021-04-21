@@ -31,6 +31,7 @@ from PySide2.QtWidgets import (
 from PySide2.QtGui import QColor, QPen, QBrush, QTextCursor, QPalette, QTextBlockFormat, QFont
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.project_commands import MoveIconCommand
+from spine_engine.spine_engine import ItemExecutionFinishState
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -189,16 +190,16 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         return [l for conn in self.connectors.values() for l in conn.incoming_links()]
 
-    def run_execution_leave_animation(self, skipped):
+    def run_execution_leave_animation(self, excluded):
         """
         Starts the animation associated with execution leaving the icon.
 
         Args:
-            skipped (bool): True if project item was not actually executed.
+            excluded (bool): True if project item was not actually executed.
         """
         animation_group = QParallelAnimationGroup(self._toolbox)
         for link in self.outgoing_links():
-            animation_group.addAnimation(link.make_execution_animation(skipped))
+            animation_group.addAnimation(link.make_execution_animation(excluded))
         animation_group.start()
 
     def hoverEnterEvent(self, event):
@@ -427,9 +428,10 @@ class ConnectorButton(QGraphicsRectItem):
 class ExecutionIcon(QGraphicsEllipseItem):
     """An icon to show information about the item's execution."""
 
-    _CHECK = "\uf00c"
-    _CROSS = "\uf00d"
-    _CLOCK = "\uf017"
+    _CHECK = "\uf00c"  # Success
+    _CROSS = "\uf00d"  # Fail
+    _CLOCK = "\uf017"  # Waiting
+    _SKIP = "\uf054"  # Excluded
 
     def __init__(self, parent):
         """
@@ -468,7 +470,7 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
         self.show()
 
-    def mark_execution_wating(self):
+    def mark_execution_waiting(self):
         self._execution_state = "waiting for dependencies"
         self._repaint(self._CLOCK, QColor("orange"))
 
@@ -476,11 +478,16 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._execution_state = "in progress"
         self._repaint(self._CHECK, QColor("orange"))
 
-    def mark_execution_finished(self, success, skipped):
-        if success:
-            self._execution_state = "skipped" if skipped else "completed"
-            colorname = "orange" if skipped else "green"
-            self._repaint(self._CHECK, QColor(colorname))
+    def mark_execution_finished(self, item_finish_state):
+        if item_finish_state == ItemExecutionFinishState.SUCCESS:
+            self._execution_state = "completed"
+            self._repaint(self._CHECK, QColor("green"))
+        elif item_finish_state == ItemExecutionFinishState.EXCLUDED:
+            self._execution_state = "excluded"
+            self._repaint(self._CHECK, QColor("orange"))
+        elif item_finish_state == ItemExecutionFinishState.SKIPPED:
+            self._execution_state = "skipped"
+            self._repaint(self._SKIP, QColor("chocolate"))
         else:
             self._execution_state = "failed"
             self._repaint(self._CROSS, QColor("red"))

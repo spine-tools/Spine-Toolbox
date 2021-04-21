@@ -337,13 +337,13 @@ class Link(LinkBase):
         center = guide_path.pointAtPercent(0.5)
         self._link_icon.setPos(center - 0.5 * QPointF(self._link_icon_extent, self._link_icon_extent))
 
-    def make_execution_animation(self, skipped):
+    def make_execution_animation(self, excluded):
         """Returns an animation to play when execution 'passes' through this link.
 
         Returns:
             QVariantAnimation
         """
-        colorname = "lightGray" if skipped else "red"
+        colorname = "lightGray" if excluded else "red"
         self._exec_color = QColor(colorname)
         qsettings = self._toolbox.qsettings()
         duration = int(qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))

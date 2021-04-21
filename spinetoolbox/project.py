@@ -626,13 +626,13 @@ class SpineToolboxProject(MetaObject):
 
     def _handle_engine_worker_finished(self, worker):
         finished_outcomes = {
-            "USER_STOPPED": "stopped by the user",
-            "FAILED": "failed",
-            "COMPLETED": "completed successfully",
+            "USER_STOPPED": [self._logger.msg_warning, "stopped by the user"],
+            "FAILED": [self._logger.msg_error, "failed"],
+            "COMPLETED": [self._logger.msg_success, "completed successfully"],
         }
         outcome = finished_outcomes.get(worker.engine_final_state())
         if outcome is not None:
-            self._logger.msg.emit("<b>DAG {0} {1}</b>".format(worker.dag_identifier, outcome))
+            outcome[0].emit("<b>DAG {0} {1}</b>".format(worker.dag_identifier, outcome[1]))
         if any(worker.engine_final_state() not in finished_outcomes for worker in self._engine_workers):
             return
         # Only after all workers have finished, notify changes and handle successful executions.
