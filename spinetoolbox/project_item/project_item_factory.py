@@ -118,7 +118,7 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def show_specification_widget(toolbox, specification=None, item=None, **kwargs):
+    def make_specification_editor(toolbox, specification=None, item=None, **kwargs):
         """
         Creates the item's specification widget.
 
@@ -144,7 +144,3 @@ class ProjectItemFactory:
             toolbox (ToolboxUI): Toolbox main window
             specification (ProjectItemSpecification): a specification to check
         """
-
-    @staticmethod
-    def tear_down():
-        """Tears down the factory. Called by toolbox when closing."""

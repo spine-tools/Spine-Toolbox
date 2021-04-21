@@ -37,6 +37,7 @@ from PySide2.QtWidgets import (
     QAction,
     QUndoStack,
     QAbstractButton,
+    QWidget,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import serialize_path, deserialize_path
@@ -47,6 +48,7 @@ from .load_project_items import load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
+from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
 from .widgets.settings_widget import SettingsWidget
@@ -1635,7 +1637,41 @@ class ToolboxUI(QMainWindow):
             return
         if not self.supports_specification(item_type):
             return
-        self.item_factories[item_type].show_specification_widget(self, specification, item, **kwargs)
+        msg = f"Opening {item_type} specification editor"
+        if specification:
+            msg += f" for {specification.name}"
+        self.msg.emit(msg)
+        multi_tab_editor = next(self.get_all_multi_tab_spec_editors(item_type), None)
+        if multi_tab_editor is None:
+            multi_tab_editor = MultiTabSpecEditor(self, item_type)
+            multi_tab_editor.add_new_tab(specification, item, **kwargs)
+            multi_tab_editor.show()
+            return
+        existing = self._get_existing_spec_editor(item_type, specification, item)
+        if existing is None:
+            multi_tab_editor.add_new_tab(specification, item, **kwargs)
+        else:
+            multi_tab_editor, editor = existing
+            multi_tab_editor.set_current_tab(editor)
+        if multi_tab_editor.windowState() & Qt.WindowMinimized:
+            multi_tab_editor.setWindowState(multi_tab_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+            multi_tab_editor.activateWindow()
+        else:
+            multi_tab_editor.raise_()
+
+    def get_all_multi_tab_spec_editors(self, item_type):
+        for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
+            widget = QWidget.find(window.winId())
+            if isinstance(widget, MultiTabSpecEditor) and widget.item_type == item_type:
+                yield widget
+
+    def _get_existing_spec_editor(self, item_type, specification, item):
+        for multi_tab_editor in self.get_all_multi_tab_spec_editors(item_type):
+            for k in range(multi_tab_editor.tab_widget.count()):
+                editor = multi_tab_editor.tab_widget.widget(k)
+                if editor.specification is not None and editor.specification == specification and editor.item == item:
+                    return multi_tab_editor, editor
+        return None
 
     @Slot()
     def show_settings(self):
@@ -1749,10 +1785,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionDuplicate.setEnabled(True)
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
 
-    def tear_down_items_and_factories(self):
-        """Calls the tear_down method on all project items, so they can clean up their mess if needed."""
-        for factory in self.item_factories.values():
-            factory.tear_down()
+    def tear_down_project(self):
+        """Calls the tear_down method on the project."""
         if self._project is not None:
             self._project.tear_down()
 
@@ -1943,7 +1977,10 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.tear_down_consoles()
-        self.tear_down_items_and_factories()
+        self.tear_down_project()
+        for item_type in self.item_factories:
+            for editor in self.get_all_multi_tab_spec_editors(item_type):
+                editor.close()
         event.accept()
 
     def _serialize_selected_items(self):

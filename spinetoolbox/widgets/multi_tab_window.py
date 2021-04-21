@@ -48,10 +48,7 @@ class MultiTabWindow(QMainWindow):
     def others(self):
         raise NotImplementedError()
 
-    def _make_new_tab(self):
-        raise NotImplementedError()
-
-    def _init_tab(self, tab, *args, **kwargs):
+    def _make_new_tab(self, *args, **kwargs):
         raise NotImplementedError()
 
     def show_plus_button_context_menu(self, global_pos):
@@ -74,9 +71,8 @@ class MultiTabWindow(QMainWindow):
     def add_new_tab(self, *args, **kwargs):
         """Creates a new tab and adds it at the end of the tab bar.
         """
-        tab = self._make_new_tab()
+        tab = self._make_new_tab(*args, **kwargs)
         self._add_connect_tab(tab, "New Tab")
-        self._init_tab(tab, *args, **kwargs)
 
     def insert_new_tab(self, index, *args, **kwargs):
         """Creates a new tab and inserts it at the given index.
@@ -84,17 +80,20 @@ class MultiTabWindow(QMainWindow):
         Args:
             index (int)
         """
-        tab = self._make_new_tab()
+        tab = self._make_new_tab(*args, **kwargs)
         self._insert_connect_tab(index, tab, "New Tab")
-        self._init_tab(tab, *args, **kwargs)
 
     def _add_connect_tab(self, tab, text):
         self.tab_widget.addTab(tab, text)
+        if not tab.windowTitle():
+            tab.setWindowTitle(text)
         self._connect_tab_signals(tab)
         self.tab_widget.setCurrentIndex(self.tab_widget.count() - 1)
 
     def _insert_connect_tab(self, index, tab, text):
         self.tab_widget.insertTab(index, tab, text)
+        if not tab.windowTitle():
+            tab.setWindowTitle(text)
         self._connect_tab_signals(tab)
         self.tab_widget.setCurrentIndex(index)
 
@@ -109,34 +108,26 @@ class MultiTabWindow(QMainWindow):
     def _connect_tab_signals(self, tab):
         if tab in self._tab_slots:
             return False
-        s1 = lambda title, tab=tab: self._handle_tab_window_title_changed(tab, title)
-        s2 = lambda dirty, tab=tab: self._handle_tab_dirty_changed(tab, dirty)
-        self._tab_slots[tab] = (s1, s2)
-        tab.windowTitleChanged.connect(s1)
-        tab.dirty_changed.connect(s2)
+        slot = lambda title, tab=tab: self._handle_tab_window_title_changed(tab, title)
+        self._tab_slots[tab] = slot
+        tab.windowTitleChanged.connect(slot)
+        self._handle_tab_window_title_changed(tab, tab.windowTitle())
         return True
 
     def _disconnect_tab_signals(self, index):
         tab = self.tab_widget.widget(index)
-        slots = self._tab_slots.pop(tab, None)
-        if slots is None:
+        slot = self._tab_slots.pop(tab, None)
+        if slot is None:
             return False
-        s1, s2 = slots
-        tab.windowTitleChanged.disconnect(s1)
-        tab.dirty_changed.disconnect(s2)
+        tab.windowTitleChanged.disconnect(slot)
         return True
 
     def _handle_tab_window_title_changed(self, tab, title):
-        for k in range(self.tab_widget.count()):
-            if self.tab_widget.widget(k) == tab:
-                self.tab_widget.setTabText(k, title)
-                break
-
-    def _handle_tab_dirty_changed(self, tab, dirty):
+        dirty = tab.isWindowModified()
         for k in range(self.tab_widget.count()):
             if self.tab_widget.widget(k) == tab:
                 mark = "*" if dirty else ""
-                self.tab_widget.setTabText(k, tab.windowTitle() + mark)
+                self.tab_widget.setTabText(k, title + mark)
                 break
 
     def _take_tab(self, index):

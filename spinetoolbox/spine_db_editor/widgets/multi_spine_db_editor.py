@@ -66,11 +66,10 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab.ui.actionSettings.triggered.disconnect(self.settings_form.show)
         return True
 
-    def _make_new_tab(self):
-        return SpineDBEditor(self.db_mngr)
-
-    def _init_tab(self, tab, db_url_codenames=None):  # pylint: disable=arguments-differ
+    def _make_new_tab(self, db_url_codenames=None):  # pylint: disable=arguments-differ
+        tab = SpineDBEditor(self.db_mngr)
         tab.load_db_urls(db_url_codenames, create=True)
+        return tab
 
     def show_plus_button_context_menu(self, global_pos):
         toolbox = self.db_mngr.parent()

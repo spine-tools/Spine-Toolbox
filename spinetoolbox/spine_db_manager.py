@@ -1719,8 +1719,7 @@ class SpineDBManager(SpineDBManagerBase):
     def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
         self._worker.duplicate_object(db_maps, object_data, orig_name, dup_name)
 
-    @staticmethod
-    def get_all_multi_spine_db_editors():
+    def get_all_multi_spine_db_editors(self):
         """Yields all instances of MultiSpineDBEditor currently open.
 
         Returns:

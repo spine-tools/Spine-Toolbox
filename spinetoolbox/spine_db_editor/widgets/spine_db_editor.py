@@ -54,7 +54,6 @@ class SpineDBEditorBase(QMainWindow):
     msg = Signal(str)
     link_msg = Signal(str, "QVariant")
     msg_error = Signal(str)
-    dirty_changed = Signal(bool)
     file_exported = Signal(str)
     sqlite_file_exported = Signal(str)
 
@@ -82,6 +81,7 @@ class SpineDBEditorBase(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
@@ -362,7 +362,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRollback.setEnabled(dirty)
         self.ui.actionView_history.setEnabled(dirty)
         self.setWindowModified(dirty)
-        self.dirty_changed.emit(dirty)
+        self.windowTitleChanged.emit(self.windowTitle())
 
     @Slot(bool)
     def show_history_dialog(self, checked=False):
