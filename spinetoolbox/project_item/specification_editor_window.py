@@ -77,7 +77,6 @@ class SpecificationEditorWindowBase(QMainWindow):
         super().__init__(parent=toolbox)  # Inherit stylesheet from ToolboxUI
         # Class attributes
         self._toolbox = toolbox
-        self._project = self._toolbox.project()
         self._original_spec_name = None if specification is None else specification.name
         self.specification = specification
         self.item = item
