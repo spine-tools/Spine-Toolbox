@@ -200,6 +200,10 @@ setting the object class to *column header* will write the name of the class as 
    Currently, buddies are fixed and defined only for a small set database items.
    Therefore, *column header* will not always produce sensible results.
 
+Changing the column and pivot header row positions leaves sometimes gaps in the output table.
+If such gaps are not desirable the *Compact* button reorders the positions by removing the gaps.
+This may be useful when the output format requires such gapless tables.
+
 The checkboxes in *Pivoted* column on the *Mapping specification* dock toggle the mapping into pivoted mode.
 One or more items on the table can be set as pivoted.
 They then act as a pivot header for the data item which is the last non-hidden item on the list.
