@@ -17,6 +17,7 @@ Contains ToolboxUI class.
 """
 
 import os
+import sys
 import locale
 import logging
 import json
@@ -113,6 +114,7 @@ class ToolboxUI(QMainWindow):
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)
+        self.set_error_mode()
         self._qsettings = QSettings("SpineProject", "Spine Toolbox", self)
         locale.setlocale(locale.LC_NUMERIC, 'C')
         # Setup the user interface from Qt Designer files
@@ -256,6 +258,16 @@ class ToolboxUI(QMainWindow):
         # Models
         self.project_item_model.rowsInserted.connect(self._update_execute_enabled)
         self.project_item_model.rowsRemoved.connect(self._update_execute_enabled)
+
+    def set_error_mode(self):
+        """Sets Windows error mode to show all error dialog boxes from subprocesses.
+
+        See https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-seterrormode
+        for documentation.
+        """
+        if sys.platform == "win32":
+            import ctypes
+            ctypes.windll.kernel32.SetErrorMode(0);
 
     def _update_execute_enabled(self):
         first_index = next(self.project_item_model.leaf_indexes(), None)
