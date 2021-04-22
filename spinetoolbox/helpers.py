@@ -101,7 +101,7 @@ def busy_effect(func):
     """ Decorator to change the mouse cursor to 'busy' while a function is processed.
 
     Args:
-        func: Decorated function.
+        func (Callable): Decorated function.
     """
 
     def new_function(*args, **kwargs):
@@ -124,9 +124,6 @@ def create_dir(base_path, folder="", verbosity=False):
         folder (str): (Optional) Folder name. Usually short name of item.
         verbosity (bool): True prints a message that tells if the directory already existed or if it was created.
 
-    Returns:
-        True if directory already exists or if it was created successfully.
-
     Raises:
         OSError if operation failed.
     """
@@ -137,7 +134,6 @@ def create_dir(base_path, folder="", verbosity=False):
         os.makedirs(directory, exist_ok=True)
         if verbosity:
             logging.debug("Directory created: %s", directory)
-    return True
 
 
 def rename_dir(old_dir, new_dir, toolbox, box_title):
@@ -241,14 +237,13 @@ def pyside2_version_check():
     qt_version is the Qt version used to compile PySide2 as string. E.g. "5.14.2"
     qt_version_info is a tuple with each version component of Qt used to compile PySide2. E.g. (5, 14, 2)
     """
-    # print("Your QT version info is:{0} version string:{1}".format(qt_version_info, qt_version))
     if not (qt_version_info[0] == 5 and qt_version_info[1] == 14) and not (
         qt_version_info[0] == 5 and qt_version_info[1] == 15
     ):
         print(
-            """Sorry for the inconvenience but,
+            f"""Sorry for the inconvenience but,
 
-            Spine Toolbox does not support PySide2 version {0}.
+            Spine Toolbox does not support PySide2 version {qt_version}.
             At the moment, supported PySide2 versions are 5.14 & 5.15.
 
             To upgrade PySide2 to latest supported version, run
@@ -256,9 +251,7 @@ def pyside2_version_check():
                 pip install -r requirements.txt --upgrade
 
             And start the application again.
-            """.format(
-                qt_version
-            )
+            """
         )
         return False
     return True
@@ -309,14 +302,14 @@ def get_datetime(show, date=True):
     Returns:
         str: datetime string or empty string if show is False
     """
-    if show:
-        t = datetime.datetime.now()
-        time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
-        if not date:
-            return "[{}] ".format(time_str)
-        date_str = "{}-{:02d}-{:02d}".format(t.day, t.month, t.year)
-        return "[{} {}] ".format(date_str, time_str)
-    return ""
+    if not show:
+        return ""
+    t = datetime.datetime.now()
+    time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
+    if not date:
+        return "[{}] ".format(time_str)
+    date_str = "{}-{:02d}-{:02d}".format(t.day, t.month, t.year)
+    return "[{} {}] ".format(date_str, time_str)
 
 
 @busy_effect
@@ -332,9 +325,9 @@ def copy_files(src_dir, dst_dir, includes=None, excludes=None):
     Returns:
         count (int): Number of files copied
     """
-    if not includes:
+    if includes is None:
         includes = ['*']
-    if not excludes:
+    if excludes is None:
         excludes = []
     src_files = []
     for pattern in includes:
@@ -374,63 +367,12 @@ def erase_dir(path, verbosity=False):
 
 
 @busy_effect
-def copy_dir(widget, src_dir, dst_dir):
-    """Makes a copy of a directory. All files and folders are copied.
-    Destination directory must not exist. Does not overwrite files.
-
-    Args:
-        widget (QWidget): Parent widget for QMessageBoxes
-        src_dir (str): Absolute path to directory that will be copied
-        dst_dir (str): Absolute path to new directory
-
-    Returns:
-        bool: True if operation was successful, False otherwise
-    """
-    try:
-        shutil.copytree(src_dir, dst_dir)
-    except FileExistsError:
-        msg = "Directory<br/><b>{0}</b><br/>already exists".format(dst_dir)
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Copying directory failed", msg)
-        return False
-    except PermissionError as pe_e:
-        logging.error(pe_e)
-        msg = (
-            "Access to directory <br/><b>{0}</b><br/>denied."
-            "<br/><br/>Possible reasons:"
-            "<br/>1. Permission error"
-            "<br/>2. Windows Explorer is open in the directory"
-            "<br/><br/>Check these and try again.".format(dst_dir)
-        )
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Permission Error", msg)
-        return False
-    except OSError as os_e:
-        logging.error(os_e)
-        msg = (
-            "Copying directory "
-            "<br/><b>{0}</b> "
-            "<br/>to "
-            "<br/><b>{1}</b> "
-            "<br/>failed."
-            "<br/><br/>Possibly reasons:"
-            "<br/>1. Windows Explorer is open in the source or destination directory."
-            "<br/>2. A file in these directories is open in another program. "
-            "<br/><br/>Check these and try again.".format(src_dir, dst_dir)
-        )
-        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "OS Error", msg)
-        return False
-    return True
-
-
-@busy_effect
-def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
+def recursive_overwrite(logger, src, dst, ignore=None, silent=True):
     """Copies everything from source directory to destination directory recursively.
     Overwrites existing files.
 
     Args:
-        widget (QWidget): Enables e.g. printing to Event Log
+        logger (LoggerInterface): Enables e.g. printing to Event Log
         src (str): Source directory
         dst (str): Destination directory
         ignore (Callable, optional): Ignore function
@@ -439,7 +381,7 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
     if os.path.isdir(src):
         if not os.path.isdir(dst):
             if not silent:
-                widget.msg.emit("Creating directory <b>{0}</b>".format(dst))
+                logger.msg.emit("Creating directory <b>{0}</b>".format(dst))
             os.makedirs(dst)
         files = os.listdir(src)
         for file_name in list(files):
@@ -454,12 +396,12 @@ def recursive_overwrite(widget, src, dst, ignore=None, silent=True):
             ignored = set()
         for f in files:
             if f not in ignored:
-                recursive_overwrite(widget, os.path.join(src, f), os.path.join(dst, f), ignore, silent)
+                recursive_overwrite(logger, os.path.join(src, f), os.path.join(dst, f), ignore, silent)
     else:
         if not silent:
             _, src_filename = os.path.split(src)
             dst_dir, _ = os.path.split(dst)
-            widget.msg.emit("Copying <b>{0}</b> -> <b>{1}</b>".format(src_filename, dst_dir))
+            logger.msg.emit("Copying <b>{0}</b> -> <b>{1}</b>".format(src_filename, dst_dir))
         shutil.copyfile(src, dst)
 
 
@@ -506,34 +448,6 @@ def rows_to_row_count_tuples(rows):
     break_points = [0] + break_points + [len(sorted_rows)]
     ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
     return [(sorted_rows[start], stop - start) for start, stop in ranges]
-
-
-def inverted(input_):
-    """Inverts a dictionary that maps keys to a list of values.
-    The output maps values to a list of keys that include the value in the input.
-
-    Args:
-        input_ (dict): dictionary to invert
-
-    Returns:
-        dict: inverted dictionary
-    """
-    output = dict()
-    for key, value_list in input_.items():
-        for value in value_list:
-            output.setdefault(value, list()).append(key)
-    return output
-
-
-class Singleton(type):
-    """A singleton class from SO."""
-
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
 
 
 class IconListManager:
@@ -709,7 +623,7 @@ def interpret_icon_id(display_icon):
     """Takes a display icon id and returns an equivalent tuple of icon and color code.
 
     Args:
-        display_icon (int): icon id
+        display_icon (int, optional): icon id
 
     Returns:
         tuple: icon's code, color code
@@ -822,8 +736,13 @@ def get_open_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, f
 
 
 def try_number_from_string(text):
-    """
-    Returns an integer or a float from the given text if possible.
+    """Tries to convert a string to integer or float.
+
+    Args:
+        text (str): string to convert
+
+    Returns:
+        int or float or str: converted value or text if conversion failed
     """
     try:
         return int(text)
@@ -876,7 +795,7 @@ def select_julia_executable(parent, line_edit):
     Used in SettingsWidget and KernelEditor.
 
     Args:
-        parent (QWidget): Parent widget for the file dialog and message boxes
+        parent (QWidget, optional): Parent widget for the file dialog and message boxes
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -905,7 +824,6 @@ def select_julia_executable(parent, line_edit):
         QMessageBox.warning(parent, "Invalid Julia Executable", msg)
         return
     line_edit.setText(answer[0])
-    return
 
 
 def select_julia_project(parent, line_edit):
@@ -913,7 +831,7 @@ def select_julia_project(parent, line_edit):
     Used in SettingsWidget and KernelEditor.
 
     Args:
-        parent (QWidget): Parent of QFileDialog
+        parent (QWidget, optional): Parent of QFileDialog
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", os.path.abspath("C:\\"))
@@ -966,7 +884,7 @@ def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
         parent (QWidget): Parent widget for the message boxes
         file_path (str): Path to check
         msgbox_title (str): Title for message boxes
-        extra_check (str): Optional, string that must match the file name of the given file_path (without extension)
+        extra_check (str, optional): String that must match the file name of the given file_path (without extension)
 
     Returns:
         bool: True if given path is an empty string or if path is valid, False otherwise

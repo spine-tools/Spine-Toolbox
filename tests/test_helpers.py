@@ -15,16 +15,71 @@ Unit tests for the helpers module.
 :authors: A. Soininen (VTT)
 :date:   23.3.2020
 """
-from sys import platform
+import re
 from pathlib import Path
-from tempfile import gettempdir, NamedTemporaryFile, TemporaryDirectory
+from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import MagicMock
-from spine_engine.utils.serialization import deserialize_path, serialize_path, serialize_url
-from spinetoolbox.helpers import rename_dir, first_non_null, interpret_icon_id, make_icon_id
+from unittest.mock import MagicMock, patch
+from PySide2.QtGui import QTextDocument
+from PySide2.QtWidgets import QApplication, QLineEdit
+from spinetoolbox.helpers import (
+    add_message_to_document,
+    copy_files,
+    create_dir,
+    dir_is_valid,
+    erase_dir,
+    format_log_message,
+    file_is_valid,
+    first_non_null,
+    format_string_list,
+    get_datetime,
+    interpret_icon_id,
+    make_icon_id,
+    recursive_overwrite,
+    rename_dir,
+    rows_to_row_count_tuples,
+    select_julia_executable,
+    select_julia_project,
+    select_python_interpreter,
+    try_number_from_string,
+    tuple_itemgetter,
+    unique_name,
+)
 
 
 class TestHelpers(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def test_format_log_message(self):
+        stamp_pattern = re.compile("\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]")
+        message = "test msg"
+
+        def test_correctness(message_type, expected_color):
+            formatted = format_log_message(message_type, message)
+            stamp_start = formatted.find("[")
+            stamp_end = formatted.find("]")
+            without_stamp = formatted[:stamp_start] + formatted[stamp_end + 1 :]
+            stamp = formatted[stamp_start : stamp_end + 1]
+            expected = f"<span style='color:{expected_color};white-space: pre-wrap;'> {message}</span>"
+            self.assertEqual(without_stamp, expected)
+            self.assertIsNotNone(stamp_pattern.match(stamp))
+
+        test_correctness("msg", "white")
+        test_correctness("msg_success", "#00ff00")
+        test_correctness("msg_error", "#ff3333")
+        test_correctness("msg_warning", "yellow")
+
+    def test_add_message_to_document(self):
+        document = QTextDocument()
+        cursor = add_message_to_document(document, "test message")
+        self.assertTrue(cursor.atEnd())
+        self.assertEqual(document.blockCount(), 2)
+        self.assertEqual(document.toPlainText(), "\ntest message")
+        document.deleteLater()
+
     def test_make_icon_id(self):
         icon_id = make_icon_id(3, 7)
         self.assertEqual(icon_id, 3 + (7 << 16))
@@ -40,6 +95,14 @@ class TestHelpers(unittest.TestCase):
     def test_first_non_null(self):
         self.assertEqual(first_non_null([23]), 23)
         self.assertEqual(first_non_null([None, 23]), 23)
+
+    def test_create_dir(self):
+        with TemporaryDirectory() as temp_dir:
+            base_dir = Path(temp_dir, "base")
+            create_dir(str(base_dir))
+            self.assertTrue(base_dir.exists())
+            create_dir(str(base_dir), "sub-folder")
+            self.assertTrue((base_dir / "sub-folder").exists())
 
     def test_rename_dir(self):
         with TemporaryDirectory() as temp_dir:
@@ -68,112 +131,152 @@ class TestHelpers(unittest.TestCase):
             self.assertTrue(old_dir.exists())
             self.assertTrue(new_dir.exists())
 
-    def test_serialize_path_makes_relative_paths_from_paths_in_project_dir(self):
-        with TemporaryDirectory() as path:
-            project_dir = gettempdir()
-            serialized = serialize_path(path, project_dir)
-            expected_path = str(Path(path).relative_to(project_dir).as_posix())
-            self.assertEqual(serialized, {"type": "path", "relative": True, "path": expected_path})
+    def test_get_datetime(self):
+        self.assertEqual(get_datetime(False), "")
+        self.assertIsNotNone(re.match("\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]", get_datetime(True)))
+        self.assertIsNotNone(re.match("\[\d\d:\d\d:\d\d]", get_datetime(True, False)))
 
-    def test_serialize_path_makes_absolute_paths_from_paths_not_in_project_dir(self):
-        with TemporaryDirectory() as project_dir:
-            with TemporaryDirectory() as path:
-                serialized = serialize_path(path, project_dir)
-                expected_path = str(Path(path).as_posix())
-                self.assertEqual(serialized, {"type": "path", "relative": False, "path": expected_path})
+    def test_copy_files(self):
+        with TemporaryDirectory() as temp_dir:
+            source_dir = Path(temp_dir, "source")
+            source_dir.mkdir()
+            source_file = Path(source_dir, "file")
+            source_file.touch()
+            destination_dir = Path(temp_dir, "destination")
+            destination_dir.mkdir()
+            destination_file = Path(destination_dir, source_file.name)
+            copy_count = copy_files(str(source_dir), str(destination_dir))
+            self.assertEqual(copy_count, 1)
+            self.assertTrue(destination_file.exists())
 
-    def test_serialize_url_makes_file_path_in_project_dir_relative(self):
-        with NamedTemporaryFile(mode="r") as temp_file:
-            url = "sqlite:///" + str(Path(temp_file.name).as_posix())
-            project_dir = gettempdir()
-            expected_path = str(Path(temp_file.name).relative_to(project_dir).as_posix())
-            serialized = serialize_url(url, project_dir)
-            self.assertEqual(
-                serialized, {"type": "file_url", "relative": True, "path": expected_path, "scheme": "sqlite"}
-            )
+    def test_copy_files_with_includes(self):
+        with TemporaryDirectory() as temp_dir:
+            source_dir = Path(temp_dir, "source")
+            source_dir.mkdir()
+            included = Path(source_dir, "file.1")
+            included.touch()
+            excluded = Path(source_dir, "file.2")
+            excluded.touch()
+            destination_dir = Path(temp_dir, "destination")
+            destination_dir.mkdir()
+            destination_file = Path(destination_dir, included.name)
+            copy_count = copy_files(str(source_dir), str(destination_dir), includes=["*.1"])
+            self.assertEqual(copy_count, 1)
+            self.assertTrue(destination_file.exists())
 
-    def test_serialize_url_keeps_file_path_not_in_project_dir_absolute(self):
-        with TemporaryDirectory() as project_dir:
-            with NamedTemporaryFile(mode="r") as temp_file:
-                expected_path = str(Path(temp_file.name).as_posix())
-                if platform == "win32":
-                    url = "sqlite:///" + expected_path
-                else:
-                    url = "sqlite://" + expected_path
-                serialized = serialize_url(url, project_dir)
-                self.assertEqual(
-                    serialized, {"type": "file_url", "relative": False, "path": expected_path, "scheme": "sqlite"}
-                )
+    def test_copy_files_with_excludes(self):
+        with TemporaryDirectory() as temp_dir:
+            source_dir = Path(temp_dir, "source")
+            source_dir.mkdir()
+            included = Path(source_dir, "file.1")
+            included.touch()
+            excluded = Path(source_dir, "file.2")
+            excluded.touch()
+            destination_dir = Path(temp_dir, "destination")
+            destination_dir.mkdir()
+            destination_file = Path(destination_dir, included.name)
+            copy_count = copy_files(str(source_dir), str(destination_dir), excludes=["*.2"])
+            self.assertEqual(copy_count, 1)
+            self.assertTrue(destination_file.exists())
 
-    def test_serialize_url_with_non_file_urls(self):
-        project_dir = gettempdir()
-        url = "http://www.spine-model.org/"
-        serialized = serialize_url(url, project_dir)
-        self.assertEqual(serialized, {"type": "url", "relative": False, "path": url})
+    def test_erase_dir(self):
+        with TemporaryDirectory() as temp_dir:
+            directory = Path(temp_dir, "dir")
+            file = Path(directory, "file")
+            directory.mkdir()
+            file.touch()
+            self.assertTrue(erase_dir(str(directory)))
+            self.assertFalse(directory.exists())
 
-    def test_serialize_relative_url_with_query(self):
-        with NamedTemporaryFile(mode="r") as temp_file:
-            url = "sqlite:///" + str(Path(temp_file.name).as_posix()) + "?filter=kol"
-            project_dir = gettempdir()
-            expected_path = str(Path(temp_file.name).relative_to(project_dir).as_posix())
-            serialized = serialize_url(url, project_dir)
-            self.assertEqual(
-                serialized,
-                {
-                    "type": "file_url",
-                    "relative": True,
-                    "path": expected_path,
-                    "scheme": "sqlite",
-                    "query": "filter=kol",
-                },
-            )
+    def test_recursive_overwrite(self):
+        with TemporaryDirectory() as temp_dir:
+            source_dir = Path(temp_dir, "source")
+            source_dir.mkdir()
+            sub_dir = Path("subdir")
+            (source_dir / sub_dir).mkdir()
+            file_name = Path("file")
+            source_file_path = source_dir / sub_dir / file_name
+            with open(source_file_path, "w") as out:
+                out.write("source")
+            destination_dir = Path(temp_dir, "destination")
+            destination_dir.mkdir()
+            (destination_dir / sub_dir).mkdir()
+            overwritten_file = destination_dir / sub_dir / file_name
+            overwritten_file.touch()
+            logger = MagicMock()
+            recursive_overwrite(logger, str(source_dir), str(destination_dir))
+            with open(overwritten_file) as input:
+                self.assertEqual(input.readline(), "source")
 
-    def test_deserialize_path_with_relative_path(self):
-        project_dir = gettempdir()
-        serialized = {"type": "path", "relative": True, "path": "subdir/file.fat"}
-        deserialized = deserialize_path(serialized, project_dir)
-        self.assertEqual(deserialized, str(Path(project_dir, "subdir", "file.fat")))
+    def test_tuple_itemgetter(self):
+        def first(t):
+            return t[0]
 
-    def test_deserialize_path_with_absolute_path(self):
-        with TemporaryDirectory() as project_dir:
-            serialized = {"type": "path", "relative": False, "path": str(Path(gettempdir(), "file.fat").as_posix())}
-            deserialized = deserialize_path(serialized, project_dir)
-            self.assertEqual(deserialized, str(Path(gettempdir(), "file.fat")))
+        item_getter = tuple_itemgetter(first, 1)
+        self.assertEqual(item_getter([3]), (3,))
+        item_getter = tuple_itemgetter(first, 2)
+        self.assertEqual(item_getter([3]), 3)
 
-    def test_deserialize_path_with_relative_file_url(self):
-        project_dir = gettempdir()
-        serialized = {"type": "file_url", "relative": True, "path": "subdir/database.sqlite", "scheme": "sqlite"}
-        deserialized = deserialize_path(serialized, project_dir)
-        expected = "sqlite:///" + str(Path(project_dir, "subdir", "database.sqlite"))
-        self.assertEqual(deserialized, expected)
+    def test_format_string_list(self):
+        self.assertEqual(format_string_list(["a", "b", "c"]), "<ul><li>a</li><li>b</li><li>c</li></ul>")
 
-    def test_deserialize_path_with_absolute_file_url(self):
-        with TemporaryDirectory() as project_dir:
-            path = str(Path(gettempdir(), "database.sqlite").as_posix())
-            serialized = {"type": "file_url", "relative": False, "path": path, "scheme": "sqlite"}
-            deserialized = deserialize_path(serialized, project_dir)
-            expected = "sqlite:///" + str(Path(gettempdir(), "database.sqlite"))
-            self.assertEqual(deserialized, expected)
+    def test_row_to_row_count_tuples(self):
+        self.assertEqual(rows_to_row_count_tuples([]), [])
+        self.assertEqual(rows_to_row_count_tuples([1, 2, 3, 5, 6, 9]), [(1, 3), (5, 2), (9, 1)])
 
-    def test_deserialize_path_with_non_file_url(self):
-        project_dir = gettempdir()
-        serialized = {"type": "url", "path": "http://www.spine-model.org/"}
-        deserialized = deserialize_path(serialized, project_dir)
-        self.assertEqual(deserialized, "http://www.spine-model.org/")
+    def test_try_number_from_string(self):
+        self.assertEqual(try_number_from_string("text"), "text")
+        self.assertEqual(try_number_from_string("23"), 23)
+        self.assertEqual(try_number_from_string("2.3"), 2.3)
 
-    def test_deserialize_relative_url_with_query(self):
-        project_dir = gettempdir()
-        serialized = {
-            "type": "file_url",
-            "relative": True,
-            "path": "subdir/database.sqlite",
-            "scheme": "sqlite",
-            "query": "filter=kax",
-        }
-        deserialized = deserialize_path(serialized, project_dir)
-        expected = "sqlite:///" + str(Path(project_dir, "subdir", "database.sqlite")) + "?filter=kax"
-        self.assertEqual(deserialized, expected)
+    def test_select_julia_executable(self):
+        with TemporaryDirectory() as temp_dir:
+            executable = Path(temp_dir, "julia.exe")
+            executable.touch()
+            with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
+                line_edit = QLineEdit()
+                select_julia_executable(None, line_edit)
+                self.assertEqual(line_edit.text(), str(executable))
+                line_edit.deleteLater()
+
+    def test_select_julia_project(self):
+        with TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir, "project")
+            project_dir.mkdir()
+            with patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory", lambda *args: str(project_dir)):
+                line_edit = QLineEdit()
+                select_julia_project(None, line_edit)
+                self.assertEqual(line_edit.text(), str(project_dir))
+                line_edit.deleteLater()
+
+    def test_select_python_interpreter(self):
+        with TemporaryDirectory() as temp_dir:
+            executable = Path(temp_dir, "python.exe")
+            executable.touch()
+            with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
+                line_edit = QLineEdit()
+                select_python_interpreter(None, line_edit)
+                self.assertEqual(line_edit.text(), str(executable))
+                line_edit.deleteLater()
+
+    def test_file_is_valid(self):
+        with TemporaryDirectory() as temp_dir:
+            file_path = Path(temp_dir, "file")
+            file_path.touch()
+            with patch("spinetoolbox.helpers.QMessageBox") as message_box:
+                self.assertTrue(file_is_valid(None, str(file_path), "Message title"))
+
+    def test_dir_is_valid(self):
+        with TemporaryDirectory() as temp_dir:
+            with patch("spinetoolbox.helpers.QMessageBox") as message_box:
+                self.assertTrue(dir_is_valid(None, temp_dir, "Message title"))
+
+    def test_unique_name(self):
+        self.assertEqual(unique_name("Prefix", []), "Prefix 1")
+        self.assertEqual(unique_name("Prefix", ["aaa"]), "Prefix 1")
+        self.assertEqual(unique_name("Prefix", ["Prefix 1"]), "Prefix 2")
+        self.assertEqual(unique_name("Prefix", ["Prefix 2"]), "Prefix 1")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
