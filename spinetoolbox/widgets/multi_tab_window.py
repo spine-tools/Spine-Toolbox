@@ -54,6 +54,10 @@ class MultiTabWindow(QMainWindow):
     def show_plus_button_context_menu(self, global_pos):
         raise NotImplementedError()
 
+    @property
+    def new_tab_title(self):
+        return "New tab"
+
     def connect_signals(self):
         self.tab_widget.tabCloseRequested.connect(self._close_tab)
         self.tab_bar.plus_clicked.connect(self.add_new_tab)
@@ -76,7 +80,7 @@ class MultiTabWindow(QMainWindow):
         """Creates a new tab and adds it at the end of the tab bar.
         """
         tab = self._make_new_tab(*args, **kwargs)
-        self._add_connect_tab(tab, "New Tab")
+        self._add_connect_tab(tab, self.new_tab_title)
 
     def insert_new_tab(self, index, *args, **kwargs):
         """Creates a new tab and inserts it at the given index.
@@ -85,12 +89,10 @@ class MultiTabWindow(QMainWindow):
             index (int)
         """
         tab = self._make_new_tab(*args, **kwargs)
-        self._insert_connect_tab(index, tab, "New Tab")
+        self._insert_connect_tab(index, tab, self.new_tab_title)
 
     def _add_connect_tab(self, tab, text):
         self.tab_widget.addTab(tab, text)
-        if not tab.windowTitle():
-            tab.setWindowTitle(text)
         self._connect_tab_signals(tab)
         self.tab_widget.setCurrentIndex(self.tab_widget.count() - 1)
 
@@ -129,6 +131,8 @@ class MultiTabWindow(QMainWindow):
     def _handle_tab_window_title_changed(self, tab, title):
         dirty = tab.isWindowModified()
         for k in range(self.tab_widget.count()):
+            if not title:
+                title = self.new_tab_title
             if self.tab_widget.widget(k) == tab:
                 mark = "*" if dirty else ""
                 self.tab_widget.setTabText(k, title + mark)

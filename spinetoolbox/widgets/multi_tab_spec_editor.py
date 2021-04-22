@@ -42,6 +42,10 @@ class MultiTabSpecEditor(MultiTabWindow):
         tab.setAttribute(Qt.WA_DeleteOnClose, True)
         return tab
 
+    @property
+    def new_tab_title(self):
+        return "<unnamed specification>"
+
     def show_plus_button_context_menu(self, global_pos):
         model = self._toolbox.filtered_spec_factory_models[self.item_type]
         specs = set(model.specifications()) - {tab.specification for tab in self.all_tabs()}

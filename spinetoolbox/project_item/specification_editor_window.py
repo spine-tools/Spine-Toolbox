@@ -157,6 +157,7 @@ class SpecificationEditorWindowBase(QMainWindow):
     def _update_window_modified(self, clean):
         self.setWindowModified(not clean)
         self._spec_toolbar.save_action.setEnabled(not clean)
+        self.setWindowTitle(self._spec_toolbar.name())
         self.windowTitleChanged.emit(self.windowTitle())
 
     def _save(self):
