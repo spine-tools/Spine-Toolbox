@@ -1103,6 +1103,7 @@ class MiniPythonKernelEditor(MiniKernelEditorBase):
         prefix = os.path.basename(python_exe)
         existing = find_python_kernels().keys()
         self._kernel_name = unique_name(prefix, existing)
+        self._kernel_name = self._kernel_name.replace(" ", "_")
         self.connect_signals()
 
     def _python_kernel_name(self):
@@ -1138,6 +1139,7 @@ class MiniJuliaKernelEditor(MiniKernelEditorBase):
         prefix = os.path.basename(julia_exe)
         existing = find_julia_kernels().keys()
         self._kernel_name = unique_name(prefix, existing)
+        self._kernel_name = self._kernel_name.replace(" ", "_")
         self.connect_signals()
 
     def _julia_kernel_name(self):
