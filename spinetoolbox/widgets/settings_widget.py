@@ -520,11 +520,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
-        use_embedded_julia = int(self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2"))
+        use_embedded_julia = int(self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="0"))
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
         julia_project_path = self._qsettings.value("appSettings/juliaProjectPath", defaultValue="")
         julia_kernel = self._qsettings.value("appSettings/juliaKernel", defaultValue="")
-        use_embedded_python = int(self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="2"))
+        use_embedded_python = int(self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="0"))
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         python_kernel = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
@@ -622,7 +622,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         we should use strings.
         """
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
-        # checkBox check states are casted from integers to string because of Linux
+        # checkBox check states are cast from integers to string for consistency
         if not super().save_settings():
             return False
         open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
