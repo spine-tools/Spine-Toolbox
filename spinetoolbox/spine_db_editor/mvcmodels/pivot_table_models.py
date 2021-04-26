@@ -711,17 +711,13 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        return header_ids[-1], [id_ for _, id_ in header_ids[:-3]]
+        return self._db_map_object_ids(header_ids)
 
-    def object_names(self, index):
-        """
-        Returns object names for given index. Used by PivotTableView.
-
-        Returns:
-            list
-        """
-        db_map, objects_ids = self.db_map_object_ids(index)
-        return [self.db_mngr.get_item(db_map, "object", id_)["name"] for id_ in objects_ids]
+    def _db_map_object_ids(self, header_ids):
+        object_indexes = [
+            k for k, h in enumerate(self.top_left_headers.values()) if isinstance(h, TopLeftObjectHeaderItem)
+        ]
+        return header_ids[-1], [header_ids[k][1] for k in object_indexes]
 
     def _all_header_names(self, index):
         """Returns the object, parameter, alternative, and db names corresponding to the given data index.
@@ -737,7 +733,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        objects_ids = [id_ for _, id_ in header_ids[:-3]]
+        _, objects_ids = self._db_map_object_ids(header_ids)
         _, parameter_id = header_ids[-3]
         _, alternative_id = header_ids[-2]
         db_map = header_ids[-1]
