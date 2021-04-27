@@ -21,6 +21,7 @@ import ctypes
 import io
 import locale
 from numbers import Number
+import re
 from PySide2.QtWidgets import QTableView, QApplication
 from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
@@ -728,12 +729,14 @@ class MapTableView(CopyPasteTableView):
                         continue
                     except SpineDBAPIError:
                         pass
-                    try:
-                        value = DateTime(cell)
-                        data_row.append(value)
-                        continue
-                    except SpineDBAPIError:
-                        pass
+                    if _could_be_time_stamp(cell):
+                        try:
+
+                            value = DateTime(cell)
+                            data_row.append(value)
+                            continue
+                        except SpineDBAPIError:
+                            pass
                     try:
                         value = from_database(cell)
                         data_row.append(value)
@@ -765,3 +768,21 @@ def _range(selection):
         right = max(right, range_.right())
         bottom = max(bottom, range_.bottom())
     return top, bottom, left, right
+
+
+_NOT_TIME_STAMP = re.compile(r"^[a-zA-z][0-9]")
+
+
+def _could_be_time_stamp(s):
+    """Evaluates if given string could be a time stamp.
+
+    This is to deal with special cases that are not intended as time stamps but
+    could end up as one by the very greedy ``DateTime`` constructor.
+
+    Args:
+        s (str): string to evaluate
+
+    Returns:
+        bool: True if s could be a time stamp, False otherwise
+    """
+    return _NOT_TIME_STAMP.match(s) is None
