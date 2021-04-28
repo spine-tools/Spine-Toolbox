@@ -38,29 +38,15 @@ DAGs if they break the rules above. Here is an example project with three DAGs.
 - DAG 2: items: e, f. connections: e-f
 - DAG 3: items: g. connections: None
 
-The numbers on the upper left corners of the icons show the item's **execution ranks**
-which roughly tell the order of execution within a DAG.
-Execution order of DAG 1 is *a->b->c->d* or *a->c->b->d* because b and c are **siblings**
-which is also indicated by their equal execution rank.
-DAG 2 execution order is *e->f* and DAG 3 is just *g*.
-All three DAGs are executed in a row though which DAG gets executed first is undefined.
-Therefore all DAGs have their execution ranks starting from 1.
-
-After you press the |play-all| button, you can follow the progress
-and the current executed item in the *Event Log*.
-Design view also animates the execution.
-
-Items in a DAG that breaks the rules above are marked by X as their rank.
-Such DAGs are skipped during execution.
-The image below shows such a DAG where the items form a loop.
-
-.. image:: img/dag_broken.png
-   :align: center
+When you press the |play-all| button, all three DAGs are executed in a row. You can see the progress
+and the current executed item in the *Event Log*. Execution order of DAG 1 is *a->b->c->d* or
+*a->c->b->d* since items b and c are **siblings**. DAG 2 execution order is *e->f* and DAG 3 is just
+*g*. If you have a DAG in your project that breaks the rules above, that DAG is skipped and the
+execution continues with the next DAG.
 
 We use the words **predecessor** and **successor** to refer to project items that are upstream or
-downstream from a project item. **Direct predecessor** is a project item that is the immediate predecessor
-while **Direct Successor** is a project item that is the immediate successor.
-For example, in DAG 1 above, the
+dowstream from a project item. **Direct predecessor** is a project item that is the immediate predecessor.
+**Direct Successor** is a project item that is the immediate successor. For example, in DAG 1 above, the
 successors of *a* are project items *b*, *c* and *d*. The direct successor of *b* is *d*. The
 predecessor of *b* is *a*, which is also its direct predecessor.
 
@@ -70,53 +56,50 @@ execute and pressing the |play-selected| button in the tool bar. For example, to
 widget and then press the |play-selected| button.
 
 .. tip::
-   You can select multiple project items by holding the Ctrl-key down and clicking on
-   desired items or by drawing a rectangle on the *Design view*.
+   You can select multiple project items by pressing the Ctrl-button down and clicking on
+   desired items.
 
 
 Example DAG
 ===========
 
 When you have created at least one Tool specification, you can execute a Tool as part of the DAG. The
-Tool specification defines the process that is executed by the Tool project item. As an example, below
-we have two project items; *Data File* Data Connection and *Julia Model* Tool connected to each other.
-
-.. image:: img/execution_data_connection_selected.png
-   :align: center
-
-In ths example, *Data File* has a single file reference ``data.csv``.
-Data Connections make their files visible to direct successors
-and thus the connection between *Data File* and *Julia Model* provides ``data.csv`` to the latter.
-
-Selecting the *Julia Model* shows its properties in the *Properties* dock widget.
+Tool specification defines the process that is depicted by the Tool project item. As an example, below
+we have two project items; *Julia Model* Tool and *Data File* Data Connection connected to each other.
 
 .. image:: img/execution_julia_tool_selected.png
    :align: center
 
-In the top of the Tool Properties, there is a specification drop-down menu.
-From this drop-down menu, you can select the Tool specification for this particular Tool item.
-The *Julia Model Specification* tool specification has been selected for *Julia Model*.
-Below the drop-down menu, you can choose a precompiled sysimage
-and edit Tool's command line arguments.
-Note that the command line argument editor already 'sees' the ``data.csv`` file provided by **Data File**.
-*Results...* button opens the Tool's result archive directory in system's file browser
-(all Tools have their own result directory).
-The *Execute in* radio buttons control, whether this Tool is first copied to a work directory and executed
+Selecting the *Julia Model* shows its properties in the *Properties* dock widget. In the top of the Tool
+Properties, there is a specification drop-down menu. From this drop-down menu, you can select the Tool specification
+for this particular Tool item. The *Julia Model Specification* tool specification has been selected for the Tool
+*Julia Model*. Below the drop-down menu, you can see the details of the Tool specification, command line arguments,
+Source files (the first one is the main program file), Input files, Optional input files and Output files.
+*Results...* button opens the Tool's result archive directory in the File Explorer (all Tools have their own result
+directory). The *Execute in* radio buttons control, whether this Tool is first copied to a work directory and executed
 there, or if the execution should happen in the source directory where the main program file is located.
 
-When you click on the |play-all| button, the execution starts from the *Data File* Data Connection
-as indicated by the execution rank numbers.
-When executed, Data Connection items *advertise* their files and references
-to project items that are their direct successors.
-In this particular example, ``data.csv`` contained in *Data File*
-is also a required input file in *Julia Model Specification*.
-When it is the *Julia Model* tool's turn to be executed, it checks if it finds the ``data.csv`` from
-its direct predecessor items that have already been executed.
-Once the input file has been found the Tool starts processing the main program file *script.jl*.
-Note that if the connection would be the other way around (from *Julia Model* to *Data File*)
-execution would start from the *Julia Model* and it would fail because it cannot find the required ``data.csv``.
-The same thing happens if there is no connection between the two project items.
-In this case the project items would be in separate DAGs.
+When you click on the |play-all| button, the execution starts from the *Data File* Data Connection. When executed,
+Data Connection items *advertise* their files and references to project items that are in the same DAG and
+executed after them. In this particular example, the *Data File* item contains a file called *data.csv* as depicted
+in the picture below.
+
+.. image:: img/execution_data_connection_selected.png
+   :align: center
+
+When it's the *Julia Model* tools turn to be executed, it checks if it finds the file *data.csv* from project items,
+that have already been executed. When the DAG is set up like this, the Tool finds the input file that it requires
+and then starts processing the Tool specification starting with the main program file *script.jl*. Note that if the
+connection would be the other way around (from *Julia Model* to *Data File*) execution would start from the
+*Julia Model* and it would fail because it cannot find the required file *data.csv*. The same thing happens if there
+is no connection between the two project items. In this case the project items would be in separate DAGs.
 
 Since the Tool specification type was set as *Julia* and the main program is a Julia script, Spine Toolbox starts the
 execution in the Julia Console (if you have selected this in the application *Settings*, See :ref:`Settings` section).
+
+Tool execution algorithm
+========================
+The below figure depicts what happens when a Tool item with a valid Tool specification is executed.
+
+.. image:: img/execution_algorithm.png
+   :align: center
