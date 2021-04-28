@@ -51,9 +51,6 @@ def main(argv):
     # tcl86t.dll and tk86t.dll are required by tkinter, which in turn is required by matplotlib
     tcl86t_dll = os.path.join(python_dir, "DLLs", "tcl86t.dll")
     tk86t_dll = os.path.join(python_dir, "DLLs", "tk86t.dll")
-    pyzmq_libs_dll1 = os.path.join(python_dir, "Lib", "site-packages", "pyzmq.libs", "concrt140.dll")
-    pyzmq_libs_dll2 = os.path.join(python_dir, "Lib", "site-packages", "pyzmq.libs", "msvcp140.dll")
-    pyzmq_libs_dll3 = os.path.join(python_dir, "Lib", "site-packages", "pyzmq.libs", "vcruntime140_1.dll")
     # Path to built documentation (No need for sources)
     doc_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build"))
     # Paths to files that should be included as is (changelog, readme, licence files, alembic version files)
@@ -104,24 +101,10 @@ def main(argv):
         + alembic_version_files,
         "include_msvcr": True
     }
-
-    # (pyzmq_libs_dll1, os.path.join("lib\\pyzmq.libs\\", "concrt140.dll")),
-    # (pyzmq_libs_dll2, os.path.join("lib\\pyzmq.libs\\", "msvcp140.dll")),
-    # (pyzmq_libs_dll3, os.path.join("lib\\pyzmq.libs\\", "vcruntime140_1.dll")),
-
     # Windows specific options
     if os.name == "nt":  # Windows specific options
         base = "Console"  # set this to "Win32GUI" to not show console, "Console" shows console
-        # systemdrive = os.environ['SYSTEMDRIVE']
-        # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
-        # msvcr120_dll = os.path.join(systemdrive, os.path.sep, "Windows", "System32", "msvcr120.dll")
-        # if not os.path.isfile(msvcr120_dll):
-        #     print("\nmsvcr120.dll not found in path:{0}".format(msvcr120_dll))
-        #     return
-        # # Append msvcr120.dll for Windows 7/8 support
-        # build_exe_options["include_files"].append(msvcr120_dll)
-    # Other platforms
-    else:
+    else:  # Other platforms
         base = None
     executables = [Executable("spinetoolbox.py", base=base, icon="spinetoolbox/ui/resources/app.ico")]
     setup(
