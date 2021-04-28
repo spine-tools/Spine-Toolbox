@@ -269,15 +269,6 @@ class ProjectItem(MetaObject):
         """Notifies direct predecessors that item's resources have changed."""
         self._project.notify_resource_changes_to_predecessors(self)
 
-    def _resource_to_predecessors_replaced(self, old, new):
-        """Notifies direct predecessors that one of item's resources has been replaced.
-
-        Args:
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
-        """
-        self._project.notify_resource_replacement_to_predecessors(self, old, new)
-
     def upstream_resources_updated(self, resources):
         """Notifies item that resources from direct predecessors have changed.
 
@@ -285,40 +276,15 @@ class ProjectItem(MetaObject):
             resources (list of ProjectItemResource): new resources from upstream
         """
 
-    def replace_resource_from_upstream(self, old, new):
-        """Replaces an existing resource from direct predecessor by a new one.
-
-        Args:
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
-        """
-
     def _resources_to_successors_changed(self):
         """Notifies direct successors that item's resources have changed."""
         self._project.notify_resource_changes_to_successors(self)
-
-    def _resource_to_successors_replaced(self, old, new):
-        """Notifies direct successors that one of item's resources has been replaced.
-
-        Args:
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
-        """
-        self._project.notify_resource_replacement_to_successors(self, old, new)
 
     def downstream_resources_updated(self, resources):
         """Notifies item that resources from direct successors have changed.
 
         Args:
             resources (list of ProjectItemResource): new resources from downstream
-        """
-
-    def replace_resource_from_downstream(self, old, new):
-        """Replaces an existing resource from direct successor by a new one.
-
-        Args:
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
         """
 
     def invalidate_workflow(self, edges):

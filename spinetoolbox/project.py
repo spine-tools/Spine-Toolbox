@@ -322,8 +322,6 @@ class SpineToolboxProject(MetaObject):
             return False
         item_index = self._project_item_model.find_item(previous_name)
         item = self._project_item_model.item(item_index).project_item
-        resources_to_predecessors = item.resources_for_direct_predecessors()
-        resources_to_successors = item.resources_for_direct_successors()
         if not item.rename(new_name, rename_data_dir_message):
             return False
         self._project_item_model.set_leaf_item_name(item_index, new_name)
@@ -333,12 +331,6 @@ class SpineToolboxProject(MetaObject):
                 connection.source = new_name
             if connection.destination == previous_name:
                 connection.destination = new_name
-        new_resources_to_predecessors = item.resources_for_direct_predecessors()
-        for old, new in zip(resources_to_predecessors, new_resources_to_predecessors):
-            self.notify_resource_replacement_to_predecessors(item, old, new)
-        new_resources_to_successors = item.resources_for_direct_successors()
-        for old, new in zip(resources_to_successors, new_resources_to_successors):
-            self.notify_resource_replacement_to_successors(item, old, new)
         self._logger.msg_success.emit(f"Project item <b>{previous_name}</b> renamed to <b>{new_name}</b>.")
         return True
 
@@ -734,12 +726,12 @@ class SpineToolboxProject(MetaObject):
             item (ProjectItem): item whose resources have changed
         """
         item_name = item.name
-        successor_names = {c.destination for c in self._outgoing_connections(item_name)}
+        sucessor_names = {c.destination for c in self._outgoing_connections(item_name)}
         predecessor_connections = self._incoming_connections
         update_resources = self._update_successor
         trigger_resources = item.resources_for_direct_successors()
         self._notify_resource_changes(
-            item_name, successor_names, predecessor_connections, update_resources, trigger_resources
+            item_name, sucessor_names, predecessor_connections, update_resources, trigger_resources
         )
         for connection in self._outgoing_connections(item_name):
             connection.receive_resources_from_source(trigger_resources)
@@ -763,33 +755,6 @@ class SpineToolboxProject(MetaObject):
             target_item = self._project_item_model.get_item(target_name).project_item
             connections = provider_connections(target_name)
             update_resources(target_item, connections, resource_cache)
-
-    def notify_resource_replacement_to_successors(self, item, old, new):
-        """Replaces a resource for direct successors and outgoing connections of given item.
-
-        Args:
-            item (ProjectItem): item whose resources have changed
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
-        """
-        for connection in self._connections:
-            if connection.source != item.name:
-                continue
-            self.get_item(connection.destination).replace_resource_from_upstream(old, new)
-            connection.replace_resource_from_source(old, new)
-
-    def notify_resource_replacement_to_predecessors(self, item, old, new):
-        """Replaces a resource for direct predecessors.
-
-        Args:
-            item (ProjectItem): item whose resources have changed
-            old (ProjectItemResource): old resource
-            new (ProjectItemResource): new resource
-        """
-        for connection in self._connections:
-            if connection.destination != item.name:
-                continue
-            self.get_item(connection.source).replace_resource_from_downstream(old, new)
 
     def _update_item_resources(self, target_item, direction):
         """Updates up or downstream resources for a single project item.
