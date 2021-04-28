@@ -9,8 +9,6 @@
    :width: 16
 .. |play-selected| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-regular.svg
    :width: 16
-.. |insert-tag| image:: ../../spinetoolbox/ui/resources/double-at.svg
-   :width: 16
 
 .. _Tool specification editor:
 
