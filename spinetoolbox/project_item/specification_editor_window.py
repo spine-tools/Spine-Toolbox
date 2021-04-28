@@ -177,6 +177,7 @@ class SpecificationEditorWindowBase(QMainWindow):
             self.item.set_specification(new_spec)
         self.specification = new_spec
         self.setWindowTitle(self.specification.name)
+        self._original_spec_name = self.specification.name
         return True
 
     def tear_down(self):
