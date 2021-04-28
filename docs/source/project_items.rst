@@ -5,8 +5,6 @@
    :width: 16
 .. |data_store| image:: ../../spinetoolbox/ui/resources/project_item_icons/database.svg
    :width: 16
-.. |data_transformer| image:: ../../spinetoolbox/ui/resources/project_item_icons/paint-brush-solid.svg
-   :width: 16
 .. |execute| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
    :width: 16
 .. |execute-selected| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-regular.svg
@@ -64,17 +62,13 @@ Data Store |data_store|
 A Data store item represents a connection to a (Spine) database.
 Currently, the item supports sqlite and mysql dialects.
 The database can be accessed and modified in :ref:`Spine db editor <Spine db editor>`
-available by double-clicking a Data store on the Design view,
-from the item's properties,
-or from a right-click context menu.
+available from the item's properties or from a right-click context menu.
 
 Data Connection |data_connection|
 =================================
 
 A Data connection item provides access to data files.
-The item has two categories of files:
-**references** connect to files anywhere on the file system
-while **data** files reside in the item's own data directory.
+It also provides access to the :ref:`Datapackage editor <Spine datapackage editor>`.
 
 Tool |tool|
 ===========
@@ -90,15 +84,6 @@ While being able to run most scripts and copyable executables, Tool cannot handl
 or executables meant to run from system's *path*. This is a job for Gimlet.
 A Gimlet can execute an arbitrary system command with given command line arguments,
 input files and work directory.
-
-Data Transformer |data_transformer|
-===================================
-
-Data transformers set up database manipulators for successor items in a DAG.
-They do not transform data themselves;
-rather, Spine Database API does the transformations configured by Data transformers
-when the database is accessed.
-Currently supported transformations include entity class and parameter renaming.
 
 View |view|
 ===========
