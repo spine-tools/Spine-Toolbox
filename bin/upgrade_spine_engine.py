@@ -8,4 +8,4 @@ This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you a
 under certain conditions; See files COPYING and COPYING.LESSER for details.
 """)
 print("")
-os.system("pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine")
+os.system("pip install --upgrade git+https://github.com/Spine-project/spine-engine.git@release-0.10#egg=spine_engine")
