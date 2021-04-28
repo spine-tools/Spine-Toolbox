@@ -301,8 +301,9 @@ class SpineDBWorker(QObject):
         db_map = DatabaseMapping(url, create=True)
         import_data(db_map, **data_for_export)
         file_name = os.path.split(file_path)[1]
-        try:
+        if os.path.exists(file_path):
             os.remove(file_path)
+        try:
             export_spine_database_to_xlsx(db_map, file_path)
         except PermissionError:
             error_msg = {
