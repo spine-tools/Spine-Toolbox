@@ -23,6 +23,7 @@ tornado>=6.1
 # dagster does not allow 226, so we are left with 225. The error happens when trying to execute anything in the
 # Python or Julia Console
 pywin32==225;sys_platform=="win32"
+pyzmq<22  # cx_freeze 6.6 has trouble building pyzmq>=22
 -e .
 # Spine Items requires the Toolbox, so install that last
 git+https://github.com/Spine-project/spine-items.git@release-0.7#egg=spine_items

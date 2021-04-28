@@ -12,11 +12,11 @@
 """
 cx-Freeze setup file for Spine Toolbox.
 
-Requires: Python3.7-64bit. cx_Freeze 6.3.
+Requires: Python3.7-64bit. cx_Freeze 6.6.
 
-WARNING: This file is from release-0.5 branch. Does not work on master branch (yet).
+NOTE: This file is for release-0.6 branch.
 
-To make a Spine Toolbox installation bundle, follow the next steps:
+To make a Spine Toolbox installation bundle, follow these steps:
 
 On Windows:
 
@@ -51,6 +51,9 @@ def main(argv):
     # tcl86t.dll and tk86t.dll are required by tkinter, which in turn is required by matplotlib
     tcl86t_dll = os.path.join(python_dir, "DLLs", "tcl86t.dll")
     tk86t_dll = os.path.join(python_dir, "DLLs", "tk86t.dll")
+    pyzmq_libs_dll1 = os.path.join(python_dir, "Lib", "site-packages", "pyzmq.libs", "concrt140.dll")
+    pyzmq_libs_dll2 = os.path.join(python_dir, "Lib", "site-packages", "pyzmq.libs", "msvcp140.dll")
+    pyzmq_libs_dll3 = os.path.join(python_dir, "Lib", "site-packages", "pyzmq.libs", "vcruntime140_1.dll")
     # Path to built documentation (No need for sources)
     doc_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build"))
     # Paths to files that should be included as is (changelog, readme, licence files, alembic version files)
@@ -64,7 +67,7 @@ def main(argv):
     site_customize = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "build_utils", "sitecustomize.py"))
     # Most dependencies are automatically detected but some need to be manually included.
     build_exe_options = {
-        "packages": ["packaging", "pkg_resources", "spine_engine"],
+        "packages": ["packaging", "pkg_resources", "spine_engine", "spine_items", "spinedb_api"],
         "excludes": [],
         "includes": [
             "atexit",
@@ -83,36 +86,6 @@ def main(argv):
             "ijson.backends.yajl2",
             "ijson.backends.yajl2_c",
             "ijson.backends.yajl2_cffi",
-            "spinetoolbox.project_item_specification_factory",
-            "spinetoolbox.project_items",
-            "spinetoolbox.project_items.combiner.ui",
-            "spinetoolbox.project_items.combiner.widgets",
-            "spinetoolbox.project_items.combiner.combiner",
-            "spinetoolbox.project_items.data_connection.ui",
-            "spinetoolbox.project_items.data_connection.widgets",
-            "spinetoolbox.project_items.data_connection.data_connection",
-            "spinetoolbox.project_items.data_store.ui",
-            "spinetoolbox.project_items.data_store.widgets",
-            "spinetoolbox.project_items.data_store.data_store",
-            "spinetoolbox.project_items.exporter.mvcmodels",
-            "spinetoolbox.project_items.exporter.ui",
-            "spinetoolbox.project_items.exporter.widgets",
-            "spinetoolbox.project_items.exporter.exporter",
-            "spinetoolbox.project_items.gimlet.ui",
-            "spinetoolbox.project_items.gimlet.widgets",
-            "spinetoolbox.project_items.gimlet.gimlet",
-            "spinetoolbox.project_items.importer.ui",
-            "spinetoolbox.project_items.importer.widgets",
-            "spinetoolbox.project_items.importer.importer",
-            "spinetoolbox.project_items.tool.ui",
-            "spinetoolbox.project_items.tool.ui.add_tool",
-            "spinetoolbox.project_items.tool.widgets",
-            "spinetoolbox.project_items.tool.tool",
-            "spinetoolbox.project_items.tool.specification_factory",
-            "spinetoolbox.project_items.view.ui",
-            "spinetoolbox.project_items.view.widgets",
-            "spinetoolbox.project_items.view.view",
-            "spinetoolbox.project_items.shared",
         ],
         "include_files": [
             (doc_path, "docs/"),
@@ -131,18 +104,22 @@ def main(argv):
         + alembic_version_files,
         "include_msvcr": True
     }
+
+    # (pyzmq_libs_dll1, os.path.join("lib\\pyzmq.libs\\", "concrt140.dll")),
+    # (pyzmq_libs_dll2, os.path.join("lib\\pyzmq.libs\\", "msvcp140.dll")),
+    # (pyzmq_libs_dll3, os.path.join("lib\\pyzmq.libs\\", "vcruntime140_1.dll")),
+
     # Windows specific options
     if os.name == "nt":  # Windows specific options
         base = "Console"  # set this to "Win32GUI" to not show console, "Console" shows console
-        # Set Windows .msi installer default install path to C:\SpineToolbox-version
-        systemdrive = os.environ['SYSTEMDRIVE']
+        # systemdrive = os.environ['SYSTEMDRIVE']
         # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
-        msvcr120_dll = os.path.join(systemdrive, os.path.sep, "Windows", "System32", "msvcr120.dll")
-        if not os.path.isfile(msvcr120_dll):
-            print("\nmsvcr120.dll not found in path:{0}".format(msvcr120_dll))
-            return
-        # Append msvcr120.dll for Windows 7/8 support
-        build_exe_options["include_files"].append(msvcr120_dll)
+        # msvcr120_dll = os.path.join(systemdrive, os.path.sep, "Windows", "System32", "msvcr120.dll")
+        # if not os.path.isfile(msvcr120_dll):
+        #     print("\nmsvcr120.dll not found in path:{0}".format(msvcr120_dll))
+        #     return
+        # # Append msvcr120.dll for Windows 7/8 support
+        # build_exe_options["include_files"].append(msvcr120_dll)
     # Other platforms
     else:
         base = None
