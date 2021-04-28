@@ -244,11 +244,11 @@ Importing the SpineOpt database template
    Enter ‘Import SpineOpt template’ as message in the popup dialog, and click **Commit**.
 
 
-.. note:: The SpineOpt template contains the fundamental object and realtionship classes,
+.. note:: The SpineOpt template contains the fundamental object and relationship classes,
    as well as parameter definitions, that SpineOpt recognizes and expects.
    You can think of it as the *generic structure* of the model,
    as opposed to the *specific data* for a particular instance.
-   In the remainder of this section, we will add the specific data for the Skellefte river.
+   In the remainder of this section, we will add that specific data for the Skellefte river.
 
 
 Creating objects
