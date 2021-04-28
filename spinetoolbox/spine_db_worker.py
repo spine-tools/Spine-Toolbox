@@ -315,6 +315,8 @@ class SpineDBWorker(QObject):
             caller.msg_error.emit(error_msg)
         else:
             caller.file_exported.emit(file_path)
+        finally:
+            db_map.connection.close()
 
     def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
         self._duplicate_object_called.emit(db_maps, object_data, orig_name, dup_name)
