@@ -53,6 +53,5 @@ The form has the following main UI components:
 - *Alternative/Scenario tree*: it presents scenarios and alternatives defined in the databases.
 - *Parameter tag*: it presents parameter tags defined in the databases.
 
-.. tip:: You can show or hide form components from **Hamburguer->View->Docks**,
-   or select among three predefined layout styles: **Stacked**, **Graph style**, and **Pivot**.
+.. tip:: You can customize the UI from the **View** and **Pivot** sections in the hamburger menu.
 

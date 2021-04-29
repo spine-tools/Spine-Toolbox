@@ -63,9 +63,6 @@ and select **Duplicate object**. Enter a name for the duplicate and press **Ok**
 Adding object groups
 ====================
 
-From *Object tree*
-~~~~~~~~~~~~~~~~~~
-
 Right-click on an object class item in *Object tree*,
 and select **Add object group** from the context menu.
 
@@ -76,7 +73,9 @@ The *Add object group* dialog will pop up:
 
 Enter the name of the group, adn select the database where you want the group to be created.
 Select the member objects under *Non members*, and press the button in the middle that has a plus sign.
-Finally, press **Ok**.
+Multiple selection works.
+
+When you're happy with your selections, press **Ok** to add the group to the database.
 
 
 Adding relationship classes
@@ -177,7 +176,7 @@ From *Pivot table*
 To add a new parameter definition for a class,
 bring the corresponding class to *Pivot table* using the **Parameter value** input type
 (see :ref:`using_pivot_table_and_frozen_table`).
-The *parameter* header of *Pivot table* will be populated
+The **parameter** header of *Pivot table* will be populated
 with existing parameter definitions for the class.
 Enter a name for the new parameter in the last cell of that header.
 
@@ -225,10 +224,7 @@ Then, enter the parameter value in the corresponding cell in the table body.
 Adding tools, features, and methods
 ===================================
 
-From *Tool/Feature tree*
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-To add a new feature, just select the last item under **feature** in the appropriate database,
+To add a new feature, go to *Tool/Feature tree* and select the last item under **feature** in the appropriate database,
 start typing or press **F2** to display available parameter definitions, and select the one you want to become a feature.
 
 .. note:: Only parameter definitions that have associated a parameter value list can become features.
@@ -245,7 +241,6 @@ start typing or press **F2** to display available methods, and select the one yo
 
 Adding alternatives and scenarios
 =================================
-
 
 From *Alternative/Scenario tree*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -274,10 +269,7 @@ To add a new alternative, enter a name in the last cell of the **alternative** h
 Adding parameter value lists
 ============================
 
-From *Parameter value list*
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To add a new parameter value list, just select the last item under the appropriate database,
+To add a new parameter value list, go to *Parameter value list* and select the last item under the appropriate database,
 and enter the name of the list.
 
 To add new values for the list, select the last empty item under the corresponding
@@ -290,8 +282,5 @@ list item, and enter the value. To enter a complex value, right-click on the emp
 Adding parameter tags
 ============================
 
-From *Parameter tag*
-~~~~~~~~~~~~~~~~~~~~
-
-To add a new parameter tag, just select the last item under the appropriate database,
+To add a new parameter tag, go to *Parameter tag* and select the last item under the appropriate database,
 and enter the tag's name.

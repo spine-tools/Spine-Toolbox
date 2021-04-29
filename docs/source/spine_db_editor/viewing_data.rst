@@ -89,7 +89,7 @@ or via *Entity graph*'s context menu.
 
 .. tip:: *Object tree* and *Relationship tree* also support **Sticky selection**, which allows one to 
    extend the selection by clicking on items *without pressing Ctrl*.
-   To enable **Sticky selection**, go to **Hamburguer->Settings** and check the corresponding box.
+   To enable **Sticky selection**, select **Settings** from the hamburger menu, and check the corresponding box.
 
 Manipulating the graph
 **********************
@@ -97,7 +97,7 @@ Manipulating the graph
 You can move items in the graph by dragging them with your mouse.
 By default, each items moves individually.
 To make relationship items move along with their member objects,
-go to **Hamburguer->Settings** and check the box next to, *Move relationships along with objects in Entity graph*.
+select **Settings** from the hamburger menu and check the box next to, *Move relationships along with objects in Entity graph*.
 
 To display *Entity graph*'s context menu, just right-click on an empty space in the graph.
 
@@ -200,7 +200,7 @@ Selecting the input type
 - **Scenario**: it shows scenarios, alternatives, and databases in the header, and corresponding *rank* in the table body.
 
 
-You can select the input type from the **Pivot** section in the *hamburguer* menu.
+You can select the input type from the **Pivot** section in the hamburger menu.
 
 .. note:: In *Pivot table*,
    header blocks in the top-left area indicate what is shown in each horizontal and vertical header.

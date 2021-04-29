@@ -7,30 +7,25 @@ This section describes the available tools to manage data, i.e., adding, updatin
 .. contents::
    :local:
 
-Managing parameter tags
+Managing object groups
 =======================
 
-To add, update, and/or remove parameter tags, press **Manage parameter tags** on *Parameter tag toolbar*,
-or select **Edit -> Manage parameter tags** from the menu bar.
+To modify object groups, expand the corresponding item in *Object tree* to display the **members** item,
+right-click on the latter and select **Manage members** from the context menu.
 The *Manage parameter tags* dialog will pop up:
 
-.. image:: img/manage_parameter_tags_dialog.png
+.. image:: img/manage_members_dialog.png
    :align: center
 
-To add new parameter tags, just fill the last empty row in the table:
-Enter the tag under *parameter tag*, and optionally a description under *description*.
-Finally, select the databases where you want to add the tag under *databases*.
+To add new member objects, select them under *Non members*, and press the button in the middle that has a plus sign.
+To remove current member objects, select them under *Members*, and press the button in the middle that has a minus sign.
+Multiple selection works in both lists.
 
-To update existing parameter tags, just edit the appropriate row in the table,
-and select the databases where you want the changes to be effective under *databases*.
+When you're happy, press **Ok**.
 
-To remove parameter tags, just check the corresponding box under the *remove* column,
-and select the databases from where you want to remove the tag under *databases*.
 
-When you're ready, press **Ok**.
-
-.. note:: Changes made using the *Manage parameter tags* dialog are not applied to
-   any databases until you press **Ok**.
+.. note:: Changes made using the *Manage members* dialog are not applied to
+   the database until you press **Ok**.
 
 Managing relationships
 ======================
