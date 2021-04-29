@@ -81,38 +81,43 @@ The graph automatically includes relationships whenever *all* the member objects
 (even if these relationships are not selected in *Object tree* or *Relationship tree*).
 You can change this behavior to automatically include relationships
 whenever *any* of the member objects are included.
-To do this, enable **Show cascading relationships** via the **Graph** menu,
+To do this, enable **Auto-expand objects** via the **Graph** menu,
 or via *Entity graph*'s context menu.
 
 .. tip:: To *extend* the selection in *Object tree* or *Relationship tree*, press and hold the **Ctrl** key
    while clicking on the items.
 
-.. tip:: *Object tree* and *Relationship tree* also support **Sticky selection**, i.e., 
-   extending the selection by clicking on items *without pressing Ctrl*.
-   To enable **Sticky selection**, go to **File -> Settings** and check the corresponding box.
-
-.. note:: At the moment, *Entity graph* only shows data from the first database open in the form.
+.. tip:: *Object tree* and *Relationship tree* also support **Sticky selection**, which allows one to 
+   extend the selection by clicking on items *without pressing Ctrl*.
+   To enable **Sticky selection**, go to **Hamburguer->Settings** and check the corresponding box.
 
 Manipulating the graph
 **********************
 
 You can move items in the graph by dragging them with your mouse.
-To make relationship items stay in the same relative position with respect to their member objects,
-go to **File -> Settings** and check the box next to, *Move relationships along with objects in Entity graph*.
+By default, each items moves individually.
+To make relationship items move along with their member objects,
+go to **Hamburguer->Settings** and check the box next to, *Move relationships along with objects in Entity graph*.
 
-To save the position of items into the database,
-select the items in the graph and then choose **Graph -> Save positions** from the menu bar.
-To clear saved positions, select the items again and choose **Graph -> Clear saved positions**.
+To display *Entity graph*'s context menu, just right-click on an empty space in the graph.
 
-To hide part of the graph, select the items you want to hide and then choose **Graph -> Hide selected**.
-To show the hidden items again, select **Graph -> Show hidden**.
-
-To prune the graph, select the items you want to prune and then choose **Graph -> Prune selected entities**
-or **Prune selected classes**.
-To restore specific prunned items,
-go to **Graph -> Restore prunned** and select the items you want to restore from the popup menu.
-To restore all prunned items at once, select **Graph -> Restore all prunned**.
-
+- To save the position of items into the database,
+  select the items in the graph and choose **Save positions** from the context menu.
+  To clear saved positions, select the items again and choose **Clear saved positions** from the context menu.
+- To hide part of the graph, select the items you want to hide and choose **Hide**  from context menu.
+  To show the hidden items again, select **Show hidden** from the context menu.
+- To prune the graph, select the items you want to prune and then choose **Prune entities**
+  or **Prune classes** from the context menu.
+  To restore specific prunned items, display the context menu,
+  hover **Restore** and select the items you want to restore from the popup menu.
+  To restore all prunned items at once, select **Restore all** from the context menu.
+- To zoom in and out, scroll your mouse wheel over *Entity graph* or use **Zoom** buttons 
+  in the context menu.
+- To rotate clockwise or anti-clockwise, press and hold the **Shift** key while scrolling your mouse wheel,
+  or use the **Rotate** buttons in the context menu.
+- To adjust the arcs' lenght, use the **Arc length** buttons in the context menu.
+- To rebuild the graph after moving items around, select **Rebuild graph** from the context menu.
+- To export the current graph as a PDF file, select **Export graph as PDF** from the context menu.
 
 .. note:: *Entity graph* supports extended selection and rubber-band selection.
    To extend a selection, press and hold **Ctrl** while clicking on the items.
@@ -121,11 +126,11 @@ To restore all prunned items at once, select **Graph -> Restore all prunned**.
 
 .. note:: Prunned items are remembered across graph builds.
 
-To zoom in and out, scroll your mouse wheel over *Entity graph* or use the buttons in **Graph -> Zoom**.
-To rotate clockwise or anti-clockwise, press and hold the **Shift** key while scrolling your mouse wheel,
-or use the buttons in **Graph -> Rotate**.
 
-To export the current graph as a PDF file, select **File -> Export graph as PDF**.
+To display an object or relationship item's context menu, just right-click on it.
+- To expand or collapse relationships for an object item, hover **Expand** or **Collapse** and select the relationship class
+  from the popup menu.
+
 
 Viewing parameter definitions and values
 ========================================
@@ -161,7 +166,7 @@ and then select **Filter by** or **Filter excluding**.
 To remove these filters, select **Remove filters** from the header menus of the filtered columns.
 
 .. tip:: You can rearrange columns in *Stacked tables* by dragging the headers with your mouse.
-   The ordering will be remembered the next time you open the form.
+   The ordering will be remembered the next time you open Spine DB editor.
 
 Viewing parameter values and relationships
 ==========================================
@@ -184,21 +189,23 @@ just select the corresponding class item in either *Object tree* or *Relationshi
 Selecting the input type
 ************************
 
-*Pivot table* and *Frozen table* support three different input types:
+*Pivot table* and *Frozen table* support four different input types:
 
-- **Parameter value** (the default): it shows objects and parameter definitions in the headers,
+- **Parameter value** (the default): it shows objects, parameter definitions, alternatives, and databases in the headers,
   and corresponding parameter values in the table body.
 - **Index expansion**: Similar to the above, but it also shows parameter indexes in the headers.
   Indexes are extracted from special parameter values, such as time-series.
-- **Relationship**: it shows objects in the headers, and corresponding relationships in the table body.
+- **Relationship**: it shows objects, and databases in the headers, and corresponding relationships in the table body.
   It only works when selecting a relationship class in *Relationship tree*.
+- **Scenario**: it shows scenarios, alternatives, and databases in the header, and corresponding *rank* in the table body.
 
-You can select the input type from the **Pivot table** menu in the menu bar.
+
+You can select the input type from the **Pivot** section in the *hamburguer* menu.
 
 .. note:: In *Pivot table*,
    header blocks in the top-left area indicate what is shown in each horizontal and vertical header.
    For example, in **Parameter value** input type, by default,
-   the horizontal header has a single row listing parameter names,
+   the horizontal header has two rows, listing alternative and parameter names, respectively;
    whereas the vertical header has one or more columns listing object names.
 
 
@@ -231,8 +238,37 @@ To filter the pivot table by an individual vector across the frozen dimensions,
 select the corresponding row in *Frozen table*.
 
 
-.. note:: At the moment, *Pivot table* shows data for only one class at a time,
-   and only for the first database open in the form.
+Viewing alternatives and scenarios
+==================================
+
+You can find alternatives and scenarios from all databases under *Alternative/Scenario tree*:
+
+.. image:: img/alternative_scenario_tree.png
+   :align: center
+
+To view the alternatives and scenarios from each database, 
+expand the root item for that database.
+To view all alternatives, expand the **alternative** item.
+To view all scenarios, expand the **scenario** item.
+To view the alternatives for a particular scenario, expand the **scenario_alternative** item under the corresponding
+scenario item.
+
+Viewing tools and features
+==========================
+
+You can find tools, features, and methods from all databases under *Tool/Feature tree*:
+
+.. image:: img/tool_feature_tree.png
+   :align: center
+
+To view the features and tools from each database, 
+expand the root item for that database.
+To view all features, expand the **feature** item.
+To view all tools, expand the **tool** item.
+To view the features for a particular tool, expand the **tool_feature** item under the corresponding
+tool item.
+To view the methods for a particular tool-feature, expand the **tool_feature_method** item under the corresponding
+tool-feature item.
 
 
 Viewing parameter value lists
@@ -251,7 +287,10 @@ To view the values for each list, expand the corresponding list item.
 Viewing parameter tags
 ======================
 
-You can find parameter tags from all databases in *Parameter tag toolbar*:
+You can find parameter tags from all databases under *Parameter tag*:
 
-.. image:: img/parameter_tag_toolbar.png
+.. image:: img/parameter_tag.png
    :align: center
+
+To view the tags from each database, 
+expand the root item for that database.

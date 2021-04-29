@@ -613,7 +613,7 @@ class ParameterValueListTreeView(ItemTreeView):
         """Creates a context menu for this view."""
         super().populate_context_menu()
         self._menu.addSeparator()
-        self._open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
+        self._open_in_editor_action = self._menu.addAction("Open editor...", self.open_in_editor)
 
     def update_actions_availability(self, item):
         """See base class."""
