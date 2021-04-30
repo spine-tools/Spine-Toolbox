@@ -3,7 +3,7 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
+## [0.6.0-beta.0] - 2021-04-30]
 
 ### Added
 - Support for Experimental Spine Engine. This can be enabled in app Settings->General tab. Experimental 
@@ -47,7 +47,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Fixed
 ### Security
 
-##[0.5.0-final.1] - 2020-02-03
+## [0.5.0-final.1] - 2020-02-03
 
 ### Added
 - Tutorial for case study A5 in the documentation
