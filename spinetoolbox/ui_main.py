@@ -54,7 +54,7 @@ from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
 from .widgets.settings_widget import SettingsWidget
 from .widgets.custom_qwidgets import ToolBarWidgetAction
-from .widgets.spine_console_widget import SpineConsoleWidget
+from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.link_properties_widget import LinkPropertiesWidget
@@ -2289,7 +2289,7 @@ class ToolboxUI(QMainWindow):
             if k_name == "":
                 self.msg_error.emit("No kernel selected. Go to Settings->Tools to select a kernel for Julia")
                 return
-            c = SpineConsoleWidget(self, k_name, owner=None)
+            c = JupyterConsoleWidget(self, k_name, owner=None)
             self._base_julia_console = ConsoleWindow(self, c)
             self._base_julia_console.start()
         else:
@@ -2305,7 +2305,7 @@ class ToolboxUI(QMainWindow):
             if k_name == "":
                 self.msg_error.emit("No kernel selected. Go to Settings->Tools to select a kernel for Python")
                 return
-            c = SpineConsoleWidget(self, k_name, owner=None)
+            c = JupyterConsoleWidget(self, k_name, owner=None)
             self._base_python_console = ConsoleWindow(self, c)
             self._base_python_console.start()
         else:
@@ -2327,7 +2327,7 @@ class ToolboxUI(QMainWindow):
             self._base_julia_console = None
 
     def make_jupyter_console(self, item, kernel_name, connection_file):
-        """Creates a new SpineConsoleWidget for given connection file if none exists yet, and returns it.
+        """Creates a new JupyterConsoleWidget for given connection file if none exists yet, and returns it.
 
         Args:
             item (ProjectItem): Item that owns the console
@@ -2335,13 +2335,13 @@ class ToolboxUI(QMainWindow):
             connection_file (str): Path of kernel connection file
 
         Returns:
-            SpineConsoleWidget
+            JupyterConsoleWidget
         """
         console = self._extra_consoles.get(connection_file)
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_consoles[connection_file] = SpineConsoleWidget(self, kernel_name, owner=item)
+        console = self._extra_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
         console.connect_to_kernel(kernel_name, connection_file)
         return console
 

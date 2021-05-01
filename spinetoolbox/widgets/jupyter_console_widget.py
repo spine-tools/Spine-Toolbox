@@ -35,7 +35,7 @@ traitlets_logger.setLevel(level=logging.WARNING)
 asyncio_logger.setLevel(level=logging.WARNING)
 
 
-class SpineConsoleWidget(RichJupyterWidget):
+class JupyterConsoleWidget(RichJupyterWidget):
     """Base class for all embedded console widgets that can run tool instances."""
 
     def __init__(self, toolbox, target_kernel_name, owner=None):

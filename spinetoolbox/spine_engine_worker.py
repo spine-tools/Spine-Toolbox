@@ -45,7 +45,7 @@ def _handle_node_execution_finished(item, direction, state, item_state):
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_stopped.emit()
         if state == "RUNNING":
-            excluded = True if item_state == ItemExecutionFinishState.EXCLUDED else False
+            excluded = item_state == ItemExecutionFinishState.EXCLUDED
             icon.run_execution_leave_animation(excluded)
 
 
@@ -199,7 +199,7 @@ class SpineEngineWorker(QObject):
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
                 f"\tUnable to find specification for kernel <b>{msg['kernel_name']}</b>. "
-                f"Go to Settings->Tools to select a valid {language} kernel."
+                "Go to Settings->Tools to select a valid kernel."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
