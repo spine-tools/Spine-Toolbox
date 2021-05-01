@@ -60,8 +60,7 @@ class ProjectItem(MetaObject):
         self.undo_specification = None
         self._log_document = None
         self._filter_log_documents = {}
-        self.julia_console = None
-        self.python_console = None
+        self.console = None
         self._filter_consoles = {}
 
     def create_data_dir(self):

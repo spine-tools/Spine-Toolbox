@@ -164,7 +164,7 @@ class ToolboxUI(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
-        # Additional consoles for item execution. See ``ToolboxUI.make_console()``
+        # Additional consoles for item execution. See ``ToolboxUI.make_jupyter_console()``
         self._extra_consoles = {}
         # Setup main window menu
         self.add_zoom_action()
@@ -267,7 +267,8 @@ class ToolboxUI(QMainWindow):
         """
         if sys.platform == "win32":
             import ctypes
-            ctypes.windll.kernel32.SetErrorMode(0);
+
+            ctypes.windll.kernel32.SetErrorMode(0)
 
     def _update_execute_enabled(self):
         first_index = next(self.project_item_model.leaf_indexes(), None)
@@ -1395,8 +1396,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_itemlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_console.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_console.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_console.toggleViewAction())
         undo_action = self.undo_stack.createUndoAction(self)
         redo_action = self.undo_stack.createRedoAction(self)
         undo_action.setShortcuts(QKeySequence.Undo)
@@ -1483,14 +1483,12 @@ class ToolboxUI(QMainWindow):
 
     def restore_original_logs_and_consoles(self):
         self.restore_original_item_log_document()
-        self.restore_original_python_console()
-        self.restore_original_julia_console()
+        self.restore_original_console()
         self.ui.dockWidget_executions.hide()
 
     def override_logs_and_consoles(self):
         self.override_item_log()
-        self.override_python_console()
-        self.override_julia_console()
+        self.override_console()
         self.override_execution_list()
 
     def override_item_log(self):
@@ -1509,33 +1507,19 @@ class ToolboxUI(QMainWindow):
         self.ui.label_no_itemlog.hide()
         self._update_item_log_title()
 
-    def override_python_console(self):
-        """Sets the python console of the active project item in Python Console and updates title."""
+    def override_console(self):
+        """Sets the jupyter console of the active project item in Jupyter Console and updates title."""
         if self.active_project_item is None:
             return
-        console = self.active_project_item.python_console
-        self._do_override_python_console(console)
+        console = self.active_project_item.console
+        self._do_override_console(console)
 
-    def _do_override_python_console(self, console):
+    def _do_override_console(self, console):
         if console is None:
-            self.restore_original_python_console()
+            self.restore_original_console()
             return
-        widget = self.ui.dockWidgetContents_python_console
-        self._set_override_console(widget, console, "Python Console")
-
-    def override_julia_console(self):
-        """Sets the julia console of the active project item in Julia Console and updates title."""
-        if self.active_project_item is None:
-            return
-        console = self.active_project_item.julia_console
-        self._do_override_julia_console(console)
-
-    def _do_override_julia_console(self, console):
-        if console is None:
-            self.restore_original_julia_console()
-            return
-        widget = self.ui.dockWidgetContents_julia_console
-        self._set_override_console(widget, console, "Julia Console")
+        widget = self.ui.dockWidgetContents_console
+        self._set_override_console(widget, console)
 
     def override_execution_list(self):
         """Displays executions of the active project item in Executions and updates title."""
@@ -1556,15 +1540,10 @@ class ToolboxUI(QMainWindow):
         self.ui.label_no_itemlog.show()
         self._update_item_log_title()
 
-    def restore_original_python_console(self):
-        """Sets the Python Console back to the original."""
-        widget = self.ui.dockWidgetContents_python_console
-        self._set_override_console(widget, self.ui.label_no_python_console, "Python Console")
-
-    def restore_original_julia_console(self):
-        """Sets the Julia Console back to the original."""
-        widget = self.ui.dockWidgetContents_julia_console
-        self._set_override_console(widget, self.ui.label_no_julia_console, "Julia Console")
+    def restore_original_console(self):
+        """Sets the Console back to the original."""
+        widget = self.ui.dockWidgetContents_console
+        self._set_override_console(widget, self.ui.label_no_console)
 
     def _update_item_log_title(self):
         """Updates Event Log title."""
@@ -1574,16 +1553,16 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidget_itemlog.setWindowTitle(new_title)
 
     @staticmethod
-    def _set_override_console(widget, console, new_title):
+    def _set_override_console(widget, console):
         layout = widget.layout()
         for i in range(layout.count()):
             layout.itemAt(i).widget().hide()
         layout.addWidget(console)
         console.show()
         try:
-            new_title = f"{console.owner_names} {new_title}"
+            new_title = f"{console.owner_names} {console.name()}"
         except AttributeError:
-            pass
+            new_title = "Console"
         widget.parent().setWindowTitle(new_title)
 
     @Slot()
@@ -2306,7 +2285,11 @@ class ToolboxUI(QMainWindow):
     def _start_base_julia_console(self):
         """Shows and starts the 'base' Julia Console if not running or activates the window if running."""
         if not self._base_julia_console:
-            c = SpineConsoleWidget(self, "Julia Console", owner=None)
+            k_name = self.qsettings().value("appSettings/juliaKernel", defaultValue="")
+            if k_name == "":
+                self.msg_error.emit("No kernel selected. Go to Settings->Tools to select a kernel for Julia")
+                return
+            c = SpineConsoleWidget(self, k_name, owner=None)
             self._base_julia_console = ConsoleWindow(self, c)
             self._base_julia_console.start()
         else:
@@ -2318,7 +2301,11 @@ class ToolboxUI(QMainWindow):
     def _start_base_python_console(self):
         """Shows and starts the 'base' Python Console if not running or activates the window if running."""
         if not self._base_python_console:
-            c = SpineConsoleWidget(self, "Python Console", owner=None)
+            k_name = self.qsettings().value("appSettings/pythonKernel", defaultValue="")
+            if k_name == "":
+                self.msg_error.emit("No kernel selected. Go to Settings->Tools to select a kernel for Python")
+                return
+            c = SpineConsoleWidget(self, k_name, owner=None)
             self._base_python_console = ConsoleWindow(self, c)
             self._base_python_console.start()
         else:
@@ -2339,11 +2326,10 @@ class ToolboxUI(QMainWindow):
             self._base_julia_console.deleteLater()
             self._base_julia_console = None
 
-    def make_console(self, name, item, kernel_name, connection_file):
+    def make_jupyter_console(self, item, kernel_name, connection_file):
         """Creates a new SpineConsoleWidget for given connection file if none exists yet, and returns it.
 
         Args:
-            name (str): Console name
             item (ProjectItem): Item that owns the console
             kernel_name (str): Name of the kernel
             connection_file (str): Path of kernel connection file
@@ -2355,7 +2341,7 @@ class ToolboxUI(QMainWindow):
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_consoles[connection_file] = SpineConsoleWidget(self, name, owner=item)
+        console = self._extra_consoles[connection_file] = SpineConsoleWidget(self, kernel_name, owner=item)
         console.connect_to_kernel(kernel_name, connection_file)
         return console
 

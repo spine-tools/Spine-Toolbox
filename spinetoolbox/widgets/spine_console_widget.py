@@ -25,7 +25,7 @@ from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import NoSuchKernel
 from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
-from spinetoolbox.widgets.kernel_editor import find_python_kernels, find_julia_kernels
+from spinetoolbox.widgets.kernel_editor import find_kernels
 from spinetoolbox.spine_engine_manager import make_engine_manager
 
 # Set logging level for jupyter loggers
@@ -38,16 +38,16 @@ asyncio_logger.setLevel(level=logging.WARNING)
 class SpineConsoleWidget(RichJupyterWidget):
     """Base class for all embedded console widgets that can run tool instances."""
 
-    def __init__(self, toolbox, name, owner=None):
+    def __init__(self, toolbox, target_kernel_name, owner=None):
         """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            name (str): Console name, e.g. 'Python Console'
+            target_kernel_name (str): Kernel name, e.g. 'julia-1.6'
             owner (ProjectItem, NoneType): Item that owns the console.
         """
         super().__init__(parent=toolbox)
         self._toolbox = toolbox
-        self._name = name
+        self._target_kernel_name = target_kernel_name
         self.owners = {owner}
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
         self.kernel_name = None
@@ -65,8 +65,8 @@ class SpineConsoleWidget(RichJupyterWidget):
         self.restart_console_action.triggered.connect(self.restart_console)
 
     def name(self):
-        """Returns console name."""
-        return self._name
+        """Returns console name for display purposes."""
+        return f"{self._target_kernel_name} Console"
 
     @property
     def owner_names(self):
@@ -76,19 +76,10 @@ class SpineConsoleWidget(RichJupyterWidget):
     def start_console(self, checked=False):
         """Starts chosen Python/Julia kernel if available and not already running.
         Context menu start action handler."""
-        if self._name == "Python Console":
-            k_name = self._toolbox.qsettings().value("appSettings/pythonKernel", defaultValue="")
-        elif self._name == "Julia Console":
-            k_name = self._toolbox.qsettings().value("appSettings/juliaKernel", defaultValue="")
-        if k_name == "":
-            self._toolbox.msg_error.emit(
-                f"No kernel selected. Go to Settings->Tools to select a kernel for {self._name}"
-            )
+        if self.kernel_manager and self.kernel_name == self._target_kernel_name:
+            self._toolbox.msg_warning.emit(f"Kernel {self._target_kernel_name} already running")
             return
-        if self.kernel_manager and self.kernel_name == k_name:
-            self._toolbox.msg_warning.emit(f"Kernel {k_name} already running in {self._name}")
-            return
-        self.call_start_kernel(k_name)
+        self.call_start_kernel()
 
     @Slot(bool)
     def restart_console(self, checked=False):
@@ -102,19 +93,10 @@ class SpineConsoleWidget(RichJupyterWidget):
             engine_mngr.restart_kernel(self._engine_connection_file)
             self._replace_client()
             return
-        if self._name == "Python Console":
-            k_name = self._toolbox.qsettings().value("appSettings/pythonKernel", defaultValue="")
-        else:
-            k_name = self._toolbox.qsettings().value("appSettings/juliaKernel", defaultValue="")
-        if k_name == "":
-            self._toolbox.msg_error.emit(
-                f"No kernel selected. Go to Settings->Tools to select a kernel for {self._name}"
-            )
-            return
-        if self.kernel_manager and self.kernel_name == k_name:
+        if self.kernel_manager and self.kernel_name == self._target_kernel_name:
             # Restart current kernel
             self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
-            self._toolbox.msg.emit(f"*** Restarting {self._name} ***")
+            self._toolbox.msg.emit(f"*** Restarting {self._target_kernel_name} ***")
             # Restart kernel manager
             blackhole = open(os.devnull, 'w')
             self.kernel_manager.restart_kernel(now=True, stdout=blackhole, stderr=blackhole)
@@ -122,54 +104,38 @@ class SpineConsoleWidget(RichJupyterWidget):
             self._replace_client()
         else:
             # No kernel running in Python Console or Python kernel has been changed in Settings->Tools. Start kernel
-            self.call_start_kernel(k_name)
+            self.call_start_kernel()
 
-    def call_start_kernel(self, k_name=None):
+    def call_start_kernel(self):
         """Finds a valid kernel and calls ``start_kernel()`` with it."""
-        d = {
-            "Python Console": ("Python", "pythonKernel", find_python_kernels),
-            "Julia Console": ("Julia", "juliaKernel", find_julia_kernels),
-        }
-        if self._name not in d:
-            self._toolbox.msg_error.emit("Unknown Console")
-            return
-        language, settings_entry, find_kernels = d[self._name]
-        if not k_name:
-            k_name = self._toolbox.qsettings().value(f"appSettings/{settings_entry}", defaultValue="")
-            if not k_name:
-                self._toolbox.msg_error.emit(
-                    f"No kernel selected. Go to Settings->Tools to select a {language} kernel."
-                )
-                return
         kernels = find_kernels()
         try:
-            kernel_path = kernels[k_name]
+            kernel_path = kernels[self._target_kernel_name]
         except KeyError:
             self._toolbox.msg_error.emit(
-                f"Kernel {k_name} not found. Go to Settings->Tools and select another {language} kernel."
+                f"Kernel {self._target_kernel_name} not found. Go to Settings->Tools and select another kernel."
             )
             return
         # Check if this kernel is already running
-        if self.kernel_manager and self.kernel_name == k_name:
+        if self.kernel_manager and self.kernel_name == self._target_kernel_name:
             return
-        self.start_kernel(k_name, kernel_path)
+        self.start_kernel(kernel_path)
 
-    def start_kernel(self, k_name, k_path):
+    def start_kernel(self, k_path):
         """Starts a kernel manager and kernel client and attaches the client to Julia or Python Console.
 
         Args:
-            k_name (str): Kernel name
             k_path (str): Directory where the the kernel specs are located
         """
-        if self.kernel_manager and self.kernel_name != k_name:
+        if self.kernel_manager and self.kernel_name != self._target_kernel_name:
             old_k_name_anchor = "<a style='color:#99CCFF;' title='{0}' href='#'>{1}</a>".format(
                 k_path, self.kernel_name
             )
             self._toolbox.msg.emit(f"Kernel changed in Settings. Shutting down current kernel {old_k_name_anchor}.")
             self.shutdown_kernel()
-        self.kernel_name = k_name
+        self.kernel_name = self._target_kernel_name
         new_k_name_anchor = "<a style='color:#99CCFF;' title='{0}' href='#'>{1}</a>".format(k_path, self.kernel_name)
-        self._toolbox.msg.emit(f"*** Starting {self._name} (kernel {new_k_name_anchor}) ***")
+        self._toolbox.msg.emit(f"*** Starting {self.name()} (kernel {new_k_name_anchor}) ***")
         self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
         km = QtKernelManager(kernel_name=self.kernel_name)
         try:
@@ -201,7 +167,7 @@ class SpineConsoleWidget(RichJupyterWidget):
         self.kernel_manager = None
         self.kernel_client.deleteLater()
         self.kernel_client = None
-        self._toolbox.msg.emit(f"{self._name} kernel <b>{self.kernel_name}</b> shut down")
+        self._toolbox.msg.emit(f"Kernel <b>{self.kernel_name}</b> shut down")
 
     def dragEnterEvent(self, e):
         """Don't accept project item drops."""
@@ -222,7 +188,7 @@ class SpineConsoleWidget(RichJupyterWidget):
             return
         if kernel_execution_state == "idle" and self._kernel_starting:
             self._kernel_starting = False
-            self._toolbox.msg.emit(f"{self._name} ready for action")
+            self._toolbox.msg.emit(f"{self.name()} ready for action")
             self._control.viewport().setCursor(self.normal_cursor)
 
     def enterEvent(self, event):
