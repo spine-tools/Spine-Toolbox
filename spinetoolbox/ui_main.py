@@ -2365,11 +2365,6 @@ class ToolboxUI(QMainWindow):
         )
         return console
 
-    def issue_persistent_command(self, persistent_key, command):
-        engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
-        yield from engine_mngr.issue_persistent_command(persistent_key, command)
-
     def _shutdown_engine_kernels(self):
         """Shuts down all kernels managed by Spine Engine."""
         engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")

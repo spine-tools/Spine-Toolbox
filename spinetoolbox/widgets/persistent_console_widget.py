@@ -13,10 +13,11 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QRunnable, QObject, Signal, QThreadPool
 from PySide2.QtWidgets import QPlainTextEdit
 from PySide2.QtGui import QFontDatabase, QTextDocumentFragment, QTextCharFormat
 from spinetoolbox.helpers import CustomSyntaxHighlighter
+from spinetoolbox.spine_engine_manager import make_engine_manager
 
 
 class PromptSyntaxHighlighter(CustomSyntaxHighlighter):
@@ -41,6 +42,7 @@ class PromptSyntaxHighlighter(CustomSyntaxHighlighter):
 class PersistentConsoleWidget(QPlainTextEdit):
     def __init__(self, toolbox, key, lexer_name, prompt, owner=None):
         super().__init__(parent=toolbox)
+        self._thread_pool = QThreadPool()
         self._editable = 1
         self._non_editable = -1
         self._toolbox = toolbox
@@ -65,6 +67,10 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def name(self):
         """Returns console name for display purposes."""
         return f"{' '.join(self._key)} Console"
+
+    @property
+    def owner_names(self):
+        return "&".join(x.name for x in self.owners if x is not None)
 
     def _setup_lexer(self):
         try:
@@ -91,15 +97,17 @@ class PersistentConsoleWidget(QPlainTextEdit):
         super().keyPressEvent(ev)
 
     def _issue_command(self):
+        self.setCursorWidth(0)
         block = self.document().lastBlock()
         cmd = block.text()[len(self._plain_prompt) :]
         block.setUserState(self._non_editable)
-        for msg in self._toolbox.issue_persistent_command(self._key, cmd):
-            if msg["type"] == "stdout":
-                self.add_stdout(msg["data"])
-            elif msg["type"] == "stderr":
-                self.add_stderr(msg["data"])
-        self.add_prompt()
+        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        runner = CommandRunner(self._key, cmd, engine_server_address)
+        runner.stdout_msg.connect(self.add_stdout)
+        runner.stderr_msg.connect(self.add_stderr)
+        runner.finished.connect(self.add_prompt)
+        runner.finished.connect(lambda: self.setCursorWidth(1))
+        self._thread_pool.start(runner)
 
     def _has_prompt(self):
         return self.document().lastBlock().userState() == self._editable
@@ -140,3 +148,28 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.block().setUserState(self._editable)
         cursor.movePosition(cursor.End)
         self.setTextCursor(cursor)
+
+
+class CommandRunner(QRunnable):
+    class Signals(QObject):
+        finished = Signal()
+        stdout_msg = Signal(str)
+        stderr_msg = Signal(str)
+
+    def __init__(self, persistent_key, command, engine_server_address):
+        super().__init__()
+        self._persistent_key = persistent_key
+        self._command = command
+        self._engine_mngr = make_engine_manager(engine_server_address)
+        self._signals = self.Signals()
+        self.finished = self._signals.finished
+        self.stdout_msg = self._signals.stdout_msg
+        self.stderr_msg = self._signals.stderr_msg
+
+    def run(self):
+        for msg in self._engine_mngr.issue_persistent_command(self._persistent_key, self._command):
+            if msg["type"] == "stdout":
+                self.stdout_msg.emit(msg["data"])
+            elif msg["type"] == "stderr":
+                self.stderr_msg.emit(msg["data"])
+        self.finished.emit()
