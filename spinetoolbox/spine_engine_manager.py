@@ -57,6 +57,34 @@ class SpineEngineManagerBase:
         """
         raise NotImplementedError()
 
+    def issue_persistent_command(self, persistent_key, command):
+        """Issues a command to a persistent process.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+            command (str): command to issue
+
+        Returns:
+            generator: stdio and stderr messages (dictionaries with two keys: type, and data)
+        """
+        raise NotImplementedError()
+
+    def restart_persistent(self, persistent_key):
+        """Restart a persistent process.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+        """
+        raise NotImplementedError()
+
+    def interrupt_persistent(self, persistent_key):
+        """Interrupts a persistent process.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+        """
+        raise NotImplementedError()
+
 
 class RemoteSpineEngineManager(SpineEngineManagerBase):
     _ENCODING = "ascii"
@@ -162,6 +190,16 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         from spine_engine.execution_managers.persistent_execution_manager import issue_persistent_command
 
         yield from issue_persistent_command(persistent_key, command)
+
+    def restart_persistent(self, persistent_key):
+        from spine_engine.execution_managers.persistent_execution_manager import restart_persistent
+
+        restart_persistent(persistent_key)
+
+    def interrupt_persistent(self, persistent_key):
+        from spine_engine.execution_managers.persistent_execution_manager import interrupt_persistent
+
+        interrupt_persistent(persistent_key)
 
 
 def make_engine_manager(engine_server_address):
