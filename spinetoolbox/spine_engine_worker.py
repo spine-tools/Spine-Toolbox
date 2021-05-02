@@ -196,7 +196,7 @@ class SpineEngineWorker(QObject):
     def _handle_persistent_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
         if msg["type"] == "persistent_started":
-            item.persistent_console_requested.emit(msg["filter_id"], msg["name"], msg["lexer_name"], msg["prompt"])
+            item.persistent_console_requested.emit(msg["filter_id"], msg["key"], msg["lexer_name"], msg["prompt"])
         elif msg["type"] == "stdin":
             item.persistent_stdin_available.emit(msg["filter_id"], msg["data"])
         elif msg["type"] == "stdout":

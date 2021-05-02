@@ -2347,8 +2347,8 @@ class ToolboxUI(QMainWindow):
         console.connect_to_kernel(kernel_name, connection_file)
         return console
 
-    def make_persistent_console(self, item, name, lexer_name, prompt):
-        """Creates a new PersistentConsoleWidget for given process name.
+    def make_persistent_console(self, item, key, lexer_name, prompt):
+        """Creates a new PersistentConsoleWidget for given process key.
 
         Args:
             item (ProjectItem): Item that owns the console
@@ -2356,14 +2356,19 @@ class ToolboxUI(QMainWindow):
         Returns:
             JupyterConsoleWidget
         """
-        console = self._extra_persistent_consoles.get(name)
+        console = self._extra_persistent_consoles.get(key)
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_persistent_consoles[name] = PersistentConsoleWidget(
-            self, name, lexer_name, prompt, owner=item
+        console = self._extra_persistent_consoles[key] = PersistentConsoleWidget(
+            self, key, lexer_name, prompt, owner=item
         )
         return console
+
+    def issue_persistent_command(self, persistent_key, command):
+        engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        engine_mngr = make_engine_manager(engine_server_address)
+        yield from engine_mngr.issue_persistent_command(persistent_key, command)
 
     def _shutdown_engine_kernels(self):
         """Shuts down all kernels managed by Spine Engine."""

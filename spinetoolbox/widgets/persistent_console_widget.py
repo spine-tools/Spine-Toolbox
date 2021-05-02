@@ -13,9 +13,9 @@ from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
 from pygments.token import Token
-from PySide2.QtCore import Slot, Qt, Signal
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QPlainTextEdit
-from PySide2.QtGui import QFontDatabase, QTextDocumentFragment, QTextCharFormat, QTextBlockUserData
+from PySide2.QtGui import QFontDatabase, QTextDocumentFragment, QTextCharFormat
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 
 
@@ -39,13 +39,12 @@ class PromptSyntaxHighlighter(CustomSyntaxHighlighter):
 
 
 class PersistentConsoleWidget(QPlainTextEdit):
-
-    _editable = QTextBlockUserData(object())
-
-    def __init__(self, toolbox, name, lexer_name, prompt, owner=None):
+    def __init__(self, toolbox, key, lexer_name, prompt, owner=None):
         super().__init__(parent=toolbox)
+        self._editable = 1
+        self._non_editable = -1
         self._toolbox = toolbox
-        self._name = name
+        self._key = key
         self._lexer_name = lexer_name
         self._prompt = prompt
         self._plain_prompt = QTextDocumentFragment.fromHtml(prompt).toPlainText()
@@ -65,7 +64,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def name(self):
         """Returns console name for display purposes."""
-        return f"{self._name} Console"
+        return f"{' '.join(self._key)} Console"
 
     def _setup_lexer(self):
         try:
@@ -76,7 +75,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def keyPressEvent(self, ev):
         cursor = self.textCursor()
-        if cursor.block().userData() != self._editable or cursor.positionInBlock() < len(self._plain_prompt):
+        if cursor.block().userState() == self._non_editable or cursor.positionInBlock() < len(self._plain_prompt):
             cursor.movePosition(cursor.End)
             self.setTextCursor(cursor)
             return
@@ -86,7 +85,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
             Qt.Key_Home,
         ):
             return
-        if ev.key() == Qt.Key_Return:
+        if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
             self._issue_command()
             return
         super().keyPressEvent(ev)
@@ -94,12 +93,16 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def _issue_command(self):
         block = self.document().lastBlock()
         cmd = block.text()[len(self._plain_prompt) :]
-        block.setUserData(QTextBlockUserData())
-        print(cmd)
-        # self._toolbox.
+        block.setUserState(self._non_editable)
+        for msg in self._toolbox.issue_persistent_command(self._key, cmd):
+            if msg["type"] == "stdout":
+                self.add_stdout(msg["data"])
+            elif msg["type"] == "stderr":
+                self.add_stderr(msg["data"])
+        self.add_prompt()
 
     def _has_prompt(self):
-        return self.document().lastBlock().userData() == self._editable
+        return self.document().lastBlock().userState() == self._editable
 
     def _insert_html_before_prompt(self, html):
         cursor = self.textCursor()
@@ -134,4 +137,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.movePosition(cursor.End)
         cursor.insertBlock()
         cursor.insertHtml(self._prompt)
-        cursor.block().setUserData(self._editable)
+        cursor.block().setUserState(self._editable)
+        cursor.movePosition(cursor.End)
+        self.setTextCursor(cursor)
