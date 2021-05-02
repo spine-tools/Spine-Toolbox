@@ -55,6 +55,7 @@ from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
 from .widgets.settings_widget import SettingsWidget
 from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
+from .widgets.persistent_console_widget import PersistentConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.link_properties_widget import LinkPropertiesWidget
@@ -164,8 +165,9 @@ class ToolboxUI(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
-        # Additional consoles for item execution. See ``ToolboxUI.make_jupyter_console()``
-        self._extra_consoles = {}
+        # Additional consoles for item execution
+        self._extra_jupyter_consoles = {}
+        self._extra_persistent_consoles = {}
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -2337,19 +2339,37 @@ class ToolboxUI(QMainWindow):
         Returns:
             JupyterConsoleWidget
         """
-        console = self._extra_consoles.get(connection_file)
+        console = self._extra_jupyter_consoles.get(connection_file)
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
+        console = self._extra_jupyter_consoles[connection_file] = JupyterConsoleWidget(self, kernel_name, owner=item)
         console.connect_to_kernel(kernel_name, connection_file)
+        return console
+
+    def make_persistent_console(self, item, name, lexer_name, prompt):
+        """Creates a new PersistentConsoleWidget for given process name.
+
+        Args:
+            item (ProjectItem): Item that owns the console
+
+        Returns:
+            JupyterConsoleWidget
+        """
+        console = self._extra_persistent_consoles.get(name)
+        if console is not None:
+            console.owners.add(item)
+            return console
+        console = self._extra_persistent_consoles[name] = PersistentConsoleWidget(
+            self, name, lexer_name, prompt, owner=item
+        )
         return console
 
     def _shutdown_engine_kernels(self):
         """Shuts down all kernels managed by Spine Engine."""
         engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        while self._extra_consoles:
-            connection_file, console = self._extra_consoles.popitem()
+        while self._extra_jupyter_consoles:
+            connection_file, console = self._extra_jupyter_consoles.popitem()
             engine_mngr.shutdown_kernel(connection_file)
             console.deleteLater()

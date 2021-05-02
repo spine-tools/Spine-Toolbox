@@ -172,6 +172,7 @@ class SpineEngineWorker(QObject):
             "event_msg": self._handle_event_msg,
             "process_msg": self._handle_process_msg,
             "standard_execution_msg": self._handle_standard_execution_msg,
+            "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
         }.get(event_type)
         if handler is None:
@@ -191,6 +192,17 @@ class SpineEngineWorker(QObject):
             self._event_message_arrived.emit(
                 item, msg["filter_id"], "msg_warning", "\tExecution is in progress. See messages below (stdout&stderr)"
             )
+
+    def _handle_persistent_execution_msg(self, msg):
+        item = self._project_items[msg["item_name"]]
+        if msg["type"] == "persistent_started":
+            item.persistent_console_requested.emit(msg["filter_id"], msg["name"], msg["lexer_name"], msg["prompt"])
+        elif msg["type"] == "stdin":
+            item.persistent_stdin_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "stdout":
+            item.persistent_stdout_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "stderr":
+            item.persistent_stderr_available.emit(msg["filter_id"], msg["data"])
 
     def _handle_kernel_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]

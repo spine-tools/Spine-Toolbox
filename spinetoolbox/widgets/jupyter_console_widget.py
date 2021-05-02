@@ -103,7 +103,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
             # Start kernel client and attach it to kernel manager
             self._replace_client()
         else:
-            # No kernel running in Python Console or Python kernel has been changed in Settings->Tools. Start kernel
+            # No kernel running in Console or kernel has been changed in Settings->Tools. Start kernel
             self.call_start_kernel()
 
     def call_start_kernel(self):
@@ -122,7 +122,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.start_kernel(kernel_path)
 
     def start_kernel(self, k_path):
-        """Starts a kernel manager and kernel client and attaches the client to Julia or Python Console.
+        """Starts a kernel manager and kernel client and attaches the client to this Console.
 
         Args:
             k_path (str): Directory where the the kernel specs are located

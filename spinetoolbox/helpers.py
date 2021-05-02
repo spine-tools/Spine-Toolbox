@@ -45,6 +45,12 @@ from PySide2.QtGui import (
     QTextCursor,
     QPalette,
     QColor,
+    QSyntaxHighlighter,
+    QTextCharFormat,
+    QBrush,
+    QColor,
+    QFont,
+    QPainter,
 )
 import spine_engine
 from .config import DEFAULT_WORK_DIR, REQUIRED_SPINE_ENGINE_VERSION
@@ -1032,3 +1038,36 @@ class SignalWaiter:
         """Wait for signal to be received."""
         while not self._triggered:
             QApplication.processEvents()
+
+
+class CustomSyntaxHighlighter(QSyntaxHighlighter):
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg, **kwargs)
+        self.lexer = None
+        self._formats = {}
+
+    def set_style(self, style):
+        self._formats.clear()
+        for ttype, tstyle in style:
+            text_format = self._formats[ttype] = QTextCharFormat()
+            if tstyle['color']:
+                brush = QBrush(QColor("#" + tstyle['color']))
+                text_format.setForeground(brush)
+            if tstyle['bgcolor']:
+                brush = QBrush(QColor("#" + tstyle['bgcolor']))
+                text_format.setBackground(brush)
+            if tstyle['bold']:
+                text_format.setFontWeight(QFont.Bold)
+            if tstyle['italic']:
+                text_format.setFontItalic(True)
+            if tstyle['underline']:
+                text_format.setFontUnderline(True)
+
+    def highlightBlock(self, text):
+        if self.lexer is None:
+            return
+        for start, ttype, subtext in self.lexer.get_tokens_unprocessed(text):
+            while ttype not in self._formats:
+                ttype = ttype.parent
+            text_format = self._formats.get(ttype, QTextCharFormat())
+            self.setFormat(start, len(subtext), text_format)
