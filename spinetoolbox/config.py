@@ -20,9 +20,9 @@ import sys
 import os
 from pathlib import Path
 
-REQUIRED_SPINE_ENGINE_VERSION = "0.9.34"
-REQUIRED_SPINEDB_API_VERSION = "0.11.50"
-PREFERRED_SPINE_ITEMS_VERSION = "0.6.50"
+REQUIRED_SPINE_ENGINE_VERSION = "0.10.0"
+REQUIRED_SPINEDB_API_VERSION = "0.12.1"
+PREFERRED_SPINE_ITEMS_VERSION = "0.7.3"
 LATEST_PROJECT_VERSION = 6
 
 # For the Add/Update SpineOpt wizard
@@ -45,7 +45,7 @@ if _frozen:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "html"))
 else:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "build", "html"))
-ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/latest"
+ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/release-0.6"
 
 PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "plugins"))
 

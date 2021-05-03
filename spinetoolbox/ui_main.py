@@ -72,6 +72,7 @@ from .config import (
     LATEST_PROJECT_VERSION,
     DEFAULT_WORK_DIR,
     PROJECT_FILENAME,
+    ONLINE_DOCUMENTATION_URL,
 )
 from .helpers import (
     create_dir,
@@ -348,11 +349,11 @@ class ToolboxUI(QMainWindow):
         Args:
             project_dir (str): project directory
         """
-        p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
+        p = os.path.join(f"{ONLINE_DOCUMENTATION_URL}", "getting_started.html")
         getting_started_anchor = (
-            "<a style='color:#99CCFF;' title='"
+            f"<a style='color:#99CCFF;' title='"
             + p
-            + "' href='https://spine-toolbox.readthedocs.io/en/latest/getting_started.html'>Getting Started</a>"
+            + f"' href='{ONLINE_DOCUMENTATION_URL}/getting_started.html'>Getting Started</a>"
         )
         welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
             getting_started_anchor
@@ -1693,14 +1694,14 @@ class ToolboxUI(QMainWindow):
         """Open Spine Toolbox documentation index page in browser."""
         # doc_index_path = os.path.join(DOCUMENTATION_PATH, "index.html")
         # index_url = "file:///" + doc_index_path
-        index_url = "https://spine-toolbox.readthedocs.io/en/latest/"
+        index_url = f"{ONLINE_DOCUMENTATION_URL}/index.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
 
     @Slot()
     def show_getting_started_guide(self):
         """Open Spine Toolbox Getting Started HTML page in browser."""
-        index_url = "https://spine-toolbox.readthedocs.io/en/latest/getting_started.html"
+        index_url = f"{ONLINE_DOCUMENTATION_URL}/getting_started.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
 

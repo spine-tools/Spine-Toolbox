@@ -45,7 +45,7 @@ class ProjectItemFactory:
         Returns the icon color.
 
         Returns:
-            QIcon
+            QColor: icon's color
         """
         raise NotImplementedError()
 

@@ -10,12 +10,11 @@ This section describes the available tools to remove data.
 Removing entities and classes
 =============================
 
-Using *Remove items* dialog
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+From *Object tree*, *Relationship tree*, or *Entity graph*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Select the items in *Object tree* or *Relationship tree* corresponding to the entities and classes
-you want to remove. Then, either select **Edit -> Remove selected items** from the menu bar,
-or right-click on the selection and choose **Remove selected items** from the context menu.
+Select the items in *Object tree*, *Relationship tree*, or *Entity graph*, corresponding to the entities and classes
+you want to remove. Then, right-click on the selection and choose **Remove** from the context menu.
 
 The *Remove items* dialog will popup:
 
@@ -25,22 +24,13 @@ The *Remove items* dialog will popup:
 Specify the databases from where you want to remove each item under the *databases* column,
 and press **Ok**.
 
-Using *Entity graph*
-~~~~~~~~~~~~~~~~~~~~
-
-Select the items in *Entity graph* corresponding to the objects and/or relationships you want to remove.
-Then, either select **Edit -> Remove selected items** from the menu bar,
-or right-click on the selection and choose **Remove selected items** from the context menu.
-
-
-Using *Pivot table*
-~~~~~~~~~~~~~~~~~~~
+From *Pivot table*
+~~~~~~~~~~~~~~~~~~
 To remove objects or relationships from a specific class, bring the class to *Pivot table*
 using the **Parameter value** input type
 (see :ref:`using_pivot_table_and_frozen_table`),
 and select the cells in the table headers corresponding to the objects and/or relationships you want to remove.
-Then, either select **Edit -> Remove selected items** from the menu bar,
-or right-click on the selection and choose **Remove selected items** from the context menu.
+Then, right-click on the selection and choose the corresponding **Remove** option from the context menu.
 
 Alternatively, to remove relationships for a specific class, 
 bring the class to *Pivot table* using the **Relationship** input type
@@ -54,43 +44,32 @@ and uncheck the corresponding box in the table body.
 Removing parameter definitions and values
 =========================================
 
-Using *Stacked tables*
-~~~~~~~~~~~~~~~~~~~~~~
+From *Stacked tables*
+~~~~~~~~~~~~~~~~~~~~~
 
 To remove parameter definitions or values,
 go to the relevant *Stacked table* and select any cell in the row corresponding to the items
 you want to remove
-Then, either select **Edit -> Remove selected items** from the menu bar,
-or right-click on the selection and choose **Remove selected items** from the context menu.
+Then, right-click on the selection and choose the appropriate **Remove** option from the context menu.
 
-Using *Pivot table*
-~~~~~~~~~~~~~~~~~~~
+From *Pivot table*
+~~~~~~~~~~~~~~~~~~
 
 To remove parameter definitions and/or values for a certain class,
 bring the corresponding class to *Pivot table* using the **Parameter value** input type
 (see :ref:`using_pivot_table_and_frozen_table`).
 Then:
 
-1. Select the cells in the *parameter* header corresponding to the parameter definitions you want to remove.
-2. Select the cells in the table body corresponding to the parameter values you want to remove.
+1. Select the cells in the *parameter* header corresponding to the parameter definitions you want to remove,
+   right-click on the selection and choose **Remove parameter definitions** from the context menu
+2. Select the cells in the table body corresponding to the parameter values you want to remove,
+   right-click on the selection and choose **Remove parameter values** from the context menu.
 
-Finally, either select **Edit -> Remove selected items** from the menu bar,
-or right-click on the selection in *Pivot table* and choose **Remove selected items** from the context menu.
+Purging items
+=============
 
-
-Removing parameter value lists
-==============================
-
-To remove parameter value list or any of their values, just select the appropriate rows in *Parameter value list*.
-Then, either select **Edit -> Remove selected items** from the menu bar,
-or right-click on the selection and choose **Remove selected items** from the context menu.
-
-
-Mass-removing items
-===================
-
-To remove all items of specific types, select **Edit -> Mass remove items** from the menu bar.
-The *Mass remove items* dialog will pop up:
+To remove all items of specific types, select **Edit -> Purge** from the hamburger menu.
+The *Purge items* dialog will pop up:
 
 .. image:: img/mass_remove_items_dialog.png
    :align: center
@@ -100,3 +79,34 @@ Select the databases from where you want to remove the items under *Databases*,
 and the type of items you want to remove under *Items*.
 Then, press **Ok**.
 
+Removing alternatives and scenarios
+===================================
+
+From *Pivot table*
+~~~~~~~~~~~~~~~~~~
+
+Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table`).
+To remove scenarios, just select the proper cells in the **scenario** header,
+right-click on the selection and chose **Remove** from the context menu.
+To remove alternatives, just edit the proper cells in the **alternative** header,
+right-click on the selection and chose **Remove** from the context menu.
+
+From *Alternative/Scenario tree*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To remove a scenario or alternative, just select the correspoding items in *Alternative/Scenario tree*,
+right-click on the selection and chose **Remove** from the context menu.
+
+
+Removing tools and features
+===========================
+
+To remove a feature, tool, or method, just select the correspoding items in *Tool/Feature tree*,
+right-click on the selection and chose **Remove** from the context menu.
+
+
+Removing parameter value lists
+==============================
+
+To remove a parameter value list or any of its values, just select the correspoding items in *Parameter value list*,
+right-click on the selection and chose **Remove** from the context menu.

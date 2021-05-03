@@ -172,7 +172,11 @@ def load_project_items():
     categories = dict()
     factories = dict()
     for child in items_root.iterdir():
-        if child.is_dir() and child.joinpath("__init__.py").exists():
+        if (
+            child.is_dir()
+            and child.joinpath("__init__.py").exists()
+            or (child.is_dir() and child.joinpath("__init__.pyc").exists())
+        ):
             spec = importlib.util.find_spec(f"spine_items.{child.stem}")
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)

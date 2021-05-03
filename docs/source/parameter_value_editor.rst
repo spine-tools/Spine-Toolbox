@@ -23,8 +23,9 @@ The combo box at the top of the editor window allows changing the type of the cu
 Plain values
 ------------
 
-The simplest parameter values are of the *Plain value* type. These are numbers or booleans
-which can be set by entering ``true`` or ``false`` on the *Parameter value* field.
+The simplest parameter values are of the *Plain value* type.
+The editor window lets you to write a number or string directly to the input field
+or set it to true, false or null as needed.
 
 .. image:: img/value_editor_plain.png
    :align: center
@@ -32,19 +33,38 @@ which can be set by entering ``true`` or ``false`` on the *Parameter value* fiel
 Maps
 ----
 
-Maps are nested data structures which can contain many different types of data including
-one and multi dimensional indexed arrays.
-The current support for maps in Parameter value editor is rather bare bones.
-The map is shown as a table where the last non-empty cells on each row contain the value
-while the preceding cells contain the value's index.
+Maps are versatile nested data structures designed to contain complex data
+including one and multi dimensional indexed arrays.
+In Parameter value editor a map is shown as a table where the last non-empty cell on each row
+contains the value while the preceding cells contain the value's indexes.
 
 .. image:: img/value_editor_map.png
    :align: center
 
-A **Right click** popup menu gives options to add rows or columns
-(effectively adds a new dimension to map) or trim empty columns from the right hand side.
+The extra gray column on the right allows expanding the map with a new dimension.
+You can append a value to the map by editing the bottom gray row.
+The reddish cells are merely a guide for the eye to indicate that the map has different nesting depths.
 
-At the moment the cell values have to be entered as JSON strings.
+A **Right click** popup menu gives options to open a value editor for individual cells,
+to add/insert/remove rows or columns (effectively changing map's dimensions),
+or to trim empty columns from the right hand side.
+
+Copying and pasting data between cells and external programs works using the usual
+**Ctrl-C** and **Ctrl-V** keyboard shortcuts.
+
+**Convert leaves to time series** 'compacts' the map by converting the last dimension into time series.
+This works only if the last dimension's type is datetime.
+For example the following map contains two time dimensions.
+Since the indexes are datetimes, the 'inner' dimension can be converted to time series.
+
+.. image:: img/value_editor_map_before_conversion.png
+   :align: center
+
+After clicking **Convert leaves to time series** the map looks like this:
+
+.. image:: img/value_editor_map_after_conversion.png
+   :align: center
+
 
 Time series
 -----------
@@ -59,12 +79,13 @@ while in fixed resolution series the time steps between consecutive stamps are f
 .. image:: img/value_editor_time_series_fixed.png
    :align: center
 
-The editor windows is split into two in both cases.
+The editor window is split into two in both cases.
 The left side holds all the options and a table with all the data
 while the right side shows a plot of the series.
 The plot is not editable and is for visualization purposes only.
 
 In the table rows can be added or removed from a popup menu available by a **right click**.
+Editing the last gray row appends a new value to the series.
 Data can be copied and pasted by **Ctrl-C** and **Ctrl-V**.
 Copying from/to an external spreadsheet program is supported.
 
@@ -83,17 +104,32 @@ i.e. it starts from the beginning once the time steps run out.
 Time patterns
 -------------
 
-The time pattern editor holds a single table which shows the period on the right column
+The time pattern editor holds a single table which shows the time period on the right column
 and the corresponding values on the left.
 Inserting/removing rows and copy-pasting works as in the time series editor.
 
 .. image:: img/value_editor_time_pattern.png
    :align: center
 
+Arrays
+------
+
+Arrays are lists of values of a single type.
+Their editor is split into two:
+the left side holds the actual array while the right side contains a plot of the array values
+versus the values' positions within the array.
+Note that not all value types can be plotted.
+The type can be selected from the *Value type* combobox.
+Inserting/removing rows and copy-pasting works as in the time series editor.
+
+.. image:: img/value_editor_array.png
+   :align: center
+
 Datetimes
 ---------
 
 The datetime value should be entered in `ISO8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ format.
+Clicking small arrow on the input field pops up a calendar that can be used to select a date.
 
 .. image:: img/value_editor_datetime.png
    :align: center
