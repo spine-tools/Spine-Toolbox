@@ -308,7 +308,7 @@ def get_datetime(show, date=True):
     time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
     if not date:
         return "[{}] ".format(time_str)
-    date_str = "{}-{:02d}-{:02d}".format(t.day, t.month, t.year)
+    date_str = "{:02d}-{:02d}-{:02d}".format(t.day, t.month, t.year)
     return "[{} {}] ".format(date_str, time_str)
 
 
