@@ -232,7 +232,7 @@ class PluginManager:
                 self._toolbox.do_remove_specification(row, ask_verification=False)
         # Remove plugin dir
         shutil.rmtree(plugin_dir)
-        self._plugin_toolbars[plugin_name].deleteLater()
+        self._plugin_toolbars.pop(plugin_name).deleteLater()
         self._toolbox.refresh_toolbars()
 
     @Slot(str)
