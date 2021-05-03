@@ -230,6 +230,7 @@ class PluginManager:
             row = self._toolbox.specification_model.specification_row(spec_dict["name"])
             if row >= 0:
                 self._toolbox.do_remove_specification(row, ask_verification=False)
+        self._plugin_specs.pop(plugin_name, None)
         # Remove plugin dir
         shutil.rmtree(plugin_dir)
         self._plugin_toolbars.pop(plugin_name).deleteLater()
