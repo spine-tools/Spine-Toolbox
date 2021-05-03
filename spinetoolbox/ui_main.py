@@ -1562,7 +1562,7 @@ class ToolboxUI(QMainWindow):
         layout.addWidget(console)
         console.show()
         try:
-            new_title = f"{console.owner_names} {console.name()}"
+            new_title = console.name()
         except AttributeError:
             new_title = "Console"
         widget.parent().setWindowTitle(new_title)
@@ -2347,22 +2347,22 @@ class ToolboxUI(QMainWindow):
         console.connect_to_kernel(kernel_name, connection_file)
         return console
 
-    def make_persistent_console(self, item, key, lexer_name, prompt):
+    def make_persistent_console(self, item, key, language):
         """Creates a new PersistentConsoleWidget for given process key.
 
         Args:
             item (ProjectItem): Item that owns the console
-
+            key (tuple): persistent process key in spine engine
+            language (str): for syntax highlighting and prompting, etc.
+            
         Returns:
-            JupyterConsoleWidget
+            PersistentConsoleWidget
         """
         console = self._extra_persistent_consoles.get(key)
         if console is not None:
             console.owners.add(item)
             return console
-        console = self._extra_persistent_consoles[key] = PersistentConsoleWidget(
-            self, key, lexer_name, prompt, owner=item
-        )
+        console = self._extra_persistent_consoles[key] = PersistentConsoleWidget(self, key, language, owner=item)
         return console
 
     def _shutdown_engine_kernels(self):

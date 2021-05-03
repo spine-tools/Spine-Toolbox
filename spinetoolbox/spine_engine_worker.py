@@ -196,13 +196,24 @@ class SpineEngineWorker(QObject):
     def _handle_persistent_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
         if msg["type"] == "persistent_started":
-            item.persistent_console_requested.emit(msg["filter_id"], msg["key"], msg["lexer_name"], msg["prompt"])
+            item.persistent_console_requested.emit(msg["filter_id"], msg["key"], msg["language"])
+        elif msg["type"] == "persistent_failed_to_start":
+            msg_text = (
+                f"\tUnable to start persistent process <b>{msg['args']}</b>: {msg['error']}."
+                "Please go to Settings->Tools and check your setup."
+            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "stdin":
             item.persistent_stdin_available.emit(msg["filter_id"], msg["data"])
         elif msg["type"] == "stdout":
             item.persistent_stdout_available.emit(msg["filter_id"], msg["data"])
         elif msg["type"] == "stderr":
             item.persistent_stderr_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "execution_started":
+            self._event_message_arrived.emit(
+                item, msg["filter_id"], "msg", f"\tStarting execution on persistent process <b>{msg['args']}</b>"
+            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages.")
 
     def _handle_kernel_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
@@ -211,7 +222,7 @@ class SpineEngineWorker(QObject):
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
                 f"\tUnable to find specification for kernel <b>{msg['kernel_name']}</b>. "
-                "Go to Settings->Tools to select a valid kernel."
+                "Please go to Settings->Tools to select a valid kernel."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
@@ -219,7 +230,7 @@ class SpineEngineWorker(QObject):
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_started":
             self._event_message_arrived.emit(
-                item, msg["filter_id"], "msg", f"\tStarting program on kernel <b>{msg['kernel_name']}</b>"
+                item, msg["filter_id"], "msg", f"\tStarting execution on kernel <b>{msg['kernel_name']}</b>"
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages.")
 

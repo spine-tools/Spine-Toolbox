@@ -66,7 +66,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
 
     def name(self):
         """Returns console name for display purposes."""
-        return f"{self._target_kernel_name} Console"
+        return f"{self._target_kernel_name} Console - {self.owner_names}"
 
     @property
     def owner_names(self):
@@ -269,6 +269,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.kernel_manager = QtKernelManager(connection_file=connection_file)
         self.kernel_manager.load_connection_file()
         self._replace_client()
+        # pylint: disable=attribute-defined-outside-init
         self.include_other_output = True
         self.other_output_prefix = ""
 

@@ -42,13 +42,12 @@ class PromptSyntaxHighlighter(CustomSyntaxHighlighter):
 class PersistentConsoleWidget(QPlainTextEdit):
     """A widget to interact with a persistent process."""
 
-    def __init__(self, toolbox, key, lexer_name, prompt, owner=None):
+    def __init__(self, toolbox, key, language, owner=None):
         """
         Args:
             toolbox (ToolboxUI)
             key (tuple): persistent process identifier
-            lexer_name (str): for syntax highlighting
-            prompt (str): prompt
+            language (str): for syntax highlighting and prompting, etc.
             owner (ProjectItemBase, optional): console owner
         """
         super().__init__(parent=toolbox)
@@ -57,9 +56,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._non_editable = -1
         self._toolbox = toolbox
         self._key = key
-        self._lexer_name = lexer_name
-        self._prompt = prompt
-        self._plain_prompt = QTextDocumentFragment.fromHtml(prompt).toPlainText()
+        self._language = language
+        self._prompt = self._make_prompt()
+        self._plain_prompt = QTextDocumentFragment.fromHtml(self._prompt).toPlainText()
         self.owners = {owner}
         self._highlighter = PromptSyntaxHighlighter(self._plain_prompt, self)
         self._highlighter.setDocument(self.document())
@@ -76,33 +75,39 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def name(self):
         """Returns console name for display purposes."""
-        return f"{' '.join(self._key)} Console"
+        return f"{self._language.capitalize()} Console - {self.owner_names}"
 
     @property
     def owner_names(self):
         return "&".join(x.name for x in self.owners if x is not None)
 
+    def _make_prompt(self):
+        return {"julia": '<br><span style="color:green; font-weight: bold">julia></span> ', "python": '>>> '}.get(
+            self._language, "$"
+        )
+
     def _setup_lexer(self):
         try:
-            self._highlighter.lexer = get_lexer_by_name(self._lexer_name)
+            self._highlighter.lexer = get_lexer_by_name(self._language)
             self._highlighter.rehighlight()
         except ClassNotFound:
             pass
 
     def keyPressEvent(self, ev):
         """Reimplemented to only accept keyboard input after the prompt."""
-        if ev.modifiers() != Qt.NoModifier:
-            super().keyPressEvent(ev)
-            return
         cursor = self.textCursor()
-        if cursor.block().userState() == self._non_editable or cursor.positionInBlock() < len(self._plain_prompt):
+        if (
+            cursor.block().userState() == self._non_editable
+            or cursor.positionInBlock() < len(self._plain_prompt)
+            and ev.modifiers() == Qt.NoModifier
+        ):
             cursor.movePosition(cursor.End)
             self.setTextCursor(cursor)
             return
-        if cursor.positionInBlock() == len(self._plain_prompt) and ev.key() in (
-            Qt.Key_Backspace,
-            Qt.Key_Left,
-            Qt.Key_Home,
+        if (
+            cursor.positionInBlock() == len(self._plain_prompt)
+            and ev.key() in (Qt.Key_Backspace, Qt.Key_Left, Qt.Key_Home)
+            and ev.modifiers() == Qt.NoModifier
         ):
             return
         if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
