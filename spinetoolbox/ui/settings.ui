@@ -21,7 +21,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>742</width>
+    <width>700</width>
     <height>550</height>
    </rect>
   </property>
@@ -95,7 +95,7 @@
       <widget class="QListWidget" name="listWidget">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
+         <horstretch>1</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
@@ -204,12 +204,12 @@
       <widget class="QStackedWidget" name="stackedWidget">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>0</horstretch>
+         <horstretch>3</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>2</number>
        </property>
        <widget class="QWidget" name="General">
         <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -772,36 +772,6 @@ p, li { white-space: pre-wrap; }
            </property>
            <layout class="QVBoxLayout" name="verticalLayout">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_9">
-              <item>
-               <widget class="CustomQComboBox" name="comboBox_julia_kernel">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia Jupyter kernel.&lt;/p&gt;&lt;p&gt;Only valid Julia kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Kernel spec editor</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
              <layout class="QHBoxLayout" name="horizontalLayout_8">
               <item>
                <widget class="QLineEdit" name="lineEdit_julia_path">
@@ -876,27 +846,40 @@ p, li { white-space: pre-wrap; }
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <layout class="QHBoxLayout" name="horizontalLayout_9">
               <item>
-               <widget class="QRadioButton" name="radioButton_use_julia_executable">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Julia Tools and scripts will be executed in a terminal as an individual process.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
+               <widget class="QCheckBox" name="checkBox_use_julia_kernel">
                 <property name="text">
-                 <string>Run Julia tools in a subprocess</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
+                 <string>Use Jupyter kernel:</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QRadioButton" name="radioButton_use_julia_console">
+               <widget class="CustomQComboBox" name="comboBox_julia_kernel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia Jupyter kernel.&lt;/p&gt;&lt;p&gt;Only valid Julia kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="sizeAdjustPolicy">
+                 <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Run Julia tools in embedded console</string>
+                 <string>Kernel editor</string>
                 </property>
                </widget>
               </item>
@@ -962,48 +945,6 @@ p, li { white-space: pre-wrap; }
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_11">
-              <item>
-               <widget class="CustomQComboBox" name="comboBox_python_kernel">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python Jupyter kernel.&lt;/p&gt;&lt;p&gt;Only valid Python kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="sizeAdjustPolicy">
-                 <enum>QComboBox::AdjustToContents</enum>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="toolTip">
-                 <string>Open kernel editor</string>
-                </property>
-                <property name="text">
-                 <string>Kernel spec editor</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
              <layout class="QHBoxLayout" name="horizontalLayout_10">
               <item>
                <widget class="QLineEdit" name="lineEdit_python_path">
@@ -1038,24 +979,49 @@ p, li { white-space: pre-wrap; }
              </layout>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_13">
+             <layout class="QHBoxLayout" name="horizontalLayout_11">
               <item>
-               <widget class="QRadioButton" name="radioButton_use_python_interpreter">
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Python Tools and scripts are executed in a separate process in terminal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
+               <widget class="QCheckBox" name="checkBox_use_python_kernel">
                 <property name="text">
-                 <string>Run Python tools in a subprocess</string>
+                 <string>Use jupyter kernel:</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QRadioButton" name="radioButton_use_python_console">
+               <widget class="CustomQComboBox" name="comboBox_python_kernel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When selected, Python Tools and scripts are executed in the embedded Python Console.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python Jupyter kernel.&lt;/p&gt;&lt;p&gt;Only valid Python kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="sizeAdjustPolicy">
+                 <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>Open kernel editor</string>
                 </property>
                 <property name="text">
-                 <string>Run Python tools in embedded console</string>
+                 <string>Kernel editor</string>
                 </property>
                </widget>
               </item>

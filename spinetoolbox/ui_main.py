@@ -117,6 +117,7 @@ class ToolboxUI(QMainWindow):
         super().__init__(flags=Qt.Window)
         self.set_error_mode()
         self._qsettings = QSettings("SpineProject", "Spine Toolbox", self)
+        self._update_qsettings()
         locale.setlocale(locale.LC_NUMERIC, 'C')
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
@@ -271,6 +272,16 @@ class ToolboxUI(QMainWindow):
             import ctypes
 
             ctypes.windll.kernel32.SetErrorMode(0)
+
+    def _update_qsettings(self):
+        """Updates obsolete settings."""
+        old_new = {
+            "appSettings/useEmbeddedJulia": "appSettings/useJuliaKernel",
+            "appSettings/useEmbeddedPython": "appSettings/usePythonKernel",
+        }
+        for old, new in old_new.items():
+            if not self._qsettings.contains(new) and self._qsettings.contains(old):
+                self._qsettings.setValue(new, self._qsettings.value(old))
 
     def _update_execute_enabled(self):
         first_index = next(self.project_item_model.leaf_indexes(), None)
@@ -2354,7 +2365,7 @@ class ToolboxUI(QMainWindow):
             item (ProjectItem): Item that owns the console
             key (tuple): persistent process key in spine engine
             language (str): for syntax highlighting and prompting, etc.
-            
+
         Returns:
             PersistentConsoleWidget
         """

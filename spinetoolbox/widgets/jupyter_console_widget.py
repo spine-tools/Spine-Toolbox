@@ -66,7 +66,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
 
     def name(self):
         """Returns console name for display purposes."""
-        return f"{self._target_kernel_name} Console - {self.owner_names}"
+        return f"Jupyter {self._target_kernel_name} Console - {self.owner_names}"
 
     @property
     def owner_names(self):
