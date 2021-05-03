@@ -5,6 +5,8 @@
             :width: 16
 .. |file| image:: ../../spinetoolbox/ui/resources/file.svg
           :width: 16
+.. |file_regular| image:: ../../spinetoolbox/ui/resources/file-regular.svg
+          :width: 16
 .. |file_link| image:: ../../spinetoolbox/ui/resources/file-link.svg
           :width: 16
 .. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
@@ -15,11 +17,10 @@
               :width: 16
 .. |tool_specification_options| image:: ../../spinetoolbox/ui/resources/wrench.svg
              :width: 16
-
-.. _SpineData.jl: https://gitlab.vtt.fi/spine/data/tree/manuelma
-.. _SpineOpt.jl: https://github.com/Spine-project/SpineOpt.jl
-.. _Jupyter: http://jupyter.org/
-.. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
+.. |angle_double_right| image:: ../../spinetoolbox/ui/resources/menu_icons/angle-double-right.svg
+             :width: 16
+.. |plus| image:: ../../spinetoolbox/ui/resources/plus.svg
+             :width: 16
 
 .. _Getting Started:
 
@@ -39,29 +40,33 @@ Spine Toolbox Interface
 -----------------------
 
 The central element in Spine Toolbox's interface is the *Design View*,
-where you can visualize and manipulate your project in a pictorial way.
-Alongside *Design View* there are a few 'dock widgets' that provide additional functionality:
+which allows you to visualize and manipulate your project workflow.
+In addition to the *Design View* there are a few 'dock widgets' that provide additional functionality:
 
-* *Project* provides a more concise view of your project, including the *Items* that are currently in the project, grouped by category: Data Stores, Data Connections, Tools, Views, Importers, Exporters and Manipulators.
+* *Project* provides a more concise view of your project, including the *Items* that are currently in the
+  project, grouped by category: Data Stores, Data Connections, Tools, Views, Importers, Exporters and
+  Manipulators.
 * *Properties* provides an interface to interact with the currently selected project item.
-* *Event Log* shows relevant messages about every performed action.
-* *Process Log* shows the output of executed Tools.
-* *Julia console* provides an interface to interact with the Julia programming language,
-  and also allows Spine Toolbox to execute Julia Tools.
+* *Event Log* shows relevant messages about user performed actions and the status of executions.
+* *Item Execution Log* shows the output of executed project items.
 * *Python console* provides an interface to interact with the Python programming language,
   and also allows Spine Toolbox to execute Python Tools.
-  
-In addition to the Design view and the dock widgets, you have a *toolbar* with buttons for the most common tasks.
+* *Julia console* provides an interface to interact with the Julia programming language,
+  and also allows Spine Toolbox to execute Julia Tools.
+* *Executions* shows a list of parallel executions available in the project.
 
-.. tip:: You can drag-and-drop the Dock Widgets around the screen,
-   customizing the interface at your will.
+In addition to the Design view and the dock widgets, the main window contains a *toolbar* split into
+two sections. The *Main* section contains the project items that you can drag-and-drop onto the Design
+View and the *Execute* section has buttons related to executing the project.
+
+.. tip:: You can drag-and-drop the dock widgets around the screen, customizing the interface at your will.
    Also, you can select which ones are shown/hidden using either the **View/Dock Widgets** menu,
    or the main menu toolbar's context menu.
    Spine Toolbox remembers your configuration between sessions. Selecting **Restore Dock Widgets**
    from the **View/Dock Widgets** menu restores the widgets back to their default location.
 
 .. tip:: Most elements in the Spine Toolbox's interface are equipped with *tool tips*. Leave your mouse
-   cursor over an element (button, view, etc.) for a moment to make the tool tip appear.
+   cursor over an element (button, checkbox, list, etc.) for a moment to make the tool tip appear.
 
 Creating a Project
 ------------------
@@ -73,10 +78,11 @@ To create a new project, please do one of the following:
 
 The *Select project directory (New project...)* dialog will show up.
 Browse to a folder of your choice and create a new directory called 'hello world' there.
-Then select the 'hello world' directory.
-Spine Toolbox will populate that directory with some files and directories it needs to store the project's data.
+Then select the 'hello world' directory and press Enter.
+Spine Toolbox will populate the selected directory with some files and directories it needs to store
+the project's data.
 
-Congratulations, you have created a new project.
+Congratulations, you have created your first Spine Toolbox project.
 
 Creating a Tool specification
 -----------------------------
@@ -86,145 +92,162 @@ Creating a Tool specification
    required and optional input files, and expected output files. Once a Tool specification is added to a project, it can
    then be associated to a **Tool** item for its execution as part of the project workflow.
 
-In the *toolbar*, click on the *add tool button* (|add_tool_specification|), and select **Create Tool Specification...** from the popup menu. The *Edit Tool specification* form will appear. Follow the instructions below to create a minimal Tool specification:
+.. note:: Just like the main window, the Tool specification editor consists of dock widgets that you can reorganize
+   however you like.
 
-* Type 'hello_world' in the *Type name here...* field.
-* Select 'Python' from the *Select type...* dropdown list,
-* Click on the |file| button right next to the field that reads *Add main program file here...*, and
-  select the option **Make new main program** from the popup menu.
-* A file browser dialog should open. Name the file *hello_world.py* and save it in a folder of your choice,
-  e.g. in 'hello world'
+In the *toolbar*, click on the |angle_double_right| icon next to the Tool icon |tool_icon|, to reveal the Tool
+specification list. Since there are none in the project yet, click on the |plus| button to open the *Tool specification
+editor*. Follow the instructions below to create a minimal Tool specification:
 
-After this, the *Edit Tool specification* form should be looking similar to this:
+* Type 'hello_world' into the *Name:* field.
+* Select 'Python' from the *Tool type* dropdown list,
+* Click on the |file_regular| button next to the *Main program file* text in the *Program files* dock widget. A
+  *Create new main program file* file browser dialog opens. Name the file *hello_world.py* and save it e.g. directly
+  to the 'hello world' project directory or to a folder of your choice.
 
-.. image:: img/hello_world_tool_specification_editor.png
+We have just created a 'hello_world.py' Python script file, but at the moment the file is empty. Spine Toolbox provides
+an mini **IDE** where you can view and edit the contents of Tool specification files. Let's try it out.
+
+Select 'hello_world.py' below the *Main Program File*. Click on the (black) editor dock widget with the title
+'hello_world.py'.
+
+Type in the following::
+
+    print("Hello, world!")
+
+Now, whenever *hello_world.py* is executed, the sentence 'Hello, World!' will be printed to the standard output.
+
+The *Tool specification editor* should be looking similar to this now:
+
+.. image:: img/release06_getting_started_tool_spec_editor.png
   :align: center
-  
-|
 
-Click **Ok** at the bottom of the form. A new system dialog will appear, allowing you to
-select a file name and location to save the Tool specification we've just created.
-Don't change the default file name, which should be *hello_world.json*.
-Just select a folder from your system (it can be the same where you saved the main program file)
-and click **Save**.
+Note that the program file (hello_world.py) and the Tool specification (hello world) now have unsaved changes.
+This is indicated by the star (*) character next to hello_world.py* and the Tool specification name in the tabbar
+(hello world*).
 
-Now you should see the new tool in the *Project* widget, *Tools* list.
+* Save changes to both by either pressing **Ctrl-s** or by mouse clicking on **Save** in the hamburger menu in
+  the upper right hand corner.
+* Close Tool specification editor by pressing **Alt-F4** or by clicking on 'X' in the top right hand corner of the
+  window.
+
+Your main window should look similar to this now.
+
+.. image:: img/release06_getting_started_first_tool_spec_created.png
+  :align: center
+
+Tool specifications are saved in JSON format by default into a dedicated directory under the project directory. If you
+want you can open the newly created hello_world.json file by clicking on the file path in the Event log message. The
+file will open in an external editor provided that you have selected a default program for files with the .json
+extension (e.g in Windows 10 you can do this in Windows Settings->Apps->Default apps). In general, you don't need
+to worry about *the contents* of the JSON Tool specification files. Editing these is done under the hood by the app.
+
+If you want to save the 'hello_world.json' file somewhere else, you can do this by clicking the white [Change] link
+after the path in the Event Log.
 
 .. tip:: Saving the Tool specification into a file allows you to add and use the same Tool specification in
-   another project. To do this, you just need to click on the add tool button (|add_tool_specification|),
-   select **Add specification from file...** from the popup menu, and then select the tool specification file from your system.
+   another project. To do this, you just need to click *add tool specification from file...* button
+   (|add_tool_specification|) in the toolbar and select the tool specification file (.json) from your system.
 
 Congratulations, you have just created your first Tool specification.
 
-However, the main program file *hello_world.py* was created empty, so for the moment this Tool
-specification does absolutely nothing. To change that, we need to add instructions to that program file so it actually
-does something when executed.
-
-Right click on the 'hello_world' item in the *Tool specifications* list and select **Edit main program file...** from the
-context menu. This will open the file *hello_world.py* in your default editor.
-
-Enter the following into the file's content::
-
-    print("Hello, World!")
-
-Save the file.
-
-Now, whenever *hello_world.py* is executed, the sentence 'Hello, World!'
-will be printed to the standard output.
 
 Adding a Tool item to the project
 ---------------------------------
 
-.. note:: The **Tool** item is used to run Tool specifications.
+.. note:: The **Tool** project item is used to run Tool specifications.
 
 Let's add a Tool item to our project, so that we're able to run the Tool specification we created above.
-To add a Tool item drag-and-drop the Tool icon from the toolbar onto the *Design View*.
+To add a Tool item drag-and-drop the Tool icon |tool_icon| from the toolbar onto the *Design View*.
 
-The *Add Tool* form will popup.
-Type 'say hello world' in the name field, select 'hello_world' from the dropdown list just below, and click **Ok**.
-Now you should see the newly added Tool item as an icon in the *Design View*,
-and also as an entry in the *Project* dock widget, *Items* list, under the 'Tools' category. It should
-look similar to this:
+The *Add Tool* form will popup. Change name of the Tool to 'say hello world', and select 'hello_world' from the
+dropdown list just below, and click **Ok**. Now you should see the newly added Tool item as an icon in the
+*Design View*, and also as an entry in the *Project* dock widget, *Items* list, under the 'Tools' category. It
+should look similar to this:
 
-.. image:: img/say_hello_world_tool.png
+.. image:: img/release06_getting_started_first_tool_created.png
    :align: center
    
 |
+
+Another way to do the same thing is to drag the |tool_icon| with the 'hello world' text from the toolbar onto
+the Design View. Similarly, the *Add Tool* form will popup but the 'hello world' tool specification is already
+selected from the dropdown list.
+
+.. note:: The Tool specification is now saved to disk but the project itself is not. Remember to save the project
+   every once in a while when you are working. You can do this from the main window `File->Save project` button
+   or by pressing **Ctrl-s** when the main window is active.
 
 Executing a Tool
 ----------------
 
-As long as the 'say hello world' Tool item is selected, you will be able to see its *Properties* on the right part
-of the window, looking similar to this:
+Select the 'say hello world' Tool on *Design View*, and you will see its *Properties* in the dedicated dock
+widget. It looks similar to this:
 
-.. image:: img/say_hello_world_tool_properties.png
+.. image:: img/release06_getting_started_tool_properties.png
    :align: center
    
 |
 
-Press *execute project* |execute| button on the toolbar. This will execute the Tool specification 'hello world',
-which in turn will run the main program file *hello_world.py* in a dedicated process.
+Press *execute project* |execute| button on the toolbar. This will execute the 'say hello world' Tool project item
+which now has the 'hello world' Tool specification associated to it. In actuality, this will run the main program
+file *hello_world.py* in a dedicated process.
 
-You can see more details about execution in the *Event Log*. Once it's finished, you will see its output in
-the *Process Log* or in the *Python Console* depending on your settings (See :ref:`Settings`).
+Once the execution is finished, you can see the item execution details in the *Item Execution Log* and the details
+about the whole execution in Event Log.
 
-.. image:: img/hello_world_event_process_log.png
+.. image:: img/release06_getting_started_after_first_execution.png
    :align: center
    
 |
 
-.. note:: If you encounter the message **Couldn't determine Python version. Please check the Python interpreter option in Settings.**
-   in the *Event Log* when trying to execute a Python Tool, check :ref:`Setting Up External Tools` for help.
+.. note:: For more information about execution modes in Spine Toolbox, please see :ref:`Setting Up External Tools`
+   for help.
 
-Congratulations, you just ran your first Spine Toolbox project.
+Congratulations, you just executed your first Spine Toolbox project.
 
 Editing a Tool specification
 ----------------------------
 
 To make things more interesting, we will now specify an *input file* for our 'hello_world' Tool specification.
 
-.. note:: Input files specified in the Tool specification can be used by the program source files, to obtain some relevant
-   information for the Tool's execution. When executed, a Tool item looks for input files in
-   **Data Connection** and **Data Store** items connected to its input.
+.. note:: Input files specified in the Tool specification can be used by the program source files, to obtain
+   input data for the Tool's execution. When executed, a Tool item looks for input files in **Data Connection**,
+   **Data Store**, **Gdx Exporter**, **Exporter**, and **Data Transformer** project items connected to its input.
 
-Click on the 'Tool specification options' button (|tool_specification_options|) in 'say hello world'
-*Properties*, and select **Edit Tool specification** from the popup menu.
-This will open the 'Edit Tool specification' form pre-filled with data from the 'hello_world' specification.
+Open the Tool specification editor for the 'hello world' Tool spec. You can do this for example, by double-clicking
+the 'say hello world' Tool, or by selecting **Edit specification** from the 'hello world' Tool specification
+context menu in the toolbar, or from the 'say hello world' Tool context-menu (**Specification...->Edit specification**).
 
-Click the *add input files and/or directories* |file_link| button right below the *Input files* list.
-A dialog will appear that lets you enter a
-name for a new input file. Type 'input.txt' and click **Ok**. The form
-should now look like this:
+In *Input & Output files* dock widget, click the |file_link| button next to the *Input Files* text. A dialog appears,
+that lets you enter a name for an input file. Type 'input.txt' and press Enter.
 
-.. image:: img/hello_world_input_tool_specification_editor.png
-  :align: center
-  
-|
-
-Click **Ok** at the bottom of the form.
-
-.. note:: See :ref:`Tool specification editor` for more information on editing Tool specifications.
-
-So far so good. Now let's use this input file in our program.
-Click on the 'Tool specification options' button (|tool_specification_options|) again,
-and this time select **Edit main program file...** from the popup menu. This will open the file
-*hello_world.py* in your default editor.
-
-Delete whatever it's in the file and enter the following instead::
+So far so good. Now let's use this input file in our program. Still in the Tool specification editor, replace the
+text in the main program file (hello_world.py), with the following::
 
     with open("input.txt") as input_file:
         print(input_file.read())
 
-Save the file.
-
 Now, whenever *hello_world.py* is executed, it will look for a file called 'input.txt'
 in the current directory, and print its content to the standard output.
 
-Try executing the tool by pressing |execute| in the toolbar.
-*The execution will fail.* This is because the file 'input.txt' is not
+The editor should now look like this:
+
+.. image:: img/release06_getting_started_added_input_file.png
+  :align: center
+
+|
+
+Save the specification and close the editor by pressing **Ctrl-s** and then **Alt-F4**.
+
+.. note:: See :ref:`Tool specification editor` for more information on editing Tool specifications.
+
+Back in the main window, note the exclamation mark on the Tool icon in Design View, if you hover the mouse over
+this mark, you will see a tooltip telling you in detail what is wrong. If you want you can try and execute the
+Tool anyway by pressing |execute| in the toolbar. *The execution will fail.* because the file 'input.txt' is not
 made available for the Tool:
 
-.. image:: img/hello_world_failed.png
+.. image:: img/release06_getting_started_say_hello_world_failed.png
   :align: center
   
 |
@@ -235,29 +258,20 @@ Adding a Data Connection item to the project
 .. note:: The **Data Connection** item is used to hold generic data files,
    so that other items, notably Importer and Tool items, can make use of that data.
 
-Let's add a Data Connection item to our project, so that we're able to pass the file 'input.txt' to 'say hello world'.
-To add a Data Connection item drag-and-drop the Data Connection icon (|dc_icon|) from the main window toolbar
+Let's add a **Data Connection** item to our project, so that we're able to pass the file 'input.txt' to
+'say hello world'. To add a Data Connection item, drag-and-drop the Data Connection icon (|dc_icon|) from the toolbar
 onto the *Design View*.
 
-The *Add Data Connection* form will show up.
-Type 'pass input txt' in the name field and click **Ok**.
-Now you should see the newly added Data Connection item as an icon in the *Design View*,
-and also as an entry in the *Project* dock widget, *Items* list, under the 'Data Connections' category. It should
-look similar to this:
-
-.. image:: img/pass_input_txt_dc_and_say_hello_world_tool.png
-   :align: center
-   
-|
+The *Add Data Connection* form will show up. Type 'pass input txt' in the name field and click **Ok**. The newly
+added Data Connection item is now in the *Design View*, and also as an entry in the *Project* dock widgets items list,
+under the 'Data Connections' category. It should look similar to this:
 
 Adding data files to a Data Connection
 --------------------------------------
 
-As long as the 'pass input txt' Data Connection item is selected,
-you will be able to see its *Properties* on the right part
-of the window, looking similar to this:
+Select the 'pass input txt' Data Connection item to view its properties in the *Properties* dock widget.
 
-.. image:: img/pass_input_txt_dc_properties.png
+.. image:: img/release06_getting_started_dc_properties.png
    :align: center
    
 |
@@ -265,14 +279,14 @@ of the window, looking similar to this:
 Right click anywhere within the *Data* box and select **New file...** from the context menu.
 When prompted to enter a name for the new file, type 'input.txt' and click **Ok**.
 
-Now you should see the newly created file in the *Data* list:
+There's now a new file in the *Data* list:
 
-.. image:: img/pass_input_txt_dc_properties_with_file.png
+.. image:: img/release06_getting_started_dc_with_an_input_file.png
    :align: center
    
 |
 
-Double click on this file to open it in your default text editor. Then enter the following into the file's content::
+Double click this file to open it in your default text editor. Then enter the following into the file's content::
 
     Hello again, World!
 
@@ -281,22 +295,19 @@ Save the file.
 Connecting project items
 ------------------------
 
-As mentioned above, a Tool item looks for input files in
-Data Connection and Data Store items connected to its input. Thus, what we need to do now is
-create a *connection* from 'pass input txt' to 'say hello world', so the file 'input.txt' gets passed.
+As mentioned above, a Tool item looks for input files in Data Connections connected to its input. Thus you now need to
+create a connection from 'pass input txt' to 'say hello world'. To do this, click on one of the *connector* slots at
+the edges of 'pass input txt' in the *Design view*, and then on a similar slot in 'say hello world'. This will create
+an arrow pointing from one to another, as seen below:
 
-To do this, click on one of the *connector* slots at the edges of 'pass input txt' in the *Design view*, and then
-on a similar slot in 'say hello world'. This will create an arrow pointing from one to another,
-as seen below:
-
-.. image:: img/pass_input_txt_dc_to_say_hello_world_tool.png
+.. image:: img/release06_getting_started_dc_to_tool_connected.png
    :align: center
    
 |
 
-Press |execute| on the toolbar. The Tool will run successfully this time:
+Press |execute| once again. The project will be executed successfully this time:
 
-.. image:: img/hello_again_world_event_process_log.png
+.. image:: img/release06_getting_started_final_execution_successful.png
    :align: center
    
 |
