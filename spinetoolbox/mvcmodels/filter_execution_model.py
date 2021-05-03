@@ -57,6 +57,5 @@ class FilterExecutionModel(QAbstractItemModel):
     def get_log_document(self, filter_id):
         return self._item.filter_log_documents[filter_id]
 
-    def get_consoles(self, filter_id):
-        consoles = self._item.filter_consoles.get(filter_id, {})
-        return consoles.get("python"), consoles.get("julia")
+    def get_console(self, filter_id):
+        return self._item.filter_consoles.get(filter_id)

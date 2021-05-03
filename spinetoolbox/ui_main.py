@@ -1597,9 +1597,8 @@ class ToolboxUI(QMainWindow):
             return
         item_log_doc = current.model().get_log_document(current.data())
         self._do_override_item_log(item_log_doc)
-        python_console, julia_console = current.model().get_consoles(current.data())
-        self._do_override_python_console(python_console)
-        self._do_override_julia_console(julia_console)
+        console = current.model().get_console(current.data())
+        self._do_override_console(console)
 
     def show_add_project_item_form(self, item_type, x=0, y=0, spec=""):
         """Show add project item widget."""
