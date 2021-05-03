@@ -97,18 +97,15 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def keyPressEvent(self, ev):
         """Reimplemented to only accept keyboard input after the prompt."""
         cursor = self.textCursor()
-        if (
-            cursor.block().userState() == self._non_editable
-            or cursor.positionInBlock() < len(self._plain_prompt)
-            and ev.modifiers() == Qt.NoModifier
+        if ev.modifiers() == Qt.NoModifier and (
+            cursor.block().userState() == self._non_editable or cursor.positionInBlock() < len(self._plain_prompt)
         ):
             cursor.movePosition(cursor.End)
             self.setTextCursor(cursor)
             return
-        if (
+        if ev.modifiers() == Qt.NoModifier and (
             cursor.positionInBlock() == len(self._plain_prompt)
             and ev.key() in (Qt.Key_Backspace, Qt.Key_Left, Qt.Key_Home)
-            and ev.modifiers() == Qt.NoModifier
         ):
             return
         if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
