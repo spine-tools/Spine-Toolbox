@@ -71,7 +71,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         background_color = self._style.background_color
         foreground_color = self._style.styles[Token.Text]
         self.setStyleSheet(f"QPlainTextEdit {{background-color: {background_color}; color: {foreground_color};}}")
-        self.add_prompt()
+        self._add_first_prompt()
+        self.setCursorWidth(self.fontMetrics().horizontalAdvance("x"))
 
     def name(self):
         """Returns console name for display purposes."""
@@ -117,16 +118,19 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def _issue_command(self):
         """Issues command in the prompt to the persistent process and adds output."""
-        self.setCursorWidth(0)
-        block = self.document().lastBlock()
+        cursor = self.textCursor()
+        cursor.movePosition(cursor.End)
+        block = cursor.block()
         cmd = block.text()[len(self._plain_prompt) :]
         block.setUserState(self._non_editable)
+        cursor.insertBlock()
+        cursor.movePosition(cursor.End)
+        cursor.block().setUserState(self._non_editable)
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         issuer = CommandIssuer(engine_server_address, self._key, cmd)
         issuer.stdout_msg.connect(self.add_stdout)
         issuer.stderr_msg.connect(self.add_stderr)
-        issuer.finished.connect(self.add_prompt)
-        issuer.finished.connect(lambda: self.setCursorWidth(1))
+        issuer.finished.connect(self._add_prompt)
         self._thread_pool.start(issuer)
 
     def _has_prompt(self):
@@ -145,9 +149,10 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """
         cursor = self.textCursor()
         cursor.movePosition(cursor.End)
-        cursor.movePosition(cursor.PreviousBlock)
-        cursor.movePosition(cursor.EndOfBlock)
-        cursor.insertBlock()
+        if self._has_prompt():
+            cursor.movePosition(cursor.PreviousBlock)
+            cursor.movePosition(cursor.EndOfBlock)
+            cursor.insertBlock()
         cursor.insertHtml(html)
 
     def add_stdin(self, data):
@@ -157,10 +162,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
             data (str)
         """
         html = self._prompt + data
-        if self._has_prompt():
-            self._insert_html_before_prompt(html)
-        else:
-            self.appendHtml(html)
+        self._insert_html_before_prompt(html)
 
     def add_stdout(self, data):
         """Adds new line to stdout. Used when adding stdout from external execution.
@@ -168,10 +170,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         Args:
             data (str)
         """
-        if self._has_prompt():
-            self._insert_html_before_prompt(data)
-        else:
-            self.appendPlainText(data)
+        self._insert_html_before_prompt(data)
 
     def add_stderr(self, data):
         """Adds new line to stderr. Used when adding stderr from external execution.
@@ -180,16 +179,17 @@ class PersistentConsoleWidget(QPlainTextEdit):
             data (str)
         """
         html = '<span style="color:red">' + data + "</span>"
-        if self._has_prompt():
-            self._insert_html_before_prompt(html)
-        else:
-            self.appendHtml(html)
+        self._insert_html_before_prompt(html)
 
-    def add_prompt(self):
+    def _add_first_prompt(self):
+        self._add_prompt(first=True)
+
+    def _add_prompt(self, first=False):
         """Adds a prompt at the end of the document."""
         cursor = self.textCursor()
         cursor.movePosition(cursor.End)
-        cursor.insertBlock()
+        if cursor.block().text() or first:
+            cursor.insertBlock()
         cursor.insertHtml(self._prompt)
         cursor.block().setUserState(self._editable)
         cursor.movePosition(cursor.End)
@@ -206,21 +206,17 @@ class PersistentConsoleWidget(QPlainTextEdit):
     @Slot(bool)
     def _restart_persistent(self, _=False):
         """Restarts underlying persistent process."""
-        self.setCursorWidth(0)
         self.clear()
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         restarter = Restarter(engine_server_address, self._key)
-        restarter.finished.connect(self.add_prompt)
-        restarter.finished.connect(lambda: self.setCursorWidth(1))
+        restarter.finished.connect(self._add_first_prompt)
         self._thread_pool.start(restarter)
 
     @Slot(bool)
     def _interrupt_persistent(self, _=False):
         """Interrupts underlying persistent process."""
-        self.setCursorWidth(0)
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         interrupter = Interrupter(engine_server_address, self._key)
-        interrupter.finished.connect(lambda: self.setCursorWidth(1))
         self._thread_pool.start(interrupter)
 
 
