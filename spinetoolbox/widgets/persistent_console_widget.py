@@ -19,6 +19,9 @@ from PySide2.QtGui import QFontDatabase, QTextDocumentFragment, QTextCharFormat
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
 
+_EDITABLE = 1
+_NON_EDITABLE = -1
+
 
 class PromptSyntaxHighlighter(CustomSyntaxHighlighter):
     def __init__(self, prompt, *arg, **kwargs):
@@ -29,7 +32,7 @@ class PromptSyntaxHighlighter(CustomSyntaxHighlighter):
         """Reimplemented to account for the prompt."""
         if self.lexer is None:
             return
-        if not text.startswith(self._prompt):
+        if self.currentBlockState() != _EDITABLE:
             return
         offset = len(self._prompt)
         for start, ttype, subtext in self.lexer.get_tokens_unprocessed(text[offset:]):
@@ -52,8 +55,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """
         super().__init__(parent=toolbox)
         self._thread_pool = QThreadPool()
-        self._editable = 1
-        self._non_editable = -1
         self._toolbox = toolbox
         self._key = key
         self._language = language
@@ -98,7 +99,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """Reimplemented to only accept keyboard input after the prompt."""
         cursor = self.textCursor()
         if ev.modifiers() == Qt.NoModifier and (
-            cursor.block().userState() == self._non_editable or cursor.positionInBlock() < len(self._plain_prompt)
+            cursor.block().userState() == _NON_EDITABLE or cursor.positionInBlock() < len(self._plain_prompt)
         ):
             cursor.movePosition(cursor.End)
             self.setTextCursor(cursor)
@@ -119,10 +120,10 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.movePosition(cursor.End)
         block = cursor.block()
         cmd = block.text()[len(self._plain_prompt) :]
-        block.setUserState(self._non_editable)
+        block.setUserState(_NON_EDITABLE)
         cursor.insertBlock()
         cursor.movePosition(cursor.End)
-        cursor.block().setUserState(self._non_editable)
+        cursor.block().setUserState(_NON_EDITABLE)
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         issuer = CommandIssuer(engine_server_address, self._key, cmd)
         issuer.stdout_msg.connect(self.add_stdout)
@@ -136,7 +137,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         Returns:
             bool
         """
-        return self.document().lastBlock().userState() == self._editable
+        return self.document().lastBlock().userState() == _EDITABLE
 
     def _insert_html_before_prompt(self, html):
         """Inserts given html before the prompt. Used when adding input and output from external execution.
@@ -149,6 +150,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if self._has_prompt():
             cursor.movePosition(cursor.PreviousBlock)
             cursor.movePosition(cursor.EndOfBlock)
+            cursor.insertBlock()
+        elif cursor.block().text():
             cursor.insertBlock()
         cursor.insertHtml(html)
 
@@ -188,7 +191,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if cursor.block().text() or first:
             cursor.insertBlock()
         cursor.insertHtml(self._prompt)
-        cursor.block().setUserState(self._editable)
+        cursor.block().setUserState(_EDITABLE)
         cursor.movePosition(cursor.End)
         self.setTextCursor(cursor)
 
