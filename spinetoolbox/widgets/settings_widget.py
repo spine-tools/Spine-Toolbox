@@ -231,6 +231,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """
         super().__init__(toolbox.qsettings())
         self.ui.stackedWidget.setCurrentIndex(0)
+        self.ui.listWidget.setFocus()
+        self.ui.listWidget.setCurrentRow(0)
         self._toolbox = toolbox  # QWidget parent
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
