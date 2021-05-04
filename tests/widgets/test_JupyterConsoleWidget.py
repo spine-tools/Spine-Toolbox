@@ -18,7 +18,7 @@ Unit tests for the SpineConsoleWidget.
 
 import unittest
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.widgets.spine_console_widget import SpineConsoleWidget
+from spinetoolbox.widgets.jupyter_console_widget import JupyterConsoleWidget
 from tests.mock_helpers import create_toolboxui, clean_up_toolbox
 
 
@@ -37,5 +37,5 @@ class TestSpineConsoleWidget(unittest.TestCase):
         clean_up_toolbox(self.toolbox)
 
     def test_make_spine_console_widget(self):
-        python_console = SpineConsoleWidget(self.toolbox, "Python Console")
-        self.assertIsInstance(python_console, SpineConsoleWidget)
+        python_console = JupyterConsoleWidget(self.toolbox, "Python Console")
+        self.assertIsInstance(python_console, JupyterConsoleWidget)
