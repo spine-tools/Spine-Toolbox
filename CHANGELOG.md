@@ -43,6 +43,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Upgrade support for original (.proj file based) Spine Toolbox projects.
 - Python 3.6 is no longer supported.
 - The Spine Datapackage Editor is gone. There wasn't enough reason to keep this widget
+- The app no longer checks that Spine dependencies are up to date. Users are asked to follow the upgrade procedure
+  which involves manually upgrading requirements after pulling the latest master branch.
 
 ### Fixed
 ### Security

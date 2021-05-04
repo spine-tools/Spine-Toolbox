@@ -104,7 +104,8 @@ Please note that this version has passed automated testing, but has not been com
 
         git pull
 
-5. Upgrade requirements using **pip** (IMPORTANT TO REMEMBER EVERY TIME! Spine Engine, Spine DB API, and Spine Items may have also been updated and a misalignment may cause intractable errors):
+5. Upgrade requirements using **pip** (IMPORTANT TO REMEMBER EVERY TIME! Spine Engine, Spine DB API, 
+   and Spine Items may have also been updated and a misalignment may cause intractable errors):
 
         python -m pip install --upgrade -r requirements.txt
 
@@ -120,11 +121,6 @@ The requirements include three packages ([`spinedb_api`](https://github.com/Spin
 [`spine_engine`](https://github.com/Spine-project/spine-engine), and [`spine_items`](https://github.com/Spine-project/spine-items)),
 developed by the Spine project consortium. Since these packages are developed very actively at the moment, 
 they may get upgraded quite regularly whenever you run `python -m pip install --upgrade -r requirements.txt`.
-
-In some cases (if you forget to run `python -m pip install --upgrade -r requirements.txt` after `git pull`),
-the application will refuse to start unless you upgrade these packages.
-Just follow the instructions that will appear in the Anaconda Prompt
-(or simply, run `python -m pip install --upgrade -r requirements.txt`).
 
 
 ### Building the User Guide

@@ -28,42 +28,6 @@ import sys
 import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
-from .spinedb_api_version_check import spinedb_api_version_check
-
-# pylint: disable=wrong-import-position
-# Check for spinedb_api version before we try to import possibly non-existent stuff below.
-if not spinedb_api_version_check():
-    sys.exit(1)
-
-from .spine_engine_version_check import spine_engine_version_check
-
-# Check for spine_engine version before we try to import possibly non-existent stuff below.
-if not spine_engine_version_check():
-    sys.exit(1)
-
-from .load_project_items import upgrade_project_items
-
-if sys.argv[-1] == "--skip-project-items-upgrade":
-    _skip_project_items_upgrade = True
-    sys.argv.pop()
-else:
-    _skip_project_items_upgrade = False
-
-if not _skip_project_items_upgrade and upgrade_project_items():
-    # Restart, otherwise the newer version is not picked.
-    # Not even importlib.reload(site) or importlib.invalidate_caches() are sufficient,
-    # because of .pyc files.
-    # We use `subprocess.run()` because `os.execl()` doesn't immediately replaces the current program on Windows
-    import subprocess
-
-    try:
-        subprocess.run(
-            [sys.executable, os.path.join(os.path.dirname(__file__), "__main__.py"), "--skip-project-items-upgrade"],
-            check=True,
-        )
-    except subprocess.CalledProcessError as err:
-        sys.exit(err.returncode)
-    sys.exit(0)
 
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
 from . import resources_icons_rc  # pylint: disable=unused-import

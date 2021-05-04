@@ -53,7 +53,7 @@ from PySide2.QtGui import (
     QPainter,
 )
 import spine_engine
-from .config import DEFAULT_WORK_DIR, REQUIRED_SPINE_ENGINE_VERSION
+from .config import DEFAULT_WORK_DIR
 
 
 if os.name == "nt":
@@ -261,41 +261,6 @@ def pyside2_version_check():
         )
         return False
     return True
-
-
-def spine_engine_version_check():
-    """Check if spine engine package is the correct version and explain how to upgrade if it is not.
-
-    Returns:
-        bool: True if Spine Engine is of correct version, False otherwise
-    """
-    try:
-        current_version = spine_engine.__version__
-        current_split = [int(x) for x in current_version.split(".")]
-        required_split = [int(x) for x in REQUIRED_SPINE_ENGINE_VERSION.split(".")]
-        if current_split >= required_split:
-            return True
-    except AttributeError:
-        current_version = "not reported"
-    script = "upgrade_spine_engine.bat" if sys.platform == "win32" else "upgrade_spine_engine.py"
-    print(
-        """SPINE ENGINE OUTDATED.
-
-        Spine Toolbox failed to start because spine_engine is outdated.
-        (Required version is {0}, whereas current is {1})
-        Please upgrade spine_engine to v{0} and start Spine Toolbox again.
-
-        To upgrade, run script '{2}' in the '/bin' folder.
-
-        Or upgrade it manually by running,
-
-            pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
-
-        """.format(
-            REQUIRED_SPINE_ENGINE_VERSION, current_version, script
-        )
-    )
-    return False
 
 
 def get_datetime(show, date=True):
