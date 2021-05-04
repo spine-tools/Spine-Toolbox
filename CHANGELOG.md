@@ -3,6 +3,17 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.6.0-beta.1] - 2021-05-04]
+
+### Changed
+- [win-x64] Installer does not require admin rights anymore
+- [win-x64] Installer always asks for an installation directory, even if a previous installation exists
+- [win-x64] Installer wizard style changed to modern
+
+### Fixed
+- [win-x64] Julia install wizard in Settings->Tools
+- Traceback in GdxExporter when there are indexing settings for a parameter that is not in the database
+
 ## [0.6.0-beta.0] - 2021-04-30]
 
 ### Added
