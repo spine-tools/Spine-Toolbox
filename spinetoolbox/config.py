@@ -45,7 +45,7 @@ if _frozen:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "html"))
 else:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "build", "html"))
-ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/release-0.6"
+ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/master/"
 
 PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "plugins"))
 
