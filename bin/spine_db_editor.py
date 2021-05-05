@@ -9,12 +9,7 @@ from PySide2.QtCore import QSettings
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.helpers import pyside2_version_check
-from spinetoolbox.spinedb_api_version_check import spinedb_api_version_check
 from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-
-# Check for spinedb_api version before we try to import possibly non-existent stuff below.
-if not spinedb_api_version_check():
-    sys.exit(1)
 
 
 def main(argv):
