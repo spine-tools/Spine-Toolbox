@@ -41,6 +41,15 @@ class SpineEngineManagerBase:
         """Stops engine currently running."""
         raise NotImplementedError()
 
+    def answer_prompt(self, item_name, accepted):
+        """Answers prompt.
+
+        Args:
+            item_name (str): The item that emitted the prompt
+            accepted (bool): The user's decision.
+        """
+        raise NotImplementedError()
+
     def restart_kernel(self, connection_file):
         """Restarts the jupyter kernel associated to given connection file.
 
@@ -171,6 +180,9 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
     def stop_engine(self):
         self._engine.stop()
+
+    def answer_prompt(self, item_name, accepted):
+        self._engine.answer_prompt(item_name, accepted)
 
     def restart_kernel(self, connection_file):
         from spine_engine.execution_managers.kernel_execution_manager import get_kernel_manager

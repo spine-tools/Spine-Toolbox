@@ -18,6 +18,7 @@ Contains SpineEngineWorker.
 
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
+from PySide2.QtWidgets import QMessageBox
 from .spine_engine_manager import make_engine_manager
 from spine_engine.spine_engine import ItemExecutionFinishState
 
@@ -174,10 +175,20 @@ class SpineEngineWorker(QObject):
             "standard_execution_msg": self._handle_standard_execution_msg,
             "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
+            "prompt": self._handle_prompt,
         }.get(event_type)
         if handler is None:
             return
         handler(data)
+
+    def _handle_prompt(self, msg):
+        prompt_text = msg["prompt_text"]
+        item_name = msg["item_name"]
+        box_title = f"{item_name}"
+        box = QMessageBox(QMessageBox.Question, box_title, prompt_text, buttons=QMessageBox.Yes | QMessageBox.No)
+        answer = box.exec_()
+        accepted = answer == QMessageBox.Yes
+        self._engine_mngr.answer_prompt(item_name, accepted)
 
     def _handle_standard_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
