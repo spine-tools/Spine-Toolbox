@@ -128,8 +128,9 @@ To display *Entity graph*'s context menu, just right-click on an empty space in 
 
 
 To display an object or relationship item's context menu, just right-click on it.
-- To expand or collapse relationships for an object item, hover **Expand** or **Collapse** and select the relationship class
-  from the popup menu.
+
+- To expand or collapse relationships for an object item, hover **Expand** or **Collapse** and select the relationship
+  class from the popup menu.
 
 
 Viewing parameter definitions and values
