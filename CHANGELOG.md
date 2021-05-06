@@ -3,7 +3,13 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.6.0-beta.1] - 2021-05-04]
+
+## [0.6.0-beta.2] - 2021-05-06
+
+### Fixed
+- [win-x64] returning_process.py when frozen 
+
+## [0.6.0-beta.1] - 2021-05-04
 
 ### Changed
 - [win-x64] Installer does not require admin rights anymore
@@ -14,7 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - [win-x64] Julia install wizard in Settings->Tools
 - Traceback in GdxExporter when there are indexing settings for a parameter that is not in the database
 
-## [0.6.0-beta.0] - 2021-04-30]
+## [0.6.0-beta.0] - 2021-04-30
 
 ### Added
 - Support for Experimental Spine Engine. This can be enabled in app Settings->General tab. Experimental 
