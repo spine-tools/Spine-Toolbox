@@ -16,6 +16,7 @@ Provides the main() function.
 :date:   4.10.2019
 """
 import os
+import multiprocessing
 import PySide2
 
 dirname = os.path.dirname(PySide2.__file__)
@@ -41,6 +42,7 @@ from .helpers import pyside2_version_check
 
 def main():
     """Creates main window GUI and starts main event loop."""
+    multiprocessing.freeze_support()
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,

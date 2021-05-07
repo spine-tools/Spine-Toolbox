@@ -4,7 +4,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Spine Toolbox"
-#define MyAppVersion "0.6.0-beta.0"
+#define MyAppVersion "0.6.0-final.0"
 #define MyAppPublisher "Spine Project Consortium"
 #define MyAppURL "https://github.com/Spine-project"
 #define MyAppExeName "spinetoolbox.exe"
@@ -29,12 +29,17 @@ LicenseFile=COPYING.LESSER
 OutputBaseFilename=spine-toolbox-{#MyAppVersion}-x64
 Compression=lzma
 SolidCompression=yes
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
+UsePreviousPrivileges=no
+PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=dist
 ArchitecturesInstallIn64BitMode=x64 ia64
 ArchitecturesAllowed=x64 ia64 arm64
 UsePreviousAppDir=yes
 SignedUninstaller=yes
+AlwaysShowDirOnReadyPage=yes
+DisableDirPage=no
+WizardStyle=modern
 
 [Code]
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);

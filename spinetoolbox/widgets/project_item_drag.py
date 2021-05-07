@@ -446,8 +446,11 @@ class ProjectItemSpecArray(QToolBar):
 
     def _remove_specs(self, parent, first, last):
         for row in range(first, last + 1):
-            action = self._actions.pop(row)
-            self.removeAction(action)
+            try:
+                action = self._actions.pop(row)
+                self.removeAction(action)
+            except KeyError:
+                pass  # Happens when Plugins are removed
         self._update_button_geom()
 
     def _reset_specs(self):

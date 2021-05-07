@@ -34,11 +34,6 @@ class ConsoleWindow(QMainWindow):
         super().__init__()  # Setting the parent inherits the stylesheet
         self._toolbox = toolbox
         self._console = spine_console
-        # Make UI
-        self.vertical_layout = QVBoxLayout(self)
-        self.vertical_layout.setContentsMargins(0, 0, 0, 0)
-        self.vertical_layout.setSpacing(0)
-        self.vertical_layout.addWidget(self._console)
         self.setCentralWidget(self._console)
         self.setWindowTitle(self._console.name())
         if "python" in self._console.name().lower():

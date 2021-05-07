@@ -103,7 +103,7 @@ def main(argv):
     }
     # Windows specific options
     if os.name == "nt":  # Windows specific options
-        base = "Console"  # set this to "Win32GUI" to not show console, "Console" shows console
+        base = "Win32GUI"  # set this to "Win32GUI" to not show console, "Console" shows console
     else:  # Other platforms
         base = None
     executables = [Executable("spinetoolbox.py", base=base, icon="spinetoolbox/ui/resources/app.ico")]
