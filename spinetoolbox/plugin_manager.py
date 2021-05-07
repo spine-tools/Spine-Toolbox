@@ -141,6 +141,7 @@ class PluginManager:
                 continue
             spec.plugin = name
             plugin_specs.append(spec)
+            self._toolbox.do_add_specification(spec)
         toolbar = self._plugin_toolbars[name] = PluginToolBar(name, parent=self._toolbox)
         toolbar.setup(plugin_specs)
         self._toolbox.addToolBar(Qt.TopToolBarArea, toolbar)
