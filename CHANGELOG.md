@@ -3,6 +3,11 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.6.0-beta.3] - 2021-05-07
+
+### Fixed
+- Bug in installing Plugins
+- Traceback when removing Plugins
 
 ## [0.6.0-beta.2] - 2021-05-06
 
