@@ -19,8 +19,9 @@ Contains SpineEngineWorker.
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from PySide2.QtWidgets import QMessageBox
-from .spine_engine_manager import make_engine_manager
 from spine_engine.spine_engine import ItemExecutionFinishState
+from .spine_engine_manager import make_engine_manager
+from .helpers import get_upgrade_db_promt_text
 
 
 @Slot(list)
@@ -60,6 +61,28 @@ def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
     item.add_process_message(filter_id, msg_type, msg_text)
 
 
+@Slot(dict, object)
+def _handle_prompt_arrived(prompt, engine_mngr):
+    prompt_type = prompt["type"]
+    if prompt_type == "upgrade_db":
+        url = prompt["url"]
+        current = prompt["current"]
+        expected = prompt["expected"]
+        text, info_text = get_upgrade_db_promt_text(url, current, expected)
+    else:
+        text = prompt["text"]
+    item_name = prompt["item_name"]
+    box_title = f"{item_name}"
+    box = QMessageBox(
+        QMessageBox.Question, box_title, text, buttons=QMessageBox.Yes | QMessageBox.No, parent=qApp.activeWindow()
+    )
+    if info_text:
+        box.setInformativeText(info_text)
+    answer = box.exec_()
+    accepted = answer == QMessageBox.Yes
+    engine_mngr.answer_prompt(item_name, accepted)
+
+
 class SpineEngineWorker(QObject):
 
     finished = Signal()
@@ -68,6 +91,7 @@ class SpineEngineWorker(QObject):
     _node_execution_finished = Signal(object, object, object, object)
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
+    _prompt_arrived = Signal(dict, object)
 
     def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items):
         """
@@ -142,6 +166,7 @@ class SpineEngineWorker(QObject):
         self._node_execution_finished.connect(_handle_node_execution_finished)
         self._event_message_arrived.connect(_handle_event_message_arrived)
         self._process_message_arrived.connect(_handle_process_message_arrived)
+        self._prompt_arrived.connect(_handle_prompt_arrived)
 
     def start(self, silent=False):
         """Connects log signals.
@@ -181,14 +206,8 @@ class SpineEngineWorker(QObject):
             return
         handler(data)
 
-    def _handle_prompt(self, msg):
-        prompt_text = msg["prompt_text"]
-        item_name = msg["item_name"]
-        box_title = f"{item_name}"
-        box = QMessageBox(QMessageBox.Question, box_title, prompt_text, buttons=QMessageBox.Yes | QMessageBox.No)
-        answer = box.exec_()
-        accepted = answer == QMessageBox.Yes
-        self._engine_mngr.answer_prompt(item_name, accepted)
+    def _handle_prompt(self, prompt):
+        self._prompt_arrived.emit(prompt, self._engine_mngr)
 
     def _handle_standard_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]

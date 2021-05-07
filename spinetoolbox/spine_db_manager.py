@@ -54,6 +54,7 @@ from .spine_db_commands import (
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+from .helpers import get_upgrade_db_promt_text
 
 
 @busy_effect
@@ -334,20 +335,12 @@ class SpineDBManager(SpineDBManagerBase):
             return self._do_get_db_map(url, codename, upgrade, create)
         except SpineDBVersionError as v_err:
             if v_err.upgrade_available:
+                text, info_text = get_upgrade_db_promt_text(url, v_err.current, v_err.expected)
                 msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
                 msg.setIcon(QMessageBox.Question)
                 msg.setWindowTitle("Incompatible database version")
-                msg.setText(
-                    f"The database at <b>{url}</b> is at revision <b>{v_err.current}</b> and needs to be "
-                    f"upgraded to revision <b>{v_err.expected}</b> in order to be used with the current "
-                    f"version of Spine Toolbox."
-                )
-                msg.setInformativeText(
-                    "Do you want to upgrade the database now?"
-                    "<p><b>WARNING</b>: After the upgrade, "
-                    "the database may no longer be used "
-                    "with previous versions of Spine."
-                )
+                msg.setText(text)
+                msg.setInformativeText(info_text)
                 msg.addButton(QMessageBox.Cancel)
                 msg.addButton("Upgrade", QMessageBox.YesRole)
                 ret = msg.exec_()  # Show message box

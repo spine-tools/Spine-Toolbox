@@ -988,6 +988,21 @@ def unique_name(prefix, existing):
     return f"{prefix} {free}"
 
 
+def get_upgrade_db_promt_text(url, current, expected):
+    text = (
+        f"The database at <b>{url}</b> is at revision <b>{current}</b> and needs to be "
+        f"upgraded to revision <b>{expected}</b> in order to be used with the current "
+        f"version of Spine Toolbox."
+    )
+    info_text = (
+        "Do you want to upgrade the database now?"
+        "<p><b>WARNING</b>: After the upgrade, "
+        "the database may no longer be used "
+        "with previous versions of Spine."
+    )
+    return text, info_text
+
+
 class SignalWaiter:
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
