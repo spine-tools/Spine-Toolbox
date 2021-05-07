@@ -3,35 +3,13 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.6.0-beta.3] - 2021-05-07
-
-### Fixed
-- Bug in installing Plugins
-- Traceback when removing Plugins
-
-## [0.6.0-beta.2] - 2021-05-06
-
-### Fixed
-- [win-x64] returning_process.py when frozen 
-
-## [0.6.0-beta.1] - 2021-05-04
-
-### Changed
-- [win-x64] Installer does not require admin rights anymore
-- [win-x64] Installer always asks for an installation directory, even if a previous installation exists
-- [win-x64] Installer wizard style changed to modern
-
-### Fixed
-- [win-x64] Julia install wizard in Settings->Tools
-- Traceback in GdxExporter when there are indexing settings for a parameter that is not in the database
-
-## [0.6.0-beta.0] - 2021-04-30
+## [0.6.0-final.0] - 2021-05-07
 
 ### Added
-- Support for Experimental Spine Engine. This can be enabled in app Settings->General tab. Experimental 
-  engine provides the latest in-development features (e.g. parallel/multicore processing, etc.).
+- Support for parallel/multicore processing
 - New project item: Data Transformer. Can be used to configure Spine database filters for successor items.
   Currently, it supports renaming entity classes.
+- New project item: Exporter. A general-purpose tabular data exporter.
 - Support for version 3 Spine Toolbox projects and an automatic upgrade of version 2 projects to version 3.
 - Support for version 4 Spine Toolbox projects.
 - Support for version 5 Spine Toolbox projects.
@@ -41,8 +19,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - The SpineOpt configuration assistant has been moved from File->Configuration assistants,
   to File->Settings->Tools->Julia, and renamed to SpineOpt Installer.
 - New wizard to install Julia, accessible from File->Settings->Tools->Julia.
-- New Exporter project item, a general-purpose tabular data exporter. The old .gdx exporter has been
-  renamed to GdxExporter.
 - File->Close project option
 - Support for Python 3.8
 - Automated kernel creation, if the user selects to run tools in console without having created a kernel.
@@ -56,9 +32,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   Toolbox's startup. 
 - Importer item now applies the same mapping to all input files. If the user needs to apply different 
   mappings, they need to create different Importers. The specification can be shared using the json file.
-- Exporter is now called GdxExporter.
-
-### Deprecated
+- The .gdx exporter project item is now called GdxExporter.
+- [win-x64] Installer does not require admin rights anymore
+- [win-x64] Installer always asks for an installation directory, even if a previous installation exists
+- [win-x64] Installer wizard style changed to modern
 
 ### Removed
 - Combiner project item. The same functionality can be achieved by connecting a Data Store to another Data Store.
@@ -67,7 +44,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - The Spine Datapackage Editor is gone. There wasn't enough reason to keep this widget
 
 ### Fixed
-### Security
+- [win-x64] returning_process.py when frozen
+- Traceback in GdxExporter when there are indexing settings for a parameter that is not in the database
+- Bug in installing Plugins
+- Traceback when removing Plugins
 
 ## [0.5.0-final.1] - 2020-02-03
 
