@@ -23,7 +23,9 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication
+
+import spinetoolbox.ui_main
+from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtCore import Qt, QPoint, QItemSelectionModel, QPointF, QMimeData
 from PySide2.QtTest import QTest
 from PySide2.QtGui import QDropEvent
@@ -631,13 +633,6 @@ class TestToolboxUI(unittest.TestCase):
         n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
         self.assertEqual(n_items_in_design_view, 0)
 
-    def test_load_tool_specification_from_file(self):
-        """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
-        spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
-        tool_spec = self.toolbox.load_specification_from_file(spec_path)
-        self.assertIsNotNone(tool_spec)
-        self.assertEqual(tool_spec.name, "Python Tool Specification")
-
     def test_add_and_remove_specification(self):
         """Tests that adding and removing a specification
         to project works from a valid tool specification file.
@@ -672,7 +667,9 @@ class TestToolboxUI(unittest.TestCase):
         # Now, remove the Tool Spec from the model
         index = self.toolbox.specification_model.specification_index("Python Tool Specification")
         self.assertTrue(index.isValid())
-        self.toolbox.remove_specification(index.row(), ask_verification=False)
+        with mock.patch.object(spinetoolbox.ui_main.QMessageBox, "exec_") as mock_message_box_exec:
+            mock_message_box_exec.return_value = QMessageBox.Ok
+            self.toolbox.remove_specification(index)
         # Tool spec model must be empty again
         self.assertEqual(0, self.toolbox.specification_model.rowCount())
 

@@ -130,20 +130,18 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, items_dict, set_selected=False, verbosity=True):
+    def __init__(self, project, items_dict, silent=True):
         """Command to add items.
 
         Args:
             project (SpineToolboxProject): the project
             items_dict (dict): a mapping from item name to item dict
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
+            silent (bool): If True, suppress messages
         """
         super().__init__()
         self._project = project
         self._items_dict = items_dict
-        self._set_selected = set_selected
-        self._verbosity = verbosity
+        self._silent = silent
         if not items_dict:
             self.setObsolete(True)
         elif len(items_dict) == 1:
@@ -152,7 +150,7 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             self.setText("add multiple items")
 
     def redo(self):
-        self._project.make_and_add_project_items(self._items_dict, self._set_selected, self._verbosity)
+        self._project.restore_project_items(self._items_dict, self._silent)
 
     def undo(self):
         for item_name in self._items_dict:
@@ -179,7 +177,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self._project.make_and_add_project_items(self._items_dict, verbosity=False)
+        self._project.restore_project_items(self._items_dict, silent=True)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(Connection.from_dict(connection_dict))
 
@@ -213,7 +211,7 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self._project.make_and_add_project_items(self._items_dict, verbosity=False)
+        self._project.restore_project_items(self._items_dict, silent=True)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(Connection.from_dict(connection_dict))
 
@@ -369,47 +367,76 @@ class SetConnectionOptionsCommand(SpineToolboxCommand):
 
 
 class AddSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, toolbox, specification):
-        """Command to add item specs to a project.
+    def __init__(self, project, specification, save_to_disk):
+        """Command to add item specification to a project.
 
         Args:
-            toolbox (ToolboxUI): the toolbox
+            project (ToolboxUI): the toolbox
             specification (ProjectItemSpecification): the spec
+            save_to_disk (bool): If True, save the specification to disk
         """
         super().__init__()
-        self.toolbox = toolbox
-        self.specification = specification
+        self._project = project
+        self._specification = specification
+        self._save_to_disk = save_to_disk
+        self._spec_id = None
         self.setText(f"add specification {specification.name}")
 
     def redo(self):
-        self.toolbox.do_add_specification(self.specification)
+        self._spec_id = self._project.add_specification(self._specification, save_to_disk=self._save_to_disk)
+        if self._spec_id is None:
+            self.setObsolete(True)
+        else:
+            self._save_to_disk = False
 
     def undo(self):
-        row = self.toolbox.specification_model.specification_row(self.specification.name)
-        # Store the current spec for eventual `redo()`
-        self.specification = self.toolbox.specification_model.specification(row)
-        self.toolbox.do_remove_specification(row, ask_verification=False)
+        self._project.remove_specification(self._spec_id)
 
 
 class RemoveSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, toolbox, row, ask_verification):
+    def __init__(self, project, name):
         """Command to remove item specs from a project.
 
         Args:
-            toolbox (ToolboxUI): the toolbox
-            row (int): the row in the ProjectItemSpecPaletteModel
-            ask_verification (bool): if True, shows confirmation message the first time
+            project (SpineToolboxProject): the project
+            name (str): specification's name
         """
         super().__init__()
-        self.toolbox = toolbox
-        self.row = row
-        self.specification = self.toolbox.specification_model.specification(row)
-        self.setText(f"remove specification {self.specification.name}")
-        self.ask_verification = ask_verification
+        self._project = project
+        self._specification = self._project.get_specification(name)
+        self._spec_id = self._project.specification_name_to_id(name)
+        self.setText(f"remove specification {self._specification.name}")
 
     def redo(self):
-        self.toolbox.do_remove_specification(self.row, ask_verification=self.ask_verification)
-        self.ask_verification = False
+        self._project.remove_specification(self._spec_id)
 
     def undo(self):
-        self.toolbox.do_add_specification(self.specification, row=self.row)
+        self._spec_id = self._project.add_specification(self._specification, save_to_disk=False)
+
+
+class SaveSpecificationAsCommand(SpineToolboxCommand):
+    def __init__(self, project, name, path):
+        """Command to remove item specs from a project.
+
+        Args:
+            project (SpineToolboxProject): the project
+            name (str): specification's name
+            path (str): new specification file location
+        """
+        super().__init__()
+        self._project = project
+        self._path = path
+        self._spec_id = self._project.specification_name_to_id(name)
+        specification = self._project.get_specification(self._spec_id)
+        self._previous_path = specification.definition_file_path
+        self.setText(f"save specification {name} as")
+
+    def redo(self):
+        specification = self._project.get_specification(self._spec_id)
+        specification.definition_file_path = self._path
+        self._project.save_specification_file(specification)
+
+    def undo(self):
+        specification = self._project.get_specification(self._spec_id)
+        specification.definition_file_path = self._previous_path
+        self._project.save_specification_file(specification)

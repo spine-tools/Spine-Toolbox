@@ -90,8 +90,8 @@ class TestProjectItemIcon(unittest.TestCase):
         icon.mouseReleaseEvent(QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMouseRelease))
         self.assertEqual(icon.x(), 99.0)
         self.assertEqual(icon.y(), 88.0)
-        self.assertEqual(self._toolbox.undo_stack.count(), 2)  # First in the stack is Add item command
-        move_command = self._toolbox.undo_stack.command(1)
+        self.assertEqual(self._toolbox.undo_stack.count(), 1)
+        move_command = self._toolbox.undo_stack.command(0)
         self.assertIsInstance(move_command, MoveIconCommand)
 
 

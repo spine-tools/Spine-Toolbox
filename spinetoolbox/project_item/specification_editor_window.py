@@ -161,23 +161,41 @@ class SpecificationEditorWindowBase(QMainWindow):
         self.windowTitleChanged.emit(self.windowTitle())
 
     def _save(self):
-        """Saves spec."""
+        """Saves spec.
+
+        Returns:
+            bool: True if operation was successful, False otherwise
+        """
         name = self._spec_toolbar.name()
         if not name:
             self._show_error("Please enter a name for the specification.")
             return False
-        new_spec = self._make_new_specification(name)
-        if new_spec is None:
+        spec = self._make_new_specification(name)
+        if spec is None:
             return False
-        update_existing = new_spec.name == self._original_spec_name
-        if not self._toolbox.add_specification(new_spec, update_existing, self):
-            return False
+        if self._original_spec_name is None:
+            if self._toolbox.project().is_specification_name_reserved(name):
+                self._show_error("Specification name already in use. Please enter a new name.")
+                return False
+            self._toolbox.add_specification(spec)
+            if not self._toolbox.project().is_specification_name_reserved(name):
+                # Something may have happened when adding the specification, e.g. user cancelled file save dialog.
+                return False
+            if self.item:
+                self.item.set_specification(spec)
+        else:
+            if name != self._original_spec_name and self._toolbox.project().is_specification_name_reserved(name):
+                self._show_error("Specification name already in use. Please enter a new name.")
+                return False
+            if self.specification is not None:
+                spec.definition_file_path = self.specification.definition_file_path
+            if not self._toolbox.project().replace_specification(self._original_spec_name, spec):
+                self._show_error("Failed to save specification. See Toolbox Event Log for more information.")
+                return False
+        self._original_spec_name = name
         self._undo_stack.setClean()
-        if self.item:
-            self.item.set_specification(new_spec)
-        self.specification = new_spec
+        self.specification = spec
         self.setWindowTitle(self.specification.name)
-        self._original_spec_name = self.specification.name
         return True
 
     def tear_down(self):

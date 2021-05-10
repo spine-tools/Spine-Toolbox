@@ -18,7 +18,9 @@ Widget shown to user when a new Project Item is created.
 
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
-from ..config import STATUSBAR_SS, INVALID_CHARS
+from spine_engine.utils.helpers import shorten
+from ..config import STATUSBAR_SS
+from ..project import ItemNameStatus
 
 
 class AddProjectItemWidget(QWidget):
@@ -93,25 +95,21 @@ class AddProjectItemWidget(QWidget):
         """Check that given item name is valid and add it to project."""
         self.name = self.ui.lineEdit_name.text()
         self.description = self.ui.lineEdit_description.text()
-        if not self.name:  # No name given
+        if not self.name:
             self.statusbar.showMessage("Name missing", 3000)
             return
-        # Check for invalid characters for a folder name
-        if any((True for x in self.name if x in INVALID_CHARS)):
+        name_status = self._toolbox.project().validate_project_item_name(self.name)
+        if name_status == ItemNameStatus.INVALID:
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return
-        # Check that name is not reserved
-        if self._toolbox.project_item_model.find_item(self.name):
-            msg = "Item '{0}' already exists".format(self.name)
+        if name_status == ItemNameStatus.EXISTS:
+            msg = f"Item '{self.name}' already exists"
             self.statusbar.showMessage(msg, 3000)
             return
-        # Check that short name (folder) is not reserved
-        short_name = self.name.lower().replace(" ", "_")
-        if self._toolbox.project_item_model.short_name_reserved(short_name):
-            msg = "Item using folder '{0}' already exists".format(short_name)
+        if name_status == ItemNameStatus.SHORT_NAME_EXISTS:
+            msg = f"Item using folder '{shorten(self.name)}' already exists"
             self.statusbar.showMessage(msg, 3000)
             return
-        # Create new Item
         self.call_add_item()
         self.close()
 

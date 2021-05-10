@@ -37,12 +37,9 @@ from PySide2.QtWidgets import (
     QDockWidget,
     QAction,
     QUndoStack,
-    QAbstractButton,
     QWidget,
 )
 from spine_engine.load_project_items import load_item_specification_factories
-from spine_engine.utils.serialization import serialize_path, deserialize_path
-from spine_engine.utils.helpers import shorten
 from spine_items.category import CATEGORIES, CATEGORY_DESCRIPTIONS
 from .project_item_icon import ProjectItemIcon
 from .load_project_items import load_project_items
@@ -64,16 +61,7 @@ from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_engine_manager import make_engine_manager
-from .config import (
-    STATUSBAR_SS,
-    MAINWINDOW_SS,
-    DOCUMENTATION_PATH,
-    _program_root,
-    LATEST_PROJECT_VERSION,
-    DEFAULT_WORK_DIR,
-    PROJECT_FILENAME,
-    ONLINE_DOCUMENTATION_URL,
-)
+from .config import STATUSBAR_SS, MAINWINDOW_SS, _program_root, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
 from .helpers import (
     create_dir,
     ensure_window_is_on_screen,
@@ -85,14 +73,14 @@ from .helpers import (
     busy_effect,
     format_log_message,
     color_from_index,
+    load_specification_from_file,
 )
-from .project_upgrader import ProjectUpgrader
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import (
     AddSpecificationCommand,
     RemoveSpecificationCommand,
     RenameProjectItemCommand,
-    SpineToolboxCommand,
+    SpineToolboxCommand, SaveSpecificationAsCommand,
 )
 from .plugin_manager import PluginManager
 
@@ -160,7 +148,6 @@ class ToolboxUI(QMainWindow):
         self.link_context_menu = None
         self.process_output_context_menu = None
         self.add_project_item_form = None
-        self.specification_form = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
         self.main_toolbar = toolbars.MainToolBar(self)
@@ -191,7 +178,7 @@ class ToolboxUI(QMainWindow):
         self.make_item_properties_uis()
         self.main_toolbar.setup()
         self._plugin_manager = PluginManager(self)
-        self._plugin_manager.load_plugins()
+        self._plugin_manager.load_installed_plugins()
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
@@ -332,6 +319,14 @@ class ToolboxUI(QMainWindow):
         """Returns application preferences object."""
         return self._qsettings
 
+    def item_specification_factories(self):
+        """Returns project item specification factories.
+
+        Returns:
+            list of ProjectItemSpecificationFactory: specification factories
+        """
+        return self._item_specification_factories
+
     def update_window_title(self):
         """Updates main window title."""
         if not self._project:
@@ -421,13 +416,15 @@ class ToolboxUI(QMainWindow):
         if self._project is not None:
             if not self.close_project():
                 return
+        self.undo_stack.clear()
         self._project = SpineToolboxProject(
-            self, name, description, location, self.project_item_model, settings=self._qsettings, logger=self
+            self, name, description, location, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
         )
+        self.project_item_model.connect_to_project(self._project)
+        self.specification_model.connect_to_project(self._project)
         self._enable_project_actions()
         self.ui.actionSave.setDisabled(True)  # Disable in a clean project
         self._connect_project_signals()
-        self.populate_specification_model(list())  # Start project with no specifications
         self.update_window_title()
         self.ui.graphicsView.reset_zoom()
         # Update recentProjects
@@ -435,7 +432,7 @@ class ToolboxUI(QMainWindow):
         # Update recentProjectStorages
         OpenProjectDialog.update_recents(os.path.abspath(os.path.join(location, os.path.pardir)), self.qsettings())
         self.save_project()
-        self.msg.emit("New project <b>{0}</b> is now open".format(self._project.name))
+        self.msg.emit(f"New project <b>{self._project.name}</b> is now open")
 
     @Slot()
     def open_project(self, load_dir=None):
@@ -465,30 +462,12 @@ class ToolboxUI(QMainWindow):
                 load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir=start_dir)
                 if not load_dir:
                     return False  # Cancelled
-                if not os.path.isfile(os.path.join(load_dir, ".spinetoolbox", PROJECT_FILENAME)):
-                    self.msg_warning.emit(f"Opening project failed. <b>{load_dir}</b> is not a Spine Toolbox project.")
-                    return False
-                # TODO: Save load_dir parent directory to "appSettings/recentProjectStorages"
-        load_path = os.path.abspath(os.path.join(load_dir, ".spinetoolbox", PROJECT_FILENAME))
-        try:
-            with open(load_path, "r") as fh:
-                try:
-                    proj_info = json.load(fh)
-                except json.decoder.JSONDecodeError:
-                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON.".format(load_path))
-                    return False
-        except OSError:
-            # Remove path from recent projects
-            self.remove_path_from_recent_projects(load_dir)
-            self.msg_error.emit("Project file <b>{0}</b> missing".format(load_path))
-            return False
-        return self.restore_project(proj_info, load_dir)
+        return self.restore_project(load_dir)
 
-    def restore_project(self, project_info, project_dir, ask_confirmation=True):
+    def restore_project(self, project_dir, ask_confirmation=True):
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
 
         Args:
-            project_info (dict): Project information dictionary
             project_dir (str): Project directory
             ask_confirmation (bool): True closes the previous project with a confirmation box if user has enabled this
 
@@ -497,41 +476,27 @@ class ToolboxUI(QMainWindow):
         """
         if not self.close_project(ask_confirmation):
             return False
-        # Check if project dictionary needs to be upgraded
-        project_info = ProjectUpgrader(self).upgrade(project_info, project_dir)
-        if not project_info:
-            return False
-        if not ProjectUpgrader(self).is_valid(LATEST_PROJECT_VERSION, project_info):  # Check project info validity
-            self.msg_error.emit(f"Opening project in directory {project_dir} failed")
-            return False
-        # Parse project info
-        name = project_info["project"]["name"]  # Project name
-        desc = project_info["project"]["description"]  # Project description
-        spec_paths_per_type = project_info["project"]["specifications"]
-        connections = project_info["project"]["connections"]
-        project_items = project_info["items"]
         # Create project
+        self.undo_stack.clear()
         self._project = SpineToolboxProject(
-            self, name, desc, project_dir, self.project_item_model, settings=self._qsettings, logger=self
+            self, "", "", project_dir, self._plugin_manager.plugin_specs, settings=self._qsettings, logger=self
         )
+        self.project_item_model.connect_to_project(self._project)
+        self.specification_model.connect_to_project(self._project)
         self._enable_project_actions()
         self.ui.actionSave.setDisabled(True)  # Save is disabled in a clean project
         self._connect_project_signals()
         self.update_window_title()
-        # Init tool spec model. We don't use the information on the item type in spec_paths_per_type, but we could...
-        deserialized_paths = [
-            deserialize_path(path, self._project.project_dir)
-            for paths in spec_paths_per_type.values()
-            for path in paths
-        ]
-        self.populate_specification_model(deserialized_paths)
         # Populate project model with project items
-        self._project.load(project_items, connections)
+        success = self._project.load(self._item_specification_factories)
+        if not success:
+            self.remove_path_from_recent_projects(self._project.project_dir)
+            return False
         self.ui.treeView_project.expandAll()
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
-        self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
+        self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
 
     def _toolbars(self):
@@ -544,8 +509,7 @@ class ToolboxUI(QMainWindow):
         New project, Open project and Open recent. Called
         in the constructor and when closing a project."""
         for toolbar in self._toolbars():
-            for button in toolbar.findChildren(QAbstractButton):
-                button.setDisabled(True)
+            toolbar.set_project_actions_enabled(False)
         self.ui.actionOpen_project_directory.setDisabled(True)
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setDisabled(True)
@@ -556,8 +520,7 @@ class ToolboxUI(QMainWindow):
         """Enables all project-related actions. Called when a
         new project is created and when a project is opened."""
         for toolbar in self._toolbars():
-            for action in toolbar.findChildren(QAbstractButton):
-                action.setEnabled(True)
+            toolbar.set_project_actions_enabled(True)
         self.ui.actionOpen_project_directory.setEnabled(True)
         self.ui.actionSave.setEnabled(True)
         self.ui.actionSave_As.setEnabled(True)
@@ -571,8 +534,6 @@ class ToolboxUI(QMainWindow):
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
-            for action in toolbar.findChildren(QAbstractButton):
-                action.setEnabled(self._project is not None)
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -587,19 +548,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        # Save specs
-        for spec in self.specification_model.specifications():
-            if not spec.save():
-                self.msg_error.emit("Project saving failed")
-                return
-        # Put project's specification definition files into a dict by item type
-        serialized_spec_paths = dict()
-        for spec in self.specification_model.specifications():
-            if spec.plugin:
-                continue
-            serialized_path = serialize_path(spec.definition_file_path, self._project.project_dir)
-            serialized_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
-        if not self._project.save(serialized_spec_paths):
+        if not self._project.save():
             self.msg_error.emit("Project saving failed")
             return
         self.msg.emit(f"Project <b>{self._project.name}</b> saved")
@@ -627,29 +576,13 @@ class ToolboxUI(QMainWindow):
             self.msg_warning.emit("Project directory unchanged")
             self.save_project()
             return
-        # Check and ask what to do if selected directory is not empty
         if not self.overwrite_check(answer):
             return
         if not self.undo_stack.isClean():
             self.save_project()  # Save before copying the project, so the changes are not discarded
-        self.msg.emit("Saving project to directory {0}".format(answer))
+        self.msg.emit(f"Saving project to directory {answer}")
         recursive_overwrite(self, self._project.project_dir, answer, silent=False)
-        # Get the project info from the new directory and restore project
-        config_file_path = os.path.join(answer, ".spinetoolbox", "project.json")
-        try:
-            with open(config_file_path, "r") as fh:
-                try:
-                    proj_info = json.load(fh)
-                except json.decoder.JSONDecodeError:
-                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON. {0}".format(config_file_path))
-                    return
-        except OSError:
-            self.msg_error.emit("[OSError] Opening project file <b>{0}</b> failed".format(config_file_path))
-            return
-        # Change name of the duplicated project to the new project directory name
-        _, new_name = os.path.split(answer)
-        proj_info["project"]["name"] = new_name
-        if not self.restore_project(proj_info, answer, ask_confirmation=False):
+        if not self.restore_project(answer, ask_confirmation=False):
             return
         self.save_project()  # Save to update project name in project.json, must be done after restore_project()
         # noinspection PyCallByClass, PyArgumentList
@@ -675,14 +608,15 @@ class ToolboxUI(QMainWindow):
                 return False
         if not self.undo_critical_commands():
             return False
+        self.clear_ui()
         self._project.tear_down()
         self._project = None
-        self.clear_ui()
         self._disable_project_actions()
         self.undo_stack.setClean()
         self.update_window_title()
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_itemlog.clear()
+
         return True
 
     @Slot(bool)
@@ -713,7 +647,6 @@ class ToolboxUI(QMainWindow):
             category_item = CategoryProjectTreeItem(str(category), CATEGORY_DESCRIPTIONS[category])
             self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
-        self.ui.treeView_project.header().hide()
 
     def init_specification_model(self):
         """Initializes specification model."""
@@ -727,61 +660,6 @@ class ToolboxUI(QMainWindow):
         for item_type, factory in self.item_factories.items():
             self._item_properties_uis[item_type] = factory.make_properties_widget(self)
 
-    def populate_specification_model(self, specification_paths):
-        """Populates specification model.
-
-        Args:
-            specification_paths (list): List of specification file paths for the current project
-        """
-        self.specification_model.clear()
-        self.msg.emit("Loading specifications...")
-        specs = []
-        for path in specification_paths:
-            if not path:  # TODO: Does this ever happen?
-                continue
-            spec = self.load_specification_from_file(path)
-            if not spec:
-                continue
-            specs.append(spec)
-        specs += list(self._plugin_manager.plugin_specs)
-        # Add specs to model
-        for spec in specs:
-            self.do_add_specification(spec)
-        if not specs:
-            self.msg_warning.emit("Project has no specifications")
-
-    def parse_specification_file(self, def_path):
-        try:
-            with open(def_path, "r") as fp:
-                try:
-                    return json.load(fp)
-                except ValueError:
-                    self.msg_error.emit("Item specification file not valid")
-                    logging.exception("Loading JSON data failed")
-                    return None
-        except FileNotFoundError:
-            # TODO: Prompt to find it?
-            self.msg_error.emit("Specification file <b>{0}</b> does not exist".format(def_path))
-            return None
-
-    def load_specification_from_file(self, def_path):
-        """Returns an Item specification from a definition file.
-
-        Args:
-            def_path (str): Path of the specification definition file
-
-        Returns:
-            ProjectItemSpecification: item specification or None if reading the file failed
-        """
-        spec_dict = self.parse_specification_file(def_path)
-        if spec_dict is None:
-            return None
-        spec_dict["definition_file_path"] = def_path
-        spec = self.load_specification(spec_dict)
-        if spec is not None:
-            spec.definition_file_path = def_path
-        return spec
-
     def supports_specifications(self, item_type):
         """Returns True if given project item type supports specifications.
 
@@ -789,22 +667,6 @@ class ToolboxUI(QMainWindow):
             bool: True if item supports specifications, False otherwise
         """
         return item_type in self._item_specification_factories
-
-    def load_specification(self, definition):
-        """Returns Item specification from a definition dictionary.
-
-        Args:
-            definition (dict): Dictionary with the definition
-
-        Returns:
-            ProjectItemSpecification or NoneType: specification or None if factory isn't found.
-        """
-        # NOTE: If the spec doesn't have the "item_type" key, we can assume it's a tool spec
-        item_type = definition.get("item_type", "Tool")
-        spec_factory = self._item_specification_factories.get(item_type)
-        if spec_factory is None:
-            return None
-        return spec_factory.make_specification(definition, self._qsettings, self)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -905,6 +767,14 @@ class ToolboxUI(QMainWindow):
                     return False
         return True
 
+    def selected_item_names(self):
+        """Returns names of selected project items.
+
+        Returns:
+            list of str: names of selected project items
+        """
+        return [self.project_item_model.item(i).name for i in self.ui.treeView_project.selectedIndexes()]
+
     @Slot(QItemSelection, QItemSelection)
     def item_selection_changed(self, selected, deselected):
         """Synchronizes selection with scene. The scene handles item/link de/activation.
@@ -988,10 +858,14 @@ class ToolboxUI(QMainWindow):
                 break
         self.ui.dockWidget_item.setWindowTitle("Link properties")
 
+    def add_specification(self, specification):
+        """Pushes an AddSpecificationCommand to undo stack."""
+        self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=True))
+
     @Slot()
     def import_specification(self):
         """Opens a file dialog where the user can select an existing specification
-        definition file (.json). If file is valid, calls add_specification().
+        definition file (.json). If file is valid, pushes AddSpecificationCommand to undo stack.
         """
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
@@ -1004,252 +878,61 @@ class ToolboxUI(QMainWindow):
             return
         def_file = os.path.abspath(answer[0])
         # Load specification
-        specification = self.load_specification_from_file(def_file)
+        specification = load_specification_from_file(
+            def_file, self._item_specification_factories, self._qsettings, self
+        )
         if not specification:
             return
-        self.add_specification(specification)
+        self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=False))
+
+    @Slot(str)
+    def repair_specification(self, name):
+        """Repairs specification if it is broken.
+
+        Args:
+            name (str): specification's name
+        """
+        specification = self._project.get_specification(name)
         item_factory = self.item_factories.get(specification.item_type)
         if item_factory is not None:
             item_factory.repair_specification(self, specification)
 
-    def _save_specificiation_file(self, specification):
-        """Saves the given spec. If the spec doesn't have the ``definition_file_path`` attribute set,
-        prompts the user to select a path.
+    def prompt_save_location(self, title, proposed_path, file_filter):
+        """Shows a dialog for the user to select a path to save a file.
 
         Args:
-            specification (ProjectItemSpecification)
-        """
-        if specification.definition_file_path:
-            return specification.save()
-        # Determine a candidate definition file path *inside* the project folder, for relocatability...
-        specs_dir = self.project().specs_dir
-        specs_type_dir = os.path.join(specs_dir, specification.item_type)
-        try:
-            create_dir(specs_type_dir)
-        except OSError:
-            self._logger.msg_error.emit("Creating directory {0} failed".format(specs_type_dir))
-            specs_type_dir = specs_dir
-        candidate_def_file_path = os.path.join(specs_type_dir, shorten(specification.name) + ".json")
-        if not os.path.exists(candidate_def_file_path):
-            specification.definition_file_path = candidate_def_file_path
-            return specification.save()
-        return self._prompt_to_save_specification_file(specification, candidate_def_file_path)
-
-    def _prompt_to_save_specification_file(self, specification, candidate_def_file_path):
-        """Shows a dialog for the user to select a path to save given spec.
-
-        Args:
-            specification (ProjectItemSpecification): The spec
-            candidate_def_file_path (str): A proposed location.
+            title (str): dialog window title
+            proposed_path (str): A proposed location.
+            file_filter (str): file extension filter
 
         Returns:
-            bool: True if the spec is saved successfully, False otherwise
+            str: absolute path or None if dialog was cancelled
         """
-        answer = QFileDialog.getSaveFileName(
-            self, f"Save {specification.item_type} specification", candidate_def_file_path, "JSON (*.json)"
-        )
+        answer = QFileDialog.getSaveFileName(self, title, proposed_path, file_filter)
         if not answer[0]:  # Cancel button clicked
-            return False
-        definition_file_path = os.path.abspath(answer[0])
-        return self._do_save_specification(specification, definition_file_path)
+            return None
+        return os.path.abspath(answer[0])
 
-    def _do_save_specification(self, specification, new_def_file_path):
-        curr_def_file_norm_path = os.path.normcase(specification.definition_file_path)
-        if os.path.normcase(new_def_file_path) == curr_def_file_norm_path:
-            return True
-        specification.definition_file_path = new_def_file_path
-        if not specification.save():
-            return False
-        # Update spec path in project file. Moving the specification file doesn't dirty the project,
-        # so this is the ideal place to do this in fact...
-        config_file = self._project.config_file
-        try:
-            with open(config_file, "r+") as fh:
-                try:
-                    proj_dict = json.load(fh)
-                except json.decoder.JSONDecodeError:
-                    self.msg_error.emit("Error in project file <b>{0}</b>. Invalid JSON.".format(config_file))
-                    return False
-                spec_paths = proj_dict["project"].get("specifications", {}).get(specification.item_type, [])
-                norm_path_index = {
-                    os.path.normcase(deserialize_path(path, self._project.project_dir)): i
-                    for i, path in enumerate(spec_paths)
-                }
-                i = norm_path_index.get(curr_def_file_norm_path)
-                if i is not None:
-                    # We found the current path in the project. This means that we need to update it.
-                    spec_paths[i] = serialize_path(new_def_file_path)
-                    json.dump(fh, proj_dict)
-        except OSError:
-            self.msg_error.emit("Project file <b>{0}</b> missing".format(config_file))
-            return False
-        return True
-
-    def _emit_specification_saved(self, specification):
+    @Slot(str)
+    def _log_specification_saved(self, name, path):
         """Prints a message in the event log, saying that given spec was saved in a certain location,
         together with a clickable link to change the location.
 
         Args:
-            specification (ProjectItemSpecification)
+            name (str): specification's name
+            path (str): specification's file path
         """
-        path = specification.definition_file_path
         self.msg_success.emit(
-            f"Specification <b>{specification.name}</b> successfully saved as "
+            f"Specification <b>{name}</b> successfully saved as "
             f"<a style='color:#99CCFF;' href='file:///{path}'>{path}</a> "
-            f"<a style='color:white;' href='change_spec_file.{specification.name}'><b>[change]</b></a>"
+            f"<a style='color:white;' href='change_spec_file.{name}'><b>[change]</b></a>"
         )
-
-    def add_specification(self, specification, update_existing=False, widget=None):
-        """Adds given specification to the project if there's no one with the same name.
-        Otherwise it updates the existing one.
-
-        Args:
-            specification (ProjectItemSpecification)
-            update_existing (bool, optional): If True, updates a spec with the same in the project.
-                If False (the default), it complains instead.
-            widget (QWidget, optional): The specification editor widget that calls this method.
-                Used to parent the QMessageBox
-
-        Returns:
-            bool: True if successful, False if not.
-        """
-        row = self.specification_model.specification_row(specification.name)
-        if row >= 0:
-            if not update_existing:
-                if widget is None:
-                    widget = self
-                QMessageBox.critical(
-                    widget,
-                    "Duplicate specification name",
-                    f"There's already a specification called <b>{specification.name}</b> in the current project.<br>",
-                )
-                return False
-            current_specification = self.specification_model.specification(row)
-            if current_specification.is_equivalent(specification):
-                # Nothing changed
-                return True
-            specification.definition_file_path = current_specification.definition_file_path
-            return self.update_specification(row, specification)
-        if not self._save_specificiation_file(specification):
-            return False
-        self._emit_specification_saved(specification)
-        self.undo_stack.push(AddSpecificationCommand(self, specification))
-        return True
-
-    def do_add_specification(self, specification, row=None):
-        """Adds a ProjectItemSpecification instance to project.
-
-        Args:
-            specification (ProjectItemSpecification): specification that is added to project
-        """
-        self.specification_model.insertRow(specification, row)
-        self.msg_success.emit("Specification <b>{0}</b> added to project".format(specification.name))
-        item_factory = self.item_factories.get(specification.item_type)
-        if item_factory is not None:
-            item_factory.repair_specification(self, specification)
-
-    def update_specification(self, row, specification):
-        """Saves the given spec to disk, then sets it for the given row in the model,
-        then refreshes the spec in all items that use it.
-
-        Args:
-            row (int): Row of tool specification in ProjectItemSpecificationModel
-            specification (ProjectItemSpecification): An updated specification
-        """
-        if not self._save_specificiation_file(specification):
-            return False
-        self._emit_specification_saved(specification)
-        if not self.specification_model.update_specification(row, specification):
-            self.msg_error.emit(f"Unable to update specification <b>{specification.name}</b>")
-            return False
-        self.msg_success.emit(f"Specification <b>{specification.name}</b> successfully updated")
-        for item in self.project_item_model.items():
-            project_item = item.project_item
-            project_item_spec = project_item.specification()
-            if project_item_spec is None or project_item_spec.name != specification.name:
-                continue
-            if project_item.do_set_specification(specification):
-                self.msg_success.emit(
-                    f"Specification <b>{specification.name}</b> successfully updated "
-                    f"in Item <b>{project_item.name}</b>"
-                )
-            else:
-                self.msg_warning.emit(
-                    f"Specification <b>{specification.name}</b> "
-                    f"of type <b>{specification.item_type}</b> "
-                    f"is no longer valid for Item <b>{project_item.name}</b> "
-                    f"of type <b>{project_item.item_type()}</b>"
-                )
-                project_item.do_set_specification(None)
-        return True
-
-    @Slot(bool)
-    def remove_selected_specification(self, checked=False):
-        """Removes specification selected in QListView."""
-        if not self._project:
-            self.msg.emit("Please create a new project or open an existing one first")
-            return
-        selected = self.main_toolbar.project_item_spec_list_view.selectedIndexes()
-        if not selected:
-            self.msg.emit("Select a specification to remove")
-            return
-        index = selected[0]
-        if not index.isValid():
-            return
-        self.remove_specification(index.row())
-
-    def remove_specification(self, row, ask_verification=True):
-        self.undo_stack.push(RemoveSpecificationCommand(self, row, ask_verification=ask_verification))
-
-    def _get_items_with_spec(self, specification):
-        """Yields project items with given specification.
-
-        Args:
-            specification (ProjectItemSpecification)
-        """
-        for item in self.project_item_model.items(specification.item_category):
-            project_item = item.project_item
-            if project_item.specification() == specification:
-                yield project_item
-
-    def do_remove_specification(self, row, ask_verification=True):
-        """Removes specification from ProjectItemSpecificationModel.
-        Removes also specifications from all items that use this specification.
-
-        Args:
-            row (int): Row in ProjectItemSpecificationModel
-            ask_verification (bool): If True, displays a dialog box asking user to verify the removal
-        """
-        specification = self.specification_model.specification(row)
-        if ask_verification:
-            message = "Remove Specification <b>{0}</b> from Project?".format(specification.name)
-            message_box = QMessageBox(
-                QMessageBox.Question,
-                "Remove Specification",
-                message,
-                buttons=QMessageBox.Ok | QMessageBox.Cancel,
-                parent=self,
-            )
-            message_box.button(QMessageBox.Ok).setText("Remove Specification")
-            answer = message_box.exec_()
-            if answer != QMessageBox.Ok:
-                return
-        items_with_removed_spec = list(self._get_items_with_spec(specification))
-        if not self.specification_model.removeRow(row):
-            self.msg_error.emit("Error in removing specification <b>{0}</b>".format(specification.name))
-            return
-        self.msg_success.emit(f"Specification <b>{specification.name}</b> removed")
-        for project_item in items_with_removed_spec:
-            project_item.do_set_specification(None)
-            self.msg.emit(
-                f"Specification <b>{specification.name}</b> successfully removed from Item <b>{project_item.name}</b>"
-            )
 
     @Slot()
     def remove_all_items(self):
         """Removes all items from project. Slot for Remove All button."""
         if not self._project:
-            self.msg.emit("No project items to remove")
+            self.msg.emit("No project items to remove.")
             return
         self._project.remove_all_items()
 
@@ -1275,12 +958,7 @@ class ToolboxUI(QMainWindow):
             return
         if url.startswith("change_spec_file."):
             _, spec_name = url.split(".")
-            spec = self.specification_model.find_specification(spec_name)
-            if not spec:
-                self.msg_error.emit(f"Unable to find specification '{spec_name}'")
-                return
-            if self._prompt_to_save_specification_file(spec, spec.definition_file_path):
-                self._emit_specification_saved(spec)
+            self._change_specification_file_location(spec_name)
             return
         callback = self._anchor_callbacks.get(url, None)
         if callback is not None:
@@ -1290,6 +968,45 @@ class ToolboxUI(QMainWindow):
         res = QDesktopServices.openUrl(qurl)
         if not res:
             self.msg_error.emit(f"Unable to open <b>{url}</b>")
+
+    def _change_specification_file_location(self, name):
+        """Prompts user for new location for a project item specification.
+
+        Delegates saving to project if one is open by pushing a command to the undo stack,
+        otherwise tries to find the specification from the plugin manager.
+
+        Args:
+            name (str): specification's name
+        """
+        if self._project is not None:
+            if not self._project.is_specification_name_reserved(name):
+                self.msg_error.emit(f"Unable to find specification '{name}'")
+                return
+            spec = self._project.get_specification(name)
+            path = self.prompt_save_location(
+                f"Save {spec.item_type} specification", spec.definition_file_path, "JSON (*.json)"
+            )
+            if path is None:
+                return
+            self.undo_stack.push(SaveSpecificationAsCommand(self._project, name, path))
+            return
+        spec = None
+        for plugin_spec in self._plugin_manager.plugin_specs:
+            if plugin_spec.name == name:
+                spec = plugin_spec
+                break
+        if spec is None:
+            self.msg_error.emit(f"Unable to find specification '{name}'.")
+            return
+        path = self.prompt_save_location(
+            f"Save {spec.item_type} specification", spec.definition_file_path, "JSON (*.json)"
+        )
+        if path is None:
+            return
+        spec.definition_file_path = path
+        if not spec.save():
+            return
+        self._log_specification_saved(spec.name)
 
     @Slot(QModelIndex, QPoint)
     def show_specification_context_menu(self, ind, global_pos):
@@ -1312,7 +1029,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(QModelIndex)
     def edit_specification(self, index, item):
-        """Open the tool specification widget for editing an existing tool specification.
+        """Opens a specification editor widget.
 
         Args:
             index (QModelIndex): Index of the item (from double-click or context menu signal)
@@ -1323,6 +1040,30 @@ class ToolboxUI(QMainWindow):
         specification = self.specification_model.specification(index.row())
         # Open spec in Tool specification edit widget
         self.show_specification_form(specification.item_type, specification, item)
+
+    @Slot(QModelIndex)
+    def remove_specification(self, index):
+        """Removes specification from project.
+
+        Args:
+            index (QModelIndex): Index of the specification item
+        """
+        if not index.isValid():
+            return
+        specification = self.specification_model.specification(index.row())
+        message = f"Remove Specification <b>{specification.name}</b> from Project?"
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            "Remove Specification",
+            message,
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self,
+        )
+        message_box.button(QMessageBox.Ok).setText("Remove Specification")
+        answer = message_box.exec_()
+        if answer != QMessageBox.Ok:
+            return
+        self.undo_stack.push(RemoveSpecificationCommand(self._project, specification.name))
 
     @busy_effect
     @Slot(QModelIndex)
@@ -1719,7 +1460,7 @@ class ToolboxUI(QMainWindow):
 
         Args:
             pos (QPoint): Mouse position
-            index (QModelIndex, None): Index of concerned item or None
+            index (QModelIndex, optional): Index of concerned item or None
         """
         if not index:  # Clicked on a blank area in Design view
             menu = QMenu(self)
@@ -1786,11 +1527,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionPasteAndDuplicateFiles.setEnabled(True)
         self.ui.actionDuplicate.setEnabled(True)
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
-
-    def tear_down_project(self):
-        """Calls the tear_down method on the project."""
-        if self._project is not None:
-            self._project.tear_down()
 
     def tear_down_consoles(self):
         """CLoses the 'base' Python and Juliö Consoles if running."""
@@ -1979,7 +1715,8 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.tear_down_consoles()
-        self.tear_down_project()
+        if self._project is not None:
+            self._project.tear_down()
         for item_type in self.item_factories:
             for editor in self.get_all_multi_tab_spec_editors(item_type):
                 editor.close()
@@ -2067,7 +1804,7 @@ class ToolboxUI(QMainWindow):
             else:
                 final_items_dict[name] = item_dict
             self._set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect)
-        self._project.add_project_items(final_items_dict, set_selected=True, verbosity=False)
+        self._project.add_project_items(final_items_dict, silent=True)
 
     @Slot()
     def project_item_to_clipboard(self):
@@ -2165,6 +1902,8 @@ class ToolboxUI(QMainWindow):
         self._project.connection_established.connect(self.ui.graphicsView.do_add_link)
         self._project.connection_replaced.connect(self.ui.graphicsView.do_replace_link)
         self._project.connection_about_to_be_removed.connect(self.ui.graphicsView.do_remove_link)
+        self._project.specification_added.connect(self.repair_specification)
+        self._project.specification_saved.connect(self._log_specification_saved)
 
     @Slot()
     def _set_execution_in_progress(self):

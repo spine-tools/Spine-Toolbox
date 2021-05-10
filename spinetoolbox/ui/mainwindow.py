@@ -313,6 +313,7 @@ class Ui_MainWindow(object):
         self.treeView_project.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.treeView_project.setUniformRowHeights(True)
         self.treeView_project.setAnimated(True)
+        self.treeView_project.header().setVisible(False)
 
         self.verticalLayout_4.addWidget(self.treeView_project)
 

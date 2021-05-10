@@ -15,6 +15,7 @@ Spine Toolbox project class.
 :authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   10.1.2018
 """
+from enum import auto, Enum, unique
 from itertools import takewhile, chain
 import os
 import json
@@ -24,11 +25,12 @@ from PySide2.QtWidgets import QMessageBox
 from spine_engine.project_item.connection import Connection
 from spine_engine.spine_engine import ExecutionDirection
 from spine_engine.utils.helpers import shorten
-from spinetoolbox.metaobject import MetaObject
-from spinetoolbox.helpers import create_dir, erase_dir, make_settings_dict_for_engine
+from spine_engine.utils.serialization import deserialize_path, serialize_path
+from .metaobject import MetaObject
+from .helpers import create_dir, erase_dir, load_specification_from_file, make_settings_dict_for_engine
+from .project_upgrader import ProjectUpgrader
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME, INVALID_CHARS
 from .dag_handler import DirectedGraphHandler
-from .project_tree_item import LeafProjectTreeItem
 from .project_commands import (
     SetProjectNameCommand,
     SetProjectDescriptionCommand,
@@ -39,9 +41,19 @@ from .project_commands import (
 from .spine_engine_worker import SpineEngineWorker
 
 
+@unique
+class ItemNameStatus(Enum):
+    OK = auto()
+    INVALID = auto()
+    EXISTS = auto()
+    SHORT_NAME_EXISTS = auto()
+
+
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
+    project_about_to_be_torn_down = Signal()
+    """Emitted before project is being torn down."""
     dag_execution_finished = Signal()
     """Emitted after a single DAG execution has finished."""
     project_execution_about_to_start = Signal()
@@ -58,21 +70,32 @@ class SpineToolboxProject(MetaObject):
     """Emitted after a project item has been added."""
     item_about_to_be_removed = Signal(str)
     """Emitted before project item removal."""
+    item_renamed = Signal(str, str)
+    """Emitted after project item has been renamed."""
+    specification_added = Signal(str)
+    """Emitted after a specification has been added."""
+    specification_removed = Signal(str)
+    """Emitted after a specification has been removed."""
+    specification_replaced = Signal(str, str)
+    """Emitted after a specification has been replaced."""
+    specification_saved = Signal(str, str)
+    """Emitted after a specification has been saved."""
 
-    def __init__(self, toolbox, name, description, p_dir, project_item_model, settings, logger):
+    def __init__(self, toolbox, name, description, p_dir, plugin_specs, settings, logger):
         """
         Args:
             toolbox (ToolboxUI): toolbox of this project
             name (str): Project name
             description (str): Project description
             p_dir (str): Project directory
-            project_item_model (ProjectItemModel): project item tree model
+            plugin_specs (Iterable of ProjectItemSpecification): specifications available as plugins
             settings (QSettings): Toolbox settings
             logger (LoggerInterface): a logger instance
         """
         super().__init__(name, description)
         self._toolbox = toolbox
-        self._project_item_model = project_item_model
+        self._project_items = dict()
+        self._specifications = {i: spec for i, spec in enumerate(plugin_specs)}
         self._connections = list()
         self._logger = logger
         self._settings = settings
@@ -84,10 +107,9 @@ class SpineToolboxProject(MetaObject):
         self.items_dir = None  # Full path to items directory
         self.specs_dir = None  # Full path to specs directory
         self.config_file = None  # Full path to .spinetoolbox/project.json file
-        self._toolbox.undo_stack.clear()
         p_dir = os.path.abspath(p_dir)
         if not self._create_project_structure(p_dir):
-            self._logger.msg_error.emit("Creating project directory structure in <b>{0}</b> failed".format(p_dir))
+            self._logger.msg_error.emit(f"Creating project directory structure in <b>{p_dir}</b> failed")
 
     def toolbox(self):
         """Returns Toolbox main window.
@@ -116,7 +138,7 @@ class SpineToolboxProject(MetaObject):
             try:
                 create_dir(dir_)
             except OSError:
-                self._logger.msg_error.emit("Creating directory {0} failed".format(dir_))
+                self._logger.msg_error.emit(f"Creating directory {dir_} failed")
                 return False
         return True
 
@@ -149,50 +171,270 @@ class SpineToolboxProject(MetaObject):
             msg += "cleared"
         self._logger.msg.emit(msg)
 
-    def save(self, spec_paths):
-        """Collects project information and objects
-        into a dictionary and writes it to a JSON file.
-
-        Args:
-            spec_paths (dict): List of absolute paths to specification files keyed by item type
+    def save(self):
+        """Collects project information and objects into a dictionary and writes it to a JSON file.
 
         Returns:
             bool: True or False depending on success
         """
-        project_dict = dict()  # Dictionary for storing project info
-        project_dict["version"] = LATEST_PROJECT_VERSION
-        project_dict["name"] = self.name
-        project_dict["description"] = self.description
-        project_dict["specifications"] = spec_paths
-        project_dict["connections"] = [connection.to_dict() for connection in self._connections]
-        items_dict = dict()  # Dictionary for storing project items
-        # Traverse all items in project model by category
-        for category_item in self._project_item_model.root().children():
-            category = category_item.name
-            # Store item dictionaries with item name as key and item_dict as value
-            for item in self._project_item_model.items(category):
-                items_dict[item.name] = item.project_item.item_dict()
-        # Save project to file
+        serialized_spec_paths = dict()
+        for spec in self._specifications.values():
+            if spec.plugin is not None:
+                continue
+            if not spec.save():
+                self._logger.msg_error.emit("Failed to save specification <b>spec.name</b>.")
+                return False
+            serialized_path = serialize_path(spec.definition_file_path, self.project_dir)
+            serialized_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
+        project_dict = {
+            "version": LATEST_PROJECT_VERSION,
+            "name": self.name,
+            "description": self.description,
+            "specifications": serialized_spec_paths,
+            "connections": [connection.to_dict() for connection in self._connections],
+        }
+        items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         saved_dict = dict(project=project_dict, items=items_dict)
-        # Write into JSON file
         with open(self.config_file, "w") as fp:
-            json.dump(saved_dict, fp, indent=4)
+            self._dump(saved_dict, fp)
         return True
 
-    def load(self, items_dict, connection_dicts):
-        """Populates project item model with items loaded from project file.
+    @staticmethod
+    def _dump(project_dict, out_stream):
+        """Dumps project dict into output stream.
 
         Args:
-            items_dict (dict): Dictionary containing all project items in JSON format
-            connection_dicts (list of dict): List containing all connections in JSON format
+            project_dict (dict): project dictionary
+            out_stream (IOBase): output stream
         """
+        json.dump(project_dict, out_stream, indent=4)
+
+    def load(self, spec_factories):
+        """Loads project from its project directory.
+
+        Args:
+            spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
+
+        Returns:
+            bool: True if the operation was successful, False otherwise
+        """
+        project_dict = self._load_project_dict()
+        if project_dict is None:
+            return False
+        project_info = ProjectUpgrader(self).upgrade(project_dict, self.project_dir)
+        if not project_info:
+            return False
+        if not ProjectUpgrader(self).is_valid(LATEST_PROJECT_VERSION, project_info):  # Check project info validity
+            self.logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
+            return False
+        # Parse project info
+        self.set_name(project_info["project"]["name"])
+        self.set_description(project_info["project"]["description"])
+        spec_paths_per_type = project_info["project"]["specifications"]
+        deserialized_paths = [
+            deserialize_path(path, self.project_dir) for paths in spec_paths_per_type.values() for path in paths
+        ]
+        self._logger.msg.emit("Loading specifications...")
+        for path in deserialized_paths:
+            spec = load_specification_from_file(path, spec_factories, self._settings, self._logger)
+            if spec is not None:
+                self.add_specification(spec, save_to_disk=False)
+        items_dict = project_info["items"]
         self._logger.msg.emit("Loading project items...")
         if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
-        self.make_and_add_project_items(items_dict, verbosity=False)
+        self.restore_project_items(items_dict, silent=True)
         self._logger.msg.emit("Restoring connections...")
+        connection_dicts = project_info["project"]["connections"]
         for connection in map(Connection.from_dict, connection_dicts):
             self.add_connection(connection, silent=True)
+        return True
+
+    def _load_project_dict(self):
+        """Loads project dictionary from project directory.
+
+        Returns:
+            dict: project dictionary
+        """
+        load_path = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox", PROJECT_FILENAME))
+        try:
+            with open(load_path, "r") as fh:
+                try:
+                    project_dict = json.load(fh)
+                except json.decoder.JSONDecodeError:
+                    self.logger.msg_error.emit(f"Error in project file <b>{load_path}</b>. Invalid JSON.")
+                    return None
+        except OSError:
+            self.logger.msg_error.emit(f"Project file <b>{load_path}</b> missing")
+            return None
+        return project_dict
+
+    def add_specification(self, specification, save_to_disk=True):
+        """Adds a specification to the project.
+
+        Args:
+            specification (ProjectItemSpecification): specification to add
+            save_to_disk (bool): if True, save the specification to disk
+
+        Returns:
+            int: A unique identifier for the specification or None if the operation was unsuccessful
+        """
+        if self.is_specification_name_reserved(specification.name):
+            self._logger.msg_warning.emit(
+                f"Specification '{specification.name}' already available to project and will not be added."
+            )
+            return None
+        if save_to_disk and not self.save_specification_file(specification):
+            return None
+        id_ = self._specification_id()
+        self._specifications[id_] = specification
+        self.specification_added.emit(specification.name)
+        return id_
+
+    def is_specification_name_reserved(self, name):
+        """Checks if specification exists.
+
+        Args:
+            name (str): specification's name
+
+        Returns:
+            bool: True if project has given specification, False otherwise
+        """
+        return name in (spec.name for spec in self._specifications.values())
+
+    def specifications(self):
+        """Yields project's specifications.
+
+        Yield:
+            ProjectItemSpecification: specification
+        """
+        yield from self._specifications.values()
+
+    def _specification_id(self):
+        """Creates an id for specification.
+
+        Returns:
+            int: new id
+        """
+        return max(self._specifications) + 1 if self._specifications else 0
+
+    def get_specification(self, name_or_id):
+        """Returns project item specification.
+
+        Args:
+            name_or_id (str or int): specification's name or id
+
+        Returns:
+            ProjectItemSpecification: specification
+        """
+        if isinstance(name_or_id, str):
+            name_or_id = self.specification_name_to_id(name_or_id)
+        return self._specifications[name_or_id]
+
+    def specification_name_to_id(self, name):
+        """Returns identifier for named specification.
+
+        Args:
+            name (str): specification's name
+
+        Returns:
+            int: specification's id
+        """
+        for id_, spec in self._specifications.items():
+            if name == spec.name:
+                return id_
+        raise RuntimeError(f"Specification '{name}' not found.")
+
+    def remove_specification(self, id_or_name):
+        """Removes a specification from project.
+
+        Args:
+            id_or_name (int or str): specification's id or name
+        """
+        if isinstance(id_or_name, str):
+            id_or_name = self.specification_name_to_id(id_or_name)
+        spec = self._specifications.pop(id_or_name)
+        for item in self._project_items.values():
+            item_spec = item.specification()
+            if item_spec is None or item_spec.name != spec.name:
+                continue
+            self._logger.msg_warning.emit(
+                f"Specification <b>{spec.name}</b> is no longer valid for Item <b>{item.name}</b> "
+            )
+            item.do_set_specification(None)
+        self.specification_removed.emit(spec.name)
+
+    def replace_specification(self, name, specification):
+        """Replaces an existing specification.
+
+        Saves the given spec to disk and refreshes the spec in all items that use it.
+
+        Args:
+            name (str): name of the specification to replace
+            specification (ProjectItemSpecification): a specification
+
+        Returns:
+            bool: True if operation was successful, False otherwise
+        """
+        if name != specification.name and self.is_specification_name_reserved(specification.name):
+            self._logger.msg_error.emit(f"Specification name {specification.name} already in use.")
+            return False
+        if not self.save_specification_file(specification):
+            return False
+        id_ = self.specification_name_to_id(name)
+        self._specifications[id_] = specification
+        for item in self._project_items.values():
+            project_item_spec = item.specification()
+            if project_item_spec is None or project_item_spec.name != specification.name:
+                continue
+            if item.do_set_specification(specification):
+                self._logger.msg_success.emit(
+                    f"Specification <b>{specification.name}</b> successfully updated " f"in Item <b>{item.name}</b>"
+                )
+            else:
+                self._logger.msg_warning.emit(
+                    f"Specification <b>{specification.name}</b> "
+                    f"of type <b>{specification.item_type}</b> "
+                    f"is no longer valid for Item <b>{item.name}</b> "
+                    f"of type <b>{item.item_type()}</b>"
+                )
+                item.do_set_specification(None)
+        self.specification_replaced.emit(name, specification.name)
+        return True
+
+    def save_specification_file(self, specification):
+        """Saves the given project item specification.
+
+        Save path is determined by specification directory and specification's name.
+
+        Args:
+            specification (ProjectItemSpecification): specification to save
+
+        Returns:
+            bool: True if operation was successful, False otherwise
+        """
+        if not specification.definition_file_path:
+            # Determine a candidate definition file path *inside* the project folder, for relocatability...
+            specs_dir = self.specs_dir
+            specs_type_dir = os.path.join(specs_dir, specification.item_type)
+            try:
+                create_dir(specs_type_dir)
+            except OSError:
+                self._logger.msg_error.emit(f"Creating directory {specs_type_dir} failed")
+                specs_type_dir = specs_dir
+            candidate_path = os.path.join(specs_type_dir, shorten(specification.name) + ".json")
+            if os.path.exists(candidate_path):
+                # Confirm overwriting existing file.
+                candidate_path = self._toolbox.prompt_save_location(
+                    f"Save {specification.item_type} specification", candidate_path, "JSON (*.json)"
+                )
+                if candidate_path is None:
+                    return False
+            specification.definition_file_path = candidate_path
+        if not specification.save():
+            return False
+        self.specification_saved.emit(specification.name, specification.definition_file_path)
+        return True
 
     def get_item(self, name):
         """Returns project item.
@@ -203,7 +445,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             ProjectItem: project item
         """
-        return self._project_item_model.get_item(name).project_item
+        return self._project_items[name]
 
     def get_items(self):
         """ Returns all project items.
@@ -211,88 +453,18 @@ class SpineToolboxProject(MetaObject):
         Returns:
             list of ProjectItem: all project items
         """
-        return [item.project_item for item in self._project_item_model.items()]
+        return list(self._project_items.values())
 
-    def add_project_items(self, items_dict, set_selected=False, verbosity=True):
+    def add_project_items(self, items_dict, silent=False):
         """Pushes an AddProjectItemsCommand to the toolbox undo stack.
+
+        Args:
+            items_dict (dict): mapping from item name to item dictionary
+            silent (bool): if True, suppress log messages
         """
         if not items_dict:
             return
-        self._toolbox.undo_stack.push(
-            AddProjectItemsCommand(self, items_dict, set_selected=set_selected, verbosity=verbosity)
-        )
-
-    def make_project_tree_items(self, items_dict):
-        """Creates and returns a dictionary mapping category indexes to a list of corresponding LeafProjectTreeItem instances.
-
-        Args:
-            items_dict (dict): a mapping from item name to item dict
-
-        Returns:
-            dict(QModelIndex, list(LeafProjectTreeItem))
-        """
-        project_items_by_category = {}
-        for item_name, item_dict in items_dict.items():
-            item_type = item_dict["type"]
-            factory = self._toolbox.item_factories.get(item_type)
-            if factory is None:
-                self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
-                self._logger.msg_error.emit(f"Loading project item <b>{item_name}</b> failed")
-                return {}
-            try:
-                project_item = factory.make_item(item_name, item_dict, self._toolbox, self)
-            except TypeError as error:
-                self._logger.msg_error.emit(
-                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
-                    "This is most likely caused by an outdated project file."
-                )
-                logging.debug(error)
-                continue
-            except KeyError as error:
-                self._logger.msg_error.emit(
-                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
-                    f"This is most likely caused by an outdated or corrupted project file "
-                    f"(missing JSON key: {str(error)})."
-                )
-                logging.debug(error)
-                continue
-            original_data_dir = item_dict.get("original_data_dir")
-            original_db_url = item_dict.get("original_db_url")
-            duplicate_files = item_dict.get("duplicate_files")
-            if original_data_dir is not None and original_db_url is not None and duplicate_files is not None:
-                project_item.copy_local_data(original_data_dir, original_db_url, duplicate_files)
-            project_items_by_category.setdefault(project_item.item_category(), list()).append(project_item)
-        project_tree_items = {}
-        for category, project_items in project_items_by_category.items():
-            category_ind = self._project_item_model.find_category(category)
-            # NOTE: category_ind might be None, and needs to be handled caller side
-            project_tree_items[category_ind] = [
-                LeafProjectTreeItem(project_item, self._toolbox) for project_item in project_items
-            ]
-        return project_tree_items
-
-    def _do_add_project_tree_items(self, category_ind, *project_tree_items, set_selected=False, verbosity=True):
-        """Adds LeafProjectTreeItem instances to project.
-
-        Args:
-            category_ind (QModelIndex): The category index
-            project_tree_items (LeafProjectTreeItem): one or more LeafProjectTreeItem instances to add
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        for project_tree_item in project_tree_items:
-            project_item = project_tree_item.project_item
-            self._project_item_model.insert_item(project_tree_item, category_ind)
-            self.dag_handler.add_dag_node(project_item.name)
-            self.item_added.emit(project_item.name)
-            project_item.set_up()
-            if verbosity:
-                self._logger.msg.emit(
-                    "{0} <b>{1}</b> added to project".format(project_item.item_type(), project_item.name)
-                )
-        if set_selected:
-            item = list(project_tree_items)[-1]
-            self.set_item_selected(item)
+        self._toolbox.undo_stack.push(AddProjectItemsCommand(self, items_dict, silent))
 
     def rename_item(self, previous_name, new_name, rename_data_dir_message):
         """Renames a project item
@@ -307,26 +479,26 @@ class SpineToolboxProject(MetaObject):
          """
         if not new_name.strip() or new_name == previous_name:
             return False
-        if any(x in INVALID_CHARS for x in new_name):
+        name_status = self.validate_project_item_name(new_name)
+        if name_status == ItemNameStatus.INVALID:
             msg = f"<b>{new_name}</b> contains invalid characters."
             self._logger.error_box.emit("Invalid characters", msg)
             return False
-        if self._project_item_model.find_item(new_name):
+        if name_status == ItemNameStatus.EXISTS:
             msg = f"Project item <b>{new_name}</b> already exists"
             self._logger.error_box.emit("Invalid name", msg)
             return False
-        new_short_name = shorten(new_name)
-        if self._toolbox.project_item_model.short_name_reserved(new_short_name):
-            msg = f"Project item using directory <b>{new_short_name}</b> already exists"
+        if name_status == ItemNameStatus.SHORT_NAME_EXISTS:
+            msg = f"Project item using directory <b>{shorten(new_name)}</b> already exists"
             self._logger.error_box("Invalid name", msg)
             return False
-        item_index = self._project_item_model.find_item(previous_name)
-        item = self._project_item_model.item(item_index).project_item
+        item = self._project_items.pop(previous_name)
         resources_to_predecessors = item.resources_for_direct_predecessors()
         resources_to_successors = item.resources_for_direct_successors()
         if not item.rename(new_name, rename_data_dir_message):
+            self._project_items[previous_name] = item
             return False
-        self._project_item_model.set_leaf_item_name(item_index, new_name)
+        self._project_items[new_name] = item
         self.dag_handler.rename_node(previous_name, new_name)
         for connection in self._connections:
             if connection.source == previous_name:
@@ -339,8 +511,27 @@ class SpineToolboxProject(MetaObject):
         new_resources_to_successors = item.resources_for_direct_successors()
         for old, new in zip(resources_to_successors, new_resources_to_successors):
             self.notify_resource_replacement_to_successors(item, old, new)
+        self.item_renamed.emit(previous_name, new_name)
         self._logger.msg_success.emit(f"Project item <b>{previous_name}</b> renamed to <b>{new_name}</b>.")
         return True
+
+    def validate_project_item_name(self, name):
+        """Validates item name.
+
+        Args:
+            name (str): proposed project item's name
+
+        Returns:
+            ItemNameStatus: validation result
+        """
+        if any(x in INVALID_CHARS for x in name):
+            return ItemNameStatus.INVALID
+        if name in self._project_items:
+            return ItemNameStatus.EXISTS
+        short_name = shorten(name)
+        if any(i.short_name == short_name for i in self._project_items.values()):
+            return ItemNameStatus.SHORT_NAME_EXISTS
+        return ItemNameStatus.OK
 
     @property
     def connections(self):
@@ -393,9 +584,9 @@ class SpineToolboxProject(MetaObject):
         self.connection_established.emit(connection)
         if not self._is_dag_valid(dag):
             return True  # Connection was added successfully even though DAG is not valid.
-        destination = self._project_item_model.get_item(connection.destination).project_item
+        destination = self._project_items[connection.destination]
         self.notify_resource_changes_to_predecessors(destination)
-        source = self._project_item_model.get_item(connection.source).project_item
+        source = self._project_items[connection.source]
         self.notify_resource_changes_to_successors(source)
         if not silent:
             destination.notify_destination(source)
@@ -413,10 +604,10 @@ class SpineToolboxProject(MetaObject):
         dags = self.dag_handler.remove_graph_edge(connection.source, connection.destination)
         valid_dags = [dag for dag in dags if self._is_dag_valid(dag)]
         updateable_nodes = set(chain(*(dag.nodes() for dag in valid_dags)))
-        destination = self._project_item_model.get_item(connection.destination).project_item
+        destination = self._project_items[connection.destination]
         if destination.name in updateable_nodes:
             self._update_item_resources(destination, ExecutionDirection.FORWARD)
-        source = self._project_item_model.get_item(connection.source).project_item
+        source = self._project_items[connection.source]
         if source.name in updateable_nodes:
             self._update_item_resources(source, ExecutionDirection.BACKWARD)
         for dag in valid_dags:
@@ -435,37 +626,56 @@ class SpineToolboxProject(MetaObject):
         self._connections.append(new_connection)
         self.connection_replaced.emit(existing_connection, new_connection)
 
-    def set_item_selected(self, item):
-        """
-        Selects the given item.
-
-        Args:
-            item (LeafProjectTreeItem)
-        """
-        ind = self._project_item_model.find_item(item.name)
-        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
-
-    def make_and_add_project_items(self, items_dict, set_selected=False, verbosity=True):
-        """Adds items to project at loading.
+    def restore_project_items(self, items_dict, silent):
+        """Restores project items from dictionary.
 
         Args:
             items_dict (dict): a mapping from item name to item dict
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
+            silent (bool): if True, suppress a log messages
         """
-        for category_ind, project_tree_items in self.make_project_tree_items(items_dict).items():
-            self._do_add_project_tree_items(
-                category_ind, *project_tree_items, set_selected=set_selected, verbosity=verbosity
-            )
+        for item_name, item_dict in items_dict.items():
+            item_type = item_dict["type"]
+            factory = self._toolbox.item_factories.get(item_type)
+            if factory is None:
+                self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
+                self._logger.msg_error.emit(f"Loading project item <b>{item_name}</b> failed")
+                return
+            try:
+                project_item = factory.make_item(item_name, item_dict, self._toolbox, self)
+            except TypeError as error:
+                self._logger.msg_error.emit(
+                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
+                    "This is most likely caused by an outdated project file."
+                )
+                logging.debug(error)
+                continue
+            except KeyError as error:
+                self._logger.msg_error.emit(
+                    f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
+                    f"This is most likely caused by an outdated or corrupted project file "
+                    f"(missing JSON key: {str(error)})."
+                )
+                logging.debug(error)
+                continue
+            original_data_dir = item_dict.get("original_data_dir")
+            original_db_url = item_dict.get("original_db_url")
+            duplicate_files = item_dict.get("duplicate_files")
+            if original_data_dir is not None and original_db_url is not None and duplicate_files is not None:
+                project_item.copy_local_data(original_data_dir, original_db_url, duplicate_files)
+            self._project_items[item_name] = project_item
+            self.dag_handler.add_dag_node(project_item.name)
+            self.item_added.emit(item_name)
+            project_item.set_up()
+            if not silent:
+                self._logger.msg.emit(f"{project_item.item_type()} <b>{item_name}</b> added to project")
 
     def remove_all_items(self):
         """Pushes a RemoveAllProjectItemsCommand to the Toolbox undo stack."""
-        items_per_category = self._project_item_model.items_per_category()
-        if not any(v for v in items_per_category.values()):
+        if not self._project_items:
             self._logger.msg.emit("No project items to remove")
             return
         delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
-        msg = "Remove all items from project?"
+        msg = "Remove all items from project? "
         if not delete_data:
             msg += "Item data directory will still be available in the project directory after this operation."
         else:
@@ -520,14 +730,11 @@ class SpineToolboxProject(MetaObject):
             item_name (str): Item's name
             delete_data (bool): If set to True, deletes the directories and data associated with the item
         """
+        self.item_about_to_be_removed.emit(item_name)
         for c in self.connections_for_item(item_name):
             self.remove_connection(c)
         self.dag_handler.remove_node_from_graph(item_name)
-        index = self._project_item_model.find_item(item_name)
-        self.item_about_to_be_removed.emit(item_name)
-        tree_item = self._project_item_model.item(index)
-        self._project_item_model.remove_item(tree_item, parent=index.parent())
-        item = tree_item.project_item
+        item = self._project_items.pop(item_name)
         item.tear_down()
         if delete_data:
             try:
@@ -542,21 +749,8 @@ class SpineToolboxProject(MetaObject):
                         self._logger.msg_error.emit("Directory does not exist")
                 except OSError:
                     self._logger.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
-        if self._project_item_model.n_items() == 0:
+        if not self._project_items:
             self._logger.msg.emit("All items removed from project.")
-
-    def do_remove_project_tree_items(self, *items, delete_data=False, silent=False):
-        """Removes LeafProjectTreeItem instances from project.
-
-        Args:
-            *items (LeafProjectTreeItem): the items to remove
-            delete_data (bool): If set to True, deletes the directories and data associated with the item
-            silent (bool): Used to prevent unnecessary log messages when switching projects
-        """
-        for item in items:
-            self.remove_item_by_name(item.name, delete_data)
-        if not silent:
-            self._logger.msg.emit(f"Item(s) <b>{', '.join(item.name for item in items)}</b> removed from project")
 
     def execute_dags(self, dags, execution_permits, msg):
         """Executes given dags.
@@ -608,10 +802,10 @@ class SpineToolboxProject(MetaObject):
         node_successors = self.get_node_successors(dag, dag_identifier)
         if node_successors is None:
             return
-        project_items = {name: self._project_item_model.get_item(name).project_item for name in node_successors}
         items = {}
         specifications = {}
-        for name, project_item in project_items.items():
+        items_in_dag = {name: item for name, item in self._project_items.items() if name in node_successors}
+        for name, project_item in items_in_dag.items():
             items[name] = project_item.item_dict()
             spec = project_item.specification()
             if spec is not None:
@@ -629,7 +823,7 @@ class SpineToolboxProject(MetaObject):
             "project_dir": self.project_dir,
         }
         server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
-        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, project_items)
+        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items_in_dag)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -663,30 +857,27 @@ class SpineToolboxProject(MetaObject):
             )
         return dag
 
-    def execute_selected(self):
-        """Executes DAGs corresponding to all selected project items."""
+    def execute_selected(self, names):
+        """Executes DAGs corresponding to given project items.
+
+        Args:
+            names (Iterable of str): item names to execute
+        """
         if not self.dag_handler.dags():
             self._logger.msg_warning.emit("Project has no items to execute")
             return
-        # Get selected item
-        selected_indexes = self._toolbox.ui.treeView_project.selectedIndexes()
-        if not selected_indexes:
+        if not names:
             self._logger.msg_warning.emit("Please select a project item and try again.")
             return
         dags = set()
-        executable_item_names = list()
-        for ind in selected_indexes:
-            item = self._project_item_model.item(ind)
-            executable_item_names.append(item.name)
-            dag = self.dag_with_node(item.name)
+        for name in names:
+            dag = self.dag_with_node(name)
             if not dag:
                 continue
             dags.add(dag)
         execution_permit_list = list()
         for dag in dags:
-            execution_permits = dict()
-            for item_name in dag.nodes:
-                execution_permits[item_name] = item_name in executable_item_names
+            execution_permits = {name: name in names for name in dag.nodes}
             execution_permit_list.append(execution_permits)
         self.execute_dags(dags, execution_permit_list, "Executing Selected Directed Acyclic Graphs")
 
@@ -720,11 +911,11 @@ class SpineToolboxProject(MetaObject):
         """
         item_name = item.name
         predecessor_names = {c.source for c in self._incoming_connections(item_name)}
-        succesor_connections = self._outgoing_connections
+        successor_connections = self._outgoing_connections
         update_resources = self._update_predecessor
         trigger_resources = item.resources_for_direct_predecessors()
         self._notify_resource_changes(
-            item_name, predecessor_names, succesor_connections, update_resources, trigger_resources
+            item_name, predecessor_names, successor_connections, update_resources, trigger_resources
         )
 
     def notify_resource_changes_to_successors(self, item):
@@ -751,16 +942,16 @@ class SpineToolboxProject(MetaObject):
 
         Args:
             trigger_name (str): item whose resources have changed
-            target_names (list(str)): items to be notified
-            provider_connections (function): function that receives a target item name and returns a list of
+            target_names (Iterable of str): items to be notified
+            provider_connections (Callable): function that receives a target item name and returns a list of
                 Connections from resource providers
-            update_resources (function): function that takes an item name, a list of provider names, and a dictionary
+            update_resources (Callable): function that takes an item name, a list of provider names, and a dictionary
                 of resources, and does the updating
-            trigger_resources (list(ProjectItemResources)): resources from the trigger item
+            trigger_resources (list of ProjectItemResource): resources from the trigger item
         """
         resource_cache = {trigger_name: trigger_resources}
         for target_name in target_names:
-            target_item = self._project_item_model.get_item(target_name).project_item
+            target_item = self._project_items[target_name]
             connections = provider_connections(target_name)
             update_resources(target_item, connections, resource_cache)
 
@@ -844,7 +1035,7 @@ class SpineToolboxProject(MetaObject):
         combined_resources = list()
         for conn in incoming_connections:
             item_name = conn.source
-            predecessor = self._project_item_model.get_item(item_name).project_item
+            predecessor = self._project_items[item_name]
             resources = resource_cache.get(item_name)
             if resources is None:
                 resources = predecessor.resources_for_direct_successors()
@@ -857,7 +1048,7 @@ class SpineToolboxProject(MetaObject):
         combined_resources = list()
         for conn in outgoing_connections:
             item_name = conn.destination
-            successor = self._project_item_model.get_item(item_name).project_item
+            successor = self._project_items[item_name]
             resources = resource_cache.get(item_name)
             if resources is None:
                 resources = successor.resources_for_direct_predecessors()
@@ -867,31 +1058,31 @@ class SpineToolboxProject(MetaObject):
 
     def _is_dag_valid(self, dag):
         node_successors = self.dag_handler.node_successors(dag)
-        items = {item.name: item.project_item for item in self._project_item_model.items()}
         if not node_successors:
             edges = self.dag_handler.edges_causing_loops(dag)
             for node in dag.nodes():
-                items[node].invalidate_workflow(edges)
+                self._project_items[node].invalidate_workflow(edges)
             return False
         for node in dag.nodes():
-            items[node].revalidate_workflow()
+            self._project_items[node].revalidate_workflow()
         return True
 
     def _update_ranks(self, dag):
         node_successors = self.dag_handler.node_successors(dag)
         ranks = _ranks(node_successors)
         for item_name in node_successors:
-            item = self._project_item_model.get_item(item_name).project_item
+            item = self._project_items[item_name]
             item.set_rank(ranks[item_name])
 
     @property
     def settings(self):
         return self._settings
 
-    def tear_down(self, silent=False):
+    def tear_down(self):
         """Cleans up project."""
-        for project_tree_items in self._project_item_model.items_per_category().values():
-            self.do_remove_project_tree_items(*project_tree_items, delete_data=False, silent=silent)
+        self.project_about_to_be_torn_down.emit()
+        for item in self._project_items.values():
+            item.tear_down()
         self.deleteLater()
 
 

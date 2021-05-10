@@ -16,7 +16,7 @@ Contains a class for storing Tool specifications.
 :date:   23.1.2018
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot
 
 
 class ProjectItemSpecificationModel(QAbstractListModel):
@@ -26,6 +26,57 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         super().__init__()
         self._specs = list()
         self._icons = icons
+        self._project = None
+
+    @Slot(str)
+    def add_specification(self, name):
+        """Adds a specification to the model.
+
+        Args:
+            name (str): specification's name
+        """
+        self.insertRow(self._project.get_specification(name))
+
+    @Slot(str)
+    def remove_specification(self, name):
+        """Removes a specification from the model
+
+        Args:
+            name (str): specification's name
+        """
+        for i, spec in enumerate(self._specs):
+            if spec.name == name:
+                self.removeRow(i)
+                return
+
+    @Slot(str, str)
+    def replace_specification(self, old_name, new_name):
+        """Replaces a specification.
+
+        Args:
+            old_name (str): previous name
+            new_name (str): new name
+        """
+        for i, spec in enumerate(self._specs):
+            if spec.name == old_name:
+                self._specs[i] = self._project.get_specification(new_name)
+                index = self.index(i, 0)
+                self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
+                return
+
+    def connect_to_project(self, project):
+        """Connects the model to a project.
+
+        Args:
+            project (SpineToolboxProject): project to connect to
+        """
+        self.clear()
+        self._project = project
+        for spec in self._project.specifications():
+            self.insertRow(spec)
+        self._project.specification_added.connect(self.add_specification)
+        self._project.specification_removed.connect(self.remove_specification)
+        self._project.specification_replaced.connect(self.replace_specification)
 
     def clear(self):
         self.beginResetModel()
@@ -82,7 +133,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
 
         Args:
             spec (ProjectItemSpecification): spec added to the model
-            row (str): Row to insert spec to
+            row (int, optional): Row to insert spec to
             parent (QModelIndex): Parent of child (not used)
 
         Returns:
@@ -111,23 +162,6 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         self._specs.pop(row)
         self.endRemoveRows()
         return True
-
-    def update_specification(self, row, spec):
-        """Updates specification.
-
-        Args:
-            row (int): Position of the spec to be updated
-            spec (ProjectItemSpecification): new spec, to replace the old one
-
-        Returns:
-            Boolean value depending on the result of the operation
-        """
-        try:
-            self._specs[row] = spec
-            self.dataChanged.emit(self.index(row), self.index(row))
-            return True
-        except IndexError:
-            return False
 
     def specification(self, row):
         """Returns spec specification on given row.

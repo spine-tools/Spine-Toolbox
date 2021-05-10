@@ -223,10 +223,10 @@ class TestSpineToolboxProject(unittest.TestCase):
         waiter.wait()
         self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
 
-    def _execute_selected(self):
+    def _execute_selected(self, names):
         waiter = SignalWaiter()
         self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-        self.toolbox.project().execute_selected()
+        self.toolbox.project().execute_selected(names)
         waiter.wait()
         self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
 
@@ -257,13 +257,12 @@ class TestSpineToolboxProject(unittest.TestCase):
         item1_executable = self._make_mock_executable(item1)
         item2 = add_view(self.toolbox.project(), "View")
         item2_executable = self._make_mock_executable(item2)
-        self.toolbox.project().set_item_selected(item2)
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 item1.name: item1_executable,
                 item2.name: item2_executable,
             }[name]
-            self._execute_selected()
+            self._execute_selected(["View"])
         self.assertFalse(item1_executable.execute_called)
         self.assertTrue(item2_executable.execute_called)
 
@@ -291,14 +290,13 @@ class TestSpineToolboxProject(unittest.TestCase):
         view_executable = self._make_mock_executable(view)
         self.toolbox.project().add_connection(Connection(data_store.name, "right", data_connection.name, "left"))
         self.toolbox.project().add_connection(Connection(data_connection.name, "bottom", view.name, "top"))
-        self.toolbox.project().set_item_selected(data_connection)
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 data_store.name: data_store_executable,
                 data_connection.name: data_connection_executable,
                 view.name: view_executable,
             }[name]
-            self._execute_selected()
+            self._execute_selected(["DC"])
         self.assertFalse(data_store_executable.execute_called)
         self.assertTrue(data_connection_executable.execute_called)
         self.assertFalse(view_executable.execute_called)

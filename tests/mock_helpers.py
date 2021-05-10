@@ -17,13 +17,14 @@ Classes and functions that can be shared among unit test modules.
 """
 
 from unittest import mock
+from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
 
 
 def create_toolboxui():
     """Returns ToolboxUI, where QSettings among others has been mocked."""
-    with mock.patch("spinetoolbox.plugin_manager.PluginManager.load_plugins"), mock.patch(
+    with mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"), mock.patch(
         "spinetoolbox.ui_main.QSettings.value"
     ) as mock_qsettings_value:
         mock_qsettings_value.side_effect = qsettings_value_side_effect
@@ -47,7 +48,7 @@ def create_toolboxui_with_project(project_dir):
     ), mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
         "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
     ), mock.patch(
-        "spinetoolbox.plugin_manager.PluginManager.load_plugins"
+        "spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"
     ):
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
@@ -58,12 +59,11 @@ def create_toolboxui_with_project(project_dir):
 def clean_up_toolbox(toolbox):
     """Cleans up toolbox and project."""
     if toolbox.project():
-        toolbox.project().tear_down()
-        toolbox.project().deleteLater()
+        toolbox.close_project(ask_confirmation=False)
+        QApplication.processEvents()  # Makes sure Design view animations finish properly.
     toolbox.db_mngr.close_all_sessions()
     toolbox.db_mngr.clean_up()
     toolbox.db_mngr = None
-    toolbox.project_item_model.remove_leaves()
     # Delete undo stack explicitly to prevent emitting certain signals well after ToolboxUI has been destroyed.
     toolbox.undo_stack.deleteLater()
     toolbox.deleteLater()
@@ -115,7 +115,7 @@ def add_dc(project, name, x=0, y=0):
         DataConnection: added project item
     """
     item_dict = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
-    project.add_project_items(item_dict)
+    project.restore_project_items(item_dict, silent=True)
     return project.get_item(name)
 
 
@@ -135,7 +135,7 @@ def add_tool(project, name, tool_spec="", x=0, y=0):
     item = {
         name: {"type": "Tool", "description": "", "specification": tool_spec, "execute_in_work": False, "x": x, "y": y}
     }
-    project.add_project_items(item)
+    project.restore_project_items(item, silent=True)
     return project.get_item(name)
 
 
@@ -152,7 +152,7 @@ def add_view(project, name, x=0, y=0):
         View: added project item
     """
     item = {name: {"type": "View", "description": "", "x": x, "y": y}}
-    project.add_project_items(item)
+    project.restore_project_items(item, silent=True)
     return project.get_item(name)
 
 
@@ -169,7 +169,7 @@ def add_importer(project, name, x=0, y=0):
         Importer: added project item
     """
     item = {name: {"type": "Importer", "description": "", "specification": "", "x": x, "y": y}}
-    project.add_project_items(item)
+    project.restore_project_items(item, silent=True)
     return project.get_item(name)
 
 
@@ -186,7 +186,7 @@ def add_gimlet(project, name, x=0, y=0):
         Gimlet: added project item
     """
     item = {name: {"type": "Gimlet", "description": "", "x": x, "y": y}}
-    project.add_project_items(item)
+    project.restore_project_items(item, silent=True)
     return project.get_item(name)
 
 
@@ -203,7 +203,7 @@ def add_data_transformer(project, name, x=0, y=0):
         DataTransformer: added project item
     """
     item = {name: {"type": "Data Transformer", "description": "", "x": x, "y": y}}
-    project.add_project_items(item)
+    project.restore_project_items(item, silent=True)
     return project.get_item(name)
 
 
@@ -220,7 +220,7 @@ def add_exporter(project, name, x=0, y=0):
         Exporter: added project item
     """
     item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "specification": None}}
-    project.add_project_items(item)
+    project.restore_project_items(item, silent=True)
     return project.get_item(name)
 
 
@@ -237,7 +237,7 @@ def add_gdx_exporter(project, name, x=0, y=0):
         GdxExporter: added project item
     """
     item = {name: {"type": "GdxExporter", "description": "", "x": x, "y": y, "settings_packs": None}}
-    project.add_project_items(item)
+    project.restore_project_items(item, silent=True)
     return project.get_item(name)
 
 

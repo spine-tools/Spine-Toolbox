@@ -197,9 +197,10 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             excluded (bool): True if project item was not actually executed.
         """
-        animation_group = QParallelAnimationGroup(self._toolbox)
+        animation_group = QParallelAnimationGroup()
         for link in self.outgoing_links():
             animation_group.addAnimation(link.make_execution_animation(excluded))
+        animation_group.finished.connect(animation_group.deleteLater)
         animation_group.start()
 
     def hoverEnterEvent(self, event):

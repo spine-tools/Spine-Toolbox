@@ -17,13 +17,44 @@ Functions to make and handle QToolBars.
 """
 
 from PySide2.QtCore import Slot, Qt
-from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
+from PySide2.QtWidgets import QToolBar, QLabel, QToolButton, QAbstractButton
 from PySide2.QtGui import QIcon, QPainter
 from ..helpers import make_icon_toolbar_ss, ColoredIcon
 from .project_item_drag import ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
 
 
-class PluginToolBar(QToolBar):
+class ToolBar(QToolBar):
+    """Base class for Toolbox toolbars."""
+
+    def __init__(self, name, toolbox):
+        """
+        Args:
+            name (str): toolbar's name
+            toolbox (ToolboxUI): Toolbox main window
+        """
+        super().__init__(name, parent=toolbox)
+        self.setObjectName(name.replace(" ", "_"))
+        self._toolbox = toolbox
+
+    def set_color(self, color):
+        """Sets toolbar's background color.
+
+        Args:
+            color (QColor): background color
+        """
+        raise NotImplementedError()
+
+    def set_project_actions_enabled(self, enabled):
+        """Enables or disables project related actions.
+
+        Args:
+            enabled (bool): True to enable actions, False to disable
+        """
+        for button in self.findChildren(QAbstractButton):
+            button.setEnabled(enabled)
+
+
+class PluginToolBar(ToolBar):
     """A plugin toolbar."""
 
     def __init__(self, name, parent):
@@ -32,38 +63,42 @@ class PluginToolBar(QToolBar):
         Args:
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__(name, parent=parent)  # Inherits stylesheet from ToolboxUI
+        super().__init__(name, parent)  # Inherits stylesheet from ToolboxUI
         self._name = name
-        self._toolbox = parent
-        self.setObjectName(name.replace(" ", "_"))
 
-    def setup(self, plugin_specs):
+    def setup(self, plugin_specs, disabled_names):
+        """Sets up the toolbar.
+
+        Args:
+            plugin_specs (dict): mapping from specification name to specification
+            disabled_names (Iterable of str): specifications that should be disabled
+        """
         self.addWidget(PaddingLabel(self._name))
-        for spec in plugin_specs:
-            factory = self._toolbox.item_factories[spec.item_type]
-            icon = QIcon(factory.icon())
-            button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
-            button.setIconSize(self.iconSize())
-            self.addWidget(button)
+        for specs in plugin_specs.values():
+            for spec in specs:
+                factory = self._toolbox.item_factories[spec.item_type]
+                icon = QIcon(factory.icon())
+                button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
+                button.setIconSize(self.iconSize())
+                if spec.name in disabled_names:
+                    button.setEnabled(False)
+                self.addWidget(button)
 
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
 
 
-class MainToolBar(QToolBar):
+class MainToolBar(ToolBar):
     """The main application toolbar: Items | Execute"""
 
     _SEPARATOR = ";;"
 
     def __init__(self, parent):
         """
-
         Args:
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__("Main Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
-        self._toolbox = parent
-        self.setObjectName("Main_Toolbar")
+        super().__init__("Main Toolbar", parent)  # Inherits stylesheet from ToolboxUI
         self.execute_project_button = None
         self.execute_selection_button = None
         self.stop_execution_button = None
@@ -154,16 +189,12 @@ class MainToolBar(QToolBar):
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().execute_project()
-        return
 
     @Slot(bool)
     def execute_selected(self, checked=False):
         """Slot for handling the Execute selected tool button clicked signal."""
-        if not self._toolbox.project():
-            self._toolbox.msg.emit("Please create a new project or open an existing one first")
-            return
-        self._toolbox.project().execute_selected()
-        return
+        selected_names = self._toolbox.selected_item_names()
+        self._toolbox.project().execute_selected(selected_names)
 
     @Slot(bool)
     def stop_execution(self, checked=False):

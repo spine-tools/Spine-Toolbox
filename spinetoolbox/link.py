@@ -49,7 +49,10 @@ class LinkBase(QGraphicsPathItem):
     @property
     def src_rect(self):
         """Returns the scene rectangle of the source connector."""
-        return self.src_connector.sceneBoundingRect()
+        try:
+            return self.src_connector.sceneBoundingRect()
+        except RuntimeError as e:
+            raise e
 
     @property
     def src_center(self):
