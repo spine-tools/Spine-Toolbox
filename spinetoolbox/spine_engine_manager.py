@@ -94,6 +94,18 @@ class SpineEngineManagerBase:
         """
         raise NotImplementedError()
 
+    def get_persistent_completions(self, persistent_key, text):
+        """Returns a list of auto-completion options from given text.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+            text (str): text to complete
+
+        Returns:
+            list of str
+        """
+        raise NotImplementedError()
+
 
 class RemoteSpineEngineManager(SpineEngineManagerBase):
     _ENCODING = "ascii"
@@ -212,6 +224,11 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         from spine_engine.execution_managers.persistent_execution_manager import interrupt_persistent
 
         interrupt_persistent(persistent_key)
+
+    def get_persistent_completions(self, persistent_key, text):
+        from spine_engine.execution_managers.persistent_execution_manager import get_persistent_completions
+
+        return get_persistent_completions(persistent_key, text)
 
 
 def make_engine_manager(engine_server_address):

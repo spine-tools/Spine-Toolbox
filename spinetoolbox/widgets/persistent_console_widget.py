@@ -115,14 +115,42 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
             self._issue_command()
             return
+        if ev.key() == Qt.Key_Tab:
+            self._get_completions()
+            return
         super().keyPressEvent(ev)
 
-    def _issue_command(self):
-        """Issues command in the prompt to the persistent process and adds output."""
+    def _get_current_input(self):
         cursor = self.textCursor()
         cursor.movePosition(cursor.End)
         block = cursor.block()
-        cmd = block.text()[len(self._plain_prompt) :]
+        input_ = block.text()[len(self._plain_prompt) :]
+        return input_, cursor
+
+    def _get_completions(self):
+        """Collects and prints completion options for text in the prompt."""
+        text, cursor = self._get_current_input()
+        cursor.movePosition(cursor.End)
+        if not text:
+            return
+        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        engine_mngr = make_engine_manager(engine_server_address)
+        completions = engine_mngr.get_persistent_completions(self._key, text)
+        if not completions:
+            return
+        if len(completions) > 1:
+            # Multiple options: Print them to stdout and add new prompt
+            cursor.insertBlock()
+            self.add_stdout("\t".join(completions))
+            self.add_stdin(text)
+            return
+        # Unique option: Autocomplet current line
+        last_word = text.split(" ")[-1]
+        cursor.insertText(completions[0][len(last_word) :])
+
+    def _issue_command(self):
+        """Issues command in the prompt to the persistent process and adds output."""
+        cmd, cursor = self._get_current_input()
         cursor.insertBlock()
         cursor.movePosition(cursor.End)
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
