@@ -134,7 +134,6 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
     @spec_name.setter
     def spec_name(self, spec_name):
         self._spec_name = spec_name
-        self._index = self._toolbox.specification_model.specification_index(self.spec_name)
         self.setText(self._spec_name)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{self.spec_name}</b> item.</p>")
 
@@ -142,10 +141,12 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
         return ",".join([self.item_type, self.spec_name])
 
     def contextMenuEvent(self, event):
-        self._toolbox.show_specification_context_menu(self._index, event.globalPos())
+        index = self._toolbox.specification_model.specification_index(self.spec_name)
+        self._toolbox.show_specification_context_menu(index, event.globalPos())
 
     def mouseDoubleClickEvent(self, event):
-        self._toolbox.edit_specification(self._index, None)
+        index = self._toolbox.specification_model.specification_index(self.spec_name)
+        self._toolbox.edit_specification(index, None)
 
 
 class ShadeMixin:
@@ -243,6 +244,7 @@ class ProjectItemSpecArray(QToolBar):
         self._button_visible.clicked.connect(self.toggle_visibility)
         self._button_new.clicked.connect(self._show_spec_form)
         self.orientationChanged.connect(self._update_button_geom)
+        self.show()
 
     def set_colored_icons(self, colored):
         self._icon.set_colored(colored)
