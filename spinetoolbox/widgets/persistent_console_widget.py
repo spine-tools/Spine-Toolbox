@@ -60,6 +60,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._language = language
         self._prompt = self._make_prompt()
         self._plain_prompt = QTextDocumentFragment.fromHtml(self._prompt).toPlainText()
+        self._history_index = 0
+        self._history_item_zero = ""
         self.owners = {owner}
         self._highlighter = PromptSyntaxHighlighter(self._plain_prompt, self)
         self._highlighter.setDocument(self.document())
@@ -115,8 +117,14 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
             self._issue_command()
             return
+        if ev.key() == Qt.Key_Up:
+            self._get_history_item(1)
+            return
+        if ev.key() == Qt.Key_Down:
+            self._get_history_item(-1)
+            return
         if ev.key() == Qt.Key_Tab:
-            self._get_completions()
+            self._autocomplete()
             return
         super().keyPressEvent(ev)
 
@@ -127,8 +135,28 @@ class PersistentConsoleWidget(QPlainTextEdit):
         input_ = block.text()[len(self._plain_prompt) :]
         return input_, cursor
 
-    def _get_completions(self):
-        """Collects and prints completion options for text in the prompt."""
+    def _get_history_item(self, step):
+        """Autocompletes current text in the prompt (or print options if multiple matches).
+
+        Args:
+            step (int)
+        """
+        text, cursor = self._get_current_input()
+        if self._history_index == 0:
+            self._history_item_zero = text
+        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        engine_mngr = make_engine_manager(engine_server_address)
+        self._history_index += step
+        if self._history_index < 1:
+            self._history_index = 0
+            history_item = self._history_item_zero
+        else:
+            history_item = engine_mngr.get_persistent_history_item(self._key, self._history_index)
+        cursor.movePosition(cursor.PreviousCharacter, cursor.KeepAnchor, len(text))
+        cursor.insertText(history_item)
+
+    def _autocomplete(self):
+        """Autocompletes current text in the prompt (or print options if multiple matches)."""
         text, cursor = self._get_current_input()
         cursor.movePosition(cursor.End)
         if not text:
@@ -146,6 +174,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
             return
         # Unique option: Autocomplet current line
         last_word = text.split(" ")[-1]
+        cursor.movePosition(cursor.End)
         cursor.insertText(completions[0][len(last_word) :])
 
     def _issue_command(self):
@@ -158,7 +187,11 @@ class PersistentConsoleWidget(QPlainTextEdit):
         issuer.stdout_msg.connect(self.add_stdout)
         issuer.stderr_msg.connect(self.add_stderr)
         issuer.finished.connect(self._add_prompt)
+        issuer.finished.connect(self._reset_history_index)
         self._thread_pool.start(issuer)
+
+    def _reset_history_index(self):
+        self._history_index = 0
 
     def _has_prompt(self):
         """Whether or not the console has a prompt. True most of the time, except when issuing a command.

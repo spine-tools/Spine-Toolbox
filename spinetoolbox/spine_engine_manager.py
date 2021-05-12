@@ -230,6 +230,11 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
         return get_persistent_completions(persistent_key, text)
 
+    def get_persistent_history_item(self, persistent_key, index):
+        from spine_engine.execution_managers.persistent_execution_manager import get_persistent_history_item
+
+        return get_persistent_history_item(persistent_key, index)
+
 
 def make_engine_manager(engine_server_address):
     if not engine_server_address:
