@@ -1,4 +1,4 @@
 @ECHO OFF
-@TITLE Upgrading spinedb-api
+@TITLE Upgrading Spine Toolbox requirements
 
 python "%~dp0\upgrade_spine_reqs.py"
