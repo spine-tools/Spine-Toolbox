@@ -46,6 +46,9 @@ class PersistentConsoleLineEdit(QPlainTextEdit):
         except ClassNotFound:
             pass
 
+    def wheelEvent(self, ev):
+        self.parent().wheelEvent(ev)
+
     def keyPressEvent(self, ev):
         input_, partial_input = self._get_current_input()
         if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
@@ -133,8 +136,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def _reposition_line_edit(self, le):
         block = le.block
-        lbh = self.blockBoundingGeometry(self.document().lastBlock()).height()
-        bh = self.blockBoundingGeometry(block).height()
         top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).bottom() - le.height())
         if block == self.document().lastBlock():
             # FIXME: Find where the -4 comes from
@@ -288,6 +289,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._insert_html_before_prompt(html)
 
     def _add_first_prompt(self):
+        while self._line_edits:
+            self._line_edits.pop().deleteLater()
         self._add_prompt(first=True)
 
     def _add_prompt(self, is_complete=True, first=False):
