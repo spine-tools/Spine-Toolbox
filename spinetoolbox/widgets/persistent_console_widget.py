@@ -32,8 +32,8 @@ class PersistentConsoleLineEdit(QPlainTextEdit):
         cursor_width = self.fontMetrics().horizontalAdvance("x")
         self.setCursorWidth(cursor_width)
         self.setTabStopDistance(4 * cursor_width)
-        self.horizontalScrollBar().hide()
-        self.verticalScrollBar().hide()
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._highlighter = CustomSyntaxHighlighter(self)
         self._highlighter.setDocument(self.document())
         self._highlighter.set_style(parent.style())
@@ -103,7 +103,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         background_color = self._style.background_color
         foreground_color = self._style.styles[Token.Text]
         self.setStyleSheet(
-            f"QPlainTextEdit {{background-color: {background_color}; color: {foreground_color}; border: 0}}"
+            f"QPlainTextEdit {{background-color: {background_color}; color: {foreground_color}; border: 0px}}"
         )
         self._add_first_prompt()
         self.setReadOnly(True)
@@ -131,12 +131,16 @@ class PersistentConsoleWidget(QPlainTextEdit):
             "python": (">>> ", "... "),
         }.get(self._language, ("$", " "))
 
-    def reposition_line_edits(self):
-        for le in self._line_edits:
-            block = le.block
-            top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
-            pos = le.pos()
-            le.move(pos.x(), top)
+    def _reposition_line_edit(self, le):
+        block = le.block
+        lbh = self.blockBoundingGeometry(self.document().lastBlock()).height()
+        bh = self.blockBoundingGeometry(block).height()
+        top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).bottom() - le.height())
+        if block == self.document().lastBlock():
+            # FIXME: Find where the -4 comes from
+            top -= 4
+        left = le.pos().x()
+        le.move(left, top)
 
     def focusInEvent(self, _ev):
         if self._line_edit is not None:
@@ -148,8 +152,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
             le.setFixedWidth(ev.size().width())
 
     def paintEvent(self, ev):
-        self.reposition_line_edits()
         super().paintEvent(ev)
+        for le in self._line_edits:
+            self._reposition_line_edit(le)
 
     def move_history(self, input_, step):
         """Moves history.
@@ -246,19 +251,16 @@ class PersistentConsoleWidget(QPlainTextEdit):
             cursor.insertHtml(self._prompt)
             self.setTextCursor(cursor)
             line_edit = PersistentConsoleLineEdit(cursor.block(), self)
-            self._line_edits.append(line_edit)
             line_edit.move(self.cursorRect().topLeft())
-            line_edit.textCursor().insertHtml(html)
             line_edit.show()
+            line_edit.textCursor().insertHtml(html)
             line_edit.setReadOnly(True)
             line_edit.setFocusPolicy(Qt.NoFocus)
+            self._reposition_line_edit(line_edit)
+            self._line_edits.append(line_edit)
         else:
             cursor.insertHtml(html)
         self._scroll_to_bottom()
-        if self._has_prompt():
-            cursor.movePosition(cursor.End)
-            self.setTextCursor(cursor)
-            self._line_edit.move(self.cursorRect().topLeft())
 
     def add_stdin(self, data):
         """Adds new prompt with data. Used when adding stdin from external execution.
@@ -299,10 +301,11 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.movePosition(cursor.End)
         self.setTextCursor(cursor)
         self._line_edit = PersistentConsoleLineEdit(cursor.block(), self)
-        self._line_edits.append(self._line_edit)
-        self._line_edit.show()
         self._line_edit.move(self.cursorRect().topLeft())
+        self._line_edit.show()
         self._line_edit.setFocus()
+        self._reposition_line_edit(self._line_edit)
+        self._line_edits.append(self._line_edit)
 
     def contextMenuEvent(self, event):
         """Reimplemented to add two more actions: Restart, and Interrupt."""
