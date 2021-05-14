@@ -15,31 +15,64 @@ from pygments.util import ClassNotFound
 from pygments.token import Token
 from PySide2.QtCore import Qt, QRunnable, QObject, Signal, QThreadPool, Slot
 from PySide2.QtWidgets import QPlainTextEdit
-from PySide2.QtGui import QFontDatabase, QTextDocumentFragment, QTextCharFormat
+from PySide2.QtGui import QFontDatabase
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.spine_engine_manager import make_engine_manager
 
 
-PROMPT = 1
+class PersistentConsoleLineEdit(QPlainTextEdit):
+    def __init__(self, block, parent):
+        super().__init__(parent)
+        self.block = block
+        self.setFont(parent.font())
+        self.setUndoRedoEnabled(False)
+        self.document().setDocumentMargin(0)
+        self.setFixedHeight(self.fontMetrics().height())
+        self.setFixedWidth(self.parent().width())
+        cursor_width = self.fontMetrics().horizontalAdvance("x")
+        self.setCursorWidth(cursor_width)
+        self.setTabStopDistance(4 * cursor_width)
+        self.horizontalScrollBar().hide()
+        self.verticalScrollBar().hide()
+        self._highlighter = CustomSyntaxHighlighter(self)
+        self._highlighter.setDocument(self.document())
+        self._highlighter.set_style(parent.style())
+        self._setup_lexer()
 
+    def _setup_lexer(self):
+        try:
+            self._highlighter.lexer = get_lexer_by_name(self.parent().language())
+            self._highlighter.rehighlight()
+        except ClassNotFound:
+            pass
 
-class PromptSyntaxHighlighter(CustomSyntaxHighlighter):
-    def __init__(self, prompt, *arg, **kwargs):
-        super().__init__(*arg, **kwargs)
-        self._prompt = prompt
-
-    def highlightBlock(self, text):
-        """Reimplemented to account for the prompt."""
-        if self.lexer is None:
+    def keyPressEvent(self, ev):
+        input_, partial_input = self._get_current_input()
+        if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
+            self.parent().issue_command(input_)
             return
-        if self.currentBlockState() != PROMPT:
+        if ev.key() == Qt.Key_Up:
+            self.parent().move_history(input_, 1)
             return
-        offset = len(self._prompt)
-        for start, ttype, subtext in self.lexer.get_tokens_unprocessed(text[offset:]):
-            while ttype not in self._formats:
-                ttype = ttype.parent
-            text_format = self._formats.get(ttype, QTextCharFormat())
-            self.setFormat(offset + start, len(subtext), text_format)
+        if ev.key() == Qt.Key_Down:
+            self.parent().move_history(input_, -1)
+            return
+        if ev.key() == Qt.Key_Tab and partial_input.strip():
+            self.parent().autocomplete(input_, partial_input)
+            return
+        super().keyPressEvent(ev)
+
+    def _get_current_input(self):
+        """
+
+        Returns:
+            str: the complete input
+            str: the input before the cursor
+        """
+        cursor = self.textCursor()
+        input_ = self.toPlainText()
+        partial_input = input_[: cursor.position()]
+        return input_, partial_input
 
 
 class PersistentConsoleWidget(QPlainTextEdit):
@@ -54,28 +87,26 @@ class PersistentConsoleWidget(QPlainTextEdit):
             owner (ProjectItemBase, optional): console owner
         """
         super().__init__(parent=toolbox)
+        self._line_edit = None
+        self._line_edits = []
         self._thread_pool = QThreadPool()
         self._toolbox = toolbox
         self._key = key
         self._language = language
-        self._prompt = self._make_prompt()
-        self._plain_prompt = QTextDocumentFragment.fromHtml(self._prompt).toPlainText()
+        self._prompt, self._cont_prompt = self._make_prompts()
         self._history_index = 0
         self._history_item_zero = ""
         self.owners = {owner}
-        self._highlighter = PromptSyntaxHighlighter(self._plain_prompt, self)
-        self._highlighter.setDocument(self.document())
-        self._style = get_style_by_name("monokai")
-        self._highlighter.set_style(self._style)
-        self._setup_lexer()
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         self.setFont(font)
-        self.setUndoRedoEnabled(False)
+        self._style = get_style_by_name("monokai")
         background_color = self._style.background_color
         foreground_color = self._style.styles[Token.Text]
-        self.setStyleSheet(f"QPlainTextEdit {{background-color: {background_color}; color: {foreground_color};}}")
+        self.setStyleSheet(
+            f"QPlainTextEdit {{background-color: {background_color}; color: {foreground_color}; border: 0}}"
+        )
         self._add_first_prompt()
-        self.setCursorWidth(self.fontMetrics().horizontalAdvance("x"))
+        self.setReadOnly(True)
 
     def name(self):
         """Returns console name for display purposes."""
@@ -85,65 +116,50 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def owner_names(self):
         return "&".join(x.name for x in self.owners if x is not None)
 
-    def _make_prompt(self):
-        return {"julia": '<br><span style="color:green; font-weight: bold">julia></span> ', "python": '>>> '}.get(
-            self._language, "$"
-        )
+    def style(self):
+        return self._style
 
-    def _setup_lexer(self):
-        try:
-            self._highlighter.lexer = get_lexer_by_name(self._language)
-            self._highlighter.rehighlight()
-        except ClassNotFound:
-            pass
+    def language(self):
+        return self._language
 
-    def _is_block_editable(self, block):
-        return block.userState() == PROMPT and block == self.document().lastBlock()
+    def _make_prompts(self):
+        return {
+            "julia": (
+                '<br><span style="color:green; font-weight: bold">julia></span> ',
+                "<pre>" + len("julia> ") * " " + "</pre>",
+            ),
+            "python": (">>> ", "... "),
+        }.get(self._language, ("$", " "))
 
-    def keyPressEvent(self, ev):
-        """Reimplemented to only accept keyboard input after the prompt."""
-        cursor = self.textCursor()
-        if ev.modifiers() == Qt.NoModifier and (
-            not self._is_block_editable(cursor.block()) or cursor.positionInBlock() < len(self._plain_prompt)
-        ):
-            cursor.movePosition(cursor.End)
-            self.setTextCursor(cursor)
-            return
-        if ev.modifiers() == Qt.NoModifier and (
-            cursor.positionInBlock() == len(self._plain_prompt)
-            and ev.key() in (Qt.Key_Backspace, Qt.Key_Left, Qt.Key_Home)
-        ):
-            return
-        if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
-            self._issue_command()
-            return
-        if ev.key() == Qt.Key_Up:
-            self._get_history_item(1)
-            return
-        if ev.key() == Qt.Key_Down:
-            self._get_history_item(-1)
-            return
-        if ev.key() == Qt.Key_Tab:
-            self._autocomplete()
-            return
-        super().keyPressEvent(ev)
+    def reposition_line_edits(self):
+        for le in self._line_edits:
+            block = le.block
+            top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
+            pos = le.pos()
+            le.move(pos.x(), top)
 
-    def _get_current_input(self):
-        cursor = self.textCursor()
-        cursor.movePosition(cursor.End)
-        block = cursor.block()
-        input_ = block.text()[len(self._plain_prompt) :]
-        return input_, cursor
+    def focusInEvent(self, _ev):
+        if self._line_edit is not None:
+            self._line_edit.setFocus()
 
-    def _get_history_item(self, step):
-        """Autocompletes current text in the prompt (or print options if multiple matches).
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        for le in self._line_edits:
+            le.setFixedWidth(ev.size().width())
+
+    def paintEvent(self, ev):
+        self.reposition_line_edits()
+        super().paintEvent(ev)
+
+    def move_history(self, input_, step):
+        """Moves history.
 
         Args:
+            input_ (str)
             step (int)
         """
-        text, cursor = self._get_current_input()
         if self._history_index == 0:
-            self._history_item_zero = text
+            self._history_item_zero = input_
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
         self._history_index += step
@@ -152,38 +168,45 @@ class PersistentConsoleWidget(QPlainTextEdit):
             history_item = self._history_item_zero
         else:
             history_item = engine_mngr.get_persistent_history_item(self._key, self._history_index)
-        cursor.movePosition(cursor.PreviousCharacter, cursor.KeepAnchor, len(text))
-        cursor.insertText(history_item)
-
-    def _autocomplete(self):
-        """Autocompletes current text in the prompt (or print options if multiple matches)."""
-        text, cursor = self._get_current_input()
+        self._line_edit.setPlainText(history_item)
+        cursor = self._line_edit.textCursor()
         cursor.movePosition(cursor.End)
-        if not text:
-            return
+        self._line_edit.setTextCursor(cursor)
+
+    def autocomplete(self, input_, partial_input):
+        """Autocompletes current text in the prompt (or print options if multiple matches).
+
+        Args:
+            input_ (str)
+            partial_input (str)
+        """
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
         engine_mngr = make_engine_manager(engine_server_address)
-        completions = engine_mngr.get_persistent_completions(self._key, text)
-        if not completions:
-            return
+        completions = engine_mngr.get_persistent_completions(self._key, partial_input)
         if len(completions) > 1:
             # Multiple options: Print them to stdout and add new prompt
-            cursor.insertBlock()
-            self.add_stdout("\t".join(completions))
-            self.add_stdin(text)
-            return
-        # Unique option: Autocomplet current line
-        last_word = text.split(" ")[-1]
-        cursor.movePosition(cursor.End)
-        cursor.insertText(completions[0][len(last_word) :])
+            self.add_stdin(input_)
+            self.add_stdout("\t\t".join(completions))
+        elif completions:
+            # Unique option: Autocomplet current line
+            cursor = self._line_edit.textCursor()
+            last_word = partial_input.split(" ")[-1]
+            cursor.insertText(completions[0][len(last_word) :])
 
-    def _issue_command(self):
-        """Issues command in the prompt to the persistent process and adds output."""
-        cmd, cursor = self._get_current_input()
-        cursor.insertBlock()
-        cursor.movePosition(cursor.End)
+    def _freeze_current_line_edit(self):
+        self._line_edit.setReadOnly(True)
+        self._line_edit.setFocusPolicy(Qt.NoFocus)
+        self._line_edit = None
+
+    def issue_command(self, input_):
+        """Issues command.
+
+        Args:
+            input_ (str)
+        """
+        self._freeze_current_line_edit()
         engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        issuer = CommandIssuer(engine_server_address, self._key, cmd)
+        issuer = CommandIssuer(engine_server_address, self._key, input_)
         issuer.stdout_msg.connect(self.add_stdout)
         issuer.stderr_msg.connect(self.add_stderr)
         issuer.finished.connect(self._add_prompt)
@@ -199,7 +222,11 @@ class PersistentConsoleWidget(QPlainTextEdit):
         Returns:
             bool
         """
-        return self.document().lastBlock().userState() == PROMPT
+        return self._line_edit is not None
+
+    def _scroll_to_bottom(self):
+        vertical_scroll_bar = self.verticalScrollBar()
+        vertical_scroll_bar.setValue(vertical_scroll_bar.maximum())
 
     def _insert_html_before_prompt(self, html, with_prompt=False):
         """Inserts given html before the prompt. Used when adding input and output from external execution.
@@ -216,9 +243,22 @@ class PersistentConsoleWidget(QPlainTextEdit):
         elif cursor.block().text():
             cursor.insertBlock()
         if with_prompt:
-            html = self._prompt + html
-            cursor.block().setUserState(PROMPT)
-        cursor.insertHtml(html)
+            cursor.insertHtml(self._prompt)
+            self.setTextCursor(cursor)
+            line_edit = PersistentConsoleLineEdit(cursor.block(), self)
+            self._line_edits.append(line_edit)
+            line_edit.move(self.cursorRect().topLeft())
+            line_edit.textCursor().insertHtml(html)
+            line_edit.show()
+            line_edit.setReadOnly(True)
+            line_edit.setFocusPolicy(Qt.NoFocus)
+        else:
+            cursor.insertHtml(html)
+        self._scroll_to_bottom()
+        if self._has_prompt():
+            cursor.movePosition(cursor.End)
+            self.setTextCursor(cursor)
+            self._line_edit.move(self.cursorRect().topLeft())
 
     def add_stdin(self, data):
         """Adds new prompt with data. Used when adding stdin from external execution.
@@ -248,16 +288,21 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def _add_first_prompt(self):
         self._add_prompt(first=True)
 
-    def _add_prompt(self, first=False):
+    def _add_prompt(self, is_complete=True, first=False):
         """Adds a prompt at the end of the document."""
+        prompt = self._prompt if is_complete else self._cont_prompt
         cursor = self.textCursor()
         cursor.movePosition(cursor.End)
         if cursor.block().text() or first:
             cursor.insertBlock()
-        cursor.insertHtml(self._prompt)
-        cursor.block().setUserState(PROMPT)
+        cursor.insertHtml(prompt)
         cursor.movePosition(cursor.End)
         self.setTextCursor(cursor)
+        self._line_edit = PersistentConsoleLineEdit(cursor.block(), self)
+        self._line_edits.append(self._line_edit)
+        self._line_edit.show()
+        self._line_edit.move(self.cursorRect().topLeft())
+        self._line_edit.setFocus()
 
     def contextMenuEvent(self, event):
         """Reimplemented to add two more actions: Restart, and Interrupt."""
@@ -323,7 +368,7 @@ class CommandIssuer(PersistentRunnableBase):
     """A runnable that issues a command."""
 
     class Signals(QObject):
-        finished = Signal()
+        finished = Signal(bool)
         stdout_msg = Signal(str)
         stderr_msg = Signal(str)
 
@@ -345,4 +390,6 @@ class CommandIssuer(PersistentRunnableBase):
                 self.stdout_msg.emit(msg["data"])
             elif msg["type"] == "stderr":
                 self.stderr_msg.emit(msg["data"])
-        self.finished.emit()
+            elif msg["type"] == "command_finished":
+                self.finished.emit(msg["is_complete"])
+                break
