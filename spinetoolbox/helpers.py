@@ -18,7 +18,6 @@ General helper functions and classes.
 
 import itertools
 import os
-import sys
 import glob
 import json
 import logging
@@ -26,6 +25,7 @@ import datetime
 import shutil
 import re
 import matplotlib
+from pygments.formatter import Formatter
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
@@ -1051,3 +1051,42 @@ class CustomSyntaxHighlighter(QSyntaxHighlighter):
                 ttype = ttype.parent
             text_format = self._formats.get(ttype, QTextCharFormat())
             self.setFormat(start, len(subtext), text_format)
+
+
+class OldHtmlFormatter(Formatter):
+    def __init__(self, **options):
+        super().__init__(**options)
+        self.styles = {}
+        for token, style in self.style:
+            start = end = ''
+            if style['color']:
+                start += '<font color="#%s">' % style['color']
+                end = '</font>' + end
+            if style['bold']:
+                start += '<b>'
+                end = '</b>' + end
+            if style['italic']:
+                start += '<i>'
+                end = '</i>' + end
+            if style['underline']:
+                start += '<u>'
+                end = '</u>' + end
+            self.styles[token] = (start, end)
+
+    def format(self, tokensource, outfile):
+        lastval = ''
+        lasttype = None
+        for ttype, value in tokensource:
+            while ttype not in self.styles:
+                ttype = ttype.parent
+            if ttype == lasttype:
+                lastval += value
+            else:
+                if lastval:
+                    stylebegin, styleend = self.styles[lasttype]
+                    outfile.write(stylebegin + lastval + styleend)
+                lastval = value
+                lasttype = ttype
+        if lastval:
+            stylebegin, styleend = self.styles[lasttype]
+            outfile.write(stylebegin + lastval + styleend)

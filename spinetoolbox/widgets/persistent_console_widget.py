@@ -9,6 +9,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
+from pygments import highlight
 from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
@@ -16,14 +17,13 @@ from pygments.token import Token
 from PySide2.QtCore import Qt, QRunnable, QObject, Signal, QThreadPool, Slot
 from PySide2.QtWidgets import QPlainTextEdit
 from PySide2.QtGui import QFontDatabase
-from spinetoolbox.helpers import CustomSyntaxHighlighter
+from spinetoolbox.helpers import CustomSyntaxHighlighter, OldHtmlFormatter
 from spinetoolbox.spine_engine_manager import make_engine_manager
 
 
 class PersistentConsoleLineEdit(QPlainTextEdit):
-    def __init__(self, block, parent):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.block = block
         self.setFont(parent.font())
         self.setUndoRedoEnabled(False)
         self.document().setDocumentMargin(0)
@@ -36,15 +36,8 @@ class PersistentConsoleLineEdit(QPlainTextEdit):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._highlighter = CustomSyntaxHighlighter(self)
         self._highlighter.setDocument(self.document())
-        self._highlighter.set_style(parent.style())
-        self._setup_lexer()
-
-    def _setup_lexer(self):
-        try:
-            self._highlighter.lexer = get_lexer_by_name(self.parent().language())
-            self._highlighter.rehighlight()
-        except ClassNotFound:
-            pass
+        self._highlighter.set_style(self.parent().style)
+        self._highlighter.lexer = self.parent().lexer
 
     def wheelEvent(self, ev):
         self.parent().wheelEvent(ev)
@@ -91,7 +84,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """
         super().__init__(parent=toolbox)
         self._line_edit = None
-        self._line_edits = []
         self._thread_pool = QThreadPool()
         self._toolbox = toolbox
         self._key = key
@@ -108,8 +100,13 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self.setStyleSheet(
             f"QPlainTextEdit {{background-color: {background_color}; color: {foreground_color}; border: 0px}}"
         )
-        self._add_first_prompt()
         self.setReadOnly(True)
+        self._formatter = OldHtmlFormatter(style=self._style)
+        try:
+            self._lexer = get_lexer_by_name(self._language)
+        except ClassNotFound:
+            self._lexer = None
+        self._add_first_prompt()
 
     def name(self):
         """Returns console name for display purposes."""
@@ -119,11 +116,13 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def owner_names(self):
         return "&".join(x.name for x in self.owners if x is not None)
 
+    @property
     def style(self):
         return self._style
 
-    def language(self):
-        return self._language
+    @property
+    def lexer(self):
+        return self._lexer
 
     def _make_prompts(self):
         return {
@@ -134,12 +133,11 @@ class PersistentConsoleWidget(QPlainTextEdit):
             "python": (">>> ", "... "),
         }.get(self._language, ("$", " "))
 
-    def _reposition_line_edit(self, le):
-        block = le.block
-        top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).bottom() - le.height())
-        if block == self.document().lastBlock():
-            # FIXME: Find where the -4 comes from
-            top -= 4
+    def _reposition_line_edit(self):
+        le = self._line_edit
+        block = self.document().lastBlock()
+        # FIXME: Find where the -4 comes from
+        top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).bottom() - le.height() - 4)
         left = le.pos().x()
         le.move(left, top)
 
@@ -149,13 +147,13 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
-        for le in self._line_edits:
-            le.setFixedWidth(ev.size().width())
+        if self._line_edit is not None:
+            self._line_edit.setFixedWidth(ev.size().width())
 
     def paintEvent(self, ev):
         super().paintEvent(ev)
-        for le in self._line_edits:
-            self._reposition_line_edit(le)
+        if self._line_edit is not None:
+            self._reposition_line_edit()
 
     def move_history(self, input_, step):
         """Moves history.
@@ -200,8 +198,14 @@ class PersistentConsoleWidget(QPlainTextEdit):
             cursor.insertText(completions[0][len(last_word) :])
 
     def _freeze_current_line_edit(self):
-        self._line_edit.setReadOnly(True)
-        self._line_edit.setFocusPolicy(Qt.NoFocus)
+        block = self.document().lastBlock()
+        cursor = self.textCursor()
+        cursor.setPosition(block.position())
+        cursor.movePosition(cursor.EndOfBlock)
+        text = self._line_edit.toPlainText()
+        html = highlight(text, self._lexer, self._formatter)
+        cursor.insertHtml(html)
+        self._line_edit.deleteLater()
         self._line_edit = None
 
     def issue_command(self, input_):
@@ -249,16 +253,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         elif cursor.block().text():
             cursor.insertBlock()
         if with_prompt:
-            cursor.insertHtml(self._prompt)
-            self.setTextCursor(cursor)
-            line_edit = PersistentConsoleLineEdit(cursor.block(), self)
-            line_edit.move(self.cursorRect().topLeft())
-            line_edit.show()
-            line_edit.textCursor().insertHtml(html)
-            line_edit.setReadOnly(True)
-            line_edit.setFocusPolicy(Qt.NoFocus)
-            self._reposition_line_edit(line_edit)
-            self._line_edits.append(line_edit)
+            html = highlight(html, self._lexer, self._formatter).strip()
+            cursor.insertHtml(self._prompt + html)
         else:
             cursor.insertHtml(html)
         self._scroll_to_bottom()
@@ -289,8 +285,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._insert_html_before_prompt(html)
 
     def _add_first_prompt(self):
-        while self._line_edits:
-            self._line_edits.pop().deleteLater()
         self._add_prompt(first=True)
 
     def _add_prompt(self, is_complete=True, first=False):
@@ -303,12 +297,11 @@ class PersistentConsoleWidget(QPlainTextEdit):
         cursor.insertHtml(prompt)
         cursor.movePosition(cursor.End)
         self.setTextCursor(cursor)
-        self._line_edit = PersistentConsoleLineEdit(cursor.block(), self)
+        self._line_edit = PersistentConsoleLineEdit(self)
         self._line_edit.move(self.cursorRect().topLeft())
         self._line_edit.show()
         self._line_edit.setFocus()
-        self._reposition_line_edit(self._line_edit)
-        self._line_edits.append(self._line_edit)
+        self._reposition_line_edit()
 
     def contextMenuEvent(self, event):
         """Reimplemented to add two more actions: Restart, and Interrupt."""
