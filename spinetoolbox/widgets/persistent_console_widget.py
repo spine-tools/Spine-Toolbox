@@ -21,7 +21,11 @@ from spinetoolbox.spine_engine_manager import make_engine_manager
 
 
 class PersistentConsoleLineEdit(QPlainTextEdit):
-    """A line edit for the prompt of PersistentConsoleWidget."""
+    """A line edit for the prompt of PersistentConsoleWidget.
+
+    This widget is fully transparent. It's only there to provide user interaction.
+    The contents are constantly reflected in the console widget.
+    """
 
     def __init__(self, parent):
         """
@@ -29,6 +33,7 @@ class PersistentConsoleLineEdit(QPlainTextEdit):
             parent (PersistentConsoleWidget)
         """
         super().__init__(parent)
+        self.setStyleSheet("QPlainTextEdit {background-color: transparent; color: transparent}")
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setFont(parent.font())
         self.setUndoRedoEnabled(False)
@@ -41,6 +46,7 @@ class PersistentConsoleLineEdit(QPlainTextEdit):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.textChanged.connect(self._adjust_size)
+        self.textChanged.connect(self.parent().reflect_line_edit_contents)
 
     @Slot()
     def _adjust_size(self):
@@ -110,14 +116,14 @@ class PersistentConsoleWidget(QPlainTextEdit):
         )
         self._highlighter = CustomSyntaxHighlighter(self)
         self._highlighter.set_style(self._style)
-        self._line_edit = PersistentConsoleLineEdit(self)
-        self._line_edit.show()
-        self._line_edit.setFocus()
-        self._highlighter.setDocument(self._line_edit.document())
         try:
             self._highlighter.lexer = get_lexer_by_name(self._language)
         except ClassNotFound:
             pass
+        self._line_edit = PersistentConsoleLineEdit(self)
+        self._line_edit.show()
+        self._line_edit.setFocus()
+        self._line_edit_char_count = 0
         self._add_prompt()
 
     def name(self):
@@ -149,6 +155,15 @@ class PersistentConsoleWidget(QPlainTextEdit):
             prompt = "  "
         return prompt
 
+    def _reposition_line_edit(self):
+        """Moves line edit vertically to the position of the last block."""
+        le = self._line_edit
+        block = self.document().lastBlock()
+        # FIXME: Try to find where the -4 comes from. It works well on windows and linux though
+        top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).bottom() - le.height() - 4)
+        left = le.pos().x()
+        le.move(left, top)
+
     def _insert_formatted_text(self, cursor, text):
         """Inserts formatted text.
 
@@ -160,6 +175,18 @@ class PersistentConsoleWidget(QPlainTextEdit):
             chunk = text[start : start + count]
             chunk = chunk.replace("\n", "\n" + self._cont_prompt).replace("\t", 4 * " ")
             cursor.insertText(chunk, text_format)
+
+    @Slot()
+    def reflect_line_edit_contents(self):
+        """Reflects contents of line edit."""
+        cursor = self.cursorForPosition(self._line_edit.pos())
+        cursor.movePosition(cursor.NextCharacter, cursor.KeepAnchor, n=self._line_edit_char_count)
+        cursor.removeSelectedText()
+        start = cursor.position()
+        text = self._line_edit.toPlainText()
+        self._insert_formatted_text(cursor, text)
+        self._line_edit_char_count = cursor.position() - start
+        self._scroll_to_bottom()
 
     def move_history(self, text, step):
         """Moves history.
@@ -205,13 +232,11 @@ class PersistentConsoleWidget(QPlainTextEdit):
             cursor.insertText(completions[0][len(last_word) :])
 
     def _commit_line_edit(self):
-        """Puts text from line edit into current position, clears line edit and moves it to the end."""
+        """Clears line edit and moves it to the end of the document."""
         cursor = self.cursorForPosition(self._line_edit.pos())
-        text = self._line_edit.toPlainText()
-        self._insert_formatted_text(cursor, text)
+        cursor.movePosition(cursor.NextCharacter, n=self._line_edit_char_count)
         cursor.insertBlock()
-        self.setTextCursor(cursor)
-        self._line_edit.move(self.cursorRect().topLeft())
+        self._line_edit.move(self.cursorRect(cursor).topLeft())
         self._line_edit.clear()
         self._has_prompt = False
 
@@ -298,19 +323,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         text_format.setForeground(Qt.red)
         self._insert_text_before_prompt(data, text_format=text_format)
 
-    def _reposition_line_edit(self):
-        """Moves line edit vertically to the position of the last block."""
-        le = self._line_edit
-        block = self.document().lastBlock()
-        # FIXME: Try to find where the -4 comes from. It works well on windows and linux though
-        top = round(
-            self.blockBoundingGeometry(block).translated(self.contentOffset()).bottom()
-            - self.fontMetrics().height()
-            - 4
-        )
-        left = le.pos().x()
-        le.move(left, top)
-
     @Slot(bool)
     def _add_prompt(self, is_complete=True):
         """Adds a prompt at the end of the document."""
@@ -321,9 +333,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         else:
             cursor.insertText(self._cont_prompt, QTextCharFormat())
         cursor.movePosition(cursor.End)
-        self.setTextCursor(cursor)
-        self._line_edit.move(self.cursorRect().topLeft())
-        self._reposition_line_edit()
+        self._line_edit.move(self.cursorRect(cursor).topLeft())
         self._has_prompt = True
 
     @Slot(bool)
@@ -368,13 +378,6 @@ class PersistentConsoleWidget(QPlainTextEdit):
         menu = self.createStandardContextMenu()
         self._extend_menu(menu)
         menu.exec_(event.globalPos())
-
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        if self._line_edit.geometry().contains(event.pos()):
-            pos = self._line_edit.mapFromParent(event.pos())
-            cursor = self._line_edit.cursorForPosition(pos)
-            self._line_edit.setTextCursor(cursor)
 
 
 class PersistentRunnableBase(QRunnable):
