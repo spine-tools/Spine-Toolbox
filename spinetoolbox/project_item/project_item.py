@@ -342,8 +342,8 @@ class ProjectItem(MetaObject):
         return {
             "type": self.item_type(),
             "description": self.description,
-            "x": self.get_icon().sceneBoundingRect().center().x(),
-            "y": self.get_icon().sceneBoundingRect().center().y(),
+            "x": self.get_icon().x(),
+            "y": self.get_icon().y(),
         }
 
     @staticmethod

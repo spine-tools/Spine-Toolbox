@@ -19,9 +19,7 @@ from enum import auto, Enum, unique
 from itertools import takewhile, chain
 import os
 import json
-import logging
 from PySide2.QtCore import Signal
-from PySide2.QtWidgets import QMessageBox
 from spine_engine.project_item.connection import Connection
 from spine_engine.spine_engine import ExecutionDirection
 from spine_engine.utils.helpers import shorten
@@ -31,13 +29,7 @@ from .helpers import create_dir, erase_dir, load_specification_from_file, make_s
 from .project_upgrader import ProjectUpgrader
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME, INVALID_CHARS
 from .dag_handler import DirectedGraphHandler
-from .project_commands import (
-    SetProjectNameCommand,
-    SetProjectDescriptionCommand,
-    AddProjectItemsCommand,
-    RemoveProjectItemsCommand,
-    RemoveAllProjectItemsCommand,
-)
+from .project_commands import SetProjectNameCommand, SetProjectDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
 
 
@@ -52,6 +44,8 @@ class ItemNameStatus(Enum):
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects."""
 
+    renamed = Signal(str)
+    """Emitted after project has been renamed."""
     project_about_to_be_torn_down = Signal()
     """Emitted before project is being torn down."""
     dag_execution_finished = Signal()
@@ -155,12 +149,8 @@ class SpineToolboxProject(MetaObject):
             name (str): New project name
         """
         super().set_name(name)
-        self._toolbox.update_window_title()
-        # Remove entry with the old name from File->Open recent menu
-        self._toolbox.remove_path_from_recent_projects(self.project_dir)
-        # Add entry with the new name back to File->Open recent menu
-        self._toolbox.update_recent_projects()
         self._logger.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
+        self.renamed.emit(name)
 
     def set_description(self, description):
         super().set_description(description)
@@ -209,11 +199,12 @@ class SpineToolboxProject(MetaObject):
         """
         json.dump(project_dict, out_stream, indent=4)
 
-    def load(self, spec_factories):
+    def load(self, spec_factories, item_factories):
         """Loads project from its project directory.
 
         Args:
             spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
+            item_factories (dict): mapping from item type to ProjectItemFactory
 
         Returns:
             bool: True if the operation was successful, False otherwise
@@ -243,7 +234,7 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("Loading project items...")
         if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
-        self.restore_project_items(items_dict, silent=True)
+        self.restore_project_items(items_dict, item_factories, silent=True)
         self._logger.msg.emit("Restoring connections...")
         connection_dicts = project_info["project"]["connections"]
         for connection in map(Connection.from_dict, connection_dicts):
@@ -325,11 +316,11 @@ class SpineToolboxProject(MetaObject):
             name_or_id (str or int): specification's name or id
 
         Returns:
-            ProjectItemSpecification: specification
+            ProjectItemSpecification: specification or None if specification was not found
         """
         if isinstance(name_or_id, str):
             name_or_id = self.specification_name_to_id(name_or_id)
-        return self._specifications[name_or_id]
+        return self._specifications.get(name_or_id, None)
 
     def specification_name_to_id(self, name):
         """Returns identifier for named specification.
@@ -338,12 +329,12 @@ class SpineToolboxProject(MetaObject):
             name (str): specification's name
 
         Returns:
-            int: specification's id
+            int: specification's id or None if no such specification exists
         """
         for id_, spec in self._specifications.items():
             if name == spec.name:
                 return id_
-        raise RuntimeError(f"Specification '{name}' not found.")
+        return None
 
     def remove_specification(self, id_or_name):
         """Removes a specification from project.
@@ -436,6 +427,14 @@ class SpineToolboxProject(MetaObject):
         self.specification_saved.emit(specification.name, specification.definition_file_path)
         return True
 
+    def has_items(self):
+        """Returns True if project has project items.
+
+        Returns:
+            bool: True if project has items, False otherwise
+        """
+        return bool(self._project_items)
+
     def get_item(self, name):
         """Returns project item.
 
@@ -454,17 +453,6 @@ class SpineToolboxProject(MetaObject):
             list of ProjectItem: all project items
         """
         return list(self._project_items.values())
-
-    def add_project_items(self, items_dict, silent=False):
-        """Pushes an AddProjectItemsCommand to the toolbox undo stack.
-
-        Args:
-            items_dict (dict): mapping from item name to item dictionary
-            silent (bool): if True, suppress log messages
-        """
-        if not items_dict:
-            return
-        self._toolbox.undo_stack.push(AddProjectItemsCommand(self, items_dict, silent))
 
     def rename_item(self, previous_name, new_name, rename_data_dir_message):
         """Renames a project item
@@ -626,16 +614,17 @@ class SpineToolboxProject(MetaObject):
         self._connections.append(new_connection)
         self.connection_replaced.emit(existing_connection, new_connection)
 
-    def restore_project_items(self, items_dict, silent):
+    def restore_project_items(self, items_dict, item_factories, silent):
         """Restores project items from dictionary.
 
         Args:
             items_dict (dict): a mapping from item name to item dict
+            item_factories (dict): a mapping from item type to ProjectItemFactory
             silent (bool): if True, suppress a log messages
         """
         for item_name, item_dict in items_dict.items():
             item_type = item_dict["type"]
-            factory = self._toolbox.item_factories.get(item_type)
+            factory = item_factories.get(item_type)
             if factory is None:
                 self._logger.msg_error.emit(f"Unknown item type <b>{item_type}</b>")
                 self._logger.msg_error.emit(f"Loading project item <b>{item_name}</b> failed")
@@ -647,7 +636,6 @@ class SpineToolboxProject(MetaObject):
                     f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
                     "This is most likely caused by an outdated project file."
                 )
-                logging.debug(error)
                 continue
             except KeyError as error:
                 self._logger.msg_error.emit(
@@ -655,7 +643,6 @@ class SpineToolboxProject(MetaObject):
                     f"This is most likely caused by an outdated or corrupted project file "
                     f"(missing JSON key: {str(error)})."
                 )
-                logging.debug(error)
                 continue
             original_data_dir = item_dict.get("original_data_dir")
             original_db_url = item_dict.get("original_db_url")
@@ -668,60 +655,6 @@ class SpineToolboxProject(MetaObject):
             project_item.set_up()
             if not silent:
                 self._logger.msg.emit(f"{project_item.item_type()} <b>{item_name}</b> added to project")
-
-    def remove_all_items(self):
-        """Pushes a RemoveAllProjectItemsCommand to the Toolbox undo stack."""
-        if not self._project_items:
-            self._logger.msg.emit("No project items to remove")
-            return
-        delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
-        msg = "Remove all items from project? "
-        if not delete_data:
-            msg += "Item data directory will still be available in the project directory after this operation."
-        else:
-            msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
-        message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove All Items",
-            msg,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self._toolbox,
-        )
-        message_box.button(QMessageBox.Ok).setText("Remove Items")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
-            return
-        self._toolbox.undo_stack.push(RemoveAllProjectItemsCommand(self, delete_data=delete_data))
-
-    def remove_project_items(self, *indexes, ask_confirmation=False):
-        """Pushes a RemoveProjectItemsCommand to the toolbox undo stack.
-
-        Args:
-            *indexes (QModelIndex): Indexes of the items in project item model
-            ask_confirmation (bool): If True, shows 'Are you sure?' message box
-        """
-        names = [i.data() for i in indexes]
-        delete_data = int(self._settings.value("appSettings/deleteData", defaultValue="0")) != 0
-        if ask_confirmation:
-            msg = f"Remove item(s) <b>{', '.join(names)}</b> from project? "
-            if not delete_data:
-                msg += "Item data directory will still be available in the project directory after this operation."
-            else:
-                msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
-            msg += "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
-            # noinspection PyCallByClass, PyTypeChecker
-            message_box = QMessageBox(
-                QMessageBox.Question,
-                "Remove Item",
-                msg,
-                buttons=QMessageBox.Ok | QMessageBox.Cancel,
-                parent=self._toolbox,
-            )
-            message_box.button(QMessageBox.Ok).setText("Remove Item")
-            answer = message_box.exec_()
-            if answer != QMessageBox.Ok:
-                return
-        self._toolbox.undo_stack.push(RemoveProjectItemsCommand(self, names, delete_data=delete_data))
 
     def remove_item_by_name(self, item_name, delete_data=False):
         """Removes project item by its name.

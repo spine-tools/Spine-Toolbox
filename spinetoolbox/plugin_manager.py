@@ -204,14 +204,9 @@ class PluginManager:
         plugin_dir = plugin_dict["plugin_dir"]
         self._plugin_specs.pop(plugin_name, None)
         if self._toolbox.project() is not None:
-            # Remove specs from project
-            specifications = plugin_dict["specifications"]
-            deserialized_paths = [
-                deserialize_path(path, plugin_dir) for paths in specifications.values() for path in paths
-            ]
-            for path in deserialized_paths:
-                spec_dict = parse_specification_file(path, self._toolbox)
-                self._toolbox.project().remove_specification(spec_dict["name"])
+            for spec in list(self._toolbox.project().specifications()):
+                if spec.plugin == plugin_name:
+                    self._toolbox.project().remove_specification(spec.name)
         # Remove plugin dir
         shutil.rmtree(plugin_dir)
         self._plugin_toolbars.pop(plugin_name).deleteLater()

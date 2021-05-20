@@ -80,7 +80,7 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(target_icon.incoming_links(), [link])
 
     def test_drag_icon(self):
-        item = add_view(self._toolbox.project(), "View")
+        item = add_view(self._toolbox.project(), self._toolbox.item_factories, "View")
         icon = item.get_icon()
         self.assertEqual(icon.x(), 0.0)
         self.assertEqual(icon.y(), 0.0)

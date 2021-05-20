@@ -40,7 +40,6 @@ class AddProjectItemWidget(QWidget):
         self._toolbox = toolbox
         self._x = x
         self._y = y
-        self._project = self._toolbox.project()
         #  Set up the user interface from Designer.
         self.ui = Ui_Form()
         self.ui.setupUi(self)

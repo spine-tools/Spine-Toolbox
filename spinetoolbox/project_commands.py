@@ -130,17 +130,19 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, items_dict, silent=True):
+    def __init__(self, project, items_dict, item_factories, silent=True):
         """Command to add items.
 
         Args:
             project (SpineToolboxProject): the project
             items_dict (dict): a mapping from item name to item dict
+            item_factories (dict): a mapping from item type to ProjectItemFactory
             silent (bool): If True, suppress messages
         """
         super().__init__()
         self._project = project
         self._items_dict = items_dict
+        self._item_factories = item_factories
         self._silent = silent
         if not items_dict:
             self.setObsolete(True)
@@ -150,7 +152,7 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             self.setText("add multiple items")
 
     def redo(self):
-        self._project.restore_project_items(self._items_dict, self._silent)
+        self._project.restore_project_items(self._items_dict, self._item_factories, self._silent)
 
     def undo(self):
         for item_name in self._items_dict:
@@ -158,15 +160,17 @@ class AddProjectItemsCommand(SpineToolboxCommand):
 
 
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, delete_data=False):
+    def __init__(self, project, item_factories, delete_data=False):
         """Command to remove all items from project.
 
         Args:
             project (SpineToolboxProject): the project
+            item_factories (dict): a mapping from item type to ProjectItemFactory
             delete_data (bool): If True, deletes the directories and data associated with the items
         """
         super().__init__()
         self._project = project
+        self._item_factories = item_factories
         self._items_dict = {i.name: i.item_dict() for i in self._project.get_items()}
         self._connection_dicts = [c.to_dict() for c in self._project.connections]
         self._delete_data = delete_data
@@ -177,22 +181,24 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self._project.restore_project_items(self._items_dict, silent=True)
+        self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(Connection.from_dict(connection_dict))
 
 
 class RemoveProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, item_names, delete_data=False):
+    def __init__(self, project, item_factories, item_names, delete_data=False):
         """Command to remove items.
 
         Args:
             project (SpineToolboxProject): The project
+            item_factories (dict): a mapping from item type to ProjectItemFactory
             item_names (list of str): Item names
             delete_data (bool): If True, deletes the directories and data associated with the item
         """
         super().__init__()
         self._project = project
+        self._item_factories = item_factories
         items = [self._project.get_item(name) for name in item_names]
         self._items_dict = {i.name: i.item_dict() for i in items}
         self._delete_data = delete_data
@@ -211,7 +217,7 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self._project.restore_project_items(self._items_dict, silent=True)
+        self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(Connection.from_dict(connection_dict))
 

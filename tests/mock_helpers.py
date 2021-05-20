@@ -85,11 +85,12 @@ def qsettings_value_side_effect(key, defaultValue="0"):
     return defaultValue
 
 
-def add_ds(project, name, x=0.0, y=0.0):
+def add_ds(project, item_factories, name, x=0.0, y=0.0):
     """Helper function to create a Data Store to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -98,15 +99,16 @@ def add_ds(project, name, x=0.0, y=0.0):
         DataStore: added project item
     """
     item_dict = {name: {"type": "Data Store", "description": "", "url": dict(), "x": x, "y": y}}
-    project.add_project_items(item_dict)
+    project.restore_project_items(item_dict, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_dc(project, name, x=0, y=0):
+def add_dc(project, item_factories, name, x=0, y=0):
     """Helper function to create a Data Connection to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -115,15 +117,16 @@ def add_dc(project, name, x=0, y=0):
         DataConnection: added project item
     """
     item_dict = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
-    project.restore_project_items(item_dict, silent=True)
+    project.restore_project_items(item_dict, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_tool(project, name, tool_spec="", x=0, y=0):
+def add_tool(project, item_factories, name, tool_spec="", x=0, y=0):
     """Helper function to create a Tool to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         tool_spec (str): Tool specification's name
         x (float): item's x coordinate
@@ -135,15 +138,16 @@ def add_tool(project, name, tool_spec="", x=0, y=0):
     item = {
         name: {"type": "Tool", "description": "", "specification": tool_spec, "execute_in_work": False, "x": x, "y": y}
     }
-    project.restore_project_items(item, silent=True)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_view(project, name, x=0, y=0):
+def add_view(project, item_factories, name, x=0, y=0):
     """Helper function to create a View to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -152,15 +156,16 @@ def add_view(project, name, x=0, y=0):
         View: added project item
     """
     item = {name: {"type": "View", "description": "", "x": x, "y": y}}
-    project.restore_project_items(item, silent=True)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_importer(project, name, x=0, y=0):
+def add_importer(project, item_factories, name, x=0, y=0):
     """Helper function to create an Importer to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -169,15 +174,16 @@ def add_importer(project, name, x=0, y=0):
         Importer: added project item
     """
     item = {name: {"type": "Importer", "description": "", "specification": "", "x": x, "y": y}}
-    project.restore_project_items(item, silent=True)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_gimlet(project, name, x=0, y=0):
+def add_gimlet(project, item_factories, name, x=0, y=0):
     """Helper function to create a Gimlet to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -186,15 +192,16 @@ def add_gimlet(project, name, x=0, y=0):
         Gimlet: added project item
     """
     item = {name: {"type": "Gimlet", "description": "", "x": x, "y": y}}
-    project.restore_project_items(item, silent=True)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_data_transformer(project, name, x=0, y=0):
+def add_data_transformer(project, item_factories, name, x=0, y=0):
     """Helper function to create a Data Transformer to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -202,16 +209,17 @@ def add_data_transformer(project, name, x=0, y=0):
     Returns:
         DataTransformer: added project item
     """
-    item = {name: {"type": "Data Transformer", "description": "", "x": x, "y": y}}
-    project.restore_project_items(item, silent=True)
+    item = {name: {"type": "Data Transformer", "description": "", "x": x, "y": y, "specification": ""}}
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_exporter(project, name, x=0, y=0):
+def add_exporter(project, item_factories, name, x=0, y=0):
     """Helper function to create an Exporter to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -220,15 +228,16 @@ def add_exporter(project, name, x=0, y=0):
         Exporter: added project item
     """
     item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "specification": None}}
-    project.restore_project_items(item, silent=True)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_gdx_exporter(project, name, x=0, y=0):
+def add_gdx_exporter(project, item_factories, name, x=0, y=0):
     """Helper function to create a GdxExporter to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -237,7 +246,7 @@ def add_gdx_exporter(project, name, x=0, y=0):
         GdxExporter: added project item
     """
     item = {name: {"type": "GdxExporter", "description": "", "x": x, "y": y, "settings_packs": None}}
-    project.restore_project_items(item, silent=True)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 

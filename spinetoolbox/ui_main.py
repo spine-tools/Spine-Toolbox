@@ -80,7 +80,8 @@ from .project_commands import (
     AddSpecificationCommand,
     RemoveSpecificationCommand,
     RenameProjectItemCommand,
-    SpineToolboxCommand, SaveSpecificationAsCommand,
+    SpineToolboxCommand, SaveSpecificationAsCommand, AddProjectItemsCommand, RemoveAllProjectItemsCommand,
+    RemoveProjectItemsCommand,
 )
 from .plugin_manager import PluginManager
 
@@ -488,7 +489,7 @@ class ToolboxUI(QMainWindow):
         self._connect_project_signals()
         self.update_window_title()
         # Populate project model with project items
-        success = self._project.load(self._item_specification_factories)
+        success = self._project.load(self._item_specification_factories, self.item_factories)
         if not success:
             self.remove_path_from_recent_projects(self._project.project_dir)
             return False
@@ -639,6 +640,17 @@ class ToolboxUI(QMainWindow):
             return
         self._project.call_set_name(new_name)
 
+    @Slot(str)
+    def _update_project_name(self, new_name):
+        """Updates window title and recent projects.
+
+        Args:
+            new_name (str): project's new name
+        """
+        self.update_window_title()
+        self.remove_path_from_recent_projects(self._project.project_dir)
+        self.update_recent_projects()
+
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and add them to the model."""
         root_item = RootProjectTreeItem()
@@ -659,6 +671,17 @@ class ToolboxUI(QMainWindow):
     def make_item_properties_uis(self):
         for item_type, factory in self.item_factories.items():
             self._item_properties_uis[item_type] = factory.make_properties_widget(self)
+
+    def add_project_items(self, items_dict, silent=False):
+        """Pushes an AddProjectItemsCommand to the undo stack.
+
+        Args:
+            items_dict (dict): mapping from item name to item dictionary
+            silent (bool): if True, suppress log messages
+        """
+        if self._project is None or not items_dict:
+            return
+        self.undo_stack.push(AddProjectItemsCommand(self._project, items_dict, self.item_factories, silent))
 
     def supports_specifications(self, item_type):
         """Returns True if given project item type supports specifications.
@@ -930,11 +953,28 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def remove_all_items(self):
-        """Removes all items from project. Slot for Remove All button."""
-        if not self._project:
+        """Pushes a RemoveAllProjectItemsCommand to the undo stack."""
+        if self._project is None or not self._project.has_items():
             self.msg.emit("No project items to remove.")
             return
-        self._project.remove_all_items()
+        delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
+        msg = "Remove all items from project? "
+        if not delete_data:
+            msg += "Item data directory will still be available in the project directory after this operation."
+        else:
+            msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            "Remove All Items",
+            msg,
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self,
+        )
+        message_box.button(QMessageBox.Ok).setText("Remove Items")
+        answer = message_box.exec_()
+        if answer != QMessageBox.Ok:
+            return
+        self.undo_stack.push(RemoveAllProjectItemsCommand(self._project, self.item_factories, delete_data=delete_data))
 
     def register_anchor_callback(self, url, callback):
         """Registers a callback for a given anchor in event log, see ``open_anchor()``.
@@ -1804,7 +1844,7 @@ class ToolboxUI(QMainWindow):
             else:
                 final_items_dict[name] = item_dict
             self._set_deserialized_item_position(item_dict, shift_x, shift_y, scene_rect)
-        self._project.add_project_items(final_items_dict, silent=True)
+        self.add_project_items(final_items_dict, silent=True)
 
     @Slot()
     def project_item_to_clipboard(self):
@@ -1893,6 +1933,7 @@ class ToolboxUI(QMainWindow):
 
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
+        self._project.renamed.connect(self._update_project_name)
         self._project.project_execution_about_to_start.connect(self.ui.textBrowser_eventlog.scroll_to_bottom)
         self._project.project_execution_about_to_start.connect(self._set_execution_in_progress)
         self._project.project_execution_finished.connect(self._unset_execution_in_progress)
@@ -1966,12 +2007,32 @@ class ToolboxUI(QMainWindow):
 
     @Slot(bool)
     def _remove_selected_items(self, _):
-        """Removes selected project items and links."""
-        if not self.ui.graphicsView.scene().selectedItems():
+        """Pushes commands to remove selected project items and links from project."""
+        selection_model = self.ui.treeView_project.selectionModel()
+        if not selection_model.hasSelection():
+            return
+        indexes = selection_model.selectedIndexes()
+        names = [i.data() for i in indexes]
+        msg = f"Remove item(s) <b>{', '.join(names)}</b> from project? "
+        delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
+        if not delete_data:
+            msg += "Item data directory will still be available in the project directory after this operation."
+        else:
+            msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
+        # noinspection PyCallByClass, PyTypeChecker
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            "Remove Item",
+            msg,
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self,
+        )
+        message_box.button(QMessageBox.Ok).setText("Remove Item")
+        answer = message_box.exec_()
+        if answer != QMessageBox.Ok:
             return
         self.undo_stack.beginMacro("remove items and links")
-        selection_model = self.ui.treeView_project.selectionModel()
-        self._project.remove_project_items(*selection_model.selection().indexes())
+        self.undo_stack.push(RemoveProjectItemsCommand(self._project, self.item_factories, names, delete_data))
         self.ui.graphicsView.remove_selected_links()
         self.undo_stack.endMacro()
 

@@ -178,17 +178,6 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         """Yields all specs."""
         yield from self._specs
 
-    def find_specification(self, name):
-        """Returns specification with the given name.
-
-        Args:
-            name (str): Name of specification to find
-        """
-        for specification in self._specs:
-            if name.lower() == specification.name.lower():
-                return specification
-        return None
-
     def specification_row(self, name):
         """Returns the row on which the given specification is located or -1 if it is not found."""
         for i in range(len(self._specs)):
