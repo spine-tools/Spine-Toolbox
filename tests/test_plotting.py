@@ -84,15 +84,15 @@ def _make_pivot_proxy_model():
         ('2', 'float_col', 'base_alternative'): ('1.2', None),
         ('3', 'float_col', 'base_alternative'): ('1.3', None),
         ('1', 'time_series_col', 'base_alternative'): (
-            '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
+            '{"data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
             "time_series",
         ),
         ('2', 'time_series_col', 'base_alternative'): (
-            '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
+            '{"index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
             "time_series",
         ),
         ('3', 'time_series_col', 'base_alternative'): (
-            '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
+            '{"data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
             "time_series",
         ),
         ("1", "map_col", "base_alternative"): to_database(simple_map),
@@ -123,18 +123,9 @@ class _MockParameterModel(QAbstractTableModel):
             ["label2", ("-0.5", None)],
             [
                 "label3",
-                (
-                    '{"type": "time_series", "index": {"start": "2019-07-11T09:00", "resolution": "3 days"}, "data": [0.5, 2.3]}',
-                    "time_series",
-                ),
+                ('{"index": {"start": "2019-07-11T09:00", "resolution": "3 days"}, "data": [0.5, 2.3]}', "time_series"),
             ],
-            [
-                "label4",
-                (
-                    '{"type": "time_series", "data": [["2019-07-11T09:00", -5.0], ["2019-07-17T10:35", -3.3]]}',
-                    "time_series",
-                ),
-            ],
+            ["label4", ('{"data": [["2019-07-11T09:00", -5.0], ["2019-07-17T10:35", -3.3]]}', "time_series")],
         ]
 
     def rowCount(self, parent=QModelIndex()):
@@ -146,7 +137,8 @@ class _MockParameterModel(QAbstractTableModel):
     def data(self, index, role=Qt.DisplayRole):
         if role != PARSED_ROLE:
             return None
-        return from_database(*self._table[index.row()][index.column()])
+        row, column = index.row(), index.column()
+        return from_database(*self._table[row][column])
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         return "value"
