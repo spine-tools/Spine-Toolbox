@@ -33,6 +33,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyRelationshipParameterDefinitionModel,
 )
+from spinetoolbox.helpers import join_value_and_type
 
 
 def _empty_indexes(model):
@@ -92,7 +93,9 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
         self.assertTrue(
-            model.batch_set_data(_empty_indexes(model), ["dog", "pluto", "breed", 1, "bloodhound", "mock_db"])
+            model.batch_set_data(
+                _empty_indexes(model), ["dog", "pluto", "breed", 1, join_value_and_type("bloodhound", None), "mock_db"]
+            )
         )
         values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
         self.assertEqual(len(values), 1)
@@ -116,7 +119,11 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
         indexes = _empty_indexes(model)
-        self.assertTrue(model.batch_set_data(indexes, ["cat", "pluto", "breed", 1, "bloodhound", "mock_db"]))
+        self.assertTrue(
+            model.batch_set_data(
+                indexes, ["cat", "pluto", "breed", 1, join_value_and_type("bloodhound", None), "mock_db"]
+            )
+        )
         self.assertEqual(indexes[0].data(), "dog")
         values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
         self.assertEqual(len(values), 1)
@@ -131,7 +138,10 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyRelationshipParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
         self.assertTrue(
-            model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "relative_speed", 1, -1, "mock_db"])
+            model.batch_set_data(
+                _empty_indexes(model),
+                ["dog__fish", "pluto,nemo", "relative_speed", 1, join_value_and_type("-1", None), "mock_db"],
+            )
         )
         values = next(self._db_mngr.get_relationship_parameter_values(self._db_map), [])
         self.assertEqual(len(values), 1)

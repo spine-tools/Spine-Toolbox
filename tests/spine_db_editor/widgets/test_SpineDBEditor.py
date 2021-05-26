@@ -95,6 +95,7 @@ class TestSpineDBEditor(
                     "parameter_id",
                     "parameter_name",
                     "value",
+                    "type",
                 ],
                 args,
             )
@@ -118,6 +119,7 @@ class TestSpineDBEditor(
                     "parameter_id",
                     "parameter_name",
                     "value",
+                    "type",
                 ],
                 args,
             )
@@ -213,6 +215,7 @@ class TestSpineDBEditor(
             cls.water_parameter["id"],
             cls.water_parameter["parameter_name"],
             '"salt"',
+            None,
         )
         cls.pluto_breed = cls._object_parameter_value(
             2,
@@ -223,6 +226,7 @@ class TestSpineDBEditor(
             cls.breed_parameter["id"],
             cls.breed_parameter["parameter_name"],
             '"bloodhound"',
+            None,
         )
         cls.scooby_breed = cls._object_parameter_value(
             3,
@@ -233,6 +237,7 @@ class TestSpineDBEditor(
             cls.breed_parameter["id"],
             cls.breed_parameter["parameter_name"],
             '"great dane"',
+            None,
         )
         cls.nemo_pluto_relative_speed = cls._relationship_parameter_value(
             4,
@@ -246,6 +251,7 @@ class TestSpineDBEditor(
             cls.relative_speed_parameter["id"],
             cls.relative_speed_parameter["parameter_name"],
             "-1",
+            None,
         )
         cls.nemo_scooby_relative_speed = cls._relationship_parameter_value(
             5,
@@ -259,6 +265,7 @@ class TestSpineDBEditor(
             cls.relative_speed_parameter["id"],
             cls.relative_speed_parameter["parameter_name"],
             "5",
+            None,
         )
         cls.pluto_nemo_combined_mojo = cls._relationship_parameter_value(
             6,
@@ -272,6 +279,7 @@ class TestSpineDBEditor(
             cls.combined_mojo_parameter["id"],
             cls.combined_mojo_parameter["parameter_name"],
             "100",
+            None,
         )
 
     def setUp(self):
