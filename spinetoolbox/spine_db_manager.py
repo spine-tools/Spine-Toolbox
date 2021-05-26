@@ -31,7 +31,6 @@ from spinedb_api import (
     ParameterValueFormatError,
     IndexedValue,
     Array,
-    DateTime,
     TimeSeries,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
@@ -54,7 +53,7 @@ from .spine_db_commands import (
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text
+from .helpers import get_upgrade_db_promt_text, join_value_and_type, split_value_and_type
 
 
 @busy_effect
@@ -141,7 +140,7 @@ class SpineDBManagerBase(QObject):
     # For tests
     data_imported = Signal()
 
-    _GROUP_SEP = " \u01C0 "
+    GROUP_SEP = " \u01C0 "
 
     def __init__(self, parent, cache, icon_mngr):
         """Initializes the instance.
@@ -687,8 +686,6 @@ class SpineDBManager(SpineDBManagerBase):
             display_data = "Map"
         elif isinstance(parsed_data, Array):
             display_data = "Array"
-        elif isinstance(parsed_data, DateTime):
-            display_data = str(parsed_data.value)
         elif isinstance(parsed_data, TimePattern):
             display_data = "Time pattern"
         elif isinstance(parsed_data, ParameterValueFormatError):
@@ -730,26 +727,51 @@ class SpineDBManager(SpineDBManagerBase):
             item_type (str): either "parameter_definition" or "parameter_value"
             id_ (int): The parameter_value or definition id
             role (int, optional)
+
+        Returns:
+            any
         """
         item = self.get_item(db_map, item_type, id_)
         if not item:
             return None
-        field = {"parameter_value": "value", "parameter_definition": "default_value"}[item_type]
+        value_field, type_field = {
+            "parameter_value": ("value", "type"),
+            "parameter_definition": ("default_value", "default_type"),
+        }[item_type]
+        complex_types = {"array": "Array", "time_series": "Time series", "time_pattern": "Time pattern", "map": "Map"}
+        if role == Qt.DisplayRole and item[type_field] in complex_types:
+            return complex_types[item[type_field]]
         if role == Qt.EditRole:
-            return item[field]
+            return join_value_and_type(item[value_field], item[type_field])
         key = "parsed_value"
         if key not in item:
-            item[key] = self.parse_value(item[field])
-        return self.format_value(item[key], role)
+            item[key] = self._parse_value(item[value_field], item[type_field])
+        return self._format_value(item[key], role)
+
+    def get_value_from_data(self, data, role=Qt.DisplayRole):
+        """Returns the value or default value of a parameter directly from data.
+        Used by ``EmptyParameterModel.data()``.
+
+        Args:
+            data (str): joined value and type
+            role (int, optional)
+
+        Returns:
+            any
+        """
+        if data is None:
+            return None
+        parsed_value = self._parse_value(*split_value_and_type(data))
+        return self._format_value(parsed_value, role)
 
     @staticmethod
-    def parse_value(db_value):
+    def _parse_value(db_value, value_type=None):
         try:
-            return from_database(db_value)
+            return from_database(db_value, value_type=value_type)
         except ParameterValueFormatError as error:
             return error
 
-    def format_value(self, parsed_value, role=Qt.DisplayRole):
+    def _format_value(self, parsed_value, role=Qt.DisplayRole):
         """Formats the given value for the given role.
 
         Args:
@@ -795,7 +817,7 @@ class SpineDBManager(SpineDBManagerBase):
         if isinstance(parsed_value, IndexedValue):
             parsed_value = parsed_value.get_value(index)
         if role == Qt.EditRole:
-            return to_database(parsed_value)
+            return join_value_and_type(*to_database(parsed_value))
         if role == Qt.DisplayRole:
             return self.display_data_from_parsed(parsed_value)
         if role == Qt.ToolTipRole:
@@ -808,7 +830,7 @@ class SpineDBManager(SpineDBManagerBase):
         if "split_value_list" not in item:
             item["split_value_list"] = item["value_list"].split(";")
         if "split_parsed_value_list" not in item:
-            item["split_parsed_value_list"] = [self.parse_value(value) for value in item["split_value_list"]]
+            item["split_parsed_value_list"] = [self._parse_value(value) for value in item["split_value_list"]]
 
     def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole):
         """Returns one value item of a parameter_value_list.
@@ -827,7 +849,7 @@ class SpineDBManager(SpineDBManagerBase):
             return None
         if role == Qt.EditRole:
             return item["split_value_list"][index]
-        return self.format_value(item["split_parsed_value_list"][index], role)
+        return self._format_value(item["split_parsed_value_list"][index], role)
 
     def get_parameter_value_list(self, db_map, id_, role=Qt.DisplayRole):
         """Returns a parameter_value_list formatted for the given role.
@@ -843,7 +865,7 @@ class SpineDBManager(SpineDBManagerBase):
         self._split_and_parse_value_list(item)
         if role == Qt.EditRole:
             return item["split_value_list"]
-        return [self.format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
+        return [self._format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
         alternative_id_list = self.get_item(db_map, "scenario", scen_id).get("alternative_id_list")
@@ -1400,17 +1422,18 @@ class SpineDBManager(SpineDBManagerBase):
         for db_map, expanded_data in db_map_data.items():
             packed_data = {}
             for item in expanded_data:
-                packed_data.setdefault(item["id"], {})[item["index"]] = item["value"]
+                packed_data.setdefault(item["id"], {})[item["index"]] = (item["value"], item["type"])
             items = []
             for id_, indexed_values in packed_data.items():
-                parsed_data = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
-                if isinstance(parsed_data, IndexedValue):
-                    for index, value in indexed_values.items():
-                        parsed_data.set_value(index, value)
-                    value = to_database(parsed_data)
+                parsed_value = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
+                if isinstance(parsed_value, IndexedValue):
+                    for index, (val, typ) in indexed_values.items():
+                        parsed_val = from_database(val, typ)
+                        parsed_value.set_value(index, parsed_val)
+                    value, value_type = to_database(parsed_value)
                 else:
-                    value = next(iter(indexed_values.values()))
-                item = {"id": id_, "value": value}
+                    value, value_type = next(iter(indexed_values.values()))
+                item = {"id": id_, "value": value, "type": value_type}
                 items.append(item)
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, items, "parameter_value"))
 

@@ -47,7 +47,7 @@ class MapValueEditor(ParameterValueEditorBase):
 
         super().__init__(index, editors, parent)
         self._model = index.model()
-        self.setWindowTitle(f"Edit map value")
+        self.setWindowTitle("Edit map value")
         self._select_editor(index.data(Qt.EditRole))
 
     def _set_data(self, value):

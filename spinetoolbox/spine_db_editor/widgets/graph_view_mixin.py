@@ -348,7 +348,7 @@ class GraphViewMixin:
             yield from []
         for db_map in self.db_maps:
             for p in self.db_mngr.get_items_by_field(db_map, "parameter_value", "parameter_name", parameter_name):
-                pos = from_database(p["value"])
+                pos = from_database(p["value"], p["type"])
                 if isinstance(pos, float):
                     yield (db_map, p["entity_id"]), pos
 

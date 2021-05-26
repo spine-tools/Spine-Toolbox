@@ -284,6 +284,7 @@ class _MenuToolBar(QToolBar):
     enabled_changed = Signal(bool)
     _enabled = True
     _focus_widget = None
+    _buttons = []
 
     def is_enabled(self):
         return self._enabled
@@ -314,8 +315,9 @@ class _MenuToolBar(QToolBar):
         button = self.widgetForAction(action)
         if not button:
             return
+        self._buttons.append(button)
         button.setText(action.text())
-        action.changed.connect(lambda action=action: button.setText(action.text()))
+        action.changed.connect(lambda action=action, button=button: button.setText(action.text()))
         button.installEventFilter(self)
 
     def actionEvent(self, ev):

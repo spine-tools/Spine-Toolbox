@@ -34,7 +34,7 @@ from spinedb_api import (
     SpineDBAPIError,
     to_database,
 )
-from ..helpers import busy_effect
+from ..helpers import busy_effect, join_value_and_type, split_value_and_type
 
 
 _ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -637,7 +637,7 @@ class MapTableView(CopyPasteTableView):
                     str_data = str(data)
                 except TypeError:
                     if isinstance(data, IndexedValue):
-                        str_data = to_database(data)
+                        str_data = join_value_and_type(*to_database(data))
                     else:
                         str_data = str(data)
                 row[x - left] = str_data
@@ -731,14 +731,13 @@ class MapTableView(CopyPasteTableView):
                         pass
                     if _could_be_time_stamp(cell):
                         try:
-
                             value = DateTime(cell)
                             data_row.append(value)
                             continue
                         except SpineDBAPIError:
                             pass
                     try:
-                        value = from_database(cell)
+                        value = from_database(*split_value_and_type(cell))
                         data_row.append(value)
                         continue
                     except ParameterValueFormatError:

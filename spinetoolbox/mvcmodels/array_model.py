@@ -108,7 +108,7 @@ class ArrayModel(QAbstractTableModel):
                 except SpineDBAPIError:
                     pass
                 try:
-                    data = from_database(value)
+                    data = from_database(value, self._data_type.type_())
                     if isinstance(data, self._data_type):
                         converted.append(data)
                         filtered.append(index)

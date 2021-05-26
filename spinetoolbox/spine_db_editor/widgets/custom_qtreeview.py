@@ -613,7 +613,7 @@ class ParameterValueListTreeView(ItemTreeView):
         """Creates a context menu for this view."""
         super().populate_context_menu()
         self._menu.addSeparator()
-        self._open_in_editor_action = self._menu.addAction("Open editor...", self.open_in_editor)
+        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
 
     def update_actions_availability(self, item):
         """See base class."""
@@ -622,7 +622,7 @@ class ParameterValueListTreeView(ItemTreeView):
     def open_in_editor(self):
         """Opens the parameter_value editor for the first selected cell."""
         index = self.currentIndex()
-        self._spine_db_editor.show_parameter_value_editor(index)
+        self._spine_db_editor.show_parameter_value_editor(index, plain=True)
 
     def remove_selected(self):
         """See base class."""

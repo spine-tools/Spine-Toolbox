@@ -18,7 +18,7 @@ These models concatenate several 'single' models and one 'empty' model.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import rows_to_row_count_tuples, join_value_and_type
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -466,7 +466,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             },
             "parameter_value": {"object_class": "object_name", "relationship_class": "object_name_list"},
         }[self.item_type][self.entity_class_type]
-        entity_name = item[entity_name_key].replace(",", self.db_mngr._GROUP_SEP)
+        entity_name = item[entity_name_key].replace(",", self.db_mngr.GROUP_SEP)
         return entity_name + " - " + item["parameter_name"]
 
     def get_set_data_delayed(self, index):
@@ -481,11 +481,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         sub_model = self.sub_model_at_row(index.row())
         if sub_model == self.empty_model:
-            return lambda value, index=index: self.setData(index, value)
+            return lambda value_and_type, index=index: self.setData(index, join_value_and_type(*value_and_type))
         id_ = self.item_at_row(index.row())
         value_field = {"parameter_value": "value", "parameter_definition": "default_value"}[self.item_type]
-        return lambda value, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
-            [{"id": id_, value_field: value}]
+        return lambda value_and_type, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
+            [{"id": id_, value_field: join_value_and_type(*value_and_type)}]
         )
 
     def get_entity_class_id(self, index, db_map):

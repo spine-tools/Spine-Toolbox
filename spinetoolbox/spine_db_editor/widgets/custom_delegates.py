@@ -24,7 +24,7 @@ from spinedb_api import to_database
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
-from ...helpers import object_icon
+from ...helpers import object_icon, join_value_and_type
 
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
@@ -149,7 +149,7 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
         """Send signal."""
         data = editor.data()
         if isinstance(editor, ParameterValueLineEditor):
-            data = to_database(data)
+            data = join_value_and_type(*to_database(data))
         self.data_committed.emit(index, data)
 
     def setEditorData(self, editor, index):
@@ -280,8 +280,11 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     def setModelData(self, editor, model, index):
         """Send signal."""
         display_value = editor.data()
-        db_value = self._db_value_list_lookup.get(display_value, to_database(display_value))
-        self.data_committed.emit(index, db_value)
+        if display_value in self._db_value_list_lookup:
+            value = self._db_value_list_lookup[display_value]
+        else:
+            value = join_value_and_type(*to_database(display_value))
+        self.data_committed.emit(index, value)
 
     def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
         """Emits the signal to request a standalone `ParameterValueEditor` from parent widget."""
@@ -312,7 +315,7 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
 
 
 class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
-    """A delegate for the either the default value."""
+    """A delegate for the default value."""
 
     def _get_value_list_id(self, index, db_map):
         """Returns a value list item for the given index and db_map."""

@@ -672,10 +672,10 @@ class SpineDBEditorBase(QMainWindow):
 
     @busy_effect
     @Slot("QModelIndex")
-    def show_parameter_value_editor(self, index):
+    def show_parameter_value_editor(self, index, plain=False):
         """Shows the parameter_value editor for the given index of given table view.
         """
-        editor = ParameterValueEditor(index, parent=self)
+        editor = ParameterValueEditor(index, parent=self, plain=plain)
         editor.show()
 
     def receive_error_msg(self, db_map_error_log):

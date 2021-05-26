@@ -17,6 +17,7 @@ Miscelaneous mixins for parameter models
 """
 
 from PySide2.QtCore import Qt
+from ...helpers import split_value_and_type
 
 
 def _parse_csv_list(csv_list):
@@ -45,6 +46,14 @@ class ConvertToDBMixin:
             list: error log
         """
         item = item.copy()
+        value_field, type_field = {
+            "parameter_value": ("value", "type"),
+            "parameter_definition": ("default_value", "default_type"),
+        }[self.item_type]
+        if value_field in item:
+            value, value_type = split_value_and_type(item[value_field])
+            item[value_field] = value
+            item[type_field] = value_type
         return item, []
 
 
