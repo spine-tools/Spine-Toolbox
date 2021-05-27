@@ -258,12 +258,13 @@ If you have GAMS in your PATH environment variable, you can leave the GAMS execu
 File->Settings blank and Spine Toolbox will find it. You can also override the GAMS in your PATH by
 setting an explicit path to the GAMS executable (e.g. `C:\\GAMS\\win64\\28.2\\gams.exe`) line edit.
 
-Installing SpineOpt.jl
-**********************
+Installing/Upgrading SpineOpt.jl
+********************************
 
-To use SpineOpt.jl in Spine Toolbox, you need to install SpineOpt.jl package into the Julia you have
-selected when following the instructions in section `Setting up Julia`_. You can either follow the
+To use **SpineOpt.jl** in Spine Toolbox, you need to install **SpineOpt.jl** package for the Julia you have
+selected for Spine Toolbox (see section `Setting up Julia`_ above). You can either follow the
 instructions on https://github.com/Spine-project/SpineOpt.jl#spineoptjl or you can use the built-in
 Add/update SpineOpt wizard. You can open the wizard by clicking the `Add/Update SpineOpt` button in
-Settings->Tools. Simply follow the instructions on screen to install SpineOpt.jl or if you have it
-installed already, you can use this wizard to update your SpineOpt.jl to the latest version.
+`File->Settings->Tools`.
+
+See section :ref:`How to set up and run SpineOpt.jl` for step-by-step instructions.
