@@ -51,6 +51,7 @@ setup(
     version=version["__version__"],
     description="An application to define, manage, and execute various energy system simulation models",
     long_description=readme,
+    long_description_content_type="text/markdown",
     author="Spine Project consortium",
     author_email="spine_info@vtt.fi",
     url="https://github.com/Spine-project/Spine-Toolbox",
@@ -60,8 +61,16 @@ setup(
     license="LGPL-3.0-or-later",
     zip_safe=False,
     keywords="",
-    classifiers=[],
     python_requires=">=3.6, <3.9",
     install_requires=install_requires,
     test_suite="tests",
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+        "Operating System :: OS Independent",
+    ],
+    project_urls={
+        "Issue Tracker": "https://github.com/Spine-project/Spine-Toolbox/issues",
+        "Documentation": "https://spine-toolbox.readthedocs.io",
+    },
 )
