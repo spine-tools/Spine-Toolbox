@@ -1210,7 +1210,7 @@ def join_value_and_type(value, value_type):
     """Returns a string that combines given parameter value and value type.
 
     Args:
-        value (str)
+        value (bytes)
         value_type (str or NoneType)
 
     Returns:
@@ -1218,7 +1218,7 @@ def join_value_and_type(value, value_type):
     """
     if value_type is None:
         value_type = ""
-    return value_type + _VALUE_TYPE_SEP + value
+    return value_type + _VALUE_TYPE_SEP + str(value, "UTF8")
 
 
 def split_value_and_type(value_and_type):
@@ -1228,10 +1228,10 @@ def split_value_and_type(value_and_type):
         value_and_type (str)
 
     Returns:
-        str
+        bytes
         str or NoneType
     """
     value_type, _, value = value_and_type.partition(_VALUE_TYPE_SEP)
     if not value_type:
         value_type = None
-    return value, value_type
+    return bytes(value, "UTF8"), value_type

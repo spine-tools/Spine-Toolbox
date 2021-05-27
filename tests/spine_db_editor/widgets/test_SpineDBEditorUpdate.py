@@ -131,7 +131,7 @@ class TestSpineDBEditorUpdateMixin:
             "nemo",
             self.water_parameter["id"],
             "water",
-            '"pepper"',
+            b'"pepper"',
             None,
         )
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):
@@ -166,7 +166,7 @@ class TestSpineDBEditorUpdateMixin:
             "nemo,pluto",
             self.relative_speed_parameter["id"],
             "relative_speed",
-            "100",
+            b"100",
             None,
         )
         with mock.patch.object(CompoundParameterModel, "_modify_data_in_filter_menus"):

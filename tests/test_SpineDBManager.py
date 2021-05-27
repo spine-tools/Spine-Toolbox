@@ -63,7 +63,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         value = 2.3
         self.db_mngr.get_item.return_value = dict(zip(("value", "type"), to_database(value)))
         formatted = self.get_value(Qt.EditRole)
-        self.assertEqual(formatted, join_value_and_type("2.3", None))
+        self.assertEqual(formatted, join_value_and_type(b"2.3", None))
 
     def test_plain_number_in_tool_tip_role(self):
         value = 2.3
@@ -152,19 +152,19 @@ class TestParameterValueFormatting(unittest.TestCase):
         self.assertEqual(formatted, "Start: 2019-07-12T08:00:00, resolution: variable, length: 2")
 
     def test_broken_value_in_display_role(self):
-        value = "dubbidubbidu"
+        value = b"dubbidubbidu"
         self.db_mngr.get_item.return_value = {"value": value, "type": None}
         formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "Error")
 
     def test_broken_value_in_edit_role(self):
-        value = "diibadaaba"
+        value = b"diibadaaba"
         self.db_mngr.get_item.return_value = {"value": value, "type": None}
         formatted = self.get_value(Qt.EditRole)
-        self.assertEqual(formatted, join_value_and_type("diibadaaba", None))
+        self.assertEqual(formatted, join_value_and_type(b"diibadaaba", None))
 
     def test_broken_value_in_tool_tip_role(self):
-        value = "diibadaaba"
+        value = b"diibadaaba"
         self.db_mngr.get_item.return_value = {"value": value, "type": None}
         formatted = self.get_value(Qt.ToolTipRole)
         self.assertTrue(formatted.startswith('Could not decode the value'))

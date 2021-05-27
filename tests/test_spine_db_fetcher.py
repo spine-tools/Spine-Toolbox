@@ -338,7 +338,7 @@ class TestSpineDBFetcher(unittest.TestCase):
                         'parameter_name': 'param',
                         'alternative_id': 1,
                         'alternative_name': 'Base',
-                        'value': '2.3',
+                        'value': b'2.3',
                         'type': None,
                     }
                 ]
@@ -358,7 +358,7 @@ class TestSpineDBFetcher(unittest.TestCase):
                 'object_name': 'obj',
                 'parameter_id': 1,
                 'parameter_name': 'param',
-                'value': '2.3',
+                'value': b'2.3',
                 'type': None,
             },
         )
