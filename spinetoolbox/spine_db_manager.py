@@ -17,6 +17,7 @@ The SpineDBManager class
 """
 
 import itertools
+import json
 from PySide2.QtCore import Qt, QObject, Signal, Slot, QThread
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
@@ -830,7 +831,7 @@ class SpineDBManager(SpineDBManagerBase):
         if "split_value_list" not in item:
             item["split_value_list"] = item["value_list"].split(";")
         if "split_parsed_value_list" not in item:
-            item["split_parsed_value_list"] = [self._parse_value(value) for value in item["split_value_list"]]
+            item["split_parsed_value_list"] = [json.loads(value) for value in item["split_value_list"]]
 
     def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole):
         """Returns one value item of a parameter_value_list.

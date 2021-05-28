@@ -16,9 +16,10 @@ A tree model for parameter_value lists.
 :date:   28.6.2019
 """
 
+import json
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QIcon
-from spinedb_api import to_database, from_database
+from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from .tree_model_base import TreeModelBase
 from .tree_item_utility import (
@@ -120,7 +121,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
 
     def update_value_list_in_db(self, child, value):
         value_list = self._new_value_list(child.child_number(), value)
-        data = [(self.name, from_database(value, value_type=None)) for value in value_list]
+        data = [(self.name, json.loads(value)) for value in value_list]
         self.db_mngr.import_data({self.db_map: {"parameter_value_lists": data}})
 
     def add_to_db(self, child, value):
@@ -183,6 +184,7 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
         if role != Qt.EditRole:
             return False
         db_value, _ = to_database(value)
+        db_value = bytes(json.dumps(value), "UTF8")
         return self.set_data_in_db(db_value)
 
     def set_data_in_db(self, db_value):
