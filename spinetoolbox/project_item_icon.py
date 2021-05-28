@@ -254,6 +254,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         # pylint: disable=undefined-variable
         if (self.current_pos - self.previous_pos).manhattanLength() > qApp.startDragDistance():
             self._toolbox.undo_stack.push(MoveIconCommand(self, self._toolbox.project()))
+            event.ignore()
         super().mouseReleaseEvent(event)
 
     def notify_item_move(self):
