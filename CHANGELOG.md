@@ -3,6 +3,19 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [Unreleased]
+
+### Added
+- Data Transformer now supports parameter value transformations.
+
+### Changed
+- Parameter renaming in Data Transformer requires now entity class names to identify the parameters.
+  Data Transformer's icon will show a notification if class names are missing.
+
+### Removed
+
+### Fixed
+
 ## [0.6.0-final.0] - 2021-05-07
 
 ### Added
