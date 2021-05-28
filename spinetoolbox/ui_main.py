@@ -1934,7 +1934,6 @@ class ToolboxUI(QMainWindow):
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
         self._project.renamed.connect(self._update_project_name)
-        self._project.project_execution_about_to_start.connect(self.ui.textBrowser_eventlog.scroll_to_bottom)
         self._project.project_execution_about_to_start.connect(self._set_execution_in_progress)
         self._project.project_execution_finished.connect(self._unset_execution_in_progress)
         self._project.item_added.connect(self.set_icon_and_properties_ui)
