@@ -66,7 +66,6 @@ from .spine_engine_manager import make_engine_manager
 from .config import (
     STATUSBAR_SS,
     MAINWINDOW_SS,
-    DOCUMENTATION_PATH,
     _program_root,
     LATEST_PROJECT_VERSION,
     DEFAULT_WORK_DIR,
@@ -2165,7 +2164,6 @@ class ToolboxUI(QMainWindow):
 
     def _connect_project_signals(self):
         """Connects signals emitted by project."""
-        self._project.project_execution_about_to_start.connect(self.ui.textBrowser_eventlog.scroll_to_bottom)
         self._project.project_execution_about_to_start.connect(self._set_execution_in_progress)
         self._project.project_execution_finished.connect(self._unset_execution_in_progress)
         self._project.item_added.connect(self.set_icon_and_properties_ui)

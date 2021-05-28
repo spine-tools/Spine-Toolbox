@@ -512,7 +512,11 @@ class ProjectItem(MetaObject):
             document = self._create_filter_log_document(filter_id)
         else:
             document = self._create_log_document()
+        scrollbar = self._project._toolbox.ui.textBrowser_itemlog.verticalScrollBar()
+        scrollbar_at_max = True if scrollbar.value() == scrollbar.maximum() else False
         add_message_to_document(document, message)
+        if scrollbar_at_max:  # if scrollbar was at maximum before document was appended -> scroll to bottom
+            self._project._toolbox.ui.textBrowser_itemlog.scroll_to_bottom()
 
     def add_event_message(self, filter_id, msg_type, msg_text):
         """Adds a message to the log document.
