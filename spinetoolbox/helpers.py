@@ -1218,7 +1218,7 @@ def join_value_and_type(value, value_type):
     """
     if value_type is None:
         value_type = ""
-    return value_type + _VALUE_TYPE_SEP + str(value, "UTF8")
+    return str(value, "UTF8") + _VALUE_TYPE_SEP + value_type
 
 
 def split_value_and_type(value_and_type):
@@ -1233,7 +1233,7 @@ def split_value_and_type(value_and_type):
     """
     if value_and_type is None:
         value_and_type = ""
-    value_type, _, value = value_and_type.partition(_VALUE_TYPE_SEP)
+    value, _, value_type = value_and_type.partition(_VALUE_TYPE_SEP)
     if not value_type:
         value_type = None
     return bytes(value, "UTF8"), value_type

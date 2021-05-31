@@ -564,7 +564,7 @@ class ValidateValueInListMixin(ConvertToDBMixin):
         param_def_id = self._get_parameter_definition_id(db_map, item)
         param_def = self.db_mngr.get_item(db_map, "parameter_definition", param_def_id)
         value_list = self.db_mngr.get_parameter_value_list(db_map, param_def.get("value_list_id"), role=Qt.EditRole)
-        if value_list and value not in value_list:
+        if value_list and str(value, "UTF8") not in value_list:
             item["has_valid_value_from_list"] = False
             msg = (
                 f"Invalid value '{value}' for parameter '{param_def['parameter_name']}', "
