@@ -56,7 +56,7 @@ def _cache_to_db_parameter_value(item):
 
 def _cache_to_db_parameter_value_list(item):
     item = deepcopy(item)
-    item["value_list"] = item["value_list"].split(";")
+    item["value_list"] = [bytes(val, "UTF8") for val in item["value_list"].split(";")]
     return item
 
 

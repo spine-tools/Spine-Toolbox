@@ -649,7 +649,7 @@ class ParameterValueListTreeView(ItemTreeView):
                         db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
                         continue
                     if new_value_list != curr_value_list:
-                        item = {"id": list_item.id, "value_list": new_value_list}
+                        item = {"id": list_item.id, "value_list": [bytes(val, "UTF-8") for val in new_value_list]}
                         db_map_data_to_upd[db_item.db_map].append(item)
                 else:
                     # WIP lists, just remove everything selected
