@@ -10,25 +10,6 @@
 How to set up and run SpineOpt.jl
 *********************************
 
-The instructions on how to set up and run `SpineOpt.jl <https://github.com/Spine-project/SpineOpt.jl>`_ in
-Spine Toolbox depends on how you have installed Spine Toolbox. **The installation options are:**
-
-1. Using a single-file *installation bundle* (**spine-toolbox-0.6.0-final.0-x64.exe**). You can find this
-   file and the latest releases from
-   `Spine Toolbox releases <https://github.com/Spine-project/Spine-Toolbox/releases>`_.
-   The installation bundles are only available for Windows at the moment.
-2. Cloning Spine Toolbox Git repository from `<https://github.com/Spine-project/Spine-Toolbox>`_. Checkout branch
-   **release-0.6** and follow the installation instructions on **README.md**.
-
-.. note:: Spine Toolbox **v0.6.0** is shipped with **spinedb_api v0.12.1**, **spine_engine v0.10.0**,
-   and **spine_items v0.7.5** and is compatible with **SpineOpt.jl v0.5.9**.
-
-Setting up SpineOpt.jl for Spine Toolbox installed using an installation bundle
--------------------------------------------------------------------------------
-
-When you have successfully installed Spine Toolbox using **spine-toolbox-0.6.0-final.0-x64.exe**,
-do the following:
-
 #. Install Julia from `<https://julialang.org/downloads/>`_ if you don't have one
 
 #. Start Spine Toolbox
@@ -37,57 +18,17 @@ do the following:
 
 #. Select `File->Settings` from the main menu and open the `Tools` page.
 
-#. Set a path to a Julia executable to the appropriate line edit (e.g. *C:\\Julia-1.5.4\\bin\\julia.exe*)
-
-#. Set the Python interpreter to `<install_dir>\\Tools\\Python.exe` (if you installed Spine Toolbox to the default
-   directory this is *C:\\Program Files\\Spine Toolbox\\tools\\Python.exe*). Your selections should look similar to
-   this now.
-
-   .. image:: img/settings_tools_filled_for_spineopt.png
-      :align: center
-
-   .. note:: If you already have a Python in your PATH, the Python interpreter line edit will show this Python in
-      the line edit. **Change it to <install_dir>\\tools\\Python.exe**, because this 'embedded' Python has
-      access to the `spinedb_api` package that is shipped with the application.
-
-#. Click the `Add/Update SpineOpt` button and click `Next` twice and finally `Install SpineOpt`. This installs
-   `SpineOpt.jl` package for the Julia you just selected. **Wait until the process has finished** and you are
-   greeted with this screen.
-
-   .. image:: img/spineopt_install_wizard_successful.png
-      :align: center
-
-   Close the wizard.
-
-#. Click Ok to close the `Settings` window
-#. Back in the main window, select `PlugIns->Install plugin…` from the menu
-#. Select `SpineOpt` and click Ok. After a short while, a red *SpineOpt Plugin Toolbar* appears on the main window.
-
-Setting up SpineOpt.jl for Spine Toolbox installed from GitHub
---------------------------------------------------------------
-
-When you have successfully installed the application by following the instructions in **README.md**,
-do the following:
-
-#. Install Julia from `<https://julialang.org/downloads/>`_ if you don't have one
-
-#. Start Spine Toolbox
-
-#. Create a new project (*File->New project...*)
-
-#. Select `File->Settings` from the main menu and open the `Tools` page.
-
-#. Set a path to a Julia executable to the appropriate line edit (e.g. *C:\\Julia-1.5.4\\bin\\julia.exe*)
-
-#. The default Python interpreter is the **Python that was used in launching the application** (i.e. *sys.executable*).
-   This is shown as placeholder (gray) text in the line edit. Leave it as it is.
+#. Set a path to a Julia executable to the appropriate line edit (e.g. *C:\\Julia-1.5.4\\bin\\julia.exe*).
+   Your selections should look similar to this now.
 
    .. image:: img/settings_tools_filled_for_spineopt_github.png
       :align: center
 
-#. Click the `Add/Update SpineOpt` button and click `Next` twice and finally `Install SpineOpt`. This installs
-   `SpineOpt.jl` package for the Julia you just selected. **Wait until the process has finished** and you are
-   greeted with this screen.
+#. Next, you need to install **SpineOpt.jl** package for the Julia you just selected for Spine Toolbox. You can do
+   this manually by following the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_
+   **or** you can install **SpineOpt.jl** by clicking the `Add/Update SpineOpt` button. After clicking the button,
+   an install/upgrade Spineopt wizard appears. Click `Next` twice and finally `Install SpineOpt`.
+   **Wait until the process has finished** and you are greeted with this screen.
 
    .. image:: img/spineopt_install_wizard_successful.png
       :align: center
@@ -97,11 +38,18 @@ do the following:
 #. Click Ok to close the `Settings` window
 #. Back in the main window, select `PlugIns->Install plugin…` from the menu
 #. Select `SpineOpt` and click Ok. After a short while, a red *SpineOpt Plugin Toolbar* appears on the main window.
+#. SpineOpt.jl is ready for action
+
+.. note:: The *SpineOpt Plugin Toolbar* contains two predefined Tools that make use of SpineOpt.jl. **The SpineOpt
+   Plugin is not a requirement to run SpineOpt.jl**, they are provided just for convenience and as examples to get
+   you started quickly.
 
 How to run SpineOpt.jl
 ----------------------
 
-After you have completed the set up phase, do the following to test **SpineOpt.jl**:
+After you have completed the set up phase, do the following to test **SpineOpt.jl** using the SpineOpt Plugin:
+
+   .. note:: If you want to do something meaningful with SpineOpt.jl, please see e.g. section :ref:`Tutorials`.
 
 #. Make sure you have either opened an existing project or created a new one in Spine Toolbox
 
