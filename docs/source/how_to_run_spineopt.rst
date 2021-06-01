@@ -25,6 +25,10 @@ How to set up SpineOpt.jl
    .. image:: img/settings_tools_filled_for_spineopt_github.png
       :align: center
 
+#. *[Optional]* If you want to install and run SpineOpt in a specific Julia project environment (the place for
+   Project.toml and Manifest.toml), you can set the path to the environment folder to the line edit just below the
+   Julia executable (the one that says *Using Julia default project*).
+
 #. Next, you need to install **SpineOpt.jl** package for the Julia you just selected for Spine Toolbox. You can do
    this manually by following the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_
    **or** you can install **SpineOpt.jl** by clicking the `Add/Update SpineOpt` button. After clicking the button,
