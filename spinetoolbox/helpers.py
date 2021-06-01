@@ -1232,7 +1232,7 @@ def split_value_and_type(value_and_type):
         str or NoneType
     """
     if value_and_type is None:
-        value_and_type = ""
+        return None, None
     value, _, value_type = value_and_type.partition(_VALUE_TYPE_SEP)
     if not value_type:
         value_type = None
