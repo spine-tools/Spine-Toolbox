@@ -545,7 +545,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.bg_color = bg_color
         self.update_bg_color()
-        self.ui.lineEdit_gams_path.setPlaceholderText(resolve_gams_executable(gams_path))
+        self.ui.lineEdit_gams_path.setPlaceholderText(resolve_gams_executable(""))
         self.ui.lineEdit_gams_path.setText(gams_path)
         # Add Python and Julia kernels to comboBoxes
         julia_k_cb_items = ["Select Julia kernel spec..."] + list(find_julia_kernels())  # Unpack to list literal
@@ -554,7 +554,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.comboBox_python_kernel.addItems(python_k_cb_items)
         if use_julia_kernel == 2:
             self.ui.checkBox_use_julia_kernel.setChecked(True)
-        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable(julia_path))
+        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable(""))
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
         ind = self.ui.comboBox_julia_kernel.findText(julia_kernel)
@@ -564,7 +564,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_julia_kernel.setCurrentIndex(ind)
         if use_python_kernel == 2:
             self.ui.checkBox_use_python_kernel.setChecked(True)
-        self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_interpreter(python_path))
+        self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_interpreter(""))
         self.ui.lineEdit_python_path.setText(python_path)
         ind = self.ui.comboBox_python_kernel.findText(python_kernel)
         if ind == -1:
