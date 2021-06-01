@@ -589,32 +589,16 @@ class SpineDBEditorBase(QMainWindow):
         s += "</ul>"
         return s
 
-    @staticmethod
-    def _metadata_per_entity(db_map, entity_ids):
-        d = {}
-        sq = db_map.ext_entity_metadata_sq
-        for x in db_map.query(sq).filter(db_map.in_(sq.c.entity_id, entity_ids)):
-            d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        return d
-
     def show_db_map_entity_metadata(self, db_map_ids):
         metadata = {
-            db_map.codename: self._metadata_per_entity(db_map, entity_ids) for db_map, entity_ids in db_map_ids.items()
+            db_map.codename: self.db_mngr.get_metadata_per_entity(db_map, entity_ids)
+            for db_map, entity_ids in db_map_ids.items()
         }
         QMessageBox.information(self, "Entity metadata", self._parse_db_map_metadata(metadata))
 
-    @staticmethod
-    def _metadata_per_parameter_value(db_map, param_val_ids):
-        d = {}
-        sq = db_map.ext_parameter_value_metadata_sq
-        for x in db_map.query(sq).filter(db_map.in_(sq.c.parameter_value_id, param_val_ids)):
-            param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
-            d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        return d
-
     def show_db_map_parameter_value_metadata(self, db_map_ids):
         metadata = {
-            db_map.codename: self._metadata_per_parameter_value(db_map, param_val_ids)
+            db_map.codename: self.db_mngr.get_metadata_per_parameter_value(db_map, param_val_ids)
             for db_map, param_val_ids in db_map_ids.items()
         }
         QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))

@@ -40,6 +40,8 @@ class SpineDBWorker(QObject):
 
     connection_closed = Signal()
     _get_db_map_called = Signal()
+    _get_metadata_per_entity_called = Signal(object, list, dict)
+    _get_metadata_per_parameter_value_called = Signal(object, list, dict)
     _close_db_map_called = Signal(object)
     _add_or_update_items_called = Signal(object, str, str, str)
     _remove_items_called = Signal(object)
@@ -63,8 +65,11 @@ class SpineDBWorker(QObject):
         self._err = None
 
     def connect_signals(self):
+        # pylint: disable=undefined-variable
         connection = Qt.BlockingQueuedConnection if self.thread() is not qApp.thread() else Qt.DirectConnection
         self._get_db_map_called.connect(self._get_db_map, connection)
+        self._get_metadata_per_entity_called.connect(self._get_metadata_per_entity, connection)
+        self._get_metadata_per_parameter_value_called.connect(self._get_metadata_per_parameter_value, connection)
         self._close_db_map_called.connect(self._close_db_map)
         self._add_or_update_items_called.connect(self._add_or_update_items)
         self._remove_items_called.connect(self._remove_items)
@@ -122,6 +127,29 @@ class SpineDBWorker(QObject):
         if not db_map.connection.closed:
             db_map.connection.close()
         self.connection_closed.emit()
+
+    def get_metadata_per_entity(self, db_map, entity_ids):
+        d = {}
+        self._get_metadata_per_entity_called.emit(db_map, entity_ids, d)
+        return d
+
+    @Slot(object, list, dict)
+    def _get_metadata_per_entity(self, db_map, entity_ids, d):
+        sq = db_map.ext_entity_metadata_sq
+        for x in db_map.query(sq).filter(db_map.in_(sq.c.entity_id, entity_ids)):
+            d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
+
+    def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
+        d = {}
+        self._get_metadata_per_parameter_value_called.emit(db_map, parameter_value_ids, d)
+        return d
+
+    @Slot(object, list, dict)
+    def _get_metadata_per_parameter_value(self, db_map, parameter_value_ids, d):
+        sq = db_map.ext_parameter_value_metadata_sq
+        for x in db_map.query(sq).filter(db_map.in_(sq.c.parameter_value_id, parameter_value_ids)):
+            param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
+            d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
 
     def add_or_update_items(self, db_map_data, method_name, getter_name, signal_name):
         self._add_or_update_items_called.emit(db_map_data, method_name, getter_name, signal_name)

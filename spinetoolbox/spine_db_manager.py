@@ -1736,6 +1736,12 @@ class SpineDBManager(SpineDBManagerBase):
     def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
         self._worker.duplicate_object(db_maps, object_data, orig_name, dup_name)
 
+    def get_metadata_per_entity(self, db_map, entity_ids):
+        return self._worker.get_metadata_per_entity(db_map, entity_ids)
+
+    def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
+        return self._worker.get_metadata_per_parameter_value(db_map, parameter_value_ids)
+
     def get_all_multi_spine_db_editors(self):
         """Yields all instances of MultiSpineDBEditor currently open.
 
