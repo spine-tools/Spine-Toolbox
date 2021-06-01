@@ -1,16 +1,17 @@
-.. How to set up and run SpineOpt.jl documentation
+.. How to set up SpineOpt.jl documentation
    Created 26.5.2021
 
 .. |execute| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
              :width: 16
 
-.. _How to set up and run SpineOpt.jl:
+.. _How to set up SpineOpt.jl:
 
-*********************************
-How to set up and run SpineOpt.jl
-*********************************
+*************************
+How to set up SpineOpt.jl
+*************************
 
-#. Install Julia from `<https://julialang.org/downloads/>`_ if you don't have one
+#. Install Julia (v1.2 or later) from `<https://julialang.org/downloads/>`_ if you don't have one.
+   See latest Julia compatibility information `here <https://github.com/Spine-project/SpineOpt.jl#spineoptjl>`_.
 
 #. Start Spine Toolbox
 
@@ -38,55 +39,12 @@ How to set up and run SpineOpt.jl
 #. Click Ok to close the `Settings` window
 #. Back in the main window, select `PlugIns->Install plugin…` from the menu
 #. Select `SpineOpt` and click Ok. After a short while, a red *SpineOpt Plugin Toolbar* appears on the main window.
-#. SpineOpt.jl is ready for action
+
+Spine Toolbox and Julia are now correctly set up for running **SpineOpt.jl**. Next step is to
+`Create a project workflow using SpineOpt.jl <https://spine-project.github.io/SpineOpt.jl/latest/getting_started/setup_workflow/>`_
+(takes you to SpineOpt documentation). See also :ref:`Tutorials` for more advanced use cases. For more information
+on how to select a specific Python or Julia version, see :ref:`Setting up External Tools`).
 
 .. note:: The *SpineOpt Plugin Toolbar* contains two predefined Tools that make use of SpineOpt.jl. **The SpineOpt
    Plugin is not a requirement to run SpineOpt.jl**, they are provided just for convenience and as examples to get
    you started quickly.
-
-How to run SpineOpt.jl
-----------------------
-
-After you have completed the set up phase, do the following to test **SpineOpt.jl** using the SpineOpt Plugin:
-
-   .. note:: If you want to do something meaningful with SpineOpt.jl, please see e.g. section :ref:`Tutorials`.
-
-#. Make sure you have either opened an existing project or created a new one in Spine Toolbox
-
-#. Drag the `Load template` icon from the *SpineOpt Plugin Toolbar* to *Design View*. Remove * 1* from the
-   suggested name to make it look cleaner and click Ok to accept the dialog.
-
-#. Create a Data Store item by dragging its icon from the *Main Toolbar* to *Design View*. Name it *Spine Db* or
-   something.
-
-#. Drag the `Run SpineOpt` icon from the *SpineOpt Plugin Toolbar* to *Design View*. Again, remove * 1* from
-   the suggested name and accept the dialog.
-
-   .. tip:: You can rename project items from the context-menu (mouse right-click menu).
-
-#. Select `Spine Db`. In *Data Store Properties* widget, set the dialect to *sqlite* and click *New Spine db* button.
-   Accept the default filename and folder by clicking *Save*.
-
-#. Create a workflow on *Design View* by connecting items `Load template` -> `Spine Db` -> `Run SpineOpt`.
-
-#. Select `Load template` item on *Design View*. In *Tool Properties* widget, drag *db_url@Spine Db*
-   item from *available resources* box and drop it onto *type new arg here...* text in the *Command line
-   arguments* box. *Design View* and `Load template` properties should look like this now:
-
-   .. image:: img/main_window_spineopt_load_template_ready.png
-      :align: center
-
-   .. tip:: The 'curved' links (yellow arrows) connecting project items are an option in `File->Settings`.
-
-#. Do the same for `Run SpineOpt` item. Select `Run SpineOpt` item on *Design View*. In *Tool Properties* widget,
-   drag *db_url@Spine Db* item from *available resources* box and drop it onto *type new arg here...* text in
-   the *Command line arguments* box.
-
-#. Save the project (`File->Save project` or `Ctrl-s`)
-
-#. Press |execute| to execute the project
-
-Congratulations! You have run **SpineOpt.jl** using Spine Toolbox.
-
-For more information on how to select a specific Python or Julia version, see :ref:`Setting up External Tools`).
-See also the :ref:`Getting Started` section for information on how to run a simple Python script using Spine Toolbox.

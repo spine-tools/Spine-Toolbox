@@ -7,7 +7,7 @@ Spine Toolbox is an application, which provides means to define, manage, and exe
 computation tasks, such as energy system models.
 
 If you are new to Spine Toolbox, :ref:`Getting Started` section is a good place to start. If you want to run
-`SpineOpt.jl <https://github.com/Spine-project/SpineOpt.jl>`_ using Spine Toolbox, :ref:`How to set up and run SpineOpt.jl`
+`SpineOpt.jl <https://github.com/Spine-project/SpineOpt.jl>`_ using Spine Toolbox, :ref:`How to set up SpineOpt.jl`
 provides the step-by-step instructions on how to get started. For information on how to set up Python, Julia, and
 Gams for Spine Toolbox, see :ref:`Setting up External Tools`. Please see :ref:`Settings` chapter for information
 on user customizable Spine Toolbox settings. If you need help in understanding the terms we use throughout the app

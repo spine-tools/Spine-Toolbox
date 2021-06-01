@@ -32,7 +32,7 @@ Welcome to the Spine Toolbox's getting started guide.
 In this guide you will learn two ways of running a `"Hello, World!" program
 <https://en.wikipedia.org/wiki/%22Hello,_World!%22_program>`_ on Spine Toolbox.
 If you need help on how to run **SpineOpt.jl** using Spine Toolbox, see chapter
-:ref:`How to set up and run SpineOpt.jl`.
+:ref:`How to set up SpineOpt.jl`.
 
 This chapter introduces the following topics:
 
@@ -318,4 +318,4 @@ Press |execute| once again. The project will be executed successfully this time:
 That's all for now. I hope you've enjoyed following this guide as much as I enjoyed writing it. See you next time.
 
 Where to next: If you need help on how to set up and run **SpineOpt.jl** using Spine Toolbox, see chapter
-:ref:`How to set up and run SpineOpt.jl`.
+:ref:`How to set up SpineOpt.jl`.
