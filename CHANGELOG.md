@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 - Data Transformer now supports parameter value transformations.
+- Project execution shortcuts: F5 to execute all DAGs, F6 to execute selected items
+  and F7 to stop execution.
 
 ### Changed
 - Data Transformer's specification editor has now a new interface.

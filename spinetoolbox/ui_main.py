@@ -151,7 +151,7 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
-        self.main_toolbar = toolbars.MainToolBar(self)
+        self.main_toolbar = toolbars.MainToolBar(self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self)
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
@@ -166,6 +166,7 @@ class ToolboxUI(QMainWindow):
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
+        self._add_actions()
         self.set_debug_qactions()
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
@@ -250,6 +251,10 @@ class ToolboxUI(QMainWindow):
         # Models
         self.project_item_model.rowsInserted.connect(self._update_execute_enabled)
         self.project_item_model.rowsRemoved.connect(self._update_execute_enabled)
+        # Execution
+        self.ui.actionExecute_project.triggered.connect(self._execute_project)
+        self.ui.actionExecute_selection.triggered.connect(self._execute_selection)
+        self.ui.actionStop_execution.triggered.connect(self._stop_execution)
 
     def set_error_mode(self):
         """Sets Windows error mode to show all error dialog boxes from subprocesses.
@@ -274,11 +279,11 @@ class ToolboxUI(QMainWindow):
 
     def _update_execute_enabled(self):
         first_index = next(self.project_item_model.leaf_indexes(), None)
-        self.main_toolbar.execute_project_button.setEnabled(first_index is not None and not self.execution_in_progress)
+        self.ui.actionExecute_project.setEnabled(first_index is not None and not self.execution_in_progress)
 
     def _update_execute_selected_enabled(self):
-        inds = self.ui.treeView_project.selectedIndexes()
-        self.main_toolbar.execute_selection_button.setEnabled(bool(inds) and not self.execution_in_progress)
+        has_selection = bool(self.ui.treeView_project.selectedIndexes())
+        self.ui.actionExecute_selection.setEnabled(has_selection and not self.execution_in_progress)
 
     @Slot(bool)
     def update_window_modified(self, clean):
@@ -516,6 +521,9 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave_As.setDisabled(True)
         self.ui.actionClose.setDisabled(True)
         self.ui.actionRename_project.setDisabled(True)
+        self.ui.actionExecute_project.setDisabled(True)
+        self.ui.actionExecute_selection.setDisabled(True)
+        self.ui.actionStop_execution.setDisabled(True)
 
     def _enable_project_actions(self):
         """Enables all project-related actions. Called when a
@@ -1177,15 +1185,21 @@ class ToolboxUI(QMainWindow):
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.3 * width], Qt.Horizontal)
 
+    def _add_actions(self):
+        """Sets adds actions to the main window."""
+        self.addAction(self.ui.actionExecute_project)
+        self.addAction(self.ui.actionExecute_selection)
+        self.addAction(self.ui.actionStop_execution)
+
     def set_debug_qactions(self):
-        """Set shortcuts for QActions that may be needed in debugging."""
+        """Sets shortcuts for QActions that may be needed in debugging."""
         self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
         self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
         self.addAction(self.show_properties_tabbar)
         self.addAction(self.show_supported_img_formats)
 
     def add_menu_actions(self):
-        """Add extra actions to Edit and View menu."""
+        """Adds extra actions to Edit and View menu."""
         self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
@@ -1945,19 +1959,56 @@ class ToolboxUI(QMainWindow):
         self._project.specification_added.connect(self.repair_specification)
         self._project.specification_saved.connect(self._log_specification_saved)
 
+    @Slot(bool)
+    def _execute_project(self, checked=False):
+        """Executes all DAGs in project.
+
+        Args:
+            checked (bool): unused
+        """
+        if self._project is None:
+            self.msg.emit("Please create a new project or open an existing one first")
+            return
+        self._project.execute_project()
+
+    @Slot(bool)
+    def _execute_selection(self, checked=False):
+        """Executes selected items.
+
+        Args:
+            checked (bool): unused
+        """
+        if self._project is None:
+            self.msg.emit("Please create a new project or open an existing one first")
+            return
+        selected_names = self.selected_item_names()
+        self._project.execute_selected(selected_names)
+
+    @Slot(bool)
+    def _stop_execution(self, checked=False):
+        """Stops execution in progress.
+
+        Args:
+            checked (bool): unused
+        """
+        if not self._project:
+            self.msg.emit("Please create a new project or open an existing one first")
+            return
+        self._project.stop()
+
     @Slot()
     def _set_execution_in_progress(self):
         self.execution_in_progress = True
-        self.main_toolbar.execute_project_button.setEnabled(False)
-        self.main_toolbar.execute_selection_button.setEnabled(False)
-        self.main_toolbar.stop_execution_button.setEnabled(True)
+        self.ui.actionExecute_project.setEnabled(False)
+        self.ui.actionExecute_selection.setEnabled(False)
+        self.ui.actionStop_execution.setEnabled(True)
 
     @Slot()
     def _unset_execution_in_progress(self):
         self.execution_in_progress = False
         self._update_execute_enabled()
         self._update_execute_selected_enabled()
-        self.main_toolbar.stop_execution_button.setEnabled(False)
+        self.ui.actionStop_execution.setEnabled(False)
 
     @Slot(str)
     def set_icon_and_properties_ui(self, item_name):
