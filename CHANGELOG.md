@@ -3,6 +3,14 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.6.0-final.2] - 2021-06-03
+
+### Fixed
+- [win-x64] Running Python or Julia Tools does not open an extra console window anymore
+
+### Security
+- urllib3 v1.26.5 now required because of a security vulnerability in earlier versions
+
 ## [0.6.0-final.1] - 2021-06-01
 
 ### Fixed
