@@ -79,7 +79,7 @@ pyzmq == 21.0.2  # pyzmq<22
 # cx_freeze 6.6 has trouble building pyzmq>=22
 qtconsole == 5.0.3
 qtpy == 1.9.0
-requests == 2.25.1
+requests == 2.25.1  # Dagster 0.10.1 uses requests
 requests-futures == 1.0.0
 rfc3986 == 1.4.0
 rx == 1.6.1
@@ -100,11 +100,12 @@ tqdm == 4.60.0
 traitlets == 5.0.5
 tzlocal == 1.5.1
 unicodecsv == 0.14.1
-urllib3 == 1.26.4
+urllib3 == 1.26.5  # Requirement of requests package.
+# 1.26.5 fixes a security vulnerability in 1.26.4 (https://github.com/advisories/GHSA-q2q7-5pp4-w6pg)
 watchdog == 2.0.3
 wcwidth == 0.2.5
 wget == 3.2
 xlrd == 2.0.1
 -e .
-# Spine Items requires the Toolbox, so install that last
+# Spine Items requires Spine Toolbox, so install that last
 git+https://github.com/Spine-project/spine-items.git@release-0.7#egg=spine_items
