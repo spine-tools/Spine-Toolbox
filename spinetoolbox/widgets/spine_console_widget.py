@@ -18,6 +18,8 @@ Class for a custom RichJupyterWidget that can run Tool instances.
 
 import logging
 import os
+import sys
+from subprocess import CREATE_NO_WINDOW
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QAction, QApplication
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
@@ -174,7 +176,8 @@ class SpineConsoleWidget(RichJupyterWidget):
         km = QtKernelManager(kernel_name=self.kernel_name)
         try:
             blackhole = open(os.devnull, 'w')
-            km.start_kernel(stdout=blackhole, stderr=blackhole)
+            cf = CREATE_NO_WINDOW if sys.platform == "win32" else 0  # Don't show console when frozen
+            km.start_kernel(stdout=blackhole, stderr=blackhole, creationflags=cf)
             kc = km.client()
             kc.hb_channel.time_to_dead = JUPYTER_KERNEL_TIME_TO_DEAD
             kc.start_channels()
