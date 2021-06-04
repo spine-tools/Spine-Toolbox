@@ -11,7 +11,7 @@ How to set up SpineOpt.jl
 *************************
 
 #. Install Julia (v1.2 or later) from `<https://julialang.org/downloads/>`_ if you don't have one.
-   See latest Julia compatibility information `here <https://github.com/Spine-project/SpineOpt.jl#spineoptjl>`_.
+   See latest **SpineOpt.jl** Julia compatibility information `here <https://github.com/Spine-project/SpineOpt.jl#spineoptjl>`_.
 
 #. Start Spine Toolbox
 
@@ -30,7 +30,7 @@ How to set up SpineOpt.jl
    Julia executable (the one that says *Using Julia default project*).
 
 #. Next, you need to install **SpineOpt.jl** package for the Julia you just selected for Spine Toolbox. You can do
-   this manually by following the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_
+   this manually by `following the instructions <https://github.com/Spine-project/SpineOpt.jl#installation>`_
    **or** you can install **SpineOpt.jl** by clicking the `Add/Update SpineOpt` button. After clicking the button,
    an install/upgrade Spineopt wizard appears. Click `Next` twice and finally `Install SpineOpt`.
    **Wait until the process has finished** and you are greeted with this screen.

@@ -7,9 +7,11 @@
 Settings
 ********
 
-You can open Spine Toolbox settings from the main window menu ``File->Settings...``, or by
+.. note:: The images and some of the text are outdated. See tooltips in the app for up-to-date information.
+
+You can open Spine Toolbox settings from the main window menu `File->Settings...`, or by
 pressing **F1**. Settings are categorized into four tabs; *General*, *Project*,
-*Tool*, and *View*. In addition to application settings, each Project item has user adjustable
+*Tools*, and *View*. In addition to application settings, each Project item has user adjustable
 properties (See :ref:`Project Items`)
 
 .. contents::
@@ -79,13 +81,10 @@ Tools settings
    :align: center
 
 - **GAMS executable** Path to GAMS executable you wish to use to execute *GdxExporter* project items and
-  *Tool* project items that use a GAMS Tool specification. Leave this empty to use the system GAMS
-  (i.e. GAMS set up in your system PATH variable).
+  *Tool* project items that use a GAMS Tool specification. See :ref:`Setting up External Tools`.
 
 - **Julia executable** Path to Julia executable you wish to use to execute *Tool* project items
-  that use a Julia Tool specification. This is the Julia executable that will be used in the
-  embedded Julia Console and also the Julia that is used when executing Julia Tool specifications
-  as in the shell. Leave this empty, if you wish to use the system Julia.
+  that use a Julia Tool specification. See :ref:`Setting up External Tools`.
 
 - **Julia home project** Set the Julia home project here.
 
@@ -94,13 +93,9 @@ Tools settings
   specifications will be executed as in the shell. I.e on Windows this would be the equivalent to
   running command ``julia.exe example_script.jl`` in the command prompt. If you decide to use the
   embedded Julia Console, the ``example_script.jl`` is *included* into the console and executed there.
-  It is recommended to use the embedded Julia Console, since this gives a significant performance
-  boost compared to shell execution.
 
 - **Python interpreter** Path to Python executable you wish to use to execute *Tool* project items
-  that use a Python Tool specification. This is the Python that will be used in the embedded Python
-  Console and also the Python that is used when executing Python Tool specifications as in the shell.
-  Leave this empty to use the system Python.
+  that use a Python Tool specification. See :ref:`Setting up External Tools`.
 
 - **Use embedded Python Console** Check this box to execute Python Tool specifications in the
   embedded Python Console. If you un-check this box, Python Tool specifications will be executed as
@@ -133,9 +128,9 @@ previous session (i.e. when closing and restarting the app).
 Where are the application settings stored?
 ------------------------------------------
 Application settings and preferences (see above) are saved to a location that depends on your
-operating system. On Windows, there is no separate settings file. They are stored into registry key
+operating system. On Windows, they are stored into registry key
 ``HKEY_CURRENT_USER\Software\SpineProject\Spine Toolbox``. It is safe to delete this key if you
-want to reset Spine Toolbox to factory settings.
+want to reset Spine Toolbox to factory defaults.
 
 .. note::
    If you are looking for information on project item properties, see :ref:`Project Items`.

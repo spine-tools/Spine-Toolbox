@@ -26,6 +26,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    project_items
    tool_specification_editor
    executing_projects
+   execution_modes
    settings
    Spine database editor <spine_db_editor/index>
    plotting
