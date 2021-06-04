@@ -50,25 +50,9 @@ Please note that this version has passed automated testing, but has not been com
 
         conda activate spinetoolbox
 
-5. Install **git** in the new environment:
+5. Install Spine Toolbox and required libraries using **pip**:
 
-        conda install -c anaconda git
-
-6. Navigate to a folder where you want the Spine Toolbox folder to be (you may be there already):
-
-        cd [folder path]
-
-7. Clone the Spine Toolbox repository from GitHub to your computer:
-
-        git clone https://github.com/Spine-project/Spine-Toolbox.git
-
-8. Navigate to your clone's root:
-
-        cd Spine-Toolbox
-
-9. Install requirements using **pip**:
-
-        python -m pip install -r requirements.txt
+        python -m pip install spinetoolbox
 
 10. Run:
 
@@ -96,18 +80,10 @@ Please note that this version has passed automated testing, but has not been com
 
         conda activate spinetoolbox
 
-3. Navigate to your Spine Toolbox clone's root:
-
-        cd Spine-Toolbox
-
-4. Pull the latest contents of the Spine Toolbox repository:
-
-        git pull
-
-5. Upgrade requirements using **pip** (IMPORTANT TO REMEMBER EVERY TIME! Spine Engine, Spine DB API, 
+3. Upgrade requirements using **pip** (IMPORTANT TO REMEMBER EVERY TIME! Spine Engine, Spine DB API, 
    and Spine Items may have also been updated and a misalignment may cause intractable errors):
 
-        python -m pip install --upgrade -r requirements.txt
+        python -m pip install --upgrade spinetoolbox
 
 
 ### About requirements
