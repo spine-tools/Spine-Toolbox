@@ -15,3 +15,4 @@ The following tutorials are available:
    :titlesonly:
 
    case_study_a5.rst
+   simple_system.rst
