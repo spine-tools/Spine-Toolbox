@@ -18,7 +18,9 @@ An editor widget for editing a map type parameter values.
 
 from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide2.QtWidgets import QWidget
+
 from spinedb_api import Map
+from ..helpers import inquire_index_name
 from .map_value_editor import MapValueEditor
 from .indexed_value_table_context_menu import MapTableContextMenu
 from ..mvcmodels.map_model import MapModel
@@ -37,12 +39,13 @@ class MapEditor(QWidget):
         from ..ui.map_editor import Ui_MapEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
-        self._model = MapModel(Map(["key"], [0.0]))
+        self._model = MapModel(Map(["key"], [0.0]), self)
         self._ui = Ui_MapEditor()
         self._ui.setupUi(self)
         self._ui.map_table_view.setModel(self._model)
         self._ui.map_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.map_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.map_table_view.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
         delegate = ParameterValueElementDelegate(self._ui.map_table_view)
         delegate.value_editor_requested.connect(self.open_value_editor)
         self._ui.map_table_view.setItemDelegate(delegate)
@@ -81,3 +84,9 @@ class MapEditor(QWidget):
         """
         editor = MapValueEditor(index, self)
         editor.show()
+
+    @Slot(int)
+    def _open_header_editor(self, column):
+        if column >= self._model.columnCount() - 2:
+            return
+        inquire_index_name(self._model, column, "Rename map's index", self)

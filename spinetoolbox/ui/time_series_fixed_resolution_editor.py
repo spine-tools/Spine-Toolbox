@@ -120,6 +120,7 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
 
         self.time_series_table = TimeSeriesFixedResolutionTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName(u"time_series_table")
+        self.time_series_table.horizontalHeader().setStretchLastSection(True)
 
         self.left_layout.addWidget(self.time_series_table)
 

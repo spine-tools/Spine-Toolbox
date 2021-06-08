@@ -37,6 +37,7 @@ class ParameterValueEditor(ParameterValueEditorBase):
         Args:
             index (QModelIndex): an index to a parameter_value in parent_model
             parent (QWidget, optional): a parent widget
+            plain (bool): if True, allow only plain value editing, otherwise allow all parameter types
         """
         editors = {ValueType.PLAIN_VALUE: PlainParameterValueEditor()}
         if not plain:

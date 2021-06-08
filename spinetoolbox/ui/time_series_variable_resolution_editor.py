@@ -25,8 +25,8 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
     QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
-from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
 from spinetoolbox.widgets.plot_widget import PlotWidget
+from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
 
 
 class Ui_TimeSeriesVariableResolutionEditor(object):
@@ -65,6 +65,7 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
 
         self.time_series_table = IndexedValueTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName(u"time_series_table")
+        self.time_series_table.horizontalHeader().setStretchLastSection(True)
 
         self.left_layout.addWidget(self.time_series_table)
 

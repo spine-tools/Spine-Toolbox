@@ -37,6 +37,7 @@ class Ui_TimePatternEditor(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.pattern_edit_table = IndexedValueTableView(TimePatternEditor)
         self.pattern_edit_table.setObjectName(u"pattern_edit_table")
+        self.pattern_edit_table.horizontalHeader().setStretchLastSection(True)
 
         self.verticalLayout.addWidget(self.pattern_edit_table)
 

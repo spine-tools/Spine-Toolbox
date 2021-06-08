@@ -25,25 +25,22 @@ import datetime
 import shutil
 import re
 import matplotlib
-from PySide2.QtGui import QCursor
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog
+from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
 from PySide2.QtGui import (
+    QCursor,
     QImageReader,
     QPixmap,
-    QPainter,
     QIcon,
     QIconEngine,
-    QFont,
     QStandardItemModel,
     QStandardItem,
     QDesktopServices,
     QKeySequence,
     QTextCursor,
     QPalette,
-    QColor,
     QSyntaxHighlighter,
     QTextCharFormat,
     QBrush,
@@ -51,9 +48,8 @@ from PySide2.QtGui import (
     QFont,
     QPainter,
 )
-import spine_engine
 from spine_engine.utils.serialization import deserialize_path
-from .config import DEFAULT_WORK_DIR, REQUIRED_SPINE_ENGINE_VERSION, PLUGINS_PATH
+from .config import DEFAULT_WORK_DIR, PLUGINS_PATH
 
 if os.name == "nt":
     import ctypes
@@ -1237,3 +1233,20 @@ def split_value_and_type(value_and_type):
     if not value_type:
         value_type = None
     return bytes(value, "UTF8"), value_type
+
+
+def inquire_index_name(model, column, title, parent_widget):
+    """Asks for indexed parameter's index name and updates model accordingly.
+
+    Args:
+        model (IndexedValueTableModel or ArrayModel): a model with header that contains index names
+        column (int): column index
+        title (str): input dialog's title
+        parent_widget (QWidget): dialog's parent widget
+    """
+    index_name = model.headerData(column, Qt.Horizontal)
+    dialog_flags = Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+    new_name, ok = QInputDialog.getText(parent_widget, title, "Index name:", text=index_name, flags=dialog_flags)
+    if not ok:
+        return
+    model.setHeaderData(column, Qt.Horizontal, new_name)

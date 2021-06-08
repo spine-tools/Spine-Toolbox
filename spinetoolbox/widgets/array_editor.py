@@ -18,10 +18,12 @@ Contains an editor widget for array type parameter values.
 
 from PySide2.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide2.QtWidgets import QWidget
+
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
 from .array_value_editor import ArrayValueEditor
 from .indexed_value_table_context_menu import ArrayTableContextMenu
 from .parameter_value_editor_base import ValueType
+from ..helpers import inquire_index_name
 from ..mvcmodels.array_model import ArrayModel
 from ..plotting import add_array_plot
 from ..spine_db_editor.widgets.custom_delegates import ParameterValueElementDelegate
@@ -40,7 +42,7 @@ class ArrayEditor(QWidget):
         super().__init__(parent)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
-        self._model = ArrayModel()
+        self._model = ArrayModel(self)
         self._model.dataChanged.connect(self._update_plot)
         self._model.modelReset.connect(self._update_plot)
         self._model.rowsInserted.connect(self._update_plot)
@@ -48,6 +50,7 @@ class ArrayEditor(QWidget):
         self._ui.array_table_view.setModel(self._model)
         self._ui.array_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.array_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.array_table_view.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
         self._ui.value_type_combo_box.currentTextChanged.connect(self._change_value_type)
         delegate = ParameterValueElementDelegate(self._ui.array_table_view)
         delegate.value_editor_requested.connect(self.open_value_editor)
@@ -133,3 +136,9 @@ class ArrayEditor(QWidget):
         except ParameterValueFormatError:
             return
         self._ui.plot_widget.canvas.draw()
+
+    @Slot(int)
+    def _open_header_editor(self, column):
+        if column != 0:
+            return
+        inquire_index_name(self._model, column, "Rename array's index", self)

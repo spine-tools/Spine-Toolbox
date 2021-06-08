@@ -44,14 +44,15 @@ class TestArrayTableContextMenu(unittest.TestCase):
         table_view = editor._ui.array_table_view
         table_view.selectRow(0)
         model = table_view.model()
-        rect = table_view.visualRect(model.index(0, 0))
+        rect = table_view.visualRect(model.index(0, 1))
         menu = ArrayTableContextMenu(editor, table_view, rect.center())
         insert_action = _find_action(menu, "Insert row after")
         self.assertIsNotNone(insert_action)
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
-        self.assertEqual(model.index(0, 0).data(), -1.0)
-        self.assertEqual(model.index(1, 0).data(), 0.0)
+        self.assertEqual(model.index(0, 1).data(), -1.0)
+        self.assertEqual(model.index(1, 1).data(), 0.0)
+        editor.deleteLater()
 
     def test_insert_row_before(self):
         editor = ArrayEditor()
@@ -59,14 +60,15 @@ class TestArrayTableContextMenu(unittest.TestCase):
         table_view = editor._ui.array_table_view
         table_view.selectRow(0)
         model = table_view.model()
-        rect = table_view.visualRect(model.index(0, 0))
+        rect = table_view.visualRect(model.index(0, 1))
         menu = ArrayTableContextMenu(editor, table_view, rect.center())
         insert_action = _find_action(menu, "Insert row before")
         self.assertIsNotNone(insert_action)
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
-        self.assertEqual(model.index(0, 0).data(), 0.0)
-        self.assertEqual(model.index(1, 0).data(), -1.0)
+        self.assertEqual(model.index(0, 1).data(), 0.0)
+        self.assertEqual(model.index(1, 1).data(), -1.0)
+        editor.deleteLater()
 
     def test_remove_rows(self):
         editor = ArrayEditor()
@@ -74,26 +76,28 @@ class TestArrayTableContextMenu(unittest.TestCase):
         table_view = editor._ui.array_table_view
         table_view.selectRow(0)
         model = table_view.model()
-        rect = table_view.visualRect(model.index(0, 0))
+        rect = table_view.visualRect(model.index(0, 1))
         menu = ArrayTableContextMenu(editor, table_view, rect.center())
         remove_action = _find_action(menu, "Remove rows")
         self.assertIsNotNone(remove_action)
         remove_action.trigger()
         self.assertEqual(model.rowCount(), 1 + 1)
-        self.assertEqual(model.index(0, 0).data(), -2.0)
+        self.assertEqual(model.index(0, 1).data(), -2.0)
+        editor.deleteLater()
 
     def test_show_value_editor(self):
         editor = ArrayEditor()
         editor.set_value(Array([-1.0]))
         table_view = editor._ui.array_table_view
         model = table_view.model()
-        rect = table_view.visualRect(model.index(0, 0))
+        rect = table_view.visualRect(model.index(0, 1))
         editor.open_value_editor = MagicMock()
         menu = ArrayTableContextMenu(editor, table_view, rect.center())
         open_action = _find_action(menu, "Open value editor...")
         self.assertIsNotNone(open_action)
         open_action.trigger()
-        editor.open_value_editor.assert_called_once_with(model.index(0, 0))
+        editor.open_value_editor.assert_called_once_with(model.index(0, 1))
+        editor.deleteLater()
 
 
 class TestIndexedValueTableContextMenu(unittest.TestCase):
@@ -118,6 +122,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), -1.1)
         self.assertEqual(model.index(1, 0).data(), "2")
         self.assertEqual(model.index(1, 1).data(), 0.0)
+        editor.deleteLater()
 
     def test_insert_row_after_with_time_series_fixed_resolution_editor(self):
         editor = TimeSeriesFixedResolutionEditor()
@@ -135,6 +140,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), -1.1)
         self.assertEqual(model.index(1, 0).data(), "2020-11-12T14:25:00")
         self.assertEqual(model.index(1, 1).data(), 0.0)
+        editor.deleteLater()
 
     def test_insert_row_after_with_time_series_variable_resolution_editor(self):
         editor = TimeSeriesVariableResolutionEditor()
@@ -152,6 +158,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), -1.1)
         self.assertEqual(model.index(1, 0).data(), "2020-11-11T15:25:00")
         self.assertEqual(model.index(1, 1).data(), 0.0)
+        editor.deleteLater()
 
     def test_insert_row_before_with_time_pattern_editor(self):
         editor = TimePatternEditor()
@@ -169,6 +176,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), 0.0)
         self.assertEqual(model.index(1, 0).data(), "1d")
         self.assertEqual(model.index(1, 1).data(), -1.1)
+        editor.deleteLater()
 
     def test_insert_row_before_with_time_series_fixed_resolution_editor(self):
         editor = TimeSeriesFixedResolutionEditor()
@@ -186,6 +194,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), 0.0)
         self.assertEqual(model.index(1, 0).data(), "2020-11-12T14:25:00")
         self.assertEqual(model.index(1, 1).data(), -1.1)
+        editor.deleteLater()
 
     def test_insert_row_before_with_time_series_variable_resolution_editor(self):
         editor = TimeSeriesVariableResolutionEditor()
@@ -203,6 +212,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), 0.0)
         self.assertEqual(model.index(1, 0).data(), "2020-11-11T14:25:00")
         self.assertEqual(model.index(1, 1).data(), -1.1)
+        editor.deleteLater()
 
     def test_remove_rows_with_time_pattern_editor(self):
         editor = TimePatternEditor()
@@ -218,6 +228,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1 + 1)
         self.assertEqual(model.index(0, 0).data(), "2d")
         self.assertEqual(model.index(0, 1).data(), -2.2)
+        editor.deleteLater()
 
     def test_remove_rows_with_time_series_fixed_resolution_editor(self):
         editor = TimeSeriesFixedResolutionEditor()
@@ -233,6 +244,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1 + 1)
         self.assertEqual(model.index(0, 0).data(), "2020-11-11T14:25:00")
         self.assertEqual(model.index(0, 1).data(), -2.2)
+        editor.deleteLater()
 
     def test_remove_rows_with_time_series_variable_resolution_editor(self):
         editor = TimeSeriesVariableResolutionEditor()
@@ -250,6 +262,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1 + 1)
         self.assertEqual(model.index(0, 0).data(), "2020-11-12T14:25:00")
         self.assertEqual(model.index(0, 1).data(), -2.2)
+        editor.deleteLater()
 
 
 class TestMapTableContextMenu(unittest.TestCase):
@@ -273,6 +286,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 0).data(), "a")
         self.assertEqual(model.index(0, 1).data(), None)
         self.assertEqual(model.index(0, 2).data(), -1.0)
+        editor.deleteLater()
 
     def test_insert_column_before(self):
         editor = MapEditor()
@@ -289,6 +303,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 0).data(), None)
         self.assertEqual(model.index(0, 1).data(), "a")
         self.assertEqual(model.index(0, 2).data(), -1.0)
+        editor.deleteLater()
 
     def test_insert_row_after(self):
         editor = MapEditor()
@@ -306,6 +321,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), -1.0)
         self.assertEqual(model.index(1, 0).data(), "a")
         self.assertEqual(model.index(1, 1).data(), -1.0)
+        editor.deleteLater()
 
     def test_insert_row_before(self):
         editor = MapEditor()
@@ -323,6 +339,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(), None)
         self.assertEqual(model.index(1, 0).data(), "a")
         self.assertEqual(model.index(1, 1).data(), -1.0)
+        editor.deleteLater()
 
     def test_remove_columns(self):
         editor = MapEditor()
@@ -337,6 +354,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         insert_action.trigger()
         self.assertEqual(model.columnCount(), 1 + 1)
         self.assertEqual(model.index(0, 0).data(), -1.0)
+        editor.deleteLater()
 
     def test_remove_rows(self):
         editor = MapEditor()
@@ -350,6 +368,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(insert_action)
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 1)
+        editor.deleteLater()
 
     def test_show_value_editor(self):
         editor = MapEditor()
@@ -363,6 +382,7 @@ class TestMapTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(open_action)
         open_action.trigger()
         editor.open_value_editor.assert_called_once_with(model.index(0, 0))
+        editor.deleteLater()
 
 
 def _find_action(menu, text):

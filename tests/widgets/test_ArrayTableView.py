@@ -19,7 +19,7 @@ Unit tests for ArrayTableView class.
 import csv
 from io import StringIO
 import unittest
-from PySide2.QtCore import QItemSelectionModel
+from PySide2.QtCore import QItemSelectionModel, QObject
 from PySide2.QtWidgets import QApplication
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel
@@ -33,43 +33,48 @@ class TestArrayTableView(unittest.TestCase):
             QApplication()
 
     def setUp(self):
+        self._parent = QObject()
         self._original_clip = QApplication.clipboard().text()
 
     def tearDown(self):
+        self._parent.deleteLater()
         QApplication.clipboard().setText(self._original_clip)
 
     def test_copy_without_selection_returns_false(self):
-        model = ArrayModel()
+        model = ArrayModel(self._parent)
         table_view = ArrayTableView()
         table_view.setModel(model)
         self.assertFalse(table_view.copy())
+        table_view.deleteLater()
 
     def test_copy_single_non_numeric_cell(self):
-        model = ArrayModel()
+        model = ArrayModel(self._parent)
         table_view = ArrayTableView()
         table_view.setModel(model)
         model.reset(Array(["a"]))
-        index = model.index(0, 0)
+        index = model.index(0, 1)
         table_view.selectionModel().select(index, QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
         array = [row for row in csv.reader(clip)]
         self.assertEqual(array, [["a"]])
+        table_view.deleteLater()
 
     def test_copy_single_numeric_cell(self):
-        model = ArrayModel()
+        model = ArrayModel(self._parent)
         table_view = ArrayTableView()
         table_view.setModel(model)
         model.reset(Array([5.5]))
-        index = model.index(0, 0)
+        index = model.index(0, 1)
         table_view.selectionModel().select(index, QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
         array = [row for row in csv.reader(clip)]
         self.assertEqual(array, [["5.5"]])
+        table_view.deleteLater()
 
     def test_paste_non_numeric_to_empty_table(self):
-        model = ArrayModel()
+        model = ArrayModel(self._parent)
         model.set_array_type(str)
         table_view = ArrayTableView()
         table_view.setModel(model)
@@ -79,9 +84,10 @@ class TestArrayTableView(unittest.TestCase):
         self.assertTrue(table_view.paste())
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.array(), Array(["a"]))
+        table_view.deleteLater()
 
     def test_paste_numeric_to_empty_table(self):
-        model = ArrayModel()
+        model = ArrayModel(self._parent)
         table_view = ArrayTableView()
         table_view.setModel(model)
         index = model.index(0, 0)
@@ -90,9 +96,10 @@ class TestArrayTableView(unittest.TestCase):
         self.assertTrue(table_view.paste())
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.array(), Array([2.3]))
+        table_view.deleteLater()
 
     def test_paste_multiple_rows_to_single_row_selection(self):
-        model = ArrayModel()
+        model = ArrayModel(self._parent)
         model.reset(Array([5.5]))
         table_view = ArrayTableView()
         table_view.setModel(model)
@@ -102,9 +109,10 @@ class TestArrayTableView(unittest.TestCase):
         self.assertTrue(table_view.paste())
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.array(), Array([2.3, -2.3]))
+        table_view.deleteLater()
 
     def test_paste_only_what_fits_selection(self):
-        model = ArrayModel()
+        model = ArrayModel(self._parent)
         model.reset(Array([5.5, -5.5]))
         table_view = ArrayTableView()
         table_view.setModel(model)
@@ -114,6 +122,7 @@ class TestArrayTableView(unittest.TestCase):
         self.assertTrue(table_view.paste())
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.array(), Array([2.3, -2.3]))
+        table_view.deleteLater()
 
     @staticmethod
     def _write_to_clipboard(data):

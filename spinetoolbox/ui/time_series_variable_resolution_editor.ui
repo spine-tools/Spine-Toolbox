@@ -65,7 +65,11 @@
         </layout>
        </item>
        <item>
-        <widget class="IndexedValueTableView" name="time_series_table"/>
+        <widget class="IndexedValueTableView" name="time_series_table">
+         <attribute name="horizontalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -76,15 +80,15 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>IndexedValueTableView</class>
-   <extends>QTableView</extends>
-   <header>spinetoolbox/widgets/custom_qtableview.h</header>
-  </customwidget>
-  <customwidget>
    <class>PlotWidget</class>
    <extends>QWidget</extends>
    <header>spinetoolbox/widgets/plot_widget.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>IndexedValueTableView</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
