@@ -31,15 +31,22 @@ Introduction
 Model assumptions
 =================
 
-Two units take fuel from a source node and release electricity to another node that has a demand. 
+- Two power plants take fuel from a source node and release electricity to another node in order to supply a demand.
 
-Modelling choices
-=================
+- Power plant 'a' has a capacity of 100 MWh and a variable operating cost of 25 euro/MWh.
+
+- Power plant 'b' has a capacity of 200 MWh and a variable operating cost of 50 euro/MWh.
+
+- The demand at the electricity node is 150 MWh.
+
+- The fuel node is able to provide infinite energy.
+
+- Both power plants convert fuel to electricity at a 1:1 ratio.
 
 
 .. image:: img/simple_system_schematic.png
    :align: center
-   :scale: 50%
+   :scale: 80%
 
 Guide
 -----
@@ -51,8 +58,13 @@ Installing requirements
    <https://github.com/Spine-project/Spine-Toolbox/>`_ and `SpineOpt 
    <https://github.com/Spine-project/SpineOpt.jl>`_ development versions.
 
-Follow the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_ 
-to install Spine Toolbox and SpineOpt in your system.
+- If you haven't, follow the instructions `here <https://github.com/Spine-project/SpineOpt.jl#installation>`_ 
+  to install Spine Toolbox and SpineOpt in your system.
+
+- If you already have Spine Toolbox and SpineOpt installed, please follow the instructions
+  `here <https://github.com/Spine-project/Spine-Toolbox/blob/master/README.md#upgrading>`_
+  and `here <https://github.com/Spine-project/SpineOpt.jl#upgrading>`_ to upgrade to the latest versions.
+
 
 Installing the SpineOpt plugin
 ==============================
