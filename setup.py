@@ -60,7 +60,7 @@ setup(
     author="Spine Project consortium",
     author_email="spine_info@vtt.fi",
     url="https://github.com/Spine-project/Spine-Toolbox",
-    packages=find_packages(exclude=("tests",)),
+    packages=find_packages(exclude=("tests*", "execution_tests*")),
     entry_points={"console_scripts": ["spinetoolbox=spinetoolbox.main:main"]},
     include_package_data=True,
     license="LGPL-3.0-or-later",
