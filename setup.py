@@ -31,7 +31,7 @@ install_requires = [
     "datapackage >= 1.15.2",
     "jupyter-client >= 6.1.12",
     "qtconsole >= 5.0.3",
-    "sqlalchemy < 1.4",
+    "sqlalchemy >=1.3, <1.4",
     "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
     "spine_engine >= {}".format(REQUIRED_SPINE_ENGINE_VERSION),
     "numpy >= 1.20.2",
