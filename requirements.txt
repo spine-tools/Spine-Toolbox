@@ -34,7 +34,7 @@ jupyter-client >= 6.1.12
 jupyter-core >= 4.7.1
 kiwisolver >= 1.3.1
 linear-tsv >= 1.1.0
-matplotlib!=3.2.1, <3.3.1
+matplotlib!=3.2.1, >3.0, <3.3.1
 # matplotlib == 3.2.1 is broken; importing e.g. networkx after matplotlib.backends.backend_qt5agg backtraces
 # also, matplotlib == 3.2.1 requires shiboken2 but does not list it in its dependencies
 # matplotlib 3.3.1 fails to install properly from pip, see
@@ -59,7 +59,7 @@ pyrsistent >= 0.17.0
 pyside2 >=5.14, <5.15
 python-editor >= 1.0.4
 python-gnupg >= 0.4.7
-pytz >= 2021.1
+pytz >= 2020.5
 pytzdata >= 2020.1
 pywin32 == 225;sys_platform=="win32"
 # 'ImportError: DLL load failed while importing win32api' error happens on Conda Python 3.8 if pywin32>=227.
