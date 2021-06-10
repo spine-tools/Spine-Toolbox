@@ -229,7 +229,7 @@ class SpineEngineWorker(QObject):
             item.persistent_console_requested.emit(msg["filter_id"], msg["key"], msg["language"])
         elif msg["type"] == "persistent_failed_to_start":
             msg_text = (
-                f"\tUnable to start persistent process <b>{msg['args']}</b>: {msg['error']}."
+                f"Unable to start persistent process <b>{msg['args']}</b>: {msg['error']}."
                 "Please go to Settings->Tools and check your setup."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
@@ -251,12 +251,16 @@ class SpineEngineWorker(QObject):
             item.jupyter_console_requested.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
-                f"\tUnable to find specification for kernel <b>{msg['kernel_name']}</b>. "
+                f"Unable to find specification for kernel <b>{msg['kernel_name']}</b>. "
                 "Please go to Settings->Tools to select a valid kernel."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
-            msg_text = f"\tExecution on kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
+            msg_text = f"Execution on kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg["type"] == "kernel_spec_exe_not_found":
+            msg_text = f"Invalid kernel spec ({msg['kernel_name']}). File <b>{msg['kernel_exe_path']}</b> " \
+                       f"does not exist."
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_started":
             self._event_message_arrived.emit(
