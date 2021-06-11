@@ -96,4 +96,4 @@ wget >= 3.2
 xlrd >= 2.0.1
 -e .
 # Spine Items requires Spine Toolbox, so install that last
-git+https://github.com/Spine-project/spine-items.git#egg=spine_items
+spine_items >=0.7.6rc1
