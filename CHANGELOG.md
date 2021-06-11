@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Data Transformer now supports parameter value transformations.
 - Project execution shortcuts: F5 to execute all DAGs, F6 to execute selected items
   and F7 to stop execution.
+- Time series, maps and other compound values have gained the ability to have names for their indexes.
+  Index names can be edited in parameter value editors and imported using Importer.
 
 ### Changed
 - Data Transformer's specification editor has now a new interface.
