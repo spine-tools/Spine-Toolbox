@@ -241,9 +241,9 @@ class SpineEngineWorker(QObject):
             item.persistent_stderr_available.emit(msg["filter_id"], msg["data"])
         elif msg["type"] == "execution_started":
             self._event_message_arrived.emit(
-                item, msg["filter_id"], "msg", f"\tStarting execution on persistent process <b>{msg['args']}</b>"
+                item, msg["filter_id"], "msg", f"*** Starting execution on persistent process <b>{msg['args']}</b> ***"
             )
-            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages.")
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
 
     def _handle_kernel_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
@@ -251,8 +251,8 @@ class SpineEngineWorker(QObject):
             item.jupyter_console_requested.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
-                f"Unable to find specification for kernel <b>{msg['kernel_name']}</b>. "
-                "Please go to Settings->Tools to select a valid kernel."
+                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>. "
+                "Please go to Settings->Tools to select a valid kernel spec."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
@@ -264,9 +264,9 @@ class SpineEngineWorker(QObject):
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_started":
             self._event_message_arrived.emit(
-                item, msg["filter_id"], "msg", f"\tStarting execution on kernel <b>{msg['kernel_name']}</b>"
+                item, msg["filter_id"], "msg", f"*** Starting execution on kernel spec <b>{msg['kernel_name']}</b> ***"
             )
-            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages.")
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
 
     def _handle_process_msg(self, data):
         self._do_handle_process_msg(**data)
