@@ -17,6 +17,7 @@ Conda environment widget.
 """
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Slot, Qt
+from PySide2.QtGui import QStandardItemModel, QStandardItem
 from spinetoolbox.config import MAINWINDOW_SS
 from spinetoolbox.cksm import CondaKernelSpecManager
 # import environment_kernels
@@ -42,6 +43,10 @@ class CondaEnv(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.connect_signals()
         self.ksm = CondaKernelSpecManager()
+        self.model = QStandardItemModel()
+        self.ui.listView.setModel(self.model)
+        all_specs = self.ksm._all_specs()
+        self.populate_model(all_specs.keys())
         # self.ksm.conda_env_dirs.append("~/.julia/conda/3/envs/")
 
     def connect_signals(self):
@@ -50,8 +55,15 @@ class CondaEnv(QWidget):
         self.ui.buttonBox.rejected.connect(self.close)
         self.ui.toolButton_refresh.clicked.connect(self.refresh)
 
+    def populate_model(self, items):
+        self.model.clear()
+        for i in items:
+            item = QStandardItem(i)
+            self.model.appendRow(item)
+
     @Slot(bool)
     def refresh(self, _checked=False):
+        self.model.clear()
         kernel_specs = self.ksm.find_kernel_specs()
         print("All specs\n")
         for k, v in kernel_specs.items():
@@ -66,6 +78,7 @@ class CondaEnv(QWidget):
         all_specs = self.ksm._all_specs()
         for k, v in all_specs.items():
             print(f"{k}: {v}")
+        self.populate_model(all_specs.keys())
 
         # kernel_specs_for_envs = self.ksm.find_kernel_specs_for_envs()
         # all_kernel_specs_for_envs = self.ksm.get_all_kernel_specs_for_envs()

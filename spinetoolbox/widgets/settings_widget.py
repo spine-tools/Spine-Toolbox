@@ -38,6 +38,7 @@ from ..widgets.kernel_editor import (
     find_python_kernels,
     find_julia_kernels,
 )
+from ..widgets.conda_envs import CondaEnv
 from ..helpers import (
     select_python_interpreter,
     select_julia_executable,
@@ -235,6 +236,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self._kernel_editor = None
+        self._conda_env_editor = None
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
@@ -267,6 +269,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
         self.ui.checkBox_use_python_kernel.clicked.connect(self._update_python_widgets_enabled)
         self.ui.checkBox_use_julia_kernel.clicked.connect(self._update_julia_widgets_enabled)
+        self.ui.pushButton_conda.clicked.connect(self.show_conda_editor)
 
     @Slot(bool)
     def _update_python_widgets_enabled(self, _=False):
@@ -356,6 +359,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def browse_python_button_clicked(self, checked=False):
         """Calls static method that shows a file browser for selecting Python interpreter."""
         select_python_interpreter(self, self.ui.lineEdit_python_path)
+
+    @Slot(bool)
+    def show_conda_editor(self, checked=False):
+        self._conda_env_editor = CondaEnv(self)
+        self._conda_env_editor.show()
 
     @Slot(bool)
     def show_python_kernel_editor(self, checked=False):
