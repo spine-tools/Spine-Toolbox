@@ -24,7 +24,7 @@ import json
 import pathlib
 import numpy as np
 from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, QModelIndex, QPoint, Qt, Signal, Slot, QSettings, QUrl
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -84,6 +84,7 @@ from .project_commands import (
     RemoveProjectItemsCommand,
 )
 from .plugin_manager import PluginManager
+from .cksm import CondaKernelSpecManager
 
 
 class ToolboxUI(QMainWindow):
@@ -134,6 +135,7 @@ class ToolboxUI(QMainWindow):
         self.project_item_model = None
         self.specification_model = None
         self.filtered_spec_factory_models = {}
+        self.conda_env_model = QStandardItemModel()
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.active_link = None
@@ -1229,6 +1231,14 @@ class ToolboxUI(QMainWindow):
         date and time is prepended to every Event Log message."""
         d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         return d != 0
+
+    def refresh_conda_env_model(self):
+        self.conda_env_model.clear()
+        ksm = CondaKernelSpecManager()
+        specs = ksm._all_specs()
+        for i in specs.keys():
+            item = QStandardItem(i)
+            self.conda_env_model.appendRow(item)
 
     @Slot(str)
     def add_message(self, msg):
