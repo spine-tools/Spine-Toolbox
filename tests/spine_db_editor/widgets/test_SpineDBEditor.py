@@ -95,6 +95,7 @@ class TestSpineDBEditor(
                     "parameter_id",
                     "parameter_name",
                     "value",
+                    "type",
                 ],
                 args,
             )
@@ -118,6 +119,7 @@ class TestSpineDBEditor(
                     "parameter_id",
                     "parameter_name",
                     "value",
+                    "type",
                 ],
                 args,
             )
@@ -212,7 +214,8 @@ class TestSpineDBEditor(
             cls.nemo_object["name"],
             cls.water_parameter["id"],
             cls.water_parameter["parameter_name"],
-            '"salt"',
+            b'"salt"',
+            None,
         )
         cls.pluto_breed = cls._object_parameter_value(
             2,
@@ -222,7 +225,8 @@ class TestSpineDBEditor(
             cls.pluto_object["name"],
             cls.breed_parameter["id"],
             cls.breed_parameter["parameter_name"],
-            '"bloodhound"',
+            b'"bloodhound"',
+            None,
         )
         cls.scooby_breed = cls._object_parameter_value(
             3,
@@ -232,7 +236,8 @@ class TestSpineDBEditor(
             cls.scooby_object["name"],
             cls.breed_parameter["id"],
             cls.breed_parameter["parameter_name"],
-            '"great dane"',
+            b'"great dane"',
+            None,
         )
         cls.nemo_pluto_relative_speed = cls._relationship_parameter_value(
             4,
@@ -245,7 +250,8 @@ class TestSpineDBEditor(
             cls.nemo_pluto_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
             cls.relative_speed_parameter["parameter_name"],
-            "-1",
+            b"-1",
+            None,
         )
         cls.nemo_scooby_relative_speed = cls._relationship_parameter_value(
             5,
@@ -258,7 +264,8 @@ class TestSpineDBEditor(
             cls.nemo_scooby_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
             cls.relative_speed_parameter["parameter_name"],
-            "5",
+            b"5",
+            None,
         )
         cls.pluto_nemo_combined_mojo = cls._relationship_parameter_value(
             6,
@@ -271,7 +278,8 @@ class TestSpineDBEditor(
             cls.pluto_nemo_rel["object_name_list"],
             cls.combined_mojo_parameter["id"],
             cls.combined_mojo_parameter["parameter_name"],
-            "100",
+            b"100",
+            None,
         )
 
     def setUp(self):

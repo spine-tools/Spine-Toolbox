@@ -53,7 +53,7 @@
      <x>0</x>
      <y>0</y>
      <width>1322</width>
-     <height>27</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -999,6 +999,42 @@
    </property>
    <property name="toolTip">
     <string>Rename project</string>
+   </property>
+  </action>
+  <action name="actionExecute_project">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/play-circle-solid.svg</normaloff>:/icons/menu_icons/play-circle-solid.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Execute project</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
+  </action>
+  <action name="actionExecute_selection">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/play-circle-regular.svg</normaloff>:/icons/menu_icons/play-circle-regular.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Execute selection</string>
+   </property>
+   <property name="shortcut">
+    <string>F6</string>
+   </property>
+  </action>
+  <action name="actionStop_execution">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/stop-circle-regular.svg</normaloff>:/icons/menu_icons/stop-circle-regular.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Stop execution</string>
+   </property>
+   <property name="shortcut">
+    <string>F7</string>
    </property>
   </action>
  </widget>

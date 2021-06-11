@@ -613,7 +613,7 @@ class ParameterValueListTreeView(ItemTreeView):
         """Creates a context menu for this view."""
         super().populate_context_menu()
         self._menu.addSeparator()
-        self._open_in_editor_action = self._menu.addAction("Open editor...", self.open_in_editor)
+        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
 
     def update_actions_availability(self, item):
         """See base class."""
@@ -622,7 +622,7 @@ class ParameterValueListTreeView(ItemTreeView):
     def open_in_editor(self):
         """Opens the parameter_value editor for the first selected cell."""
         index = self.currentIndex()
-        self._spine_db_editor.show_parameter_value_editor(index)
+        self._spine_db_editor.show_parameter_value_editor(index, plain=True)
 
     def remove_selected(self):
         """See base class."""
@@ -649,7 +649,7 @@ class ParameterValueListTreeView(ItemTreeView):
                         db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
                         continue
                     if new_value_list != curr_value_list:
-                        item = {"id": list_item.id, "value_list": new_value_list}
+                        item = {"id": list_item.id, "value_list": [bytes(val, "UTF-8") for val in new_value_list]}
                         db_map_data_to_upd[db_item.db_map].append(item)
                 else:
                     # WIP lists, just remove everything selected

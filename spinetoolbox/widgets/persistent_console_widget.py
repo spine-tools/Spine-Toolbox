@@ -427,7 +427,7 @@ class CommandIssuer(PersistentRunnableBase):
     def __init__(self, engine_server_address, persistent_key, command):
         """
         Args:
-            engine_server_address (str): address of the remote engine, currently should always an empty string
+            engine_server_address (str): address of the remote engine, currently should always be an empty string
             persistent_key (tuple): persistent process identifier
             command (str): command to execute
         """

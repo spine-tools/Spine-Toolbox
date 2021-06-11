@@ -152,14 +152,14 @@ version 5.15 (yet).
 
 If you installed Spine Toolbox *without Conda* on **Python 3.8 on Windows**, 
 you may see this error when trying to execute a project item. The cause of this error 
-is the package `pywin32` version 225. To fix this error, upgrade the package with the 
-following command
+is the package `pywin32` version 225. To fix this error, upgrade the package to version 
+300 using the following command
 
 ```shell
-pip install --upgrade pywin32
+pip install --upgrade "pywin32==300"
 ```
 
-to the latest version and restart the application.
+After the process has finished, restart the application. **Note: pywin32 v301 does not work**.
 
 ## Contribution Guide
 

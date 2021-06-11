@@ -50,7 +50,8 @@ Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine T
   project.
 - **Project item** Spine Toolbox projects consist of project items. Project items together with
   connections are used to build Directed Acyclic Graphs (DAG). Project items act as nodes and
-  connections act as edges in the DAG.
+  connections act as edges in the DAG. See :ref:`Project Items` for an up-to-date list on project
+  items available in Spine Toolbox.
 - **Scenario** A scenario is a meaningful data set for the target tool.
 - **Spine data structure** Spine data structure defines the format for storing and moving data within
   Spine Toolbox. A generic data structure allows representation of many different modelling entities.

@@ -7,12 +7,35 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 - Data Transformer now supports parameter value transformations.
+- Project execution shortcuts: F5 to execute all DAGs, F6 to execute selected items
+  and F7 to stop execution.
 
 ### Changed
+- Data Transformer's specification editor has now a new interface.
+- Parameter renaming in Data Transformer requires now entity class names to identify the parameters.
+  Data Transformer's icon will show a notification if class names are missing.
+
+### Deprecated
+- GdxExporter has been deprecated. Use the general purpose Exporter item instead.
+  GdxExporter will be removed in a future release. Please replace existing items by Exporter.
 
 ### Removed
 
 ### Fixed
+
+## [0.6.0-final.2] - 2021-06-03
+
+### Fixed
+- [win-x64] Running Python or Julia Tools does not open an extra console window anymore
+
+### Security
+- urllib3 v1.26.5 now required because of a security vulnerability in earlier versions
+
+## [0.6.0-final.1] - 2021-06-01
+
+### Fixed
+- Event Log and Item Execution Logs now automatically scroll to the bottom when there are new messages
+- [win-x64] Resolve correct GAMS, Python, and Julia paths in Settings->Tools
 
 ## [0.6.0-final.0] - 2021-05-07
 

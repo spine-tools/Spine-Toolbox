@@ -40,8 +40,11 @@ class TestIndexedValueTableView(unittest.TestCase):
             False,
             False,
         )
-        model = TimeSeriesModelVariableResolution(series)
-        self._table_view.setModel(model)
+        self._model = TimeSeriesModelVariableResolution(series, self._table_view)
+        self._table_view.setModel(self._model)
+
+    def tearDown(self):
+        self._table_view.deleteLater()
 
     def test_copy(self):
         selection_model = self._table_view.selectionModel()

@@ -32,23 +32,26 @@ from ..mvcmodels.shared import PARSED_ROLE
 class ParameterValueEditor(ParameterValueEditorBase):
     """Dialog for editing parameter values in Database editor."""
 
-    def __init__(self, index, parent=None):
+    def __init__(self, index, parent=None, plain=False):
         """
         Args:
             index (QModelIndex): an index to a parameter_value in parent_model
             parent (QWidget, optional): a parent widget
+            plain (bool): if True, allow only plain value editing, otherwise allow all parameter types
         """
-        editors = {
-            ValueType.PLAIN_VALUE: PlainParameterValueEditor(),
-            ValueType.MAP: MapEditor(),
-            ValueType.TIME_SERIES_FIXED_RESOLUTION: TimeSeriesFixedResolutionEditor(),
-            ValueType.TIME_SERIES_VARIABLE_RESOLUTION: TimeSeriesVariableResolutionEditor(),
-            ValueType.TIME_PATTERN: TimePatternEditor(),
-            ValueType.ARRAY: ArrayEditor(),
-            ValueType.DATETIME: DatetimeEditor(),
-            ValueType.DURATION: DurationEditor(),
-        }
-
+        editors = {ValueType.PLAIN_VALUE: PlainParameterValueEditor()}
+        if not plain:
+            editors.update(
+                {
+                    ValueType.MAP: MapEditor(),
+                    ValueType.TIME_SERIES_FIXED_RESOLUTION: TimeSeriesFixedResolutionEditor(),
+                    ValueType.TIME_SERIES_VARIABLE_RESOLUTION: TimeSeriesVariableResolutionEditor(),
+                    ValueType.TIME_PATTERN: TimePatternEditor(),
+                    ValueType.ARRAY: ArrayEditor(),
+                    ValueType.DATETIME: DatetimeEditor(),
+                    ValueType.DURATION: DurationEditor(),
+                }
+            )
         super().__init__(index, editors, parent)
         model = index.model()
         self._index = index
@@ -59,10 +62,10 @@ class ParameterValueEditor(ParameterValueEditorBase):
     def _set_data(self, value):
         """See base class."""
         try:
-            value = to_database(value)
+            value_type_tup = to_database(value)
         except ParameterValueFormatError as error:
             message = f"Cannot set value: {error}"
             QMessageBox.warning(self, "Parameter Value error", message)
             return False
-        self.set_data_delayed(value)
+        self.set_data_delayed(value_type_tup)
         return True

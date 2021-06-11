@@ -291,6 +291,7 @@ class TestSpineDBFetcher(unittest.TestCase):
                         'parameter_tag_id_list': None,
                         'parameter_tag_list': None,
                         'default_value': None,
+                        'default_type': None,
                         'description': None,
                     }
                 ]
@@ -300,6 +301,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             self._db_mngr.get_item(self._db_map, "parameter_definition", 1),
             {
                 'default_value': None,
+                'default_type': None,
                 'description': None,
                 'entity_class_id': 1,
                 'id': 1,
@@ -336,7 +338,8 @@ class TestSpineDBFetcher(unittest.TestCase):
                         'parameter_name': 'param',
                         'alternative_id': 1,
                         'alternative_name': 'Base',
-                        'value': '2.3',
+                        'value': b'2.3',
+                        'type': None,
                     }
                 ]
             }
@@ -355,7 +358,8 @@ class TestSpineDBFetcher(unittest.TestCase):
                 'object_name': 'obj',
                 'parameter_id': 1,
                 'parameter_name': 'param',
-                'value': '2.3',
+                'value': b'2.3',
+                'type': None,
             },
         )
 

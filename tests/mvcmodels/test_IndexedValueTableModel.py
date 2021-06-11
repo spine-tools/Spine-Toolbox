@@ -26,6 +26,7 @@ class MockValue:
     def __init__(self, indexes, values):
         self.indexes = indexes
         self.values = values
+        self.index_name = "idx"
 
     def __eq__(self, other):
         if not isinstance(other, MockValue):
@@ -44,7 +45,7 @@ class TestIndexedValueTableModel(unittest.TestCase):
 
     def setUp(self):
         self._value = MockValue(['a', 'b', 'c'], [7, 5, 3])
-        self._model = IndexedValueTableModel(self._value, "Index", "Value")
+        self._model = IndexedValueTableModel(self._value, None)
 
     def test_column_count_is_2(self):
         self.assertEqual(self._model.columnCount(), 2)
@@ -60,8 +61,12 @@ class TestIndexedValueTableModel(unittest.TestCase):
         self.assertEqual(self._model.data(model_index), 3)
 
     def test_horizontal_header_data(self):
-        self.assertEqual(self._model.headerData(0), 'Index')
+        self.assertEqual(self._model.headerData(0), 'idx')
         self.assertEqual(self._model.headerData(1), 'Value')
+
+    def test_set_horizontal_header_data(self):
+        self._model.setHeaderData(0, Qt.Horizontal, "new idx")
+        self.assertEqual(self._model.headerData(0), 'new idx')
 
     def test_vertical_header_data_is_row_number(self):
         for row in range(3):

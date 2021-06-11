@@ -89,7 +89,7 @@ class SpineToolboxProject(MetaObject):
         super().__init__(name, description)
         self._toolbox = toolbox
         self._project_items = dict()
-        self._specifications = {i: spec for i, spec in enumerate(plugin_specs)}
+        self._specifications = dict(enumerate(plugin_specs))
         self._connections = list()
         self._logger = logger
         self._settings = settings
@@ -216,7 +216,7 @@ class SpineToolboxProject(MetaObject):
         if not project_info:
             return False
         if not ProjectUpgrader(self).is_valid(LATEST_PROJECT_VERSION, project_info):  # Check project info validity
-            self.logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
+            self._logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
             return False
         # Parse project info
         self.set_name(project_info["project"]["name"])
@@ -253,10 +253,10 @@ class SpineToolboxProject(MetaObject):
                 try:
                     project_dict = json.load(fh)
                 except json.decoder.JSONDecodeError:
-                    self.logger.msg_error.emit(f"Error in project file <b>{load_path}</b>. Invalid JSON.")
+                    self._logger.msg_error.emit(f"Error in project file <b>{load_path}</b>. Invalid JSON.")
                     return None
         except OSError:
-            self.logger.msg_error.emit(f"Project file <b>{load_path}</b> missing")
+            self._logger.msg_error.emit(f"Project file <b>{load_path}</b> missing")
             return None
         return project_dict
 

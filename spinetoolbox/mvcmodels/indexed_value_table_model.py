@@ -23,18 +23,16 @@ EXPANSE_COLOR = QColor(245, 245, 245)
 
 
 class IndexedValueTableModel(QAbstractTableModel):
-    def __init__(self, value, index_header, value_header):
-        """A base class for time pattern and time series models.
+    """A base class for time pattern and time series models."""
 
-        Args:
-            value (TimePattern, TimeSeriesFixedStep, TimeSeriesVariableStep): a parameter_value
-            index_header (str): a header for the index column
-            value_header (str): a header for the value column
+    def __init__(self, value, parent):
         """
-        super().__init__(parent=None)
+        Args:
+            value (IndexedValue): a parameter_value
+            parent (QObject): parent object
+        """
+        super().__init__(parent)
         self._value = value
-        self._index_header = index_header
-        self._value_header = value_header
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns which is two."""
@@ -61,7 +59,7 @@ class IndexedValueTableModel(QAbstractTableModel):
             return None
         if orientation == Qt.Vertical:
             return section + 1
-        return self._index_header if section == 0 else self._value_header
+        return (self._value.index_name, "Value")[section]
 
     def is_expanse_row(self, row):
         """
@@ -84,6 +82,13 @@ class IndexedValueTableModel(QAbstractTableModel):
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows."""
         return len(self._value) + 1
+
+    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
+        if role != Qt.EditRole or section != 0 or orientation != Qt.Horizontal or not value:
+            return False
+        self._value.index_name = value
+        self.headerDataChanged.emit(orientation, section, section)
+        return True
 
     @property
     def value(self):

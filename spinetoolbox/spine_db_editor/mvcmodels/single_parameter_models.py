@@ -79,8 +79,8 @@ class SingleParameterModel(MinimalTableModel):
         ]
 
     @property
-    def json_fields(self):
-        return {"parameter_definition": ["default_value"], "parameter_value": ["value"]}[self.item_type]
+    def value_field(self):
+        return {"parameter_definition": "default_value", "parameter_value": "value"}[self.item_type]
 
     @property
     def fixed_fields(self):
@@ -185,7 +185,7 @@ class SingleParameterModel(MinimalTableModel):
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
         # Display, edit, tool tip, alignment role of 'json fields'
-        if field in self.json_fields and role in (
+        if field == self.value_field and role in (
             Qt.DisplayRole,
             Qt.EditRole,
             Qt.ToolTipRole,
@@ -205,7 +205,7 @@ class SingleParameterModel(MinimalTableModel):
                     return description
             data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
-                data = data.replace(",", self.db_mngr._GROUP_SEP)
+                data = data.replace(",", self.db_mngr.GROUP_SEP)
             return data
         # Decoration role
 

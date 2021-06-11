@@ -245,7 +245,6 @@ class ProjectItemSpecArray(QToolBar):
         self._button_visible.clicked.connect(self.toggle_visibility)
         self._button_new.clicked.connect(self._show_spec_form)
         self.orientationChanged.connect(self._update_button_geom)
-        self.show()
 
     def set_colored_icons(self, colored):
         self._icon.set_colored(colored)

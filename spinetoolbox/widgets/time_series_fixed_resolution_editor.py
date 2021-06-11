@@ -19,12 +19,14 @@ Contains logic for the fixed step time series editor widget.
 from datetime import datetime
 from PySide2.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
 from PySide2.QtWidgets import QCalendarWidget, QWidget
+
 from spinedb_api import (
     duration_to_relativedelta,
     ParameterValueFormatError,
     relativedelta_to_duration,
     TimeSeriesFixedResolution,
 )
+from ..helpers import inquire_index_name
 from ..plotting import add_time_series_plot
 from ..mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from .indexed_value_table_context_menu import IndexedValueTableContextMenu
@@ -65,7 +67,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         resolution = [duration_to_relativedelta("1 hour")]
         values = 2 * [0.0]
         initial_value = TimeSeriesFixedResolution(start, resolution, values, False, False)
-        self._model = TimeSeriesModelFixedResolution(initial_value)
+        self._model = TimeSeriesModelFixedResolution(initial_value, self)
         self._model.dataChanged.connect(self._update_plot)
         self._model.modelReset.connect(self._update_plot)
         self._model.rowsInserted.connect(self._update_plot)
@@ -80,6 +82,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.time_series_table.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
@@ -162,3 +165,9 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     def value(self):
         """Returns the parameter_value currently being edited."""
         return self._model.value
+
+    @Slot(int)
+    def _open_header_editor(self, column):
+        if column != 0:
+            return
+        inquire_index_name(self._model, column, "Rename time index", self)

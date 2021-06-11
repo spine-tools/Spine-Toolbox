@@ -50,7 +50,7 @@ class EmptyParameterModel(EmptyRowModel):
 
     @property
     def item_type(self):
-        """The item type, either 'parameter_value' or 'parameter_definition', required by the json_fields property."""
+        """The item type, either 'parameter_value' or 'parameter_definition', required by the value_field property."""
         raise NotImplementedError()
 
     @property
@@ -75,8 +75,8 @@ class EmptyParameterModel(EmptyRowModel):
         return False
 
     @property
-    def json_fields(self):
-        return {"parameter_definition": ["default_value"], "parameter_value": ["value"]}[self.item_type]
+    def value_field(self):
+        return {"parameter_definition": "default_value", "parameter_value": "value"}[self.item_type]
 
     def accepted_rows(self):
         return list(range(self.rowCount()))
@@ -94,15 +94,14 @@ class EmptyParameterModel(EmptyRowModel):
         return flags
 
     def data(self, index, role=Qt.DisplayRole):
-        if self.header[index.column()] in self.json_fields and role in (
+        if self.header[index.column()] == self.value_field and role in (
             Qt.DisplayRole,
             Qt.ToolTipRole,
             Qt.TextAlignmentRole,
             PARSED_ROLE,
         ):
-            data = super().data(index)
-            parsed_value = self.db_mngr.parse_value(data)
-            return self.db_mngr.format_value(parsed_value, role)
+            data = super().data(index, role=Qt.EditRole)
+            return self.db_mngr.get_value_from_data(data, role)
         return super().data(index, role)
 
     def _make_unique_id(self, item):

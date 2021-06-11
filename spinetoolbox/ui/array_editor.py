@@ -65,6 +65,8 @@ class Ui_Form(object):
 
         self.array_table_view = ArrayTableView(self.verticalLayoutWidget)
         self.array_table_view.setObjectName(u"array_table_view")
+        self.array_table_view.horizontalHeader().setStretchLastSection(True)
+        self.array_table_view.verticalHeader().setVisible(False)
 
         self.verticalLayout_3.addWidget(self.array_table_view)
 

@@ -342,7 +342,7 @@ class RelationshipItem(EntityItem):
     def _make_tool_tip(self):
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{self.object_name_list.replace(",", self.db_mngr._GROUP_SEP)}<br>"""
+            f"""{self.object_name_list.replace(",", self.db_mngr.GROUP_SEP)}<br>"""
             f"""@{self.db_map.codename}</p></html>"""
         )
 
