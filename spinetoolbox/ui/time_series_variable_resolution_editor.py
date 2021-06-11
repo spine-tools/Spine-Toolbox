@@ -13,17 +13,20 @@
 ################################################################################
 ## Form generated from reading UI file 'time_series_variable_resolution_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.14.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
-from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
 from spinetoolbox.widgets.plot_widget import PlotWidget
+from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
 
 
 class Ui_TimeSeriesVariableResolutionEditor(object):
@@ -62,6 +65,7 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
 
         self.time_series_table = IndexedValueTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName(u"time_series_table")
+        self.time_series_table.horizontalHeader().setStretchLastSection(True)
 
         self.left_layout.addWidget(self.time_series_table)
 

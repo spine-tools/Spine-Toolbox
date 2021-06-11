@@ -21,6 +21,7 @@ from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
 from ...config import PIVOT_TABLE_HEADER_COLOR
+from ...helpers import join_value_and_type, split_value_and_type
 from ..widgets.custom_delegates import (
     RelationshipPivotTableDelegate,
     ParameterPivotTableDelegate,
@@ -711,17 +712,13 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        return header_ids[-1], [id_ for _, id_ in header_ids[:-3]]
+        return self._db_map_object_ids(header_ids)
 
-    def object_names(self, index):
-        """
-        Returns object names for given index. Used by PivotTableView.
-
-        Returns:
-            list
-        """
-        db_map, objects_ids = self.db_map_object_ids(index)
-        return [self.db_mngr.get_item(db_map, "object", id_)["name"] for id_ in objects_ids]
+    def _db_map_object_ids(self, header_ids):
+        object_indexes = [
+            k for k, h in enumerate(self.top_left_headers.values()) if isinstance(h, TopLeftObjectHeaderItem)
+        ]
+        return header_ids[-1], [header_ids[k][1] for k in object_indexes]
 
     def _all_header_names(self, index):
         """Returns the object, parameter, alternative, and db names corresponding to the given data index.
@@ -737,7 +734,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         """
         row, column = self.map_to_pivot(index)
         header_ids = self._header_ids(row, column)
-        objects_ids = [id_ for _, id_ in header_ids[:-3]]
+        _, objects_ids = self._db_map_object_ids(header_ids)
         _, parameter_id = header_ids[-3]
         _, alternative_id = header_ids[-2]
         db_map = header_ids[-1]
@@ -760,7 +757,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             return ""
         object_names, parameter_name, alternative_name, db_name = self._all_header_names(index)
         return (
-            self.db_mngr._GROUP_SEP.join(object_names)
+            self.db_mngr.GROUP_SEP.join(object_names)
             + " - "
             + parameter_name
             + " - "
@@ -784,7 +781,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         for row, top_left_id in enumerate(self.model.pivot_columns):
             header_id = self.model._column_data_header[column][row]
             header_names.append(self._header_name(top_left_id, header_id))
-        return self.db_mngr._GROUP_SEP.join(header_names)
+        return self.db_mngr.GROUP_SEP.join(header_names)
 
     def call_reset_model(self, pivot=None):
         """See base class."""
@@ -826,23 +823,27 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
         return self._batch_set_parameter_value_data(row_map, column_map, data, values)
 
-    def _object_parameter_value_to_add(self, db_map, header_ids, value):
+    def _object_parameter_value_to_add(self, db_map, header_ids, value_and_type):
+        value, value_type = split_value_and_type(value_and_type)
         return dict(
             entity_class_id=self._parent.current_class_id[db_map],
             entity_id=header_ids[0],
             parameter_definition_id=header_ids[-2],
             value=value,
+            type=value_type,
             alternative_id=header_ids[-1],
         )
 
-    def _relationship_parameter_value_to_add(self, db_map, header_ids, value, rel_id_lookup):
+    def _relationship_parameter_value_to_add(self, db_map, header_ids, value_and_type, rel_id_lookup):
         object_id_list = ",".join([str(id_) for id_ in header_ids[:-2]])
         relationship_id = rel_id_lookup[db_map, object_id_list]
+        value, value_type = split_value_and_type(value_and_type)
         return dict(
             entity_class_id=self._parent.current_class_id[db_map],
             entity_id=relationship_id,
             parameter_definition_id=header_ids[-2],
             value=value,
+            type=value_type,
             alternative_id=header_ids[-1],
         )
 
@@ -863,9 +864,15 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
                 db_map, header_ids, value, rel_id_lookup
             )
 
-    @staticmethod
-    def _parameter_value_to_update(id_, header_ids, value):
-        return {"id": id_, "value": value, "parameter_definition_id": header_ids[-2], "alternative_id": header_ids[-1]}
+    def _parameter_value_to_update(self, id_, header_ids, value_and_type):
+        value, value_type = split_value_and_type(value_and_type)
+        return {
+            "id": id_,
+            "value": value,
+            "type": value_type,
+            "parameter_definition_id": header_ids[-2],
+            "alternative_id": header_ids[-1],
+        }
 
     def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
         """Sets parameter values in batch."""
@@ -946,12 +953,12 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         header_ids = [id_ for _db_map, id_ in header_ids]
         if data[0][0] is None:
             func = self._make_parameter_value_to_add()
-            return lambda value, func=func, db_map=db_map, header_ids=header_ids: self._add_parameter_values(
-                {db_map: [func(db_map, header_ids, value)]}
+            return lambda value_type_tup, func=func, db_map=db_map, header_ids=header_ids: self._add_parameter_values(
+                {db_map: [func(db_map, header_ids, join_value_and_type(*value_type_tup))]}
             )
         _db_map, id_ = data[0][0]
-        return lambda value, id_=id_, header_ids=header_ids: self._update_parameter_values(
-            {db_map: [self._parameter_value_to_update(id_, header_ids, value)]}
+        return lambda value_type_tup, id_=id_, header_ids=header_ids: self._update_parameter_values(
+            {db_map: [self._parameter_value_to_update(id_, header_ids, join_value_and_type(*value_type_tup))]}
         )
 
     def receive_objects_added_or_removed(self, db_map_data, action):
@@ -1099,9 +1106,9 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         db_map, id_ = data[0][0]
         return self.db_mngr.get_value_index(db_map, "parameter_value", id_, parameter_index, role)
 
-    @staticmethod
-    def _parameter_value_to_update(id_, header_ids, value):
-        return {"id": id_, "value": value, "index": header_ids[-3]}
+    def _parameter_value_to_update(self, id_, header_ids, value_and_type):
+        value, value_type = split_value_and_type(value_and_type)
+        return {"id": id_, "value": value, "type": value_type, "index": header_ids[-3]}
 
     def _update_parameter_values(self, db_map_data):
         self.db_mngr.update_expanded_parameter_values(db_map_data)

@@ -17,6 +17,7 @@ The SpineDBManager class
 """
 
 import itertools
+import json
 from PySide2.QtCore import Qt, QObject, Signal, Slot, QThread
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
@@ -31,7 +32,6 @@ from spinedb_api import (
     ParameterValueFormatError,
     IndexedValue,
     Array,
-    DateTime,
     TimeSeries,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
@@ -39,7 +39,7 @@ from spinedb_api import (
     Map,
 )
 from .spine_db_icon_manager import SpineDBIconManager
-from .helpers import busy_effect
+from .helpers import busy_effect, SignalWaiter
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
@@ -54,7 +54,7 @@ from .spine_db_commands import (
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from .helpers import get_upgrade_db_promt_text, join_value_and_type, split_value_and_type
 
 
 @busy_effect
@@ -141,7 +141,7 @@ class SpineDBManagerBase(QObject):
     # For tests
     data_imported = Signal()
 
-    _GROUP_SEP = " \u01C0 "
+    GROUP_SEP = " \u01C0 "
 
     def __init__(self, parent, cache, icon_mngr):
         """Initializes the instance.
@@ -303,15 +303,19 @@ class SpineDBManager(SpineDBManagerBase):
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
-        self._close_db_map(db_map)
+        waiter = SignalWaiter()
+        self._worker.connection_closed.connect(waiter.trigger)
+        self._worker.close_db_map(db_map)
+        waiter.wait()
+        self._worker.connection_closed.disconnect(waiter.trigger)
+        del self.undo_stack[db_map]
+        del self.undo_action[db_map]
+        del self.redo_action[db_map]
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
-        for db_map in self._db_maps.values():
-            self._close_db_map(db_map)
-
-    def _close_db_map(self, db_map):
-        self._worker.close_db_map(db_map)
+        for url in list(self._db_maps):
+            self.close_session(url)
 
     def get_db_map(self, url, logger, codename=None, upgrade=False, create=False):
         """Returns a DiffDatabaseMapping instance from url if possible, None otherwise.
@@ -331,20 +335,12 @@ class SpineDBManager(SpineDBManagerBase):
             return self._do_get_db_map(url, codename, upgrade, create)
         except SpineDBVersionError as v_err:
             if v_err.upgrade_available:
+                text, info_text = get_upgrade_db_promt_text(url, v_err.current, v_err.expected)
                 msg = QMessageBox(qApp.activeWindow())  # pylint: disable=undefined-variable
                 msg.setIcon(QMessageBox.Question)
                 msg.setWindowTitle("Incompatible database version")
-                msg.setText(
-                    f"The database at <b>{url}</b> is at revision <b>{v_err.current}</b> and needs to be "
-                    f"upgraded to revision <b>{v_err.expected}</b> in order to be used with the current "
-                    f"version of Spine Toolbox."
-                )
-                msg.setInformativeText(
-                    "Do you want to upgrade the database now?"
-                    "<p><b>WARNING</b>: After the upgrade, "
-                    "the database may no longer be used "
-                    "with previous versions of Spine."
-                )
+                msg.setText(text)
+                msg.setInformativeText(info_text)
                 msg.addButton(QMessageBox.Cancel)
                 msg.addButton("Upgrade", QMessageBox.YesRole)
                 ret = msg.exec_()  # Show message box
@@ -417,6 +413,9 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             listener (object)
             db_maps (DiffDatabaseMapping)
+
+        Returns:
+            bool: True if operation was successful, False otherwise
         """
         is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
         is_orphan = lambda db_map: not set(self.signaller.db_map_listeners(db_map)) - {listener}
@@ -445,9 +444,6 @@ class SpineDBManager(SpineDBManagerBase):
         for db_map in db_maps:
             if not self.signaller.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
-                del self.undo_stack[db_map]
-                del self.undo_action[db_map]
-                del self.redo_action[db_map]
         return True
 
     def _prompt_to_commit_changes(self):
@@ -500,7 +496,7 @@ class SpineDBManager(SpineDBManagerBase):
             return
         fetcher = self._fetchers[0]
         if fetcher.started:
-            # The fecther was started and is not finished
+            # The fetcher was started and is not finished
             return
         if fetcher.prepared:
             fetcher.finished.connect(self._handle_fetcher_finished)
@@ -518,6 +514,7 @@ class SpineDBManager(SpineDBManagerBase):
     def clean_up(self):
         self._thread.quit()
         self._thread.wait()
+        self._thread.deleteLater()
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
@@ -584,16 +581,16 @@ class SpineDBManager(SpineDBManagerBase):
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
-        """Returns an appropriate icon for a given entity class.
+        """Returns an icon renderer for a given entity class.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DiffDatabaseMapping): database map
             entity_type (str): either 'object_class' or 'relationship_class'
             entity_class_id (int): entity class' id
             for_group (bool): if True, return the group object icon instead
 
         Returns:
-            QIcon: requested icon
+            QSvgRenderer: requested renderer or None if no entity class was found
         """
         entity_class = self.get_item(db_map, entity_type, entity_class_id)
         if not entity_class:
@@ -606,9 +603,19 @@ class SpineDBManager(SpineDBManagerBase):
             return self.get_icon_mngr(db_map).relationship_renderer(entity_class["object_class_name_list"])
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
-        return SpineDBIconManager.icon_from_renderer(
-            self.entity_class_renderer(db_map, entity_type, entity_class_id, for_group=for_group)
-        )
+        """Returns an appropriate icon for a given entity class.
+
+        Args:
+            db_map (DiffDatabaseMapping): database map
+            entity_type (str): either 'object_class' or 'relationship_class'
+            entity_class_id (int): entity class' id
+            for_group (bool): if True, return the group object icon instead
+
+        Returns:
+            QIcon: requested icon or None if no entity class was found
+        """
+        renderer = self.entity_class_renderer(db_map, entity_type, entity_class_id, for_group=for_group)
+        return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
     def get_item(self, db_map, item_type, id_):
         """Returns the item of the given type in the given db map that has the given id,
@@ -680,8 +687,6 @@ class SpineDBManager(SpineDBManagerBase):
             display_data = "Map"
         elif isinstance(parsed_data, Array):
             display_data = "Array"
-        elif isinstance(parsed_data, DateTime):
-            display_data = str(parsed_data.value)
         elif isinstance(parsed_data, TimePattern):
             display_data = "Time pattern"
         elif isinstance(parsed_data, ParameterValueFormatError):
@@ -723,26 +728,51 @@ class SpineDBManager(SpineDBManagerBase):
             item_type (str): either "parameter_definition" or "parameter_value"
             id_ (int): The parameter_value or definition id
             role (int, optional)
+
+        Returns:
+            any
         """
         item = self.get_item(db_map, item_type, id_)
         if not item:
             return None
-        field = {"parameter_value": "value", "parameter_definition": "default_value"}[item_type]
+        value_field, type_field = {
+            "parameter_value": ("value", "type"),
+            "parameter_definition": ("default_value", "default_type"),
+        }[item_type]
+        complex_types = {"array": "Array", "time_series": "Time series", "time_pattern": "Time pattern", "map": "Map"}
+        if role == Qt.DisplayRole and item[type_field] in complex_types:
+            return complex_types[item[type_field]]
         if role == Qt.EditRole:
-            return item[field]
+            return join_value_and_type(item[value_field], item[type_field])
         key = "parsed_value"
         if key not in item:
-            item[key] = self.parse_value(item[field])
-        return self.format_value(item[key], role)
+            item[key] = self._parse_value(item[value_field], item[type_field])
+        return self._format_value(item[key], role)
+
+    def get_value_from_data(self, data, role=Qt.DisplayRole):
+        """Returns the value or default value of a parameter directly from data.
+        Used by ``EmptyParameterModel.data()``.
+
+        Args:
+            data (str): joined value and type
+            role (int, optional)
+
+        Returns:
+            any
+        """
+        if data is None:
+            return None
+        parsed_value = self._parse_value(*split_value_and_type(data))
+        return self._format_value(parsed_value, role)
 
     @staticmethod
-    def parse_value(db_value):
+    def _parse_value(db_value, value_type=None):
         try:
-            return from_database(db_value)
+            return from_database(db_value, value_type=value_type)
         except ParameterValueFormatError as error:
             return error
 
-    def format_value(self, parsed_value, role=Qt.DisplayRole):
+    def _format_value(self, parsed_value, role=Qt.DisplayRole):
         """Formats the given value for the given role.
 
         Args:
@@ -788,7 +818,7 @@ class SpineDBManager(SpineDBManagerBase):
         if isinstance(parsed_value, IndexedValue):
             parsed_value = parsed_value.get_value(index)
         if role == Qt.EditRole:
-            return to_database(parsed_value)
+            return join_value_and_type(*to_database(parsed_value))
         if role == Qt.DisplayRole:
             return self.display_data_from_parsed(parsed_value)
         if role == Qt.ToolTipRole:
@@ -801,7 +831,7 @@ class SpineDBManager(SpineDBManagerBase):
         if "split_value_list" not in item:
             item["split_value_list"] = item["value_list"].split(";")
         if "split_parsed_value_list" not in item:
-            item["split_parsed_value_list"] = [self.parse_value(value) for value in item["split_value_list"]]
+            item["split_parsed_value_list"] = [json.loads(value) for value in item["split_value_list"]]
 
     def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole):
         """Returns one value item of a parameter_value_list.
@@ -820,7 +850,7 @@ class SpineDBManager(SpineDBManagerBase):
             return None
         if role == Qt.EditRole:
             return item["split_value_list"][index]
-        return self.format_value(item["split_parsed_value_list"][index], role)
+        return self._format_value(item["split_parsed_value_list"][index], role)
 
     def get_parameter_value_list(self, db_map, id_, role=Qt.DisplayRole):
         """Returns a parameter_value_list formatted for the given role.
@@ -836,7 +866,7 @@ class SpineDBManager(SpineDBManagerBase):
         self._split_and_parse_value_list(item)
         if role == Qt.EditRole:
             return item["split_value_list"]
-        return [self.format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
+        return [self._format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
         alternative_id_list = self.get_item(db_map, "scenario", scen_id).get("alternative_id_list")
@@ -846,9 +876,9 @@ class SpineDBManager(SpineDBManagerBase):
 
     @staticmethod
     def get_db_items(query, chunk_size=1000):
-        """Runs the given query and yield results by chunks of given size.
+        """Runs the given query and yields results by chunks of given size.
 
-        Returns:
+        Yields:
             generator(list)
         """
         it = (x._asdict() for x in query.yield_per(chunk_size).enable_eagerloads(False))
@@ -883,7 +913,7 @@ class SpineDBManager(SpineDBManagerBase):
             db_map (DatabaseMappingBase): database map
             ids (Iterable of int): ids by which the alternatives should be filtered
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "alternative_sq", ids=ids, key=["name"]))
@@ -894,7 +924,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "wide_scenario_sq", ids=ids, key=["name"]))
@@ -905,7 +935,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "scenario_alternative_sq", ids=ids))
@@ -916,7 +946,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "object_class_sq", ids=ids, key=["name"]))
@@ -927,7 +957,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "ext_object_sq", ids=ids, key=["class_id", "name"]))
@@ -938,7 +968,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "wide_relationship_class_sq", ids=ids, key=["name"]))
@@ -949,7 +979,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -962,7 +992,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "ext_entity_group_sq", ids=ids, key=["member_name"]))
@@ -973,7 +1003,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -988,7 +1018,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -1006,7 +1036,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_object_parameter_definitions(db_map, ids=ids)
@@ -1018,7 +1048,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "parameter_definition_tag_sq", ids=ids))
@@ -1029,7 +1059,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -1044,7 +1074,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -1062,7 +1092,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_object_parameter_values(db_map, ids=ids)
@@ -1074,7 +1104,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "wide_parameter_value_list_sq", ids=ids, key=["name"]))
@@ -1085,7 +1115,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "parameter_tag_sq", ids=ids, key=["tag"]))
@@ -1096,7 +1126,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(
@@ -1109,7 +1139,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "tool_sq", ids=ids, key=["name"]))
@@ -1120,7 +1150,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "tool_feature_sq", ids=ids))
@@ -1131,7 +1161,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map (DiffDatabaseMapping)
 
-        Returns:
+        Yields:
             list: dictionary items
         """
         yield from self.get_db_items(self._make_query(db_map, "tool_feature_method_sq", ids=ids))
@@ -1393,17 +1423,18 @@ class SpineDBManager(SpineDBManagerBase):
         for db_map, expanded_data in db_map_data.items():
             packed_data = {}
             for item in expanded_data:
-                packed_data.setdefault(item["id"], {})[item["index"]] = item["value"]
+                packed_data.setdefault(item["id"], {})[item["index"]] = (item["value"], item["type"])
             items = []
             for id_, indexed_values in packed_data.items():
-                parsed_data = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
-                if isinstance(parsed_data, IndexedValue):
-                    for index, value in indexed_values.items():
-                        parsed_data.set_value(index, value)
-                    value = to_database(parsed_data)
+                parsed_value = self.get_value(db_map, "parameter_value", id_, role=PARSED_ROLE)
+                if isinstance(parsed_value, IndexedValue):
+                    for index, (val, typ) in indexed_values.items():
+                        parsed_val = from_database(val, typ)
+                        parsed_value.set_value(index, parsed_val)
+                    value, value_type = to_database(parsed_value)
                 else:
-                    value = next(iter(indexed_values.values()))
-                item = {"id": id_, "value": value}
+                    value, value_type = next(iter(indexed_values.values()))
+                item = {"id": id_, "value": value, "type": value_type}
                 items.append(item)
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, items, "parameter_value"))
 
@@ -1705,8 +1736,13 @@ class SpineDBManager(SpineDBManagerBase):
     def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
         self._worker.duplicate_object(db_maps, object_data, orig_name, dup_name)
 
-    @staticmethod
-    def get_all_multi_spine_db_editors():
+    def get_metadata_per_entity(self, db_map, entity_ids):
+        return self._worker.get_metadata_per_entity(db_map, entity_ids)
+
+    def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
+        return self._worker.get_metadata_per_parameter_value(db_map, parameter_value_ids)
+
+    def get_all_multi_spine_db_editors(self):
         """Yields all instances of MultiSpineDBEditor currently open.
 
         Returns:
@@ -1754,7 +1790,7 @@ class SpineDBManager(SpineDBManagerBase):
             multi_db_editor.add_new_tab(db_url_codenames)
         else:
             multi_db_editor, db_editor = existing
-            multi_db_editor.set_current_db_editor(db_editor)
+            multi_db_editor.set_current_tab(db_editor)
         if multi_db_editor.windowState() & Qt.WindowMinimized:
             multi_db_editor.setWindowState(multi_db_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
             multi_db_editor.activateWindow()

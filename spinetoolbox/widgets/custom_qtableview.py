@@ -17,9 +17,11 @@ Custom QTableView classes that support copy-paste and the like.
 """
 
 import csv
+import ctypes
 import io
 import locale
 from numbers import Number
+import re
 from PySide2.QtWidgets import QTableView, QApplication
 from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
@@ -32,14 +34,17 @@ from spinedb_api import (
     SpineDBAPIError,
     to_database,
 )
-from ..helpers import busy_effect
+from ..helpers import busy_effect, join_value_and_type, split_value_and_type
+
+
+_ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 
 class CopyPasteTableView(QTableView):
     """Custom QTableView class with copy and paste methods."""
 
     def keyPressEvent(self, event):
-        """Copy and paste to and from clipboard in Excel-like format."""
+        """Copies and pastes to and from clipboard in Excel-like format."""
         if event.matches(QKeySequence.Copy):
             if not self.copy():
                 super().keyPressEvent(event)
@@ -53,7 +58,7 @@ class CopyPasteTableView(QTableView):
             super().keyPressEvent(event)
 
     def delete_content(self):
-        """Delete content from editable indexes in current selection."""
+        """Deletes content from editable indexes in current selection."""
         selection = self.selectionModel().selection()
         if not selection:
             return False
@@ -65,7 +70,7 @@ class CopyPasteTableView(QTableView):
 
     @busy_effect
     def copy(self):
-        """Copy current selection to clipboard in excel format."""
+        """Copies current selection to clipboard in excel format."""
         selection = self.selectionModel().selection()
         if not selection:
             return False
@@ -112,11 +117,11 @@ class CopyPasteTableView(QTableView):
 
     @staticmethod
     def _read_pasted_text(text):
-        """
-        Parses a tab separated CSV text table.
+        """Parses a tab separated CSV text table.
 
         Args:
             text (str): a CSV formatted table
+
         Returns:
             list: a list of rows
         """
@@ -128,7 +133,7 @@ class CopyPasteTableView(QTableView):
             return rows
 
     def paste_on_selection(self):
-        """Paste clipboard data on selection, but not beyond.
+        """Pastes clipboard data on selection, but not beyond.
         If data is smaller than selection, repeat data to fit selection."""
         text = QApplication.clipboard().text()
         if not text:
@@ -159,7 +164,7 @@ class CopyPasteTableView(QTableView):
         return True
 
     def paste_normal(self):
-        """Paste clipboard data, overwriting cells if needed"""
+        """Pastes clipboard data, overwriting cells if needed."""
         text = QApplication.clipboard().text().strip()
         if not text:
             return False
@@ -275,12 +280,10 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
 
 
 class IndexedParameterValueTableViewBase(CopyPasteTableView):
-    """
-    Custom QTableView base class with copy and paste methods for indexed parameter values.
-    """
+    """Custom QTableView base class with copy and paste methods for indexed parameter values."""
 
     def copy(self):
-        """Copy current selection to clipboard in CSV format."""
+        """Copies current selection to clipboard in CSV format."""
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
             return False
@@ -367,16 +370,16 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         indexes_to_set, values_to_set = self._paste_to_values_column(pasted_table, first_row, paste_length)
         model.batch_set_data(indexes_to_set, values_to_set)
         self._select_pasted(indexes_to_set)
+        return True
 
     @staticmethod
     def _read_pasted_text(text):
-        """
-        Parses the given CSV table.
-
+        """Parses the given CSV table.
         Parsing is locale aware.
 
         Args:
             text (str): a CSV table containing numbers
+
         Returns:
             list of float: A list of floats
         """
@@ -389,13 +392,13 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         return single_column
 
     def _paste_to_values_column(self, values, first_row, paste_length):
-        """
-        Pastes data to the Values column.
+        """Pastes data to the Values column.
 
         Args:
             values (list): a list of float values to paste
             first_row (int): index of the first row where to paste
             paste_length (int): length of the paste selection (can be different from len(values))
+
         Returns:
             tuple: A tuple (list(pasted indexes), list(pasted values))
         """
@@ -453,18 +456,19 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             )
         model.batch_set_data(indexes_to_set, values_to_set)
         self._select_pasted(indexes_to_set)
+        return True
 
     def _paste_two_columns(self, data_indexes, data_values, first_row, paste_length):
-        """
-        Pastes data indexes and values.
+        """Pastes data indexes and values.
 
         Args:
             data_indexes (list): a list of data indexes (time stamps/durations)
             data_values (list): a list of data values
             first_row (int): first row index
             paste_length (int): selection length for pasting
+
         Returns:
-            tuple_ a tuple (modified model indexes, modified model values)
+            tuple: a tuple (modified model indexes, modified model values)
         """
         values_to_set = list()
         indexes_to_set = list()
@@ -478,13 +482,13 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         return indexes_to_set, values_to_set
 
     def _paste_single_column(self, values, first_row, first_column, paste_length):
-        """
-        Pastes a single column of data
+        """Pastes a single column of data.
 
         Args:
             values (list): a list of data to paste (data indexes or values)
             first_row (int): first row index
             paste_length (int): selection length for pasting
+
         Returns:
             tuple: a tuple (modified model indexes, modified model values)
         """
@@ -500,11 +504,11 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
 
     @staticmethod
     def _read_pasted_text(text):
-        """
-        Parses a given CSV table
+        """Parses a given CSV table.
 
         Args:
             text (str): a CSV table
+
         Returns:
             tuple: a tuple (data indexes, data values)
         """
@@ -536,7 +540,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
     """Custom QTableView with copy and paste methods for single column tables."""
 
     def copy(self):
-        """Copy current selection to clipboard in CSV format."""
+        """Copies current selection to clipboard in CSV format."""
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
             return False
@@ -553,7 +557,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         return True
 
     def paste(self):
-        """Paste data from clipboard."""
+        """Pastes data from clipboard."""
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
             return False
@@ -590,11 +594,11 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
             indexes_to_set.append(create_model_index(row, 0))
         model.batch_set_data(indexes_to_set, values_to_set)
         self._select_pasted(indexes_to_set)
+        return True
 
     @staticmethod
     def _read_pasted_text(text):
-        """
-        Reads the first column of given CSV table.
+        """Reads the first column of given CSV table.
 
         Args:
             text (str): a CSV table
@@ -612,7 +616,7 @@ class MapTableView(CopyPasteTableView):
     """Custom QTableView with copy and paste methods for map tables."""
 
     def copy(self):
-        """Copy current selection to clipboard in Excel compatible csv format."""
+        """Copies current selection to clipboard in Excel compatible CSV format."""
         selection = self.selectionModel().selection()
         if not selection:
             return False
@@ -633,7 +637,7 @@ class MapTableView(CopyPasteTableView):
                     str_data = str(data)
                 except TypeError:
                     if isinstance(data, IndexedValue):
-                        str_data = to_database(data)
+                        str_data = join_value_and_type(*to_database(data))
                     else:
                         str_data = str(data)
                 row[x - left] = str_data
@@ -645,15 +649,14 @@ class MapTableView(CopyPasteTableView):
         return True
 
     def delete_content(self):
-        """Delete content in current selection."""
+        """Deletes content in current selection."""
         selection = self.selectionModel().selection()
         if not selection:
             return False
         self.model().clear(selection.indexes())
 
     def paste(self):
-        """
-        Pastes data from clipboard.
+        """Pastes data from clipboard.
 
         Returns:
             bool: True if data was pasted successfully, False otherwise
@@ -673,16 +676,16 @@ class MapTableView(CopyPasteTableView):
         selection_length = last_row - first_row + 1
         selection_width = last_column - first_column + 1
         model = self.model()
-        model_column_count = model.columnCount()
-        model_row_count = model.rowCount()
         if (
             (selection_length == 1 and selection_width == 1)
             or model.is_expanse_row(last_row)
             or model.is_expanse_column(last_column)
         ):
             # If a single cell or expanse is selected, we paste everything.
+            model_row_count = model.rowCount()
             if model_row_count <= first_row + paste_length:
                 model.insertRows(model_row_count, paste_length - (model_row_count - 1 - first_row))
+            model_column_count = model.columnCount()
             if model_column_count <= first_column + paste_width:
                 model.insertColumns(model_column_count, paste_width - (model_column_count - 1 - first_column))
             capped_length = paste_length
@@ -699,11 +702,11 @@ class MapTableView(CopyPasteTableView):
 
     @staticmethod
     def _read_pasted_text(text):
-        """
-        Parses a given CSV table
+        """Parses a given CSV table.
 
         Args:
             text (str): a CSV table
+
         Returns:
             list of list: a list of table rows
         """
@@ -726,14 +729,15 @@ class MapTableView(CopyPasteTableView):
                         continue
                     except SpineDBAPIError:
                         pass
+                    if _could_be_time_stamp(cell):
+                        try:
+                            value = DateTime(cell)
+                            data_row.append(value)
+                            continue
+                        except SpineDBAPIError:
+                            pass
                     try:
-                        value = DateTime(cell)
-                        data_row.append(value)
-                        continue
-                    except SpineDBAPIError:
-                        pass
-                    try:
-                        value = from_database(cell)
+                        value = from_database(*split_value_and_type(cell))
                         data_row.append(value)
                         continue
                     except ParameterValueFormatError:
@@ -744,13 +748,13 @@ class MapTableView(CopyPasteTableView):
 
 
 def _range(selection):
-    """
-    Returns the top left and bottom right corners of selection.
+    """Returns the top left and bottom right corners of selection.
 
     Args:
         selection (QItemSelection): a list of selected QItemSelection objects
+
     Returns:
-        tuple of int: a tuple (top row, bottom row, left column, right column)
+        tuple of ints: a tuple (top row, bottom row, left column, right column)
     """
     left = selection[0].left()
     top = selection[0].top()
@@ -763,3 +767,21 @@ def _range(selection):
         right = max(right, range_.right())
         bottom = max(bottom, range_.bottom())
     return top, bottom, left, right
+
+
+_NOT_TIME_STAMP = re.compile(r"^[a-zA-z][0-9]")
+
+
+def _could_be_time_stamp(s):
+    """Evaluates if given string could be a time stamp.
+
+    This is to deal with special cases that are not intended as time stamps but
+    could end up as one by the very greedy ``DateTime`` constructor.
+
+    Args:
+        s (str): string to evaluate
+
+    Returns:
+        bool: True if s could be a time stamp, False otherwise
+    """
+    return _NOT_TIME_STAMP.match(s) is None

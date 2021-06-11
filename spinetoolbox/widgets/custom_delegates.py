@@ -143,8 +143,7 @@ class CheckBoxDelegate(QStyledItemDelegate):
 
 
 class RankDelegate(CheckBoxDelegate):
-    """A delegate that places a fully functioning QCheckBox.
-    """
+    """A delegate that places a QCheckBox but draws a number instead of the check."""
 
     @staticmethod
     def _do_paint(painter, checkbox_style_option, index):
@@ -154,59 +153,3 @@ class RankDelegate(CheckBoxDelegate):
         if not rank:
             return
         painter.drawText(checkbox_style_option.rect, Qt.AlignCenter, str(rank))
-
-
-class ForeignKeysDelegate(QStyledItemDelegate):
-    """A QComboBox delegate with checkboxes.
-
-    Attributes:
-        parent (SpineDatapackageWidget): spine datapackage widget
-    """
-
-    data_committed = Signal("QModelIndex", "QVariant")
-
-    def _close_editor(self, editor, index):
-        """Closes editor. Needed by SearchBarEditor."""
-        self.closeEditor.emit(editor)
-        self.setModelData(editor, index.model(), index)
-
-    def createEditor(self, parent, option, index):
-        """Return editor."""
-        model = index.model()
-        header = model.horizontal_header_labels()
-        if header[index.column()] == 'fields':
-            editor = CheckListEditor(self.parent(), parent, ranked=True)
-            current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
-            field_names = model.datapackage.resources[model.resource_index].schema.field_names
-            editor.set_data(field_names, current_field_names)
-            return editor
-        if header[index.column()] == 'reference resource':
-            editor = SearchBarEditor(self.parent(), parent)
-            editor.set_data(index.data(Qt.DisplayRole), model.datapackage.resource_names)
-            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
-            return editor
-        if header[index.column()] == 'reference fields':
-            editor = CheckListEditor(self.parent(), parent, ranked=True)
-            current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
-            reference_resource_name = index.sibling(index.row(), header.index('reference resource')).data(
-                Qt.DisplayRole
-            )
-            reference_resource = model.datapackage.get_resource(reference_resource_name)
-            if not reference_resource:
-                field_names = []
-            else:
-                field_names = reference_resource.schema.field_names
-            editor.set_data(field_names, current_field_names)
-            return editor
-        return None
-
-    def updateEditorGeometry(self, editor, option, index):
-        super().updateEditorGeometry(editor, option, index)
-        if isinstance(editor, (SearchBarEditor, CheckListEditor)):
-            size = option.rect.size()
-            editor.set_base_size(size)
-            editor.update_geometry()
-
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        self.data_committed.emit(index, editor.data())

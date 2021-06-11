@@ -73,7 +73,7 @@ class TestProjectItemModel(unittest.TestCase):
         mock_project_item = NonCallableMagicMock()
         mock_project_item.name = "project item"
         mock_project_item.description = "project item description"
-        leaf = LeafProjectTreeItem(mock_project_item, self.toolbox)
+        leaf = LeafProjectTreeItem(mock_project_item)
         model.insert_item(leaf, category_index)
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.rowCount(category_index), 1)
@@ -87,7 +87,7 @@ class TestProjectItemModel(unittest.TestCase):
         model.insert_item(category)
         category_index = model.find_category("category")
         project_item = ProjectItem("item", "item description", 0.0, 0.0, self.toolbox.project())
-        leaf = LeafProjectTreeItem(project_item, self.toolbox)
+        leaf = LeafProjectTreeItem(project_item)
         model.insert_item(leaf, category_index)
         leaf_index = model.find_item("item")
         model.set_leaf_item_name(leaf_index, "new view item name")
@@ -101,7 +101,7 @@ class TestProjectItemModel(unittest.TestCase):
         model = ProjectItemModel(root)
         self.assertEqual(model.category_of_item("nonexistent item"), None)
         project_item = ProjectItem("item", "item description", 0.0, 0.0, self.toolbox.project())
-        item = LeafProjectTreeItem(project_item, self.toolbox)
+        item = LeafProjectTreeItem(project_item)
         category.add_child(item)
         found_category = model.category_of_item("item")
         self.assertEqual(found_category.name, category.name)

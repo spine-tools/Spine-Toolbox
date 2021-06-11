@@ -17,11 +17,10 @@ Unit tests for ``spine_db_fetcher`` module.
 """
 import unittest
 from unittest.mock import MagicMock
-from PySide2.QtCore import QObject, Slot
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.spine_db_fetcher import SpineDBFetcher
 from spinetoolbox.spine_db_manager import SpineDBManager
+from spinetoolbox.helpers import SignalWaiter
 
 
 class TestSpineDBFetcher(unittest.TestCase):
@@ -37,24 +36,19 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="test_db", create=True)
         self._listener = MagicMock()
         self._fetcher = self._db_mngr.get_fetcher()
-        self._fetcher_semaphore = Semaphore()
-        self._import_semaphore = Semaphore()
-        self._commit_semaphore = Semaphore()
-        self._fetcher.finished.connect(self._fetcher_semaphore.let_continue)
-        self._db_mngr.data_imported.connect(self._import_semaphore.let_continue)
-        self._db_mngr.session_committed.connect(self._commit_semaphore.let_continue)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
-        self._fetcher_semaphore.deleteLater()
-        self._import_semaphore.deleteLater()
-        self._commit_semaphore.deleteLater()
+
+    def _fetch(self):
+        waiter = SignalWaiter()
+        self._fetcher.finished.connect(waiter.trigger)
+        self._fetcher.fetch(self._listener, [self._db_map])
+        waiter.wait()
 
     def test_fetch_empty_database(self):
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self.assertTrue(self._listener.silenced)
         self._listener.receive_alternatives_added.assert_called_once_with(
             {self._db_map: [{"id": 1, "name": "Base", "description": "Base alternative", "commit_id": 1}]}
@@ -81,19 +75,20 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._listener.receive_tool_feature_methods_added.assert_not_called()
 
     def _import_data(self, **data):
+        waiter = SignalWaiter()
+        self._db_mngr.data_imported.connect(waiter.trigger)
         self._db_mngr.import_data({self._db_map: data})
-        while not self._import_semaphore.can_continue:
-            QApplication.processEvents()
+        waiter.wait()
+        self._db_mngr.data_imported.disconnect(waiter.trigger)
         self._db_mngr._get_commit_msg = lambda *args, **kwargs: "Add test data."
+        self._db_mngr.session_committed.connect(waiter.trigger)
         self._db_mngr.commit_session(self._db_map)
-        while not self._commit_semaphore.can_continue:
-            QApplication.processEvents()
+        waiter.wait()
+        self._db_mngr.session_committed.disconnect(waiter.trigger)
 
     def test_fetch_alternatives(self):
         self._import_data(alternatives=("alt",))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_alternatives_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -109,9 +104,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_scenarios(self):
         self._import_data(scenarios=("scenario",))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_scenarios_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -140,9 +133,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_scenario_alternatives(self):
         self._import_data(alternatives=("alt",), scenarios=("scenario",), scenario_alternatives=(("scenario", "alt"),))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self.assertEqual(
             self._db_mngr.get_item(self._db_map, "scenario_alternative", 1),
             {'alternative_id': 2, 'commit_id': 2, 'id': 1, 'rank': 1, 'scenario_id': 1},
@@ -150,9 +141,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_object_classes(self):
         self._import_data(object_classes=("oc",))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_object_classes_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -184,9 +173,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_objects(self):
         self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_objects_added.assert_called_once_with(
             {self._db_map: [{'id': 1, 'class_id': 1, 'class_name': 'oc', 'name': 'obj', 'description': None}]}
         )
@@ -197,9 +184,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_relationship_classes(self):
         self._import_data(object_classes=("oc",), relationship_classes=(("rc", ("oc",)),))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_relationship_classes_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -225,9 +210,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             relationship_classes=(("rc", ("oc",)),),
             relationships=(("rc", ("obj",)),),
         )
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_relationships_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -262,9 +245,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._import_data(
             object_classes=("oc",), objects=(("oc", "obj"), ("oc", "group")), object_groups=(("oc", "group", "obj"),)
         )
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_entity_groups_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -295,9 +276,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_parameter_definitions(self):
         self._import_data(object_classes=("oc",), object_parameters=(("oc", "param"),))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_parameter_definitions_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -312,6 +291,7 @@ class TestSpineDBFetcher(unittest.TestCase):
                         'parameter_tag_id_list': None,
                         'parameter_tag_list': None,
                         'default_value': None,
+                        'default_type': None,
                         'description': None,
                     }
                 ]
@@ -321,6 +301,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             self._db_mngr.get_item(self._db_map, "parameter_definition", 1),
             {
                 'default_value': None,
+                'default_type': None,
                 'description': None,
                 'entity_class_id': 1,
                 'id': 1,
@@ -341,9 +322,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             object_parameters=(("oc", "param"),),
             object_parameter_values=(("oc", "obj", "param", 2.3),),
         )
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_parameter_values_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -359,7 +338,8 @@ class TestSpineDBFetcher(unittest.TestCase):
                         'parameter_name': 'param',
                         'alternative_id': 1,
                         'alternative_name': 'Base',
-                        'value': '2.3',
+                        'value': b'2.3',
+                        'type': None,
                     }
                 ]
             }
@@ -378,15 +358,14 @@ class TestSpineDBFetcher(unittest.TestCase):
                 'object_name': 'obj',
                 'parameter_id': 1,
                 'parameter_name': 'param',
-                'value': '2.3',
+                'value': b'2.3',
+                'type': None,
             },
         )
 
     def test_fetch_parameter_value_lists(self):
         self._import_data(parameter_value_lists=(("value_list", (2.3,)),))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_parameter_value_lists_added.assert_called_once_with(
             {self._db_map: [{'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_list': '[2.3]'}]}
         )
@@ -402,9 +381,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             object_parameters=(("oc", "param", 2.3, "value_list"),),
             features=(("oc", "param"),),
         )
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_features_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -437,9 +414,7 @@ class TestSpineDBFetcher(unittest.TestCase):
 
     def test_fetch_tools(self):
         self._import_data(tools=("tool",))
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_tools_added.assert_called_once_with(
             {self._db_map: [{'id': 1, 'name': 'tool', 'description': None, 'commit_id': 2}]}
         )
@@ -457,9 +432,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             tools=("tool",),
             tool_features=(("tool", "oc", "param"),),
         )
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_tool_features_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -489,9 +462,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             tool_features=(("tool", "oc", "param"),),
             tool_feature_methods=(("tool", "oc", "param", "m"),),
         )
-        self._fetcher.fetch(self._listener, [self._db_map])
-        while not self._fetcher_semaphore.can_continue:
-            QApplication.processEvents()
+        self._fetch()
         self._listener.receive_tool_feature_methods_added.assert_called_once_with(
             {
                 self._db_map: [
@@ -503,16 +474,6 @@ class TestSpineDBFetcher(unittest.TestCase):
             self._db_mngr.get_item(self._db_map, "tool_feature_method", 1),
             {'commit_id': 2, 'id': 1, 'method_index': 0, 'parameter_value_list_id': 1, 'tool_feature_id': 1},
         )
-
-
-class Semaphore(QObject):
-    def __init__(self):
-        super().__init__()
-        self.can_continue = False
-
-    @Slot()
-    def let_continue(self):
-        self.can_continue = True
 
 
 if __name__ == "__main__":

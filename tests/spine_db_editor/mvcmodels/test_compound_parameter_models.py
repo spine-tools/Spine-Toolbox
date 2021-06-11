@@ -176,7 +176,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
                 self._db_map: [
                     {
                         "parameter_definition_id": 1,
-                        "value": "23.0",
+                        "value": b"23.0",
                         "object_id": 1,
                         "object_class_id": 1,
                         "alternative_id": 1,
@@ -241,7 +241,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
                 self._db_map: [
                     {
                         "parameter_definition_id": 1,
-                        "value": "23.0",
+                        "value": b"23.0",
                         "relationship_id": 2,
                         "relationship_class_id": 2,
                         "alternative_id": 1,
@@ -249,7 +249,6 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
                 ]
             }
         )
-        values = self._db_map.query(self._db_map.parameter_value_sq).all()
         value_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [2]}, "parameter_value")
         model.receive_parameter_data_added(value_data)
         self.assertEqual(model.rowCount(), 1)

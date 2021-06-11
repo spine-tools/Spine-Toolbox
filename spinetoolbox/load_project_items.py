@@ -18,144 +18,12 @@ Functions to load project item modules.
 import pathlib
 import importlib
 import importlib.util
-import subprocess
-import os
-import sys
 import pkgutil
-import tempfile
-import zipfile
 from spine_engine.project_item.project_item_info import ProjectItemInfo
 from spine_engine.version import __version__ as curr_engine_version
 from spinedb_api.version import __version__ as curr_db_api_version
-from .config import PREFERRED_SPINE_ITEMS_VERSION
 from .version import __version__ as curr_toolbox_version
 from .project_item.project_item_factory import ProjectItemFactory
-
-
-def _spine_items_version_check():
-    """Check if spine_items is the preferred version."""
-    try:
-        import spine_items  # pylint: disable=import-outside-toplevel
-    except ModuleNotFoundError:
-        # Module not installed yet
-        return False
-    try:
-        current_version = spine_items.__version__
-    except AttributeError:
-        # Version not reported (should never happen as spine_items has always reported its version)
-        return False
-    current_split = [int(x) for x in current_version.split(".")]
-    preferred_split = [int(x) for x in PREFERRED_SPINE_ITEMS_VERSION.split(".")]
-    return current_split >= preferred_split
-
-
-def _download_spine_items(tmpdirname):
-    """Downloads spine_items to a temporary directory.
-
-    Args:
-        tmpdirname (str)
-    """
-    args = [
-        sys.executable,
-        "-m",
-        "pip",
-        "download",
-        "-d",
-        tmpdirname,
-        "git+https://github.com/Spine-project/spine-items.git@master",
-    ]
-    try:
-        subprocess.run(args, check=True)
-    except subprocess.CalledProcessError:
-        pass
-
-
-def _install_spine_items(tmpdirname):
-    """Installs spine_items from a temporary directory.
-
-    Args:
-        tmpdirname (str)
-    """
-    args = [sys.executable, "-m", "pip", "install", "--upgrade", "--find-links", tmpdirname, "spine_items"]
-    try:
-        subprocess.run(args, check=True)
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-
-def _print_unsatisfiable_requirement(pkg, curr, req):
-    print(f"Unsatisfiable requirement: {pkg} version is {curr}, whereas {req} is required", file=sys.stderr)
-
-
-def upgrade_project_items():
-    """
-    Upgrades project items.
-
-    Returns:
-        bool: True if upgraded, False if no action taken.
-    """
-    if _spine_items_version_check():
-        # No need to upgrade
-        return False
-    print(
-        """
-UPGRADING PROJECT ITEMS...
-
-(Depending on your internet connection, this may take a few moments.)
-"""
-    )
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        # Download
-        _download_spine_items(tmpdirname)
-        if not os.listdir(tmpdirname):
-            print(f"The directory {tmpdirname} is empty", file=sys.stderr)
-            return False
-        # Unpack
-        zip_fp = os.path.join(tmpdirname, os.listdir(tmpdirname)[0])
-        with zipfile.ZipFile(zip_fp, 'r') as zip_ref:
-            zip_ref.extractall(tmpdirname)
-        # Query toolbox version required by items
-        spine_items_path = os.path.join(tmpdirname, "spine-items", "spine_items")
-        version_file_path = os.path.join(spine_items_path, "version.py")
-        version = {}
-        with open(version_file_path) as fp:
-            exec(fp.read(), version)  # pylint: disable=exec-used
-        req_toolbox_version = version.get("REQUIRED_SPINE_TOOLBOX_VERSION", "0.5.2")
-        req_engine_version = version.get("REQUIRED_SPINE_ENGINE_VERSION", "0.7.3")
-        req_db_api_version = version.get("REQUIRED_SPINEDB_API_VERSION", "0.8.11")
-        # Check if new items is compatible with current toolbox and engine
-        version_split = lambda version: [int(x) for x in version.split(".")]
-        curr_toolbox_version_split = version_split(curr_toolbox_version)
-        curr_engine_version_split = version_split(curr_engine_version)
-        curr_db_api_version_split = version_split(curr_db_api_version)
-        req_toolbox_version_split = version_split(req_toolbox_version)
-        req_engine_version_split = version_split(req_engine_version)
-        req_db_api_version_split = version_split(req_db_api_version)
-        if curr_toolbox_version_split < req_toolbox_version_split:
-            _print_unsatisfiable_requirement("spinetoolbox", curr_toolbox_version, req_toolbox_version)
-            return False
-        if curr_engine_version_split < req_engine_version_split:
-            _print_unsatisfiable_requirement("spine_engine", curr_engine_version, req_engine_version)
-            return False
-        if curr_db_api_version_split < req_db_api_version_split:
-            _print_unsatisfiable_requirement("spinedb_api", curr_db_api_version, req_db_api_version)
-            return False
-        # Check if new items are already installed
-        try:
-            import spine_items  # pylint: disable=import-outside-toplevel
-
-            curr_items_version = spine_items.__version__
-            new_items_version = version["__version__"]
-            if curr_items_version == new_items_version:
-                # No need to upgrade
-                return False
-
-        except ModuleNotFoundError:
-            pass
-        if not _install_spine_items(tmpdirname):
-            return False
-    return True
 
 
 def load_project_items():
@@ -172,7 +40,11 @@ def load_project_items():
     categories = dict()
     factories = dict()
     for child in items_root.iterdir():
-        if child.is_dir() and child.joinpath("__init__.py").exists():
+        if (
+            child.is_dir()
+            and child.joinpath("__init__.py").exists()
+            or (child.is_dir() and child.joinpath("__init__.pyc").exists())
+        ):
             spec = importlib.util.find_spec(f"spine_items.{child.stem}")
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)

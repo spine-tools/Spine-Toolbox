@@ -30,12 +30,31 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
+    def is_deprecated():
+        """Queries if item is deprecated.
+
+        Returns:
+            bool: True if item is deprecated, False otherwise
+        """
+        return False
+
+    @staticmethod
     def icon():
         """
         Returns the icon resource path.
 
         Returns:
             str
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def icon_color():
+        """
+        Returns the icon color.
+
+        Returns:
+            QColor: icon's color
         """
         raise NotImplementedError()
 
@@ -108,7 +127,7 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def show_specification_widget(toolbox, specification=None, item=None, **kwargs):
+    def make_specification_editor(toolbox, specification=None, item=None, **kwargs):
         """
         Creates the item's specification widget.
 
@@ -134,7 +153,3 @@ class ProjectItemFactory:
             toolbox (ToolboxUI): Toolbox main window
             specification (ProjectItemSpecification): a specification to check
         """
-
-    @staticmethod
-    def tear_down():
-        """Tears down the factory. Called by toolbox when closing."""

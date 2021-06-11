@@ -44,7 +44,7 @@ Please note that this version has passed automated testing, but has not been com
 
 3. Create a new environment by typing:
 
-        conda create -n spinetoolbox python=3.7
+        conda create -n spinetoolbox python=3.8
 
 4. Activate the new environment:
 
@@ -54,19 +54,23 @@ Please note that this version has passed automated testing, but has not been com
 
         conda install -c anaconda git
 
-6. Clone the Spine Toolbox repository from GitHub to your computer:
+6. Navigate to a folder where you want the Spine Toolbox folder to be (you may be there already):
+
+        cd [folder path]
+
+7. Clone the Spine Toolbox repository from GitHub to your computer:
 
         git clone https://github.com/Spine-project/Spine-Toolbox.git
 
-7. Navigate to your clone's root:
+8. Navigate to your clone's root:
 
         cd Spine-Toolbox
 
-8. Install requirements using **pip**:
+9. Install requirements using **pip**:
 
         python -m pip install -r requirements.txt
 
-9. Run:
+10. Run:
 
         python -m spinetoolbox
 
@@ -100,7 +104,8 @@ Please note that this version has passed automated testing, but has not been com
 
         git pull
 
-5. Upgrade requirements using **pip**:
+5. Upgrade requirements using **pip** (IMPORTANT TO REMEMBER EVERY TIME! Spine Engine, Spine DB API, 
+   and Spine Items may have also been updated and a misalignment may cause intractable errors):
 
         python -m pip install --upgrade -r requirements.txt
 
@@ -116,11 +121,6 @@ The requirements include three packages ([`spinedb_api`](https://github.com/Spin
 [`spine_engine`](https://github.com/Spine-project/spine-engine), and [`spine_items`](https://github.com/Spine-project/spine-items)),
 developed by the Spine project consortium. Since these packages are developed very actively at the moment, 
 they may get upgraded quite regularly whenever you run `python -m pip install --upgrade -r requirements.txt`.
-
-In some cases (if you forget to run `python -m pip install --upgrade -r requirements.txt` after `git pull`),
-the application will refuse to start unless you upgrade these packages.
-Just follow the instructions that will appear in the Anaconda Prompt
-(or simply, run `python -m pip install --upgrade -r requirements.txt`).
 
 
 ### Building the User Guide
@@ -171,6 +171,19 @@ not needed and there is a chance of conflicts between the packages.
 
 **Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support PySide2 
 version 5.15 (yet).
+
+#### ImportError: DLL load failed while importing win32api
+
+If you installed Spine Toolbox *without Conda* on **Python 3.8 on Windows**, 
+you may see this error when trying to execute a project item. The cause of this error 
+is the package `pywin32` version 225. To fix this error, upgrade the package to version 
+300 using the following command
+
+```shell
+pip install --upgrade "pywin32==300"
+```
+
+After the process has finished, restart the application. **Note: pywin32 v301 does not work**.
 
 ## Contribution Guide
 

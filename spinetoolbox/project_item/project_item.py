@@ -60,8 +60,7 @@ class ProjectItem(MetaObject):
         self.undo_specification = None
         self._log_document = None
         self._filter_log_documents = {}
-        self.julia_console = None
-        self.python_console = None
+        self.console = None
         self._filter_consoles = {}
 
     def create_data_dir(self):
@@ -218,6 +217,9 @@ class ProjectItem(MetaObject):
         """Add a notification to the exclamation icon."""
         self.get_icon().exclamation_icon.add_notification(text)
 
+    def remove_notification(self, text):
+        self.get_icon().exclamation_icon.remove_notification(text)
+
     def set_rank(self, rank):
         """Set rank of this item for displaying in the design view."""
         if rank is not None:
@@ -266,6 +268,15 @@ class ProjectItem(MetaObject):
         """Notifies direct predecessors that item's resources have changed."""
         self._project.notify_resource_changes_to_predecessors(self)
 
+    def _resource_to_predecessors_replaced(self, old, new):
+        """Notifies direct predecessors that one of item's resources has been replaced.
+
+        Args:
+            old (ProjectItemResource): old resource
+            new (ProjectItemResource): new resource
+        """
+        self._project.notify_resource_replacement_to_predecessors(self, old, new)
+
     def upstream_resources_updated(self, resources):
         """Notifies item that resources from direct predecessors have changed.
 
@@ -273,9 +284,26 @@ class ProjectItem(MetaObject):
             resources (list of ProjectItemResource): new resources from upstream
         """
 
+    def replace_resource_from_upstream(self, old, new):
+        """Replaces an existing resource from direct predecessor by a new one.
+
+        Args:
+            old (ProjectItemResource): old resource
+            new (ProjectItemResource): new resource
+        """
+
     def _resources_to_successors_changed(self):
         """Notifies direct successors that item's resources have changed."""
         self._project.notify_resource_changes_to_successors(self)
+
+    def _resource_to_successors_replaced(self, old, new):
+        """Notifies direct successors that one of item's resources has been replaced.
+
+        Args:
+            old (ProjectItemResource): old resource
+            new (ProjectItemResource): new resource
+        """
+        self._project.notify_resource_replacement_to_successors(self, old, new)
 
     def downstream_resources_updated(self, resources):
         """Notifies item that resources from direct successors have changed.
@@ -284,27 +312,38 @@ class ProjectItem(MetaObject):
             resources (list of ProjectItemResource): new resources from downstream
         """
 
+    def replace_resource_from_downstream(self, old, new):
+        """Replaces an existing resource from direct successor by a new one.
+
+        Args:
+            old (ProjectItemResource): old resource
+            new (ProjectItemResource): new resource
+        """
+
     def invalidate_workflow(self, edges):
         """Notifies that this item's workflow is not acyclic.
 
         Args:
             edges (list): A list of edges that make the graph acyclic after removing them.
         """
-        edges = ["{0} -> {1}".format(*edge) for edge in edges]
+        edges = ", ".join("{0} -> {1}".format(*edge) for edge in edges)
         self.clear_notifications()
         self.set_rank(None)
         self.add_notification(
             "The workflow defined for this item has loops and thus cannot be executed. "
-            "Possible fix: remove link(s) {0}.".format(", ".join(edges))
+            f"Possible fix: remove link(s) {edges}."
         )
+
+    def revalidate_workflow(self):
+        self.remove_notification("The workflow defined for this item has loops and thus cannot be executed.")
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         return {
             "type": self.item_type(),
             "description": self.description,
-            "x": self.get_icon().sceneBoundingRect().center().x(),
-            "y": self.get_icon().sceneBoundingRect().center().y(),
+            "x": self.get_icon().x(),
+            "y": self.get_icon().y(),
         }
 
     @staticmethod
@@ -396,6 +435,7 @@ class ProjectItem(MetaObject):
         """
         for action in self._actions:
             action.deleteLater()
+        self.deleteLater()
 
     def set_up(self):
         """Sets up this item. Called when adding the item to the project.
@@ -471,7 +511,11 @@ class ProjectItem(MetaObject):
             document = self._create_filter_log_document(filter_id)
         else:
             document = self._create_log_document()
+        scrollbar = self._project._toolbox.ui.textBrowser_itemlog.verticalScrollBar()
+        scrollbar_at_max = True if scrollbar.value() == scrollbar.maximum() else False
         add_message_to_document(document, message)
+        if scrollbar_at_max:  # if scrollbar was at maximum before document was appended -> scroll to bottom
+            self._project._toolbox.ui.textBrowser_itemlog.scroll_to_bottom()
 
     def add_event_message(self, filter_id, msg_type, msg_text):
         """Adds a message to the log document.

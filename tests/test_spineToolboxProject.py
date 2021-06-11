@@ -16,15 +16,17 @@ Unit tests for SpineToolboxProject class.
 :date:   14.11.2018
 """
 import os.path
-from tempfile import TemporaryDirectory
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide2.QtCore import QVariantAnimation, QEventLoop
 from PySide2.QtWidgets import QApplication
+from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.connection import Connection
 from spine_engine.utils.helpers import shorten
+from spinetoolbox.helpers import SignalWaiter
 from .mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
@@ -34,6 +36,9 @@ from .mock_helpers import (
     add_view,
     add_importer,
     add_gdx_exporter,
+    add_gimlet,
+    add_exporter,
+    add_data_transformer,
 )
 
 
@@ -58,7 +63,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_data_store(self):
         """Test adding a Data Store to project."""
         name = "DS"
-        add_ds(self.toolbox.project(), name)
+        add_ds(self.toolbox.project(), self.toolbox.item_factories, name)
         # Check that an item with the created name is found from project item model
         found_index = self.toolbox.project_item_model.find_item(name)
         found_item = self.toolbox.project_item_model.item(found_index).project_item
@@ -82,7 +87,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_data_connection(self):
         """Test adding a Data Connection to project."""
         name = "DC"
-        add_dc(self.toolbox.project(), name)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, name)
         # Check that an item with the created name is found from project item model
         found_index = self.toolbox.project_item_model.find_item(name)
         found_item = self.toolbox.project_item_model.item(found_index).project_item
@@ -95,7 +100,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_tool(self):
         """Test adding a Tool to project."""
         name = "Tool"
-        add_tool(self.toolbox.project(), name)
+        add_tool(self.toolbox.project(), self.toolbox.item_factories, name)
         # Check that an item with the created name is found from project item model
         found_index = self.toolbox.project_item_model.find_item(name)
         found_item = self.toolbox.project_item_model.item(found_index).project_item
@@ -108,7 +113,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_view(self):
         """Test adding a View to project."""
         name = "View"
-        add_view(self.toolbox.project(), name)
+        add_view(self.toolbox.project(), self.toolbox.item_factories, name)
         # Check that an item with the created name is found from project item model
         found_index = self.toolbox.project_item_model.find_item(name)
         found_item = self.toolbox.project_item_model.item(found_index).project_item
@@ -118,91 +123,165 @@ class TestSpineToolboxProject(unittest.TestCase):
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
-    def test_add_six_items(self):
+    def test_add_all_available_items(self):
         """Test that adding multiple items works as expected.
-        Six items are added in order DS, DC, Tool, View, Importer, GdxExporter."""
+        Multiple items are added in order DS, DC, DT, Tool, Gimlet, View, Importer, Exporter, GdxExporter."""
         p = self.toolbox.project()
         # Add items
         ds_name = "DS"
         dc_name = "DC"
+        dt_name = "DT"
         tool_name = "Tool"
+        gimlet_name = "Gimlet"
         view_name = "View"
         imp_name = "Importer"
-        exp_name = "GdxExporter"
-        add_ds(p, ds_name)
-        add_dc(p, dc_name)
-        add_tool(p, tool_name)
-        add_view(p, view_name)
-        add_importer(p, imp_name)
-        add_gdx_exporter(p, exp_name)
+        exporter_name = "Exporter"
+        gdx_exporter_name = "GdxExporter"
+        add_ds(p, self.toolbox.item_factories, ds_name)
+        add_dc(p, self.toolbox.item_factories, dc_name)
+        add_data_transformer(p, self.toolbox.item_factories, dt_name)
+        add_tool(p, self.toolbox.item_factories, tool_name)
+        add_gimlet(p, self.toolbox.item_factories, gimlet_name)
+        add_view(p, self.toolbox.item_factories, view_name)
+        add_importer(p, self.toolbox.item_factories, imp_name)
+        add_exporter(p, self.toolbox.item_factories, exporter_name)
+        add_gdx_exporter(p, self.toolbox.item_factories, gdx_exporter_name)
         # Check that the items are found from project item model
-        ds = self.toolbox.project_item_model.get_item(ds_name)
+        ds = p.get_item(ds_name)
         self.assertEqual(ds_name, ds.name)
-        dc = self.toolbox.project_item_model.get_item(dc_name)
+        dc = p.get_item(dc_name)
         self.assertEqual(dc_name, dc.name)
-        tool = self.toolbox.project_item_model.get_item(tool_name)
+        dt = p.get_item(dt_name)
+        self.assertEqual(dt_name, dt.name)
+        tool = p.get_item(tool_name)
         self.assertEqual(tool_name, tool.name)
-        view = self.toolbox.project_item_model.get_item(view_name)
+        gimlet = p.get_item(gimlet_name)
+        self.assertEqual(gimlet_name, gimlet.name)
+        view = p.get_item(view_name)
         self.assertEqual(view_name, view.name)
-        importer = self.toolbox.project_item_model.get_item(imp_name)
+        importer = p.get_item(imp_name)
         self.assertEqual(imp_name, importer.name)
-        gdx_exporter = self.toolbox.project_item_model.get_item(exp_name)
-        self.assertEqual(exp_name, gdx_exporter.name)
+        exporter = p.get_item(exporter_name)
+        self.assertEqual(exporter_name, exporter.name)
+        gdx_exporter = p.get_item(gdx_exporter_name)
+        self.assertEqual(gdx_exporter_name, gdx_exporter.name)
         # DAG handler should now have six graphs, each with one item
         dag_hndlr = self.toolbox.project().dag_handler
         n_dags = len(dag_hndlr.dags())
-        self.assertEqual(6, n_dags)
+        self.assertEqual(9, n_dags)
         # Check that all created items are in graphs
-        ds_graph = dag_hndlr.dag_with_node(ds_name)  # Returns None if graph is not found
+        ds_graph = dag_hndlr.dag_with_node(ds_name)
         self.assertIsNotNone(ds_graph)
         dc_graph = dag_hndlr.dag_with_node(dc_name)
         self.assertIsNotNone(dc_graph)
+        dt_graph = dag_hndlr.dag_with_node(dt_name)
+        self.assertIsNotNone(dt_graph)
         tool_graph = dag_hndlr.dag_with_node(tool_name)
         self.assertIsNotNone(tool_graph)
+        gimlet_graph = dag_hndlr.dag_with_node(gimlet_name)
+        self.assertIsNotNone(gimlet_graph)
         view_graph = dag_hndlr.dag_with_node(view_name)
         self.assertIsNotNone(view_graph)
         importer_graph = dag_hndlr.dag_with_node(imp_name)
         self.assertIsNotNone(importer_graph)
-        exporter_graph = dag_hndlr.dag_with_node(exp_name)
+        exporter_graph = dag_hndlr.dag_with_node(exporter_name)
         self.assertIsNotNone(exporter_graph)
+        gdx_exporter_graph = dag_hndlr.dag_with_node(gdx_exporter_name)
+        self.assertIsNotNone(gdx_exporter_graph)
 
-    def _wait_for_execution_finished(self):
-        loop = QEventLoop()
-        self.toolbox.project().project_execution_finished.connect(loop.quit)
-        loop.exec_()
+    def test_remove_item_by_name(self):
+        view_name = "View"
+        add_view(self.toolbox.project(), self.toolbox.item_factories, view_name)
+        view = self.toolbox.project_item_model.get_item(view_name)
+        self.assertEqual(view_name, view.name)
+        self.toolbox.project().remove_item_by_name(view_name)
+        self.assertEqual(self.toolbox.project_item_model.n_items(), 0)
+
+    def test_remove_item_by_name_removes_outgoing_connections(self):
+        project = self.toolbox.project()
+        view1_name = "View 1"
+        add_view(project, self.toolbox.item_factories, view1_name)
+        view2_name = "View 2"
+        add_view(project, self.toolbox.item_factories, view2_name)
+        project.add_connection(Connection(view1_name, "top", view2_name, "bottom"))
+        view = self.toolbox.project_item_model.get_item(view1_name)
+        self.assertEqual(view1_name, view.name)
+        view = self.toolbox.project_item_model.get_item(view2_name)
+        self.assertEqual(view2_name, view.name)
+        self.assertEqual(len(project.connections), 1)
+        project.remove_item_by_name(view1_name)
+        self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
+        self.assertEqual(len(project.connections), 0)
+        view = self.toolbox.project_item_model.get_item(view2_name)
+        self.assertEqual(view2_name, view.name)
+        self.assertTrue(project.dag_handler.node_is_isolated(view2_name))
+
+    def test_remove_item_by_name_removes_incoming_connections(self):
+        project = self.toolbox.project()
+        view1_name = "View 1"
+        add_view(project, self.toolbox.item_factories, view1_name)
+        view2_name = "View 2"
+        add_view(project, self.toolbox.item_factories, view2_name)
+        project.add_connection(Connection(view1_name, "top", view2_name, "bottom"))
+        view = self.toolbox.project_item_model.get_item(view1_name)
+        self.assertEqual(view1_name, view.name)
+        view = self.toolbox.project_item_model.get_item(view2_name)
+        self.assertEqual(view2_name, view.name)
+        self.assertEqual(len(project.connections), 1)
+        project.remove_item_by_name(view2_name)
+        self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
+        self.assertEqual(len(project.connections), 0)
+        view = self.toolbox.project_item_model.get_item(view1_name)
+        self.assertEqual(view1_name, view.name)
+        self.assertTrue(project.dag_handler.node_is_isolated(view1_name))
+
+    def _execute_project(self):
+        waiter = SignalWaiter()
+        self.toolbox.project().project_execution_finished.connect(waiter.trigger)
+        self.toolbox.project().execute_project()
+        waiter.wait()
+        self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
+
+    def _execute_selected(self, names):
+        waiter = SignalWaiter()
+        self.toolbox.project().project_execution_finished.connect(waiter.trigger)
+        self.toolbox.project().execute_selected(names)
+        waiter.wait()
+        self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
 
     def test_execute_project_with_single_item(self):
-        _, view_executable = self._make_item(self.add_view)
+        view = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        view_executable = self._make_mock_executable(view)
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.return_value = view_executable
-            self.toolbox.project().execute_project()
-            self._wait_for_execution_finished()
+            self._execute_project()
         self.assertTrue(view_executable.execute_called)
 
     def test_execute_project_with_two_dags(self):
-        item1, item1_executable = self._make_item(self.add_dc)
-        item2, item2_executable = self._make_item(self.add_view)
+        item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        item1_executable = self._make_mock_executable(item1)
+        item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        item2_executable = self._make_mock_executable(item2)
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 item1.name: item1_executable,
                 item2.name: item2_executable,
             }[name]
-            self.toolbox.project().execute_project()
-            self._wait_for_execution_finished()
+            self._execute_project()
         self.assertTrue(item1_executable.execute_called)
         self.assertTrue(item2_executable.execute_called)
 
     def test_execute_selected_dag(self):
-        item1, item1_executable = self._make_item(self.add_dc)
-        item2, item2_executable = self._make_item(self.add_view)
-        self.toolbox.project().set_item_selected(item2)
+        item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        item1_executable = self._make_mock_executable(item1)
+        item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        item2_executable = self._make_mock_executable(item2)
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 item1.name: item1_executable,
                 item2.name: item2_executable,
             }[name]
-            self.toolbox.project().execute_selected()
-            self._wait_for_execution_finished()
+            self._execute_selected(["View"])
         self.assertFalse(item1_executable.execute_called)
         self.assertTrue(item2_executable.execute_called)
 
@@ -222,20 +301,21 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(self.toolbox.project().description, desc)
 
     def test_execute_selected_item_within_single_dag(self):
-        data_store, data_store_executable = self._make_item(self.add_ds)
-        data_connection, data_connection_executable = self._make_item(self.add_dc)
-        view, view_executable = self._make_item(self.add_view)
+        data_store = add_ds(self.toolbox.project(), self.toolbox.item_factories, "DS")
+        data_store_executable = self._make_mock_executable(data_store)
+        data_connection = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        data_connection_executable = self._make_mock_executable(data_connection)
+        view = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        view_executable = self._make_mock_executable(view)
         self.toolbox.project().add_connection(Connection(data_store.name, "right", data_connection.name, "left"))
         self.toolbox.project().add_connection(Connection(data_connection.name, "bottom", view.name, "top"))
-        self.toolbox.project().set_item_selected(data_connection)
         with mock.patch("spine_engine.spine_engine.SpineEngine._make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args: {
                 data_store.name: data_store_executable,
                 data_connection.name: data_connection_executable,
                 view.name: view_executable,
             }[name]
-            self.toolbox.project().execute_selected()
-            self._wait_for_execution_finished()
+            self._execute_selected(["DC"])
         self.assertFalse(data_store_executable.execute_called)
         self.assertTrue(data_connection_executable.execute_called)
         self.assertFalse(view_executable.execute_called)
@@ -244,8 +324,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         project = self.toolbox.project()
         source_name = "source"
         destination_name = "destination"
-        add_view(project, source_name)
-        add_view(project, destination_name)
+        add_view(project, self.toolbox.item_factories, source_name)
+        add_view(project, self.toolbox.item_factories, destination_name)
         source_item = project.get_item("source")
         project.add_connection(Connection(source_name, "left", destination_name, "right"))
         project.rename_item("source", "renamed source", "")
@@ -260,69 +340,119 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(source_item.get_icon().name(), "renamed source")
         self.assertEqual(os.path.split(source_item.data_dir)[1], shorten("renamed source"))
 
+    def test_connections_for_item_no_connections(self):
+        project = self.toolbox.project()
+        dc_name = "DC"
+        add_dc(project, self.toolbox.item_factories, dc_name)
+        self.assertEqual(project.connections_for_item(dc_name), [])
+
+    def test_connections_for_item(self):
+        project = self.toolbox.project()
+        dc1_name = "My first DC"
+        add_dc(project, self.toolbox.item_factories, dc1_name)
+        dc2_name = "My second DC"
+        add_dc(project, self.toolbox.item_factories, dc2_name)
+        dc3_name = "My third and last DC"
+        add_dc(project, self.toolbox.item_factories, dc3_name)
+        project.add_connection(Connection(dc1_name, "bottom", dc2_name, "top"))
+        project.add_connection(Connection(dc2_name, "top", dc3_name, "bottom"))
+        self.assertEqual(project.connections_for_item(dc1_name), [Connection(dc1_name, "bottom", dc2_name, "top")])
+        self.assertEqual(
+            project.connections_for_item(dc2_name),
+            [Connection(dc1_name, "bottom", dc2_name, "top"), Connection(dc2_name, "top", dc3_name, "bottom")],
+        )
+        self.assertEqual(project.connections_for_item(dc3_name), [Connection(dc2_name, "top", dc3_name, "bottom")])
+
+    def test_add_connection_updates_dag_handler(self):
+        project = self.toolbox.project()
+        dc_name = "DC"
+        add_dc(project, self.toolbox.item_factories, dc_name)
+        importer_name = "Importer"
+        add_importer(project, self.toolbox.item_factories, importer_name)
+        project.add_connection(Connection(dc_name, "right", importer_name, "left"))
+        self.assertEqual(len(project.connections), 1)
+        dag = project.dag_handler.dag_with_node(dc_name)
+        self.assertEqual(project.dag_handler.node_successors(dag), {dc_name: [importer_name], importer_name: []})
+
+    def test_add_connection_updates_resources(self):
+        project = self.toolbox.project()
+        dc_name = "DC"
+        add_dc(project, self.toolbox.item_factories, dc_name)
+        tool_name = "Tool"
+        add_tool(project, self.toolbox.item_factories, tool_name)
+        dc = project.get_item(dc_name)
+        data_file = Path(self._temp_dir.name, "a.txt")
+        data_file.touch()
+        dc.add_data_files([data_file])
+        tool = project.get_item(tool_name)
+        self.assertEqual(tool._input_file_model.rowCount(), 0)
+        project.add_connection(Connection(dc_name, "left", tool_name, "right"))
+        self.assertEqual(tool._input_file_model.rowCount(), 1)
+
+    def test_modifying_connected_item_updates_resources(self):
+        project = self.toolbox.project()
+        dc_name = "DC"
+        add_dc(project, self.toolbox.item_factories, dc_name)
+        tool_name = "Tool"
+        add_tool(project, self.toolbox.item_factories, tool_name)
+        tool = project.get_item(tool_name)
+        project.add_connection(Connection(dc_name, "left", tool_name, "right"))
+        self.assertEqual(tool._input_file_model.rowCount(), 0)
+        dc = project.get_item(dc_name)
+        data_file = Path(self._temp_dir.name, "a.txt")
+        data_file.touch()
+        dc.add_data_files([data_file])
+        while dc.data_model.rowCount() == 0:
+            QApplication.processEvents()  # DC's file system watcher updates DC here
+        self.assertEqual(tool._input_file_model.rowCount(), 1)
+
     def test_remove_connection(self):
         """Tests issue #1310"""
         # Make two DC's connected to a tool and provide a resource from both to Tool.
         # Remove one connection, and test that the other one still provides the resource to Tool
         project = self.toolbox.project()
-        add_dc(project, "dc1")
-        add_dc(project, "dc2")
-        add_tool(project, "t")
+        add_dc(project, self.toolbox.item_factories, "dc1")
+        add_dc(project, self.toolbox.item_factories, "dc2")
+        add_tool(project, self.toolbox.item_factories, "t")
         dc1 = project.get_item("dc1")
         dc2 = project.get_item("dc2")
         t = project.get_item("t")
-        with TemporaryDirectory() as temp_dir:
-            a = Path(temp_dir, "a.txt")
-            a.touch()
-            b = Path(temp_dir, "b.txt")
-            b.touch()
-            dc1.add_data_files([a])
-            dc2.add_data_files([b])
-            project.add_connection(Connection("dc1", "right", "t", "left"))
-            project.add_connection(Connection("dc2", "right", "t", "left"))
-            self.assertTrue(t._input_file_model.rowCount() == 2)  # There should 2 files in Available resources
-            connection = project.find_connection("dc2", "t")
-            project.remove_connection(connection)
-            self.assertTrue(t._input_file_model.rowCount() == 1)  # There should 1 resource left
+        a = Path(self._temp_dir.name, "a.txt")
+        a.touch()
+        b = Path(self._temp_dir.name, "b.txt")
+        b.touch()
+        dc1.add_data_files([a])
+        dc2.add_data_files([b])
+        project.add_connection(Connection("dc1", "right", "t", "left"))
+        project.add_connection(Connection("dc2", "right", "t", "left"))
+        self.assertEqual(t._input_file_model.rowCount(), 2)  # There should 2 files in Available resources
+        connection = project.find_connection("dc2", "t")
+        project.remove_connection(connection)
+        self.assertEqual(t._input_file_model.rowCount(), 1)  # There should 1 resource left
 
-    def add_ds(self):
-        """Helper method to add Data Store. Returns created items name."""
-        item = {"DS": {"type": "Data Store", "description": "", "url": dict(), "x": 0, "y": 0}}
-        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
-            self.toolbox.project().add_project_items(item)
-        return "DS"
+    def test_replace_connection(self):
+        project = self.toolbox.project()
+        dc1_name = "DC 1"
+        add_dc(project, self.toolbox.item_factories, dc1_name)
+        dc2_name = "DC 2"
+        add_dc(project, self.toolbox.item_factories, dc2_name)
+        project.add_connection(Connection(dc1_name, "left", dc2_name, "right"))
+        project.replace_connection(
+            Connection(dc1_name, "left", dc2_name, "right"), Connection(dc1_name, "top", dc2_name, "bottom")
+        )
+        self.assertEqual(project.connections_for_item(dc1_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
+        self.assertEqual(project.connections_for_item(dc2_name), [Connection(dc1_name, "top", dc2_name, "bottom")])
+        dag = project.dag_handler.dag_with_node(dc1_name)
+        self.assertEqual(project.dag_handler.node_successors(dag), {dc1_name: [dc2_name], dc2_name: []})
 
-    def add_dc(self):
-        """Helper method to add Data Connection. Returns created items name."""
-        item = {"DC": {"type": "Data Connection", "description": "", "references": list(), "x": 0, "y": 0}}
-        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
-            self.toolbox.project().add_project_items(item)
-        return "DC"
-
-    def add_tool(self):
-        """Helper method to add Tool. Returns created items name."""
-        item = {
-            "tool": {"type": "Tool", "description": "", "specification": "", "execute_in_work": False, "x": 0, "y": 0}
-        }
-        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
-            self.toolbox.project().add_project_items(item)
-        return "tool"
-
-    def add_view(self):
-        """Helper method to add View. Returns created items name."""
-        item = {"view": {"type": "View", "description": "", "x": 0, "y": 0}}
-        with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
-            self.toolbox.project().add_project_items(item)
-        return "view"
-
-    def _make_item(self, add_item_function):
-        item_name = add_item_function()
+    def _make_mock_executable(self, item):
+        item_name = item.name
         item = self.toolbox.project_item_model.get_item(item_name).project_item
         item_executable = _MockExecutableItem(item_name, self.toolbox.project().project_dir, self.toolbox)
         animation = QVariantAnimation()
         animation.setDuration(0)
         item.make_execution_leave_animation = mock.MagicMock(return_value=animation)
-        return item, item_executable
+        return item_executable
 
 
 class _MockExecutableItem(ExecutableItemBase):
@@ -340,7 +470,7 @@ class _MockExecutableItem(ExecutableItemBase):
 
     def execute(self, _forward_resources, _backward_resources):
         self.execute_called = True
-        return True
+        return ItemExecutionFinishState.SUCCESS
 
     @classmethod
     def from_dict(cls, item_dict, name, project_dir, app_settings, specifications, logger):

@@ -61,13 +61,15 @@ class MapModel(QAbstractTableModel):
         === === ====
     """
 
-    def __init__(self, map_value):
+    def __init__(self, map_value, parent):
         """
         Args:
             map_value (Map): a map
+            parent (QObject): parent object
         """
-        super().__init__()
+        super().__init__(parent)
         self._rows = convert_map_to_table(map_value)
+        self._index_names = _gather_index_names(map_value)
         self._BOLD = QFont()
         self._BOLD.setBold(True)
         self._EMTPY_COLOR = QColor(255, 240, 240)
@@ -80,6 +82,7 @@ class MapModel(QAbstractTableModel):
         last = first
         self.beginInsertColumns(QModelIndex(), first, last)
         self._rows = list(map(lambda row: row + [None], self._rows))
+        self._index_names += [Map.DEFAULT_INDEX_NAME]
         self.endInsertColumns()
 
     def clear(self, indexes):
@@ -175,14 +178,7 @@ class MapModel(QAbstractTableModel):
             if section < len(self._rows):
                 return section + 1
             return None
-        if section == 0:
-            return "Index"
-        if self._rows:
-            if section == len(self._rows[0]) - 1:
-                return "Value"
-            if section == len(self._rows[0]):
-                return None
-        return "Index or value"
+        return (self._index_names + ["Value", None])[section]
 
     def insertColumns(self, column, count, parent=QModelIndex()):
         """
@@ -200,6 +196,7 @@ class MapModel(QAbstractTableModel):
             return False
         self.beginInsertColumns(parent, column, column + count - 1)
         self._rows = [row[:column] + count * [None] + row[column:] for row in self._rows]
+        self._index_names = self._index_names[:column] + count * [Map.DEFAULT_INDEX_NAME] + self._index_names[column:]
         self.endInsertColumns()
         return True
 
@@ -289,6 +286,7 @@ class MapModel(QAbstractTableModel):
         last = min(column + count - 1, len(self._rows[0]) - 1)
         self.beginRemoveColumns(parent, column, last)
         self._rows = [row[:column] + row[column + count :] for row in self._rows]
+        self._index_names = self._index_names[:column] + self._index_names[column + count :]
         self.endRemoveColumns()
         return True
 
@@ -316,6 +314,7 @@ class MapModel(QAbstractTableModel):
         """Resets the model to given map_value."""
         self.beginResetModel()
         self._rows = convert_map_to_table(map_value)
+        self._index_names = _gather_index_names(map_value)
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
@@ -385,6 +384,13 @@ class MapModel(QAbstractTableModel):
             self.dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
         return True
 
+    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
+        if role != Qt.EditRole:
+            return False
+        self._index_names[section] = value
+        self.headerDataChanged.emit(orientation, section, section)
+        return True
+
     def trim_columns(self):
         """Removes empty columns from the right."""
         if not self._rows or len(self._rows[0]) == 2:
@@ -400,12 +406,15 @@ class MapModel(QAbstractTableModel):
         last = column_count - 1
         self.beginRemoveColumns(QModelIndex(), first, last)
         self._rows = list(map(lambda row: row[:first], self._rows))
+        self._index_names = self._index_names[:max_data_length]
         self.endRemoveColumns()
 
     def value(self):
         """Returns the Map."""
         tree = _rows_to_dict(self._rows)
-        return _reconstruct_map(tree)
+        map_value = _reconstruct_map(tree)
+        _apply_index_names(map_value, self._index_names)
+        return map_value
 
 
 def _rows_to_dict(rows):
@@ -470,3 +479,36 @@ def _data_length(row):
         int: data length
     """
     return len(list(takewhile(lambda x: x is not None, row)))
+
+
+def _gather_index_names(map_value):
+    """Collects index names from Map.
+
+    Returns only the 'first' index name for nested maps at the same depth.
+
+    Args:
+        map_value (Map): map to investigate
+
+    Returns:
+        list of str: index names
+    """
+    nested_names = list()
+    for v in map_value.values:
+        if isinstance(v, Map):
+            new_nested_names = _gather_index_names(v)
+            if len(new_nested_names) > len(nested_names):
+                nested_names = nested_names + new_nested_names[len(nested_names) :]
+    return [map_value.index_name] + nested_names
+
+
+def _apply_index_names(map_value, index_names):
+    """Applies index names to Map.
+
+    Args:
+        map_value (Map): target Map
+        index_names (list of str): index names
+    """
+    map_value.index_name = index_names[0]
+    for value in map_value.values:
+        if isinstance(value, Map):
+            _apply_index_names(value, index_names[1:])

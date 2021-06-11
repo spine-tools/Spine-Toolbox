@@ -6,10 +6,46 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
-- Support for Experimental Spine Engine. This can be enabled in app Settings->General tab. Experimental 
-  engine provides the latest in-development features (e.g. parallel/multicore processing, etc.).
+- Data Transformer now supports parameter value transformations.
+- Project execution shortcuts: F5 to execute all DAGs, F6 to execute selected items
+  and F7 to stop execution.
+- Time series, maps and other compound values have gained the ability to have names for their indexes.
+  Index names can be edited in parameter value editors and imported using Importer.
+
+### Changed
+- Data Transformer's specification editor has now a new interface.
+- Parameter renaming in Data Transformer requires now entity class names to identify the parameters.
+  Data Transformer's icon will show a notification if class names are missing.
+
+### Deprecated
+- GdxExporter has been deprecated. Use the general purpose Exporter item instead.
+  GdxExporter will be removed in a future release. Please replace existing items by Exporter.
+
+### Removed
+
+### Fixed
+
+## [0.6.0-final.2] - 2021-06-03
+
+### Fixed
+- [win-x64] Running Python or Julia Tools does not open an extra console window anymore
+
+### Security
+- urllib3 v1.26.5 now required because of a security vulnerability in earlier versions
+
+## [0.6.0-final.1] - 2021-06-01
+
+### Fixed
+- Event Log and Item Execution Logs now automatically scroll to the bottom when there are new messages
+- [win-x64] Resolve correct GAMS, Python, and Julia paths in Settings->Tools
+
+## [0.6.0-final.0] - 2021-05-07
+
+### Added
+- Support for parallel/multicore processing
 - New project item: Data Transformer. Can be used to configure Spine database filters for successor items.
   Currently, it supports renaming entity classes.
+- New project item: Exporter. A general-purpose tabular data exporter.
 - Support for version 3 Spine Toolbox projects and an automatic upgrade of version 2 projects to version 3.
 - Support for version 4 Spine Toolbox projects.
 - Support for version 5 Spine Toolbox projects.
@@ -19,9 +55,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - The SpineOpt configuration assistant has been moved from File->Configuration assistants,
   to File->Settings->Tools->Julia, and renamed to SpineOpt Installer.
 - New wizard to install Julia, accessible from File->Settings->Tools->Julia.
-- New Exporter project item, a general-purpose tabular data exporter. The old .gdx exporter has been
-  renamed to GdxExporter.
 - File->Close project option
+- Support for Python 3.8
+- Automated kernel creation, if the user selects to run tools in console without having created a kernel.
+- Option to pack CSV resource files into one datapackage.json file for advertising, available from Link properties.
+- Option to color project item icons in the toolbar, available frm File->Settings->General.
+- Reorganize project item icons in the toolbar with drag and drop.
 
 ### Changed
 - Project Item (Tool, Data Store, Importer, etc.) code has been removed from Spine Toolbox. 
@@ -29,18 +68,26 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   Toolbox's startup. 
 - Importer item now applies the same mapping to all input files. If the user needs to apply different 
   mappings, they need to create different Importers. The specification can be shared using the json file.
-- Exporter is now called GdxExporter.
-
-### Deprecated
+- The .gdx exporter project item is now called GdxExporter.
+- [win-x64] Installer does not require admin rights anymore
+- [win-x64] Installer always asks for an installation directory, even if a previous installation exists
+- [win-x64] Installer wizard style changed to modern
 
 ### Removed
 - Combiner project item. The same functionality can be achieved by connecting a Data Store to another Data Store.
 - Upgrade support for original (.proj file based) Spine Toolbox projects.
+- Python 3.6 is no longer supported.
+- The Spine Datapackage Editor is gone. There wasn't enough reason to keep this widget
+- The app no longer checks that Spine dependencies are up to date. Users are asked to follow the upgrade procedure
+  which involves manually upgrading requirements after pulling the latest master branch.
 
 ### Fixed
-### Security
+- [win-x64] returning_process.py when frozen
+- Traceback in GdxExporter when there are indexing settings for a parameter that is not in the database
+- Bug in installing Plugins
+- Traceback when removing Plugins
 
-##[0.5.0-final.1] - 2020-02-03
+## [0.5.0-final.1] - 2020-02-03
 
 ### Added
 - Tutorial for case study A5 in the documentation

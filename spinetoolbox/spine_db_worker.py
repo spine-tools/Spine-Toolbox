@@ -38,7 +38,10 @@ from .spine_db_commands import AgedUndoCommand, AddItemsCommand, UpdateItemsComm
 class SpineDBWorker(QObject):
     """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
 
+    connection_closed = Signal()
     _get_db_map_called = Signal()
+    _get_metadata_per_entity_called = Signal(object, list, dict)
+    _get_metadata_per_parameter_value_called = Signal(object, list, dict)
     _close_db_map_called = Signal(object)
     _add_or_update_items_called = Signal(object, str, str, str)
     _remove_items_called = Signal(object)
@@ -52,7 +55,9 @@ class SpineDBWorker(QObject):
 
     def __init__(self, db_mngr):
         super().__init__()
+        thread = db_mngr.thread
         self.moveToThread(db_mngr.thread)
+        thread.finished.connect(self.deleteLater)
         self._db_mngr = db_mngr
         self._db_map = None
         self._db_map_args = None
@@ -60,8 +65,11 @@ class SpineDBWorker(QObject):
         self._err = None
 
     def connect_signals(self):
-        connection = Qt.BlockingQueuedConnection if self.thread() != qApp.thread() else Qt.DirectConnection
+        # pylint: disable=undefined-variable
+        connection = Qt.BlockingQueuedConnection if self.thread() is not qApp.thread() else Qt.DirectConnection
         self._get_db_map_called.connect(self._get_db_map, connection)
+        self._get_metadata_per_entity_called.connect(self._get_metadata_per_entity, connection)
+        self._get_metadata_per_parameter_value_called.connect(self._get_metadata_per_parameter_value, connection)
         self._close_db_map_called.connect(self._close_db_map)
         self._add_or_update_items_called.connect(self._add_or_update_items)
         self._remove_items_called.connect(self._remove_items)
@@ -72,6 +80,29 @@ class SpineDBWorker(QObject):
         self._set_parameter_definition_tags_called.connect(self._set_parameter_definition_tags)
         self._export_data_called.connect(self._export_data)
         self._duplicate_object_called.connect(self._duplicate_object)
+        # Refresh
+        self._db_mngr.alternatives_updated.connect(self._cascade_refresh_parameter_values_by_alternative)
+        self._db_mngr.object_classes_updated.connect(self._cascade_refresh_relationship_classes)
+        self._db_mngr.object_classes_updated.connect(self._cascade_refresh_parameter_definitions)
+        self._db_mngr.object_classes_updated.connect(self._cascade_refresh_parameter_values_by_entity_class)
+        self._db_mngr.relationship_classes_updated.connect(self._cascade_refresh_parameter_definitions)
+        self._db_mngr.relationship_classes_updated.connect(self._cascade_refresh_parameter_values_by_entity_class)
+        self._db_mngr.objects_updated.connect(self._cascade_refresh_relationships_by_object)
+        self._db_mngr.objects_updated.connect(self._cascade_refresh_parameter_values_by_entity)
+        self._db_mngr.relationships_updated.connect(self._cascade_refresh_parameter_values_by_entity)
+        self._db_mngr.parameter_definitions_updated.connect(self._cascade_refresh_parameter_values_by_definition)
+        self._db_mngr.parameter_definitions_updated.connect(self._cascade_refresh_features_by_paremeter_definition)
+        self._db_mngr.parameter_value_lists_added.connect(self._cascade_refresh_parameter_definitions_by_value_list)
+        self._db_mngr.parameter_value_lists_updated.connect(self._cascade_refresh_parameter_definitions_by_value_list)
+        self._db_mngr.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_paremeter_value_list)
+        self._db_mngr.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_value_list)
+        self._db_mngr.parameter_tags_updated.connect(self._cascade_refresh_parameter_definitions_by_tag)
+        self._db_mngr.features_updated.connect(self._cascade_refresh_tool_features_by_feature)
+        self._db_mngr.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
+        self._db_mngr.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
+        self._db_mngr.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
+        self._db_mngr.parameter_definition_tags_added.connect(self._refresh_parameter_definitions_by_tag)
+        self._db_mngr.parameter_definition_tags_removed.connect(self._refresh_parameter_definitions_by_tag)
 
     def get_db_map(self, *args, **kwargs):
         self._db_map = None
@@ -95,6 +126,30 @@ class SpineDBWorker(QObject):
     def _close_db_map(self, db_map):  # pylint: disable=no-self-use
         if not db_map.connection.closed:
             db_map.connection.close()
+        self.connection_closed.emit()
+
+    def get_metadata_per_entity(self, db_map, entity_ids):
+        d = {}
+        self._get_metadata_per_entity_called.emit(db_map, entity_ids, d)
+        return d
+
+    @Slot(object, list, dict)
+    def _get_metadata_per_entity(self, db_map, entity_ids, d):
+        sq = db_map.ext_entity_metadata_sq
+        for x in db_map.query(sq).filter(db_map.in_(sq.c.entity_id, entity_ids)):
+            d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
+
+    def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
+        d = {}
+        self._get_metadata_per_parameter_value_called.emit(db_map, parameter_value_ids, d)
+        return d
+
+    @Slot(object, list, dict)
+    def _get_metadata_per_parameter_value(self, db_map, parameter_value_ids, d):
+        sq = db_map.ext_parameter_value_metadata_sq
+        for x in db_map.query(sq).filter(db_map.in_(sq.c.parameter_value_id, parameter_value_ids)):
+            param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
+            d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
 
     def add_or_update_items(self, db_map_data, method_name, getter_name, signal_name):
         self._add_or_update_items_called.emit(db_map_data, method_name, getter_name, signal_name)
@@ -124,7 +179,6 @@ class SpineDBWorker(QObject):
                 continue
             for chunk in getter(db_map, ids=ids):
                 signal.emit({db_map: chunk})
-                self._refresh(signal_name, {db_map: chunk})
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
 
@@ -297,11 +351,13 @@ class SpineDBWorker(QObject):
         db_map = DatabaseMapping(url, create=True)
         import_data(db_map, **data_for_export)
         file_name = os.path.split(file_path)[1]
+        if os.path.exists(file_path):
+            os.remove(file_path)
         try:
             export_spine_database_to_xlsx(db_map, file_path)
         except PermissionError:
             error_msg = {
-                None: [f"Unable to export file <b>{file_name}</b>.<br/>" "Close the file in Excel and try again."]
+                None: [f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."]
             }
             caller.msg_error.emit(error_msg)
         except OSError:
@@ -309,6 +365,8 @@ class SpineDBWorker(QObject):
             caller.msg_error.emit(error_msg)
         else:
             caller.file_exported.emit(file_path)
+        finally:
+            db_map.connection.close()
 
     def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
         self._duplicate_object_called.emit(db_maps, object_data, orig_name, dup_name)
@@ -383,44 +441,6 @@ class SpineDBWorker(QObject):
             if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
                 macro.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
-
-    def _refresh(self, signal_name, db_map_data):
-        callbacks = {
-            "alternatives_updated": (self._cascade_refresh_parameter_values_by_alternative,),
-            "object_classes_updated": (
-                self._cascade_refresh_relationship_classes,
-                self._cascade_refresh_parameter_definitions,
-                self._cascade_refresh_parameter_values_by_entity_class,
-            ),
-            "relationship_classes_updated": (
-                self._cascade_refresh_parameter_definitions,
-                self._cascade_refresh_parameter_values_by_entity_class,
-            ),
-            "objects_updated": (
-                self._cascade_refresh_relationships_by_object,
-                self._cascade_refresh_parameter_values_by_entity,
-            ),
-            "relationships_updated": (self._cascade_refresh_parameter_values_by_entity,),
-            "parameter_definitions_updated": (
-                self._cascade_refresh_parameter_values_by_definition,
-                self._cascade_refresh_features_by_paremeter_definition,
-            ),
-            "parameter_value_lists_added": (self._cascade_refresh_parameter_definitions_by_value_list,),
-            "parameter_value_lists_updated": (
-                self._cascade_refresh_parameter_definitions_by_value_list,
-                self._cascade_refresh_features_by_paremeter_value_list,
-            ),
-            "parameter_value_lists_removed": (self._cascade_refresh_parameter_definitions_by_value_list,),
-            "parameter_tags_updated": (self._cascade_refresh_parameter_definitions_by_tag,),
-            "features_updated": (self._cascade_refresh_tool_features_by_feature,),
-            "scenario_alternatives_added": (self._refresh_scenario_alternatives,),
-            "scenario_alternatives_updated": (self._refresh_scenario_alternatives,),
-            "scenario_alternatives_removed": (self._refresh_scenario_alternatives,),
-            "parameter_definition_tags_added": (self._refresh_parameter_definitions_by_tag,),
-            "parameter_definition_tags_removed": (self._refresh_parameter_definitions_by_tag,),
-        }.get(signal_name, ())
-        for callback in callbacks:
-            callback(db_map_data)
 
     def _refresh_scenario_alternatives(self, db_map_data):
         """Refreshes cached scenarios when updating scenario alternatives.

@@ -284,6 +284,7 @@ class _MenuToolBar(QToolBar):
     enabled_changed = Signal(bool)
     _enabled = True
     _focus_widget = None
+    _buttons = []
 
     def is_enabled(self):
         return self._enabled
@@ -303,7 +304,7 @@ class _MenuToolBar(QToolBar):
 
     def _setup_action_button(self, action):
         """Customizes the QToolButton associated with given action:
-            1. Makes sure that the text honores the action's mnemonics.
+            1. Makes sure that the text honors the action's mnemonics.
             2. Installs this as event filter on the button (see ``self.eventFilter()``).
 
         Must be called everytime an action is added to the tool bar.
@@ -314,8 +315,9 @@ class _MenuToolBar(QToolBar):
         button = self.widgetForAction(action)
         if not button:
             return
+        self._buttons.append(button)
         button.setText(action.text())
-        action.changed.connect(lambda action=action: button.setText(action.text()))
+        action.changed.connect(lambda action=action, button=button: button.setText(action.text()))
         button.installEventFilter(self)
 
     def actionEvent(self, ev):

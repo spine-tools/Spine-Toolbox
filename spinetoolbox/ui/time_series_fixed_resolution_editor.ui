@@ -122,7 +122,11 @@
         </layout>
        </item>
        <item>
-        <widget class="TimeSeriesFixedResolutionTableView" name="time_series_table"/>
+        <widget class="TimeSeriesFixedResolutionTableView" name="time_series_table">
+         <attribute name="horizontalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+        </widget>
        </item>
       </layout>
      </widget>

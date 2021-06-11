@@ -95,6 +95,7 @@ class TestSpineDBEditor(
                     "parameter_id",
                     "parameter_name",
                     "value",
+                    "type",
                 ],
                 args,
             )
@@ -118,6 +119,7 @@ class TestSpineDBEditor(
                     "parameter_id",
                     "parameter_name",
                     "value",
+                    "type",
                 ],
                 args,
             )
@@ -212,7 +214,8 @@ class TestSpineDBEditor(
             cls.nemo_object["name"],
             cls.water_parameter["id"],
             cls.water_parameter["parameter_name"],
-            '"salt"',
+            b'"salt"',
+            None,
         )
         cls.pluto_breed = cls._object_parameter_value(
             2,
@@ -222,7 +225,8 @@ class TestSpineDBEditor(
             cls.pluto_object["name"],
             cls.breed_parameter["id"],
             cls.breed_parameter["parameter_name"],
-            '"bloodhound"',
+            b'"bloodhound"',
+            None,
         )
         cls.scooby_breed = cls._object_parameter_value(
             3,
@@ -232,7 +236,8 @@ class TestSpineDBEditor(
             cls.scooby_object["name"],
             cls.breed_parameter["id"],
             cls.breed_parameter["parameter_name"],
-            '"great dane"',
+            b'"great dane"',
+            None,
         )
         cls.nemo_pluto_relative_speed = cls._relationship_parameter_value(
             4,
@@ -245,7 +250,8 @@ class TestSpineDBEditor(
             cls.nemo_pluto_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
             cls.relative_speed_parameter["parameter_name"],
-            "-1",
+            b"-1",
+            None,
         )
         cls.nemo_scooby_relative_speed = cls._relationship_parameter_value(
             5,
@@ -258,7 +264,8 @@ class TestSpineDBEditor(
             cls.nemo_scooby_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
             cls.relative_speed_parameter["parameter_name"],
-            "5",
+            b"5",
+            None,
         )
         cls.pluto_nemo_combined_mojo = cls._relationship_parameter_value(
             6,
@@ -271,27 +278,23 @@ class TestSpineDBEditor(
             cls.pluto_nemo_rel["object_name_list"],
             cls.combined_mojo_parameter["id"],
             cls.combined_mojo_parameter["parameter_name"],
-            "100",
+            b"100",
+            None,
         )
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of SpineDBEditor classes."""
-        with mock.patch("spinetoolbox.spine_db_worker.DiffDatabaseMapping") as mock_DiffDBMapping, mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
-        ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        ):
             mock_settings = mock.Mock()
-            mock_settings.value.side_effect = lambda *args, **kwards: 0
+            mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self.db_mngr = SpineDBManager(mock_settings, None)
             self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
-            def DiffDBMapping_side_effect(url, codename=None, upgrade=False, create=False):
-                mock_db_map = mock.MagicMock()
-                mock_db_map.db_url = url
-                mock_db_map.codename = codename
-                return mock_db_map
-
-            mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
-            self.spine_db_editor = SpineDBEditor(self.db_mngr, {"mock_url": "mock_db"})
+            logger = mock.MagicMock()
+            self.db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+            self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": "database"})
             self.mock_db_map = self.spine_db_editor.first_db_map
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
 
@@ -399,7 +402,7 @@ class TestSpineDBEditor(
         row_data = []
         for row in range(model.rowCount()):
             row_data.append(tuple(model.index(row, h(field)).data() for field in ("object_class_name", "database")))
-        self.assertTrue(("fish", "mock_db") in row_data)
+        self.assertIn(("fish", "database"), row_data)
 
     @unittest.skip("TODO")
     def test_set_object_parameter_value_defaults(self):

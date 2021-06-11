@@ -4,7 +4,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Spine Toolbox"
-#define MyAppVersion "0.6.0-alpha.0"
+#define MyAppVersion "0.6.0-final.0"
 #define MyAppPublisher "Spine Project Consortium"
 #define MyAppURL "https://github.com/Spine-project"
 #define MyAppExeName "spinetoolbox.exe"
@@ -13,7 +13,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
 ; Do not use the same AppId value in installers for other applications.
-; AppId for the release version
+SignTool=signtool
 AppId={{6E794A8A-E508-47C4-9319-1113852224D3}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
@@ -22,18 +22,24 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={pf}\Spine Toolbox
+DefaultDirName={commonpf}\Spine Toolbox
 DefaultGroupName=Spine Toolbox
 AllowNoIcons=yes
 LicenseFile=COPYING.LESSER
 OutputBaseFilename=spine-toolbox-{#MyAppVersion}-x64
 Compression=lzma
 SolidCompression=yes
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
+UsePreviousPrivileges=no
+PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=dist
 ArchitecturesInstallIn64BitMode=x64 ia64
 ArchitecturesAllowed=x64 ia64 arm64
 UsePreviousAppDir=yes
+SignedUninstaller=yes
+AlwaysShowDirOnReadyPage=yes
+DisableDirPage=no
+WizardStyle=modern
 
 [Code]
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -55,7 +61,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "build\exe.win-amd64-3.7\spinetoolbox.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\exe.win-amd64-3.7\spinetoolbox.exe"; DestDir: "{app}"; Flags: ignoreversion sign
 Source: "build\exe.win-amd64-3.7\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

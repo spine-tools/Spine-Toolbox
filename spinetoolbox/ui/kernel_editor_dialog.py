@@ -13,13 +13,16 @@
 ################################################################################
 ## Form generated from reading UI file 'kernel_editor_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.14.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
 from spinetoolbox import resources_icons_rc
@@ -310,7 +313,7 @@ class Ui_Dialog(object):
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Kernel specification editor", None))
         self.label_8.setText(QCoreApplication.translate("Dialog", u"Make new Python kernel specs", None))
-        self.label_3.setText(QCoreApplication.translate("Dialog", u"Interpeter", None))
+        self.label_3.setText(QCoreApplication.translate("Dialog", u"Interpreter", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_python_interpreter.setToolTip(QCoreApplication.translate("Dialog", u"<html><head/><body><p>Python interpreter for the new kernel. </p><p>Use the browse button to select a different Python.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)

@@ -151,7 +151,7 @@ class ItemSpecificationMenu(CustomPopupMenu):
         self._toolbox = toolbox
         self.index = QPersistentModelIndex(index)
         self.add_action("Edit specification", lambda item=item: toolbox.edit_specification(self.index, item))
-        self.add_action("Remove specification", lambda: toolbox.remove_specification(self.index.row()))
+        self.add_action("Remove specification", lambda: toolbox.remove_specification(self.index))
         self.add_action("Open specification file...", lambda: toolbox.open_specification_file(self.index))
 
 

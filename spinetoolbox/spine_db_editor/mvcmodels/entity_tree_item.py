@@ -399,7 +399,7 @@ class RelationshipItem(EntityItem):
     @property
     def display_data(self):
         """"Returns the name for display."""
-        return self.db_mngr._GROUP_SEP.join(
+        return self.db_mngr.GROUP_SEP.join(
             [x for x in self.object_name_list.split(",") if x != self.parent_item.parent_item.display_data]
         )
 

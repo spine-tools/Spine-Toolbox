@@ -179,7 +179,7 @@ class MultiDBTreeItem(TreeItem):
 
         Args:
             db_map (DiffDatabaseMapping): create children for this db_map
-            children_data (iter): create childs from these dictionaries
+            children_ids (iter): create children from these ids
         """
         return [self.child_item_type(self.model, {db_map: id_}) for id_ in children_ids]
 

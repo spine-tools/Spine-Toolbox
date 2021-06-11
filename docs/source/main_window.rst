@@ -1,11 +1,11 @@
 .. Main Window documentation
    Created 16.1.2019
 
-.. |play-all| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-solid.svg
+.. |play-all| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
             :width: 16
-.. |play-selected| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-regular.svg
+.. |play-selected| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-regular.svg
             :width: 16
-.. |stop| image:: ../../spinetoolbox/ui/resources/project_item_icons/stop-circle-regular.svg
+.. |stop| image:: ../../spinetoolbox/ui/resources/menu_icons/stop-circle-regular.svg
             :width: 16
 .. |trash| image:: ../../spinetoolbox/ui/resources/menu_icons/trash-alt.svg
             :width: 16

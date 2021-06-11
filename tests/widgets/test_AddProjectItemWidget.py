@@ -19,6 +19,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide2.QtWidgets import QApplication
+from PySide2.QtGui import QColor
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
@@ -116,6 +117,10 @@ class TestItemFactory(ProjectItemFactory):
     @staticmethod
     def icon():
         return ""
+
+    @staticmethod
+    def icon_color():
+        return QColor()
 
     @staticmethod
     def make_add_item_widget(toolbox, x, y, specification):

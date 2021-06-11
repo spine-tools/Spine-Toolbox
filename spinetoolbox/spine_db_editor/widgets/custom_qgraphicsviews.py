@@ -56,6 +56,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.cross_hairs_items = []
         self.auto_expand_objects = None
         self._auto_expand_objects_action = None
+        self._add_objects_action = None
         self._save_pos_action = None
         self._clear_pos_action = None
         self._hide_action = None
@@ -70,6 +71,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._arc_length_action = None
         self._restore_pruned_menu = None
         self._parameter_heat_map_menu = None
+        self._previous_mouse_pos = None
+        self._context_menu_pos = None
 
     @property
     def entity_items(self):
@@ -102,6 +105,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         )
         self._auto_expand_objects_action.setChecked(self.auto_expand_objects)
         self._auto_expand_objects_action.toggled.connect(self.set_auto_expand_objects)
+        self._menu.addSeparator()
+        self._add_objects_action = self._menu.addAction("Add objects", self.add_objects_at_position)
         self._menu.addSeparator()
         self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
         self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
@@ -192,6 +197,16 @@ class EntityQGraphicsView(CustomQGraphicsView):
         return menu
 
     @Slot(bool)
+    def set_auto_expand_objects(self, checked=False):
+        self.auto_expand_objects = checked
+        self._auto_expand_objects_action.setChecked(checked)
+        self._spine_db_editor.build_graph()
+
+    @Slot(bool)
+    def add_objects_at_position(self, checked=False):
+        self._spine_db_editor.add_objects_at_position(self._context_menu_pos)
+
+    @Slot(bool)
     def edit_selected(self, _=False):
         """Edits selected items."""
         obj_items = [item for item in self.selected_items if isinstance(item, ObjectItem)]
@@ -209,12 +224,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
             db_map, entity_id = item.db_map_entity_id
             db_map_typed_data.setdefault(db_map, {}).setdefault(item.entity_type, set()).add(entity_id)
         self._spine_db_editor.db_mngr.remove_items(db_map_typed_data)
-
-    @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
-        self.auto_expand_objects = checked
-        self._auto_expand_objects_action.setChecked(checked)
-        self._spine_db_editor.build_graph()
 
     @Slot(bool)
     def hide_selected_items(self, checked=False):
@@ -506,10 +515,15 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def mouseMoveEvent(self, event):
         """Updates the hovered object item if we're in relationship creation mode."""
-        if not self.cross_hairs_items:
-            super().mouseMoveEvent(event)
+        if self.cross_hairs_items:
+            self._update_cross_hairs_pos(event.pos())
             return
-        self._update_cross_hairs_pos(event.pos())
+        super().mouseMoveEvent(event)
+        if not self.itemAt(event.pos()) and (event.buttons() & Qt.LeftButton != 0):
+            if self._previous_mouse_pos is not None:
+                delta = event.pos() - self._previous_mouse_pos
+                self._scroll_scene_by(delta.x(), delta.y())
+            self._previous_mouse_pos = event.pos()
 
     def _update_cross_hairs_pos(self, pos):
         """Updates the hovered object item and sets the 'cross_hairs' icon accordingly.
@@ -539,6 +553,24 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if not self.cross_hairs_items:
             super().mouseReleaseEvent(event)
 
+    def _scroll_scene_by(self, dx, dy):
+        if dx == dy == 0:
+            return
+        scene_rect = self.sceneRect()
+        view_scene_rect = self.mapFromScene(scene_rect).boundingRect()
+        view_rect = self.viewport().rect()
+        scene_dx = abs((self.mapToScene(0, 0) - self.mapToScene(dx, 0)).x())
+        scene_dy = abs((self.mapToScene(0, 0) - self.mapToScene(0, dy)).y())
+        if dx < 0 and view_rect.right() - dx >= view_scene_rect.right():
+            scene_rect.adjust(0, 0, scene_dx, 0)
+        elif dx > 0 and view_rect.left() - dx <= view_scene_rect.left():
+            scene_rect.adjust(-scene_dx, 0, 0, 0)
+        if dy < 0 and view_rect.bottom() - dy >= view_scene_rect.bottom():
+            scene_rect.adjust(0, 0, 0, scene_dy)
+        elif dy > 0 and view_rect.top() - dy <= view_scene_rect.top():
+            scene_rect.adjust(0, -scene_dy, 0, 0)
+        self.scene().setSceneRect(scene_rect)
+
     def keyPressEvent(self, event):
         """Aborts relationship creation if user presses ESC."""
         super().keyPressEvent(event)
@@ -556,6 +588,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if e.isAccepted():
             return
         e.accept()
+        self._context_menu_pos = self.mapToScene(e.pos())
         self._menu.exec_(e.globalPos())
 
     def _compute_max_zoom(self):

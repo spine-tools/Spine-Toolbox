@@ -77,6 +77,7 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         self.db_maps = db_maps
         label = QLabel("<p>Please check the relationships you want to add and press <b>Ok</b>.</p>")
         label.setWordWrap(True)
+        self.table_view.horizontalHeader().setMinimumSectionSize(0)
         self.layout().addWidget(label, 0, 0)
         self.layout().addWidget(self.table_view, 1, 0)
         self.layout().addWidget(self.button_box, 2, 0, -1, -1)

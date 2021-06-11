@@ -21,8 +21,9 @@ from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt, QSize, QSettings
 from PySide2.QtGui import QPixmap
 from spine_engine.utils.helpers import (
-    resolve_julia_executable_from_path,
-    resolve_python_executable_from_path,
+    resolve_python_interpreter,
+    resolve_julia_executable,
+    resolve_gams_executable,
     get_julia_env,
 )
 from .notification import Notification
@@ -30,8 +31,13 @@ from .install_julia_wizard import InstallJuliaWizard
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..link import Link
-from ..widgets.kernel_editor import KernelEditor, find_python_kernels, find_julia_kernels
-from ..widgets.conda_envs import CondaEnv
+from ..widgets.kernel_editor import (
+    KernelEditor,
+    MiniPythonKernelEditor,
+    MiniJuliaKernelEditor,
+    find_python_kernels,
+    find_julia_kernels,
+)
 from ..helpers import (
     select_python_interpreter,
     select_julia_executable,
@@ -150,6 +156,7 @@ class SpineDBEditorSettingsMixin:
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
         relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
         auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
+        db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
         elif commit_at_exit == 1:
@@ -161,6 +168,8 @@ class SpineDBEditorSettingsMixin:
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
         self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
         self.ui.checkBox_auto_expand_objects.setChecked(auto_expand_objects == "true")
+        if db_editor_show_undo == 2:
+            self.ui.checkBox_db_editor_show_undo.setChecked(True)
 
     def save_settings(self):
         """Get selections and save them to persistent memory."""
@@ -178,6 +187,8 @@ class SpineDBEditorSettingsMixin:
         self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
         auto_expand_objects = "true" if int(self.ui.checkBox_auto_expand_objects.checkState()) else "false"
         self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
+        db_editor_show_undo = str(int(self.ui.checkBox_db_editor_show_undo.checkState()))
+        self._qsettings.setValue("appSettings/dbEditorShowUndo", db_editor_show_undo)
         return True
 
     def update_ui(self):
@@ -217,11 +228,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             toolbox (ToolboxUI): Parent widget.
         """
         super().__init__(toolbox.qsettings())
+        self.ui.stackedWidget.setCurrentIndex(0)
+        self.ui.listWidget.setFocus()
+        self.ui.listWidget.setCurrentRow(0)
         self._toolbox = toolbox  # QWidget parent
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self._kernel_editor = None
-        self._conda_env_window = None
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
@@ -231,6 +244,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.connect_signals()
         self.read_settings()
         self.read_project_settings()
+        self._update_python_widgets_enabled()
+        self._update_julia_widgets_enabled()
 
     def connect_signals(self):
         """Connect signals."""
@@ -241,59 +256,45 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.toolButton_browse_python.clicked.connect(self.browse_python_button_clicked)
         self.ui.pushButton_open_kernel_editor_python.clicked.connect(self.show_python_kernel_editor)
         self.ui.pushButton_open_kernel_editor_julia.clicked.connect(self.show_julia_kernel_editor)
-        self.ui.pushButton_conda.clicked.connect(self.show_conda_envs)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_tree.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_solid.clicked.connect(self.update_scene_bg)
+        self.ui.checkBox_color_toolbar_icons.clicked.connect(self.set_toolbar_colored_icons)
         self.ui.checkBox_use_curved_links.clicked.connect(self.update_links_geometry)
-        self.ui.radioButton_use_julia_executable.clicked.connect(self.update_julia_execution_mode)
-        self.ui.radioButton_use_julia_console.clicked.connect(self.update_julia_execution_mode)
-        self.ui.radioButton_use_python_interpreter.clicked.connect(self.update_python_execution_mode)
-        self.ui.radioButton_use_python_console.clicked.connect(self.update_python_execution_mode)
         self.ui.pushButton_install_julia.clicked.connect(self._show_install_julia_wizard)
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
+        self.ui.checkBox_use_python_kernel.clicked.connect(self._update_python_widgets_enabled)
+        self.ui.checkBox_use_julia_kernel.clicked.connect(self._update_julia_widgets_enabled)
+
+    @Slot(bool)
+    def _update_python_widgets_enabled(self, _=False):
+        use_python_kernel = self.ui.checkBox_use_python_kernel.isChecked()
+        self.ui.comboBox_python_kernel.setEnabled(use_python_kernel)
+        self.ui.pushButton_open_kernel_editor_python.setEnabled(use_python_kernel)
+        self.ui.lineEdit_python_path.setEnabled(not use_python_kernel)
+        self.ui.toolButton_browse_python.setEnabled(not use_python_kernel)
+
+    @Slot(bool)
+    def _update_julia_widgets_enabled(self, _=False):
+        use_julia_kernel = self.ui.checkBox_use_julia_kernel.isChecked()
+        self.ui.comboBox_julia_kernel.setEnabled(use_julia_kernel)
+        self.ui.pushButton_open_kernel_editor_julia.setEnabled(use_julia_kernel)
+        self.ui.lineEdit_julia_path.setEnabled(not use_julia_kernel)
+        self.ui.lineEdit_julia_project_path.setEnabled(not use_julia_kernel)
+        self.ui.toolButton_browse_julia.setEnabled(not use_julia_kernel)
+        self.ui.toolButton_browse_julia_project.setEnabled(not use_julia_kernel)
 
     def _show_install_julia_wizard(self):
         wizard = InstallJuliaWizard(self)
-        wizard.julia_exe_selected.connect(self._use_installed_julia)
+        wizard.julia_exe_selected.connect(self.ui.lineEdit_julia_path.setText)
         wizard.show()
 
-    @Slot(str, bool)
-    def _use_installed_julia(self, julia_exe, create_kernel):
-        self.ui.lineEdit_julia_path.setText(julia_exe)
-        if not create_kernel:
-            self.ui.radioButton_use_julia_executable.setChecked(True)
-            self.update_julia_execution_mode()
-            return
-        self.ui.radioButton_use_julia_console.setChecked(True)
-        self.update_julia_execution_mode()
-        self._kernel_editor = KernelEditor(self, "", julia_exe, "julia", "")
-        self._kernel_editor.finished.connect(self.julia_kernel_editor_closed)
-        self._kernel_editor.finished.connect(self._call_update_julia_exec_mode)
-        self._kernel_editor.open()
-
-    @Slot(int)
-    def _call_update_julia_exec_mode(self, ret_code):
-        if ret_code != 1:  # Not Ok
-            self.ui.radioButton_use_julia_executable.setChecked(True)
-            self.update_julia_execution_mode()
-
-    def _get_julia_settings(self):
-        use_emb_julia = "2" if self.ui.radioButton_use_julia_console.isChecked() else "0"
-        julia_path = self.ui.lineEdit_julia_path.text().strip()
-        julia_project_path = self.ui.lineEdit_julia_project_path.text().strip()
-        if self.ui.comboBox_julia_kernel.currentIndex() == 0:
-            julia_kernel = ""
-        else:
-            julia_kernel = self.ui.comboBox_julia_kernel.currentText()
-        return use_emb_julia, julia_path, julia_project_path, julia_kernel
-
     def _show_add_up_spine_opt_wizard(self):
-        use_emb_julia, julia_path, julia_project_path, julia_kernel = self._get_julia_settings()
+        use_julia_kernel, julia_path, julia_project_path, julia_kernel = self._get_julia_settings()
         settings = QSettings("SpineProject", "AddUpSpineOptWizard")
-        settings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
+        settings.setValue("appSettings/useJuliaKernel", use_julia_kernel)
         settings.setValue("appSettings/juliaPath", julia_path)
         settings.setValue("appSettings/juliaProjectPath", julia_project_path)
         settings.setValue("appSettings/juliaKernel", julia_kernel)
@@ -355,15 +356,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def browse_python_button_clicked(self, checked=False):
         """Calls static method that shows a file browser for selecting Python interpreter."""
         select_python_interpreter(self, self.ui.lineEdit_python_path)
-
-    @Slot(bool)
-    def show_conda_envs(self, _checked=False):
-        """Opens Conda envs 'editor'."""
-        self._conda_env_window = CondaEnv(self)
-        self._conda_env_window.show()
-
-    def conda_env_window_closed(self):
-        self._conda_env_window = None
 
     @Slot(bool)
     def show_python_kernel_editor(self, checked=False):
@@ -488,39 +480,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
                 item.update_geometry(curved_links=checked)
 
     @Slot(bool)
-    def update_julia_execution_mode(self, checked=False):
-        """Toggles between console and non-console Julia execution
-        modes depending on radiobutton states.
-
-        Args:
-            checked (boolean): Toggle state
-        """
-        if self.ui.radioButton_use_julia_executable.isChecked():
-            console_enabled = False
-        elif self.ui.radioButton_use_julia_console.isChecked():
-            console_enabled = True
-        self.ui.comboBox_julia_kernel.setEnabled(console_enabled)
-        self.ui.lineEdit_julia_path.setEnabled(not console_enabled)
-        self.ui.lineEdit_julia_project_path.setEnabled(not console_enabled)
-        self.ui.toolButton_browse_julia.setEnabled(not console_enabled)
-        self.ui.toolButton_browse_julia_project.setEnabled(not console_enabled)
-
-    @Slot(bool)
-    def update_python_execution_mode(self, checked=False):
-        """Toggles between console and non-console Python execution
-        modes depending on radiobutton states.
-
-        Args:
-            checked (boolean): Toggle state
-        """
-        console_enabled = True
-        if self.ui.radioButton_use_python_interpreter.isChecked():
-            console_enabled = False
-        elif self.ui.radioButton_use_python_console.isChecked():
-            console_enabled = True
-        self.ui.comboBox_python_kernel.setEnabled(console_enabled)
-        self.ui.lineEdit_python_path.setEnabled(not console_enabled)
-        self.ui.toolButton_browse_python.setEnabled(not console_enabled)
+    def set_toolbar_colored_icons(self, checked=False):
+        self._toolbox.main_toolbar.set_colored_icons(checked)
 
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
@@ -534,29 +495,32 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         custom_open_project_dialog = self._qsettings.value("appSettings/customOpenProjectDialog", defaultValue="true")
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
+        color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
-        use_embedded_julia = int(self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2"))
+        use_julia_kernel = int(self._qsettings.value("appSettings/useJuliaKernel", defaultValue="0"))
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
         julia_project_path = self._qsettings.value("appSettings/juliaProjectPath", defaultValue="")
         julia_kernel = self._qsettings.value("appSettings/juliaKernel", defaultValue="")
-        use_embedded_python = int(self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="2"))
+        use_python_kernel = int(self._qsettings.value("appSettings/usePythonKernel", defaultValue="0"))
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         python_kernel = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
+        save_spec = int(self._qsettings.value("appSettings/saveSpecBeforeClosing", defaultValue="1"))  # tri-state
+        spec_show_undo = int(self._qsettings.value("appSettings/specShowUndo", defaultValue="2"))
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt == 2:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
         if save_at_exit == 0:  # Not needed but makes the code more readable.
-            self.ui.checkBox_save_at_exit.setCheckState(Qt.Unchecked)
+            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.Unchecked)
         elif save_at_exit == 1:
-            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.PartiallyChecked)
         else:  # save_at_exit == 2:
-            self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
+            self.ui.checkBox_save_project_before_closing.setCheckState(Qt.Checked)
         if datetime == 2:
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
         if delete_data == 2:
@@ -565,6 +529,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_custom_open_project_dialog.setCheckState(Qt.Checked)
         if smooth_zoom == "true":
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
+        if color_toolbar_icons == "true":
+            self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
@@ -579,18 +545,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.bg_color = bg_color
         self.update_bg_color()
+        self.ui.lineEdit_gams_path.setPlaceholderText(resolve_gams_executable(""))
         self.ui.lineEdit_gams_path.setText(gams_path)
         # Add Python and Julia kernels to comboBoxes
         julia_k_cb_items = ["Select Julia kernel spec..."] + list(find_julia_kernels())  # Unpack to list literal
         self.ui.comboBox_julia_kernel.addItems(julia_k_cb_items)
         python_k_cb_items = ["Select Python kernel spec..."] + list(find_python_kernels())
         self.ui.comboBox_python_kernel.addItems(python_k_cb_items)
-        if use_embedded_julia == 2:
-            self.ui.radioButton_use_julia_console.setChecked(True)
-        else:
-            self.ui.radioButton_use_python_interpreter.setChecked(True)
-        self.update_julia_execution_mode()
-        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable_from_path())
+        if use_julia_kernel == 2:
+            self.ui.checkBox_use_julia_kernel.setChecked(True)
+        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable(""))
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
         ind = self.ui.comboBox_julia_kernel.findText(julia_kernel)
@@ -598,12 +562,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_julia_kernel.setCurrentIndex(0)
         else:
             self.ui.comboBox_julia_kernel.setCurrentIndex(ind)
-        if use_embedded_python == 2:
-            self.ui.radioButton_use_python_console.setChecked(True)
-        else:
-            self.ui.radioButton_use_python_interpreter.setChecked(True)
-        self.update_python_execution_mode()
-        self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_executable_from_path())
+        if use_python_kernel == 2:
+            self.ui.checkBox_use_python_kernel.setChecked(True)
+        self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_interpreter(""))
         self.ui.lineEdit_python_path.setText(python_path)
         ind = self.ui.comboBox_python_kernel.findText(python_kernel)
         if ind == -1:
@@ -612,6 +573,14 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_python_kernel.setCurrentIndex(ind)
         self.ui.lineEdit_work_dir.setText(work_dir)
         self.orig_work_dir = work_dir
+        if save_spec == 0:
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.Unchecked)
+        elif save_spec == 1:
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.PartiallyChecked)
+        else:  # save_spec == 2:
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.Checked)
+        if spec_show_undo == 2:
+            self.ui.checkBox_spec_show_undo.setChecked(True)
 
     def read_project_settings(self):
         """Get project name and description and update widgets accordingly."""
@@ -631,14 +600,14 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         we should use strings.
         """
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
-        # checkBox check states are casted from integers to string because of Linux
+        # checkBox check states are cast from integers to string for consistency
         if not super().save_settings():
             return False
         open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
         self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
         exit_prompt = str(int(self.ui.checkBox_exit_prompt.checkState()))
         self._qsettings.setValue("appSettings/showExitPrompt", exit_prompt)
-        save_at_exit = str(int(self.ui.checkBox_save_at_exit.checkState()))
+        save_at_exit = str(int(self.ui.checkBox_save_project_before_closing.checkState()))
         self._qsettings.setValue("appSettings/saveAtExit", save_at_exit)
         datetime = str(int(self.ui.checkBox_datetime.checkState()))
         self._qsettings.setValue("appSettings/dateTime", datetime)
@@ -648,6 +617,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/customOpenProjectDialog", custom_open_project_dial)
         smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
+        color_toolbar_icons = "true" if int(self.ui.checkBox_color_toolbar_icons.checkState()) else "false"
+        self._qsettings.setValue("appSettings/colorToolbarIcons", color_toolbar_icons)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
@@ -660,35 +631,50 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             bg_choice = "solid"
         self._qsettings.setValue("appSettings/bgChoice", bg_choice)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
+        save_spec = str(int(self.ui.checkBox_save_spec_before_closing.checkState()))
+        self._qsettings.setValue("appSettings/saveSpecBeforeClosing", save_spec)
+        spec_show_undo = str(int(self.ui.checkBox_spec_show_undo.checkState()))
+        self._qsettings.setValue("appSettings/specShowUndo", spec_show_undo)
         # GAMS
         gams_path = self.ui.lineEdit_gams_path.text().strip()
         # Check gams_path is a file, it exists, and file name starts with 'gams'
         if not file_is_valid(self, gams_path, "Invalid GAMS Program", extra_check="gams"):
             return False
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
-        # Julia (str because Linux)
-        use_emb_julia, julia_path, julia_project_path, julia_kernel = self._get_julia_settings()
-        self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
+        # Julia
+        use_julia_kernel, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
+        if use_julia_kernel == "2" and not julia_kernel:
+            julia_kernel = _get_julia_kernel_name_by_env(julia_exe, julia_project)
+            if not julia_kernel:
+                MiniJuliaKernelEditor(self, julia_exe, julia_project).make_kernel()
+                julia_kernel = _get_julia_kernel_name_by_env(julia_exe, julia_project)
+        self._qsettings.setValue("appSettings/useJuliaKernel", use_julia_kernel)
         # Check julia_path is a file, it exists, and file name starts with 'julia'
-        if not file_is_valid(self, julia_path, "Invalid Julia Executable", extra_check="julia"):
+        if not file_is_valid(self, julia_exe, "Invalid Julia Executable", extra_check="julia"):
             return False
-        self._qsettings.setValue("appSettings/juliaPath", julia_path)
-        if not dir_is_valid(self, julia_project_path, "Invalid Julia Project"):  # Check it's a directory and it exists
+        self._qsettings.setValue("appSettings/juliaPath", julia_exe)
+        # Check julia project is a directory and it exists
+        if julia_project != "@." and not dir_is_valid(self, julia_project, "Invalid Julia Project"):
             return False
-        self._qsettings.setValue("appSettings/juliaProjectPath", julia_project_path)
+        self._qsettings.setValue("appSettings/juliaProjectPath", julia_project)
         self._qsettings.setValue("appSettings/juliaKernel", julia_kernel)
         # Python
-        use_emb_python = "2" if self.ui.radioButton_use_python_console.isChecked() else "0"
-        self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
-        python_path = self.ui.lineEdit_python_path.text().strip()
-        # Check python_path is a file, it exists, and file name starts with 'python'
-        if not file_is_valid(self, python_path, "Invalid Python Interpreter", extra_check="python"):
-            return False
-        self._qsettings.setValue("appSettings/pythonPath", python_path)
+        use_python_kernel = "2" if self.ui.checkBox_use_python_kernel.isChecked() else "0"
+        python_exe = self.ui.lineEdit_python_path.text().strip()
         if self.ui.comboBox_python_kernel.currentIndex() == 0:
             python_kernel = ""
         else:
             python_kernel = self.ui.comboBox_python_kernel.currentText()
+        if use_python_kernel == "2" and not python_kernel:
+            python_kernel = _get_python_kernel_name_by_exe(python_exe)
+            if not python_kernel:
+                MiniPythonKernelEditor(self, python_exe).make_kernel()
+                python_kernel = _get_python_kernel_name_by_exe(python_exe)
+        self._qsettings.setValue("appSettings/usePythonKernel", use_python_kernel)
+        # Check python_path is a file, it exists, and file name starts with 'python'
+        if not file_is_valid(self, python_exe, "Invalid Python Interpreter", extra_check="python"):
+            return False
+        self._qsettings.setValue("appSettings/pythonPath", python_exe)
         self._qsettings.setValue("appSettings/pythonKernel", python_kernel)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
@@ -698,6 +684,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         # Project
         self.update_project_settings()
         return True
+
+    def _get_julia_settings(self):
+        use_julia_kernel = "2" if self.ui.checkBox_use_julia_kernel.isChecked() else "0"
+        julia_exe = self.ui.lineEdit_julia_path.text().strip()
+        julia_project = self.ui.lineEdit_julia_project_path.text().strip()
+        if self.ui.comboBox_julia_kernel.currentIndex() == 0:
+            julia_kernel = ""
+        else:
+            julia_kernel = self.ui.comboBox_julia_kernel.currentText()
+        return use_julia_kernel, julia_exe, julia_project, julia_kernel
 
     def update_project_settings(self):
         """Update project name and description if these have been changed."""
@@ -728,6 +724,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
+        color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
+        self.set_toolbar_colored_icons(color_toolbar_icons == "true")
         self.update_links_geometry(curved_links == "true")
         if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
@@ -741,3 +739,45 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.bg_color = bg_color
         self.update_bg_color()
+
+
+def _get_python_kernel_name_by_exe(python_exe):
+    """Returns a kernel name corresponding to given python exe, or an empty string if none available.
+
+    Args:
+        python_exe (str)
+
+    Returns:
+        str
+    """
+    python_exe = resolve_python_interpreter(python_exe)
+    for name, location in find_python_kernels().items():
+        deats = KernelEditor.get_kernel_deats(location)
+        if _samefile(deats["exe"], python_exe):
+            return name
+    return ""
+
+
+def _get_julia_kernel_name_by_env(julia_exe, julia_project):
+    """Returns a kernel name corresponding to given julia exe and project, or an empty string if none available.
+
+    Args:
+        julia_exe (str)
+        julia_project (str)
+
+    Returns:
+        str
+    """
+    julia_exe = resolve_julia_executable(julia_exe)
+    for name, location in find_julia_kernels().items():
+        deats = KernelEditor.get_kernel_deats(location)
+        if _samefile(deats["exe"], julia_exe) and _samefile(deats["project"], julia_project):
+            return name
+    return ""
+
+
+def _samefile(a, b):
+    try:
+        return os.path.samefile(os.path.realpath(a), os.path.realpath(b))
+    except FileNotFoundError:
+        return False

@@ -55,6 +55,7 @@ class CustomQGraphicsView(QGraphicsView):
         self.scene().center_items()
         self._update_zoom_limits()
         self._zoom(self._items_fitting_zoom)
+        self._set_preferred_scene_rect()
 
     def keyPressEvent(self, event):
         """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
@@ -299,7 +300,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         factor = extent / self.mapFromScene(QRectF(0, 0, extent, 0)).boundingRect().width()
         if factor < 1:
             self._zoom(factor)
-        self._set_preferred_scene_rect()
 
     def _compute_max_zoom(self):
         # The max zoom is the one that fits one item into the view

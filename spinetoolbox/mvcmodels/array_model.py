@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains logic for the fixed step time series editor widget.
+Contains model for the Array editor widget.
 
 :author: A. Soininen (VTT)
 :date:   14.6.2019
@@ -31,14 +31,19 @@ class ArrayModel(QAbstractTableModel):
     This is to show an empty row in the table view.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QObject): parent object
+        """
+        super().__init__(parent)
         self._data = list()
         self._data_type = float
+        self._index_name = Array.DEFAULT_INDEX_NAME
 
     def array(self):
         """Returns the array modeled by this model."""
-        return Array(self._data, self._data_type)
+        return Array(self._data, self._data_type, self._index_name)
 
     def batch_set_data(self, indexes, values):
         """Sets data at multiple indexes at once.
@@ -66,8 +71,8 @@ class ArrayModel(QAbstractTableModel):
         self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole, Qt.DisplayRole, Qt.ToolTipRole])
 
     def columnCount(self, parent=QModelIndex()):
-        """Returns 1."""
-        return 1
+        """Returns 2."""
+        return 2
 
     def _convert_to_data_type(self, indexes, values):
         """
@@ -108,7 +113,7 @@ class ArrayModel(QAbstractTableModel):
                 except SpineDBAPIError:
                     pass
                 try:
-                    data = from_database(value)
+                    data = from_database(value, self._data_type.type_())
                     if isinstance(data, self._data_type):
                         converted.append(data)
                         filtered.append(index)
@@ -121,41 +126,44 @@ class ArrayModel(QAbstractTableModel):
         if not index.isValid():
             return None
         row = index.row()
+        column = index.column()
         if role == Qt.DisplayRole:
+            if column == 0:
+                return row + 1
             if row == len(self._data):
                 return None
             element = self._data[row]
             if isinstance(element, (float, str)):
                 return element
             return str(element)
-        if role == Qt.EditRole:
-            if row == len(self._data):
-                return self._data_type()
-            return self._data[row]
-        if role == Qt.ToolTipRole:
-            if row == len(self._data):
-                return None
-            element = self._data[row]
-            return str(element)
-        if role == Qt.BackgroundRole:
-            if row == len(self._data):
+        if column == 1:
+            if role == Qt.EditRole:
+                if row == len(self._data):
+                    return self._data_type()
+                return self._data[row]
+            if role == Qt.ToolTipRole:
+                if row == len(self._data):
+                    return None
+                element = self._data[row]
+                return str(element)
+            if role == Qt.BackgroundRole and row == len(self._data):
                 return EXPANSE_COLOR
-            return None
         return None
 
     def flags(self, index):
         """Returns table cell's flags."""
         if not index.isValid():
             return Qt.NoItemFlags
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+        flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        if index.column() == 1:
+            flags = flags | Qt.ItemIsEditable
+        return flags
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         """Returns header data."""
-        if role != Qt.DisplayRole:
-            return None
-        if orientation == Qt.Vertical:
-            return section + 1
-        return "Value"
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return (self._index_name, "Value")[section]
+        return None
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts rows to the array."""
@@ -208,6 +216,7 @@ class ArrayModel(QAbstractTableModel):
         self.beginResetModel()
         self._data = list(value.values)
         self._data_type = value.value_type
+        self._index_name = value.index_name
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
@@ -233,6 +242,13 @@ class ArrayModel(QAbstractTableModel):
             self._data = len(self._data) * [new_type()]
         self._data_type = new_type
         self.endResetModel()
+
+    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
+        if role == Qt.EditRole and section == 0 and orientation == Qt.Horizontal and value:
+            self._index_name = value
+            self.headerDataChanged.emit(orientation, section, section)
+            return True
+        return False
 
     def setData(self, index, value, role=Qt.EditRole):
         """Sets the value at given index."""

@@ -37,6 +37,7 @@ class UrlToolBar(QToolBar):
         self.reload_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_R))
         self._go_back_action.setEnabled(False)
         self._go_forward_action.setEnabled(False)
+        self.reload_action.setEnabled(False)
         self._open_project_url_menu = self._add_open_project_url_menu()
         self._line_edit = QLineEdit(self)
         self._line_edit.setPlaceholderText("Type the URL of a Spine DB")

@@ -17,6 +17,7 @@ Miscelaneous mixins for parameter models
 """
 
 from PySide2.QtCore import Qt
+from ...helpers import split_value_and_type
 
 
 def _parse_csv_list(csv_list):
@@ -45,6 +46,14 @@ class ConvertToDBMixin:
             list: error log
         """
         item = item.copy()
+        value_field, type_field = {
+            "parameter_value": ("value", "type"),
+            "parameter_definition": ("default_value", "default_type"),
+        }[self.item_type]
+        if value_field in item:
+            value, value_type = split_value_and_type(item[value_field])
+            item[value_field] = value
+            item[type_field] = value_type
         return item, []
 
 
@@ -552,13 +561,14 @@ class ValidateValueInListMixin(ConvertToDBMixin):
         value = item.get("value")
         if value is None:
             return item, err
+        str_value = str(value, "UTF8")
         param_def_id = self._get_parameter_definition_id(db_map, item)
         param_def = self.db_mngr.get_item(db_map, "parameter_definition", param_def_id)
         value_list = self.db_mngr.get_parameter_value_list(db_map, param_def.get("value_list_id"), role=Qt.EditRole)
-        if value_list and value not in value_list:
+        if value_list and str_value not in value_list:
             item["has_valid_value_from_list"] = False
             msg = (
-                f"Invalid value '{value}' for parameter '{param_def['parameter_name']}', "
+                f"Invalid value '{str_value}' for parameter '{param_def['parameter_name']}', "
                 f"valid values are {', '.join(value_list)}"
             )
             return item, err + [msg]

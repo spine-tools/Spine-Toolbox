@@ -20,7 +20,9 @@ from math import atan2, sin, cos, pi
 from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, QGraphicsEllipseItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont
+from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
+from spinetoolbox.helpers import busy_effect
 from .project_item_icon import ConnectorButton
 
 
@@ -47,7 +49,10 @@ class LinkBase(QGraphicsPathItem):
     @property
     def src_rect(self):
         """Returns the scene rectangle of the source connector."""
-        return self.src_connector.sceneBoundingRect()
+        try:
+            return self.src_connector.sceneBoundingRect()
+        except RuntimeError as e:
+            raise e
 
     @property
     def src_center(self):
@@ -101,10 +106,6 @@ class LinkBase(QGraphicsPathItem):
         return ellipse_path
 
     def _get_src_offset(self):
-        if self.src_connector == self.dst_connector:
-            return {"left": QPointF(0, 1), "bottom": QPointF(1, 0), "right": QPointF(0, -1)}[
-                self.src_connector.position
-            ]
         return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.src_connector.position]
 
     def _get_dst_offset(self, c1):
@@ -148,41 +149,10 @@ class LinkBase(QGraphicsPathItem):
             list(QPointF): points
             list(float): angles
         """
-        max_incr = 0.05
-        min_incr = 0.01
-        max_angle_change = 0.001
-        percents = list()
-        angles = list()
-        t = path.percentAtLength(self.src_rect.width() / 2)
-        a = path.angleAtPercent(t)
-        while t < 0.5:
-            percents.append(t)
-            angles.append(a)
-            t_ref = t
-            a_ref = a
-            incr = max_incr
-            while incr > min_incr:
-                t = t_ref + incr
-                a = path.angleAtPercent(t)
-                try:
-                    angle_change = abs((a - a_ref) / (a_ref + a) / 2)
-                except ZeroDivisionError:
-                    incr = min_incr
-                    break
-                if angle_change < max_angle_change:
-                    break
-                incr /= 2
-            t += incr
-        t = 0.5
-        a = path.angleAtPercent(t)
-        percents.append(t)
-        angles.append(a)
+        count = min(int(100 * (1.0 - path.percentAtLength(self.src_rect.width() / 2))) + 2, 100)
+        percents = [k / 100 for k in range(count)]
         points = list(map(path.pointAtPercent, percents))
-        for t in reversed(percents):
-            p = path.pointAtPercent(1.0 - t)
-            a = path.angleAtPercent(1.0 - t)
-            points.append(p)
-            angles.append(a)
+        angles = list(map(path.angleAtPercent, percents))
         return points, angles
 
     def _make_connecting_path(self, guide_path):
@@ -217,7 +187,9 @@ class LinkBase(QGraphicsPathItem):
     def _follow_points(curve_path, points):
         points = iter(points)
         for p0 in points:
-            p1 = next(points)
+            p1 = next(points, None)
+            if p1 is None:
+                break
             curve_path.quadTo(p0, p1)
 
     def _radius_from_point_and_angle(self, point, angle):
@@ -263,8 +235,8 @@ class LinkBase(QGraphicsPathItem):
         return atan2(-line.dy(), line.dx())
 
 
-class FilterIcon(QGraphicsEllipseItem):
-    """An icon to show that a Link has filters."""
+class _LinkIcon(QGraphicsEllipseItem):
+    """An icon to show over a Link."""
 
     def __init__(self, x, y, w, h, parent):
         super().__init__(x, y, w, h, parent)
@@ -274,11 +246,37 @@ class FilterIcon(QGraphicsEllipseItem):
         self._text_item = QGraphicsTextItem(self)
         font = QFont('Font Awesome 5 Free Solid')
         self._text_item.setFont(font)
-        self._text_item.setPos(0, 0)
-        self._text_item.setPlainText("\uf0b0")
         self._text_item.setDefaultTextColor(color)
-        self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+        self._svg_item = QGraphicsSvgItem(self)
+        self._datapkg_renderer = QSvgRenderer()
+        self._datapkg_renderer.load(":/icons/datapkg.svg")
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self._block_updates = False
+
+    def update_icon(self):
+        """Sets the icon (filter, datapkg, or none), depending on Connection state."""
+        connection = self._parent.connection
+        if connection.use_datapackage:
+            self.setVisible(True)
+            self._svg_item.setVisible(True)
+            self._svg_item.setSharedRenderer(self._datapkg_renderer)
+            scale = 0.8 * self.rect().width() / self._datapkg_renderer.defaultSize().width()
+            self._svg_item.setScale(scale)
+            self._svg_item.setPos(0, 0)
+            self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
+            self._text_item.setVisible(False)
+            return
+        if connection.has_filters():
+            self.setVisible(True)
+            self._text_item.setVisible(True)
+            self._text_item.setPlainText("\uf0b0")
+            self._svg_item.setPos(0, 0)
+            self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
+            self._svg_item.setVisible(False)
+            return
+        self.setVisible(False)
+        self._text_item.setVisible(False)
+        self._svg_item.setVisible(False)
 
 
 class Link(LinkBase):
@@ -298,13 +296,11 @@ class Link(LinkBase):
         self.dst_connector = dst_connector
         self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
-        self._filter_icon_extent = 4 * self.magic_number
-        self._filter_icon = FilterIcon(0, 0, self._filter_icon_extent, self._filter_icon_extent, self)
-        self._filter_icon.setPen(self.normal_pen)
-        self.setToolTip(
-            "<html><p>Connection from <b>{0}</b>'s output "
-            "to <b>{1}</b>'s input</html>".format(self._connection.source, self._connection.destination)
-        )
+        self._link_icon_extent = 4 * self.magic_number
+        self._link_icon = _LinkIcon(0, 0, self._link_icon_extent, self._link_icon_extent, self)
+        self._link_icon.setPen(self.normal_pen)
+        self._link_icon.update_icon()
+        self.setToolTip(f"<html><p>Connection {self._connection.name}</p></html>")
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
@@ -319,9 +315,20 @@ class Link(LinkBase):
         """Makes resource filter mode fetch filter data from database."""
         self.resource_filter_model.build_tree()
 
+    @busy_effect
+    def set_connection_options(self, options):
+        if options == self.connection.options:
+            return
+        self.connection.options = options
+        self._link_icon.update_icon()
+        item = self._toolbox.project_item_model.get_item(self.connection.source).project_item
+        self._toolbox.project().notify_resource_changes_to_successors(item)
+        if self is self._toolbox.active_link:
+            self._toolbox.link_properties_widget.load_connection_options()
+
     @property
     def name(self):
-        return f"from {self._connection.source} to {self._connection.destination}"
+        return self._connection.name
 
     @property
     def connection(self):
@@ -331,15 +338,15 @@ class Link(LinkBase):
         """See base class."""
         super().do_update_geometry(guide_path)
         center = guide_path.pointAtPercent(0.5)
-        self._filter_icon.setPos(center - 0.5 * QPointF(self._filter_icon_extent, self._filter_icon_extent))
+        self._link_icon.setPos(center - 0.5 * QPointF(self._link_icon_extent, self._link_icon_extent))
 
-    def make_execution_animation(self, skipped):
+    def make_execution_animation(self, excluded):
         """Returns an animation to play when execution 'passes' through this link.
 
         Returns:
             QVariantAnimation
         """
-        colorname = "lightGray" if skipped else "red"
+        colorname = "lightGray" if excluded else "red"
         self._exec_color = QColor(colorname)
         qsettings = self._toolbox.qsettings()
         duration = int(qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
@@ -396,20 +403,19 @@ class Link(LinkBase):
 
     def paint(self, painter, option, widget=None):
         """Sets a dashed pen if selected."""
-        self._filter_icon.setVisible(self._connection.has_filters())
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             self.setPen(self.selected_pen)
-            self._filter_icon.setPen(self.selected_pen)
+            self._link_icon.setPen(self.selected_pen)
         else:
             self.setPen(self.normal_pen)
-            self._filter_icon.setPen(self.normal_pen)
+            self._link_icon.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
     def shape(self):
         shape = super().shape()
-        if self._filter_icon.isVisible():
-            shape.addEllipse(self._filter_icon.sceneBoundingRect())
+        if self._link_icon.isVisible():
+            shape.addEllipse(self._link_icon.sceneBoundingRect())
         return shape
 
     def itemChange(self, change, value):

@@ -18,13 +18,16 @@ Contains SpineEngineWorker.
 
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
+from PySide2.QtWidgets import QMessageBox
+from spine_engine.spine_engine import ItemExecutionFinishState
 from .spine_engine_manager import make_engine_manager
+from .helpers import get_upgrade_db_promt_text
 
 
 @Slot(list)
 def _handle_dag_execution_started(project_items):
     for item in project_items:
-        item.get_icon().execution_icon.mark_execution_wating()
+        item.get_icon().execution_icon.mark_execution_waiting()
 
 
 @Slot(object, object)
@@ -36,15 +39,16 @@ def _handle_node_execution_started(item, direction):
             icon.animation_signaller.animation_started.emit()
 
 
-@Slot(object, object, object, bool, bool)
-def _handle_node_execution_finished(item, direction, state, success, skipped):
+@Slot(object, object, object, object)
+def _handle_node_execution_finished(item, direction, state, item_state):
     icon = item.get_icon()
     if direction == "FORWARD":
-        icon.execution_icon.mark_execution_finished(success, skipped)
+        icon.execution_icon.mark_execution_finished(item_state)
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_stopped.emit()
         if state == "RUNNING":
-            icon.run_execution_leave_animation(skipped)
+            excluded = item_state == ItemExecutionFinishState.EXCLUDED
+            icon.run_execution_leave_animation(excluded)
 
 
 @Slot(object, str, str)
@@ -57,14 +61,37 @@ def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
     item.add_process_message(filter_id, msg_type, msg_text)
 
 
+@Slot(dict, object)
+def _handle_prompt_arrived(prompt, engine_mngr):
+    prompt_type = prompt["type"]
+    if prompt_type == "upgrade_db":
+        url = prompt["url"]
+        current = prompt["current"]
+        expected = prompt["expected"]
+        text, info_text = get_upgrade_db_promt_text(url, current, expected)
+    else:
+        text = prompt["text"]
+    item_name = prompt["item_name"]
+    box_title = f"{item_name}"
+    box = QMessageBox(
+        QMessageBox.Question, box_title, text, buttons=QMessageBox.Yes | QMessageBox.No, parent=qApp.activeWindow()
+    )
+    if info_text:
+        box.setInformativeText(info_text)
+    answer = box.exec_()
+    accepted = answer == QMessageBox.Yes
+    engine_mngr.answer_prompt(item_name, accepted)
+
+
 class SpineEngineWorker(QObject):
 
     finished = Signal()
     _dag_execution_started = Signal(list)
     _node_execution_started = Signal(object, object)
-    _node_execution_finished = Signal(object, object, object, bool, bool)
+    _node_execution_finished = Signal(object, object, object, object)
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
+    _prompt_arrived = Signal(dict, object)
 
     def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items):
         """
@@ -139,6 +166,7 @@ class SpineEngineWorker(QObject):
         self._node_execution_finished.connect(_handle_node_execution_finished)
         self._event_message_arrived.connect(_handle_event_message_arrived)
         self._process_message_arrived.connect(_handle_process_message_arrived)
+        self._prompt_arrived.connect(_handle_prompt_arrived)
 
     def start(self, silent=False):
         """Connects log signals.
@@ -170,11 +198,16 @@ class SpineEngineWorker(QObject):
             "event_msg": self._handle_event_msg,
             "process_msg": self._handle_process_msg,
             "standard_execution_msg": self._handle_standard_execution_msg,
+            "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
+            "prompt": self._handle_prompt,
         }.get(event_type)
         if handler is None:
             return
         handler(data)
+
+    def _handle_prompt(self, prompt):
+        self._prompt_arrived.emit(prompt, self._engine_mngr)
 
     def _handle_standard_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
@@ -190,32 +223,50 @@ class SpineEngineWorker(QObject):
                 item, msg["filter_id"], "msg_warning", "\tExecution is in progress. See messages below (stdout&stderr)"
             )
 
+    def _handle_persistent_execution_msg(self, msg):
+        item = self._project_items[msg["item_name"]]
+        if msg["type"] == "persistent_started":
+            item.persistent_console_requested.emit(msg["filter_id"], msg["key"], msg["language"])
+        elif msg["type"] == "persistent_failed_to_start":
+            msg_text = (
+                f"Unable to start persistent process <b>{msg['args']}</b>: {msg['error']}."
+                "Please go to Settings->Tools and check your setup."
+            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg["type"] == "stdin":
+            item.persistent_stdin_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "stdout":
+            item.persistent_stdout_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "stderr":
+            item.persistent_stderr_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "execution_started":
+            self._event_message_arrived.emit(
+                item, msg["filter_id"], "msg", f"*** Starting execution on persistent process <b>{msg['args']}</b> ***"
+            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
+
     def _handle_kernel_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
-        language = msg["language"].capitalize()
         if msg["type"] == "kernel_started":
-            console_requested_signal = {
-                "julia": item.julia_console_requested,
-                "python": item.python_console_requested,
-            }.get(msg["language"])
-            if console_requested_signal is not None:
-                console_requested_signal.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
+            item.jupyter_console_requested.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
-                f"\tUnable to find specification for {language} kernel <b>{msg['kernel_name']}</b>. "
-                f"Go to Settings->Tools to select a valid {language} kernel."
+                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>. "
+                "Please go to Settings->Tools to select a valid kernel spec."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
-            msg_text = f"\tExecution on {language} kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
+            msg_text = f"Execution on kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg["type"] == "kernel_spec_exe_not_found":
+            msg_text = f"Invalid kernel spec ({msg['kernel_name']}). File <b>{msg['kernel_exe_path']}</b> " \
+                       f"does not exist."
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_started":
             self._event_message_arrived.emit(
-                item, msg["filter_id"], "msg", f"\tStarting program on {language} kernel <b>{msg['kernel_name']}</b>"
+                item, msg["filter_id"], "msg", f"*** Starting execution on kernel spec <b>{msg['kernel_name']}</b> ***"
             )
-            self._event_message_arrived.emit(
-                item, msg["filter_id"], "msg_warning", f"See {language} Console for messages."
-            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
 
     def _handle_process_msg(self, data):
         self._do_handle_process_msg(**data)
@@ -243,16 +294,17 @@ class SpineEngineWorker(QObject):
     def _handle_node_execution_finished(self, data):
         self._do_handle_node_execution_finished(**data)
 
-    def _do_handle_node_execution_finished(self, item_name, direction, state, success, skipped):
+    def _do_handle_node_execution_finished(self, item_name, direction, state, item_state):
         item = self._project_items[item_name]
-        if success and not skipped:
+        if item_state == ItemExecutionFinishState.SUCCESS:
             self.successful_executions.append((item, direction, state))
         self._executing_items.remove(item)
-        self._node_execution_finished.emit(item, direction, state, success, skipped)
+        self._node_execution_finished.emit(item, direction, state, item_state)
 
     def clean_up(self):
         for item in self._executing_items:
-            self._node_execution_finished.emit(item, None, None, False, False)
+            self._node_execution_finished.emit(item, None, None, None)
         self._thread.quit()
         self._thread.wait()
+        self._thread.deleteLater()
         self.deleteLater()

@@ -5,7 +5,8 @@ Plotting
 ========
 
 Basic data visualization is available in the Spine database editors.
-Currently, it is possible to plot plain parameter values as well as time series and maps.
+Currently, it is possible to plot scalar values
+as well as time series, arrays and one dimensional maps with some limitations.
 
 To plot a column, select the values from a table and then *Plot* from the **right click** popup menu.
 
@@ -17,21 +18,24 @@ To plot a column, select the values from a table and then *Plot* from the **righ
 
 Selecting data in multiple columns plots the selection in a single window.
 
-It is possible to add a plot to an existing plot window. Select the target plot window
-from the *Plot in window* submenu and the data will be added to the plot.
+To add a plot to an existing window select the target plot window
+from the *Plot in window* submenu.
 
 .. image:: img/plotting_popup_menu_plot_in_window.png
    :align: center
 
-X axis for plain values
+.. image:: img/plotting_window_added_plot.png
+   :align: center
+
+X column in pivot table
 -----------------------
 
-It is possible to plot plain values against X values given by a designated column
+It is possible to plot a column of scalar values against a designated X column
 in the pivot table.
 
 To set a column as the X column **right click** the top empty area above the column header
 and select *Use as X* from the popup menu.
-An *(X)* in the topmost cell indicates that the column is designated as containing the X axis.
+*(X)* in the topmost cell indicates that the column is designated as the X axis.
 
 .. image:: img/plotting_use_as_x_popup.png
    :align: center

@@ -33,6 +33,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyRelationshipParameterDefinitionModel,
 )
+from spinetoolbox.helpers import join_value_and_type
 
 
 def _empty_indexes(model):
@@ -92,14 +93,16 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
         self.assertTrue(
-            model.batch_set_data(_empty_indexes(model), ["dog", "pluto", "breed", 1, "bloodhound", "mock_db"])
+            model.batch_set_data(
+                _empty_indexes(model), ["dog", "pluto", "breed", 1, join_value_and_type(b"bloodhound", None), "mock_db"]
+            )
         )
         values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["object_class_name"], "dog")
         self.assertEqual(values[0]["object_name"], "pluto")
         self.assertEqual(values[0]["parameter_name"], "breed")
-        self.assertEqual(values[0]["value"], "bloodhound")
+        self.assertEqual(values[0]["value"], b"bloodhound")
 
     def test_do_not_add_invalid_object_parameter_values(self):
         """Test that object parameter values aren't added to the db if data is incomplete."""
@@ -116,14 +119,18 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
         indexes = _empty_indexes(model)
-        self.assertTrue(model.batch_set_data(indexes, ["cat", "pluto", "breed", 1, "bloodhound", "mock_db"]))
+        self.assertTrue(
+            model.batch_set_data(
+                indexes, ["cat", "pluto", "breed", 1, join_value_and_type(b"bloodhound", None), "mock_db"]
+            )
+        )
         self.assertEqual(indexes[0].data(), "dog")
         values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["object_class_name"], "dog")
         self.assertEqual(values[0]["object_name"], "pluto")
         self.assertEqual(values[0]["parameter_name"], "breed")
-        self.assertEqual(values[0]["value"], "bloodhound")
+        self.assertEqual(values[0]["value"], b"bloodhound")
 
     def test_add_relationship_parameter_values_to_db(self):
         """Test that relationship parameter values are added to the db when editing the table."""
@@ -131,14 +138,17 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyRelationshipParameterValueModel(None, header, self._db_mngr)
         model.fetchMore()
         self.assertTrue(
-            model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "relative_speed", 1, -1, "mock_db"])
+            model.batch_set_data(
+                _empty_indexes(model),
+                ["dog__fish", "pluto,nemo", "relative_speed", 1, join_value_and_type(b"-1", None), "mock_db"],
+            )
         )
         values = next(self._db_mngr.get_relationship_parameter_values(self._db_map), [])
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["relationship_class_name"], "dog__fish")
         self.assertEqual(values[0]["object_name_list"], "pluto,nemo")
         self.assertEqual(values[0]["parameter_name"], "relative_speed")
-        self.assertEqual(values[0]["value"], "-1")
+        self.assertEqual(values[0]["value"], b"-1")
 
     def test_do_not_add_invalid_relationship_parameter_values(self):
         """Test that relationship parameter values aren't added to the db if data is incomplete."""

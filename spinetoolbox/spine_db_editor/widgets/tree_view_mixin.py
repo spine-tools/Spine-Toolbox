@@ -105,7 +105,6 @@ class TreeViewMixin:
     def _expand_object_tree_root_index(self):
         qApp.processEvents()  # pylint: disable=undefined-variable
         self.ui.treeView_object.expand(self.object_tree_model.root_index)
-        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
     @Slot()
     def _expand_relationship_tree_root_index(self):

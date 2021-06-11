@@ -18,29 +18,31 @@ An editor widget for editing a time pattern type (relationship) parameter values
 
 from PySide2.QtCore import QPoint, Qt, Slot
 from PySide2.QtWidgets import QWidget
+
 from spinedb_api import TimePattern
+from ..helpers import inquire_index_name
 from ..mvcmodels.time_pattern_model import TimePatternModel
 from .indexed_value_table_context_menu import IndexedValueTableContextMenu
 
 
 class TimePatternEditor(QWidget):
-    """
-    A widget for editing time patterns.
-
-    Attributes:
-        parent (QWidget):
-    """
+    """A widget for editing time patterns."""
 
     def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
         from ..ui.time_pattern_editor import Ui_TimePatternEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
-        self._model = TimePatternModel(TimePattern(["1-7d"], [0.0]))
+        self._model = TimePatternModel(TimePattern(["1-7d"], [0.0]), self)
         self._ui = Ui_TimePatternEditor()
         self._ui.setupUi(self)
         self._ui.pattern_edit_table.setModel(self._model)
         self._ui.pattern_edit_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.pattern_edit_table.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._ui.pattern_edit_table.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
 
     @Slot(QPoint)
     def _show_table_context_menu(self, position):
@@ -60,3 +62,9 @@ class TimePatternEditor(QWidget):
     def value(self):
         """Returns the parameter_value currently being edited."""
         return self._model.value
+
+    @Slot(int)
+    def _open_header_editor(self, column):
+        if column != 0:
+            return
+        inquire_index_name(self._model, column, "Rename pattern's index", self)

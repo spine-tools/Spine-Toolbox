@@ -16,9 +16,10 @@ A tree model for parameter_value lists.
 :date:   28.6.2019
 """
 
+import json
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QIcon
-from spinedb_api import to_database, from_database
+from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from .tree_model_base import TreeModelBase
 from .tree_item_utility import (
@@ -65,7 +66,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
     def value_list(self):
         if not self.id:
             return [child.value for child in self.children[:-1]]
-        return self.db_mngr.get_item(self.db_map, "parameter_value_list", self.id)["value_list"].split(";")
+        return self.db_mngr.get_parameter_value_list(self.db_map, self.id, role=Qt.EditRole)
 
     def fetch_more(self):
         children = [ValueItem() for _ in self.value_list]
@@ -120,7 +121,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
 
     def update_value_list_in_db(self, child, value):
         value_list = self._new_value_list(child.child_number(), value)
-        data = [(self.name, from_database(value)) for value in value_list]
+        data = [(self.name, json.loads(value)) for value in value_list]
         self.db_mngr.import_data({self.db_map: {"parameter_value_lists": data}})
 
     def add_to_db(self, child, value):
@@ -182,8 +183,9 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
     def set_data(self, column, value, role=Qt.EditRole):
         if role != Qt.EditRole:
             return False
-        value = to_database(value)
-        return self.set_data_in_db(value)
+        db_value, _ = to_database(value)
+        db_value = bytes(json.dumps(value), "UTF8")
+        return self.set_data_in_db(db_value)
 
     def set_data_in_db(self, db_value):
         return self.parent_item.set_child_data(self, db_value)
@@ -246,4 +248,4 @@ class ParameterValueListModel(TreeModelBase):
             function
         """
         item = self.item_from_index(index)
-        return lambda value, item=item: item.set_data_in_db(value)
+        return lambda value, item=item: item.set_data_in_db(value[0])

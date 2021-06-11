@@ -54,7 +54,6 @@ class SpineDBEditorBase(QMainWindow):
     msg = Signal(str)
     link_msg = Signal(str, "QVariant")
     msg_error = Signal(str)
-    dirty_changed = Signal(bool)
     file_exported = Signal(str)
     sqlite_file_exported = Signal(str)
 
@@ -73,6 +72,7 @@ class SpineDBEditorBase(QMainWindow):
         self._change_notifiers = []
         self._changelog = []
         self.db_url = None
+        self._fetcher = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -81,6 +81,7 @@ class SpineDBEditorBase(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
         self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings
         self.err_msg = QErrorMessage(self)
         self.err_msg.setWindowTitle("Error")
@@ -120,6 +121,10 @@ class SpineDBEditorBase(QMainWindow):
         return {db_map.db_url: db_map.codename for db_map in self.db_maps}
 
     def load_db_urls(self, db_url_codenames, create=False, update_history=True):
+        self.ui.actionImport.setEnabled(False)
+        self.ui.actionExport.setEnabled(False)
+        self.ui.actionMass_remove_items.setEnabled(False)
+        self.url_toolbar.reload_action.setEnabled(False)
         if not db_url_codenames:
             return
         if not self.tear_down():
@@ -134,7 +139,14 @@ class SpineDBEditorBase(QMainWindow):
                 self.db_maps.append(db_map)
         if not self.db_maps:
             return
-        self._change_notifiers = [ChangeNotifier(self.db_mngr.undo_stack[db_map], self) for db_map in self.db_maps]
+        self.ui.actionImport.setEnabled(True)
+        self.ui.actionExport.setEnabled(True)
+        self.ui.actionMass_remove_items.setEnabled(True)
+        self.url_toolbar.reload_action.setEnabled(True)
+        self._change_notifiers = [
+            ChangeNotifier(self, self.db_mngr.undo_stack[db_map], self.qsettings, "appSettings/dbEditorShowUndo")
+            for db_map in self.db_maps
+        ]
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.url_toolbar.set_current_urls(self.db_urls)
         self.db_url = self.db_urls[0]
@@ -154,10 +166,10 @@ class SpineDBEditorBase(QMainWindow):
     def fetch_db_maps(self, *db_maps):
         if not db_maps:
             db_maps = self.db_maps
-        fetcher = self.db_mngr.get_fetcher()
-        fetcher.finished.connect(self._make_iddle)
+        self._fetcher = self.db_mngr.get_fetcher()
+        self._fetcher.finished.connect(self._make_iddle)
         self._make_busy()
-        fetcher.fetch(self, db_maps)
+        self._fetcher.fetch(self, db_maps)
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
 
     def _make_busy(self):
@@ -167,6 +179,7 @@ class SpineDBEditorBase(QMainWindow):
     def _make_iddle(self):
         self.silenced = False
         self.unsetCursor()
+        self._fetcher = None
 
     @Slot(bool)
     def load_previous_urls(self, _=False):
@@ -349,7 +362,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRollback.setEnabled(dirty)
         self.ui.actionView_history.setEnabled(dirty)
         self.setWindowModified(dirty)
-        self.dirty_changed.emit(dirty)
+        self.windowTitleChanged.emit(self.windowTitle())
 
     @Slot(bool)
     def show_history_dialog(self, checked=False):
@@ -576,32 +589,16 @@ class SpineDBEditorBase(QMainWindow):
         s += "</ul>"
         return s
 
-    @staticmethod
-    def _metadata_per_entity(db_map, entity_ids):
-        d = {}
-        sq = db_map.ext_entity_metadata_sq
-        for x in db_map.query(sq).filter(db_map.in_(sq.c.entity_id, entity_ids)):
-            d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        return d
-
     def show_db_map_entity_metadata(self, db_map_ids):
         metadata = {
-            db_map.codename: self._metadata_per_entity(db_map, entity_ids) for db_map, entity_ids in db_map_ids.items()
+            db_map.codename: self.db_mngr.get_metadata_per_entity(db_map, entity_ids)
+            for db_map, entity_ids in db_map_ids.items()
         }
         QMessageBox.information(self, "Entity metadata", self._parse_db_map_metadata(metadata))
 
-    @staticmethod
-    def _metadata_per_parameter_value(db_map, param_val_ids):
-        d = {}
-        sq = db_map.ext_parameter_value_metadata_sq
-        for x in db_map.query(sq).filter(db_map.in_(sq.c.parameter_value_id, param_val_ids)):
-            param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
-            d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        return d
-
     def show_db_map_parameter_value_metadata(self, db_map_ids):
         metadata = {
-            db_map.codename: self._metadata_per_parameter_value(db_map, param_val_ids)
+            db_map.codename: self.db_mngr.get_metadata_per_parameter_value(db_map, param_val_ids)
             for db_map, param_val_ids in db_map_ids.items()
         }
         QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))
@@ -659,10 +656,10 @@ class SpineDBEditorBase(QMainWindow):
 
     @busy_effect
     @Slot("QModelIndex")
-    def show_parameter_value_editor(self, index):
+    def show_parameter_value_editor(self, index, plain=False):
         """Shows the parameter_value editor for the given index of given table view.
         """
-        editor = ParameterValueEditor(index, parent=self)
+        editor = ParameterValueEditor(index, parent=self, plain=plain)
         editor.show()
 
     def receive_error_msg(self, db_map_error_log):
@@ -834,6 +831,8 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
 
     def tear_down(self):
+        if self._fetcher is not None:
+            self._fetcher.stop()
         if not self.db_mngr.unregister_listener(self, *self.db_maps):
             return False
         # Save UI form state
@@ -855,12 +854,11 @@ class SpineDBEditorBase(QMainWindow):
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
 
-    def __init__(self, db_mngr, db_url_codenames=None, create=False):
+    def __init__(self, db_mngr, db_url_codenames=None):
         """Initializes everything.
 
         Args:
             db_mngr (SpineDBManager): The manager to use
-            db_url_codenames (dict): mapping url to codename.
         """
         super().__init__(db_mngr)
         self._original_size = None
@@ -870,7 +868,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.add_main_menu()
         self.connect_signals()
         self.apply_stacked_style()
-        self.load_db_urls(db_url_codenames, create=create)
+        if db_url_codenames is not None:
+            self.load_db_urls(db_url_codenames)
 
     def connect_signals(self):
         super().connect_signals()
