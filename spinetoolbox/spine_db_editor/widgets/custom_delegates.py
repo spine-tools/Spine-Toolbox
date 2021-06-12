@@ -21,10 +21,11 @@ from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal
 from PySide2.QtWidgets import QStyledItemDelegate
 from PySide2.QtGui import QFontMetrics
 from spinedb_api import to_database
+from spinedb_api.parameter_value import join_value_and_type
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
-from ...helpers import object_icon, join_value_and_type
+from ...helpers import object_icon
 
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
