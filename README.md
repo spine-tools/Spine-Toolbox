@@ -53,7 +53,6 @@ Please note that this version has passed automated testing, but has not been com
 5. Install Spine Toolbox and required libraries using **pip**:
 
         python -m pip install spinetoolbox
-        python -m pip install spine_items
 
 10. Run:
 
@@ -84,7 +83,7 @@ Please note that this version has passed automated testing, but has not been com
 3. Upgrade requirements using **pip** (IMPORTANT TO REMEMBER EVERY TIME! Spine Engine, Spine DB API, 
    and Spine Items may have also been updated and a misalignment may cause intractable errors):
 
-        python -m pip install --upgrade spinetoolbox spine_items
+        python -m pip install --upgrade spinetoolbox
 
 
 ### About requirements

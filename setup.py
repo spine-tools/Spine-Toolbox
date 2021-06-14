@@ -19,7 +19,11 @@ Setup script for Python's setuptools.
 from setuptools import setup, find_packages
 
 from spinetoolbox.version import __version__
-from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, REQUIRED_SPINE_ENGINE_VERSION
+from spinetoolbox.config import (
+    REQUIRED_SPINEDB_API_VERSION,
+    REQUIRED_SPINE_ENGINE_VERSION,
+    PREFERRED_SPINE_ITEMS_VERSION,
+)
 
 with open("README.md", encoding="utf8") as readme_file:
     readme = readme_file.read()
@@ -42,6 +46,7 @@ install_requires = [
     "pyodbc >= 4.0.30",
     "psycopg2 >= 2.8.6",
     "jill >= 0.9.2",
+    "spine-items >={}".format(PREFERRED_SPINE_ITEMS_VERSION),
 ]
 
 setup(

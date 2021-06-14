@@ -95,5 +95,3 @@ wcwidth >= 0.2.5
 wget >= 3.2
 xlrd >= 2.0.1
 -e .
-# Spine Items requires Spine Toolbox, so install that last
-spine_items >=0.7.6rc1
