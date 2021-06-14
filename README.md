@@ -26,10 +26,26 @@ Guide.
 
 ## Official releases
 
-Release versions of Spine Toolbox can be found 
+### With Python installed
+
+Spine Toolbox is available on [The Python Package Index (PyPI)](https://pypi.org/project/spinetoolbox/).
+With Python installed in your system, you can get the latest release using [pipx](https://pypa.github.io/pipx/).
+
+    pipx install spinetoolbox
+
+Start the application by running `spinetoolbox` which should now be available on the path.
+Update the application with 
+
+    pipx upgrade spinetoolbox
+
+
+### Without Python 
+
+Binary installer packages of Spine Toolbox can be found 
 [here](https://drive.google.com/drive/folders/1t-AIIwRMl3HiYgka4ex5bCccI2gpbspK)
 (only available for 64-bit Windows for now). Download the latest version, install and
-run `spinetoolbox.exe`.
+run `spinetoolbox.exe`. 
+There is no need to install Python or anything else when using the installer.
 
 ## Development version
 
@@ -57,11 +73,7 @@ Please note that this version has passed automated testing, but has not been com
 
 6. Install Spine Toolbox and required libraries using **pip**:
 
-        python -m pip install spinetoolbox
-
-7. Run:
-
-        python -m spinetoolbox
+        python -m pip install git+https://github.com/Spine-project/Spine-Toolbox.git#egg=spinetoolbox
 
 
 ### Running
