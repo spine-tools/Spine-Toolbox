@@ -50,11 +50,15 @@ Please note that this version has passed automated testing, but has not been com
 
         conda activate spinetoolbox
 
-5. Install Spine Toolbox and required libraries using **pip**:
+5. Make sure Python pacakge installer **pip** is up-to-date, at least version 20.3 is required:
+
+        conda update pip
+
+6. Install Spine Toolbox and required libraries using **pip**:
 
         python -m pip install spinetoolbox
 
-10. Run:
+7. Run:
 
         python -m spinetoolbox
 
