@@ -1195,46 +1195,6 @@ class CustomSyntaxHighlighter(QSyntaxHighlighter):
             self.setFormat(start, count, text_format)
 
 
-_VALUE_TYPE_SEP = "::"
-"""Separator for combining parameter value and type into a string.
-This is mainly to keep using a single 'field' for the value in Qt models.
-For copy-paste, we also need it to be a string (otherwise a tuple would have worked).
-"""
-
-
-def join_value_and_type(value, value_type):
-    """Returns a string that combines given parameter value and value type.
-
-    Args:
-        value (bytes)
-        value_type (str or NoneType)
-
-    Returns:
-        str
-    """
-    if value_type is None:
-        value_type = ""
-    return str(value, "UTF8") + _VALUE_TYPE_SEP + value_type
-
-
-def split_value_and_type(value_and_type):
-    """Splits the given string into parameter value and value type.
-
-    Args:
-        value_and_type (str)
-
-    Returns:
-        bytes
-        str or NoneType
-    """
-    if value_and_type is None:
-        return None, None
-    value, _, value_type = value_and_type.partition(_VALUE_TYPE_SEP)
-    if not value_type:
-        value_type = None
-    return bytes(value, "UTF8"), value_type
-
-
 def inquire_index_name(model, column, title, parent_widget):
     """Asks for indexed parameter's index name and updates model accordingly.
 

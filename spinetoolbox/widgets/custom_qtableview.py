@@ -34,7 +34,8 @@ from spinedb_api import (
     SpineDBAPIError,
     to_database,
 )
-from ..helpers import busy_effect, join_value_and_type, split_value_and_type
+from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
+from ..helpers import busy_effect
 
 
 _ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
