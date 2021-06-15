@@ -144,7 +144,7 @@ Importing the SpineOpt database template
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. Download `the basic SpineOpt database template 
-   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/data/basic_spineopt_template.json>`_
+   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/models/basic_model_template.json>`_
    (right click on the link, then select *Save link as...*)
 
 #. Select the 'input' Data Store item in the *Design View*.
