@@ -29,7 +29,13 @@ Guide.
 ### With Python installed
 
 Spine Toolbox is available on [The Python Package Index (PyPI)](https://pypi.org/project/spinetoolbox/).
-With Python installed in your system, you can get the latest release using [pipx](https://pypa.github.io/pipx/).
+With Python installed in your system, you can install the latest release using [pipx](https://pypa.github.io/pipx/). 
+First, install pipx with
+
+    python -m pip install pipx
+    pipx ensurepath
+
+Then, get the latest Spine Toolbox using
 
     pipx install spinetoolbox
 
