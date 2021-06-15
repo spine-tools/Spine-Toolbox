@@ -42,7 +42,7 @@ Update the application with
 ### Without Python 
 
 Binary installer packages of Spine Toolbox can be found 
-[here](https://drive.google.com/drive/folders/1t-AIIwRMl3HiYgka4ex5bCccI2gpbspK)
+[here](https://github.com/Spine-project/Spine-Toolbox/releases)
 (only available for 64-bit Windows for now). Download the latest version, install and
 run `spinetoolbox.exe`. 
 There is no need to install Python or anything else when using the installer.
