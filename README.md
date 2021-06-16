@@ -249,3 +249,14 @@ out the required fields on the issue tracker and give a description of the new f
 A picture accompanying the description is a good way to get your idea into development
 faster. But before you make a new issue, please check that there isn't a related idea 
 already open in the issue tracker.
+
+&nbsp;
+<hr>
+<center>
+<table width=500px frame="none">
+<tr>
+<td valign="middle" width=100px>
+<img src=https://europa.eu/european-union/sites/europaeu/files/docs/body/flag_yellow_low.jpg alt="EU emblem" width=100%></td>
+<td valign="middle">This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 774629.</td>
+</table>
+</center>
