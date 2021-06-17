@@ -48,13 +48,14 @@ from .mvcmodels.project_item_specification_models import ProjectItemSpecificatio
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
-from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
+from .widgets.custom_menus import RecentProjectsPopupMenu
 from .widgets.settings_widget import SettingsWidget
 from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.persistent_console_widget import PersistentConsoleWidget
 from .widgets import toolbars
 from .widgets.open_project_widget import OpenProjectDialog
+from .widgets.jump_properties_widget import JumpPropertiesWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.console_window import ConsoleWindow
 from .project import SpineToolboxProject
@@ -88,7 +89,7 @@ from .project_commands import (
     RemoveProjectItemsCommand,
 )
 from .plugin_manager import PluginManager
-from .link import Link
+from .link import JumpLink, Link
 
 
 class ToolboxUI(QMainWindow):
@@ -144,15 +145,12 @@ class ToolboxUI(QMainWindow):
         self.active_link = None
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
-        self.link_properties_widget = LinkPropertiesWidget(self)
+        self.link_properties_widgets = {Link: LinkPropertiesWidget(self), JumpLink: JumpPropertiesWidget(self)}
         self._anchor_callbacks = {}
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
         self.settings_form = None
-        self.specification_context_menu = None
-        self.link_context_menu = None
-        self.process_output_context_menu = None
         self.add_project_item_form = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
@@ -864,16 +862,18 @@ class ToolboxUI(QMainWindow):
 
     def _set_active_link(self, active_link):
         """
+        Sets active link and connects to corresponding properties widget.
+
         Args:
-            active_link (Link or NoneType)
+            active_link (JumpLink or Link, optional)
         """
-        if self.active_link == active_link:
+        if self.active_link is active_link:
             return
         if self.active_link:
-            self.link_properties_widget.unset_link()
+            self.link_properties_widgets[type(self.active_link)].unset_link()
         self.active_link = active_link
         if self.active_link:
-            self.link_properties_widget.set_link(self.active_link)
+            self.link_properties_widgets[type(self.active_link)].set_link(self.active_link)
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
@@ -895,11 +895,12 @@ class ToolboxUI(QMainWindow):
 
     def activate_link_tab(self):
         """Shows link properties tab."""
+        tab_text = {Link: "Link properties", JumpLink: "Loop properties"}[type(self.active_link)]
         for i in range(self.ui.tabWidget_item_properties.count()):
-            if self.ui.tabWidget_item_properties.tabText(i) == "Link properties":
+            if self.ui.tabWidget_item_properties.tabText(i) == tab_text:
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
-        self.ui.dockWidget_item.setWindowTitle("Link properties")
+        self.ui.dockWidget_item.setWindowTitle(tab_text)
 
     def add_specification(self, specification):
         """Pushes an AddSpecificationCommand to undo stack."""
@@ -988,7 +989,11 @@ class ToolboxUI(QMainWindow):
         else:
             msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
-            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            QMessageBox.Question,
+            "Remove All Items",
+            msg,
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self,
         )
         message_box.button(QMessageBox.Ok).setText("Remove Items")
         answer = message_box.exec_()
@@ -1082,10 +1087,10 @@ class ToolboxUI(QMainWindow):
         if not self.supports_specification(spec.item_type):
             return
         item_factory = self.item_factories[spec.item_type]
-        self.specification_context_menu = item_factory.make_specification_menu(self, ind)
-        self.specification_context_menu.exec_(global_pos)
-        self.specification_context_menu.deleteLater()
-        self.specification_context_menu = None
+        menu = item_factory.make_specification_menu(self, ind)
+        menu.exec_(global_pos)
+        menu.deleteLater()
+        menu = None
 
     @Slot(QModelIndex)
     def edit_specification(self, index, item):
@@ -1472,9 +1477,10 @@ class ToolboxUI(QMainWindow):
     @staticmethod
     def get_all_multi_tab_spec_editors(item_type):
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
-            widget = QWidget.find(window.winId())
-            if isinstance(widget, MultiTabSpecEditor) and widget.item_type == item_type:
-                yield widget
+            if isinstance(window, QWidget):
+                widget = QWidget.find(window.winId())
+                if isinstance(widget, MultiTabSpecEditor) and widget.item_type == item_type:
+                    yield widget
 
     def _get_existing_spec_editor(self, item_type, specification, item):
         for multi_tab_editor in self.get_all_multi_tab_spec_editors(item_type):
@@ -1553,18 +1559,15 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             link (Link(QGraphicsPathItem)): The concerned link
         """
-        self.link_context_menu = LinkContextMenu(self, pos, link)
-        option = self.link_context_menu.get_action()
-        if option == "Remove connection":
-            self.ui.graphicsView.remove_links([link])
-            return
-        if option == "Take connection":
+        menu = QMenu(self)
+        menu.addAction(self.ui.actionRemove)
+        self.ui.actionRemove.setEnabled(True)
+        menu.addAction(self.ui.actionTake_link)
+        action = menu.exec_(pos)
+        if action is self.ui.actionTake_link:
             self.ui.graphicsView.take_link(link)
-            return
-        if option == "Send to bottom":
-            link.send_to_bottom()
-        self.link_context_menu.deleteLater()
-        self.link_context_menu = None
+        self.refresh_edit_action_states()
+        menu.deleteLater()
 
     @Slot()
     def refresh_edit_action_states(self):
@@ -1575,14 +1578,16 @@ class ToolboxUI(QMainWindow):
         clipboard = QApplication.clipboard()
         byte_data = clipboard.mimeData().data("application/vnd.spinetoolbox.ProjectItem")
         can_paste = not byte_data.isNull()
-        can_copy = any(isinstance(x, ProjectItemIcon) for x in self.ui.graphicsView.scene().selectedItems())
+        selected_items = self.ui.graphicsView.scene().selectedItems()
+        has_selection = bool(selected_items)
+        can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
         has_items = self.project_item_model.n_items() > 0
         self.ui.actionCopy.setEnabled(can_copy)
         self.ui.actionPaste.setEnabled(can_paste)
         self.ui.actionPasteAndDuplicateFiles.setEnabled(can_paste)
         self.ui.actionDuplicate.setEnabled(can_copy)
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(can_copy)
-        self.ui.actionRemove.setEnabled(can_copy)
+        self.ui.actionRemove.setEnabled(has_selection)
         self.ui.actionRemove_all.setEnabled(has_items)
 
     @Slot()
@@ -1970,6 +1975,9 @@ class ToolboxUI(QMainWindow):
         self._project.connection_established.connect(self.ui.graphicsView.do_add_link)
         self._project.connection_replaced.connect(self.ui.graphicsView.do_replace_link)
         self._project.connection_about_to_be_removed.connect(self.ui.graphicsView.do_remove_link)
+        self._project.jump_added.connect(self.ui.graphicsView.do_add_jump)
+        self._project.jump_about_to_be_removed.connect(self.ui.graphicsView.do_remove_jump)
+        self._project.jump_replaced.connect(self.ui.graphicsView.do_replace_jump)
         self._project.specification_added.connect(self.repair_specification)
         self._project.specification_saved.connect(self._log_specification_saved)
 
@@ -2080,7 +2088,7 @@ class ToolboxUI(QMainWindow):
         for item in selected_items:
             if isinstance(item, ProjectItemIcon):
                 project_item_names.add(item.name())
-            elif isinstance(item, Link):
+            elif isinstance(item, (JumpLink, Link)):
                 has_connections = True
         if not project_item_names and not has_connections:
             return

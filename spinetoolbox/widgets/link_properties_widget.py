@@ -1,7 +1,7 @@
 ######################################################################################################################
 # Copyright (C) 2017-2021 Spine project consortium
-# This file is part of Spine Items.
-# Spine Items is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
 # any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 # without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
@@ -22,17 +22,16 @@ from ..project_commands import SetConnectionOptionsCommand
 
 
 class LinkPropertiesWidget(QWidget):
-    """Widget for the Data Connection Item Properties."""
+    """Widget for connection link properties."""
 
     def __init__(self, toolbox):
         """
-
         Args:
             toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
         """
         from ..ui.link_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
-        super().__init__()
+        super().__init__(toolbox)
         self._toolbox = toolbox
         self._link = None
         self.ui = Ui_Form()
@@ -50,7 +49,7 @@ class LinkPropertiesWidget(QWidget):
         link.refresh_resource_filter_model()
         self.ui.treeView_filters.setModel(link.resource_filter_model)
         self.ui.treeView_filters.expandAll()
-        self.ui.label_link_name.setText(link.name)
+        self.ui.label_link_name.setText(f"Link {link.name}")
         self.load_connection_options()
 
     def unset_link(self):

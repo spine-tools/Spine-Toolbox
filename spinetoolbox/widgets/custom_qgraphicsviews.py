@@ -22,8 +22,9 @@ from PySide2.QtGui import QCursor
 from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF
 from spine_engine.project_item.connection import Connection
 from ..project_item_icon import ProjectItemIcon
-from ..project_commands import AddConnectionCommand, RemoveConnectionsCommand
-from ..link import Link
+from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
+from ..link import Link, JumpLink
+from ..helpers import LinkType
 from .custom_qgraphicsscene import DesignGraphicsScene
 
 
@@ -281,12 +282,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
 
     def __init__(self, parent):
         """
-
         Args:
-            parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
+            parent (QWidget): parent widget
         """
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
-        self._scene = None
         self._toolbox = None
 
     def set_ui(self, toolbox):
@@ -335,14 +334,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         scene.removeItem(icon)
         self._set_preferred_scene_rect()
 
-    def links(self):
-        """Returns all Links in the scene.
-
-        Returns:
-            list of Link: scene's links
-        """
-        return [item for item in self.items() if isinstance(item, Link)]
-
     def add_link(self, src_connector, dst_connector):
         """
         Pushes an AddLinkCommand to the toolbox undo stack.
@@ -361,26 +352,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
             )
         )
 
-    def make_link(self, src_connector, dst_connector, connection=None):
-        """Constructs a Link between given connectors.
-
-        Args:
-            src_connector (ConnectorButton): Source connector button
-            dst_connector (ConnectorButton): Destination connector button
-            connection (Connection, optional): Underlying connection
-
-        Returns:
-            Link: new link
-        """
-        if connection is None:
-            connection = Connection(
-                src_connector.project_item().name,
-                src_connector.position,
-                dst_connector.project_item().name,
-                dst_connector.position,
-            )
-        return Link(self._toolbox, src_connector, dst_connector, connection)
-
     @Slot(object)
     def do_add_link(self, connection):
         """Adds given connection to the Design view.
@@ -393,9 +364,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         destination_connector = (
             project.get_item(connection.destination).get_icon().conn_button(connection.destination_position)
         )
-        link = self.make_link(source_connector, destination_connector, connection)
-        link.src_connector.links.append(link)
-        link.dst_connector.links.append(link)
+        link = Link(self._toolbox, source_connector, destination_connector, connection)
+        source_connector.links.append(link)
+        destination_connector.links.append(link)
         self.scene().addItem(link)
 
     @Slot(object, object)
@@ -415,23 +386,23 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             links (list of Link): links to remove
         """
-        connections = list()
-        for link in links:
-            source = link.src_connector
-            destination = link.dst_connector
-            connections.append(
-                Connection(source.parent_name(), source.position, destination.parent_name(), destination.position)
-            )
-        self._toolbox.undo_stack.push(RemoveConnectionsCommand(self._toolbox.project(), connections))
+        connections = [l.connection for l in links if isinstance(l, Link)]
+        jumps = [l.jump for l in links if isinstance(l, JumpLink)]
+        self._toolbox.undo_stack.beginMacro("remove links")
+        if connections:
+            self._toolbox.undo_stack.push(RemoveConnectionsCommand(self._toolbox.project(), connections))
+        if jumps:
+            self._toolbox.undo_stack.push(RemoveJumpsCommand(self._toolbox.project(), jumps))
+        self._toolbox.undo_stack.endMacro()
 
     @Slot(object)
     def do_remove_link(self, connection):
         """Removes a link from the scene.
 
         Args:
-            connection (Connection): link's connection
+            connection (ConnectionBase): link's connection
         """
-        for link in self.links():
+        for link in [item for item in self.items() if isinstance(item, Link)]:
             source_name = link.src_connector.parent_name()
             destination_name = link.dst_connector.parent_name()
             if source_name == connection.source and destination_name == connection.destination:
@@ -439,16 +410,76 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 break
 
     def remove_selected_links(self):
-        self.remove_links([item for item in self.scene().selectedItems() if isinstance(item, Link)])
+        self.remove_links([item for item in self.scene().selectedItems() if isinstance(item, (JumpLink, Link))])
 
     def take_link(self, link):
         """Remove link, then start drawing another one from the same source connector."""
         self.remove_links([link])
-        link_drawer = self.scene().link_drawer
+        scene = self.scene()
+        scene.select_link_drawer(LinkType.CONNECTION if isinstance(link, Link) else LinkType.JUMP)
+        link_drawer = scene.link_drawer
         link_drawer.wake_up(link.src_connector)
         # noinspection PyArgumentList
         link_drawer.tip = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
         link_drawer.update_geometry()
+
+    def add_jump(self, src_connector, dst_connector):
+        """
+        Pushes an AddJumpCommand to the Toolbox undo stack.
+
+        Args:
+            src_connector (ConnectorButton): source connector button
+            dst_connector (ConnectorButton): destination connector button
+        """
+        self._toolbox.undo_stack.push(
+            AddJumpCommand(
+                self._toolbox.project(),
+                src_connector.parent_name(),
+                src_connector.position,
+                dst_connector.parent_name(),
+                dst_connector.position,
+            )
+        )
+
+    @Slot(object)
+    def do_add_jump(self, jump):
+        """Adds given jump to the Design view.
+
+        Args:
+            jump (Jump): jump to add
+        """
+        project = self._toolbox.project()
+        source_connector = project.get_item(jump.source).get_icon().conn_button(jump.source_position)
+        destination_connector = project.get_item(jump.destination).get_icon().conn_button(jump.destination_position)
+        jump_link = JumpLink(self._toolbox, source_connector, destination_connector, jump)
+        source_connector.links.append(jump_link)
+        destination_connector.links.append(jump_link)
+        self.scene().addItem(jump_link)
+
+    @Slot(object, object)
+    def do_replace_jump(self, original_jump, new_jump):
+        """Replaces a jump link on the Design view.
+
+        Args:
+            original_jump (Jump): jump that was replaced
+            new_jump (Jump): replacing jump
+        """
+        self.do_remove_jump(original_jump)
+        self.do_add_jump(new_jump)
+
+    @Slot(object)
+    def do_remove_jump(self, jump):
+        """Removes a jump from the scene.
+
+        Args:
+            jump (Jump): link's jump
+        """
+        for link in [item for item in self.items() if isinstance(item, JumpLink)]:
+            source_name = link.src_connector.parent_name()
+            destination_name = link.dst_connector.parent_name()
+            if source_name == jump.source and destination_name == jump.destination:
+                link.wipe_out()
+                break
 
     def contextMenuEvent(self, event):
         """Shows context menu for the blank view
