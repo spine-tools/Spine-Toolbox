@@ -8,3 +8,4 @@ Here you can find developer specific documentation on Spine Toolbox.
    :caption: Contents:
 
    project_item_development
+   publishing_to_pypi
