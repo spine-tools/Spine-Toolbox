@@ -368,8 +368,8 @@ class Ui_SettingsForm(object):
         self.stackedWidget.addWidget(self.Project)
         self.ExternalTools = QWidget()
         self.ExternalTools.setObjectName(u"ExternalTools")
-        self.verticalLayout_8 = QVBoxLayout(self.ExternalTools)
-        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
+        self.verticalLayout_13 = QVBoxLayout(self.ExternalTools)
+        self.verticalLayout_13.setObjectName(u"verticalLayout_13")
         self.groupBox_gams = QGroupBox(self.ExternalTools)
         self.groupBox_gams.setObjectName(u"groupBox_gams")
         self.gridLayout_4 = QGridLayout(self.groupBox_gams)
@@ -395,7 +395,7 @@ class Ui_SettingsForm(object):
         self.gridLayout_4.addWidget(self.toolButton_browse_gams, 2, 1, 1, 1)
 
 
-        self.verticalLayout_8.addWidget(self.groupBox_gams)
+        self.verticalLayout_13.addWidget(self.groupBox_gams)
 
         self.groupBox_julia = QGroupBox(self.ExternalTools)
         self.groupBox_julia.setObjectName(u"groupBox_julia")
@@ -492,7 +492,7 @@ class Ui_SettingsForm(object):
         self.verticalLayout.addLayout(self.horizontalLayout_12)
 
 
-        self.verticalLayout_8.addWidget(self.groupBox_julia)
+        self.verticalLayout_13.addWidget(self.groupBox_julia)
 
         self.groupBox_python = QGroupBox(self.ExternalTools)
         self.groupBox_python.setObjectName(u"groupBox_python")
@@ -546,16 +546,49 @@ class Ui_SettingsForm(object):
         self.verticalLayout_5.addLayout(self.horizontalLayout_11)
 
 
-        self.verticalLayout_8.addWidget(self.groupBox_python)
+        self.verticalLayout_13.addWidget(self.groupBox_python)
 
-        self.pushButton_conda = QPushButton(self.ExternalTools)
+        self.groupBox_2 = QGroupBox(self.ExternalTools)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.verticalLayout_8 = QVBoxLayout(self.groupBox_2)
+        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.lineEdit_conda_path = QLineEdit(self.groupBox_2)
+        self.lineEdit_conda_path.setObjectName(u"lineEdit_conda_path")
+        self.lineEdit_conda_path.setClearButtonEnabled(True)
+
+        self.horizontalLayout_2.addWidget(self.lineEdit_conda_path)
+
+        self.toolButton_browse_conda = QToolButton(self.groupBox_2)
+        self.toolButton_browse_conda.setObjectName(u"toolButton_browse_conda")
+        self.toolButton_browse_conda.setIcon(icon5)
+
+        self.horizontalLayout_2.addWidget(self.toolButton_browse_conda)
+
+
+        self.verticalLayout_8.addLayout(self.horizontalLayout_2)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.pushButton_conda = QPushButton(self.groupBox_2)
         self.pushButton_conda.setObjectName(u"pushButton_conda")
 
-        self.verticalLayout_8.addWidget(self.pushButton_conda)
+        self.horizontalLayout_3.addWidget(self.pushButton_conda)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_2)
+
+
+        self.verticalLayout_8.addLayout(self.horizontalLayout_3)
+
+
+        self.verticalLayout_13.addWidget(self.groupBox_2)
 
         self.verticalSpacer_2 = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.verticalLayout_8.addItem(self.verticalSpacer_2)
+        self.verticalLayout_13.addItem(self.verticalSpacer_2)
 
         self.stackedWidget.addWidget(self.ExternalTools)
         self.SpineDBEditor = QWidget()
@@ -849,7 +882,13 @@ class Ui_SettingsForm(object):
         self.pushButton_open_kernel_editor_python.setToolTip(QCoreApplication.translate("SettingsForm", u"Open kernel editor", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_open_kernel_editor_python.setText(QCoreApplication.translate("SettingsForm", u"Kernel editor", None))
-        self.pushButton_conda.setText(QCoreApplication.translate("SettingsForm", u"Conda", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("SettingsForm", u"Conda", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_conda_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select Conda executable</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_conda_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Conda executable in system PATH", None))
+        self.toolButton_browse_conda.setText("")
+        self.pushButton_conda.setText(QCoreApplication.translate("SettingsForm", u"View Environments", None))
         self.groupBox_spine_db_editor.setTitle(QCoreApplication.translate("SettingsForm", u"Spine database editor", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Don't commit session and don't show message box</p><p>Partially checked: Show message box (default)</p><p>Checked: Commit session and don't show message box</p><p><br/></p></body></html>", None))

@@ -30,6 +30,7 @@ from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.widgets.kernel_editor import find_kernels
 from spinetoolbox.spine_engine_manager import make_engine_manager
 from spinetoolbox.cksm import CondaKernelSpecManager
+from spinetoolbox.widgets.settings_widget import resolve_conda_executable
 
 # Set logging level for jupyter loggers
 traitlets_logger = logging.getLogger("traitlets")
@@ -141,7 +142,9 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self._toolbox.msg.emit(f"*** Starting {self.name()} (kernel {new_k_name_anchor}) ***")
         self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
         km = QtKernelManager(kernel_name="conda-env-3-calliope-py")
-        km.kernel_spec_manager = CondaKernelSpecManager()
+        conda_exe = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+        conda_exe = resolve_conda_executable(conda_exe)
+        km.kernel_spec_manager = CondaKernelSpecManager(conda_exe=conda_exe)
         try:
             blackhole = open(os.devnull, 'w')
             cf = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0  # Don't show console when frozen

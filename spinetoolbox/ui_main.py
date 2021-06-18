@@ -49,7 +49,7 @@ from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
-from .widgets.settings_widget import SettingsWidget
+from .widgets.settings_widget import SettingsWidget, resolve_conda_executable
 from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.persistent_console_widget import PersistentConsoleWidget
@@ -185,6 +185,7 @@ class ToolboxUI(QMainWindow):
         self._plugin_manager.load_installed_plugins()
         self.set_work_directory()
         self._disable_project_actions()
+        self.refresh_conda_env_model()
         self.connect_signals()
 
     def connect_signals(self):
@@ -1234,10 +1235,23 @@ class ToolboxUI(QMainWindow):
 
     def refresh_conda_env_model(self):
         self.conda_env_model.clear()
-        ksm = CondaKernelSpecManager()
+        conda_exe = self._qsettings.value("appSettings/condaPath", defaultValue="")
+        conda_exe = resolve_conda_executable(conda_exe)
+        ksm = CondaKernelSpecManager(conda_exe=conda_exe)
         specs = ksm._all_specs()
+        default_k_spec = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
+        default_item = QStandardItem(default_k_spec)
+        self.conda_env_model.appendRow(default_item)
+        spec_data = dict()
+        spec_data["kernel_name"] = default_k_spec
+        spec_data["is_conda"] = False
+        default_item.setData(spec_data)
         for i in specs.keys():
             item = QStandardItem(i)
+            spec_data = dict()
+            spec_data["kernel_name"] = i
+            spec_data["is_conda"] = True
+            item.setData(spec_data)
             self.conda_env_model.appendRow(item)
 
     @Slot(str)

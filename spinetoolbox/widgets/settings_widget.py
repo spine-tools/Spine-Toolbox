@@ -40,12 +40,25 @@ from ..widgets.kernel_editor import (
 )
 from ..widgets.conda_envs import CondaEnv
 from ..helpers import (
+    select_gams_executable,
     select_python_interpreter,
     select_julia_executable,
     select_julia_project,
+    select_conda_executable,
     file_is_valid,
     dir_is_valid,
 )
+
+
+def resolve_conda_executable(conda_path):
+    """If given conda_path is not empty, returns
+    "conda" whether we are on conda or not.
+    """
+    if conda_path != "":
+        return conda_path
+    # Are we on Conda or not
+    CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
+    return CONDA_EXE
 
 
 class SettingsWidgetBase(QWidget):
@@ -236,7 +249,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self._kernel_editor = None
-        self._conda_env_editor = None
+        self._conda_env_widget = None
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
@@ -252,10 +265,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
-        self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
+        self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_button_clicked)
         self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_button_clicked)
         self.ui.toolButton_browse_julia_project.clicked.connect(self.browse_julia_project_button_clicked)
         self.ui.toolButton_browse_python.clicked.connect(self.browse_python_button_clicked)
+        self.ui.toolButton_browse_conda.clicked.connect(self.browse_conda_button_clicked)
         self.ui.pushButton_open_kernel_editor_python.clicked.connect(self.show_python_kernel_editor)
         self.ui.pushButton_open_kernel_editor_julia.clicked.connect(self.show_julia_kernel_editor)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
@@ -269,7 +283,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
         self.ui.checkBox_use_python_kernel.clicked.connect(self._update_python_widgets_enabled)
         self.ui.checkBox_use_julia_kernel.clicked.connect(self._update_julia_widgets_enabled)
-        self.ui.pushButton_conda.clicked.connect(self.show_conda_editor)
+        self.ui.pushButton_conda.clicked.connect(self.show_conda_env_widget)
 
     @Slot(bool)
     def _update_python_widgets_enabled(self, _=False):
@@ -315,55 +329,34 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             db_editor.ui.graphicsView.set_auto_expand_objects(checked)
 
     @Slot(bool)
-    def browse_gams_path(self, checked=False):
-        """Open file browser where user can select a GAMS program."""
-        # noinspection PyCallByClass, PyArgumentList
-        answer = QFileDialog.getOpenFileName(
-            self, "Select GAMS Program (e.g. gams.exe on Windows)", os.path.abspath("C:\\")
-        )
-        if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
-            return
-        # Check that it's not a directory
-        if os.path.isdir(answer[0]):
-            msg = "Please select a valid GAMS program (file) and not a directory"
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid GAMS Program", msg)
-            return
-        # Check that it's a file that actually exists
-        if not os.path.exists(answer[0]):
-            msg = "File {0} does not exist".format(answer[0])
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid GAMS Program", msg)
-            return
-        # Check that selected file at least starts with string 'gams'
-        _, selected_file = os.path.split(answer[0])
-        if not selected_file.lower().startswith("gams"):
-            msg = "Selected file <b>{0}</b> may not be a valid GAMS program".format(selected_file)
-            # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid GAMS Program", msg)
-            return
-        self.ui.lineEdit_gams_path.setText(answer[0])
-        return
+    def browse_gams_button_clicked(self, checked=False):
+        """Calls static method that shows a file browser for selecting a Gams executable."""
+        select_gams_executable(self, self.ui.lineEdit_gams_path)
 
     @Slot(bool)
     def browse_julia_button_clicked(self, checked=False):
-        """Calls static method that shows a file browser for selecting the Julia path."""
+        """Calls static method that shows a file browser for selecting a Julia path."""
         select_julia_executable(self, self.ui.lineEdit_julia_path)
 
     @Slot(bool)
     def browse_julia_project_button_clicked(self, checked=False):
-        """Calls static method that shows a file browser for selecting a Julia project."""
+        """Calls static method that shows a folder browser for selecting a Julia project."""
         select_julia_project(self, self.ui.lineEdit_julia_project_path)
 
     @Slot(bool)
     def browse_python_button_clicked(self, checked=False):
-        """Calls static method that shows a file browser for selecting Python interpreter."""
+        """Calls static method that shows a file browser for selecting a Python interpreter."""
         select_python_interpreter(self, self.ui.lineEdit_python_path)
 
     @Slot(bool)
-    def show_conda_editor(self, checked=False):
-        self._conda_env_editor = CondaEnv(self)
-        self._conda_env_editor.show()
+    def browse_conda_button_clicked(self, checked=False):
+        """Calls static method that shows a file browser for selecting a Conda executable."""
+        select_conda_executable(self, self.ui.lineEdit_conda_path)
+
+    @Slot(bool)
+    def show_conda_env_widget(self, checked=False):
+        self._conda_env_widget = CondaEnv(self)
+        self._conda_env_widget.show()
 
     @Slot(bool)
     def show_python_kernel_editor(self, checked=False):
@@ -516,6 +509,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         use_python_kernel = int(self._qsettings.value("appSettings/usePythonKernel", defaultValue="0"))
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         python_kernel = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
+        conda_path = self._qsettings.value("appSettings/condaPath", defaultValue="")
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
         save_spec = int(self._qsettings.value("appSettings/saveSpecBeforeClosing", defaultValue="1"))  # tri-state
         spec_show_undo = int(self._qsettings.value("appSettings/specShowUndo", defaultValue="2"))
@@ -579,6 +573,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_python_kernel.setCurrentIndex(0)
         else:
             self.ui.comboBox_python_kernel.setCurrentIndex(ind)
+        self.ui.lineEdit_conda_path.setPlaceholderText(resolve_conda_executable(""))
+        self.ui.lineEdit_conda_path.setText(conda_path)
         self.ui.lineEdit_work_dir.setText(work_dir)
         self.orig_work_dir = work_dir
         if save_spec == 0:
@@ -684,6 +680,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             return False
         self._qsettings.setValue("appSettings/pythonPath", python_exe)
         self._qsettings.setValue("appSettings/pythonKernel", python_kernel)
+        # Conda
+        conda_exe = self.ui.lineEdit_conda_path.text().strip()
+        self._qsettings.setValue("appSettings/condaPath", conda_exe)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
         self.set_work_directory(work_dir)

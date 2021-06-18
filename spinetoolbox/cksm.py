@@ -18,7 +18,7 @@ from jupyter_client.kernelspec import KernelSpecManager, KernelSpec, NoSuchKerne
 
 CACHE_TIMEOUT = 60
 
-CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
+#CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
 
 RUNNER_COMMAND = ['python', '-m', 'nb_conda_kernels.runner']
 
@@ -76,7 +76,7 @@ class CondaKernelSpecManager(KernelSpecManager):
 
     def __init__(self, **kwargs):
         super(CondaKernelSpecManager, self).__init__(**kwargs)
-
+        self._conda_executable = kwargs["conda_exe"]
         self._conda_info_cache = None
         self._conda_info_cache_expiry = None
 
@@ -125,13 +125,13 @@ class CondaKernelSpecManager(KernelSpecManager):
             # This is to make sure that subprocess can find 'conda' even if
             # it is a Windows batch file---which is the case in non-root
             # conda environments.
-            shell = CONDA_EXE == 'conda' and sys.platform.startswith('win')
+            shell = self._conda_executable == 'conda' and sys.platform.startswith('win')
             try:
                 # conda info --json uses the standard JSON escaping
                 # mechanism for non-ASCII characters. So it is always
                 # valid to decode here as 'ascii', since the JSON loads()
                 # method will recover any original Unicode for us.
-                p = subprocess.check_output([CONDA_EXE, "info", "--json"],
+                p = subprocess.check_output([self._conda_executable, "info", "--json"],
                                             shell=shell).decode('ascii')
                 conda_info = json.loads(p)
             except Exception as err:

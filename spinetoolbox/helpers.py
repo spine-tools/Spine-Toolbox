@@ -756,6 +756,29 @@ class ChildCyclingKeyPressFilter(QObject):
         return QObject.eventFilter(self, obj, event)  # Pass event further
 
 
+def select_gams_executable(parent, line_edit):
+    """Opens file browser where user can select a Gams executable (i.e. gams.exe on Windows).
+
+    Args:
+        parent (QWidget, optional): Parent widget for the file dialog and message boxes
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+    """
+    # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+    answer = QFileDialog.getOpenFileName(
+        parent, "Select GAMS Program (e.g. gams.exe on Windows)", os.path.abspath("C:\\")
+    )
+    if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
+        return
+    # Check that selected file at least starts with string 'gams'
+    _, selected_file = os.path.split(answer[0])
+    if not selected_file.lower().startswith("gams"):
+        msg = "Selected file <b>{0}</b> may not be a valid GAMS program".format(selected_file)
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid GAMS Program", msg)
+        return
+    line_edit.setText(answer[0])
+
+
 def select_julia_executable(parent, line_edit):
     """Opens file browser where user can select a Julia executable (i.e. julia.exe on Windows).
     Used in SettingsWidget and KernelEditor.
@@ -769,18 +792,6 @@ def select_julia_executable(parent, line_edit):
         parent, "Select Julia Executable (e.g. julia.exe on Windows)", os.path.abspath('C:\\')
     )
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
-        return
-    # Check that it's not a directory
-    if os.path.isdir(answer[0]):
-        msg = "Please select a valid Julia Executable (file) and not a directory"
-        # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.warning(parent, "Invalid Julia Executable", msg)
-        return
-    # Check that it's a file that actually exists
-    if not os.path.exists(answer[0]):
-        msg = "File {0} does not exist".format(answer[0])
-        # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.warning(parent, "Invalid Julia Executable", msg)
         return
     # Check that selected file at least starts with string 'julia'
     _, selected_file = os.path.split(answer[0])
@@ -820,12 +831,6 @@ def select_python_interpreter(parent, line_edit):
     )
     if answer[0] == "":  # Canceled
         return
-    # Check that it's not a directory
-    if os.path.isdir(answer[0]):
-        msg = "Please select a valid Python interpreter (file) and not a directory"
-        # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.warning(parent, "Invalid Python Interpreter", msg)
-        return
     # Check that selected file at least starts with string 'python'
     _, selected_file = os.path.split(answer[0])
     if not selected_file.lower().startswith("python"):
@@ -835,6 +840,29 @@ def select_python_interpreter(parent, line_edit):
         return
     line_edit.setText(answer[0])
     return
+
+
+def select_conda_executable(parent, line_edit):
+    """Opens file browser where user can select a conda executable.
+
+    Args:
+        parent (QWidget): Parent widget for the file dialog and message boxes
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+    """
+    # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+    answer = QFileDialog.getOpenFileName(
+        parent, "Select Conda Executable (e.g. conda.exe on Windows)", os.path.abspath("C:\\")
+    )
+    if answer[0] == "":  # Canceled
+        return
+    # Check that selected file at least starts with string 'conda'
+    _, selected_file = os.path.split(answer[0])
+    if not selected_file.lower().startswith("conda"):
+        msg = "Selected file <b>{0}</b> is not a valid Conda executable".format(selected_file)
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid Conda selected", msg)
+        return
+    line_edit.setText(answer[0])
 
 
 def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
