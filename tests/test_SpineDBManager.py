@@ -29,7 +29,7 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
 )
 from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.helpers import join_value_and_type
+from spinedb_api.parameter_value import join_value_and_type
 
 
 class TestParameterValueFormatting(unittest.TestCase):

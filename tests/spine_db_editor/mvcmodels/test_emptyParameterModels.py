@@ -33,7 +33,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyRelationshipParameterDefinitionModel,
 )
-from spinetoolbox.helpers import join_value_and_type
+from spinedb_api.parameter_value import join_value_and_type
 
 
 def _empty_indexes(model):
