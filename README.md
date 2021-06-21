@@ -23,90 +23,92 @@ documentation, original graphics and other material are released under the
 Licenses of all packages used by Spine Toolbox are listed in the Spine Toolbox User 
 Guide.
 
+## Installation
 
-## Official releases
+Three options for installing Spine toolbox exist: as an application within
+an existing Python installation, using stand-alone installation package and using 
+the source files directly (for developers).
 
-### With Python installed
+### With standard Python installation
 
 Spine Toolbox is available on [The Python Package Index (PyPI)](https://pypi.org/project/spinetoolbox/).
-With Python installed in your system, you can install the latest release using [pipx](https://pypa.github.io/pipx/). 
-First, install pipx with
+This option is the recommended way to get the most recent release version but a
+working Python installation is also required. 
 
-    python -m pip install pipx
-    pipx ensurepath
+---
+**NOTE:** If you already have Spine toolbox installed globally using pip, please first 
+uninstall using `pip uninstall spinetoolbox`.
 
-Then, get the latest Spine Toolbox using
+---
 
-    pipx install spinetoolbox
+1. Install Python 3.8. On Windows systems, the easiest way is through **Microsoft Store** 
+or [Python.org](https://www.python.org/downloads/windows/). On OS X, get 
+[the latest release at Python.org](https://www.python.org/downloads/mac-osx/). 
+Most Linux distributions have Python preinstalled, but please check which version 
+you have and update if necessary.
 
-Start the application by running `spinetoolbox` which should now be available on the path.
-Update the application with 
+2. Make sure you have the latest version of pip installed:
+
+        python3 -m pip install --upgrade pip
+
+3. Install [pipx](https://pypa.github.io/pipx/). Open a terminal and type
+
+        python3 -m pip install pipx
+        python3 -m pipx ensurepath
+        
+4. Install the latest Spine Toolbox release using
+
+        pipx install spinetoolbox
+
+You can now start Spine Toolbox by calling `spinetoolbox` on the command line.
+To update the installation, run
 
     pipx upgrade spinetoolbox
 
+If you need a more recent version, you can install the latest development version
+using
 
-### Without Python 
+    pipx install git+https://github.com/Spine-project/Spine-Toolbox.git#egg=spinetoolbox
 
-Binary installer packages of Spine Toolbox can be found 
-[here](https://github.com/Spine-project/Spine-Toolbox/releases)
-(only available for 64-bit Windows for now). Download the latest version, install and
-run `spinetoolbox.exe`. 
-There is no need to install Python or anything else when using the installer.
+Please note that the stability of the latest version is not quaranteed.
 
-## Development version
+### Stand-alone installer packages
 
-The development version of Spine Toolbox is in the master branch on this repository, and it has all the latest features and bug-fixes.
-Please note that this version has passed automated testing, but has not been completely manually tested.
-
-### Installation
-
-1. Do you have Conda? If yes, go directly to step 2. Otherwise, install either [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
-(recommended) or [Anaconda](https://www.anaconda.com/distribution/) (good alternative).
-
-2. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
-
-3. Create a new environment by typing:
-
-        conda create -n spinetoolbox python=3.8
-
-4. Activate the new environment:
-
-        conda activate spinetoolbox
-
-5. Make sure Python pacakge installer **pip** is up-to-date, at least version 20.3 is required:
-
-        conda update pip
-
-6. Install Spine Toolbox and required libraries using **pip**:
-
-        python -m pip install git+https://github.com/Spine-project/Spine-Toolbox.git#egg=spinetoolbox
+We offer stand-alone binary installers for the Windows platform (64-bit). 
+This option is suitable for users who cannot install Python or don’t care so much 
+about updates. Download the latest version from [here](https://github.com/Spine-project/Spine-Toolbox/releases),
+install and run `spinetoolbox.exe`. 
 
 
-### Running
+### Getting the source
 
-1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
+This option is for the developers who wish to debug or edit the Spine Toolbox
+source code. First, follow the above instructions on installing Python and upgrading pip.
 
-2. Activate the `spinetoolbox` environment:
+1. Clone or download the latest source code of Spine Toolbox from its 
+   [GitHub repository](https://github.com/Spine-project/Spine-Toolbox).
+   
+2. Browse to the folder and create a virtual environment using
 
-        conda activate spinetoolbox
+    python3 -m venv .venv
 
-3. Run:
+3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
+   or `source .venv/bin/activate` (bash, zsh). 
 
-        python -m spinetoolbox
+4. Install Spine Toolbox using pip. Note that the terminal prompt should indicate 
+   the activated environment.
 
-### Upgrading
+        pip install -r requirements.txt
 
+5. (Optional) Install additional development packages with
 
-1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
+        pip install -r dev-requirements.txt
 
-2. Activate the `spinetoolbox` environment:
+You can now run Spine Toolbox by calling `spinetoolbox` when the environment 
+is activated. To update, just pull or copy the latest changes from the repository
+and run 
 
-        conda activate spinetoolbox
-
-3. Upgrade requirements using **pip** (IMPORTANT TO REMEMBER EVERY TIME! Spine Engine, Spine DB API, 
-   and Spine Items may have also been updated and a misalignment may cause intractable errors):
-
-        python -m pip install --upgrade spinetoolbox
+    pip install --upgrade -r requirements.txt [-r dev-requirements.txt]
 
 
 ### About requirements
