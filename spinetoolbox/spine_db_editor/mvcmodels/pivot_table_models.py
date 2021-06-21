@@ -21,7 +21,7 @@ from PySide2.QtGui import QColor, QFont
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
 from ...config import PIVOT_TABLE_HEADER_COLOR
-from ...helpers import join_value_and_type, split_value_and_type
+from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from ..widgets.custom_delegates import (
     RelationshipPivotTableDelegate,
     ParameterPivotTableDelegate,

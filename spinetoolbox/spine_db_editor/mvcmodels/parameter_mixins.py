@@ -17,7 +17,7 @@ Miscelaneous mixins for parameter models
 """
 
 from PySide2.QtCore import Qt
-from ...helpers import split_value_and_type
+from spinedb_api.parameter_value import split_value_and_type
 
 
 def _parse_csv_list(csv_list):

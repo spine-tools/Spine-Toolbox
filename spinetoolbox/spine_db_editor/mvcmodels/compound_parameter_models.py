@@ -18,7 +18,8 @@ These models concatenate several 'single' models and one 'empty' model.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont
-from ...helpers import rows_to_row_count_tuples, join_value_and_type
+from spinedb_api.parameter_value import join_value_and_type
+from ...helpers import rows_to_row_count_tuples
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (

@@ -38,6 +38,7 @@ from spinedb_api import (
     TimePattern,
     Map,
 )
+from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from .spine_db_icon_manager import SpineDBIconManager
 from .helpers import busy_effect, SignalWaiter
 from .spine_db_signaller import SpineDBSignaller
@@ -54,7 +55,7 @@ from .spine_db_commands import (
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, join_value_and_type, split_value_and_type
+from .helpers import get_upgrade_db_promt_text
 
 
 @busy_effect
