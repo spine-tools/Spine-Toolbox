@@ -65,7 +65,8 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         object_class_index = self._editor.object_tree_model.index(0, 0)
         self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
-        self._editor.reload_pivot_table(index)
+        self._editor._update_class_attributes(index)
+        self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
         self._model.start_fetching()
 
@@ -154,7 +155,8 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
             if action.text() == self._editor._INDEX_EXPANSION:
                 action.trigger()
                 break
-        self._editor.reload_pivot_table(index)
+        self._editor._update_class_attributes(index)
+        self._editor.do_reload_pivot_table()
         self._model = self._editor.pivot_table_model
         self._model.start_fetching()
 
