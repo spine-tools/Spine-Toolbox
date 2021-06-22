@@ -61,7 +61,6 @@ setup(
     packages=find_packages(exclude=("tests*", "execution_tests*")),
     entry_points={"console_scripts": ["spinetoolbox=spinetoolbox.main:main"]},
     include_package_data=True,
-    package_data={"spinetoolbox": ["app.ico"]},
     license="LGPL-3.0-or-later",
     license_files=["COPYING", "COPYING.LESSER"],
     zip_safe=False,
