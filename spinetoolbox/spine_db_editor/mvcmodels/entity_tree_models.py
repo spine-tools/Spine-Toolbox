@@ -88,7 +88,7 @@ class ObjectTreeModel(MultiDBTreeModel):
             for (class_id, object_class_id_list, object_id_list), ids in d.items():
                 for object_class_id, object_id in zip(object_class_id_list, object_id_list):
                     for parent_item in self.find_items(db_map, (object_class_id, object_id, class_id)):
-                        result.setdefault(parent_item, {})[db_map] = list(ids.keys())
+                        result.setdefault(parent_item, {}).setdefault(db_map, []).extend(list(ids.keys()))
         return result
 
     def _parent_entity_group_data(self, db_map_data):
