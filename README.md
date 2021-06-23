@@ -29,7 +29,7 @@ Three options for installing Spine toolbox exist: as an application within
 an existing Python installation, using stand-alone installation package and using 
 the source files directly (for developers).
 
-### With standard Python installation
+### Standard Python installation
 
 Spine Toolbox is available on [The Python Package Index (PyPI)](https://pypi.org/project/spinetoolbox/).
 This option is the recommended way to get the most recent release version but a
@@ -45,16 +45,21 @@ uninstall using `pip uninstall spinetoolbox`.
 or [Python.org](https://www.python.org/downloads/windows/). On OS X, get 
 [the latest release at Python.org](https://www.python.org/downloads/mac-osx/). 
 Most Linux distributions have Python preinstalled, but please check which version 
-you have and update if necessary.
+you have and update if necessary. Check the Python version by running
+
+        python --version
+    
+    Note that on some systems, you might need to call `python3` instead of `python`.
 
 2. Make sure you have the latest version of pip installed:
 
-        python3 -m pip install --upgrade pip
+        python -m pip install --upgrade pip
 
 3. Install [pipx](https://pypa.github.io/pipx/). Open a terminal and type
 
-        python3 -m pip install pipx
-        python3 -m pipx ensurepath
+        python -m pip install pipx
+        python -m pipx ensurepath
+
         
 4. Install the latest Spine Toolbox release using
 
@@ -65,10 +70,10 @@ To update the installation, run
 
     pipx upgrade spinetoolbox
 
-If you need a more recent version, you can install the latest development version
+Optional: If you need a more recent version, you can install the latest development version
 using
 
-    pipx install git+https://github.com/Spine-project/Spine-Toolbox.git#egg=spinetoolbox
+    pipx install git+https://github.com/Spine-project/Spine-Toolbox.git
 
 Please note that the stability of the latest version is not quaranteed.
 
@@ -90,8 +95,8 @@ source code. First, follow the above instructions on installing Python and upgra
    
 2. Browse to the folder and create a virtual environment using
 
-    python3 -m venv .venv
-
+        python -m venv .venv
+    
 3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
    or `source .venv/bin/activate` (bash, zsh). 
 
@@ -99,7 +104,7 @@ source code. First, follow the above instructions on installing Python and upgra
    the activated environment.
 
         pip install -r requirements.txt
-
+    
 5. (Optional) Install additional development packages with
 
         pip install -r dev-requirements.txt
@@ -148,8 +153,8 @@ If Python runs into errors while installing on Linux systems, running the
 following commands in a terminal may help:
 
 ```shell
-sudo apt install libpq-dev
-sudo apt-get install unixodbc-dev
+$ sudo apt install libpq-dev
+$ sudo apt-get install unixodbc-dev
 ```
 
 #### Problems in starting the application
@@ -180,9 +185,7 @@ you may see this error when trying to execute a project item. The cause of this 
 is the package `pywin32` version 225. To fix this error, upgrade the package to version 
 300 using the following command
 
-```shell
-pip install --upgrade "pywin32==300"
-```
+    pip install --upgrade "pywin32==300"
 
 After the process has finished, restart the application. **Note: pywin32 v301 does not work**.
 
@@ -219,9 +222,7 @@ The project root includes a configuration file for `pylint`.
 Unit tests are located in the `tests` directory.
 You can run the entire test suite from project root by
 
-```shell
-python -m unittest
-```
+    python -m unittest
 
 ### Reporting bugs
 If you think you have found a bug, please check the following before creating a new 
