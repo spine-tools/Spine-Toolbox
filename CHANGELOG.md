@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Parameter renaming in Data Transformer requires now entity class names to identify the parameters.
   Data Transformer's icon will show a notification if class names are missing.
 - Installation instructions advice to install directly from PyPI. 
+- Stand-alone DB Editor is now opened with the `spine-db-editor [URL]` command
 
 ### Deprecated
 - GdxExporter has been deprecated. Use the general purpose Exporter item instead.
