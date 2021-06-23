@@ -35,7 +35,7 @@ Before making a real upload, please test using TestPyPI which is a separate
 instance from the real index server.
 Once a version has been uploaded to PyPI, it cannot be reverted or modified. 
 
-`Register an an account <https://test.pypi.org/account/register/>`_ and ask 
+`Register an account <https://test.pypi.org/account/register/>`_ and ask 
 some of the owners of `the Spine Toolbox package <https://test.pypi.org/project/spinetoolbox/>`_ 
 (or other relevant package) to add you as a maintainer.
 
@@ -49,7 +49,7 @@ See `Using TestPyPI <https://packaging.python.org/guides/using-testpypi/>`_
 for more information. To avoid entering your username and password every time,
 see `Keyring support in twine documentation <https://twine.readthedocs.io/en/latest/#keyring-support>`_.
 
-If everything went smoothly, you are ready to upload the the real index.
+If everything went smoothly, you are ready to upload the real index.
 Again, you need to register to PyPI and ask to become a maintainer of the package
 you want to upload to. Upload the distribution using
 
