@@ -26,6 +26,9 @@ Build a source distribution archive and a wheel package with
     $ python setup.py sdist bdist_wheel
 
 This will create distribution files under the ‘dist’ directory.
+Please remember to clean up between subsequent builds::
+
+    $ python setup.py clean --all
 
 
 Uploading

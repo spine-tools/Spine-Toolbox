@@ -16,70 +16,7 @@ Setup script for Python's setuptools.
 :date:   3.10.2019
 """
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
-from spinetoolbox.version import __version__
-from spinetoolbox.config import (
-    REQUIRED_SPINEDB_API_VERSION,
-    REQUIRED_SPINE_ENGINE_VERSION,
-    PREFERRED_SPINE_ITEMS_VERSION,
-)
-
-with open("README.md", encoding="utf8") as readme_file:
-    readme = readme_file.read()
-
-install_requires = [
-    "pyside2 >=5.14, <5.15",
-    "datapackage >= 1.15.2",
-    "jupyter-client >= 6.1.12",
-    "qtconsole >= 5.0.3",
-    "sqlalchemy >=1.3, <1.4",
-    "spinedb_api >= {}".format(REQUIRED_SPINEDB_API_VERSION),
-    "spine_engine >= {}".format(REQUIRED_SPINE_ENGINE_VERSION),
-    "numpy >= 1.20.2",
-    "matplotlib!=3.2.1, >3.0, <3.3.1",
-    "scipy >= 1.6.3",
-    "networkx >= 2.5.1",
-    "cx-Oracle >= 8.1.0",
-    "pandas >= 1.2.4",
-    "pymysql >= 1.0.2",
-    "pyodbc >= 4.0.30",
-    "psycopg2 >= 2.8.6",
-    "jill >= 0.9.2",
-    "spine-items >={}".format(PREFERRED_SPINE_ITEMS_VERSION),
-]
-
-setup(
-    name="spinetoolbox",
-    version=__version__,
-    description="An application to define, manage, and execute various energy system simulation models",
-    long_description=readme,
-    long_description_content_type="text/markdown",
-    author="Spine Project consortium",
-    author_email="spine_info@vtt.fi",
-    url="https://github.com/Spine-project/Spine-Toolbox",
-    packages=find_packages(exclude=("tests*", "execution_tests*")),
-    entry_points={
-        "console_scripts": [
-            "spinetoolbox=spinetoolbox.main:main",
-            "spine-db-editor=spinetoolbox.spine_db_editor.main:main",
-        ]
-    },
-    include_package_data=True,
-    license="LGPL-3.0-or-later",
-    license_files=["COPYING", "COPYING.LESSER"],
-    zip_safe=False,
-    keywords="",
-    python_requires=">=3.6, <3.9",
-    install_requires=install_requires,
-    test_suite="tests",
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-        "Operating System :: OS Independent",
-    ],
-    project_urls={
-        "Issue Tracker": "https://github.com/Spine-project/Spine-Toolbox/issues",
-        "Documentation": "https://spine-toolbox.readthedocs.io",
-    },
-)
+# NOTE: package configuration moved to setup.cfg
+setup()
