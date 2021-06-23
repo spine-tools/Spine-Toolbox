@@ -13,7 +13,7 @@ from ..helpers import pyside2_version_check
 from .widgets.multi_spine_db_editor import MultiSpineDBEditor
 
 
-def main(argv=sys.argv):
+def main():
     """Launches Spine Db Editor as it's own application.
 
     Args:
@@ -22,10 +22,10 @@ def main(argv=sys.argv):
     if not pyside2_version_check():
         return 1
     try:
-        urls = argv[1:]
+        urls = sys.argv[1:]
     except IndexError:
         return 2
-    app = QApplication(argv)
+    app = QApplication(sys.argv)
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
@@ -39,4 +39,4 @@ def main(argv=sys.argv):
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(main())
