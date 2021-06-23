@@ -6,13 +6,14 @@ import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QSettings
-import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.helpers import pyside2_version_check
-from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+
+from .. import resources_icons_rc  # pylint: disable=unused-import
+from ..spine_db_manager import SpineDBManager
+from ..helpers import pyside2_version_check
+from .widgets.multi_spine_db_editor import MultiSpineDBEditor
 
 
-def main(argv):
+def main(argv=sys.argv):
     """Launches Spine Db Editor as it's own application.
 
     Args:

@@ -59,7 +59,12 @@ setup(
     author_email="spine_info@vtt.fi",
     url="https://github.com/Spine-project/Spine-Toolbox",
     packages=find_packages(exclude=("tests*", "execution_tests*")),
-    entry_points={"console_scripts": ["spinetoolbox=spinetoolbox.main:main"]},
+    entry_points={
+        "console_scripts": [
+            "spinetoolbox=spinetoolbox.main:main",
+            "spine-db-editor=spinetoolbox.spine_db_editor.main:main",
+        ]
+    },
     include_package_data=True,
     license="LGPL-3.0-or-later",
     license_files=["COPYING", "COPYING.LESSER"],
