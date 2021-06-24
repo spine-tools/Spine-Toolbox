@@ -183,7 +183,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
-            self._project.add_connection(Connection.from_dict(connection_dict))
+            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
 
 
 class RemoveProjectItemsCommand(SpineToolboxCommand):
@@ -219,7 +219,7 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
-            self._project.add_connection(Connection.from_dict(connection_dict))
+            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
 
 
 class RenameProjectItemCommand(SpineToolboxCommand):
@@ -320,7 +320,7 @@ class RemoveConnectionsCommand(SpineToolboxCommand):
 
     def undo(self):
         for connection_dict in self._connections_dict.values():
-            self._project.add_connection(Connection.from_dict(connection_dict))
+            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
 
 
 class SetFiltersOnlineCommand(SpineToolboxCommand):

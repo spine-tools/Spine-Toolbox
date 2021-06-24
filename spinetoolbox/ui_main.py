@@ -80,10 +80,14 @@ from .project_commands import (
     AddSpecificationCommand,
     RemoveSpecificationCommand,
     RenameProjectItemCommand,
-    SpineToolboxCommand, SaveSpecificationAsCommand, AddProjectItemsCommand, RemoveAllProjectItemsCommand,
+    SpineToolboxCommand,
+    SaveSpecificationAsCommand,
+    AddProjectItemsCommand,
+    RemoveAllProjectItemsCommand,
     RemoveProjectItemsCommand,
 )
 from .plugin_manager import PluginManager
+from .link import Link
 
 
 class ToolboxUI(QMainWindow):
@@ -151,7 +155,9 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
-        self.main_toolbar = toolbars.MainToolBar(self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self)
+        self.main_toolbar = toolbars.MainToolBar(
+            self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
+        )
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
@@ -972,11 +978,7 @@ class ToolboxUI(QMainWindow):
         else:
             msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove All Items",
-            msg,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self,
+            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
         )
         message_box.button(QMessageBox.Ok).setText("Remove Items")
         answer = message_box.exec_()
@@ -2058,31 +2060,36 @@ class ToolboxUI(QMainWindow):
     @Slot(bool)
     def _remove_selected_items(self, _):
         """Pushes commands to remove selected project items and links from project."""
-        selection_model = self.ui.treeView_project.selectionModel()
-        if not selection_model.hasSelection():
+        selected_items = self.ui.graphicsView.scene().selectedItems()
+        if not selected_items:
             return
-        indexes = selection_model.selectedIndexes()
-        names = [i.data() for i in indexes]
-        msg = f"Remove item(s) <b>{', '.join(names)}</b> from project? "
+        project_item_names = set()
+        has_connections = False
+        for item in selected_items:
+            if isinstance(item, ProjectItemIcon):
+                project_item_names.add(item.name())
+            elif isinstance(item, Link):
+                has_connections = True
+        if not project_item_names and not has_connections:
+            return
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
-        if not delete_data:
-            msg += "Item data directory will still be available in the project directory after this operation."
-        else:
-            msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
-        # noinspection PyCallByClass, PyTypeChecker
-        message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove Item",
-            msg,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self,
-        )
-        message_box.button(QMessageBox.Ok).setText("Remove Item")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
-            return
+        if project_item_names:
+            msg = f"Remove item(s) <b>{', '.join(project_item_names)}</b> from project? "
+            if not delete_data:
+                msg += "Item data directory will still be available in the project directory after this operation."
+            else:
+                msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
+            # noinspection PyCallByClass, PyTypeChecker
+            message_box = QMessageBox(
+                QMessageBox.Question, "Remove Item", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            )
+            message_box.button(QMessageBox.Ok).setText("Remove Item")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
+                return
         self.undo_stack.beginMacro("remove items and links")
-        self.undo_stack.push(RemoveProjectItemsCommand(self._project, self.item_factories, names, delete_data))
+        if project_item_names:
+            self.undo_stack.push(RemoveProjectItemsCommand(self._project, self.item_factories, list(project_item_names), delete_data))
         self.ui.graphicsView.remove_selected_links()
         self.undo_stack.endMacro()
 
