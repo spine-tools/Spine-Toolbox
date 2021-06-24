@@ -71,7 +71,7 @@ To update Spine Toolbox to the latest available release, open a terminal and run
     pipx upgrade spinetoolbox
 
 
-### Installation from stand-alone package (only for Windows 64-bit)
+### Installation from stand-alone packages (only for Windows 64-bit)
 
 This option is suitable for users who cannot install Python or don't need to get the most recent updates.
 Download the latest installer package from [here](https://github.com/Spine-project/Spine-Toolbox/releases),
