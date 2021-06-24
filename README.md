@@ -26,16 +26,16 @@ Guide.
 ## Installation
 
 We provide three options for installing Spine toolbox:
-from the [Python Package Index (PyPI)](https://pypi.org/project/spinetoolbox/),
-from a stand-alone installation package,
-and directly from sources (for developers).
+(i) from the [Python Package Index (PyPI)](https://pypi.org/project/spinetoolbox/),
+(ii) from stand-alone installation packages,
+and (iii) directly from sources.
 
 ### Installation from PyPI (recommended)
 
 This is the recommended way to install Spine Toolbox and keep it updated with new releases.
 
 ---
-**NOTE:** If you have previously installed Spine toolbox using Conda, 
+**NOTE:** If you have previously installed Spine Toolbox using Conda, 
 please follow the steps [here](#uninstalling-a-previous-conda-installation) to uninstall it.
 
 ---
