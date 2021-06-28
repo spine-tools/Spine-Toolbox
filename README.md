@@ -25,9 +25,9 @@ Guide.
 
 ## Installation
 
-We provide three options for installing Spine toolbox:
+We provide three options for installing Spine Toolbox:
 (i) from the [Python Package Index (PyPI)](https://pypi.org/project/spinetoolbox/),
-(ii) from stand-alone installation packages,
+(ii) using stand-alone installation packages,
 and (iii) directly from sources.
 
 ### Installation from PyPI (recommended)
@@ -35,14 +35,14 @@ and (iii) directly from sources.
 This is the recommended way to install Spine Toolbox and keep it updated with new releases.
 
 ---
-**NOTE:** If you have previously installed Spine Toolbox using Conda, 
-please follow the steps [here](#uninstalling-a-previous-conda-installation) to uninstall it.
+**NOTE:** If you have previously installed Spine Toolbox in a conda environment, 
+please follow the steps [here](#uninstalling-a-previous-installation-in-a-conda-environment) to uninstall it.
 
 ---
 
 1. Install Python 3.8.
    - On Windows, open **Microsoft Store** from the start menu,
-     enter 'python' in the search box, select Python 3.8, and press **Get**.
+     enter ‘python’ in the search box, select Python 3.8, and press **Get**.
    - On OS X and Linux, get [the latest release from Python.org](https://www.python.org/downloads/).
 
 2. Open a terminal (e.g., Command Prompt on Windows).
@@ -60,7 +60,7 @@ please follow the steps [here](#uninstalling-a-previous-conda-installation) to u
 
         pipx install spinetoolbox
 
-That's it!
+That’s it!
 
 To launch Spine Toolbox, open a terminal and run
 
@@ -73,26 +73,33 @@ To update Spine Toolbox to the latest available release, open a terminal and run
 
 ### Installation from stand-alone packages (only for Windows 64-bit)
 
-This option is suitable for users who cannot install Python or don't need to get the most recent updates.
+This option is suitable for users who cannot install Python or don’t need to get 
+the most recent updates.
 Download the latest installer package from [here](https://github.com/Spine-project/Spine-Toolbox/releases),
 run it, and follow the instructions to install Spine Toolbox.
 
 
 ### Installation from sources
 
-This option is for the developers and contributors who want to debug or edit Spine Toolbox's source code.
-First, follow the instructions above to install Python and get the latest version of pip.
+This option is for the developers and other contributors who want to debug or 
+edit the Spine Toolbox source code.
+First, follow the instructions above to install Python and get the latest 
+version of pip.
 
-1. Clone or download Spine Toolbox's source code from this repository.
+1. Clone or download the source code from this repository.
    
 2. Browse to the folder and create a virtual environment using
 
         python -m venv .venv
+
+   (Advanced users can also manage the environment using 
+   [conda](https://docs.conda.io/projects/conda/), but this is not covered here.)
     
 3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
    or `source .venv/bin/activate` (bash, zsh). 
 
-4. Make sure that the terminal prompt indicates the active environment, and install Spine Toolbox by running
+4. Make sure that the terminal prompt indicates the active environment, 
+   and install Spine Toolbox by running
 
         pip install -r requirements.txt
     
@@ -100,13 +107,14 @@ First, follow the instructions above to install Python and get the latest versio
 
         pip install -r dev-requirements.txt
 
-You can now launch Spine Toolbox by running `spinetoolbox` when the environment is active.
-To update, just pull or copy the latest changes from the repository and run
+You can now launch Spine Toolbox by running `spinetoolbox` when the environment 
+is active. To update, just pull or copy the latest changes from the repository 
+and run
 
     pip install --upgrade -r requirements.txt [-r dev-requirements.txt]
 
 
-### Uninstalling a previous Conda installation
+### Uninstalling a previous installation in a conda environment
 
 1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
 
