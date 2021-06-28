@@ -6,13 +6,14 @@ import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QSettings
-import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.helpers import pyside2_version_check
-from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+
+from .. import resources_icons_rc  # pylint: disable=unused-import
+from ..spine_db_manager import SpineDBManager
+from ..helpers import pyside2_version_check
+from .widgets.multi_spine_db_editor import MultiSpineDBEditor
 
 
-def main(argv):
+def main():
     """Launches Spine Db Editor as it's own application.
 
     Args:
@@ -21,10 +22,10 @@ def main(argv):
     if not pyside2_version_check():
         return 1
     try:
-        urls = argv[1:]
+        urls = sys.argv[1:]
     except IndexError:
         return 2
-    app = QApplication(argv)
+    app = QApplication(sys.argv)
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
@@ -38,4 +39,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    sys.exit(main())

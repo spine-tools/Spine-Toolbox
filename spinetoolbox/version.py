@@ -29,11 +29,17 @@ class VersionInfo(NamedTuple):
     releaselevel: str
     serial: int
 
+    def __str__(self) -> str:
+        version = "{}.{}.{}".format(major, minor, micro)
+        if not self.releaselevel == 'final':
+            version += "-{}.{}".format(releaselevel, serial)
+        return version
+
 
 major = 0
 minor = 6
 micro = 1
 releaselevel = "alpha"
-serial = 0
+serial = 6
 __version_info__ = VersionInfo(major, minor, micro, releaselevel, serial)
-__version__ = ".".join([str(a) for a in __version_info__[:3]])
+__version__ = str(__version_info__)

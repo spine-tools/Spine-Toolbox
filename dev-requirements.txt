@@ -2,4 +2,7 @@ black == 19.3b0
 pre-commit == 2.0.1
 PyYAML >= 5.4
 pylint >= 2.3.0
+setuptools >=42
+wheel >=0.36.2
+twine >= 3.4.1
 -r "docs/requirements.txt"

@@ -29,10 +29,12 @@ To open multiple databases in Spine database editor:
 From the command line
 =====================
 
-To open a single SQLite database in Spine database editor, use the ``spine_db_editor.py`` script
-in the ``bin`` folder::
+To open a single database in Spine database editor, use the ``spine-db-editor`` 
+application which comes with Spine Toolbox::
 
-    spine_db_editor.py "...path of the database file..."
+    spine-db-editor "...url of the database..." 
+
+Note that for e.g. an SQLite database, the url should start with ‘sqlite:’.
 
 
 Knowing the UI

@@ -20,9 +20,7 @@ import sys
 import os
 from pathlib import Path
 
-REQUIRED_SPINE_ENGINE_VERSION = "0.10.0"
-REQUIRED_SPINEDB_API_VERSION = "0.12.1"
-PREFERRED_SPINE_ITEMS_VERSION = "0.7.5"
+# NOTE: All required Python package versions are in setup.cfg
 LATEST_PROJECT_VERSION = 6
 
 # For the Add/Update SpineOpt wizard
