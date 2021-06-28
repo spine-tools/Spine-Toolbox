@@ -30,6 +30,14 @@ Please remember to clean up between subsequent builds::
 
     $ python setup.py clean --all
 
+Before uploading, tag the code revision with
+
+::
+
+    $ git tag --message "Version x.y.z" <version number>
+
+where the version number is a string given by ``spinetoolbox.__version__``. 
+
 
 Uploading
 ---------
