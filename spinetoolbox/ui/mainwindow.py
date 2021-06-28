@@ -18,17 +18,41 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
-from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+from PySide2.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QMetaObject,
+    QObject,
+    QPoint,
+    QRect,
+    QSize,
+    QTime,
+    QUrl,
+    Qt,
+)
+from PySide2.QtGui import (
+    QBrush,
+    QColor,
+    QConicalGradient,
+    QCursor,
+    QFont,
+    QFontDatabase,
+    QIcon,
+    QKeySequence,
+    QLinearGradient,
+    QPalette,
+    QPainter,
+    QPixmap,
+    QRadialGradient,
+)
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
 
 from spinetoolbox import resources_icons_rc
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -192,7 +216,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1322, 21))
+        self.menubar.setGeometry(QRect(0, 0, 1322, 27))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
@@ -302,6 +326,16 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_14.addWidget(self.label_no_selection)
 
+        self.listView_executions = QTreeView(self.tab_no_selection)
+        self.listView_executions.setObjectName(u"listView_executions")
+        sizePolicy1.setHeightForWidth(self.listView_executions.sizePolicy().hasHeightForWidth())
+        self.listView_executions.setSizePolicy(sizePolicy1)
+        font1 = QFont()
+        font1.setPointSize(11)
+        self.listView_executions.setFont(font1)
+
+        self.verticalLayout_14.addWidget(self.listView_executions)
+
         self.tabWidget_item_properties.addTab(self.tab_no_selection, "")
 
         self.verticalLayout.addWidget(self.tabWidget_item_properties)
@@ -353,23 +387,6 @@ class Ui_MainWindow(object):
 
         self.dockWidget_console.setWidget(self.dockWidgetContents_console)
         MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_console)
-        self.dockWidget_executions = QDockWidget(MainWindow)
-        self.dockWidget_executions.setObjectName(u"dockWidget_executions")
-        self.dockWidgetContents_executions = QWidget()
-        self.dockWidgetContents_executions.setObjectName(u"dockWidgetContents_executions")
-        self.verticalLayout_6 = QVBoxLayout(self.dockWidgetContents_executions)
-        self.verticalLayout_6.setSpacing(0)
-        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
-        self.listView_executions = QListView(self.dockWidgetContents_executions)
-        self.listView_executions.setObjectName(u"listView_executions")
-        sizePolicy1.setHeightForWidth(self.listView_executions.sizePolicy().hasHeightForWidth())
-        self.listView_executions.setSizePolicy(sizePolicy1)
-
-        self.verticalLayout_6.addWidget(self.listView_executions)
-
-        self.dockWidget_executions.setWidget(self.dockWidgetContents_executions)
-        MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_executions)
         self.dockWidget_design_view = QDockWidget(MainWindow)
         self.dockWidget_design_view.setObjectName(u"dockWidget_design_view")
         self.dockWidgetContents_5 = QWidget()
@@ -387,7 +404,7 @@ class Ui_MainWindow(object):
         self.graphicsView.setFrameShadow(QFrame.Raised)
         self.graphicsView.setMidLineWidth(0)
         self.graphicsView.setAlignment(Qt.AlignCenter)
-        self.graphicsView.setRenderHints(QPainter.Antialiasing|QPainter.TextAntialiasing)
+        self.graphicsView.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
         self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
         self.graphicsView.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.graphicsView.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
@@ -447,207 +464,335 @@ class Ui_MainWindow(object):
 
         self.tabWidget_item_properties.setCurrentIndex(0)
 
-
         QMetaObject.connectSlotsByName(MainWindow)
+
     # setupUi
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Spine Toolbox", None))
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
-#if QT_CONFIG(tooltip)
-        self.actionQuit.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Quit</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionQuit.setToolTip(
+            QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Quit</p></body></html>", None)
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionQuit.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Q", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionDocumentation.setText(QCoreApplication.translate("MainWindow", u"Documentation", None))
         self.actionAbout.setText(QCoreApplication.translate("MainWindow", u"About...", None))
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(shortcut)
         self.actionAbout.setShortcut(QCoreApplication.translate("MainWindow", u"F12", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionSave.setText(QCoreApplication.translate("MainWindow", u"Save project", None))
-#if QT_CONFIG(tooltip)
-        self.actionSave.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Save project</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionSave.setToolTip(
+            QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Save project</p></body></html>", None)
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionSave.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+S", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionSave_As.setText(QCoreApplication.translate("MainWindow", u"Save project as...", None))
-#if QT_CONFIG(tooltip)
-        self.actionSave_As.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Save project in another directory</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionSave_As.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Save project in another directory</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionSave_As.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Shift+S", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionOpen.setText(QCoreApplication.translate("MainWindow", u"Open project...", None))
-#if QT_CONFIG(tooltip)
-        self.actionOpen.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open existing project</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionOpen.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Open existing project</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionOpen.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+O", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionNew.setText(QCoreApplication.translate("MainWindow", u"New project...", None))
-#if QT_CONFIG(tooltip)
-        self.actionNew.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Create new project</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionNew.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Create new project</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionNew.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+N", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionSettings.setText(QCoreApplication.translate("MainWindow", u"Settings...", None))
-#if QT_CONFIG(tooltip)
-        self.actionSettings.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open application and project settings</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionSettings.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Open application and project settings</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionSettings.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+,", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionItem_Toolbar.setText(QCoreApplication.translate("MainWindow", u"Item Toolbar", None))
         self.actionAdd_Item_Toolbar.setText(QCoreApplication.translate("MainWindow", u"Add Item Toolbar", None))
-#if QT_CONFIG(tooltip)
-        self.actionAdd_Item_Toolbar.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Make Add Item Toolbar visible</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionAdd_Item_Toolbar.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Make Add Item Toolbar visible</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionEvent_Log.setText(QCoreApplication.translate("MainWindow", u"Event Log", None))
-#if QT_CONFIG(tooltip)
-        self.actionEvent_Log.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Make Event Log widget visible</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionEvent_Log.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Make Event Log widget visible</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionSubprocess_Output.setText(QCoreApplication.translate("MainWindow", u"Subprocess Output", None))
-#if QT_CONFIG(tooltip)
-        self.actionSubprocess_Output.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Make Subprocess Output widget visible</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionSubprocess_Output.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Make Subprocess Output widget visible</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionSelected_Item.setText(QCoreApplication.translate("MainWindow", u"Selected Item", None))
-#if QT_CONFIG(tooltip)
-        self.actionSelected_Item.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Make Selected Item widget visible</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionSelected_Item.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Make Selected Item widget visible</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionJulia_REPL.setText(QCoreApplication.translate("MainWindow", u"Julia REPL", None))
-#if QT_CONFIG(tooltip)
-        self.actionJulia_REPL.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionJulia_REPL.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionUser_Guide.setText(QCoreApplication.translate("MainWindow", u"User guide", None))
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(shortcut)
         self.actionUser_Guide.setShortcut(QCoreApplication.translate("MainWindow", u"F1", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionRestore_Dock_Widgets.setText(QCoreApplication.translate("MainWindow", u"Restore Dock Widgets", None))
-#if QT_CONFIG(tooltip)
-        self.actionRestore_Dock_Widgets.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionRestore_Dock_Widgets.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow",
+                u"<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>",
+                None,
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionAbout_Qt.setText(QCoreApplication.translate("MainWindow", u"About Qt...", None))
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(shortcut)
         self.actionAbout_Qt.setShortcut(QCoreApplication.translate("MainWindow", u"F11", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionRemove_all.setText(QCoreApplication.translate("MainWindow", u"Remove all", None))
-#if QT_CONFIG(tooltip)
-        self.actionRemove_all.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Remove all project items</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionRemove_all.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Remove all project items</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionGetting_started.setText(QCoreApplication.translate("MainWindow", u"Getting started", None))
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(shortcut)
         self.actionGetting_started.setShortcut(QCoreApplication.translate("MainWindow", u"F3", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionOpen_recent.setText(QCoreApplication.translate("MainWindow", u"Open recent", None))
-#if QT_CONFIG(tooltip)
-        self.actionOpen_recent.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open recent project</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionOpen_recent.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Open recent project</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionCopy.setText(QCoreApplication.translate("MainWindow", u"Copy", None))
-#if QT_CONFIG(tooltip)
-        self.actionCopy.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Copy project item(s)</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionCopy.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Copy project item(s)</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionCopy.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+C", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionPaste.setText(QCoreApplication.translate("MainWindow", u"Paste", None))
-#if QT_CONFIG(tooltip)
-        self.actionPaste.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Paste project item(s)</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionPaste.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Paste project item(s)</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionPaste.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+V", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionDuplicate.setText(QCoreApplication.translate("MainWindow", u"Duplicate", None))
-#if QT_CONFIG(tooltip)
-        self.actionDuplicate.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Duplicate project item(s)</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionDuplicate.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Duplicate project item(s)</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionDuplicate.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+D", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionLive_tutorial.setText(QCoreApplication.translate("MainWindow", u"Live tutorial", None))
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(shortcut)
         self.actionLive_tutorial.setShortcut(QCoreApplication.translate("MainWindow", u"Shift+F2", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionUpgrade_project.setText(QCoreApplication.translate("MainWindow", u"Upgrade project", None))
-#if QT_CONFIG(tooltip)
-        self.actionUpgrade_project.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Upgrade old (.proj) Spine Toolbox project into a new style directory based project</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionUpgrade_project.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow",
+                u"<html><head/><body><p>Upgrade old (.proj) Spine Toolbox project into a new style directory based project</p></body></html>",
+                None,
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionRemove.setText(QCoreApplication.translate("MainWindow", u"Remove", None))
-#if QT_CONFIG(tooltip)
-        self.actionRemove.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Remove project item(s)</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionRemove.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Remove project item(s)</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionRemove.setShortcut(QCoreApplication.translate("MainWindow", u"Del", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionOpen_project_directory.setText(QCoreApplication.translate("MainWindow", u"Open project directory...", None))
-#if QT_CONFIG(tooltip)
-        self.actionOpen_project_directory.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open project directory in file browser</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.actionOpen_item_directory.setText(QCoreApplication.translate("MainWindow", u"Open item directory...", None))
-#if QT_CONFIG(tooltip)
-        self.actionOpen_item_directory.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open item directory in file browser</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # endif // QT_CONFIG(shortcut)
+        self.actionOpen_project_directory.setText(
+            QCoreApplication.translate("MainWindow", u"Open project directory...", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.actionOpen_project_directory.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Open project directory in file browser</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        self.actionOpen_item_directory.setText(
+            QCoreApplication.translate("MainWindow", u"Open item directory...", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.actionOpen_item_directory.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Open item directory in file browser</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionRename_item.setText(QCoreApplication.translate("MainWindow", u"Rename...", None))
-#if QT_CONFIG(tooltip)
-        self.actionRename_item.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Rename project item</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionRename_item.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Rename project item</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionNew_DB_editor.setText(QCoreApplication.translate("MainWindow", u"New DB editor", None))
-#if QT_CONFIG(tooltip)
-        self.actionNew_DB_editor.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open Spine Db Editor</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.actionPasteAndDuplicateFiles.setText(QCoreApplication.translate("MainWindow", u"Paste and duplicate files", None))
-#if QT_CONFIG(tooltip)
-        self.actionPasteAndDuplicateFiles.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Paste project item(s) and duplicate files</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionNew_DB_editor.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Open Spine Db Editor</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        self.actionPasteAndDuplicateFiles.setText(
+            QCoreApplication.translate("MainWindow", u"Paste and duplicate files", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.actionPasteAndDuplicateFiles.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Paste project item(s) and duplicate files</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionPasteAndDuplicateFiles.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Shift+V", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionDuplicateAndDuplicateFiles.setText(QCoreApplication.translate("MainWindow", u"Duplicate and duplicate files", None))
-#if QT_CONFIG(tooltip)
-        self.actionDuplicateAndDuplicateFiles.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Duplicate project item(s) and duplicate files</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
-        self.actionDuplicateAndDuplicateFiles.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Shift+D", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
+        self.actionDuplicateAndDuplicateFiles.setText(
+            QCoreApplication.translate("MainWindow", u"Duplicate and duplicate files", None)
+        )
+        # if QT_CONFIG(tooltip)
+        self.actionDuplicateAndDuplicateFiles.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow",
+                u"<html><head/><body><p>Duplicate project item(s) and duplicate files</p></body></html>",
+                None,
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
+        self.actionDuplicateAndDuplicateFiles.setShortcut(
+            QCoreApplication.translate("MainWindow", u"Ctrl+Shift+D", None)
+        )
+        # endif // QT_CONFIG(shortcut)
         self.actionInstall_plugin.setText(QCoreApplication.translate("MainWindow", u"Install plugin...", None))
         self.actionManage_plugins.setText(QCoreApplication.translate("MainWindow", u"Manage plugins...", None))
         self.actionCreate_plugin.setText(QCoreApplication.translate("MainWindow", u"Create plugin...", None))
         self.actionStartJuliaConsole.setText(QCoreApplication.translate("MainWindow", u"Start Julia Console", None))
-#if QT_CONFIG(tooltip)
-        self.actionStartJuliaConsole.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Start Julia Console using the kernel selected in Settings-&gt;Tools</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionStartJuliaConsole.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow",
+                u"<html><head/><body><p>Start Julia Console using the kernel selected in Settings-&gt;Tools</p></body></html>",
+                None,
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionStartJuliaConsole.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+2", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionStartPythonConsole.setText(QCoreApplication.translate("MainWindow", u"Start Python Console", None))
-#if QT_CONFIG(tooltip)
-        self.actionStartPythonConsole.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Start Python Console using the kernel selected in Settings-&gt;Tools</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(tooltip)
+        self.actionStartPythonConsole.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow",
+                u"<html><head/><body><p>Start Python Console using the kernel selected in Settings-&gt;Tools</p></body></html>",
+                None,
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(shortcut)
         self.actionStartPythonConsole.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+1", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionClose.setText(QCoreApplication.translate("MainWindow", u"Close project", None))
-#if QT_CONFIG(tooltip)
-        self.actionClose.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Close current project</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
+        self.actionClose.setToolTip(
+            QCoreApplication.translate(
+                "MainWindow", u"<html><head/><body><p>Close current project</p></body></html>", None
+            )
+        )
+        # endif // QT_CONFIG(tooltip)
         self.actionRename_project.setText(QCoreApplication.translate("MainWindow", u"Rename project...", None))
-#if QT_CONFIG(tooltip)
+        # if QT_CONFIG(tooltip)
         self.actionRename_project.setToolTip(QCoreApplication.translate("MainWindow", u"Rename project", None))
-#endif // QT_CONFIG(tooltip)
+        # endif // QT_CONFIG(tooltip)
         self.actionExecute_project.setText(QCoreApplication.translate("MainWindow", u"Execute project", None))
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(shortcut)
         self.actionExecute_project.setShortcut(QCoreApplication.translate("MainWindow", u"F5", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionExecute_selection.setText(QCoreApplication.translate("MainWindow", u"Execute selection", None))
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(shortcut)
         self.actionExecute_selection.setShortcut(QCoreApplication.translate("MainWindow", u"F6", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.actionStop_execution.setText(QCoreApplication.translate("MainWindow", u"Stop execution", None))
-#if QT_CONFIG(shortcut)
+        # if QT_CONFIG(shortcut)
         self.actionStop_execution.setShortcut(QCoreApplication.translate("MainWindow", u"F7", None))
-#endif // QT_CONFIG(shortcut)
+        # endif // QT_CONFIG(shortcut)
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"Edit", None))
@@ -658,14 +803,24 @@ class Ui_MainWindow(object):
         self.menuConsoles.setTitle(QCoreApplication.translate("MainWindow", u"Consoles", None))
         self.dockWidget_eventlog.setWindowTitle(QCoreApplication.translate("MainWindow", u"Event Log", None))
         self.dockWidget_itemlog.setWindowTitle(QCoreApplication.translate("MainWindow", u"Item Execution Log", None))
-        self.label_no_itemlog.setText(QCoreApplication.translate("MainWindow", u"Select and execute a project item to view its execution log", None))
+        self.label_no_itemlog.setText(
+            QCoreApplication.translate(
+                "MainWindow", u"Select and execute a project item to view its execution log", None
+            )
+        )
         self.dockWidget_item.setWindowTitle(QCoreApplication.translate("MainWindow", u"Properties", None))
-        self.label_no_selection.setText(QCoreApplication.translate("MainWindow", u"Select a project item to view its properties", None))
-        self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_no_selection), QCoreApplication.translate("MainWindow", u"No Selection", None))
+        self.label_no_selection.setText(
+            QCoreApplication.translate("MainWindow", u"Select a project item to view its properties", None)
+        )
+        self.tabWidget_item_properties.setTabText(
+            self.tabWidget_item_properties.indexOf(self.tab_no_selection),
+            QCoreApplication.translate("MainWindow", u"No Selection", None),
+        )
         self.dockWidget_project.setWindowTitle(QCoreApplication.translate("MainWindow", u"Project", None))
         self.dockWidget_console.setWindowTitle(QCoreApplication.translate("MainWindow", u"Console", None))
-        self.label_no_console.setText(QCoreApplication.translate("MainWindow", u"Select and execute a Tool to see its console", None))
-        self.dockWidget_executions.setWindowTitle(QCoreApplication.translate("MainWindow", u"Executions", None))
+        self.label_no_console.setText(
+            QCoreApplication.translate("MainWindow", u"Select and execute a Tool to see its console", None)
+        )
         self.dockWidget_design_view.setWindowTitle(QCoreApplication.translate("MainWindow", u"Design View", None))
-    # retranslateUi
 
+    # retranslateUi

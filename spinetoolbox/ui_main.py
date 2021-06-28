@@ -179,7 +179,7 @@ class ToolboxUI(QMainWindow):
         self._proposed_item_name_counts = dict()
         self.restore_dock_widgets()
         self.restore_ui()
-        self.ui.dockWidget_executions.hide()
+        self.ui.listView_executions.hide()
         self.parse_project_item_modules()
         self.init_project_item_model()
         self.init_specification_model()
@@ -832,12 +832,12 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item:
             self.activate_item_tab()
             self.override_logs_and_consoles()
-        else:
-            self.restore_original_logs_and_consoles()
-            if self.active_link:
-                self.activate_link_tab()
-            else:
-                self.activate_no_selection_tab()
+            return
+        self.restore_original_logs_and_consoles()
+        if self.active_link:
+            self.activate_link_tab()
+            return
+        self.activate_no_selection_tab()
 
     def _set_active_project_item(self, active_project_item):
         """
@@ -1295,7 +1295,7 @@ class ToolboxUI(QMainWindow):
     def restore_original_logs_and_consoles(self):
         self.restore_original_item_log_document()
         self.restore_original_console()
-        self.ui.dockWidget_executions.hide()
+        self.ui.listView_executions.hide()
 
     def override_logs_and_consoles(self):
         self.override_item_log()
@@ -1336,11 +1336,10 @@ class ToolboxUI(QMainWindow):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
+        visible = bool(self.active_project_item.filter_log_documents or self.active_project_item.filter_consoles)
+        self.ui.dockWidget_item.widget().layout().addWidget(self.ui.listView_executions)
+        self.ui.listView_executions.setVisible(visible)
         self.ui.listView_executions.model().reset_model(self.active_project_item)
-        self.ui.dockWidget_executions.setVisible(
-            bool(self.active_project_item.filter_log_documents or self.active_project_item.filter_consoles)
-        )
-        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self.active_project_item.name}]")
         current = self.ui.listView_executions.currentIndex()
         self._select_execution(current, None)
 
@@ -1379,7 +1378,7 @@ class ToolboxUI(QMainWindow):
     @Slot()
     def _refresh_execution_list(self):
         """Refreshes Executions as the active project item starts new executions."""
-        self.ui.dockWidget_executions.show()
+        self.ui.listView_executions.show()
         if not self.ui.listView_executions.currentIndex().isValid():
             index = self.ui.listView_executions.model().index(0, 0)
             self.ui.listView_executions.setCurrentIndex(index)
@@ -2089,7 +2088,9 @@ class ToolboxUI(QMainWindow):
                 return
         self.undo_stack.beginMacro("remove items and links")
         if project_item_names:
-            self.undo_stack.push(RemoveProjectItemsCommand(self._project, self.item_factories, list(project_item_names), delete_data))
+            self.undo_stack.push(
+                RemoveProjectItemsCommand(self._project, self.item_factories, list(project_item_names), delete_data)
+            )
         self.ui.graphicsView.remove_selected_links()
         self.undo_stack.endMacro()
 

@@ -46,7 +46,7 @@ class FilterExecutionModel(QAbstractItemModel):
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if section == 0 and orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return "Execution filters"
+            return "Executions"
 
     def data(self, index, role=Qt.DisplayRole):
         if self._item is None:
