@@ -401,7 +401,7 @@ class AddSpecificationCommand(SpineToolboxCommand):
 
 class RemoveSpecificationCommand(SpineToolboxCommand):
     def __init__(self, project, name):
-        """Command to remove item specs from a project.
+        """Command to remove specs from a project.
 
         Args:
             project (SpineToolboxProject): the project

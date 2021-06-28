@@ -100,6 +100,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self._populate_main_menu()
         self._spec_toolbar.save_action.triggered.connect(self._save)
+        self._spec_toolbar.duplicate_action.triggered.connect(self._duplicate)
         self._spec_toolbar.close_action.triggered.connect(self.close)
         self._undo_stack.cleanChanged.connect(self._update_window_modified)
 
@@ -173,7 +174,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         spec = self._make_new_specification(name)
         if spec is None:
             return False
-        if self._original_spec_name is None:
+        if not self._original_spec_name:
             if self._toolbox.project().is_specification_name_reserved(name):
                 self._show_error("Specification name already in use. Please enter a new name.")
                 return False
@@ -187,16 +188,21 @@ class SpecificationEditorWindowBase(QMainWindow):
             if name != self._original_spec_name and self._toolbox.project().is_specification_name_reserved(name):
                 self._show_error("Specification name already in use. Please enter a new name.")
                 return False
-            if self.specification is not None:
-                spec.definition_file_path = self.specification.definition_file_path
+            spec.definition_file_path = self.specification.definition_file_path
             if not self._toolbox.project().replace_specification(self._original_spec_name, spec):
                 self._show_error("Failed to save specification. See Toolbox Event Log for more information.")
                 return False
         self._original_spec_name = name
         self._undo_stack.setClean()
         self.specification = spec
+        self._spec_toolbar.duplicate_action.setEnabled(True)
         self.setWindowTitle(self.specification.name)
         return True
+
+    def _duplicate(self):
+        new_spec = self._make_new_specification("")
+        item_type = new_spec.item_type
+        self._toolbox.show_specification_form(item_type, new_spec)
 
     def tear_down(self):
         if self.focusWidget():
@@ -249,9 +255,12 @@ class _SpecNameDescriptionToolbar(QToolBar):
         self.addWidget(widget)
         self.menu = self._make_main_menu()
         self.save_action = self.menu.addAction("Save")
-        self.save_action.setEnabled(False)
+        self.duplicate_action = self.menu.addAction("Duplicate")
         self.close_action = self.menu.addAction("Close")
+        self.save_action.setEnabled(False)
+        self.duplicate_action.setEnabled(self._parent.specification is not None)
         self.save_action.setShortcut(QKeySequence.Save)
+        self.duplicate_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_D))
         self.close_action.setShortcut(QKeySequence.Close)
         self.setObjectName("_SpecNameDescriptionToolbar")
         if spec:
