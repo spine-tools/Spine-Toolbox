@@ -183,7 +183,6 @@ class SpecificationEditorWindowBase(QMainWindow):
                 return False
             self._toolbox.add_specification(spec)
             if not self._toolbox.project().is_specification_name_reserved(name):
-                # Something may have happened when adding the specification, e.g. user cancelled file save dialog.
                 return False
             if self.item:
                 self.item.set_specification(spec)
@@ -192,8 +191,8 @@ class SpecificationEditorWindowBase(QMainWindow):
                 self._show_error("Specification name already in use. Please enter a new name.")
                 return False
             spec.definition_file_path = self.specification.definition_file_path
-            if not self._toolbox.project().replace_specification(self._original_spec_name, spec):
-                self._show_error("Failed to save specification. See Toolbox Event Log for more information.")
+            self._toolbox.replace_specification(self._original_spec_name, spec)
+            if not self._toolbox.project().is_specification_name_reserved(name):
                 return False
         self._original_spec_name = name
         self._undo_stack.setClean()

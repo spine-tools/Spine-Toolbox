@@ -401,6 +401,35 @@ class AddSpecificationCommand(SpineToolboxCommand):
         self._project.remove_specification(self._spec_id)
 
 
+class ReplaceSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, project, name, specification):
+        """Command to replace item specification in project.
+
+        Args:
+            project (ToolboxUI): the toolbox
+            name (str): the name of the spec to be replaced
+            specification (ProjectItemSpecification): the new spec
+        """
+        super().__init__()
+        self._project = project
+        self._name = name
+        self._specification = specification
+        self._undo_name = specification.name
+        self._undo_specification = self._project.get_specification(name)
+        self.setText(f"replace specification {name} by {specification.name}")
+
+    def redo(self):
+        if not self._project.replace_specification(self._name, self._specification):
+            self.setObsolete(True)
+
+    def undo(self):
+        self.successfully_undone = self._project.replace_specification(self._undo_name, self._undo_specification)
+
+    @staticmethod
+    def is_critical():
+        return True
+
+
 class RemoveSpecificationCommand(SpineToolboxCommand):
     def __init__(self, project, name):
         """Command to remove specs from a project.

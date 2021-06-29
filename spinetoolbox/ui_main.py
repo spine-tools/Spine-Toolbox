@@ -78,6 +78,7 @@ from .helpers import (
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import (
     AddSpecificationCommand,
+    ReplaceSpecificationCommand,
     RemoveSpecificationCommand,
     RenameProjectItemCommand,
     SpineToolboxCommand,
@@ -921,6 +922,10 @@ class ToolboxUI(QMainWindow):
         if not specification:
             return
         self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=False))
+
+    def replace_specification(self, name, specification):
+        """Pushes an ReplaceSpecificationCommand to undo stack."""
+        self.undo_stack.push(ReplaceSpecificationCommand(self._project, name, specification))
 
     @Slot(str)
     def repair_specification(self, name):
