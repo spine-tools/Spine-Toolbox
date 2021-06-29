@@ -10,4 +10,4 @@ under certain conditions; See files COPYING and COPYING.LESSER for details.
 """
 )
 print("")
-os.system("pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git")
+os.system("pip install --upgrade spinedb_api")

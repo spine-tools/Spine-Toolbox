@@ -78,12 +78,17 @@ from .helpers import (
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import (
     AddSpecificationCommand,
+    ReplaceSpecificationCommand,
     RemoveSpecificationCommand,
     RenameProjectItemCommand,
-    SpineToolboxCommand, SaveSpecificationAsCommand, AddProjectItemsCommand, RemoveAllProjectItemsCommand,
+    SpineToolboxCommand,
+    SaveSpecificationAsCommand,
+    AddProjectItemsCommand,
+    RemoveAllProjectItemsCommand,
     RemoveProjectItemsCommand,
 )
 from .plugin_manager import PluginManager
+from .link import Link
 
 
 class ToolboxUI(QMainWindow):
@@ -151,7 +156,9 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
-        self.main_toolbar = toolbars.MainToolBar(self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self)
+        self.main_toolbar = toolbars.MainToolBar(
+            self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
+        )
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
@@ -173,7 +180,7 @@ class ToolboxUI(QMainWindow):
         self._proposed_item_name_counts = dict()
         self.restore_dock_widgets()
         self.restore_ui()
-        self.ui.dockWidget_executions.hide()
+        self.ui.listView_executions.hide()
         self.parse_project_item_modules()
         self.init_project_item_model()
         self.init_specification_model()
@@ -826,12 +833,12 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item:
             self.activate_item_tab()
             self.override_logs_and_consoles()
-        else:
-            self.restore_original_logs_and_consoles()
-            if self.active_link:
-                self.activate_link_tab()
-            else:
-                self.activate_no_selection_tab()
+            return
+        self.restore_original_logs_and_consoles()
+        if self.active_link:
+            self.activate_link_tab()
+            return
+        self.activate_no_selection_tab()
 
     def _set_active_project_item(self, active_project_item):
         """
@@ -916,6 +923,10 @@ class ToolboxUI(QMainWindow):
             return
         self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=False))
 
+    def replace_specification(self, name, specification):
+        """Pushes an ReplaceSpecificationCommand to undo stack."""
+        self.undo_stack.push(ReplaceSpecificationCommand(self._project, name, specification))
+
     @Slot(str)
     def repair_specification(self, name):
         """Repairs specification if it is broken.
@@ -944,7 +955,7 @@ class ToolboxUI(QMainWindow):
             return None
         return os.path.abspath(answer[0])
 
-    @Slot(str)
+    @Slot(str, str)
     def _log_specification_saved(self, name, path):
         """Prints a message in the event log, saying that given spec was saved in a certain location,
         together with a clickable link to change the location.
@@ -972,11 +983,7 @@ class ToolboxUI(QMainWindow):
         else:
             msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove All Items",
-            msg,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self,
+            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
         )
         message_box.button(QMessageBox.Ok).setText("Remove Items")
         answer = message_box.exec_()
@@ -1054,7 +1061,7 @@ class ToolboxUI(QMainWindow):
         spec.definition_file_path = path
         if not spec.save():
             return
-        self._log_specification_saved(spec.name)
+        self._log_specification_saved(spec.name, path)
 
     @Slot(QModelIndex, QPoint)
     def show_specification_context_menu(self, ind, global_pos):
@@ -1293,7 +1300,7 @@ class ToolboxUI(QMainWindow):
     def restore_original_logs_and_consoles(self):
         self.restore_original_item_log_document()
         self.restore_original_console()
-        self.ui.dockWidget_executions.hide()
+        self.ui.listView_executions.hide()
 
     def override_logs_and_consoles(self):
         self.override_item_log()
@@ -1334,11 +1341,10 @@ class ToolboxUI(QMainWindow):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
+        visible = bool(self.active_project_item.filter_log_documents or self.active_project_item.filter_consoles)
+        self.ui.dockWidget_item.widget().layout().addWidget(self.ui.listView_executions)
+        self.ui.listView_executions.setVisible(visible)
         self.ui.listView_executions.model().reset_model(self.active_project_item)
-        self.ui.dockWidget_executions.setVisible(
-            bool(self.active_project_item.filter_log_documents or self.active_project_item.filter_consoles)
-        )
-        self.ui.dockWidget_executions.setWindowTitle(f"Executions [{self.active_project_item.name}]")
         current = self.ui.listView_executions.currentIndex()
         self._select_execution(current, None)
 
@@ -1377,7 +1383,7 @@ class ToolboxUI(QMainWindow):
     @Slot()
     def _refresh_execution_list(self):
         """Refreshes Executions as the active project item starts new executions."""
-        self.ui.dockWidget_executions.show()
+        self.ui.listView_executions.show()
         if not self.ui.listView_executions.currentIndex().isValid():
             index = self.ui.listView_executions.model().index(0, 0)
             self.ui.listView_executions.setCurrentIndex(index)
@@ -2058,31 +2064,38 @@ class ToolboxUI(QMainWindow):
     @Slot(bool)
     def _remove_selected_items(self, _):
         """Pushes commands to remove selected project items and links from project."""
-        selection_model = self.ui.treeView_project.selectionModel()
-        if not selection_model.hasSelection():
+        selected_items = self.ui.graphicsView.scene().selectedItems()
+        if not selected_items:
             return
-        indexes = selection_model.selectedIndexes()
-        names = [i.data() for i in indexes]
-        msg = f"Remove item(s) <b>{', '.join(names)}</b> from project? "
+        project_item_names = set()
+        has_connections = False
+        for item in selected_items:
+            if isinstance(item, ProjectItemIcon):
+                project_item_names.add(item.name())
+            elif isinstance(item, Link):
+                has_connections = True
+        if not project_item_names and not has_connections:
+            return
         delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
-        if not delete_data:
-            msg += "Item data directory will still be available in the project directory after this operation."
-        else:
-            msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
-        # noinspection PyCallByClass, PyTypeChecker
-        message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove Item",
-            msg,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self,
-        )
-        message_box.button(QMessageBox.Ok).setText("Remove Item")
-        answer = message_box.exec_()
-        if answer != QMessageBox.Ok:
-            return
+        if project_item_names:
+            msg = f"Remove item(s) <b>{', '.join(project_item_names)}</b> from project? "
+            if not delete_data:
+                msg += "Item data directory will still be available in the project directory after this operation."
+            else:
+                msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
+            # noinspection PyCallByClass, PyTypeChecker
+            message_box = QMessageBox(
+                QMessageBox.Question, "Remove Item", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            )
+            message_box.button(QMessageBox.Ok).setText("Remove Item")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
+                return
         self.undo_stack.beginMacro("remove items and links")
-        self.undo_stack.push(RemoveProjectItemsCommand(self._project, self.item_factories, names, delete_data))
+        if project_item_names:
+            self.undo_stack.push(
+                RemoveProjectItemsCommand(self._project, self.item_factories, list(project_item_names), delete_data)
+            )
         self.ui.graphicsView.remove_selected_links()
         self.undo_stack.endMacro()
 

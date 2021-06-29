@@ -32,23 +32,25 @@ class SpineToolboxCommand(QUndoCommand):
 
 
 class SetItemSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, item, specification):
+    def __init__(self, item, spec, old_spec):
         """Command to set the specification for a Tool.
 
         Args:
             item (ProjectItem): the Item
-            specification (ProjectItemSpecification): the new spec
+            spec (ProjectItemSpecification): the new spec
+            old_spec (ProjectItemSpecification): the old spec
         """
         super().__init__()
         self.item = item
-        self.redo_specification = specification
+        self.spec = spec
+        self.old_spec = old_spec
         self.setText(f"set specification of {item.name}")
 
     def redo(self):
-        self.item.do_set_specification(self.redo_specification)
+        self.item.do_set_specification(self.spec)
 
     def undo(self):
-        self.item.undo_set_specification()
+        self.item.do_set_specification(self.old_spec)
 
 
 class MoveIconCommand(SpineToolboxCommand):
@@ -183,7 +185,7 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
-            self._project.add_connection(Connection.from_dict(connection_dict))
+            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
 
 
 class RemoveProjectItemsCommand(SpineToolboxCommand):
@@ -219,7 +221,7 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
     def undo(self):
         self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
         for connection_dict in self._connection_dicts:
-            self._project.add_connection(Connection.from_dict(connection_dict))
+            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
 
 
 class RenameProjectItemCommand(SpineToolboxCommand):
@@ -320,7 +322,7 @@ class RemoveConnectionsCommand(SpineToolboxCommand):
 
     def undo(self):
         for connection_dict in self._connections_dict.values():
-            self._project.add_connection(Connection.from_dict(connection_dict))
+            self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
 
 
 class SetFiltersOnlineCommand(SpineToolboxCommand):
@@ -399,9 +401,38 @@ class AddSpecificationCommand(SpineToolboxCommand):
         self._project.remove_specification(self._spec_id)
 
 
+class ReplaceSpecificationCommand(SpineToolboxCommand):
+    def __init__(self, project, name, specification):
+        """Command to replace item specification in project.
+
+        Args:
+            project (ToolboxUI): the toolbox
+            name (str): the name of the spec to be replaced
+            specification (ProjectItemSpecification): the new spec
+        """
+        super().__init__()
+        self._project = project
+        self._name = name
+        self._specification = specification
+        self._undo_name = specification.name
+        self._undo_specification = self._project.get_specification(name)
+        self.setText(f"replace specification {name} by {specification.name}")
+
+    def redo(self):
+        if not self._project.replace_specification(self._name, self._specification):
+            self.setObsolete(True)
+
+    def undo(self):
+        self.successfully_undone = self._project.replace_specification(self._undo_name, self._undo_specification)
+
+    @staticmethod
+    def is_critical():
+        return True
+
+
 class RemoveSpecificationCommand(SpineToolboxCommand):
     def __init__(self, project, name):
-        """Command to remove item specs from a project.
+        """Command to remove specs from a project.
 
         Args:
             project (SpineToolboxProject): the project

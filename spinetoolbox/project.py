@@ -376,11 +376,11 @@ class SpineToolboxProject(MetaObject):
         self._specifications[id_] = specification
         for item in self._project_items.values():
             project_item_spec = item.specification()
-            if project_item_spec is None or project_item_spec.name != specification.name:
+            if project_item_spec is None or project_item_spec.name != name:
                 continue
             if item.do_set_specification(specification):
                 self._logger.msg_success.emit(
-                    f"Specification <b>{specification.name}</b> successfully updated " f"in Item <b>{item.name}</b>"
+                    f"Specification <b>{specification.name}</b> successfully updated in Item <b>{item.name}</b>"
                 )
             else:
                 self._logger.msg_warning.emit(

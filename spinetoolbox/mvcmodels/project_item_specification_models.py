@@ -24,7 +24,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
 
     def __init__(self, icons):
         super().__init__()
-        self._specs = list()
+        self._spec_names = list()
         self._icons = icons
         self._project = None
 
@@ -35,7 +35,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         Args:
             name (str): specification's name
         """
-        self.insertRow(self._project.get_specification(name))
+        self.insertRow(name)
 
     @Slot(str)
     def remove_specification(self, name):
@@ -44,10 +44,10 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         Args:
             name (str): specification's name
         """
-        for i, spec in enumerate(self._specs):
-            if spec.name == name:
+        for i, spec_name in enumerate(self._spec_names):
+            if spec_name == name:
                 self.removeRow(i)
-                return
+                break
 
     @Slot(str, str)
     def replace_specification(self, old_name, new_name):
@@ -57,12 +57,12 @@ class ProjectItemSpecificationModel(QAbstractListModel):
             old_name (str): previous name
             new_name (str): new name
         """
-        for i, spec in enumerate(self._specs):
-            if spec.name == old_name:
-                self._specs[i] = self._project.get_specification(new_name)
+        for i, spec_name in enumerate(self._spec_names):
+            if spec_name == old_name:
+                self._spec_names[i] = new_name
                 index = self.index(i, 0)
                 self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
-                return
+                break
 
     def connect_to_project(self, project):
         """Connects the model to a project.
@@ -73,14 +73,14 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         self.clear()
         self._project = project
         for spec in self._project.specifications():
-            self.insertRow(spec)
+            self.insertRow(spec.name)
         self._project.specification_added.connect(self.add_specification)
         self._project.specification_removed.connect(self.remove_specification)
         self._project.specification_replaced.connect(self.replace_specification)
 
     def clear(self):
         self.beginResetModel()
-        self._specs = list()
+        self._spec_names = list()
         self.endResetModel()
 
     def rowCount(self, parent=None):
@@ -92,7 +92,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         Returns:
             Number of rows (available specs) in the model
         """
-        return len(self._specs)
+        return len(self._spec_names)
 
     def data(self, index, role=None):
         """Must be reimplemented when subclassing.
@@ -108,17 +108,17 @@ class ProjectItemSpecificationModel(QAbstractListModel):
             return None
         row = index.row()
         if role == Qt.DisplayRole:
-            specname = self._specs[row].name
-            return specname
+            return self._spec_names[row]
         if role == Qt.ToolTipRole:
             if row >= self.rowCount():
                 return ""
             return (
                 "<p>Drag-and-drop this onto the Design View "
-                f"to create a new <b>{self._specs[row].name}</b> item.</p>"
+                f"to create a new <b>{self._spec_names[row]}</b> item.</p>"
             )
         if role == Qt.DecorationRole:
-            return self._icons[self._specs[row].item_type]
+            spec = self.specification(row)
+            return self._icons[spec.item_type]
 
     def flags(self, index):
         """Returns enabled flags for the given index.
@@ -128,11 +128,11 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         """
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-    def insertRow(self, spec, row=None, parent=QModelIndex()):
+    def insertRow(self, spec_name, row=None, parent=QModelIndex()):
         """Insert row (specification) into model.
 
         Args:
-            spec (ProjectItemSpecification): spec added to the model
+            spec_name (str): name of spec added to the model
             row (int, optional): Row to insert spec to
             parent (QModelIndex): Parent of child (not used)
 
@@ -142,7 +142,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         if row is None:
             row = self.rowCount()
         self.beginInsertRows(parent, row, row)
-        self._specs.insert(row, spec)
+        self._spec_names.insert(row, spec_name)
         self.endInsertRows()
 
     def removeRow(self, row, parent=QModelIndex()):
@@ -159,7 +159,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
             # logging.error("Invalid row number")
             return False
         self.beginRemoveRows(parent, row, row)
-        self._specs.pop(row)
+        self._spec_names.pop(row)
         self.endRemoveRows()
         return True
 
@@ -172,16 +172,12 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         Returns:
             ProjectItemSpecification from specification list or None if given row is zero
         """
-        return self._specs[row]
-
-    def specifications(self):
-        """Yields all specs."""
-        yield from self._specs
+        return self._project.get_specification(self._spec_names[row])
 
     def specification_row(self, name):
         """Returns the row on which the given specification is located or -1 if it is not found."""
-        for i in range(len(self._specs)):
-            if name.lower() == self._specs[i].name.lower():
+        for i, spec_name in enumerate(self._spec_names):
+            if name.lower() == spec_name.lower():
                 return i
         return -1
 

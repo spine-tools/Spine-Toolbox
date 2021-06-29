@@ -21,7 +21,7 @@ from typing import NamedTuple
 class VersionInfo(NamedTuple):
     """A class for a named tuple containing the five components of the version number: major, minor,
     micro, releaselevel, and serial. All values except releaselevel are integers; the release level is
-    'alpha', 'beta', 'candidate', or 'final'."""
+    'dev', 'alpha', 'beta', 'candidate', or 'final'."""
 
     major: int
     minor: int
@@ -29,11 +29,21 @@ class VersionInfo(NamedTuple):
     releaselevel: str
     serial: int
 
+    def __str__(self) -> str:
+        """Create a version string following PEP 440"""
+        version = f"{self.major}.{self.minor}.{self.micro}"
+        if self.releaselevel == 'final':  # pylint: disable=no-else-return
+            return version
+        elif self.releaselevel.startswith('dev'):
+            return version + f".dev{self.serial}"
+        else:
+            return version + f"-{self.releaselevel}.{self.serial}"
+
 
 major = 0
 minor = 6
-micro = 1
-releaselevel = "alpha"
+micro = 2
+releaselevel = "dev"
 serial = 0
 __version_info__ = VersionInfo(major, minor, micro, releaselevel, serial)
-__version__ = ".".join([str(a) for a in __version_info__[:3]])
+__version__ = str(__version_info__)

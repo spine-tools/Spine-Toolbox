@@ -33,15 +33,15 @@ Model assumptions
 
 - Two power plants take fuel from a source node and release electricity to another node in order to supply a demand.
 
-- Power plant 'a' has a capacity of 100 MWh and a variable operating cost of 25 euro/MWh.
+- Power plant 'a' has a capacity of 100 MWh, a variable operating cost of 25 euro/fuel unit, and generates 0.7 MWh of electricity
+  per unit of fuel.
 
-- Power plant 'b' has a capacity of 200 MWh and a variable operating cost of 50 euro/MWh.
+- Power plant 'b' has a capacity of 200 MWh, a variable operating cost of 50 euro/fuel unit, and generates 0.8 MWh of electricity
+  per unit of fuel.
 
 - The demand at the electricity node is 150 MWh.
 
 - The fuel node is able to provide infinite energy.
-
-- Both power plants convert fuel to electricity at a 1:1 ratio.
 
 
 .. image:: img/simple_system_schematic.png
@@ -86,7 +86,7 @@ Setting up project
 
 #. Select **File -> New project...** from Spine Toolbox main menu.
    Browse to a location where you want to create the project and create a new folder for it,
-   called e.g. ‘Case Study A5’, and then click **Open**.
+   called e.g. ’SimpleSystem’, and then click **Open**.
 
 #. Drag the *Data Store* icon |ds_icon| from the tool bar and drop it into the 
    *Design View*. This will open the *Add Data Store* dialog. 
@@ -144,7 +144,7 @@ Importing the SpineOpt database template
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. Download `the basic SpineOpt database template 
-   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/data/basic_spineopt_template.json>`_
+   <https://raw.githubusercontent.com/Spine-project/SpineOpt.jl/master/templates/models/basic_model_template.json>`_
    (right click on the link, then select *Save link as...*)
 
 #. Select the 'input' Data Store item in the *Design View*.
@@ -200,6 +200,17 @@ Creating objects
 .. note:: In SpineOpt, nodes are points where an energy balance takes place, whereas units are energy conversion
    devices that can take energy from nodes, and release energy to nodes.
 
+#. Right click on the `output` class, and select *Add objects* from the context menu.
+   The *Add objects* dialog will pop up.
+
+#. Enter `unit_flow` under *object name* as in the image below, then press *Ok*. This will create one object
+   of class `unit`, called `unit_flow`.
+
+   .. image:: img/simple_system_add_output.png
+      :align: center
+
+.. note:: In SpineOpt, outputs represent optimization variables that can be written to the output database as part of a report.
+
 .. note:: To modify an object after you enter it, right click on it and select **Edit...** from the context menu.
 
 
@@ -227,6 +238,16 @@ Establishing relationships
    .. image:: img/simple_system_add_unit__to_node_relationships.png
       :align: center
 
+#. Right click on the `report__output` class, and select *Add relationships* from the context menu.
+   The *Add relationships* dialog will pop up.
+
+#. Enter `report1` under *report*, and `unit_flow` under *output*, as seen in the image below; then press *Ok*.
+   This will tell SpineOpt to write the value of the `unit_flow` optimization variable to the output database,
+   as part of `report1`.
+
+   .. image:: img/simple_system_add_report__output_relationships.png
+      :align: center
+
 
 .. _Specifying object parameter values:
 
@@ -237,16 +258,17 @@ Specifying object parameter values
 
 #. Locate the *Object parameter* table (typically at the top-center).
 
-#. Select the `demand` parameter and the `Base` alternative, and enter the value `100` as seen in the image below.
+#. In the *Object parameter* table (typically at the top-center),
+   select the `demand` parameter and the `Base` alternative, and enter the value `100` as seen in the image below.
    This will establish that there's a demand of '100' at the electricity node.
 
    .. image:: img/simple_system_electricity_demand.png
       :align: center
 
-#. Select `fuel_node` in the *Object tree*, and come back to the *Object parameter* table.
+#. Select `fuel_node` in the *Object tree*.
 
-#. Select the `balance_type` parameter and the `Base` alternative, and enter the value `balance_type_none`
-   as seen in the image below.
+#. In the *Object parameter* table, select the `balance_type` parameter and the `Base` alternative,
+   and enter the value `balance_type_none` as seen in the image below.
    This will establish that the fuel node is not balanced, and thus provide as much fuel as needed.
 
    .. image:: img/simple_system_fuel_balance_type.png
@@ -260,28 +282,48 @@ Specifying relationship parameter values
 
 #. In *Relationship tree*, expand the `unit__from_node` class and select `power_plant_a | fuel_node`.
 
-#. Locate the *Relationship parameter* table (typically at the bottom-center).
+#. In the *Relationship parameter* table (typically at the bottom-center),
+   select the `vom_cost` parameter and the `Base` alternative, and enter the value `25` as seen in the image below.
+   This will set the operating cost for `power_plant_a`.
 
-#. As seen in the image below, select the `unit_capacity` parameter and the `Base` alternative, and enter the value `100`;
-   then select the `vom_cost` parameter and the `Base` alternative, and enter the value `25`.
-   This will set the operation parameters for `power_plant_a`.
-
-   .. image:: img/simple_system_power_plant_a_capacity_vom_cost.png
+   .. image:: img/simple_system_power_plant_a_vom_cost.png
       :align: center
 
-#. Select `power_plant_b | fuel_node` in the *Relationship tree*, and come back to the *Relationship parameter* table.
+#. Select `power_plant_b | fuel_node` in the *Relationship tree*.
 
-#. As seen in the image below, select the `unit_capacity` parameter and the `Base` alternative, and enter the value `200`;
-   then select the `vom_cost` parameter and the `Base` alternative, and enter the value `50`.
-   This will set the operation parameters for `power_plant_b`.
+#. In the *Relationship parameter* table, select the `vom_cost` parameter and the `Base` alternative,
+   and enter the value `50` as seen in the image below.
+   This will set the operating cost for `power_plant_b`.
 
-   .. image:: img/simple_system_power_plant_b_capacity_vom_cost.png
+   .. image:: img/simple_system_power_plant_b_vom_cost.png
+      :align: center
+
+#. In *Relationship tree*, expand the `unit__to_node` class and select `power_plant_a | electricity_node`.
+
+#. In the *Relationship parameter* table, select the `unit_capacity` parameter and the `Base` alternative,
+   and enter the value `100` as seen in the image below.
+   This will set the capacity for `power_plant_a`.
+
+   .. image:: img/simple_system_power_plant_a_capacity.png
+      :align: center
+
+#. Select `power_plant_b | electricity_node` in the *Relationship tree*.
+
+#. In the *Relationship parameter* table, select the `unit_capacity` parameter and the `Base` alternative,
+   and enter the value `200` as seen in the image below.
+   This will set the capacity for `power_plant_b`.
+
+   .. image:: img/simple_system_power_plant_b_capacity.png
       :align: center
 
 #. In *Relationship tree*, select the `unit__node__node` class, and come back to the *Relationship parameter* table.
 
-#. Edit the cells as you just learned, so it looks like the image below.
-   This will set the conversion ratio from fuel to electricity for both power plants to `1`, or '100% efficiency'.
+#. In the *Relationship parameter* table, select `power_plant_a | electricity_node | fuel_node` under *object name list*,
+   `fix_ratio_out_in_unit_flow` under *parameter name*, `Base` under *alternative name*, and enter `0.7` under *value*.
+   Repeat the operation for `power_plant_b`, but this time enter `0.8` under *value*.
+   This will set the conversion ratio from fuel to electricity for `power_plant_a` and `power_plant_b` to `0.7` and `0.8`,
+   respectively.
+   It should like the image below.
 
    .. image:: img/simple_system_fix_ratio_out_in_unit_flow.png
       :align: center

@@ -136,7 +136,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 project_item_icons.append(item)
             elif isinstance(item, Link):
                 links.append(item)
-        # Set active project item, active link, and executed item in toolbox
+        # Set active project item and active link in toolbox
         active_project_item = (
             self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
             if len(project_item_icons) == 1
