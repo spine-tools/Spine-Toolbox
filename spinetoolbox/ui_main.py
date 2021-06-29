@@ -950,7 +950,7 @@ class ToolboxUI(QMainWindow):
             return None
         return os.path.abspath(answer[0])
 
-    @Slot(str)
+    @Slot(str, str)
     def _log_specification_saved(self, name, path):
         """Prints a message in the event log, saying that given spec was saved in a certain location,
         together with a clickable link to change the location.
@@ -1056,7 +1056,7 @@ class ToolboxUI(QMainWindow):
         spec.definition_file_path = path
         if not spec.save():
             return
-        self._log_specification_saved(spec.name)
+        self._log_specification_saved(spec.name, path)
 
     @Slot(QModelIndex, QPoint)
     def show_specification_context_menu(self, ind, global_pos):

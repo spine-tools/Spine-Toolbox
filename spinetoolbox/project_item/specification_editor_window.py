@@ -167,6 +167,9 @@ class SpecificationEditorWindowBase(QMainWindow):
         Returns:
             bool: True if operation was successful, False otherwise
         """
+        if not self._toolbox.project():
+            self._show_error("Please open or create a project first")
+            return False
         name = self._spec_toolbar.name()
         if not name:
             self._show_error("Please enter a name for the specification.")
@@ -204,9 +207,11 @@ class SpecificationEditorWindowBase(QMainWindow):
         return {}
 
     def _duplicate(self):
+        if not self._toolbox.project():
+            self._show_error("Please open or create a project first")
+            return
         new_spec = self._make_new_specification("")
-        item_type = new_spec.item_type
-        self._toolbox.show_specification_form(item_type, new_spec, **self._duplicate_kwargs)
+        self._toolbox.show_specification_form(new_spec.item_type, new_spec, **self._duplicate_kwargs)
 
     def tear_down(self):
         if self.focusWidget():
