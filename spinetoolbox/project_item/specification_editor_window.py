@@ -199,10 +199,14 @@ class SpecificationEditorWindowBase(QMainWindow):
         self.setWindowTitle(self.specification.name)
         return True
 
+    @property
+    def _duplicate_kwargs(self):
+        return {}
+
     def _duplicate(self):
         new_spec = self._make_new_specification("")
         item_type = new_spec.item_type
-        self._toolbox.show_specification_form(item_type, new_spec)
+        self._toolbox.show_specification_form(item_type, new_spec, **self._duplicate_kwargs)
 
     def tear_down(self):
         if self.focusWidget():
