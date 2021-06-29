@@ -57,7 +57,6 @@ class ProjectItem(MetaObject):
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
-        self.undo_specification = None
         self._log_document = None
         self._filter_log_documents = {}
         self.console = None
@@ -170,12 +169,15 @@ class ProjectItem(MetaObject):
         """Returns the specification for this item."""
         return self._specification
 
+    def undo_specification(self):
+        return self._specification
+
     def set_specification(self, specification):
         """Pushes a new SetItemSpecificationCommand to the toolbox' undo stack.
         """
         if specification == self._specification:
             return
-        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification))
+        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification, self.undo_specification()))
 
     def do_set_specification(self, specification):
         """Sets specification for this item. Removes specification if None given as argument.
@@ -185,12 +187,8 @@ class ProjectItem(MetaObject):
         """
         if specification and specification.item_type != self.item_type():
             return False
-        self.undo_specification = self._specification
         self._specification = specification
         return True
-
-    def undo_set_specification(self):
-        self.do_set_specification(self.undo_specification)
 
     def set_icon(self, icon):
         """

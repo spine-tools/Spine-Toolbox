@@ -32,23 +32,25 @@ class SpineToolboxCommand(QUndoCommand):
 
 
 class SetItemSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, item, specification):
+    def __init__(self, item, spec, old_spec):
         """Command to set the specification for a Tool.
 
         Args:
             item (ProjectItem): the Item
-            specification (ProjectItemSpecification): the new spec
+            spec (ProjectItemSpecification): the new spec
+            old_spec (ProjectItemSpecification): the old spec
         """
         super().__init__()
         self.item = item
-        self.redo_specification = specification
+        self.spec = spec
+        self.old_spec = old_spec
         self.setText(f"set specification of {item.name}")
 
     def redo(self):
-        self.item.do_set_specification(self.redo_specification)
+        self.item.do_set_specification(self.spec)
 
     def undo(self):
-        self.item.undo_set_specification()
+        self.item.do_set_specification(self.old_spec)
 
 
 class MoveIconCommand(SpineToolboxCommand):
