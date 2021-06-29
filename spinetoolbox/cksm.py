@@ -310,7 +310,7 @@ class CondaKernelSpecManager(KernelSpecManager):
     def _conda_kspecs(self):
         """ Get (or refresh) the cache of conda kernels
         """
-        print("_conda_kspecs")
+        # print("_conda_kspecs")
         if self._conda_info is None:
             return {}
 

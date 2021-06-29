@@ -24,6 +24,7 @@ from spine_engine.utils.helpers import (
     resolve_python_interpreter,
     resolve_julia_executable,
     resolve_gams_executable,
+    resolve_conda_executable,
     get_julia_env,
 )
 from .notification import Notification
@@ -50,17 +51,6 @@ from ..helpers import (
 )
 
 
-def resolve_conda_executable(conda_path):
-    """If given conda_path is not empty, returns
-    "conda" whether we are on conda or not.
-    """
-    if conda_path != "":
-        return conda_path
-    # Are we on Conda or not
-    CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
-    return CONDA_EXE
-
-
 class SettingsWidgetBase(QWidget):
     def __init__(self, qsettings):
         """
@@ -81,6 +71,10 @@ class SettingsWidgetBase(QWidget):
         self._mouse_press_pos = None
         self._mouse_release_pos = None
         self._mouse_move_pos = None
+
+    @property
+    def qsettings(self):
+        return self._qsettings
 
     def connect_signals(self):
         """Connect signals."""

@@ -24,7 +24,7 @@ import json
 import pathlib
 import numpy as np
 from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, QModelIndex, QPoint, Qt, Signal, Slot, QSettings, QUrl
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QStandardItemModel, QStandardItem
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -49,7 +49,7 @@ from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import LinkContextMenu, RecentProjectsPopupMenu
-from .widgets.settings_widget import SettingsWidget, resolve_conda_executable
+from .widgets.settings_widget import SettingsWidget
 from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.persistent_console_widget import PersistentConsoleWidget
@@ -84,7 +84,6 @@ from .project_commands import (
     RemoveProjectItemsCommand,
 )
 from .plugin_manager import PluginManager
-from .cksm import CondaKernelSpecManager
 
 
 class ToolboxUI(QMainWindow):
@@ -135,7 +134,6 @@ class ToolboxUI(QMainWindow):
         self.project_item_model = None
         self.specification_model = None
         self.filtered_spec_factory_models = {}
-        self.conda_env_model = QStandardItemModel()
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.active_link = None
@@ -185,7 +183,6 @@ class ToolboxUI(QMainWindow):
         self._plugin_manager.load_installed_plugins()
         self.set_work_directory()
         self._disable_project_actions()
-        self.refresh_conda_env_model()
         self.connect_signals()
 
     def connect_signals(self):
@@ -1232,27 +1229,6 @@ class ToolboxUI(QMainWindow):
         date and time is prepended to every Event Log message."""
         d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
         return d != 0
-
-    def refresh_conda_env_model(self):
-        self.conda_env_model.clear()
-        conda_exe = self._qsettings.value("appSettings/condaPath", defaultValue="")
-        conda_exe = resolve_conda_executable(conda_exe)
-        ksm = CondaKernelSpecManager(conda_exe=conda_exe)
-        specs = ksm._all_specs()
-        default_k_spec = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
-        default_item = QStandardItem(default_k_spec)
-        self.conda_env_model.appendRow(default_item)
-        spec_data = dict()
-        spec_data["kernel_name"] = default_k_spec
-        spec_data["is_conda"] = False
-        default_item.setData(spec_data)
-        for i in specs.keys():
-            item = QStandardItem(i)
-            spec_data = dict()
-            spec_data["kernel_name"] = i
-            spec_data["is_conda"] = True
-            item.setData(spec_data)
-            self.conda_env_model.appendRow(item)
 
     @Slot(str)
     def add_message(self, msg):

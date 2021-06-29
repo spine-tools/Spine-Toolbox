@@ -48,7 +48,7 @@ class KernelEditorBase(QDialog):
         self.setup_dialog_style()
         # Class attributes
         self._parent = parent  # QSettingsWidget
-        self._app_settings = self._parent._qsettings
+        self._app_settings = self._parent.qsettings
         self._logger = LoggerInterface()
         self._install_kernel_process = None
         self._install_package_process = None
