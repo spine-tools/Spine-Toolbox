@@ -19,7 +19,7 @@ from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from spinetoolbox.config import MAINWINDOW_SS
-from spinetoolbox.cksm import CondaKernelSpecManager
+from spine_engine.cksm import CondaKernelSpecManager
 # import environment_kernels
 # from environment_kernels.envs_conda import get_conda_env_data
 
