@@ -119,18 +119,18 @@ Spine Toolbox uses Sphinx to create HTML pages from restructured text (.rst) fil
 plain text files that are formatted in a way that Sphinx understands and is able to turn them into HTML.
 Please see this `brief introduction <http://www.sphinx-doc.org/en/stable/rest.html>`_ for more on reStructured text.
 You can modify the existing or create new .rst files into ``docs/source`` directory. When you are done editing, run
-``bin/build_doc.bat`` on Windows or ``bin/build_doc.sh`` on Linux to build the HTML pages to check the result before
-making a commit. The created pages are found in ``docs/build/html`` directory. After a commit, the User Guide is built
-automatically by readthedocs.org. The latest User Guide is available in
+``bin/build_doc.bat`` on Windows or ``bin/build_doc.py`` on other systems to build the HTML pages to check the result
+before making a commit. The created pages are found in ``docs/build/html`` directory. After a commit, the User Guide is
+built automatically by readthedocs.org. The latest User Guide is available in
 `<https://spine-toolbox.readthedocs.io/en/latest/>`_.
 
 
 Contributing to the Spine Toolbox Graphical User Interface
 ----------------------------------------------------------
 If you want to change or add new widgets into the application, you need to use the ``bin\build_ui.bat`` (Windows) or
-``bin/build_ui.sh`` (Linux) scripts. The main design of the widgets should be done with Qt Designer (``designer.exe``
-or ``designer``) that is included with PySide2. The files produced by Qt Designer are XML files (.ui). You can
-also embed graphics (e.g. icons, logos, etc.) into the application by using Qt Designer. When you are done
+``bin/build_ui.py`` (other systems) scripts. The main design of the widgets should be done with Qt Designer
+(``designer.exe`` or ``designer``) that is included with PySide2. The files produced by Qt Designer are XML files (.ui).
+You can also embed graphics (e.g. icons, logos, etc.) into the application by using Qt Designer. When you are done
 modifying widgets in the designer, you need to run the ``build_ui`` script for the changes to take effect.
 This script uses tools provided in the PySide2 package to turn .ui files into Python files, in essence
 rebuilding the whole Spine Toolbox user interface.
@@ -179,6 +179,7 @@ It is recommended to use test-first development as it really helps make features
 and identifies potential edge cases earlier instead of later. Writing tests before the implementation
 is strongly encouraged.
 
+See :ref:`Unit testing guidelines` for more information.
 
 Full example
 ------------
