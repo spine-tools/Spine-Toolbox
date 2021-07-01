@@ -39,7 +39,6 @@ from ..widgets.kernel_editor import (
     find_python_kernels,
     find_julia_kernels,
 )
-from ..widgets.conda_envs import CondaEnv
 from ..helpers import (
     select_gams_executable,
     select_python_interpreter,
@@ -243,7 +242,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self._kernel_editor = None
-        self._conda_env_widget = None
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
@@ -277,7 +275,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
         self.ui.checkBox_use_python_kernel.clicked.connect(self._update_python_widgets_enabled)
         self.ui.checkBox_use_julia_kernel.clicked.connect(self._update_julia_widgets_enabled)
-        self.ui.pushButton_conda.clicked.connect(self.show_conda_env_widget)
 
     @Slot(bool)
     def _update_python_widgets_enabled(self, _=False):
@@ -346,11 +343,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def browse_conda_button_clicked(self, checked=False):
         """Calls static method that shows a file browser for selecting a Conda executable."""
         select_conda_executable(self, self.ui.lineEdit_conda_path)
-
-    @Slot(bool)
-    def show_conda_env_widget(self, checked=False):
-        self._conda_env_widget = CondaEnv(self)
-        self._conda_env_widget.show()
 
     @Slot(bool)
     def show_python_kernel_editor(self, checked=False):
@@ -567,7 +559,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_python_kernel.setCurrentIndex(0)
         else:
             self.ui.comboBox_python_kernel.setCurrentIndex(ind)
-        self.ui.lineEdit_conda_path.setPlaceholderText(resolve_conda_executable(""))
+        conda_placeholder_txt = resolve_conda_executable("")
+        if conda_placeholder_txt != "":
+            self.ui.lineEdit_conda_path.setPlaceholderText(conda_placeholder_txt)
         self.ui.lineEdit_conda_path.setText(conda_path)
         self.ui.lineEdit_work_dir.setText(work_dir)
         self.orig_work_dir = work_dir

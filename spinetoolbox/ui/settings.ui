@@ -206,7 +206,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="General">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -813,7 +813,7 @@ p, li { white-space: pre-wrap; }
                 </size>
                </property>
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia environment/project directory for Julia Tool specifications. Leave blank to use the default environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="text">
                 <string/>
@@ -846,6 +846,9 @@ p, li { white-space: pre-wrap; }
             <layout class="QHBoxLayout" name="horizontalLayout_9">
              <item>
               <widget class="QCheckBox" name="checkBox_use_julia_kernel">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute Julia Tool specifications in Spine Console / Jupyter Console.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Use jupyter kernel:</string>
                </property>
@@ -860,7 +863,7 @@ p, li { white-space: pre-wrap; }
                 </sizepolicy>
                </property>
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia Jupyter kernel.&lt;/p&gt;&lt;p&gt;Only valid Julia kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="sizeAdjustPolicy">
                 <enum>QComboBox::AdjustToMinimumContentsLength</enum>
@@ -875,8 +878,11 @@ p, li { white-space: pre-wrap; }
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="toolTip">
+                <string>Open Julia kernel spec editor</string>
+               </property>
                <property name="text">
-                <string>Kernel editor</string>
+                <string>Kernel spec editor</string>
                </property>
               </widget>
              </item>
@@ -937,8 +943,11 @@ p, li { white-space: pre-wrap; }
             <height>95</height>
            </size>
           </property>
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;These are the &lt;span style=&quot; font-weight:600;&quot;&gt;default settings&lt;/span&gt; for new Python Tool specs. You can override these for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="title">
-           <string>Python</string>
+           <string>Python (default settings)</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
            <item>
@@ -952,7 +961,7 @@ p, li { white-space: pre-wrap; }
                 </size>
                </property>
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter for Python Console. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="placeholderText">
                 <string>Using current Python interpreter</string>
@@ -979,6 +988,9 @@ p, li { white-space: pre-wrap; }
             <layout class="QHBoxLayout" name="horizontalLayout_11">
              <item>
               <widget class="QCheckBox" name="checkBox_use_python_kernel">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute Python Tool specifications in Python Console / Jupyter Console.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string>Use jupyter kernel:</string>
                </property>
@@ -993,7 +1005,7 @@ p, li { white-space: pre-wrap; }
                 </sizepolicy>
                </property>
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python Jupyter kernel.&lt;/p&gt;&lt;p&gt;Only valid Python kernels are shown. Open Kernel editor to add kernels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="sizeAdjustPolicy">
                 <enum>QComboBox::AdjustToMinimumContentsLength</enum>
@@ -1015,10 +1027,10 @@ p, li { white-space: pre-wrap; }
                 </size>
                </property>
                <property name="toolTip">
-                <string>Open kernel editor</string>
+                <string>Open Python kernel spec editor</string>
                </property>
                <property name="text">
-                <string>Kernel editor</string>
+                <string>Kernel spec editor</string>
                </property>
               </widget>
              </item>
@@ -1038,10 +1050,10 @@ p, li { white-space: pre-wrap; }
              <item>
               <widget class="QLineEdit" name="lineEdit_conda_path">
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select Conda executable&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select Conda executable for running Tool specifications in a Conda environment.&lt;/p&gt;&lt;p&gt;If you started Spine Toolbox in Conda, the &lt;span style=&quot; font-weight:600;&quot;&gt;Conda executable is set up automatically&lt;/span&gt;.&lt;/p&gt;&lt;p&gt;If not on Conda, please select &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;lt;base_env&amp;gt;\scripts\conda.exe&lt;/span&gt; (on Win10), where &lt;span style=&quot; font-weight:600;&quot;&gt;&amp;lt;base_env&amp;gt;&lt;/span&gt; is the root directory of your Conda installation (i.e. base environment location).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="placeholderText">
-                <string>Using Conda executable in system PATH</string>
+                <string>Select Conda executable...</string>
                </property>
                <property name="clearButtonEnabled">
                 <bool>true</bool>
@@ -1050,6 +1062,9 @@ p, li { white-space: pre-wrap; }
              </item>
              <item>
               <widget class="QToolButton" name="toolButton_browse_conda">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Conda executable using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
                 <string/>
                </property>
@@ -1058,30 +1073,6 @@ p, li { white-space: pre-wrap; }
                  <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                </property>
               </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_3">
-             <item>
-              <widget class="QPushButton" name="pushButton_conda">
-               <property name="text">
-                <string>View Environments</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
              </item>
             </layout>
            </item>
