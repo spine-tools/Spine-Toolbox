@@ -68,8 +68,8 @@ class SpineToolboxProject(MetaObject):
     """Emitted after project item has been renamed."""
     specification_added = Signal(str)
     """Emitted after a specification has been added."""
-    specification_removed = Signal(str)
-    """Emitted after a specification has been removed."""
+    specification_about_to_be_removed = Signal(str)
+    """Emitted before a specification will be removed."""
     specification_replaced = Signal(str, str)
     """Emitted after a specification has been replaced."""
     specification_saved = Signal(str, str)
@@ -344,7 +344,9 @@ class SpineToolboxProject(MetaObject):
         """
         if isinstance(id_or_name, str):
             id_or_name = self.specification_name_to_id(id_or_name)
-        spec = self._specifications.pop(id_or_name)
+        spec = self._specifications[id_or_name]
+        self.specification_about_to_be_removed.emit(spec.name)
+        del self._specifications[id_or_name]
         for item in self._project_items.values():
             item_spec = item.specification()
             if item_spec is None or item_spec.name != spec.name:
@@ -353,7 +355,6 @@ class SpineToolboxProject(MetaObject):
                 f"Specification <b>{spec.name}</b> is no longer valid for Item <b>{item.name}</b> "
             )
             item.do_set_specification(None)
-        self.specification_removed.emit(spec.name)
 
     def replace_specification(self, name, specification):
         """Replaces an existing specification.
@@ -426,6 +427,17 @@ class SpineToolboxProject(MetaObject):
             return False
         self.specification_saved.emit(specification.name, specification.definition_file_path)
         return True
+
+    def add_item(self, item):
+        """Adds a project to item project.
+
+        Args:
+            item (ProjectItem): item to add
+        """
+        if item.name in self._project_items:
+            raise RuntimeError("Item already in project.")
+        self._project_items[item.name] = item
+        self.item_added.emit(item.name)
 
     def has_items(self):
         """Returns True if project has project items.

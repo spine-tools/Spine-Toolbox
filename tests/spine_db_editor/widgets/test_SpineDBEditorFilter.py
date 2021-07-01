@@ -62,7 +62,9 @@ class TestSpineDBEditorFilterMixin:
         root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = root_item.child(0)
         fish_index = self.spine_db_editor.object_tree_model.index_from_item(fish_item)
-        self.spine_db_editor.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        selection_model = self.spine_db_editor.ui.treeView_object.selectionModel()
+        selection_model.setCurrentIndex(fish_index, QItemSelectionModel.NoUpdate)
+        selection_model.select(fish_index, QItemSelectionModel.Select)
         filtered_values = {
             self.spine_db_editor.object_parameter_definition_model: [('dog',)],
             self.spine_db_editor.object_parameter_value_model: [('dog', 'pluto'), ('dog', 'scooby')],
@@ -79,7 +81,9 @@ class TestSpineDBEditorFilterMixin:
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)
         pluto_index = self.spine_db_editor.object_tree_model.index_from_item(pluto_item)
-        self.spine_db_editor.ui.treeView_object.selectionModel().select(pluto_index, QItemSelectionModel.Select)
+        selection_model = self.spine_db_editor.ui.treeView_object.selectionModel()
+        selection_model.setCurrentIndex(pluto_index, QItemSelectionModel.NoUpdate)
+        selection_model.select(pluto_index, QItemSelectionModel.Select)
         filtered_values = {
             self.spine_db_editor.object_parameter_definition_model: [('fish',)],
             self.spine_db_editor.object_parameter_value_model: [('fish', 'nemo'), ('dog', 'scooby')],
@@ -97,9 +101,9 @@ class TestSpineDBEditorFilterMixin:
         pluto_item = dog_item.child(0)
         pluto_fish_dog_item = pluto_item.child(0)
         pluto_fish_dog_index = self.spine_db_editor.object_tree_model.index_from_item(pluto_fish_dog_item)
-        self.spine_db_editor.ui.treeView_object.selectionModel().select(
-            pluto_fish_dog_index, QItemSelectionModel.Select
-        )
+        selection_model = self.spine_db_editor.ui.treeView_object.selectionModel()
+        selection_model.setCurrentIndex(pluto_fish_dog_index, QItemSelectionModel.NoUpdate)
+        selection_model.select(pluto_fish_dog_index, QItemSelectionModel.Select)
         filtered_values = {
             self.spine_db_editor.object_parameter_definition_model: [],
             self.spine_db_editor.object_parameter_value_model: [],
@@ -118,9 +122,9 @@ class TestSpineDBEditorFilterMixin:
         pluto_fish_dog_item = pluto_item.child(0)
         fish_dog_nemo_pluto_item = pluto_fish_dog_item.child(0)
         fish_dog_nemo_pluto_index = self.spine_db_editor.object_tree_model.index_from_item(fish_dog_nemo_pluto_item)
-        self.spine_db_editor.ui.treeView_object.selectionModel().select(
-            fish_dog_nemo_pluto_index, QItemSelectionModel.Select
-        )
+        selection_model = self.spine_db_editor.ui.treeView_object.selectionModel()
+        selection_model.setCurrentIndex(fish_dog_nemo_pluto_index, QItemSelectionModel.NoUpdate)
+        selection_model.select(fish_dog_nemo_pluto_index, QItemSelectionModel.Select)
         filtered_values = {
             self.spine_db_editor.object_parameter_definition_model: [],
             self.spine_db_editor.object_parameter_value_model: [],

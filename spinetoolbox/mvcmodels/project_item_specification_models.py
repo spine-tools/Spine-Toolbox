@@ -75,7 +75,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         for spec in self._project.specifications():
             self.insertRow(spec.name)
         self._project.specification_added.connect(self.add_specification)
-        self._project.specification_removed.connect(self.remove_specification)
+        self._project.specification_about_to_be_removed.connect(self.remove_specification)
         self._project.specification_replaced.connect(self.replace_specification)
 
     def clear(self):

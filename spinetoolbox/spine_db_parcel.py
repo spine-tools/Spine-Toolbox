@@ -88,6 +88,9 @@ class SpineDBParcel:
                 for db_map, ids in db_map_ids.items()
             }
         )
+        self.push_relationship_class_ids(
+            {db_map: self._get_fields(db_map, "relationship", "class_id", ids) for db_map, ids in db_map_ids.items()}
+        )
 
     def push_parameter_value_list_ids(self, db_map_ids):
         """Pushes parameter_value_list ids."""
