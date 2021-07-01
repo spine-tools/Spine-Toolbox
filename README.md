@@ -25,12 +25,9 @@ Guide.
 
 ## Installation
 
-We provide three options for installing Spine Toolbox:
-(i) from the [Python Package Index (PyPI)](https://pypi.org/project/spinetoolbox/),
-(ii) using stand-alone installation packages,
-and (iii) directly from sources.
+We provide three options for installing Spine Toolbox.
 
-### Installation from PyPI (recommended)
+### Standard Python Installation (recommended)
 
 This is the recommended way to install Spine Toolbox and keep it updated with new releases.
 
@@ -71,15 +68,17 @@ To update Spine Toolbox to the latest available release, open a terminal and run
     pipx upgrade spinetoolbox
 
 
-### Installation from stand-alone packages (only for Windows 64-bit)
+### Windows 64-bit Installer Package
 
+Windows installer packages are published periodically
+but not as frequently as the standard Python installation above.
 This option is suitable for users who cannot install Python or don’t need to get 
 the most recent updates.
 Download the latest installer package from [here](https://github.com/Spine-project/Spine-Toolbox/releases),
 run it, and follow the instructions to install Spine Toolbox.
 
 
-### Installation from sources
+### Installation from sources using GIT
 
 This option is for the developers and other contributors who want to debug or 
 edit the Spine Toolbox source code.
