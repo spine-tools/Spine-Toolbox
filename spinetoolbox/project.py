@@ -427,6 +427,17 @@ class SpineToolboxProject(MetaObject):
         self.specification_saved.emit(specification.name, specification.definition_file_path)
         return True
 
+    def add_item(self, item):
+        """Adds a project to item project.
+
+        Args:
+            item (ProjectItem): item to add
+        """
+        if item.name in self._project_items:
+            raise RuntimeError("Item already in project.")
+        self._project_items[item.name] = item
+        self.item_added.emit(item.name)
+
     def has_items(self):
         """Returns True if project has project items.
 

@@ -184,7 +184,7 @@ class SpecificationEditorWindowBase(QMainWindow):
             self._toolbox.add_specification(spec)
             if not self._toolbox.project().is_specification_name_reserved(name):
                 return False
-            if self.item:
+            if self.item is not None:
                 self.item.set_specification(spec)
         else:
             if name != self._original_spec_name and self._toolbox.project().is_specification_name_reserved(name):

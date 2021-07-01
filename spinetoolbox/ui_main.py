@@ -325,7 +325,11 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit(f"[OSError] Creating work directory {new_work_dir} failed. Check permissions.")
 
     def project(self):
-        """Returns current project or None if no project open."""
+        """Returns current project or None if no project open.
+
+        Returns:
+            SpineToolboxProject: current project or None
+        """
         return self._project
 
     def qsettings(self):
