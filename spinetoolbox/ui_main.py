@@ -263,14 +263,15 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExecute_selection.triggered.connect(self._execute_selection)
         self.ui.actionStop_execution.triggered.connect(self._stop_execution)
 
-    def set_error_mode(self):
+    @staticmethod
+    def set_error_mode():
         """Sets Windows error mode to show all error dialog boxes from subprocesses.
 
         See https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-seterrormode
         for documentation.
         """
         if sys.platform == "win32":
-            import ctypes
+            import ctypes  # pylint: disable=import-outside-toplevel
 
             ctypes.windll.kernel32.SetErrorMode(0)
 
@@ -363,7 +364,7 @@ class ToolboxUI(QMainWindow):
         """
         p = os.path.join(f"{ONLINE_DOCUMENTATION_URL}", "getting_started.html")
         getting_started_anchor = (
-            f"<a style='color:#99CCFF;' title='"
+            "<a style='color:#99CCFF;' title='"
             + p
             + f"' href='{ONLINE_DOCUMENTATION_URL}/getting_started.html'>Getting Started</a>"
         )
@@ -1468,7 +1469,8 @@ class ToolboxUI(QMainWindow):
         else:
             multi_tab_editor.raise_()
 
-    def get_all_multi_tab_spec_editors(self, item_type):
+    @staticmethod
+    def get_all_multi_tab_spec_editors(item_type):
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
             widget = QWidget.find(window.winId())
             if isinstance(widget, MultiTabSpecEditor) and widget.item_type == item_type:
@@ -1494,6 +1496,7 @@ class ToolboxUI(QMainWindow):
         form = AboutWidget(self)
         form.show()
 
+    # pylint: disable=no-self-use
     @Slot()
     def show_user_guide(self):
         """Open Spine Toolbox documentation index page in browser."""
@@ -1501,6 +1504,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
 
+    # pylint: disable=no-self-use
     @Slot()
     def show_getting_started_guide(self):
         """Open Spine Toolbox Getting Started HTML page in browser."""

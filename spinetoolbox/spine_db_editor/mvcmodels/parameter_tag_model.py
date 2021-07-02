@@ -34,7 +34,7 @@ class TagItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
     def __init__(self, identifier=None):
         super().__init__()
         self._id = identifier
-        self._item_data = {"tag": f"Type new tag here...", "description": ""}
+        self._item_data = {"tag": "Type new tag here...", "description": ""}
 
     @property
     def item_type(self):

@@ -84,7 +84,7 @@ class CustomQTextBrowser(QTextBrowser):
         Args:
             text (str): text to add
         """
-        scrollbar_at_max = True if self.verticalScrollBar().value() == self.verticalScrollBar().maximum() else False
+        scrollbar_at_max = self.verticalScrollBar().value() == self.verticalScrollBar().maximum()
         cursor = add_message_to_document(self._original_document, text)
         block_count = self._original_document.blockCount()
         if block_count > self._max_blocks:

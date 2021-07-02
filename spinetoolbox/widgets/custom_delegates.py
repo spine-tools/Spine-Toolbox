@@ -25,7 +25,6 @@ from PySide2.QtWidgets import (
     QApplication,
     QStyleOptionComboBox,
 )
-from .custom_editors import SearchBarEditor, CheckListEditor
 
 
 class ComboBoxDelegate(QStyledItemDelegate):

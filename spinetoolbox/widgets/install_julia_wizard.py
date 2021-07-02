@@ -16,7 +16,6 @@ Classes for custom QDialogs for julia setup.
 :date:   13.5.2018
 """
 
-import sys
 import os
 from enum import IntEnum, auto
 
@@ -38,10 +37,10 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QCursor
+from spine_engine.utils.helpers import resolve_python_interpreter
 from ..execution_managers import QProcessExecutionManager
 from ..config import APPLICATION_PATH
 from .custom_qwidgets import HyperTextLabel, QWizardProcessPage, LabelWithCopyButton
-from spine_engine.utils.helpers import resolve_python_interpreter
 
 
 class _PageId(IntEnum):

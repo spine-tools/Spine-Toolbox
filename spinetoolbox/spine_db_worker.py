@@ -55,8 +55,8 @@ class SpineDBWorker(QObject):
 
     def __init__(self, db_mngr):
         super().__init__()
-        thread = db_mngr.thread
-        self.moveToThread(db_mngr.thread)
+        thread = db_mngr.worker_thread
+        self.moveToThread(thread)
         thread.finished.connect(self.deleteLater)
         self._db_mngr = db_mngr
         self._db_map = None
@@ -133,6 +133,7 @@ class SpineDBWorker(QObject):
         self._get_metadata_per_entity_called.emit(db_map, entity_ids, d)
         return d
 
+    # pylint: disable=no-self-use
     @Slot(object, list, dict)
     def _get_metadata_per_entity(self, db_map, entity_ids, d):
         sq = db_map.ext_entity_metadata_sq
@@ -144,6 +145,7 @@ class SpineDBWorker(QObject):
         self._get_metadata_per_parameter_value_called.emit(db_map, parameter_value_ids, d)
         return d
 
+    # pylint: disable=no-self-use
     @Slot(object, list, dict)
     def _get_metadata_per_parameter_value(self, db_map, parameter_value_ids, d):
         sq = db_map.ext_parameter_value_metadata_sq
@@ -274,7 +276,7 @@ class SpineDBWorker(QObject):
                     upd_cmd = UpdateItemsCommand(self._db_mngr, db_map, to_update, item_type, parent=macro)
                     upd_cmd.redo()
                     child_cmds.append(upd_cmd)
-            if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
+            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
                 # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
                 macro.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
@@ -285,7 +287,8 @@ class SpineDBWorker(QObject):
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
         self._export_data_called.emit(caller, db_map_item_ids, file_path, file_filter)
 
-    def _get_data_for_export(self, db_map_item_ids):
+    @staticmethod
+    def _get_data_for_export(db_map_item_ids):
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
             for key, items in export_data(db_map, **item_ids).items():
@@ -413,7 +416,7 @@ class SpineDBWorker(QObject):
                 add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "scenario_alternative", parent=macro)
                 add_cmd.redo()
                 child_cmds.append(add_cmd)
-            if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
+            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
                 macro.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
 
@@ -438,7 +441,7 @@ class SpineDBWorker(QObject):
                 add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "parameter_definition_tag", parent=macro)
                 add_cmd.redo()
                 child_cmds.append(add_cmd)
-            if child_cmds and all([cmd.isObsolete() for cmd in child_cmds]):
+            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
                 macro.setObsolete(True)
                 self._db_mngr.undo_stack[db_map].undo()
 

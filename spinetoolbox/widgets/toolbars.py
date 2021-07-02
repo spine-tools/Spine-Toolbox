@@ -16,7 +16,7 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QToolBar, QLabel, QToolButton, QAbstractButton
 from PySide2.QtGui import QIcon, QPainter
 from ..helpers import make_icon_toolbar_ss, ColoredIcon

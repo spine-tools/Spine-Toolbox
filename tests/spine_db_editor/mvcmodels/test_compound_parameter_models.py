@@ -38,7 +38,7 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock
+            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
         ) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._db_mngr = SpineDBManager(app_settings, None)
@@ -88,7 +88,7 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock
+            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
         ) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._db_mngr = SpineDBManager(app_settings, None)
@@ -140,7 +140,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock
+            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
         ) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._db_mngr = SpineDBManager(app_settings, None)
@@ -203,7 +203,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock
+            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
         ) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._db_mngr = SpineDBManager(app_settings, None)

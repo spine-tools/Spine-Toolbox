@@ -304,6 +304,7 @@ class KernelEditorBase(QDialog):
             self.start_ijulia_install_process(julia, project)
         return True
 
+    # pylint: disable=no-self-use
     def _is_rebuild_ijulia_needed(self):
         return True
 

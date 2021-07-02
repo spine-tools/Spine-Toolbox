@@ -234,7 +234,7 @@ class GraphViewMixin:
         self.layout_gens[self._layout_gen_id] = layout_gen = self._make_layout_generator()
         layout_gen.show_progress_widget(self.ui.graphicsView)
         layout_gen.layout_available.connect(self._complete_graph)
-        layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_))
+        layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_))  # pylint: disable=unnecessary-lambda
         self._thread_pool.start(layout_gen)
 
     def _stop_layout_generators(self):

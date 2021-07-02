@@ -18,10 +18,10 @@ Provides pivot table models for the Tabular View.
 
 from PySide2.QtCore import Qt, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
+from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
 from ...config import PIVOT_TABLE_HEADER_COLOR
-from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from ..widgets.custom_delegates import (
     RelationshipPivotTableDelegate,
     ParameterPivotTableDelegate,
@@ -864,7 +864,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
                 db_map, header_ids, value, rel_id_lookup
             )
 
-    def _parameter_value_to_update(self, id_, header_ids, value_and_type):
+    @staticmethod
+    def _parameter_value_to_update(id_, header_ids, value_and_type):
         value, value_type = split_value_and_type(value_and_type)
         return {
             "id": id_,
@@ -1106,7 +1107,8 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
         db_map, id_ = data[0][0]
         return self.db_mngr.get_value_index(db_map, "parameter_value", id_, parameter_index, role)
 
-    def _parameter_value_to_update(self, id_, header_ids, value_and_type):
+    @staticmethod
+    def _parameter_value_to_update(id_, header_ids, value_and_type):
         value, value_type = split_value_and_type(value_and_type)
         return {"id": id_, "value": value, "type": value_type, "index": header_ids[-3]}
 

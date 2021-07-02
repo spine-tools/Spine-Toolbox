@@ -26,14 +26,6 @@ from .indexed_value_table_model import IndexedValueTableModel
 class TimeSeriesModelVariableResolution(IndexedValueTableModel):
     """A model for variable resolution time series type parameter values."""
 
-    def __init__(self, series, parent):
-        """
-        Args:
-            series (TimeSeriesVariableResolution): a time series
-            parent (QObject): parent object
-        """
-        super().__init__(series, parent)
-
     def flags(self, index):
         """Returns the flags for given model index."""
         if not index.isValid():

@@ -37,7 +37,7 @@ class SpineDBFetcher(QObject):
         super().__init__()
         self._db_mngr = db_mngr
         self._mini = mini
-        self.moveToThread(db_mngr.thread)
+        self.moveToThread(db_mngr.worker_thread)
         self._started.connect(self._do_work)
         self._db_maps = None
         self._tablenames = None

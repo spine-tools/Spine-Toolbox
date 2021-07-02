@@ -18,11 +18,10 @@ Contains classes for handling DAGs.
 
 import logging
 import random
-from PySide2.QtCore import Signal, QObject
 import networkx as nx
 
 
-class DirectedGraphHandler(QObject):
+class DirectedGraphHandler:
     """Class for manipulating graphs according to user's actions."""
 
     def __init__(self):
