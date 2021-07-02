@@ -25,6 +25,7 @@ import datetime
 import shutil
 import re
 import matplotlib
+import pathlib
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
@@ -49,6 +50,7 @@ from PySide2.QtGui import (
     QPainter,
 )
 from spine_engine.utils.serialization import deserialize_path
+from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import DEFAULT_WORK_DIR, PLUGINS_PATH
 
 if os.name == "nt":
@@ -62,6 +64,11 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     from pandas.plotting import register_matplotlib_converters
 
     register_matplotlib_converters()
+
+
+def home_dir():
+    """Returns user's home dir"""
+    return str(pathlib.Path.home())
 
 
 def format_log_message(msg_type, message, show_datetime=True):
@@ -763,9 +770,12 @@ def select_gams_executable(parent, line_edit):
         parent (QWidget, optional): Parent widget for the file dialog and message boxes
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
+    start_dir = find_gams_directory()
+    if not start_dir:
+        start_dir = home_dir()
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
     answer = QFileDialog.getOpenFileName(
-        parent, "Select GAMS Program (e.g. gams.exe on Windows)", os.path.abspath("C:\\")
+        parent, "Select GAMS Program (e.g. gams.exe on Windows)", start_dir
     )
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return
@@ -789,7 +799,7 @@ def select_julia_executable(parent, line_edit):
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
     answer = QFileDialog.getOpenFileName(
-        parent, "Select Julia Executable (e.g. julia.exe on Windows)", os.path.abspath('C:\\')
+        parent, "Select Julia Executable (e.g. julia.exe on Windows)", home_dir()
     )
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return
@@ -811,7 +821,7 @@ def select_julia_project(parent, line_edit):
         parent (QWidget, optional): Parent of QFileDialog
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
-    answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", os.path.abspath("C:\\"))
+    answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", home_dir())
     if not answer:  # Canceled (american-english), cancelled (british-english)
         return
     line_edit.setText(answer)
@@ -827,7 +837,7 @@ def select_python_interpreter(parent, line_edit):
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
     answer = QFileDialog.getOpenFileName(
-        parent, "Select Python Interpreter (e.g. python.exe on Windows)", os.path.abspath("C:\\")
+        parent, "Select Python Interpreter (e.g. python.exe on Windows)", home_dir()
     )
     if answer[0] == "":  # Canceled
         return
@@ -851,7 +861,7 @@ def select_conda_executable(parent, line_edit):
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
     answer = QFileDialog.getOpenFileName(
-        parent, "Select Conda Executable (e.g. conda.exe on Windows)", os.path.abspath("C:\\")
+        parent, "Select Conda Executable (e.g. conda.exe on Windows)", home_dir()
     )
     if answer[0] == "":  # Canceled
         return

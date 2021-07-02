@@ -638,7 +638,6 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_itemlog.clear()
-
         return True
 
     @Slot(bool)

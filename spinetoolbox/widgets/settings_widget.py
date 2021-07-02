@@ -17,7 +17,7 @@ Widget for controlling user settings.
 """
 
 import os
-from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
+from PySide2.QtWidgets import QWidget, QFileDialog, QColorDialog
 from PySide2.QtCore import Slot, Qt, QSize, QSettings
 from PySide2.QtGui import QPixmap
 from spine_engine.utils.helpers import (
@@ -47,6 +47,7 @@ from ..helpers import (
     select_conda_executable,
     file_is_valid,
     dir_is_valid,
+    home_dir,
 )
 
 
@@ -417,7 +418,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def browse_work_path(self, checked=False):
         """Open file browser where user can select the path to wanted work directory."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, "Select Work Directory", os.path.abspath("C:\\"))
+        answer = QFileDialog.getExistingDirectory(self, "Select Work Directory", home_dir())
         if answer == '':  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)

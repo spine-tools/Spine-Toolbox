@@ -24,6 +24,7 @@ import copy
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from spine_engine.utils.serialization import serialize_path, deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
+from .helpers import home_dir
 
 
 class ProjectUpgrader:
@@ -377,7 +378,7 @@ class ProjectUpgrader:
             str: Path to project directory or an empty string if operation is canceled.
         """
         # Ask user for a new directory where to save the project
-        answer = QFileDialog.getExistingDirectory(self._toolbox, "Select a project directory", os.path.abspath("C:\\"))
+        answer = QFileDialog.getExistingDirectory(self._toolbox, "Select a project directory", home_dir())
         if not answer:  # Canceled (american-english), cancelled (british-english)
             return ""
         if not os.path.isdir(answer):  # Check that it's a directory
