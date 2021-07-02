@@ -19,7 +19,6 @@ Contains a notification widget.
 from PySide2.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
 from PySide2.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
 from PySide2.QtGui import QFont, QColor
-import shiboken2
 from spinetoolbox.helpers import color_from_index
 
 

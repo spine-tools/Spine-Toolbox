@@ -24,7 +24,7 @@ import shutil
 from PySide2.QtCore import Qt, Signal, Slot, QObject, QThread
 from spine_engine.utils.serialization import serialize_path, deserialize_path, deserialize_remote_path
 from .config import PLUGINS_PATH, PLUGIN_REGISTRY_URL
-from .helpers import load_plugin_dict, load_plugin_specifications, parse_specification_file, plugins_dirs
+from .helpers import load_plugin_dict, load_plugin_specifications, plugins_dirs
 from .widgets.toolbars import PluginToolBar
 from .widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog
 

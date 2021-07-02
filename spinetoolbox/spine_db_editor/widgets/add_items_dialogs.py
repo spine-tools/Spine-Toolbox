@@ -817,7 +817,7 @@ class ObjectGroupDialogBase(QDialog):
         self.header_widget = QWidget(self)
         self.group_name_line_edit = QLineEdit(self)
         header_layout = QHBoxLayout(self.header_widget)
-        header_layout.addWidget(QLabel(f"Group name: "))
+        header_layout.addWidget(QLabel("Group name:"))
         header_layout.addWidget(self.group_name_line_edit)
         header_layout.addSpacing(32)
         header_layout.addWidget(QLabel("Database"))
@@ -949,7 +949,7 @@ class AddObjectGroupDialog(ObjectGroupDialogBase):
             return False
         group_name = self.group_name_line_edit.text()
         if not group_name:
-            self.parent().msg_error.emit(f"Please enter a name for the group.")
+            self.parent().msg_error.emit("Please enter a name for the group.")
             return False
         if group_name in self.db_map_object_ids[self.db_map]:
             self.parent().msg_error.emit(

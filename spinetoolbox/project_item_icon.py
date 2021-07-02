@@ -30,8 +30,8 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QTextCursor, QPalette, QTextBlockFormat, QFont
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from spinetoolbox.project_commands import MoveIconCommand
 from spine_engine.spine_engine import ItemExecutionFinishState
+from .project_commands import MoveIconCommand
 
 
 class ProjectItemIcon(QGraphicsRectItem):

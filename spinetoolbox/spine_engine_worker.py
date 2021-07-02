@@ -73,6 +73,7 @@ def _handle_prompt_arrived(prompt, engine_mngr):
         text = prompt["text"]
     item_name = prompt["item_name"]
     box_title = f"{item_name}"
+    # pylint: disable=undefined-variable
     box = QMessageBox(
         QMessageBox.Question, box_title, text, buttons=QMessageBox.Yes | QMessageBox.No, parent=qApp.activeWindow()
     )

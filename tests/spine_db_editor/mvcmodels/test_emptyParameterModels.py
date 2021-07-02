@@ -51,7 +51,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         app_settings = mock.MagicMock()
         logger = mock.MagicMock()
         with mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=mock.PropertyMock
+            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=mock.PropertyMock
         ) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._db_mngr = SpineDBManager(app_settings, None)

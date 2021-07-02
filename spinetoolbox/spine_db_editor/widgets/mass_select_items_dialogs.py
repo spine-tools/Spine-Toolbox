@@ -99,7 +99,7 @@ class MassSelectItemsDialog(QDialog):
     @Slot()
     def _set_item_check_box_enabled(self):
         """Set the enabled property on item check boxes depending on the state of db_map check boxes."""
-        enabled = any([x.isChecked() for x in self.db_map_check_boxes.values()])
+        enabled = any(x.isChecked() for x in self.db_map_check_boxes.values())
         for check_box in self.item_check_boxes.values():
             check_box.setEnabled(enabled)
 

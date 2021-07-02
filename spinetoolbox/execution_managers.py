@@ -17,7 +17,6 @@ Classes to manage tool instance execution in various forms.
 """
 
 import logging
-import json
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
 
 

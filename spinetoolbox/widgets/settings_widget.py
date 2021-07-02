@@ -132,6 +132,7 @@ class SettingsWidgetBase(QWidget):
         """Updates UI to reflect current settings. Called when the user choses to cancel their changes.
         Undoes all temporary UI changes that resulted from the user playing with certain settings."""
 
+    # pylint: disable=no-self-use
     def save_settings(self):
         """Gets selections and saves them to persistent memory."""
         return True

@@ -57,7 +57,7 @@ class UpdateResourceDataCommand(QUndoCommand):
         if len(old_values) == 1:
             self.setText(f"update {old_values[0]} to {new_values[0]}")
         else:
-            self.setText(f"update multiple values")
+            self.setText("update multiple values")
 
     def redo(self):
         self.model.update_resource_data(self.resource_index, self.rows, self.columns, self.new_values)
@@ -82,7 +82,7 @@ class UpdateFieldNamesCommand(QUndoCommand):
         if len(old_names) == 1:
             self.setText(f"rename {old_names[0]} to {new_names[0]}")
         else:
-            self.setText(f"rename multiple fields")
+            self.setText("rename multiple fields")
 
     def redo(self):
         self.model.update_field_names(self.resource_index, self.field_indexes, self.old_names, self.new_names)
@@ -109,7 +109,7 @@ class UpdatePrimaryKeysCommand(QUndoCommand):
             action = f"add {field_name} to" if self.statuses[0] else f"remove {field_name} from"
             self.setText(f"{action} primary key")
         else:
-            self.setText(f"update primary key")
+            self.setText("update primary key")
 
     def redo(self):
         self.model.update_primary_keys(self.resource_index, self.field_indexes, self.statuses)

@@ -57,7 +57,9 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
         )
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        with patch("spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock) as mock_thread:
+        with patch(
+            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
+        ) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._db_mngr = SpineDBManager(app_settings, None)
             with patch.object(SpineDBEditor, "restore_ui"):
@@ -143,7 +145,9 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
         )
         db_map.commit_session("Add test data.")
         db_map.connection.close()
-        with patch("spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock) as mock_thread:
+        with patch(
+            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
+        ) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._db_mngr = SpineDBManager(app_settings, None)
             with patch.object(SpineDBEditor, "restore_ui"):

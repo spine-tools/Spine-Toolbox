@@ -20,9 +20,7 @@ from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import (
     QMainWindow,
-    QMessageBox,
     QUndoStack,
-    QLabel,
     QWidget,
     QToolBar,
     QLabel,

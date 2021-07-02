@@ -238,7 +238,7 @@ class SpineDBManager(SpineDBManagerBase):
         super().__init__(parent, cache={}, icon_mngr={})
         self.qsettings = settings
         self._db_maps = {}
-        self._thread = QThread()
+        self._worker_thread = QThread()
         self._worker = SpineDBWorker(self)
         self._fetchers = []
         self.undo_stack = {}
@@ -247,9 +247,9 @@ class SpineDBManager(SpineDBManagerBase):
         self.connect_signals()
 
     @property
-    def thread(self):
-        self._thread.start()
-        return self._thread
+    def worker_thread(self):
+        self._worker_thread.start()
+        return self._worker_thread
 
     @property
     def db_maps(self):
@@ -513,9 +513,9 @@ class SpineDBManager(SpineDBManagerBase):
         self.fetch_next()
 
     def clean_up(self):
-        self._thread.quit()
-        self._thread.wait()
-        self._thread.deleteLater()
+        self._worker_thread.quit()
+        self._worker_thread.wait()
+        self._worker_thread.deleteLater()
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
@@ -828,7 +828,8 @@ class SpineDBManager(SpineDBManagerBase):
             return parsed_value
         return None
 
-    def _split_and_parse_value_list(self, item):
+    @staticmethod
+    def _split_and_parse_value_list(item):
         if "split_value_list" not in item:
             item["split_value_list"] = item["value_list"].split(";")
         if "split_parsed_value_list" not in item:
@@ -1743,11 +1744,12 @@ class SpineDBManager(SpineDBManagerBase):
     def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
         return self._worker.get_metadata_per_parameter_value(db_map, parameter_value_ids)
 
-    def get_all_multi_spine_db_editors(self):
+    @staticmethod
+    def get_all_multi_spine_db_editors():
         """Yields all instances of MultiSpineDBEditor currently open.
 
-        Returns:
-            Generator
+        Yields:
+            MultiSpineDBEditor
         """
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
             widget = QWidget.find(window.winId())
@@ -1757,8 +1759,8 @@ class SpineDBManager(SpineDBManagerBase):
     def get_all_spine_db_editors(self):
         """Yields all instances of SpineDBEditor currently open.
 
-        Returns:
-            Generator
+        Yields:
+            SpineDBEditor
         """
         for w in self.get_all_multi_spine_db_editors():
             for k in range(w.tab_widget.count()):

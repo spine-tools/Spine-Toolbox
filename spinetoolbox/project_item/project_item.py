@@ -510,7 +510,7 @@ class ProjectItem(MetaObject):
         else:
             document = self._create_log_document()
         scrollbar = self._project._toolbox.ui.textBrowser_itemlog.verticalScrollBar()
-        scrollbar_at_max = True if scrollbar.value() == scrollbar.maximum() else False
+        scrollbar_at_max = scrollbar.value() == scrollbar.maximum()
         add_message_to_document(document, message)
         if scrollbar_at_max:  # if scrollbar was at maximum before document was appended -> scroll to bottom
             self._project._toolbox.ui.textBrowser_itemlog.scroll_to_bottom()

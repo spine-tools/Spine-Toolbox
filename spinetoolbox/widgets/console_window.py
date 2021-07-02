@@ -16,7 +16,7 @@ Window for the 'base' Julia Console and Python Console.
 :date: 5.2.2021
 """
 
-from PySide2.QtWidgets import QMainWindow, QVBoxLayout
+from PySide2.QtWidgets import QMainWindow
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
 
