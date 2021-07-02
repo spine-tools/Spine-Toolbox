@@ -170,6 +170,7 @@ class ToolboxUI(QMainWindow):
         self.add_menu_actions()
         self.ui.menuFile.setToolTipsVisible(True)
         self.ui.menuEdit.setToolTipsVisible(True)
+        self.ui.menuConsoles.setToolTipsVisible(True)
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
@@ -637,7 +638,6 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_itemlog.clear()
-
         return True
 
     @Slot(bool)

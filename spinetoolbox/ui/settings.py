@@ -368,8 +368,8 @@ class Ui_SettingsForm(object):
         self.stackedWidget.addWidget(self.Project)
         self.ExternalTools = QWidget()
         self.ExternalTools.setObjectName(u"ExternalTools")
-        self.verticalLayout_8 = QVBoxLayout(self.ExternalTools)
-        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
+        self.verticalLayout_13 = QVBoxLayout(self.ExternalTools)
+        self.verticalLayout_13.setObjectName(u"verticalLayout_13")
         self.groupBox_gams = QGroupBox(self.ExternalTools)
         self.groupBox_gams.setObjectName(u"groupBox_gams")
         self.gridLayout_4 = QGridLayout(self.groupBox_gams)
@@ -395,7 +395,7 @@ class Ui_SettingsForm(object):
         self.gridLayout_4.addWidget(self.toolButton_browse_gams, 2, 1, 1, 1)
 
 
-        self.verticalLayout_8.addWidget(self.groupBox_gams)
+        self.verticalLayout_13.addWidget(self.groupBox_gams)
 
         self.groupBox_julia = QGroupBox(self.ExternalTools)
         self.groupBox_julia.setObjectName(u"groupBox_julia")
@@ -492,7 +492,7 @@ class Ui_SettingsForm(object):
         self.verticalLayout.addLayout(self.horizontalLayout_12)
 
 
-        self.verticalLayout_8.addWidget(self.groupBox_julia)
+        self.verticalLayout_13.addWidget(self.groupBox_julia)
 
         self.groupBox_python = QGroupBox(self.ExternalTools)
         self.groupBox_python.setObjectName(u"groupBox_python")
@@ -546,11 +546,35 @@ class Ui_SettingsForm(object):
         self.verticalLayout_5.addLayout(self.horizontalLayout_11)
 
 
-        self.verticalLayout_8.addWidget(self.groupBox_python)
+        self.verticalLayout_13.addWidget(self.groupBox_python)
+
+        self.groupBox_2 = QGroupBox(self.ExternalTools)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.verticalLayout_8 = QVBoxLayout(self.groupBox_2)
+        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.lineEdit_conda_path = QLineEdit(self.groupBox_2)
+        self.lineEdit_conda_path.setObjectName(u"lineEdit_conda_path")
+        self.lineEdit_conda_path.setClearButtonEnabled(True)
+
+        self.horizontalLayout_2.addWidget(self.lineEdit_conda_path)
+
+        self.toolButton_browse_conda = QToolButton(self.groupBox_2)
+        self.toolButton_browse_conda.setObjectName(u"toolButton_browse_conda")
+        self.toolButton_browse_conda.setIcon(icon5)
+
+        self.horizontalLayout_2.addWidget(self.toolButton_browse_conda)
+
+
+        self.verticalLayout_8.addLayout(self.horizontalLayout_2)
+
+
+        self.verticalLayout_13.addWidget(self.groupBox_2)
 
         self.verticalSpacer_2 = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.verticalLayout_8.addItem(self.verticalSpacer_2)
+        self.verticalLayout_13.addItem(self.verticalSpacer_2)
 
         self.stackedWidget.addWidget(self.ExternalTools)
         self.SpineDBEditor = QWidget()
@@ -792,8 +816,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QCoreApplication.translate("SettingsForm", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
+"</style></head><body style=\" font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None))
         self.textEdit_project_description.setPlaceholderText("")
         self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
         self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
@@ -813,7 +837,7 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia executable using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.lineEdit_julia_project_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia project</p></body></html>", None))
+        self.lineEdit_julia_project_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia environment/project directory for Julia Tool specifications. Leave blank to use the default environment.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_julia_project_path.setText("")
         self.lineEdit_julia_project_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Julia default project", None))
@@ -821,29 +845,50 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_julia_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia project using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.toolButton_browse_julia_project.setText(QCoreApplication.translate("SettingsForm", u"...", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_use_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Execute Julia Tool specifications in Spine Console / Jupyter Console.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_use_julia_kernel.setText(QCoreApplication.translate("SettingsForm", u"Use jupyter kernel:", None))
 #if QT_CONFIG(tooltip)
-        self.comboBox_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Julia Jupyter kernel.</p><p>Only valid Julia kernels are shown. Open Kernel editor to add kernels.</p></body></html>", None))
+        self.comboBox_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Julia kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_open_kernel_editor_julia.setText(QCoreApplication.translate("SettingsForm", u"Kernel editor", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_open_kernel_editor_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"Open Julia kernel spec editor", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_open_kernel_editor_julia.setText(QCoreApplication.translate("SettingsForm", u"Kernel spec editor", None))
         self.pushButton_install_julia.setText(QCoreApplication.translate("SettingsForm", u"Install Julia", None))
         self.pushButton_add_up_spine_opt.setText(QCoreApplication.translate("SettingsForm", u"Add/Update SpineOpt", None))
-        self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python", None))
 #if QT_CONFIG(tooltip)
-        self.lineEdit_python_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Python interpreter. Leave blank to use the Python that was used in launching Spine Toolbox.</p></body></html>", None))
+        self.groupBox_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>These are the <span style=\" font-weight:600;\">default settings</span> for new Python Tool specs. You can override these for each Tool spec separately.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python (default settings)", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_python_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Python interpreter for Python Console. Leave blank to use the Python that was used in launching Spine Toolbox.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Python Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_python_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using current Python interpreter", None))
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Python interpreter using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.checkBox_use_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Execute Python Tool specifications in Python Console / Jupyter Console.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Python Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.checkBox_use_python_kernel.setText(QCoreApplication.translate("SettingsForm", u"Use jupyter kernel:", None))
 #if QT_CONFIG(tooltip)
-        self.comboBox_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Python Jupyter kernel.</p><p>Only valid Python kernels are shown. Open Kernel editor to add kernels.</p></body></html>", None))
+        self.comboBox_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Python kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Python Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.pushButton_open_kernel_editor_python.setToolTip(QCoreApplication.translate("SettingsForm", u"Open kernel editor", None))
+        self.pushButton_open_kernel_editor_python.setToolTip(QCoreApplication.translate("SettingsForm", u"Open Python kernel spec editor", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_open_kernel_editor_python.setText(QCoreApplication.translate("SettingsForm", u"Kernel editor", None))
+        self.pushButton_open_kernel_editor_python.setText(QCoreApplication.translate("SettingsForm", u"Kernel spec editor", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("SettingsForm", u"Conda", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_conda_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select Conda executable for running Tool specifications in a Conda environment.</p><p>If you started Spine Toolbox in Conda, the <span style=\" font-weight:600;\">Conda executable is set up automatically</span>.</p><p>If not on Conda, please select <span style=\" font-weight:600;\">&lt;base_env&gt;\\scripts\\conda.exe</span> (on Win10), where <span style=\" font-weight:600;\">&lt;base_env&gt;</span> is the root directory of your Conda installation (i.e. base environment location).</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_conda_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Select Conda executable...", None))
+#if QT_CONFIG(tooltip)
+        self.toolButton_browse_conda.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Conda executable using a file browser</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.toolButton_browse_conda.setText("")
         self.groupBox_spine_db_editor.setTitle(QCoreApplication.translate("SettingsForm", u"Spine database editor", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Don't commit session and don't show message box</p><p>Partially checked: Show message box (default)</p><p>Checked: Commit session and don't show message box</p><p><br/></p></body></html>", None))

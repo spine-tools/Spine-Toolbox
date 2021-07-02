@@ -24,6 +24,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   and F7 to stop execution.
 - Time series, maps and other compound values have gained the ability to have names for their indexes.
   Index names can be edited in parameter value editors, and they are also supported by Importer and Exporter items.
+- Support for running Python Tools (specifications) in a Conda environment
+- Execution mode (kernel spec, console, interpreter) can now be selected individually for each Python 
+  Tool specification
 
 ### Changed
 - Data Transformer's specification editor has now a new interface.
@@ -31,6 +34,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   Data Transformer's icon will show a notification if class names are missing.
 - Installation instructions advice to install directly from PyPI. 
 - Stand-alone DB Editor is now opened with the `spine-db-editor [URL]` command
+- Python settings on the *Tools* page of *File->Settings* are now the default settings for new Python Tool
+  specifications. I.e. they are not global settings anymore.
 
 ### Deprecated
 - GdxExporter has been deprecated. Use the general purpose Exporter item instead.
