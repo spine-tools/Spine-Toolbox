@@ -562,7 +562,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.comboBox_python_kernel.setCurrentIndex(ind)
         conda_placeholder_txt = resolve_conda_executable("")
-        if conda_placeholder_txt != "":
+        if conda_placeholder_txt:
             self.ui.lineEdit_conda_path.setPlaceholderText(conda_placeholder_txt)
         self.ui.lineEdit_conda_path.setText(conda_path)
         self.ui.lineEdit_work_dir.setText(work_dir)
