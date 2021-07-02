@@ -252,7 +252,8 @@ class SpineEngineWorker(QObject):
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
                 f"Unable to find kernel spec <b>{msg['kernel_name']}</b>. "
-                "Please go to Settings->Tools to select a valid kernel spec."
+                "For Python Tools, select a kernel spec in the Tool specification editor."
+                "For Julia Tools, select a kernel spec from File->Settings->Tools."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
