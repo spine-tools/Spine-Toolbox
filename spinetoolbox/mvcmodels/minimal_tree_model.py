@@ -38,7 +38,7 @@ class TreeItem:
         return self._model
 
     @property
-    def child_item_type(self):
+    def child_item_class(self):
         """Returns the type of child items. Reimplement in subclasses to return something more meaningful."""
         return TreeItem
 

@@ -153,7 +153,7 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr.register_listener(self, *self.db_maps)
         self.init_models()
         self.init_add_undo_redo_actions()
-        self.fetch_db_maps()
+        self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
         self.restore_ui()
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
@@ -162,15 +162,6 @@ class SpineDBEditorBase(QMainWindow):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
         new_redo_action = self.db_mngr.redo_action[self.first_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
-
-    def fetch_db_maps(self, *db_maps):
-        if not db_maps:
-            db_maps = self.db_maps
-        self._fetcher = self.db_mngr.get_fetcher()
-        self._fetcher.finished.connect(self._make_iddle)
-        self._make_busy()
-        self._fetcher.fetch(self, db_maps)
-        self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
 
     def _make_busy(self):
         self.silenced = True
@@ -212,6 +203,10 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None}, create=True)
 
@@ -606,7 +601,7 @@ class SpineDBEditorBase(QMainWindow):
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
         self.init_models()
-        self.fetch_db_maps(*db_maps)
+        # FIXME: self.fetch_db_maps(*db_maps)
 
     @Slot(bool)
     def refresh_session(self, checked=False):

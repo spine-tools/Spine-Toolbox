@@ -50,7 +50,7 @@ class ObjectTreeRootItem(EntityRootItem):
     item_type = "root"
 
     @property
-    def child_item_type(self):
+    def child_item_class(self):
         """Returns ObjectClassItem."""
         return ObjectClassItem
 
@@ -69,7 +69,7 @@ class RelationshipTreeRootItem(EntityRootItem):
     item_type = "root"
 
     @property
-    def child_item_type(self):
+    def child_item_class(self):
         """Returns RelationshipClassItem."""
         return RelationshipClassItem
 
@@ -172,7 +172,7 @@ class ObjectClassItem(EntityClassItem):
     item_type = "object_class"
 
     @property
-    def child_item_type(self):
+    def child_item_class(self):
         """Returns ObjectItem."""
         return ObjectItem
 
@@ -196,7 +196,7 @@ class RelationshipClassItemBase(EntityClassItem):
     item_type = "relationship_class"
 
     @property
-    def child_item_type(self):
+    def child_item_class(self):
         """Returns RelationshipItem."""
         return RelationshipItem
 
@@ -270,7 +270,7 @@ class MemberObjectClassItem(ObjectClassItem):
         return self.parent_item.db_map_member_ids(db_map)
 
     @property
-    def child_item_type(self):
+    def child_item_class(self):
         """Returns MemberObjectItem."""
         return MemberObjectItem
 
@@ -328,7 +328,7 @@ class ObjectItem(EntityItem):
     item_type = "object"
 
     @property
-    def child_item_type(self):
+    def child_item_class(self):
         """Returns RelationshipClassItem."""
         return ObjectRelationshipClassItem
 
