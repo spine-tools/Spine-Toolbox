@@ -16,14 +16,14 @@ SpineDBFetcher class.
 :date:   13.3.2020
 """
 
-from PySide2.QtCore import Signal, Slot, QObject, Qt
+from PySide2.QtCore import Signal, Slot, QObject
+from spinetoolbox.helpers import busy_effect
 
 
 class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
     _fetch_more_requested = Signal(str)
-    _fetch_initialization_needed = Signal()
 
     def __init__(self, db_mngr, db_map):
         """Initializes the fetcher object.
@@ -35,7 +35,6 @@ class SpineDBFetcher(QObject):
         super().__init__()
         self._db_mngr = db_mngr
         self._db_map = db_map
-        self._fetched = {}
         self._getters = {
             "object_class": self._db_mngr.get_object_classes,
             "relationship_class": self._db_mngr.get_relationship_classes,
@@ -77,17 +76,6 @@ class SpineDBFetcher(QObject):
         self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
-        self._fetch_initialization_needed.connect(self._init_fetched, Qt.BlockingQueuedConnection)
-        self._fetch_initialization_needed.emit()
-
-    @Slot()
-    def _init_fetched(self):
-        self._fetched = {
-            item_type: getter(self._db_map, probe=True) is None for item_type, getter in self._getters.items()
-        }
-
-    def can_fetch_more(self, item_type):
-        return not self._fetched[item_type]
 
     def fetch_more(self, item_type):
         """Fetches items from the database.
@@ -99,12 +87,16 @@ class SpineDBFetcher(QObject):
 
     @Slot(str)
     def _fetch_more(self, item_type):
+        self._do_fetch_more(item_type)
+
+    @busy_effect
+    def _do_fetch_more(self, item_type):
         iterator = self._iterators.get(item_type)
         if iterator is None:
             return
-        qApp.setOverrideCursor(Qt.BusyCursor)
-        chunk = next(iterator, [])
-        self._fetched[item_type] = not chunk
+        with self._db_map.original_tables():
+            chunk = next(iterator, [])
+        if not chunk:
+            return
         signal = self._signals.get(item_type)
         signal.emit({self._db_map: chunk})
-        qApp.restoreOverrideCursor()

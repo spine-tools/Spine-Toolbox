@@ -39,6 +39,8 @@ class MultiDBTreeItem(TreeItem):
             db_map_id = {}
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
+        self._fetched_once = False
+        self.fetch_recursive = False
 
     @property
     def db_mngr(self):
@@ -199,23 +201,25 @@ class MultiDBTreeItem(TreeItem):
                 unmerged.append(new_child)
         self.append_children(*unmerged)
 
-    @property
-    def child_type(self):
-        return self.child_item_class.item_type
-
     def has_children(self):
         """Returns whether or not this item has or could have children."""
-        if self.can_fetch_more():
-            return True
-        return bool(self.child_count())
+        if self._fetched_once:
+            return any(self._get_children_ids(db_map) for db_map in self.db_maps)
+        return True
 
     def can_fetch_more(self):
-        return any(self.db_mngr.can_fetch_more(db_map, self.child_type) for db_map in self.db_maps)
+        if not super().can_fetch_more():
+            return False
+        self.fetch_recursive = True
+        return True
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
+        self._fetched_once = True
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self.child_type)
+            self.db_mngr.fetch_more(db_map, self.child_item_class.item_type)
+        db_map_ids = {db_map: self._get_children_ids(db_map) for db_map in self.db_maps}
+        self.append_children_by_id(db_map_ids)
 
     def _get_children_ids(self, db_map):
         """Returns a list of children ids.
@@ -231,12 +235,7 @@ class MultiDBTreeItem(TreeItem):
         """
         new_children = []
         for db_map, ids in db_map_ids.items():
-            if not ids:
-                continue
             new_children += self._create_new_children(db_map, ids)
-        if not new_children:
-            self.model.layoutChanged.emit()
-            return
         self._merge_children(new_children)
 
     def remove_children_by_id(self, db_map_ids):
@@ -272,6 +271,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
         if self.can_fetch_more():
+            # FIXME
             return
         # Find rows to update and db_map ids to add
         rows_to_update = set()
@@ -319,10 +319,13 @@ class MultiDBTreeItem(TreeItem):
         bad_types = [type(child) for child in children if not isinstance(child, MultiDBTreeItem)]
         if bad_types:
             raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
-        if super().insert_children(position, *children):
-            self._refresh_child_map()
-            return True
-        return False
+        if not super().insert_children(position, *children):
+            return False
+        self._refresh_child_map()
+        if self.fetch_recursive:
+            for child in list(children):
+                child.fetch_more()
+        return True
 
     def remove_children(self, position, count):
         """Removes count children starting from the given position."""

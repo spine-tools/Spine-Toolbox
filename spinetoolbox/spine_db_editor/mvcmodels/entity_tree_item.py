@@ -25,6 +25,11 @@ class EntityRootItem(MultiDBTreeItem):
 
     item_type = "root"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fetch_recursive = True
+        self.fetch_more()
+
     @property
     def display_id(self):
         """"See super class."""
@@ -424,7 +429,7 @@ class RelationshipItem(EntityItem):
 
     def _get_children_ids(self, db_map):
         """See base class"""
-        raise NotImplementedError()
+        return []
 
     def is_valid(self):
         """Checks that the grand parent object is still in the relationship."""
