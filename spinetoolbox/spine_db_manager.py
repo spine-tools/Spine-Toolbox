@@ -232,8 +232,7 @@ class SpineDBManager(SpineDBManagerBase):
         super().__init__(parent, cache={}, icon_mngr={})
         self.qsettings = settings
         self._db_maps = {}
-        # self._worker_thread = QThread()
-        self._worker_thread = qApp.thread()
+        self._worker_thread = QThread()
         self._worker = SpineDBWorker(self)
         self._fetchers = {}
         self.undo_stack = {}

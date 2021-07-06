@@ -74,6 +74,7 @@ class SpineDBFetcher(QObject):
             "tool_feature_method": self._db_mngr.tool_feature_methods_added,
         }
         self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
+        self._fetched = {item_type: False for item_type in self._getters}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
 
@@ -83,6 +84,8 @@ class SpineDBFetcher(QObject):
         Args:
             item_type (str): the type of items to fetch, e.g. "object_class"
         """
+        if self._fetched[item_type]:
+            return
         self._fetch_more_requested.emit(item_type)
 
     @Slot(str)
@@ -97,6 +100,7 @@ class SpineDBFetcher(QObject):
         with self._db_map.original_tables():
             chunk = next(iterator, [])
         if not chunk:
+            self._fetched[item_type] = True
             return
         signal = self._signals.get(item_type)
         signal.emit({self._db_map: chunk})

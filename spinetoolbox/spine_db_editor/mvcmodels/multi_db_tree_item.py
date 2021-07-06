@@ -39,7 +39,6 @@ class MultiDBTreeItem(TreeItem):
             db_map_id = {}
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
-        self._fetched_once = False
         self.fetch_recursive = False
 
     @property
@@ -203,21 +202,20 @@ class MultiDBTreeItem(TreeItem):
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
-        if self._fetched_once:
-            return any(self._get_children_ids(db_map) for db_map in self.db_maps)
-        return True
+        return any(self._get_children_ids(db_map) for db_map in self.db_maps)
 
     def can_fetch_more(self):
-        if not super().can_fetch_more():
-            return False
         self.fetch_recursive = True
         return True
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
-        self._fetched_once = True
+        child_type = self.child_item_class.item_type
+        if child_type is None:
+            return
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self.child_item_class.item_type)
+            self.db_mngr.fetch_more(db_map, child_type)
+        # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
         db_map_ids = {db_map: self._get_children_ids(db_map) for db_map in self.db_maps}
         self.append_children_by_id(db_map_ids)
 

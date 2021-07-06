@@ -126,6 +126,9 @@ class EntityClassItem(MultiDBTreeItem):
         """Fetches children from all associated databases and raises group children.
         """
         super().fetch_more()
+        for db_map in self.db_maps:
+            self.db_mngr.fetch_more(db_map, "entity_group")
+        # Raise group children, in case the db items were fetched elsewhere.
         rows = [row for row, child in enumerate(self.children) if child.is_group()]
         self._raise_group_children_by_row(rows)
 
@@ -331,6 +334,7 @@ class ObjectItem(EntityItem):
     """An object item."""
 
     item_type = "object"
+    _has_members = False
 
     @property
     def child_item_class(self):
@@ -349,6 +353,10 @@ class ObjectItem(EntityItem):
         """See base class."""
         raise NotImplementedError()
 
+    def has_children(self):
+        """See base class."""
+        return super().has_children() or self.is_group()
+
     def _get_children_ids(self, db_map):
         """See base class"""
         object_class_id = self.db_map_data_field(db_map, 'class_id')
@@ -359,13 +367,14 @@ class ObjectItem(EntityItem):
         ]
 
     def fetch_more(self):
-        """Fetches children from all associated databases."""
+        """See base class."""
         super().fetch_more()
-        if not self.is_group():
+        if not self.is_group() or self._has_members:
             return
         # Insert member class item. Note that we pass the db_map_ids of the parent object class item
         db_map_ids = {db_map: self.parent_item.db_map_id(db_map) for db_map in self.db_maps}
         self.insert_children(0, MemberObjectClassItem(self.model, db_map_ids))
+        self._has_members = True
 
 
 class MemberObjectItem(ObjectItem):
@@ -378,8 +387,13 @@ class MemberObjectItem(ObjectItem):
         return self.parent_item.display_icon
 
     def has_children(self):
-        """Returns false, this item never has children."""
         return False
+
+    def can_fetch_more(self):
+        return False
+
+    def _get_children_ids(self, db_map):
+        return []
 
     def set_data(self, column, value, role):
         """See base class."""
@@ -412,10 +426,6 @@ class RelationshipItem(EntityItem):
     def edit_data(self):
         return self.object_name_list
 
-    def has_children(self):
-        """Returns false, this item never has children."""
-        return False
-
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         return dict(
@@ -424,11 +434,13 @@ class RelationshipItem(EntityItem):
             database=self.first_db_map.codename,
         )
 
+    def has_children(self):
+        return False
+
     def can_fetch_more(self):
         return False
 
     def _get_children_ids(self, db_map):
-        """See base class"""
         return []
 
     def is_valid(self):
@@ -437,3 +449,7 @@ class RelationshipItem(EntityItem):
         if grand_parent.item_type == "root":
             return True
         return grand_parent.display_data in self.object_name_list.split(",")
+
+    def set_data(self, column, value, role):
+        """See base class."""
+        raise NotImplementedError()

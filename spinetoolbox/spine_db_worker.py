@@ -179,10 +179,8 @@ class SpineDBWorker(QObject):
                 db_map_error_log[db_map] = errors
             if not ids:
                 continue
-            with db_map.difference_tables():
-                for chunk in getter(db_map, filter_by=dict(id=ids)):
-                    print("HEYs")
-                    signal.emit({db_map: chunk})
+            for chunk in getter(db_map, filter_by=dict(id=ids)):
+                signal.emit({db_map: chunk})
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
 
