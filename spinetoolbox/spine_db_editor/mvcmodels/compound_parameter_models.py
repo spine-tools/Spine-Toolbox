@@ -16,7 +16,7 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtCore import Qt, Signal, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
 from ...helpers import rows_to_row_count_tuples
@@ -41,7 +41,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     and one empty parameter model.
     """
 
-    data_for_single_model_received = Signal(object, int, list)
+    _data_for_single_model_received = Signal(object, int, list)
     """Emitted by the fetcher when there's data for another single model."""
 
     def __init__(self, parent, db_mngr, *db_maps):
@@ -60,7 +60,16 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_valid = True
         self._auto_filter_menus = {}
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
-        self.data_for_single_model_received.connect(self.create_and_append_single_model)
+        self._data_for_single_model_received.connect(self._create_and_append_single_model)
+
+    def canFetchMore(self, parent=QModelIndex()):
+        """Returns True if any of the submodels that haven't been fetched yet can fetch more."""
+        return True
+
+    def fetchMore(self, parent=QModelIndex()):
+        """Fetches the next sub model and increments the fetched counter."""
+        for db_map in self.db_maps:
+            self.db_mngr.fetch_more(db_map, self.item_type)
 
     def _make_header(self):
         raise NotImplementedError()
@@ -386,12 +395,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids = [item["id"] for item in class_items]
-                self.data_for_single_model_received.emit(db_map, entity_class_id, ids)
+                self._data_for_single_model_received.emit(db_map, entity_class_id, ids)
                 self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.receive_parameter_data_added(db_map_data)
 
     @Slot(object, int, list)
-    def create_and_append_single_model(self, db_map, entity_class_id, ids):
+    def _create_and_append_single_model(self, db_map, entity_class_id, ids):
         model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
         model.reset_model(ids)
         single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows

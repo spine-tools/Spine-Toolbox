@@ -54,6 +54,13 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
+    def canFetchMore(self, parent=QModelIndex()):
+        return True
+
+    def fetchMore(self, parent=QModelIndex()):
+        for db_map in self._parent.db_maps:
+            self.db_mngr.fetch_more(db_map, self.item_type)
+
     @property
     def item_type(self):
         """Returns the item type."""
@@ -82,7 +89,7 @@ class PivotTableModelBase(QAbstractTableModel):
 
     @Slot()
     def fetch_more_columns(self):
-        max_count = max(self._MIN_FETCH_COUNT, len(self.model.rows) // self._FETCH_STEP_COUNT + 1)
+        max_count = max(self._MIN_FETCH_COUNT, len(self.model.columns) // self._FETCH_STEP_COUNT + 1)
         count = min(max_count, len(self.model.columns) - self._data_column_count)
         if not count:
             return

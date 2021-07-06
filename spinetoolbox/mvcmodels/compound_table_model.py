@@ -35,7 +35,7 @@ class CompoundTableModel(MinimalTableModel):
         self.sub_models = []
         self._row_map = []  # Maps compound row to tuple (sub_model, sub_row)
         self._inv_row_map = {}  # Maps tuple (sub_model, sub_row) to compound row
-        self._fetch_sub_model = None
+        self._next_sub_model = None
 
     def map_to_sub(self, index):
         """Returns an equivalent submodel index.
@@ -136,16 +136,16 @@ class CompoundTableModel(MinimalTableModel):
 
     def canFetchMore(self, parent=QModelIndex()):
         """Returns True if any of the submodels that haven't been fetched yet can fetch more."""
-        for self._fetch_sub_model in self.sub_models:
-            if self._fetch_sub_model.canFetchMore(self.map_to_sub(parent)):
+        for self._next_sub_model in self.sub_models:
+            if self._next_sub_model.canFetchMore(self.map_to_sub(parent)):
                 return True
         return False
 
     def fetchMore(self, parent=QModelIndex()):
         """Fetches the next sub model and increments the fetched counter."""
-        self._fetch_sub_model.fetchMore(self.map_to_sub(parent))
-        if not self._fetch_sub_model.rowCount():
-            self.sub_models.remove(self._fetch_sub_model)
+        self._next_sub_model.fetchMore(self.map_to_sub(parent))
+        if not self._next_sub_model.rowCount():
+            self.sub_models.remove(self._next_sub_model)
         self.layoutChanged.emit()
 
     def flags(self, index):
@@ -274,7 +274,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             )
 
     def _recompute_empty_row_map(self):
-        """Recomputeds the part of the row map corresponding to the empty model."""
+        """Recomputes the part of the row map corresponding to the empty model."""
         empty_row_map = self._row_map_for_model(self.empty_model)
         try:
             row = self._inv_row_map[self.empty_model, 0]

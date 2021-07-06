@@ -101,6 +101,5 @@ class SpineDBFetcher(QObject):
             chunk = next(iterator, [])
         if not chunk:
             self._fetched[item_type] = True
-            return
         signal = self._signals.get(item_type)
         signal.emit({self._db_map: chunk})

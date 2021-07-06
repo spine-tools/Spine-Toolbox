@@ -867,9 +867,9 @@ class SpineDBManager(SpineDBManagerBase):
         it = (x._asdict() for x in query.yield_per(chunk_size).enable_eagerloads(False))
         while True:
             chunk = list(itertools.islice(it, chunk_size))
-            if not chunk:
-                return
             yield chunk
+            if not chunk:
+                break
 
     @staticmethod
     def _make_query(db_map, sq_name, order_by=("id",), filter_by=None):
@@ -1028,8 +1028,12 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_object_parameter_definitions(db_map, **kwargs)
-        yield from self.get_relationship_parameter_definitions(db_map, **kwargs)
+        for obj_chunk, rel_chunk in itertools.zip_longest(
+            self.get_object_parameter_definitions(db_map, **kwargs),
+            self.get_relationship_parameter_definitions(db_map, **kwargs),
+            fillvalue=[],
+        ):
+            yield obj_chunk + rel_chunk
 
     def get_parameter_definition_tags(self, db_map, **kwargs):
         """Returns parameter definition tags.
@@ -1087,8 +1091,12 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_object_parameter_values(db_map, **kwargs)
-        yield from self.get_relationship_parameter_values(db_map, **kwargs)
+        for obj_chunk, rel_chunk in itertools.zip_longest(
+            self.get_object_parameter_values(db_map, **kwargs),
+            self.get_relationship_parameter_values(db_map, **kwargs),
+            fillvalue=[],
+        ):
+            yield obj_chunk + rel_chunk
 
     def get_parameter_value_lists(self, db_map, **kwargs):
         """Returns parameter_value lists from database.

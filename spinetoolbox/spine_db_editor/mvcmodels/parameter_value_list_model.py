@@ -69,11 +69,11 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
         return self.db_mngr.get_parameter_value_list(self.db_map, self.id, role=Qt.EditRole)
 
     def fetch_more(self):
+        self.db_mngr.fetch_more(self.db_map, "parameter_value_list")
         children = [ValueItem() for _ in self.value_list]
-        if self.id:
-            children.append(self.empty_child())
         self.append_children(*children)
-        self._fetched = True
+        if self.id:
+            self.append_children(self.empty_child())
 
     # pylint: disable=no-self-use
     def empty_child(self):

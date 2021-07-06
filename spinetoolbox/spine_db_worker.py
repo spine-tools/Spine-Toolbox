@@ -452,7 +452,7 @@ class SpineDBWorker(QObject):
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
         for db_map, data in db_map_data.items():
-            for chunk in self._db_mngr.get_scenarios(db_map, ids={x["scenario_id"] for x in data}):
+            for chunk in self._db_mngr.get_scenarios(db_map, filter_by=dict(id={x["scenario_id"] for x in data})):
                 self._db_mngr.scenarios_updated.emit({db_map: chunk})
 
     def _refresh_parameter_definitions_by_tag(self, db_map_data):
@@ -463,7 +463,7 @@ class SpineDBWorker(QObject):
         """
         for db_map, data in db_map_data.items():
             for chunk in self._db_mngr.get_parameter_definitions(
-                db_map, ids={x["parameter_definition_id"] for x in data}
+                db_map, filter_by=dict(id={x["parameter_definition_id"] for x in data})
             ):
                 self._db_mngr.parameter_definitions_updated.emit({db_map: chunk})
 
@@ -475,7 +475,7 @@ class SpineDBWorker(QObject):
         """
         db_map_cascading_data = self._db_mngr.find_cascading_relationship_classes(self._db_map_ids(db_map_data))
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_relationship_classes(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_relationship_classes(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.relationship_classes_updated.emit({db_map: chunk})
 
     def _cascade_refresh_relationships_by_object(self, db_map_data):
@@ -486,7 +486,7 @@ class SpineDBWorker(QObject):
         """
         db_map_cascading_data = self._db_mngr.find_cascading_relationships(self._db_map_ids(db_map_data))
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_relationships(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_relationships(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.relationships_updated.emit({db_map: chunk})
 
     def _cascade_refresh_parameter_definitions(self, db_map_data):
@@ -499,7 +499,7 @@ class SpineDBWorker(QObject):
             self._db_map_ids(db_map_data), "parameter_definition"
         )
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_parameter_definitions(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_parameter_definitions(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.parameter_definitions_updated.emit({db_map: chunk})
 
     def _cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
@@ -512,7 +512,7 @@ class SpineDBWorker(QObject):
             self._db_map_ids(db_map_data)
         )
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_parameter_definitions(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_parameter_definitions(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.parameter_definitions_updated.emit({db_map: chunk})
 
     def _cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
@@ -525,7 +525,7 @@ class SpineDBWorker(QObject):
             self._db_map_ids(db_map_data), "parameter_value"
         )
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_parameter_values(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_parameter_values(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.parameter_values_updated.emit({db_map: chunk})
 
     def _cascade_refresh_parameter_values_by_entity(self, db_map_data):
@@ -536,7 +536,7 @@ class SpineDBWorker(QObject):
         """
         db_map_cascading_data = self._db_mngr.find_cascading_parameter_values_by_entity(self._db_map_ids(db_map_data))
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_parameter_values(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_parameter_values(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.parameter_values_updated.emit({db_map: chunk})
 
     def _cascade_refresh_parameter_values_by_alternative(self, db_map_data):
@@ -549,7 +549,7 @@ class SpineDBWorker(QObject):
             self._db_map_ids(db_map_data)
         )
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_parameter_values(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_parameter_values(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.parameter_values_updated.emit({db_map: chunk})
 
     def _cascade_refresh_parameter_values_by_definition(self, db_map_data):
@@ -562,7 +562,7 @@ class SpineDBWorker(QObject):
             self._db_map_ids(db_map_data)
         )
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_parameter_values(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_parameter_values(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.parameter_values_updated.emit({db_map: chunk})
 
     def _cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
@@ -573,7 +573,7 @@ class SpineDBWorker(QObject):
         """
         db_map_cascading_data = self._db_mngr.find_cascading_parameter_definitions_by_tag(self._db_map_ids(db_map_data))
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_parameter_definitions(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_parameter_definitions(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.parameter_definitions_updated.emit({db_map: chunk})
 
     def _cascade_refresh_features_by_paremeter_definition(self, db_map_data):
@@ -586,7 +586,7 @@ class SpineDBWorker(QObject):
             self._db_map_ids(db_map_data)
         )
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_features(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_features(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.features_updated.emit({db_map: chunk})
 
     def _cascade_refresh_features_by_paremeter_value_list(self, db_map_data):
@@ -599,7 +599,7 @@ class SpineDBWorker(QObject):
             self._db_map_ids(db_map_data)
         )
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_features(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_features(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.features_updated.emit({db_map: chunk})
 
     def _cascade_refresh_tool_features_by_feature(self, db_map_data):
@@ -610,7 +610,7 @@ class SpineDBWorker(QObject):
         """
         db_map_cascading_data = self._db_mngr.find_cascading_tool_features_by_feature(self._db_map_ids(db_map_data))
         for db_map, data in db_map_cascading_data.items():
-            for chunk in self._db_mngr.get_tool_features(db_map, ids={x["id"] for x in data}):
+            for chunk in self._db_mngr.get_tool_features(db_map, filter_by=dict(id={x["id"] for x in data})):
                 self._db_mngr.tool_features_updated.emit({db_map: chunk})
 
     def _db_map_ids(self, db_map_data):
