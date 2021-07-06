@@ -41,7 +41,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._db_mngr.clean_up()
 
     def _fetch(self):
-        self._db_mngr.fetch_all(self._db_map)
+        self._db_mngr.fetch_more_all(self._db_map)
 
     def test_fetch_empty_database(self):
         self._fetch()

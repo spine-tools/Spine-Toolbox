@@ -38,7 +38,6 @@ from .spine_db_commands import AgedUndoCommand, AddItemsCommand, UpdateItemsComm
 class SpineDBWorker(QObject):
     """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
 
-    connection_closed = Signal()
     _get_db_map_called = Signal()
     _get_metadata_per_entity_called = Signal(object, list, dict)
     _get_metadata_per_parameter_value_called = Signal(object, list, dict)
@@ -126,7 +125,6 @@ class SpineDBWorker(QObject):
     def _close_db_map(self, db_map):  # pylint: disable=no-self-use
         if not db_map.connection.closed:
             db_map.connection.close()
-        self.connection_closed.emit()
 
     def get_metadata_per_entity(self, db_map, entity_ids):
         d = {}

@@ -40,7 +40,7 @@ from spinedb_api import (
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from .spine_db_icon_manager import SpineDBIconManager
-from .helpers import busy_effect, SignalWaiter
+from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
@@ -298,14 +298,13 @@ class SpineDBManager(SpineDBManagerBase):
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
-        waiter = SignalWaiter()
-        self._worker.connection_closed.connect(waiter.trigger)
         self._worker.close_db_map(db_map)
-        waiter.wait()
-        self._worker.connection_closed.disconnect(waiter.trigger)
         del self.undo_stack[db_map]
         del self.undo_action[db_map]
         del self.redo_action[db_map]
+        fetcher = self._fetchers.pop(db_map, None)
+        if fetcher is not None:
+            fetcher.deleteLater()
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
@@ -855,6 +854,8 @@ class SpineDBManager(SpineDBManagerBase):
         return self._fetchers[db_map]
 
     def fetch_more(self, db_map, item_type):
+        if db_map.connection.closed:
+            return
         self._get_fetcher(db_map).fetch_more(item_type)
 
     @staticmethod
