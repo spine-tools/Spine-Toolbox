@@ -23,8 +23,8 @@ import logging
 import sys
 from PySide2.QtCore import QEventLoop
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditorWithDBMapping(unittest.TestCase):
@@ -51,7 +51,7 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
-            self.db_mngr = SpineDBManager(mock_settings, None)
+            self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self.db_map = self.db_mngr.get_db_map(url, logger, codename="db", create=True)
             self.spine_db_editor = SpineDBEditor(self.db_mngr, {url: "db"})
@@ -89,11 +89,7 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         data["object_parameter_values"] = [("fish", "nemo", "color", "orange")]
         with mock.patch("spinetoolbox.spine_db_manager.SpineDBManager.entity_class_icon") as mock_icon:
             mock_icon.return_value = None
-            loop = QEventLoop()
-            self.db_mngr.data_imported.connect(loop.quit)
             self.db_mngr.import_data({self.db_map: data})
-            loop.exec_()
-            loop.deleteLater()
             mock_icon.assert_called()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
@@ -101,11 +97,7 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         nemo_item = fish_item.child(0)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.tree_view_mixin.QInputDialog") as mock_input_dialog:
             mock_input_dialog.getText.side_effect = lambda *args, **kwargs: ("nemo_copy", True)
-            loop = QEventLoop()
-            self.db_mngr.data_imported.connect(loop.quit)
             self.spine_db_editor.duplicate_object(nemo_item.index())
-            loop.exec_()
-            loop.deleteLater()
         nemo_dupe = fish_item.child(1)
         self.assertEqual(nemo_dupe.display_data, "nemo_copy")
 

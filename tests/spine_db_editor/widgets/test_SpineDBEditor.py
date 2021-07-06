@@ -23,13 +23,13 @@ import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
 from .test_SpineDBEditorUpdate import TestSpineDBEditorUpdateMixin
 from .test_SpineDBEditorRemove import TestSpineDBEditorRemoveMixin
 from .test_SpineDBEditorFilter import TestSpineDBEditorFilterMixin
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditor(
@@ -289,7 +289,7 @@ class TestSpineDBEditor(
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self.db_mngr = SpineDBManager(mock_settings, None)
+            self.db_mngr = TestSpineDBManager(mock_settings, None)
             self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
             logger = mock.MagicMock()

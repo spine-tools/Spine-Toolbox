@@ -19,8 +19,7 @@ import unittest
 from unittest.mock import MagicMock
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.helpers import SignalWaiter
+from .mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBFetcher(unittest.TestCase):
@@ -32,20 +31,17 @@ class TestSpineDBFetcher(unittest.TestCase):
     def setUp(self):
         app_settings = MagicMock()
         self._logger = MagicMock()  # Collects error messages therefore handy for debugging.
-        self._db_mngr = SpineDBManager(app_settings, None)
+        self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="test_db", create=True)
         self._listener = MagicMock()
-        self._fetcher = self._db_mngr.get_fetcher()
+        self._db_mngr.register_listener(self._listener, self._db_map)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
 
     def _fetch(self):
-        waiter = SignalWaiter()
-        self._fetcher.finished.connect(waiter.trigger)
-        self._fetcher.fetch(self._listener, [self._db_map])
-        waiter.wait()
+        self._db_mngr.fetch_all(self._db_map)
 
     def test_fetch_empty_database(self):
         self._fetch()
@@ -57,39 +53,31 @@ class TestSpineDBFetcher(unittest.TestCase):
             self._db_mngr.get_item(self._db_map, "alternative", 1),
             {'commit_id': 1, 'description': 'Base alternative', 'id': 1, 'name': 'Base'},
         )
-        self._listener.receive_scenarios_added.assert_not_called()
+        self._listener.receive_scenarios_added.assert_called_once_with({self._db_map: []})
         self._listener.receive_scenario_alternatives_added.assert_not_called()
-        self._listener.receive_object_classes_added.assert_not_called()
-        self._listener.receive_objects_added.assert_not_called()
-        self._listener.receive_relationship_classes_added.assert_not_called()
-        self._listener.receive_relationships_added.assert_not_called()
-        self._listener.receive_entity_groups_added.assert_not_called()
-        self._listener.receive_parameter_definitions_added.assert_not_called()
-        self._listener.receive_parameter_definition_tags_added.assert_not_called()
-        self._listener.receive_parameter_values_added.assert_not_called()
-        self._listener.receive_parameter_value_lists_added.assert_not_called()
-        self._listener.receive_parameter_tags_added.assert_not_called()
-        self._listener.receive_features_added.assert_not_called()
-        self._listener.receive_tools_added.assert_not_called()
-        self._listener.receive_tool_features_added.assert_not_called()
-        self._listener.receive_tool_feature_methods_added.assert_not_called()
+        self._listener.receive_object_classes_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_objects_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_relationship_classes_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_relationships_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_entity_groups_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_parameter_definitions_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_parameter_values_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_parameter_value_lists_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_parameter_tags_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_features_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_tools_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_tool_features_added.assert_called_once_with({self._db_map: []})
+        self._listener.receive_tool_feature_methods_added.assert_called_once_with({self._db_map: []})
 
     def _import_data(self, **data):
-        waiter = SignalWaiter()
-        self._db_mngr.data_imported.connect(waiter.trigger)
         self._db_mngr.import_data({self._db_map: data})
-        waiter.wait()
-        self._db_mngr.data_imported.disconnect(waiter.trigger)
         self._db_mngr._get_commit_msg = lambda *args, **kwargs: "Add test data."
-        self._db_mngr.session_committed.connect(waiter.trigger)
         self._db_mngr.commit_session(self._db_map)
-        waiter.wait()
-        self._db_mngr.session_committed.disconnect(waiter.trigger)
 
     def test_fetch_alternatives(self):
         self._import_data(alternatives=("alt",))
         self._fetch()
-        self._listener.receive_alternatives_added.assert_called_once_with(
+        self._listener.receive_alternatives_added.assert_called_with(
             {
                 self._db_map: [
                     {'id': 1, 'name': 'Base', 'description': 'Base alternative', 'commit_id': 1},
@@ -105,7 +93,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_scenarios(self):
         self._import_data(scenarios=("scenario",))
         self._fetch()
-        self._listener.receive_scenarios_added.assert_called_once_with(
+        self._listener.receive_scenarios_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -142,7 +130,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_object_classes(self):
         self._import_data(object_classes=("oc",))
         self._fetch()
-        self._listener.receive_object_classes_added.assert_called_once_with(
+        self._listener.receive_object_classes_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -174,7 +162,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_objects(self):
         self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
         self._fetch()
-        self._listener.receive_objects_added.assert_called_once_with(
+        self._listener.receive_objects_added.assert_called_with(
             {self._db_map: [{'id': 1, 'class_id': 1, 'class_name': 'oc', 'name': 'obj', 'description': None}]}
         )
         self.assertEqual(
@@ -185,7 +173,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_relationship_classes(self):
         self._import_data(object_classes=("oc",), relationship_classes=(("rc", ("oc",)),))
         self._fetch()
-        self._listener.receive_relationship_classes_added.assert_called_once_with(
+        self._listener.receive_relationship_classes_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -211,7 +199,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             relationships=(("rc", ("obj",)),),
         )
         self._fetch()
-        self._listener.receive_relationships_added.assert_called_once_with(
+        self._listener.receive_relationships_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -246,7 +234,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             object_classes=("oc",), objects=(("oc", "obj"), ("oc", "group")), object_groups=(("oc", "group", "obj"),)
         )
         self._fetch()
-        self._listener.receive_entity_groups_added.assert_called_once_with(
+        self._listener.receive_entity_groups_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -277,7 +265,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_parameter_definitions(self):
         self._import_data(object_classes=("oc",), object_parameters=(("oc", "param"),))
         self._fetch()
-        self._listener.receive_parameter_definitions_added.assert_called_once_with(
+        self._listener.receive_parameter_definitions_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -323,7 +311,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             object_parameter_values=(("oc", "obj", "param", 2.3),),
         )
         self._fetch()
-        self._listener.receive_parameter_values_added.assert_called_once_with(
+        self._listener.receive_parameter_values_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -366,7 +354,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_parameter_value_lists(self):
         self._import_data(parameter_value_lists=(("value_list", (2.3,)),))
         self._fetch()
-        self._listener.receive_parameter_value_lists_added.assert_called_once_with(
+        self._listener.receive_parameter_value_lists_added.assert_called_with(
             {self._db_map: [{'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_list': '[2.3]'}]}
         )
         self.assertEqual(
@@ -382,7 +370,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             features=(("oc", "param"),),
         )
         self._fetch()
-        self._listener.receive_features_added.assert_called_once_with(
+        self._listener.receive_features_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -415,7 +403,7 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_tools(self):
         self._import_data(tools=("tool",))
         self._fetch()
-        self._listener.receive_tools_added.assert_called_once_with(
+        self._listener.receive_tools_added.assert_called_with(
             {self._db_map: [{'id': 1, 'name': 'tool', 'description': None, 'commit_id': 2}]}
         )
         self.assertEqual(
@@ -433,7 +421,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             tool_features=(("tool", "oc", "param"),),
         )
         self._fetch()
-        self._listener.receive_tool_features_added.assert_called_once_with(
+        self._listener.receive_tool_features_added.assert_called_with(
             {
                 self._db_map: [
                     {
@@ -463,7 +451,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             tool_feature_methods=(("tool", "oc", "param", "m"),),
         )
         self._fetch()
-        self._listener.receive_tool_feature_methods_added.assert_called_once_with(
+        self._listener.receive_tool_feature_methods_added.assert_called_with(
             {
                 self._db_map: [
                     {'id': 1, 'tool_feature_id': 1, 'parameter_value_list_id': 1, 'method_index': 0, 'commit_id': 2}

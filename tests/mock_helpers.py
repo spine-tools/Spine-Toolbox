@@ -20,6 +20,7 @@ from unittest import mock
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
+from spinetoolbox.spine_db_manager import SpineDBManager
 
 
 def create_toolboxui():
@@ -291,3 +292,38 @@ class MockInstantQProcess(mock.Mock):
     def start(self, *args, **kwargs):
         for slot in self.finished.slots:
             slot(*self._finished_args)
+
+
+class TestSpineDBManager(SpineDBManager):
+    @property
+    def worker_thread(self):
+        return QApplication.instance().thread()
+
+    def clean_up(self):
+        while self._fetchers:
+            _, fetcher = self._fetchers.popitem()
+            fetcher.deleteLater()
+        self.deleteLater()
+
+    def fetch_more_all(self, db_map):
+        item_types = [
+            "object_class",
+            "relationship_class",
+            "parameter_tag",
+            "parameter_value_list",
+            "parameter_definition",
+            "parameter_definition_tag",
+            "alternative",
+            "scenario",
+            "scenario_alternative",
+            "object",
+            "relationship",
+            "entity_group",
+            "parameter_value",
+            "feature",
+            "tool",
+            "tool_feature",
+            "tool_feature_method",
+        ]
+        for item_type in item_types:
+            self.fetch_more(db_map, item_type)
