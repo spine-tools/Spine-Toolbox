@@ -32,8 +32,7 @@ from ..widgets.custom_delegates import (
 class PivotTableModelBase(QAbstractTableModel):
 
     _V_HEADER_WIDTH = 5
-    _FETCH_STEP_COUNT = 64
-    _MIN_FETCH_COUNT = 512
+    _MAX_FETCH_COUNT = 1000
     _FETCH_DELAY = 0
 
     def __init__(self, parent):
@@ -78,8 +77,7 @@ class PivotTableModelBase(QAbstractTableModel):
 
     @Slot()
     def fetch_more_rows(self):
-        max_count = max(self._MIN_FETCH_COUNT, len(self.model.rows) // self._FETCH_STEP_COUNT + 1)
-        count = min(max_count, len(self.model.rows) - self._data_row_count)
+        count = min(self._MAX_FETCH_COUNT, len(self.model.rows) - self._data_row_count)
         if not count:
             return
         first = self.headerRowCount() + self.dataRowCount()
@@ -89,8 +87,7 @@ class PivotTableModelBase(QAbstractTableModel):
 
     @Slot()
     def fetch_more_columns(self):
-        max_count = max(self._MIN_FETCH_COUNT, len(self.model.columns) // self._FETCH_STEP_COUNT + 1)
-        count = min(max_count, len(self.model.columns) - self._data_column_count)
+        count = min(self._MAX_FETCH_COUNT, len(self.model.columns) - self._data_column_count)
         if not count:
             return
         first = self.headerColumnCount() + self.dataColumnCount()
