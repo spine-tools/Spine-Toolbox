@@ -16,7 +16,7 @@ Unit tests for the models in ``compound_parameter_models`` module.
 :date:   28.1.2021
 """
 import unittest
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -25,7 +25,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterValueModel,
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_manager import SpineDBManager
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
@@ -37,11 +37,7 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
-        with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
-        ) as mock_thread:
-            mock_thread.return_value = QApplication.instance().thread()
-            self._db_mngr = SpineDBManager(app_settings, None)
+        self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 
@@ -87,11 +83,7 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
-        with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
-        ) as mock_thread:
-            mock_thread.return_value = QApplication.instance().thread()
-            self._db_mngr = SpineDBManager(app_settings, None)
+        self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 
@@ -139,11 +131,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
-        with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
-        ) as mock_thread:
-            mock_thread.return_value = QApplication.instance().thread()
-            self._db_mngr = SpineDBManager(app_settings, None)
+        self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 
@@ -202,11 +190,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
-        with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
-        ) as mock_thread:
-            mock_thread.return_value = QApplication.instance().thread()
-            self._db_mngr = SpineDBManager(app_settings, None)
+        self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 

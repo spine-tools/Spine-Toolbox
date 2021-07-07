@@ -18,18 +18,18 @@ Unit tests for the plotting module.
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 from PySide2.QtWidgets import QApplication
 from spinedb_api import (
-    DiffDatabaseMapping,
+    DatabaseMapping,
     import_object_classes,
     import_object_parameters,
     import_objects,
     import_object_parameter_values,
     Map,
 )
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestParameterValuePivotTableModel(unittest.TestCase):
@@ -40,30 +40,23 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
 
     def setUp(self):
         app_settings = MagicMock()
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
-        import_object_classes(db_map, ("class1",))
-        import_object_parameters(db_map, (("class1", "parameter1"), ("class1", "parameter2")))
-        import_objects(db_map, (("class1", "object1"), ("class1", "object2")))
-        import_object_parameter_values(
-            db_map,
-            (
+        logger = MagicMock()
+        self._db_mngr = TestSpineDBManager(app_settings, None)
+        db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        with patch.object(SpineDBEditor, "restore_ui"):
+            self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": db_map.codename})
+        data = {
+            "object_classes": ("class1",),
+            "object_parameters": (("class1", "parameter1"), ("class1", "parameter2")),
+            "objects": (("class1", "object1"), ("class1", "object2")),
+            "object_parameter_values": (
                 ("class1", "object1", "parameter1", 1.0),
                 ("class1", "object2", "parameter1", 3.0),
                 ("class1", "object1", "parameter2", 5.0),
                 ("class1", "object2", "parameter2", 7.0),
             ),
-        )
-        db_map.commit_session("Add test data.")
-        db_map.connection.close()
-        with patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
-        ) as mock_thread:
-            mock_thread.return_value = QApplication.instance().thread()
-            self._db_mngr = SpineDBManager(app_settings, None)
-            with patch.object(SpineDBEditor, "restore_ui"):
-                self._editor = SpineDBEditor(self._db_mngr, {url: db_map.codename})
+        }
+        self._db_mngr.import_data({db_map: data})
         object_class_index = self._editor.object_tree_model.index(0, 0)
         self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
@@ -75,7 +68,6 @@ class TestParameterValuePivotTableModel(unittest.TestCase):
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
-        self._temp_dir.cleanup()
 
     def test_x_flag(self):
         self.assertIsNone(self._model.plot_x_column)
@@ -128,30 +120,23 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
 
     def setUp(self):
         app_settings = MagicMock()
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
-        db_map = DiffDatabaseMapping(url, create=True)
-        import_object_classes(db_map, ("class1",))
-        import_object_parameters(db_map, (("class1", "parameter1"), ("class1", "parameter2")))
-        import_objects(db_map, (("class1", "object1"), ("class1", "object2")))
-        import_object_parameter_values(
-            db_map,
-            (
+        logger = MagicMock()
+        self._db_mngr = TestSpineDBManager(app_settings, None)
+        db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        with patch.object(SpineDBEditor, "restore_ui"):
+            self._editor = SpineDBEditor(self._db_mngr, {"sqlite://": db_map.codename})
+        data = {
+            "object_classes": ("class1",),
+            "object_parameters": (("class1", "parameter1"), ("class1", "parameter2")),
+            "objects": (("class1", "object1"), ("class1", "object2")),
+            "object_parameter_values": (
                 ("class1", "object1", "parameter1", Map(["A", "B"], [1.1, 2.1])),
                 ("class1", "object2", "parameter1", Map(["C", "D"], [1.2, 2.2])),
                 ("class1", "object1", "parameter2", Map(["C", "D"], [-1.1, -2.1])),
                 ("class1", "object2", "parameter2", Map(["A", "B"], [-1.2, -2.2])),
             ),
-        )
-        db_map.commit_session("Add test data.")
-        db_map.connection.close()
-        with patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.worker_thread", new_callable=PropertyMock
-        ) as mock_thread:
-            mock_thread.return_value = QApplication.instance().thread()
-            self._db_mngr = SpineDBManager(app_settings, None)
-            with patch.object(SpineDBEditor, "restore_ui"):
-                self._editor = SpineDBEditor(self._db_mngr, {url: db_map.codename})
+        }
+        self._db_mngr.import_data({db_map: data})
         object_class_index = self._editor.object_tree_model.index(0, 0)
         self._editor.object_tree_model.fetchMore(object_class_index)
         index = self._editor.object_tree_model.index(0, 0, object_class_index)
@@ -167,7 +152,6 @@ class TestIndexExpansionPivotTableModel(unittest.TestCase):
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
-        self._temp_dir.cleanup()
 
     def test_data(self):
         self.assertEqual(self._model.rowCount(), 11)

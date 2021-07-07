@@ -27,7 +27,7 @@ class EntityRootItem(MultiDBTreeItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fetch_recursive = True
+        self._fetch_recursive = True
         self.fetch_more()
 
     @property

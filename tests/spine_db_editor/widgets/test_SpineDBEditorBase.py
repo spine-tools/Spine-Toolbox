@@ -19,8 +19,8 @@ Contains unit tests for the SpineDBEditorBase class.
 import unittest
 from unittest import mock
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditorBase
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditorBase(unittest.TestCase):
@@ -36,8 +36,7 @@ class TestSpineDBEditorBase(unittest.TestCase):
         ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
-            self.db_mngr = SpineDBManager(mock_settings, None)
-            self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
+            self.db_mngr = TestSpineDBManager(mock_settings, None)
 
             def DiffDBMapping_side_effect(url, codename=None, upgrade=False, create=False):
                 mock_db_map = mock.MagicMock()
