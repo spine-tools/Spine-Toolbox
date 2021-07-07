@@ -601,7 +601,6 @@ class SpineDBEditorBase(QMainWindow):
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
         self.init_models()
-        # FIXME: self.fetch_db_maps(*db_maps)
 
     @Slot(bool)
     def refresh_session(self, checked=False):
@@ -624,9 +623,10 @@ class SpineDBEditorBase(QMainWindow):
         if cookie is self:
             msg = f"All changes in {db_names} committed successfully."
             self.msg.emit(msg)
-        else:  # Commit done by an 'outside force'.
-            self.reload_session(db_maps)
-            self.msg.emit(f"Databases {db_names} reloaded from an external action.")
+            return
+        # Commit done by an 'outside force'.
+        self.reload_session(db_maps)
+        self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)

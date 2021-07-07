@@ -64,15 +64,6 @@ def do_create_new_spine_database(url):
     create_new_spine_database(url)
 
 
-def _grouper(iterable, n):
-    it = iter(iterable)
-    while True:
-        chunk = list(itertools.islice(it, n))
-        if not chunk:
-            return
-        yield chunk
-
-
 class SpineDBManagerBase(QObject):
     """Class to manage DBs within a project.
 
@@ -180,6 +171,7 @@ class SpineDBManagerBase(QObject):
         for item_type, signals in ordered_signals.items():
             for signal in signals:
                 signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        self.session_rolled_back.connect(self._refetch)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
         # Icons
@@ -488,7 +480,14 @@ class SpineDBManager(SpineDBManagerBase):
             if self._cache.pop(db_map, None) is not None:
                 refreshed_db_maps.add(db_map)
         if refreshed_db_maps:
+            self._refetch(refreshed_db_maps)
             self.session_refreshed.emit(refreshed_db_maps)
+
+    def _refetch(self, db_maps):
+        for db_map in db_maps:
+            fetcher = self._fetchers.pop(db_map, None)
+            if fetcher is not None:
+                fetcher.deleteLater()
 
     def commit_session(self, *db_maps, cookie=None):
         """

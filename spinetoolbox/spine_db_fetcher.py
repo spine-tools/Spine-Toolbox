@@ -97,7 +97,10 @@ class SpineDBFetcher(QObject):
         iterator = self._iterators.get(item_type)
         if iterator is None:
             return
-        with self._db_map.original_tables():
+        if self._db_mngr.undo_stack[self._db_map].isClean() and not self._db_map.has_pending_changes():
+            with self._db_map.original_tables():
+                chunk = next(iterator, [])
+        else:
             chunk = next(iterator, [])
         if not chunk:
             self._fetched[item_type] = True

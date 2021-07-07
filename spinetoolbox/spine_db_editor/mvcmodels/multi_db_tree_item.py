@@ -269,9 +269,6 @@ class MultiDBTreeItem(TreeItem):
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
-        if self.can_fetch_more():
-            # FIXME
-            return
         # Find rows to update and db_map ids to add
         rows_to_update = set()
         db_map_ids_to_add = dict()
