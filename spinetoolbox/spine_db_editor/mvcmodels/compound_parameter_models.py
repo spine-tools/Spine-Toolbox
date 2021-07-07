@@ -60,14 +60,16 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_valid = True
         self._auto_filter_menus = {}
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
+        self._super_can_fetch_more = {}
         self._data_for_single_model_received.connect(self._create_and_append_single_model)
 
     def canFetchMore(self, parent=QModelIndex()):
-        """Returns True if any of the submodels that haven't been fetched yet can fetch more."""
+        self._super_can_fetch_more[parent] = super().canFetchMore(parent)
         return True
 
     def fetchMore(self, parent=QModelIndex()):
-        """Fetches the next sub model and increments the fetched counter."""
+        if self._super_can_fetch_more.get(parent, False):
+            super().fetchMore(parent)
         for db_map in self.db_maps:
             self.db_mngr.fetch_more(db_map, self.item_type)
 
