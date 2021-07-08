@@ -774,9 +774,7 @@ def select_gams_executable(parent, line_edit):
     if not start_dir:
         start_dir = home_dir()
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select GAMS Program (e.g. gams.exe on Windows)", start_dir
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select GAMS Program (e.g. gams.exe on Windows)", start_dir)
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return
     # Check that selected file at least starts with string 'gams'
@@ -798,9 +796,7 @@ def select_julia_executable(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select Julia Executable (e.g. julia.exe on Windows)", home_dir()
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select Julia Executable (e.g. julia.exe on Windows)", home_dir())
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return
     # Check that selected file at least starts with string 'julia'
@@ -836,9 +832,7 @@ def select_python_interpreter(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select Python Interpreter (e.g. python.exe on Windows)", home_dir()
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select Python Interpreter (e.g. python.exe on Windows)", home_dir())
     if answer[0] == "":  # Canceled
         return
     # Check that selected file at least starts with string 'python'
@@ -860,9 +854,7 @@ def select_conda_executable(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select Conda Executable (e.g. conda.exe on Windows)", home_dir()
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select Conda Executable (e.g. conda.exe on Windows)", home_dir())
     if answer[0] == "":  # Canceled
         return
     # Check that selected file at least starts with string 'conda'
