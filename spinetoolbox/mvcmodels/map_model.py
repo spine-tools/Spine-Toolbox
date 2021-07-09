@@ -35,6 +35,10 @@ from spinedb_api import (
 from .indexed_value_table_model import EXPANSE_COLOR
 
 
+empty = object()
+"""Sentinel for empty cells."""
+
+
 class MapModel(QAbstractTableModel):
     """
     A model for Map type parameter values.
@@ -68,7 +72,7 @@ class MapModel(QAbstractTableModel):
             parent (QObject): parent object
         """
         super().__init__(parent)
-        self._rows = convert_map_to_table(map_value)
+        self._rows = convert_map_to_table(map_value, empty=empty)
         self._index_names = _gather_index_names(map_value)
         self._BOLD = QFont()
         self._BOLD.setBold(True)
@@ -81,7 +85,7 @@ class MapModel(QAbstractTableModel):
         first = len(self._rows[0])
         last = first
         self.beginInsertColumns(QModelIndex(), first, last)
-        self._rows = list(map(lambda row: row + [None], self._rows))
+        self._rows = list(map(lambda row: row + [empty], self._rows))
         self._index_names += [Map.DEFAULT_INDEX_NAME]
         self.endInsertColumns()
 
@@ -105,7 +109,7 @@ class MapModel(QAbstractTableModel):
             bottom = max(bottom, row)
             left = min(left, column)
             right = max(right, column)
-            self._rows[row][column] = None
+            self._rows[row][column] = empty
         if top <= bottom:
             self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.DisplayRole, Qt.ToolTipRole])
             self.dataChanged.emit(
@@ -137,7 +141,8 @@ class MapModel(QAbstractTableModel):
         if role == Qt.EditRole:
             if self._is_in_expanse(row_index, column_index):
                 return ""
-            return self._rows[row_index][column_index]
+            value = self._rows[row_index][column_index]
+            return value if value is not empty else ""
         if role == Qt.DisplayRole:
             if self._is_in_expanse(row_index, column_index):
                 return ""
@@ -154,6 +159,10 @@ class MapModel(QAbstractTableModel):
                 return "Array"
             if isinstance(data, Number):
                 return float(data)
+            if data is None:
+                return "None"
+            if data is empty:
+                return ""
             return data
         if role == Qt.FontRole:
             if self._is_in_expanse(row_index, column_index):
@@ -195,7 +204,7 @@ class MapModel(QAbstractTableModel):
         if not self._rows:
             return False
         self.beginInsertColumns(parent, column, column + count - 1)
-        self._rows = [row[:column] + count * [None] + row[column:] for row in self._rows]
+        self._rows = [row[:column] + count * [empty] + row[column:] for row in self._rows]
         self._index_names = self._index_names[:column] + count * [Map.DEFAULT_INDEX_NAME] + self._index_names[column:]
         self.endInsertColumns()
         return True
@@ -218,12 +227,12 @@ class MapModel(QAbstractTableModel):
             if row > 0:
                 row_before = self._rows[row - 1]
             else:
-                row_before = len(self._rows[0]) * [None]
+                row_before = len(self._rows[0]) * [empty]
         else:
-            row_before = [None, None]
+            row_before = [empty, empty]
         inserted = list()
         for _ in range(count):
-            inserted.append(deepcopy(row_before))
+            inserted.append([deepcopy(x) if x is not empty else x for x in row_before])
         self._rows = self._rows[:row] + inserted + self._rows[row:]
         self.endInsertRows()
         return True
@@ -313,7 +322,7 @@ class MapModel(QAbstractTableModel):
     def reset(self, map_value):
         """Resets the model to given map_value."""
         self.beginResetModel()
-        self._rows = convert_map_to_table(map_value)
+        self._rows = convert_map_to_table(map_value, empty=empty)
         self._index_names = _gather_index_names(map_value)
         self.endResetModel()
 
@@ -361,7 +370,7 @@ class MapModel(QAbstractTableModel):
             self.insertRow(row_index)
             row = self._rows[row_index]
             for i in range(column_index + 1, len(row)):
-                row[i] = None
+                row[i] = empty
             top_left = self.index(row_index, column_index + 1)
             if top_left.isValid():
                 bottom_right = self.index(row_index, len(row))
@@ -371,12 +380,12 @@ class MapModel(QAbstractTableModel):
         if column_index == len(row):
             self.append_column()
             row = self._rows[row_index]
-        if value != 0 and not value:
+        if value is None or (isinstance(value, str) and value.lower() in ("null", "none")):
             row[column_index] = None
-            return True
-        if not isinstance(value, (str, int, float, Duration, DateTime, IndexedValue)):
-            return False
-        row[column_index] = value if not isinstance(value, Number) else float(value)
+        elif value != 0 and not value:
+            row[column_index] = empty
+        else:
+            row[column_index] = value if not isinstance(value, Number) else float(value)
         self.dataChanged.emit(index, index, [Qt.DisplayRole, Qt.ToolTipRole])
         if column_index > 0:
             top_left = self.index(row_index, 0)
@@ -433,7 +442,7 @@ def _rows_to_dict(rows):
         for i, column in enumerate(row):
             if column is None:
                 raise ParameterValueFormatError(f"Index missing on row {rows.index(row) + 1} column {i + 1}.")
-            if i < len(row) - 2 and row[i + 2] is not None:
+            if i < len(row) - 2 and row[i + 2] is not empty:
                 if not isinstance(column, (str, int, float, DateTime, Duration)):
                     raise ParameterValueFormatError(f"Index on row {rows.index(row) + 1} column {i + 1} is not scalar.")
                 current = current.setdefault(column, dict())
@@ -441,7 +450,7 @@ def _rows_to_dict(rows):
                     raise ParameterValueFormatError(f"Indexing broken on row {rows.index(row) + 1} column {i + 1}.")
             else:
                 value = row[i + 1]
-                if value is None:
+                if value is empty:
                     raise ParameterValueFormatError(f"Value missing on row {rows.index(row) + 1} column {i + 1}.")
                 current[column] = value
                 break
@@ -470,7 +479,7 @@ def _reconstruct_map(tree):
 
 def _data_length(row):
     """
-    Counts the number of non-None elements at the beginning of row.
+    Counts the number of non-empty elements at the beginning of row.
 
     Args:
         row (list): a row of data
@@ -478,7 +487,7 @@ def _data_length(row):
     Returns:
         int: data length
     """
-    return len(list(takewhile(lambda x: x is not None, row)))
+    return len(list(takewhile(lambda x: x is not empty, row)))
 
 
 def _gather_index_names(map_value):

@@ -19,7 +19,6 @@ from enum import auto, Enum, unique
 from itertools import takewhile, chain
 import os
 import json
-
 import networkx as nx
 from PySide2.QtCore import Signal
 from spine_engine.project_item.connection import Connection, Jump
@@ -440,17 +439,22 @@ class SpineToolboxProject(MetaObject):
         self.specification_saved.emit(specification.name, specification.definition_file_path)
         return True
 
-    def add_item(self, item):
+    def add_item(self, item, silent=True):
         """Adds a project to item project.
 
         Args:
             item (ProjectItem): item to add
+            silent (bool): if True, don't log messages
         """
         if item.name in self._project_items:
             raise RuntimeError("Item already in project.")
         self._project_items[item.name] = item
-        self.dag_handler.add_dag_node(item.name)
-        self.item_added.emit(item.name)
+        name = item.name
+        self.dag_handler.add_dag_node(name)
+        self.item_added.emit(name)
+        item.set_up()
+        if not silent:
+            self._logger.msg.emit(f"{item.item_type()} <b>{name}</b> added to project")
 
     def has_items(self):
         """Returns True if project has project items.
@@ -758,10 +762,7 @@ class SpineToolboxProject(MetaObject):
             duplicate_files = item_dict.get("duplicate_files")
             if original_data_dir is not None and original_db_url is not None and duplicate_files is not None:
                 project_item.copy_local_data(original_data_dir, original_db_url, duplicate_files)
-            self.add_item(project_item)
-            project_item.set_up()
-            if not silent:
-                self._logger.msg.emit(f"{project_item.item_type()} <b>{item_name}</b> added to project")
+            self.add_item(project_item, silent)
 
     def remove_item_by_name(self, item_name, delete_data=False):
         """Removes project item by its name.

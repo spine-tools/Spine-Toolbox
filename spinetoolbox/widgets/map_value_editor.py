@@ -27,7 +27,7 @@ from .time_series_variable_resolution_editor import TimeSeriesVariableResolution
 
 
 class MapValueEditor(ParameterValueEditorBase):
-    """Dialog for editing parameter values in Database editor."""
+    """Dialog for editing parameter values in Map value editor."""
 
     def __init__(self, index, parent=None):
         """

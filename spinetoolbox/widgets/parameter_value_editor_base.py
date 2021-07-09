@@ -79,6 +79,7 @@ class ParameterValueEditorBase(QWidget):
         from ..ui.parameter_value_editor import Ui_ParameterValueEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent, f=Qt.Window)
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self._index = index
         self._editors = editor_widgets
         self._editor_indexes = {value_type: i for i, value_type in enumerate(editor_widgets)}
@@ -86,8 +87,12 @@ class ParameterValueEditorBase(QWidget):
         self._ui.setupUi(self)
         self._ui.parameter_type_selector.addItems([_SELECTORS[value_type] for value_type in editor_widgets])
         self._ui.parameter_type_selector.currentIndexChanged.connect(self._change_parameter_type)
-        self._ui.button_box.accepted.connect(self.accept)
-        self._ui.button_box.rejected.connect(self.close)
+        self.addAction(self._ui.accept_action)
+        self.addAction(self._ui.reject_action)
+        self._ui.accept_action.triggered.connect(self.accept)
+        self._ui.reject_action.triggered.connect(self.close)
+        self._ui.button_box.accepted.connect(self._ui.accept_action.trigger)
+        self._ui.button_box.rejected.connect(self._ui.reject_action.trigger)
         for widget in self._editors.values():
             self._ui.editor_stack.addWidget(widget)
 
