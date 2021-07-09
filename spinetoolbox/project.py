@@ -21,8 +21,10 @@ import os
 import json
 import networkx as nx
 from PySide2.QtCore import Signal
+
+from spine_engine.exception import EngineInitFailed
 from spine_engine.project_item.connection import Connection, Jump
-from spine_engine.spine_engine import ExecutionDirection
+from spine_engine.spine_engine import ExecutionDirection, validate_jumps
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .metaobject import MetaObject
@@ -698,33 +700,14 @@ class SpineToolboxProject(MetaObject):
         Returns:
             list of str: list of issues, if any
         """
-        if jump.source == jump.destination:
-            return []
         issues = list()
         dag = self.dag_handler.dag_with_node(jump.source)
         if not dag.has_node(jump.destination):
             issues.append("Loop cannot span over separate DAGs.")
-        elif nx.has_path(dag, jump.source, jump.destination):
-            issues.append("Cannot loop in forward direction.")
-        elif not nx.has_path(nx.reverse_view(dag), jump.source, jump.destination):
-            issues.append("Loop cannot span over different DAG branches.")
-        reserved_items = dict()
-        for i, other_jump in enumerate(self._jumps):
-            if other_jump == jump:
-                continue
-            jump_items = {other_jump.source}
-            jump_items |= {
-                item for path in nx.all_simple_paths(dag, other_jump.destination, other_jump.source) for item in path
-            }
-            reserved_items[i] = jump_items
-        jump_span = [set(), set()]
-        for id_, items in reserved_items.items():
-            if jump.source in items:
-                jump_span[0].add(id_)
-            if jump.destination in items:
-                jump_span[1].add(id_)
-        if jump_span[0] != jump_span[1]:
-            issues.append("Loops cannot overlap.")
+        try:
+            validate_jumps(self._jumps, dag)
+        except EngineInitFailed as issue:
+            issues.append(str(issue))
         return issues
 
     def restore_project_items(self, items_dict, item_factories, silent):
