@@ -16,7 +16,6 @@ Miscelaneous mixins for parameter models
 :date:   4.10.2019
 """
 
-from PySide2.QtCore import Qt
 from spinedb_api.parameter_value import split_value_and_type
 
 
@@ -541,52 +540,6 @@ class ImposeEntityClassIdMixin(ConvertToDBMixin):
         if parameter_definition_id:
             item["parameter_definition_id"] = parameter_definition_id
         return []
-
-
-class ValidateValueInListMixin(ConvertToDBMixin):
-    """Validates that the chosen value is in the value list if one set."""
-
-    def _convert_to_db(self, item, db_map):
-        """Returns a db item (id-based) from the given model item (name-based).
-
-        Args:
-            item (dict): the model item
-            db_map (DiffDatabaseMapping): the database where the resulting item belongs
-
-        Returns:
-            dict: the db item
-            list: error log
-        """
-        item, err = super()._convert_to_db(item, db_map)
-        value = item.get("value")
-        if value is None:
-            return item, err
-        str_value = str(value, "UTF8")
-        param_def_id = self._get_parameter_definition_id(db_map, item)
-        param_def = self.db_mngr.get_item(db_map, "parameter_definition", param_def_id)
-        value_list = self.db_mngr.get_parameter_value_list(db_map, param_def.get("value_list_id"), role=Qt.EditRole)
-        if value_list and str_value not in value_list:
-            item["has_valid_value_from_list"] = False
-            msg = (
-                f"Invalid value '{str_value}' for parameter '{param_def['parameter_name']}', "
-                f"valid values are {', '.join(value_list)}"
-            )
-            return item, err + [msg]
-        return item, err
-
-    def _get_parameter_definition_id(self, db_map, item):
-        raise NotImplementedError()
-
-
-class ValidateValueInListForInsertMixin(ValidateValueInListMixin):
-    def _get_parameter_definition_id(self, db_map, item):
-        return item.get("parameter_definition_id")
-
-
-class ValidateValueInListForUpdateMixin(ValidateValueInListMixin):
-    def _get_parameter_definition_id(self, db_map, item):
-        param_val = self.db_mngr.get_item(db_map, "parameter_value", item["id"])
-        return param_val.get("parameter_id")
 
 
 class MakeRelationshipOnTheFlyMixin:

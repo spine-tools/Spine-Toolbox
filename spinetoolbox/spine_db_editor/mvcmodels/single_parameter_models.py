@@ -24,7 +24,6 @@ from ..mvcmodels.parameter_mixins import (
     FillInValueListIdMixin,
     MakeParameterTagMixin,
     MakeRelationshipOnTheFlyMixin,
-    ValidateValueInListForUpdateMixin,
     FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
     FillInEntityIdsMixin,
@@ -333,11 +332,7 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
 
 
 class SingleParameterValueMixin(
-    ValidateValueInListForUpdateMixin,
-    FillInAlternativeIdMixin,
-    ImposeEntityClassIdMixin,
-    FillInParameterDefinitionIdsMixin,
-    FillInEntityIdsMixin,
+    FillInAlternativeIdMixin, ImposeEntityClassIdMixin, FillInParameterDefinitionIdsMixin, FillInEntityIdsMixin
 ):
     """A parameter_value model for a single entity_class."""
 
@@ -418,44 +413,15 @@ class SingleParameterValueMixin(
         db_map_data[self.db_map] = items
         self.build_lookup_dictionary(db_map_data)
         for item in items:
-            param_val, convert_errors = self._convert_to_db(item, self.db_map)
-            param_val, check_errors = self._check_item(param_val)
-            if param_val:
+            param_val, errors = self._convert_to_db(item, self.db_map)
+            if tuple(param_val.keys()) != ("id",):
                 param_vals.append(param_val)
-            errors = convert_errors + check_errors
             if errors:
                 error_log += errors
         if param_vals:
             self.db_mngr.update_parameter_values({self.db_map: param_vals})
         if error_log:
             self.db_mngr.error_msg.emit({self.db_map: error_log})
-
-    def _check_item(self, item):
-        """Checks if a db item is good to be updated."""
-        item = item.copy()
-        id_ = item.get("id")
-        has_valid_value_from_list = item.pop("has_valid_value_from_list", True)
-        if not all([id_, has_valid_value_from_list, len(item) > 1]):
-            return None, []
-        existing_items = {
-            (x["entity_class_id"], x["entity_id"], x["parameter_id"], x["alternative_id"]): (
-                x.get("object_name") or x.get("object_name_list"),
-                x["parameter_name"],
-                x["alternative_name"],
-            )
-            for x in self.db_mngr.get_items(self.db_map, "parameter_value")
-            if x["id"] != id_
-        }
-        existing = self.db_mngr.get_item(self.db_map, "parameter_value", id_).copy()
-        entity_class_id = item.get("entity_class_id") or existing["entity_class_id"]
-        entity_id = item.get("entity_id") or existing["entity_id"]
-        parameter_id = item.get("parameter_definition_id") or existing["parameter_id"]
-        alternative_id = item.get("alternative_id") or existing["alternative_id"]
-        dupe = existing_items.get((entity_class_id, entity_id, parameter_id, alternative_id))
-        if dupe is not None:
-            entity_name, parameter_name, alternative_name = dupe
-            return None, [f"The '{alternative_name}' value of '{parameter_name}' for '{entity_name}' is already set"]
-        return item, []
 
 
 class SingleObjectParameterDefinitionModel(

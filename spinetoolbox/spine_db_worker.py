@@ -43,6 +43,7 @@ class SpineDBWorker(QObject):
     _get_metadata_per_parameter_value_called = Signal(object, list, dict)
     _close_db_map_called = Signal(object)
     _add_or_update_items_called = Signal(object, str, str, str)
+    _readd_items_called = Signal(object, str, str, str)
     _remove_items_called = Signal(object)
     _commit_session_called = Signal(object, str, object)
     _rollback_session_called = Signal(object)
@@ -71,6 +72,7 @@ class SpineDBWorker(QObject):
         self._get_metadata_per_parameter_value_called.connect(self._get_metadata_per_parameter_value, connection)
         self._close_db_map_called.connect(self._close_db_map)
         self._add_or_update_items_called.connect(self._add_or_update_items)
+        self._readd_items_called.connect(self._readd_items)
         self._remove_items_called.connect(self._remove_items)
         self._commit_session_called.connect(self._commit_session)
         self._rollback_session_called.connect(self._rollback_session)
@@ -151,36 +153,54 @@ class SpineDBWorker(QObject):
             param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
             d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
 
-    def add_or_update_items(self, db_map_data, method_name, getter_name, signal_name):
-        self._add_or_update_items_called.emit(db_map_data, method_name, getter_name, signal_name)
+    def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False):
+        if readd:
+            self._readd_items_called.emit(db_map_data, method_name, item_type, signal_name)
+        else:
+            self._add_or_update_items_called.emit(db_map_data, method_name, item_type, signal_name)
 
     @Slot(object, str, str, str)
-    def _add_or_update_items(self, db_map_data, method_name, getter_name, signal_name):
+    def _add_or_update_items(self, db_map_data, method_name, item_type, signal_name):
         """Adds or updates items in db.
 
         Args:
             db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
             method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
-            getter_name (str): attribute of SpineDBManager to call for getting affected items
+            item_type (str): item type
             signal_name (str) : signal attribute of SpineDBManager to emit if successful
         """
-        getter = getattr(self._db_mngr, getter_name)
         signal = getattr(self._db_mngr, signal_name)
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
-            result = getattr(db_map, method_name)(*items)
-            if isinstance(result, tuple):
-                ids, errors = result
-            else:
-                ids, errors = result, ()
+            cache = self._db_mngr.get_db_map_cache(db_map)
+            items, errors = getattr(db_map, method_name)(*items, return_items=True, cache=cache)
             if errors:
                 db_map_error_log[db_map] = errors
-            if not ids:
+            if not items:
                 continue
-            for chunk in getter(db_map, filter_by=dict(id=ids)):
-                signal.emit({db_map: chunk})
+            items = [self._db_mngr.db_to_cache(db_map, item_type, item) for item in items]
+            signal.emit({db_map: items})
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
+
+    def readd_items(self, db_map_data, method_name, item_type, signal_name):
+        self._readd_items_called.emit(db_map_data, method_name, item_type, signal_name)
+
+    @Slot(object, str, str, str)
+    def _readd_items(self, db_map_data, method_name, item_type, signal_name):
+        """Adds or updates items in db.
+
+        Args:
+            db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
+            method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
+            item_type (str): item type
+            signal_name (str) : signal attribute of SpineDBManager to emit if successful
+        """
+        signal = getattr(self._db_mngr, signal_name)
+        for db_map, items in db_map_data.items():
+            getattr(db_map, method_name)(*items, readd=True)
+            items = [self._db_mngr.db_to_cache(db_map, item_type, item) for item in items]
+            signal.emit({db_map: items})
 
     def remove_items(self, db_map_typed_ids):
         self._remove_items_called.emit(db_map_typed_ids)

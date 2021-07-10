@@ -906,39 +906,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             self._update_parameter_values(to_update)
         return True
 
-    def _checked_parameter_values(self, db_map_data):
-        db_map_value_lists = {}
-        db_map_par_def_ids = {
-            db_map: {item["parameter_definition_id"] for item in items} for db_map, items in db_map_data.items()
-        }
-        for db_map, par_def_ids in db_map_par_def_ids.items():
-            for par_def_id in par_def_ids:
-                param_val_list_id = self.db_mngr.get_item(db_map, "parameter_definition", par_def_id).get(
-                    "parameter_value_list_id"
-                )
-                if not param_val_list_id:
-                    continue
-                param_val_list = self.db_mngr.get_item(db_map, "parameter_value_list", param_val_list_id)
-                value_list = param_val_list.get("value_list")
-                if not value_list:
-                    continue
-                db_map_value_lists.setdefault(db_map, {})[par_def_id] = value_list.split(";")
-        db_map_checked_items = {}
-        for db_map, items in db_map_data.items():
-            for item in items:
-                par_def_id = item["parameter_definition_id"]
-                value_list = db_map_value_lists.get(db_map, {}).get(par_def_id)
-                if value_list and item["value"] not in value_list:
-                    continue
-                db_map_checked_items.setdefault(db_map, []).append(item)
-        return db_map_checked_items
-
     def _add_parameter_values(self, db_map_data):
-        db_map_data = self._checked_parameter_values(db_map_data)
         self.db_mngr.add_parameter_values(db_map_data)
 
     def _update_parameter_values(self, db_map_data):
-        db_map_data = self._checked_parameter_values(db_map_data)
         self.db_mngr.update_parameter_values(db_map_data)
 
     def get_set_data_delayed(self, index):

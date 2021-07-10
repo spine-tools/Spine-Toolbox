@@ -64,11 +64,20 @@ def do_create_new_spine_database(url):
     create_new_spine_database(url)
 
 
-class SpineDBManagerBase(QObject):
-    """Class to manage DBs within a project.
+class _CacheItem(dict):
+    """A dictionary that behaves kinda like a row from a query result.
 
-    TODO: Expand description, how it works, the cache, the signals, etc.
+    It is used to store items in the cache, so we can access them as if they were rows from a query result.
+    This is mainly because we want to use the cache as a replacement for db queries in some spinedb_api methods.
     """
+
+    def __getattr__(self, name):
+        """Overridden method to return the dictionary key named after the attribute, or None if it doesn't exist."""
+        return self.get(name)
+
+
+class SpineDBManagerBase(QObject):
+    """Class to manage DBs within a project."""
 
     error_msg = Signal(object)
     session_refreshed = Signal(set)
@@ -188,7 +197,7 @@ class SpineDBManagerBase(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = _CacheItem(**item)
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -625,6 +634,12 @@ class SpineDBManager(SpineDBManagerBase):
             list
         """
         return [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
+
+    def get_db_map_cache(self, db_map):
+        items_per_type = self._cache.get(db_map)
+        if items_per_type is None:
+            return None
+        return {item_type: items.values() for item_type, items in self._cache.get(db_map).items()}
 
     def get_items(self, db_map, item_type):
         """Returns all the items of the given type in the given db map,
@@ -1181,8 +1196,8 @@ class SpineDBManager(SpineDBManagerBase):
         """
         self._worker.import_data(db_map_data, command_text)
 
-    def add_or_update_items(self, db_map_data, method_name, get_method_name, signal_name):
-        self._worker.add_or_update_items(db_map_data, method_name, get_method_name, signal_name)
+    def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False):
+        self._worker.add_or_update_items(db_map_data, method_name, item_type, signal_name, readd=readd)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
@@ -1801,3 +1816,102 @@ class SpineDBManager(SpineDBManagerBase):
             multi_db_editor.activateWindow()
         else:
             multi_db_editor.raise_()
+
+    @staticmethod
+    def cache_to_db(item_type, item):
+        """
+        Returns the db equivalent of a cache item.
+
+        Args:
+            item_type (str): The item type
+            item (dict): The item in the cache
+
+        Returns:
+            dict
+        """
+        item = item.copy()
+        if item_type == "relationship_class":
+            item["object_class_id_list"] = [int(id_) for id_ in item["object_class_id_list"].split(",")]
+        elif item_type == "relationship":
+            item["object_id_list"] = [int(id_) for id_ in item["object_id_list"].split(",")]
+        elif item_type == "parameter_definition":
+            item.pop("parsed_value", None)
+            item["name"] = item.pop("parameter_name")
+            item["parameter_value_list_id"] = item.pop("value_list_id")
+        elif item_type == "parameter_value":
+            item.pop("parsed_value", None)
+            item["parameter_definition_id"] = item.pop("parameter_id")
+        elif item_type == "parameter_value_list":
+            item["value_list"] = [bytes(val, "UTF8") for val in item["value_list"].split(";")]
+        elif item_type == "entity_group":
+            item["entity_class_id"] = item["class_id"]
+            item["entity_id"] = item["group_id"]
+        return item
+
+    def db_to_cache(self, db_map, item_type, item):
+        """
+        Returns the cache equivalent of a db item.
+
+        Args:
+            db_map (DiffDatabaseMapping): The db
+            item_type (str): The item type
+            item (dict): The item in the db
+
+        Returns:
+            dict
+        """
+        item = item.copy()
+        if item_type == "object":
+            item["class_name"] = self.get_item(db_map, "object_class", item["class_id"])["name"]
+        elif item_type == "relationship_class":
+            item["object_class_name_list"] = ",".join(
+                self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
+            )
+            item["object_class_id_list"] = ",".join(str(id_) for id_ in item["object_class_id_list"])
+        elif item_type == "relationship":
+            item["class_name"] = self.get_item(db_map, "relationship_class", item["class_id"])["name"]
+            item["object_name_list"] = ",".join(
+                self.get_item(db_map, "object", id_)["name"] for id_ in item["object_id_list"]
+            )
+            item["object_id_list"] = ",".join(str(id_) for id_ in item["object_id_list"])
+            item["object_class_name_list"] = ",".join(
+                self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
+            )
+            item["object_class_id_list"] = ",".join(str(id_) for id_ in item["object_class_id_list"])
+        elif item_type == "parameter_definition":
+            item["parameter_name"] = item.pop("name", item.get("parameter_name"))
+            object_class = self.get_item(db_map, "object_class", item["entity_class_id"])
+            relationship_class = self.get_item(db_map, "relationship_class", item["entity_class_id"])
+            if object_class:
+                item["object_class_id"] = object_class["id"]
+                item["object_class_name"] = object_class["name"]
+            if relationship_class:
+                item["relationship_class_id"] = relationship_class["id"]
+                item["relationship_class_name"] = relationship_class["name"]
+                item["object_class_id_list"] = relationship_class["object_class_id_list"]
+                item["object_class_name_list"] = relationship_class["object_class_name_list"]
+            item["value_list_id"] = value_list_id = item.pop("parameter_value_list_id", item.get("value_list_id"))
+            item["value_list_name"] = self.get_item(db_map, "parameter_value_list", value_list_id).get("name")
+        elif item_type == "parameter_value":
+            item["parameter_id"] = parameter_id = item.pop("parameter_definition_id", item.get("parameter_id"))
+            param_def = self.get_item(db_map, "parameter_definition", parameter_id)
+            item["parameter_name"] = param_def["parameter_name"]
+            item["entity_class_id"] = param_def["entity_class_id"]
+            object_class_id = param_def.get("object_class_id")
+            relationship_class_id = param_def.get("relationship_class_id")
+            if object_class_id:
+                item["object_class_id"] = object_class_id
+                item["object_class_name"] = param_def["object_class_name"]
+                item["object_id"] = object_id = item["entity_id"]
+                item["object_name"] = self.get_item(db_map, "object", object_id)["name"]
+            if relationship_class_id:
+                item["relationship_class_id"] = relationship_class_id
+                item["relationship_class_name"] = param_def["relationship_class_name"]
+                item["object_class_id_list"] = param_def["object_class_id_list"]
+                item["object_class_name_list"] = param_def["object_class_name_list"]
+                item["relationship_id"] = relationship_id = item["entity_id"]
+                relationship = self.get_item(db_map, "relationship", relationship_id)
+                item["object_id_list"] = relationship["object_id_list"]
+                item["object_name_list"] = relationship["object_name_list"]
+            item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
+        return item

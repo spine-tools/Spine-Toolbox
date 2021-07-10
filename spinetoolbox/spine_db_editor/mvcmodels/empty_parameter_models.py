@@ -26,7 +26,6 @@ from .parameter_mixins import (
     FillInEntityIdsMixin,
     FillInEntityClassIdMixin,
     FillInValueListIdMixin,
-    ValidateValueInListForInsertMixin,
 )
 from ...mvcmodels.shared import PARSED_ROLE
 from ...helpers import rows_to_row_count_tuples
@@ -186,11 +185,11 @@ class EmptyParameterDefinitionModel(
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                def_item, err = self._convert_to_db(item, db_map)
+                def_item, errors = self._convert_to_db(item, db_map)
                 if self._check_item(def_item):
                     db_map_param_def.setdefault(db_map, []).append(def_item)
-                if err:
-                    db_map_error_log.setdefault(db_map, []).extend(err)
+                if errors:
+                    db_map_error_log.setdefault(db_map, []).extend(errors)
         if any(db_map_param_def.values()):
             self.db_mngr.add_parameter_definitions(db_map_param_def)
         if db_map_error_log:
@@ -225,7 +224,6 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
 
 
 class EmptyParameterValueModel(
-    ValidateValueInListForInsertMixin,
     InferEntityClassIdMixin,
     FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
@@ -267,11 +265,9 @@ class EmptyParameterValueModel(
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
             for item in items:
-                param_val, convert_errors = self._convert_to_db(item, db_map)
-                param_val, check_errors = self._check_item(db_map, param_val)
-                if param_val:
+                param_val, errors = self._convert_to_db(item, db_map)
+                if self._check_item(db_map, param_val):
                     db_map_param_val.setdefault(db_map, []).append(param_val)
-                errors = convert_errors + check_errors
                 if errors:
                     db_map_error_log.setdefault(db_map, []).extend(errors)
         if any(db_map_param_val.values()):
@@ -281,27 +277,12 @@ class EmptyParameterValueModel(
 
     def _check_item(self, db_map, item):
         """Checks if a db item is ready to be inserted."""
-        item = item.copy()
-        entity_class_id = item.get(self.entity_class_id_key)
-        entity_id = item.get(self.entity_id_key)
-        parameter_id = item.get("parameter_definition_id")
-        alternative_id = item.get("alternative_id")
-        has_valid_value_from_list = item.pop("has_valid_value_from_list", True)
-        if not all([entity_class_id, entity_id, parameter_id, alternative_id, has_valid_value_from_list]):
-            return None, []
-        existing_items = {
-            (x["entity_class_id"], x["entity_id"], x["parameter_id"], x["alternative_id"]): (
-                x.get("object_name") or x.get("object_name_list"),
-                x["parameter_name"],
-                x["alternative_name"],
-            )
-            for x in self.db_mngr.get_items(db_map, "parameter_value")
-        }
-        dupe = existing_items.get((entity_class_id, entity_id, parameter_id, alternative_id))
-        if dupe is not None:
-            entity_name, parameter_name, alternative_name = dupe
-            return None, [f"The '{alternative_name}' value of '{parameter_name}' for '{entity_name}' is already set"]
-        return item, []
+        return (
+            self.entity_class_id_key in item
+            and self.entity_id_key in item
+            and "parameter_definition_id" in item
+            and "alternative_id" in item
+        )
 
 
 class EmptyObjectParameterValueModel(EmptyParameterValueModel):
