@@ -274,12 +274,6 @@ class AddItemsCommand(SpineDBCommand):
         return {_format_item(self.item_type, item): [] for item in self.redo_db_map_data[self.db_map]}
 
 
-class CheckAddParameterValuesCommand(AddItemsCommand):
-    def __init__(self, db_mngr, db_map, data, parent=None):
-        super().__init__(db_mngr, db_map, data, "parameter_value", parent=parent)
-        self.method_name = "add_parameter_values"
-
-
 class UpdateItemsCommand(SpineDBCommand):
     def __init__(self, db_mngr, db_map, data, item_type, parent=None):
         """
@@ -323,12 +317,6 @@ class UpdateItemsCommand(SpineDBCommand):
 
     def data(self):
         return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map]}
-
-
-class CheckUpdateParameterValuesCommand(UpdateItemsCommand):
-    def __init__(self, db_mngr, db_map, data, parent=None):
-        super().__init__(db_mngr, db_map, data, "parameter_value", parent=parent)
-        self.method_name = "update_parameter_values"
 
 
 class RemoveItemsCommand(SpineDBCommand):
