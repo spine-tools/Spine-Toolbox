@@ -32,7 +32,7 @@ from spinedb_api import (
     create_new_spine_database,
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
-from .spine_db_commands import AgedUndoCommand, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
+from .spine_db_commands import AgedUndoCommand, AddItemsCommand, RemoveItemsCommand
 
 
 class SpineDBWorker(QObject):
@@ -47,8 +47,6 @@ class SpineDBWorker(QObject):
     _remove_items_called = Signal(object)
     _commit_session_called = Signal(object, str, object)
     _rollback_session_called = Signal(object)
-    _import_data_called = Signal(object, str)
-    _set_scenario_alternatives_called = Signal(object)
     _set_parameter_definition_tags_called = Signal(bool)
     _export_data_called = Signal(object, object, str, str)
     _duplicate_object_called = Signal(list, dict, str, str)
@@ -76,8 +74,6 @@ class SpineDBWorker(QObject):
         self._remove_items_called.connect(self._remove_items)
         self._commit_session_called.connect(self._commit_session)
         self._rollback_session_called.connect(self._rollback_session)
-        self._import_data_called.connect(self._import_data)
-        self._set_scenario_alternatives_called.connect(self._set_scenario_alternatives)
         self._set_parameter_definition_tags_called.connect(self._set_parameter_definition_tags)
         self._export_data_called.connect(self._export_data)
         self._duplicate_object_called.connect(self._duplicate_object)
@@ -243,43 +239,6 @@ class SpineDBWorker(QObject):
         if rolled_db_maps:
             self._db_mngr.session_rolled_back.emit(rolled_db_maps)
 
-    def import_data(self, db_map_data, command_text="Import data"):
-        self._import_data_called.emit(db_map_data, command_text)
-
-    @Slot(object, str)
-    def _import_data(self, db_map_data, command_text="Import data"):
-        db_map_error_log = dict()
-        for db_map, data in db_map_data.items():
-            try:
-                data_for_import = get_data_for_import(db_map, **data)
-            except (TypeError, ValueError) as err:
-                msg = f"Failed to import data: {err}. Please check that your data source has the right format."
-                db_map_error_log.setdefault(db_map, []).append(msg)
-                continue
-            macro = AgedUndoCommand()
-            macro.setText(command_text)
-            child_cmds = []
-            # NOTE: we push the import macro before adding the children,
-            # because we *need* to call redo() on the children one by one so the data gets in gradually
-            self._db_mngr.undo_stack[db_map].push(macro)
-            for item_type, (to_add, to_update, import_error_log) in data_for_import:
-                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
-                if to_add:
-                    add_cmd = AddItemsCommand(self._db_mngr, db_map, to_add, item_type, parent=macro, check=False)
-                    add_cmd.redo()
-                    child_cmds.append(add_cmd)
-                if to_update:
-                    upd_cmd = UpdateItemsCommand(self._db_mngr, db_map, to_update, item_type, parent=macro, check=False)
-                    upd_cmd.redo()
-                    child_cmds.append(upd_cmd)
-            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
-                # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
-                macro.setObsolete(True)
-                self._db_mngr.undo_stack[db_map].undo()
-        if any(db_map_error_log.values()):
-            self._db_mngr.error_msg.emit(db_map_error_log)
-        self._db_mngr.data_imported.emit()
-
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
         self._export_data_called.emit(caller, db_map_item_ids, file_path, file_filter)
 
@@ -390,32 +349,6 @@ class SpineDBWorker(QObject):
             ],
         }
         self._db_mngr.import_data({db_map: data for db_map in db_maps}, command_text="Duplicate object")
-
-    def set_scenario_alternatives(self, db_map_data):
-        self._set_scenario_alternatives_called.emit(db_map_data)
-
-    @Slot(object)
-    def _set_scenario_alternatives(self, db_map_data):
-        for db_map, data in db_map_data.items():
-            macro = AgedUndoCommand()
-            macro.setText(f"set scenario alternatives in {db_map.codename}")
-            self._db_mngr.undo_stack[db_map].push(macro)
-            child_cmds = []
-            cache = self._db_mngr.get_db_map_cache(db_map)
-            items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
-            if ids_to_remove:
-                rm_cmd = RemoveItemsCommand(
-                    self._db_mngr, db_map, {"scenario_alternative": ids_to_remove}, parent=macro
-                )
-                rm_cmd.redo()
-                child_cmds.append(rm_cmd)
-            if items_to_add:
-                add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "scenario_alternative", parent=macro)
-                add_cmd.redo()
-                child_cmds.append(add_cmd)
-            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
-                macro.setObsolete(True)
-                self._db_mngr.undo_stack[db_map].undo()
 
     def set_parameter_definition_tags(self, db_map_data):
         self._set_parameter_definition_tags_called.emit(db_map_data)

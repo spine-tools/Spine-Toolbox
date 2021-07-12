@@ -24,8 +24,9 @@ import logging
 import datetime
 import shutil
 import re
-import matplotlib
 import pathlib
+from contextlib import contextmanager
+import matplotlib
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
@@ -774,9 +775,7 @@ def select_gams_executable(parent, line_edit):
     if not start_dir:
         start_dir = home_dir()
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select GAMS Program (e.g. gams.exe on Windows)", start_dir
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select GAMS Program (e.g. gams.exe on Windows)", start_dir)
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return
     # Check that selected file at least starts with string 'gams'
@@ -798,9 +797,7 @@ def select_julia_executable(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select Julia Executable (e.g. julia.exe on Windows)", home_dir()
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select Julia Executable (e.g. julia.exe on Windows)", home_dir())
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return
     # Check that selected file at least starts with string 'julia'
@@ -836,9 +833,7 @@ def select_python_interpreter(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select Python Interpreter (e.g. python.exe on Windows)", home_dir()
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select Python Interpreter (e.g. python.exe on Windows)", home_dir())
     if answer[0] == "":  # Canceled
         return
     # Check that selected file at least starts with string 'python'
@@ -860,9 +855,7 @@ def select_conda_executable(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select Conda Executable (e.g. conda.exe on Windows)", home_dir()
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select Conda Executable (e.g. conda.exe on Windows)", home_dir())
     if answer[0] == "":  # Canceled
         return
     # Check that selected file at least starts with string 'conda'
@@ -1179,13 +1172,13 @@ def load_plugin_specifications(plugin_dict, spec_factories, app_settings, logger
     return {name: plugin_specs}
 
 
-class SignalWaiter:
+class SignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
     def __init__(self):
+        super().__init__()
         self._triggered = False
 
-    @Slot()
     def trigger(self):
         """Signal receiving slot."""
         self._triggered = True
@@ -1194,6 +1187,16 @@ class SignalWaiter:
         """Wait for signal to be received."""
         while not self._triggered:
             QApplication.processEvents()
+
+
+@contextmanager
+def signal_waiter(signal):
+    waiter = SignalWaiter()
+    signal.connect(waiter.trigger)
+    try:
+        yield waiter
+    finally:
+        signal.disconnect(waiter.trigger)
 
 
 class CustomSyntaxHighlighter(QSyntaxHighlighter):

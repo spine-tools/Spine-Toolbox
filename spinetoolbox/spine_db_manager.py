@@ -37,6 +37,7 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     TimePattern,
     Map,
+    get_data_for_import,
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from .spine_db_icon_manager import SpineDBIconManager
@@ -44,11 +45,11 @@ from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
-from .spine_db_commands import AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
+from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text
+from .helpers import get_upgrade_db_promt_text, signal_waiter
 
 
 @busy_effect
@@ -57,22 +58,7 @@ def do_create_new_spine_database(url):
     create_new_spine_database(url)
 
 
-class _CacheItem(dict):
-    """A dictionary that behaves kinda like a row from a query result.
-
-    It is used to store items in the cache, so we can access them as if they were rows from a query result.
-    This is mainly because we want to use the cache as a replacement for db queries in some spinedb_api methods.
-    """
-
-    def __getattr__(self, name):
-        """Overridden method to return the dictionary key named after the attribute, or None if it doesn't exist."""
-        return self.get(name)
-
-    def _asdict(self):
-        return dict(**self)
-
-
-class SpineDBManagerBase(QObject):
+class SpineDBManager(QObject):
     """Class to manage DBs within a project."""
 
     error_msg = Signal(object)
@@ -140,16 +126,27 @@ class SpineDBManagerBase(QObject):
 
     GROUP_SEP = " \u01C0 "
 
-    def __init__(self, parent, cache, icon_mngr):
+    def __init__(self, settings, parent):
         """Initializes the instance.
 
         Args:
+            settings (QSettings): Toolbox settings
             parent (QObject, optional): parent object
         """
         super().__init__(parent)
-        self._cache = cache
-        self._icon_mngr = icon_mngr
+        self.qsettings = settings
+        self._db_maps = {}
+        self._worker_thread = QThread()
+        # self._worker_thread = qApp.thread()
+        self._worker = SpineDBWorker(self)
+        self._fetchers = {}
+        self.undo_stack = {}
+        self.undo_action = {}
+        self.redo_action = {}
+        self._cache = {}
+        self._icon_mngr = {}
         self.signaller = SpineDBSignaller(self)
+        self.connect_signals()
 
     def connect_signals(self):
         """Connects signals."""
@@ -205,6 +202,8 @@ class SpineDBManagerBase(QObject):
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
+        self._worker.connect_signals()
+        qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -216,7 +215,7 @@ class SpineDBManagerBase(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = _CacheItem(**item)
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -281,26 +280,6 @@ class SpineDBManagerBase(QObject):
         """
         for db_map, object_classes in db_map_data.items():
             self.get_icon_mngr(db_map).update_icon_caches(object_classes)
-
-
-class SpineDBManager(SpineDBManagerBase):
-    def __init__(self, settings, parent):
-        """Initializes the instance.
-
-        Args:
-            settings (QSettings): Toolbox settings
-            parent (QObject, optional): parent object
-        """
-        super().__init__(parent, cache={}, icon_mngr={})
-        self.qsettings = settings
-        self._db_maps = {}
-        self._worker_thread = QThread()
-        self._worker = SpineDBWorker(self)
-        self._fetchers = {}
-        self.undo_stack = {}
-        self.undo_action = {}
-        self.redo_action = {}
-        self.connect_signals()
 
     @property
     def worker_thread(self):
@@ -609,11 +588,6 @@ class SpineDBManager(SpineDBManagerBase):
         answer = message_box.exec_()
         return answer == QMessageBox.Ok
 
-    def connect_signals(self):
-        super().connect_signals()
-        self._worker.connect_signals()
-        qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
-
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an icon renderer for a given entity class.
 
@@ -697,10 +671,7 @@ class SpineDBManager(SpineDBManagerBase):
         return [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
 
     def get_db_map_cache(self, db_map):
-        items_per_type = self._cache.get(db_map)
-        if items_per_type is None:
-            return None
-        return {item_type: items.values() for item_type, items in self._cache.get(db_map).items()}
+        return self._cache.get(db_map)
 
     def get_items(self, db_map, item_type):
         """Returns all the items of the given type in the given db map,
@@ -1255,7 +1226,44 @@ class SpineDBManager(SpineDBManagerBase):
                 to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
-        self._worker.import_data(db_map_data, command_text)
+        db_map_error_log = dict()
+        for db_map, data in db_map_data.items():
+            try:
+                cache = self.get_db_map_cache(db_map)
+                data_for_import = get_data_for_import(db_map, cache=cache, **data)
+            except (TypeError, ValueError) as err:
+                msg = f"Failed to import data: {err}. Please check that your data source has the right format."
+                db_map_error_log.setdefault(db_map, []).append(msg)
+                continue
+            macro = AgedUndoCommand()
+            macro.setText(command_text)
+            child_cmds = []
+            # NOTE: we push the import macro before adding the children,
+            # because we *need* to call redo() on the children one by one so the data gets in gradually
+            self.undo_stack[db_map].push(macro)
+            for item_type, (to_add, to_update, import_error_log) in data_for_import:
+                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
+                if to_add:
+                    add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=macro, check=False)
+                    with signal_waiter(add_cmd.completed_signal) as waiter:
+                        add_cmd.redo()
+                        waiter.wait()
+                    child_cmds.append(add_cmd)
+                if to_update:
+                    upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=macro, check=False)
+                    with signal_waiter(upd_cmd.completed_signal) as waiter:
+                        upd_cmd.redo()
+                        waiter.wait()
+                    child_cmds.append(upd_cmd)
+            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+                # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
+                macro.setObsolete(True)
+                self.undo_stack[db_map].undo()
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
+        self.data_imported.emit()
+
+        # self._worker.import_data(db_map_data, command_text)
 
     def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
         self._worker.add_or_update_items(db_map_data, method_name, item_type, signal_name, readd=readd, check=check)
@@ -1560,7 +1568,24 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
-        self._worker.set_scenario_alternatives(db_map_data)
+        for db_map, data in db_map_data.items():
+            macro = AgedUndoCommand()
+            macro.setText(f"set scenario alternatives in {db_map.codename}")
+            self.undo_stack[db_map].push(macro)
+            child_cmds = []
+            cache = self.get_db_map_cache(db_map)
+            items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
+            if ids_to_remove:
+                rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove}, parent=macro)
+                rm_cmd.redo()
+                child_cmds.append(rm_cmd)
+            if items_to_add:
+                add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative", parent=macro)
+                add_cmd.redo()
+                child_cmds.append(add_cmd)
+            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+                macro.setObsolete(True)
+                self.undo_stack[db_map].undo()
 
     def set_parameter_definition_tags(self, db_map_data):
         """Sets parameter_definition tags in db.
@@ -2044,7 +2069,7 @@ class SpineDBManager(SpineDBManagerBase):
         Returns the cache equivalent of a db item.
 
         Args:
-            db_map (DiffDatabaseMapping): The db
+            db_map (DiffDatabaseMapping): the db map
             item_type (str): The item type
             item (dict): The item in the db
 
@@ -2129,3 +2154,18 @@ class SpineDBManager(SpineDBManagerBase):
             if "required" not in item:
                 item["required"] = False
         return item
+
+
+class CacheItem(dict):
+    """A dictionary that behaves kinda like a row from a query result.
+
+    It is used to store items in a cache, so we can access them as if they were rows from a query result.
+    This is mainly because we want to use the cache as a replacement for db queries in some methods.
+    """
+
+    def __getattr__(self, name):
+        """Overridden method to return the dictionary key named after the attribute, or None if it doesn't exist."""
+        return self.get(name)
+
+    def _asdict(self):
+        return dict(**self)
