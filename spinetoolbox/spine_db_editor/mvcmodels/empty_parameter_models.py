@@ -86,12 +86,6 @@ class EmptyParameterModel(EmptyRowModel):
     def item_id(self, _row):  # pylint: disable=no-self-use
         return None
 
-    def flags(self, index):
-        flags = super().flags(index)
-        if self.header[index.column()] == "parameter_tag_list":
-            flags &= ~Qt.ItemIsEditable
-        return flags
-
     def data(self, index, role=Qt.DisplayRole):
         if self.header[index.column()] == self.value_field and role in (
             Qt.DisplayRole,

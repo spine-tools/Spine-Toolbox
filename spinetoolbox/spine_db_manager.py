@@ -76,7 +76,6 @@ class SpineDBManager(QObject):
     parameter_definitions_added = Signal(object)
     parameter_values_added = Signal(object)
     parameter_value_lists_added = Signal(object)
-    parameter_tags_added = Signal(object)
     features_added = Signal(object)
     tools_added = Signal(object)
     tool_features_added = Signal(object)
@@ -92,7 +91,6 @@ class SpineDBManager(QObject):
     parameter_definitions_removed = Signal(object)
     parameter_values_removed = Signal(object)
     parameter_value_lists_removed = Signal(object)
-    parameter_tags_removed = Signal(object)
     features_removed = Signal(object)
     tools_removed = Signal(object)
     tool_features_removed = Signal(object)
@@ -107,8 +105,6 @@ class SpineDBManager(QObject):
     parameter_definitions_updated = Signal(object)
     parameter_values_updated = Signal(object)
     parameter_value_lists_updated = Signal(object)
-    parameter_tags_updated = Signal(object)
-    parameter_definition_tags_set = Signal(object)
     features_updated = Signal(object)
     tools_updated = Signal(object)
     tool_features_updated = Signal(object)
@@ -119,8 +115,6 @@ class SpineDBManager(QObject):
     scenario_alternatives_added = Signal(object)
     scenario_alternatives_updated = Signal(object)
     scenario_alternatives_removed = Signal(object)
-    parameter_definition_tags_added = Signal(object)
-    parameter_definition_tags_removed = Signal(object)
     # For tests
     data_imported = Signal()
 
@@ -154,10 +148,8 @@ class SpineDBManager(QObject):
         ordered_signals = {
             "object_class": (self.object_classes_added, self.object_classes_updated),
             "relationship_class": (self.relationship_classes_added, self.relationship_classes_updated),
-            "parameter_tag": (self.parameter_tags_added, self.parameter_tags_updated),
             "parameter_value_list": (self.parameter_value_lists_added, self.parameter_value_lists_updated),
             "parameter_definition": (self.parameter_definitions_added, self.parameter_definitions_updated),
-            "parameter_definition_tag": (self.parameter_definition_tags_added,),
             "alternative": (self.alternatives_added, self.alternatives_updated),
             "scenario": (self.scenarios_added, self.scenarios_updated),
             "scenario_alternative": (self.scenario_alternatives_added, self.scenario_alternatives_updated),
@@ -192,13 +184,10 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_updated.connect(self._cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_paremeter_value_list)
         self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_value_list)
-        self.parameter_tags_updated.connect(self._cascade_refresh_parameter_definitions_by_tag)
         self.features_updated.connect(self._cascade_refresh_tool_features_by_feature)
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
-        self.parameter_definition_tags_added.connect(self._refresh_parameter_definitions_by_tag)
-        self.parameter_definition_tags_removed.connect(self._refresh_parameter_definitions_by_tag)
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
@@ -234,14 +223,12 @@ class SpineDBManager(QObject):
             "scenario_alternative": self.scenario_alternatives_removed,
             "scenario": self.scenarios_removed,
             "alternative": self.alternatives_removed,
-            "parameter_definition_tag": self.parameter_definition_tags_removed,
             "tool_feature_method": self.tool_feature_methods_removed,
             "tool_feature": self.tool_features_removed,
             "feature": self.features_removed,
             "tool": self.tools_removed,
             "parameter_definition": self.parameter_definitions_removed,
             "parameter_value_list": self.parameter_value_lists_removed,
-            "parameter_tag": self.parameter_tags_removed,
             "relationship_class": self.relationship_classes_removed,
             "object_class": self.object_classes_removed,
         }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
@@ -1082,17 +1069,6 @@ class SpineDBManager(QObject):
         ):
             yield obj_chunk + rel_chunk
 
-    def get_parameter_definition_tags(self, db_map, **kwargs):
-        """Returns parameter definition tags.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "parameter_definition_tag_sq", **kwargs))
-
     def get_object_parameter_values(self, db_map, **kwargs):
         """Returns object parameter values from database.
 
@@ -1157,17 +1133,6 @@ class SpineDBManager(QObject):
         yield from self.get_db_items(
             self._make_query(db_map, "wide_parameter_value_list_sq", order_by=["name"], **kwargs)
         )
-
-    def get_parameter_tags(self, db_map, **kwargs):
-        """Get parameter tags from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "parameter_tag_sq", order_by=["tag"], **kwargs))
 
     def get_features(self, db_map, **kwargs):
         """Returns features from database.
@@ -1367,15 +1332,6 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_value_list"))
 
-    def add_parameter_tags(self, db_map_data):
-        """Adds parameter tags to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_tag"))
-
     def add_features(self, db_map_data):
         """Adds features to db.
 
@@ -1517,15 +1473,6 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_value_list"))
 
-    def update_parameter_tags(self, db_map_data):
-        """Updates parameter tags in db.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_tag"))
-
     def update_features(self, db_map_data):
         """Updates features in db.
 
@@ -1586,14 +1533,6 @@ class SpineDBManager(QObject):
             if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
                 macro.setObsolete(True)
                 self.undo_stack[db_map].undo()
-
-    def set_parameter_definition_tags(self, db_map_data):
-        """Sets parameter_definition tags in db.
-
-        Args:
-            db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
-        """
-        self._worker.set_parameter_definition_tags(db_map_data)
 
     def remove_items(self, db_map_typed_ids):
         for db_map, ids_per_type in db_map_typed_ids.items():
@@ -1704,19 +1643,6 @@ class SpineDBManager(QObject):
                 if value_list_name:
                     item["value_list_name"] = value_list_name
                     db_map_cascading_data.setdefault(db_map, []).append(item)
-        return db_map_cascading_data
-
-    def find_cascading_parameter_definitions_by_tag(self, db_map_ids):
-        """Finds and returns cascading parameter definitions for the given parameter_tag ids."""
-        # FIXME?
-        db_map_cascading_data = dict()
-        for db_map, tag_ids in db_map_ids.items():
-            tag_ids = {str(id_) for id_ in tag_ids}
-            db_map_cascading_data[db_map] = [
-                item
-                for item in self.get_items(db_map, "parameter_definition")
-                if tag_ids.intersection((item["parameter_tag_id_list"] or "0").split(","))
-            ]  # NOTE: 0 is 'untagged'
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_entity(self, db_map_ids):
@@ -1842,19 +1768,6 @@ class SpineDBManager(QObject):
                 db_map_scenario_data.setdefault(db_map, []).append(scenario)
         self.scenarios_updated.emit(db_map_scenario_data)
 
-    def _refresh_parameter_definitions_by_tag(self, db_map_data):
-        """Refreshes cached parameter definitions when updating parameter tags.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        # FIXME?
-        for db_map, data in db_map_data.items():
-            for chunk in self.get_parameter_definitions(
-                db_map, filter_by=dict(id={x["parameter_definition_id"] for x in data})
-            ):
-                self.parameter_definitions_updated.emit({db_map: chunk})
-
     def _cascade_refresh_relationship_classes(self, db_map_data):
         """Refreshes cached relationship classes when updating object classes.
 
@@ -1926,15 +1839,6 @@ class SpineDBManager(QObject):
         """
         db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
         self.parameter_values_updated.emit(db_map_cascading_data)
-
-    def _cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
-        """Refreshes cached parameter definitions when updating parameter tags.
-
-        Args:
-            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
-        """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self.db_map_ids(db_map_data))
-        self.parameter_definitions_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_features_by_paremeter_definition(self, db_map_data):
         """Refreshes cached features in cascade when updating parameter definitions.

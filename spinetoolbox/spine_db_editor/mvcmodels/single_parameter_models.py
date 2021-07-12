@@ -22,7 +22,6 @@ from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
     FillInParameterNameMixin,
     FillInValueListIdMixin,
-    MakeParameterTagMixin,
     MakeRelationshipOnTheFlyMixin,
     FillInAlternativeIdMixin,
     FillInParameterDefinitionIdsMixin,
@@ -91,9 +90,9 @@ class SingleParameterModel(MinimalTableModel):
     @property
     def group_fields(self):
         return {
-            "object_class": {"parameter_definition": ["parameter_tag_list"], "parameter_value": []},
+            "object_class": {"parameter_definition": [], "parameter_value": []},
             "relationship_class": {
-                "parameter_definition": ["object_class_name_list", "parameter_tag_list"],
+                "parameter_definition": ["object_class_name_list"],
                 "parameter_value": ["object_name_list"],
             },
         }[self.entity_class_type][self.item_type]
@@ -297,7 +296,7 @@ class SingleRelationshipParameterMixin:
         return "relationship_class"
 
 
-class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin):
+class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListIdMixin):
     """A parameter_definition model for a single entity_class."""
 
     @property
@@ -312,19 +311,13 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
         """
         self.build_lookup_dictionary({self.db_map: items})
         param_defs = list()
-        param_def_tags = list()
         error_log = list()
         for item in items:
-            param_def_tag, err2 = self._make_parameter_definition_tag(item, self.db_map)
-            param_def, err1 = self._convert_to_db(item, self.db_map)
+            param_def, errors = self._convert_to_db(item, self.db_map)
             if tuple(param_def.keys()) != ("id",):
                 param_defs.append(param_def)
-            if param_def_tag:
-                param_def_tags.append(param_def_tag)
-            if err1 or err2:
-                error_log += err1 + err2
-        if param_def_tags:
-            self.db_mngr.set_parameter_definition_tags({self.db_map: param_def_tags})
+            if errors:
+                error_log += errors
         if param_defs:
             self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
         if error_log:

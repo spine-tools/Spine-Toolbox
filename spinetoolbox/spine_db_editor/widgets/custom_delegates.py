@@ -344,25 +344,6 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             return next(iter(value_list_ids))
 
 
-class TagListDelegate(ParameterDelegate):
-    """A delegate for the parameter_tag list."""
-
-    def createEditor(self, parent, option, index):
-        """Returns editor."""
-        db_map = self._get_db_map(index)
-        if not db_map:
-            return None
-        editor = CheckListEditor(self.parent(), parent)
-        all_parameter_tag_list = [x["tag"] for x in self.db_mngr.get_items(db_map, "parameter_tag")]
-        try:
-            parameter_tag_list = index.data(Qt.EditRole).split(",")
-        except AttributeError:
-            # Gibberish in the cell
-            parameter_tag_list = []
-        editor.set_data(all_parameter_tag_list, parameter_tag_list)
-        return editor
-
-
 class ValueListDelegate(ParameterDelegate):
     """A delegate for the parameter_value-list."""
 

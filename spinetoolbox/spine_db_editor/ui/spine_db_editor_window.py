@@ -36,7 +36,6 @@ from spinetoolbox.spine_db_editor.widgets.custom_qtableview import ObjectParamet
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterDefinitionTableView
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import RelationshipParameterValueTableView
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeScenarioTreeView
-from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ParameterTagTreeView
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import ToolFeatureTreeView
 
 from spinetoolbox import resources_icons_rc
@@ -451,25 +450,6 @@ class Ui_MainWindow(object):
 
         self.dockWidget_exports.setWidget(self.dockWidgetContents_12)
         MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_exports)
-        self.dockWidget_parameter_tag = QDockWidget(MainWindow)
-        self.dockWidget_parameter_tag.setObjectName(u"dockWidget_parameter_tag")
-        self.dockWidgetContents_9 = QWidget()
-        self.dockWidgetContents_9.setObjectName(u"dockWidgetContents_9")
-        self.verticalLayout_9 = QVBoxLayout(self.dockWidgetContents_9)
-        self.verticalLayout_9.setSpacing(0)
-        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
-        self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
-        self.treeView_parameter_tag = ParameterTagTreeView(self.dockWidgetContents_9)
-        self.treeView_parameter_tag.setObjectName(u"treeView_parameter_tag")
-        self.treeView_parameter_tag.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.treeView_parameter_tag.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
-        self.treeView_parameter_tag.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.treeView_parameter_tag.setUniformRowHeights(True)
-
-        self.verticalLayout_9.addWidget(self.treeView_parameter_tag)
-
-        self.dockWidget_parameter_tag.setWidget(self.dockWidgetContents_9)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_parameter_tag)
         self.dockWidget_tool_feature_tree = QDockWidget(MainWindow)
         self.dockWidget_tool_feature_tree.setObjectName(u"dockWidget_tool_feature_tree")
         self.dockWidgetContents_13 = QWidget()
@@ -593,10 +573,6 @@ class Ui_MainWindow(object):
         self.dockWidget_pivot_table.setWindowTitle(QCoreApplication.translate("MainWindow", u"Pivot table", None))
         self.dockWidget_frozen_table.setWindowTitle(QCoreApplication.translate("MainWindow", u"Frozen table", None))
         self.dockWidget_exports.setWindowTitle(QCoreApplication.translate("MainWindow", u"Exports", None))
-        self.dockWidget_parameter_tag.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter tag", None))
-#if QT_CONFIG(accessibility)
-        self.treeView_parameter_tag.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter value list", None))
-#endif // QT_CONFIG(accessibility)
         self.dockWidget_tool_feature_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Tool/Feature tree", None))
     # retranslateUi
 

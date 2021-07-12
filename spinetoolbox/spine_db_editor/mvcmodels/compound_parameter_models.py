@@ -548,9 +548,6 @@ class CompoundParameterDefinitionMixin:
     def item_type(self):
         return "parameter_definition"
 
-    def receive_parameter_definition_tags_set(self, db_map_data):
-        self._emit_data_changed_for_column("parameter_tag_list")
-
 
 class CompoundParameterValueMixin:
     """Handles signals from db mngr for parameter_value models."""
@@ -596,15 +593,7 @@ class CompoundObjectParameterDefinitionModel(
     """
 
     def _make_header(self):
-        return [
-            "object_class_name",
-            "parameter_name",
-            "value_list_name",
-            "parameter_tag_list",
-            "default_value",
-            "description",
-            "database",
-        ]
+        return ["object_class_name", "parameter_name", "value_list_name", "default_value", "description", "database"]
 
 
 class CompoundRelationshipParameterDefinitionModel(
@@ -620,7 +609,6 @@ class CompoundRelationshipParameterDefinitionModel(
             "object_class_name_list",
             "parameter_name",
             "value_list_name",
-            "parameter_tag_list",
             "default_value",
             "description",
             "database",

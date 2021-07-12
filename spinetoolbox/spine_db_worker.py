@@ -32,7 +32,6 @@ from spinedb_api import (
     create_new_spine_database,
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
-from .spine_db_commands import AgedUndoCommand, AddItemsCommand, RemoveItemsCommand
 
 
 class SpineDBWorker(QObject):
@@ -47,7 +46,6 @@ class SpineDBWorker(QObject):
     _remove_items_called = Signal(object)
     _commit_session_called = Signal(object, str, object)
     _rollback_session_called = Signal(object)
-    _set_parameter_definition_tags_called = Signal(bool)
     _export_data_called = Signal(object, object, str, str)
     _duplicate_object_called = Signal(list, dict, str, str)
 
@@ -74,7 +72,6 @@ class SpineDBWorker(QObject):
         self._remove_items_called.connect(self._remove_items)
         self._commit_session_called.connect(self._commit_session)
         self._rollback_session_called.connect(self._rollback_session)
-        self._set_parameter_definition_tags_called.connect(self._set_parameter_definition_tags)
         self._export_data_called.connect(self._export_data)
         self._duplicate_object_called.connect(self._duplicate_object)
 
@@ -349,28 +346,3 @@ class SpineDBWorker(QObject):
             ],
         }
         self._db_mngr.import_data({db_map: data for db_map in db_maps}, command_text="Duplicate object")
-
-    def set_parameter_definition_tags(self, db_map_data):
-        self._set_parameter_definition_tags_called.emit(db_map_data)
-
-    @Slot(object)
-    def _set_parameter_definition_tags(self, db_map_data):
-        for db_map, data in db_map_data.items():
-            macro = AgedUndoCommand()
-            macro.setText(f"set parameter definition tags in {db_map.codename}")
-            self._db_mngr.undo_stack[db_map].push(macro)
-            child_cmds = []
-            items_to_add, ids_to_remove = db_map.get_data_to_set_parameter_definition_tags(*data)
-            if ids_to_remove:
-                rm_cmd = RemoveItemsCommand(
-                    self._db_mngr, db_map, {"parameter_definition_tag": ids_to_remove}, parent=macro
-                )
-                rm_cmd.redo()
-                child_cmds.append(rm_cmd)
-            if items_to_add:
-                add_cmd = AddItemsCommand(self._db_mngr, db_map, items_to_add, "parameter_definition_tag", parent=macro)
-                add_cmd.redo()
-                child_cmds.append(add_cmd)
-            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
-                macro.setObsolete(True)
-                self._db_mngr.undo_stack[db_map].undo()

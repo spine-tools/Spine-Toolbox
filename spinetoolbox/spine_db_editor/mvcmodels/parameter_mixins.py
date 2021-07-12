@@ -193,63 +193,6 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         return []
 
 
-class MakeParameterTagMixin(ConvertToDBMixin):
-    """Makes parameter_tag items."""
-
-    def __init__(self, *args, **kwargs):
-        """Initializes lookup dicts."""
-        super().__init__(*args, **kwargs)
-        self._db_map_tag_lookup = dict()
-
-    def build_lookup_dictionary(self, db_map_data):
-        """Builds a name lookup dictionary for the given data.
-
-        Args:
-            db_map_data (dict): lists of model items keyed by DiffDatabaseMapping
-        """
-        super().build_lookup_dictionary(db_map_data)
-        # Group data by name
-        db_map_parameter_tags = dict()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                parameter_tag_list = item.get("parameter_tag_list")
-                parameter_tag_list = _parse_csv_list(parameter_tag_list)
-                if parameter_tag_list:
-                    db_map_parameter_tags.setdefault(db_map, set()).update(parameter_tag_list)
-        # Build lookup dict
-        self._db_map_tag_lookup.clear()
-        for db_map, tags in db_map_parameter_tags.items():
-            for tag in tags:
-                item = self.db_mngr.get_item_by_field(db_map, "parameter_tag", "tag", tag)
-                if item:
-                    self._db_map_tag_lookup.setdefault(db_map, {})[tag] = item
-
-    def _make_parameter_definition_tag(self, item, db_map):
-        """Returns a db parameter_definition tag item (id-based) from the given model parameter_definition item (name-based).
-
-        Args:
-            item (dict): the model parameter_definition item
-            db_map (DiffDatabaseMapping): the database where the resulting item belongs
-
-        Returns:
-            dict: the db parameter_definition tag item
-            list: error log
-        """
-        parameter_tag_list = item.pop("parameter_tag_list", None)
-        parsed_parameter_tag_list = _parse_csv_list(parameter_tag_list)
-        if parsed_parameter_tag_list is None:
-            return None, [f"Unable to parse {parameter_tag_list}"] if parameter_tag_list else []
-        parameter_tag_id_list = []
-        for tag in parsed_parameter_tag_list:
-            if tag == "":
-                break
-            tag_item = self._db_map_tag_lookup.get(db_map, {}).get(tag)
-            if not tag_item:
-                return None, [f"Unknown tag {tag}"]
-            parameter_tag_id_list.append(str(tag_item["id"]))
-        return ({"id": item["id"], "parameter_tag_id_list": ",".join(parameter_tag_id_list)}, [])
-
-
 class FillInEntityClassIdMixin(ConvertToDBMixin):
     """Fills in entity_class ids."""
 
