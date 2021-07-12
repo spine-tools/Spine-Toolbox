@@ -42,7 +42,7 @@ class SpineDBWorker(QObject):
     _get_metadata_per_entity_called = Signal(object, list, dict)
     _get_metadata_per_parameter_value_called = Signal(object, list, dict)
     _close_db_map_called = Signal(object)
-    _add_or_update_items_called = Signal(object, str, str, str)
+    _add_or_update_items_called = Signal(object, str, str, bool, str)
     _readd_items_called = Signal(object, str, str, str)
     _remove_items_called = Signal(object)
     _commit_session_called = Signal(object, str, object)
@@ -130,27 +130,28 @@ class SpineDBWorker(QObject):
             param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
             d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
 
-    def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False):
+    def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
         if readd:
             self._readd_items_called.emit(db_map_data, method_name, item_type, signal_name)
         else:
-            self._add_or_update_items_called.emit(db_map_data, method_name, item_type, signal_name)
+            self._add_or_update_items_called.emit(db_map_data, method_name, item_type, check, signal_name)
 
-    @Slot(object, str, str, str)
-    def _add_or_update_items(self, db_map_data, method_name, item_type, signal_name):
+    @Slot(object, str, str, bool, str)
+    def _add_or_update_items(self, db_map_data, method_name, item_type, check, signal_name):
         """Adds or updates items in db.
 
         Args:
             db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
             method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
             item_type (str): item type
+            check (bool): Whether or not to check integrity
             signal_name (str) : signal attribute of SpineDBManager to emit if successful
         """
         signal = getattr(self._db_mngr, signal_name)
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
             cache = self._db_mngr.get_db_map_cache(db_map)
-            items, errors = getattr(db_map, method_name)(*items, return_items=True, cache=cache)
+            items, errors = getattr(db_map, method_name)(*items, check=check, return_items=True, cache=cache)
             if errors:
                 db_map_error_log[db_map] = errors
             if not items:
@@ -264,11 +265,11 @@ class SpineDBWorker(QObject):
             for item_type, (to_add, to_update, import_error_log) in data_for_import:
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_add:
-                    add_cmd = AddItemsCommand(self._db_mngr, db_map, to_add, item_type, parent=macro)
+                    add_cmd = AddItemsCommand(self._db_mngr, db_map, to_add, item_type, parent=macro, check=False)
                     add_cmd.redo()
                     child_cmds.append(add_cmd)
                 if to_update:
-                    upd_cmd = UpdateItemsCommand(self._db_mngr, db_map, to_update, item_type, parent=macro)
+                    upd_cmd = UpdateItemsCommand(self._db_mngr, db_map, to_update, item_type, parent=macro, check=False)
                     upd_cmd.redo()
                     child_cmds.append(upd_cmd)
             if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):

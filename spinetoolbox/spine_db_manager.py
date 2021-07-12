@@ -1257,8 +1257,8 @@ class SpineDBManager(SpineDBManagerBase):
         """
         self._worker.import_data(db_map_data, command_text)
 
-    def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False):
-        self._worker.add_or_update_items(db_map_data, method_name, item_type, signal_name, readd=readd)
+    def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
+        self._worker.add_or_update_items(db_map_data, method_name, item_type, signal_name, readd=readd, check=check)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
@@ -1823,7 +1823,7 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        # FIXME
+        # FIXME?
         for db_map, data in db_map_data.items():
             for chunk in self.get_parameter_definitions(
                 db_map, filter_by=dict(id={x["parameter_definition_id"] for x in data})
@@ -2108,7 +2108,6 @@ class SpineDBManager(SpineDBManagerBase):
         elif item_type == "parameter_value_list":
             item["value_list"] = ";".join(str(val, "UTF8") for val in item["value_list"])
         elif item_type == "entity_group":
-            # FIXME?
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
         elif item_type == "scenario":

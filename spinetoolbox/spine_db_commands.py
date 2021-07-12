@@ -227,7 +227,7 @@ class SpineDBCommand(AgedUndoCommand):
 
 
 class AddItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, data, item_type, parent=None):
+    def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
@@ -244,14 +244,20 @@ class AddItemsCommand(SpineDBCommand):
         self.method_name = self._add_method_name[item_type]
         self.completed_signal_name = self._added_signal_name[item_type]
         self.completed_signal = getattr(db_mngr, self.completed_signal_name)
-        self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
         self.undo_db_map_typed_ids = None
         self._readd = False
+        self._check = check
+        self.setText(self._add_command_name.get(item_type, "add item") + f" to '{db_map.codename}'")
 
     @SpineDBCommand.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(
-            self.redo_db_map_data, self.method_name, self.item_type, self.completed_signal_name, readd=self._readd
+            self.redo_db_map_data,
+            self.method_name,
+            self.item_type,
+            self.completed_signal_name,
+            readd=self._readd,
+            check=self._check,
         )
 
     @SpineDBCommand.undomethod
@@ -275,7 +281,7 @@ class AddItemsCommand(SpineDBCommand):
 
 
 class UpdateItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, data, item_type, parent=None):
+    def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
@@ -297,6 +303,7 @@ class UpdateItemsCommand(SpineDBCommand):
         self.method_name = self._update_method_name[item_type]
         self.completed_signal_name = self._updated_signal_name[item_type]
         self.completed_signal = getattr(db_mngr, self.completed_signal_name)
+        self._check = check
         self.setText(self._update_command_name.get(item_type, "update item") + f" in '{db_map.codename}'")
 
     def _undo_item(self, db_map, id_):
@@ -306,13 +313,13 @@ class UpdateItemsCommand(SpineDBCommand):
     @SpineDBCommand.redomethod
     def redo(self):
         self.db_mngr.add_or_update_items(
-            self.redo_db_map_data, self.method_name, self.item_type, self.completed_signal_name
+            self.redo_db_map_data, self.method_name, self.item_type, self.completed_signal_name, check=self._check
         )
 
     @SpineDBCommand.undomethod
     def undo(self):
         self.db_mngr.add_or_update_items(
-            self.undo_db_map_data, self.method_name, self.item_type, self.completed_signal_name
+            self.undo_db_map_data, self.method_name, self.item_type, self.completed_signal_name, check=False
         )
 
     def data(self):
