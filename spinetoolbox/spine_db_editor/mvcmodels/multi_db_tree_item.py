@@ -202,7 +202,7 @@ class MultiDBTreeItem(TreeItem):
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
-        return any(self._get_children_ids(db_map) for db_map in self.db_maps)
+        return self.can_fetch_more() or self.child_count()
 
     def _fetch_success_cond(self, db_map, chunk):
         return True

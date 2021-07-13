@@ -84,6 +84,8 @@ class SpineDBFetcher(QObject):
         Args:
             item_type (str): the type of items to fetch, e.g. "object_class"
         """
+        if not self.can_fetch_more(item_type):
+            return
         if success_cond is None:
             success_cond = lambda chunk: True
         chunks = self._chunks.get(item_type, [])
@@ -93,8 +95,6 @@ class SpineDBFetcher(QObject):
                 signal.emit({self._db_map: chunk})
                 chunks.pop(k)
                 return
-        if not self.can_fetch_more(item_type):
-            return
         self._fetch_more_requested.emit(item_type, success_cond)
 
     @Slot(str, object)
