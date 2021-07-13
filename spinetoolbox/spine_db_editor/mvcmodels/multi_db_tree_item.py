@@ -204,7 +204,15 @@ class MultiDBTreeItem(TreeItem):
         """Returns whether or not this item has or could have children."""
         return any(self._get_children_ids(db_map) for db_map in self.db_maps)
 
+    def _fetch_success_cond(self, db_map, chunk):
+        return True
+
     def can_fetch_more(self):
+        child_type = self.child_item_class.item_type
+        if child_type is None or not any(
+            self.db_mngr.can_fetch_more(db_map, child_type) or self._get_children_ids(db_map) for db_map in self.db_maps
+        ):
+            return False
         self._fetch_recursive = True
         return True
 
@@ -214,7 +222,8 @@ class MultiDBTreeItem(TreeItem):
         if child_type is None:
             return
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, child_type)
+            success_cond = lambda chunk, db_map=db_map: self._fetch_success_cond(db_map, chunk)
+            self.db_mngr.fetch_more(db_map, child_type, success_cond=success_cond)
         # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
         # This is needed for object items that are created *after* the relationship classes are fetched.
         db_map_ids = {db_map: self._get_children_ids(db_map) for db_map in self.db_maps}

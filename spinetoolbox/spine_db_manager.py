@@ -886,10 +886,15 @@ class SpineDBManager(QObject):
             self._fetchers[db_map] = SpineDBFetcher(self, db_map)
         return self._fetchers[db_map]
 
-    def fetch_more(self, db_map, item_type):
+    def can_fetch_more(self, db_map, item_type):
+        if db_map.connection.closed:
+            return False
+        return self._get_fetcher(db_map).can_fetch_more(item_type)
+
+    def fetch_more(self, db_map, item_type, success_cond=None):
         if db_map.connection.closed:
             return
-        self._get_fetcher(db_map).fetch_more(item_type)
+        self._get_fetcher(db_map).fetch_more(item_type, success_cond=success_cond)
 
     @staticmethod
     def get_db_items(query, chunk_size=1000):
@@ -900,7 +905,7 @@ class SpineDBManager(QObject):
         """
         it = (x._asdict() for x in query.yield_per(chunk_size).enable_eagerloads(False))
         while True:
-            chunk = list(itertools.islice(it, chunk_size))
+            chunk = list(itertools.islice(it, chunk_size // 10))
             yield chunk
             if not chunk:
                 break

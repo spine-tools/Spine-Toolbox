@@ -366,10 +366,6 @@ class SpineDBEditorBase(QMainWindow):
     def init_models(self):
         """Initializes models."""
         self.parameter_value_list_model.build_tree()
-        for item in self.parameter_value_list_model.visit_all():
-            index = self.parameter_value_list_model.index_from_item(item)
-            self.ui.treeView_parameter_value_list.expand(index)
-        self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
         self.ui.treeView_parameter_value_list.header().hide()
 
     @Slot(str)

@@ -23,7 +23,7 @@ from spinetoolbox.helpers import busy_effect
 class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
-    _fetch_more_requested = Signal(str)
+    _fetch_more_requested = Signal(str, object)
 
     def __init__(self, db_mngr, db_map):
         """Initializes the fetcher object.
@@ -71,30 +71,48 @@ class SpineDBFetcher(QObject):
         }
         self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
         self._fetched = {item_type: False for item_type in self._getters}
+        self._chunks = {}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
 
-    def fetch_more(self, item_type):
+    def can_fetch_more(self, item_type):
+        return not self._fetched.get(item_type, False) or self._chunks.get(item_type, [])
+
+    def fetch_more(self, item_type, success_cond=None):
         """Fetches items from the database.
 
         Args:
             item_type (str): the type of items to fetch, e.g. "object_class"
         """
-        if self._fetched[item_type]:
+        if success_cond is None:
+            success_cond = lambda chunk: True
+        chunks = self._chunks.get(item_type, [])
+        for k, chunk in enumerate(chunks):
+            if success_cond(chunk):
+                signal = self._signals.get(item_type)
+                signal.emit({self._db_map: chunk})
+                chunks.pop(k)
+                return
+        if not self.can_fetch_more(item_type):
             return
-        self._fetch_more_requested.emit(item_type)
+        self._fetch_more_requested.emit(item_type, success_cond)
 
-    @Slot(str)
-    def _fetch_more(self, item_type):
-        self._do_fetch_more(item_type)
+    @Slot(str, object)
+    def _fetch_more(self, item_type, success_cond):
+        self._do_fetch_more(item_type, success_cond)
 
     @busy_effect
-    def _do_fetch_more(self, item_type):
+    def _do_fetch_more(self, item_type, success_cond):
         iterator = self._iterators.get(item_type)
         if iterator is None:
             return
-        chunk = next(iterator, [])
-        if not chunk:
-            self._fetched[item_type] = True
-        signal = self._signals.get(item_type)
-        signal.emit({self._db_map: chunk})
+        while True:
+            chunk = next(iterator, [])
+            if not chunk:
+                self._fetched[item_type] = True
+                break
+            if success_cond(chunk):
+                signal = self._signals.get(item_type)
+                signal.emit({self._db_map: chunk})
+                break
+            self._chunks.setdefault(item_type, []).append(chunk)

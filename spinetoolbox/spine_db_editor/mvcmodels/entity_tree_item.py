@@ -196,6 +196,9 @@ class ObjectClassItem(EntityClassItem):
         """see super class."""
         return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
 
+    def _fetch_success_cond(self, db_map, chunk):
+        return any(x["class_id"] == self.db_map_id(db_map) for x in chunk)
+
 
 class RelationshipClassItemBase(EntityClassItem):
     """A relationship_class item."""
@@ -227,6 +230,9 @@ class RelationshipClassItem(RelationshipClassItemBase):
         return [
             x["id"] for x in self.db_mngr.get_items(db_map, "relationship") if x["class_id"] == self.db_map_id(db_map)
         ]
+
+    def _fetch_success_cond(self, db_map, chunk):
+        return any(x["class_id"] == self.db_map_id(db_map) for x in chunk)
 
 
 class ObjectRelationshipClassItem(RelationshipClassItemBase):
