@@ -115,8 +115,8 @@ class SpineDBManager(QObject):
     scenario_alternatives_added = Signal(object)
     scenario_alternatives_updated = Signal(object)
     scenario_alternatives_removed = Signal(object)
-    # For tests
-    data_imported = Signal()
+    # Fetched
+    db_map_fetched = Signal(object)
 
     GROUP_SEP = " \u01C0 "
 
@@ -658,7 +658,8 @@ class SpineDBManager(QObject):
         return [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
 
     def get_db_map_cache(self, db_map):
-        return self._cache.get(db_map)
+        self.fetch_all(db_map)
+        return self._cache.setdefault(db_map, {})
 
     def get_items(self, db_map, item_type):
         """Returns all the items of the given type in the given db map,
@@ -890,6 +891,14 @@ class SpineDBManager(QObject):
         if db_map.connection.closed:
             return
         self._get_fetcher(db_map).fetch_more(item_type)
+
+    def fetch_all(self, db_map):
+        if db_map.connection.closed:
+            return
+        fetcher = self._get_fetcher(db_map)
+        with signal_waiter(fetcher.all_fetched) as waiter:
+            fetcher.fetch_all()
+            waiter.wait()
 
     @staticmethod
     def get_db_items(query, chunk_size=1000):
@@ -1193,8 +1202,8 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = dict()
         for db_map, data in db_map_data.items():
+            cache = self.get_db_map_cache(db_map)
             try:
-                cache = self.get_db_map_cache(db_map)
                 data_for_import = get_data_for_import(db_map, cache=cache, **data)
             except (TypeError, ValueError) as err:
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
@@ -1226,9 +1235,6 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].undo()
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
-        self.data_imported.emit()
-
-        # self._worker.import_data(db_map_data, command_text)
 
     def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
         self._worker.add_or_update_items(db_map_data, method_name, item_type, signal_name, readd=readd, check=check)
@@ -1981,7 +1987,9 @@ class SpineDBManager(QObject):
             dict
         """
         item = item.copy()
-        if item_type == "object":
+        if item_type == "object_class":
+            item["display_icon"] = item.get("display_icon")
+        elif item_type == "object":
             item["class_name"] = self.get_item(db_map, "object_class", item["class_id"])["name"]
         elif item_type == "relationship_class":
             item["object_class_name_list"] = ",".join(
@@ -2012,6 +2020,9 @@ class SpineDBManager(QObject):
                 item["object_class_name_list"] = relationship_class["object_class_name_list"]
             item["value_list_id"] = value_list_id = item.pop("parameter_value_list_id", item.get("value_list_id"))
             item["value_list_name"] = self.get_item(db_map, "parameter_value_list", value_list_id).get("name")
+            item["default_value"] = item.get("default_value")
+            item["default_type"] = item.get("default_type")
+            item["description"] = item.get("description")
         elif item_type == "parameter_value":
             item["parameter_id"] = parameter_id = item.pop("parameter_definition_id", item.get("parameter_id"))
             param_def = self.get_item(db_map, "parameter_definition", parameter_id)
@@ -2040,8 +2051,7 @@ class SpineDBManager(QObject):
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
         elif item_type == "scenario":
-            if "active" not in item:
-                item["active"] = False
+            item["active"] = item.get("active", False)
         elif item_type == "feature":
             param_def = self.get_item(db_map, "parameter_definition", item["parameter_definition_id"])
             item["parameter_definition_name"] = param_def["parameter_name"]
@@ -2055,8 +2065,7 @@ class SpineDBManager(QObject):
                 db_map, "parameter_value_list", item["parameter_value_list_id"]
             ).get("name")
         elif item_type == "tool_feature":
-            if "required" not in item:
-                item["required"] = False
+            item["required"] = item.get("required", False)
         return item
 
 

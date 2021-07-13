@@ -24,6 +24,8 @@ class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
     _fetch_more_requested = Signal(str)
+    _fetch_all_requested = Signal()
+    all_fetched = Signal()
 
     def __init__(self, db_mngr, db_map):
         """Initializes the fetcher object.
@@ -73,6 +75,7 @@ class SpineDBFetcher(QObject):
         self._fetched = {item_type: False for item_type in self._getters}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
+        self._fetch_all_requested.connect(self._fetch_all)
 
     def fetch_more(self, item_type):
         """Fetches items from the database.
@@ -98,3 +101,33 @@ class SpineDBFetcher(QObject):
             self._fetched[item_type] = True
         signal = self._signals.get(item_type)
         signal.emit({self._db_map: chunk})
+
+    def fetch_all(self):
+        self._fetch_all_requested.emit()
+
+    @Slot()
+    def _fetch_all(self):
+        self._do_fetch_all()
+
+    @busy_effect
+    def _do_fetch_all(self):
+        for item_type in [
+            "object_class",
+            "relationship_class",
+            "parameter_value_list",
+            "parameter_definition",
+            "alternative",
+            "scenario",
+            "scenario_alternative",
+            "object",
+            "relationship",
+            "entity_group",
+            "parameter_value",
+            "feature",
+            "tool",
+            "tool_feature",
+            "tool_feature_method",
+        ]:
+            while not self._fetched[item_type]:
+                self._do_fetch_more(item_type)
+        self.all_fetched.emit()

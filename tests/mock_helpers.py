@@ -304,24 +304,3 @@ class TestSpineDBManager(SpineDBManager):
             _, fetcher = self._fetchers.popitem()
             fetcher.deleteLater()
         self.deleteLater()
-
-    def fetch_more_all(self, db_map):
-        item_types = [
-            "object_class",
-            "relationship_class",
-            "parameter_value_list",
-            "parameter_definition",
-            "alternative",
-            "scenario",
-            "scenario_alternative",
-            "object",
-            "relationship",
-            "entity_group",
-            "parameter_value",
-            "feature",
-            "tool",
-            "tool_feature",
-            "tool_feature_method",
-        ]
-        for item_type in item_types:
-            self.fetch_more(db_map, item_type)

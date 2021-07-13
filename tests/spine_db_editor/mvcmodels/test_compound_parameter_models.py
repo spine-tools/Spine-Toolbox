@@ -64,7 +64,7 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         model.init_model()
         self._db_mngr.add_object_classes({self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "object_class_id": 1}]})
-        self._db_mngr.fetch_more_all(self._db_map)
+        self._db_mngr.fetch_all(self._db_map)
         definition_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [1]}, "parameter_definition")
         model.receive_parameter_data_added(definition_data)
         self.assertEqual(model.rowCount(), 1)
@@ -112,7 +112,7 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         self._db_mngr.add_object_classes({self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_relationship_classes({self._db_map: [{"name": "rc", "object_class_id_list": [1]}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "relationship_class_id": 2}]})
-        self._db_mngr.fetch_more_all(self._db_map)
+        self._db_mngr.fetch_all(self._db_map)
         definition_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [2]}, "parameter_definition")
         model.receive_parameter_data_added(definition_data)
         self.assertEqual(model.rowCount(), 1)
@@ -134,7 +134,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        self._db_mngr.fetch_more_all(self._db_map)
+        self._db_mngr.fetch_all(self._db_map)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -195,7 +195,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
-        self._db_mngr.fetch_more_all(self._db_map)
+        self._db_mngr.fetch_all(self._db_map)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()

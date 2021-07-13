@@ -88,6 +88,7 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         model.build_tree()
         model.add_alternatives({self._db_map: [{"id": 2}]})
         model.add_scenarios({self._db_map: [{"id": 1}]})
+        model.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
         data = self._model_data_to_dict(model)
         expected = [
             [
@@ -153,6 +154,7 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         model.add_scenarios({self._db_map: [{"id": 1}]})
         self._db_mngr.update_alternatives({self._db_map: [{"id": 2, "name": "renamed"}]})
         model.update_alternatives({self._db_map: [{"id": 2}]})
+        model.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
         data = self._model_data_to_dict(model)
         expected = [
             [

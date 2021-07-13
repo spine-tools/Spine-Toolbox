@@ -59,7 +59,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         import_relationship_parameters(self._db_map, (("dog__fish", "relative_speed"),))
         import_relationships(self._db_map, (("dog_fish", ("pluto", "nemo")),))
         self._db_map.commit_session("Add test data")
-        self._db_mngr.fetch_more_all(self._db_map)
+        self._db_mngr.fetch_all(self._db_map)
         self.object_table_header = [
             "object_class_name",
             "object_name",
