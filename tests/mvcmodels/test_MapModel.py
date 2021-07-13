@@ -20,7 +20,7 @@ import unittest
 from PySide2.QtCore import QObject, Qt
 from PySide2.QtGui import QColor
 from spinedb_api import Array, DateTime, Duration, Map, ParameterValueFormatError
-from spinetoolbox.mvcmodels.map_model import MapModel
+from spinetoolbox.mvcmodels.map_model import MapModel, empty
 
 
 class TestMapModel(unittest.TestCase):
@@ -37,9 +37,9 @@ class TestMapModel(unittest.TestCase):
         model.append_column()
         self.assertEqual(model.columnCount(), 5)
         expected_table = [
-            ["A", -1.1, None, None, ""],
-            ["B", "a", 1.1, None, ""],
-            ["B", "b", 2.2, None, ""],
+            ["A", -1.1, "", "", ""],
+            ["B", "a", 1.1, "", ""],
+            ["B", "b", 2.2, "", ""],
             ["", "", "", "", ""],
         ]
         for y, row in enumerate(expected_table):
@@ -126,7 +126,7 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(1, 1).data(), "a")
         self.assertEqual(model.index(2, 1).data(), "b")
         self.assertEqual(model.index(3, 1).data(), "")
-        self.assertEqual(model.index(0, 2).data(), None)
+        self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 2).data(), 1.1)
         self.assertEqual(model.index(2, 2).data(), 2.2)
         self.assertEqual(model.index(3, 2).data(), "")
@@ -136,7 +136,7 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(3, 3).data(), "")
 
     def test_data_nested_maps_EditRole(self):
-        nested_map = Map(["a", "b"], [1.1, 2.2])
+        nested_map = Map(["a", "b"], [None, 2.2])
         map_value = Map(["A", "B"], [-1.1, nested_map])
         model = MapModel(map_value, self._parent)
         self.assertEqual(model.index(0, 0).data(Qt.EditRole), "A")
@@ -145,8 +145,8 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.index(0, 1).data(Qt.EditRole), -1.1)
         self.assertEqual(model.index(1, 1).data(Qt.EditRole), "a")
         self.assertEqual(model.index(2, 1).data(Qt.EditRole), "b")
-        self.assertEqual(model.index(0, 2).data(Qt.EditRole), None)
-        self.assertEqual(model.index(1, 2).data(Qt.EditRole), 1.1)
+        self.assertEqual(model.index(0, 2).data(Qt.EditRole), "")
+        self.assertEqual(model.index(1, 2).data(Qt.EditRole), None)
         self.assertEqual(model.index(2, 2).data(Qt.EditRole), 2.2)
 
     def test_data_nested_maps_FontRole(self):
@@ -227,8 +227,8 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1)
         self.assertTrue(model.insertRows(0, 1))
         self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.index(0, 0).data(), None)
-        self.assertEqual(model.index(0, 1).data(), None)
+        self.assertEqual(model.index(0, 0).data(), "")
+        self.assertEqual(model.index(0, 1).data(), "")
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "")
         self.assertEqual(model.index(1, 1).data(), "")
@@ -239,8 +239,8 @@ class TestMapModel(unittest.TestCase):
         model = MapModel(map_value, self._parent)
         self.assertTrue(model.insertRows(0, 1))
         self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.index(0, 0).data(), None)
-        self.assertEqual(model.index(0, 1).data(), None)
+        self.assertEqual(model.index(0, 0).data(), "")
+        self.assertEqual(model.index(0, 1).data(), "")
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "a")
         self.assertEqual(model.index(1, 1).data(), 1.1)
@@ -341,7 +341,7 @@ class TestMapModel(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.index(0, 0).data(), "1M")
-        self.assertEqual(model.index(0, 1).data(), None)
+        self.assertEqual(model.index(0, 1).data(), "")
         self.assertEqual(model.index(0, 2).data(), "")
         self.assertEqual(model.index(1, 0).data(), "")
         self.assertEqual(model.index(1, 1).data(), "")
@@ -457,6 +457,11 @@ class TestMapModel(unittest.TestCase):
         self.assertIsInstance(map_.values[1], Map)
         self.assertEqual(map_.values[1].indexes, ["kkey1", "kkey2"])
         self.assertEqual(map_.values[1].values, ["value21", "value22"])
+
+    def test_null_value(self):
+        model = MapModel(Map(["a"], [None]), self._parent)
+        self.assertEqual(model.index(0, 0).data(), "a")
+        self.assertEqual(model.index(0, 1).data(), "None")
 
     def test_value_map_missing_index_raises(self):
         root = Map([None], [1.1])

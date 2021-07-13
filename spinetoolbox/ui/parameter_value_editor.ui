@@ -68,6 +68,22 @@
     </widget>
    </item>
   </layout>
+  <action name="reject_action">
+   <property name="text">
+    <string>Close</string>
+   </property>
+   <property name="shortcut">
+    <string>Esc</string>
+   </property>
+  </action>
+  <action name="accept_action">
+   <property name="text">
+    <string>OK</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Return</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

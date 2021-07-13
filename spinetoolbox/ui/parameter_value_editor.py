@@ -31,6 +31,10 @@ class Ui_ParameterValueEditor(object):
         if not ParameterValueEditor.objectName():
             ParameterValueEditor.setObjectName(u"ParameterValueEditor")
         ParameterValueEditor.resize(700, 400)
+        self.reject_action = QAction(ParameterValueEditor)
+        self.reject_action.setObjectName(u"reject_action")
+        self.accept_action = QAction(ParameterValueEditor)
+        self.accept_action.setObjectName(u"accept_action")
         self.verticalLayout = QVBoxLayout(ParameterValueEditor)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.parameter_type_selector_layout = QHBoxLayout()
@@ -74,6 +78,14 @@ class Ui_ParameterValueEditor(object):
 
     def retranslateUi(self, ParameterValueEditor):
         ParameterValueEditor.setWindowTitle(QCoreApplication.translate("ParameterValueEditor", u"Edit parameter_value", None))
+        self.reject_action.setText(QCoreApplication.translate("ParameterValueEditor", u"Close", None))
+#if QT_CONFIG(shortcut)
+        self.reject_action.setShortcut(QCoreApplication.translate("ParameterValueEditor", u"Esc", None))
+#endif // QT_CONFIG(shortcut)
+        self.accept_action.setText(QCoreApplication.translate("ParameterValueEditor", u"OK", None))
+#if QT_CONFIG(shortcut)
+        self.accept_action.setShortcut(QCoreApplication.translate("ParameterValueEditor", u"Ctrl+Return", None))
+#endif // QT_CONFIG(shortcut)
         self.parameter_type_selector_label.setText(QCoreApplication.translate("ParameterValueEditor", u"Parameter type", None))
     # retranslateUi
 
