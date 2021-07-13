@@ -309,10 +309,8 @@ class TestSpineDBManager(SpineDBManager):
         item_types = [
             "object_class",
             "relationship_class",
-            "parameter_tag",
             "parameter_value_list",
             "parameter_definition",
-            "parameter_definition_tag",
             "alternative",
             "scenario",
             "scenario_alternative",

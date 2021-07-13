@@ -89,7 +89,8 @@ class TestEmptyParameterModel(unittest.TestCase):
         model.fetchMore()
         self.assertTrue(
             model.batch_set_data(
-                _empty_indexes(model), ["dog", "pluto", "breed", 1, join_value_and_type(b"bloodhound", None), "mock_db"]
+                _empty_indexes(model),
+                ["dog", "pluto", "breed", 1, join_value_and_type(b'"bloodhound"', None), "mock_db"],
             )
         )
         values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
@@ -97,7 +98,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertEqual(values[0]["object_class_name"], "dog")
         self.assertEqual(values[0]["object_name"], "pluto")
         self.assertEqual(values[0]["parameter_name"], "breed")
-        self.assertEqual(values[0]["value"], b"bloodhound")
+        self.assertEqual(values[0]["value"], b'"bloodhound"')
 
     def test_do_not_add_invalid_object_parameter_values(self):
         """Test that object parameter values aren't added to the db if data is incomplete."""
@@ -116,7 +117,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         indexes = _empty_indexes(model)
         self.assertTrue(
             model.batch_set_data(
-                indexes, ["cat", "pluto", "breed", 1, join_value_and_type(b"bloodhound", None), "mock_db"]
+                indexes, ["cat", "pluto", "breed", 1, join_value_and_type(b'"bloodhound"', None), "mock_db"]
             )
         )
         self.assertEqual(indexes[0].data(), "dog")
@@ -125,7 +126,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertEqual(values[0]["object_class_name"], "dog")
         self.assertEqual(values[0]["object_name"], "pluto")
         self.assertEqual(values[0]["parameter_name"], "breed")
-        self.assertEqual(values[0]["value"], b"bloodhound")
+        self.assertEqual(values[0]["value"], b'"bloodhound"')
 
     def test_add_relationship_parameter_values_to_db(self):
         """Test that relationship parameter values are added to the db when editing the table."""
@@ -158,10 +159,10 @@ class TestEmptyParameterModel(unittest.TestCase):
 
     def test_add_object_parameter_definitions_to_db(self):
         """Test that object parameter definitions are added to the db when editing the table."""
-        header = ["object_class_name", "parameter_name", "value_list_name", "parameter_tag_list", "database"]
+        header = ["object_class_name", "parameter_name", "value_list_name", "database"]
         model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore()
-        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", None, None, "mock_db"]))
+        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", None, "mock_db"]))
         definitions = next(self._db_mngr.get_object_parameter_definitions(self._db_map), [])
         self.assertEqual(len(definitions), 2)
         names = {d["parameter_name"] for d in definitions}
@@ -172,19 +173,17 @@ class TestEmptyParameterModel(unittest.TestCase):
         header = self.object_table_header
         model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore()
-        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["cat", "color", None, None, "mock_db"]))
+        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["cat", "color", None, "mock_db"]))
         definitions = next(self._db_mngr.get_object_parameter_definitions(self._db_map), [])
         self.assertEqual(len(definitions), 1)
         self.assertEqual(definitions[0]["parameter_name"], "breed")
 
     def test_add_relationship_parameter_definitions_to_db(self):
         """Test that relationship parameter definitions are added to the db when editing the table."""
-        header = ["relationship_class_name", "parameter_name", "value_list_name", "parameter_tag_list", "database"]
+        header = ["relationship_class_name", "parameter_name", "value_list_name", "database"]
         model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore()
-        self.assertTrue(
-            model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", None, None, "mock_db"])
-        )
+        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", None, "mock_db"]))
         definitions = next(self._db_mngr.get_relationship_parameter_definitions(self._db_map), [])
         self.assertEqual(len(definitions), 2)
         names = {d["parameter_name"] for d in definitions}
@@ -196,7 +195,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore()
         self.assertTrue(
-            model.batch_set_data(_empty_indexes(model), ["fish__dog", "each_others_opinion", None, None, "mock_db"])
+            model.batch_set_data(_empty_indexes(model), ["fish__dog", "each_others_opinion", None, "mock_db"])
         )
         definitions = next(self._db_mngr.get_relationship_parameter_definitions(self._db_map), [])
         self.assertEqual(len(definitions), 1)
