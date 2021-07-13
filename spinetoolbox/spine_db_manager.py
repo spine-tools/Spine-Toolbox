@@ -658,7 +658,6 @@ class SpineDBManager(QObject):
         return [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
 
     def get_db_map_cache(self, db_map):
-        self.fetch_all(db_map)
         return self._cache.setdefault(db_map, {})
 
     def get_items(self, db_map, item_type):
@@ -891,14 +890,6 @@ class SpineDBManager(QObject):
         if db_map.connection.closed:
             return
         self._get_fetcher(db_map).fetch_more(item_type)
-
-    def fetch_all(self, db_map):
-        if db_map.connection.closed:
-            return
-        fetcher = self._get_fetcher(db_map)
-        with signal_waiter(fetcher.all_fetched) as waiter:
-            fetcher.fetch_all()
-            waiter.wait()
 
     @staticmethod
     def get_db_items(query, chunk_size=1000):
