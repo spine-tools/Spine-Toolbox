@@ -19,6 +19,7 @@ QUndoCommand subclasses for modifying the db.
 import time
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QUndoCommand, QUndoStack
+from spinetoolbox.helpers import signal_waiter
 
 
 def _format_item(item_type, item):
@@ -344,7 +345,9 @@ class RemoveItemsCommand(SpineDBCommand):
             db_map_data = self.undo_typed_db_map_data[item_type]
             method_name = self._add_method_name[item_type]
             emit_signal_name = self._added_signal_name[item_type]
-            self.db_mngr.add_or_update_items(db_map_data, method_name, item_type, emit_signal_name, readd=True)
+            with signal_waiter(getattr(self.db_mngr, emit_signal_name)) as waiter:
+                self.db_mngr.add_or_update_items(db_map_data, method_name, item_type, emit_signal_name, readd=True)
+                waiter.wait()
 
     @Slot(object)
     def receive_items_changed(self, typed_db_map_data):  # pylint: disable=arguments-differ
