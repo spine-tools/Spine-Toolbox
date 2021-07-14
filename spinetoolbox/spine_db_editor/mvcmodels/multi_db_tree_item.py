@@ -40,6 +40,7 @@ class MultiDBTreeItem(TreeItem):
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
         self._fetch_recursive = False
+        self._fetched_once = False
 
     @property
     def db_mngr(self):
@@ -202,6 +203,9 @@ class MultiDBTreeItem(TreeItem):
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
+        if self.can_fetch_more() and not self._fetched_once:
+            self.fetch_more()
+            self._fetched_once = True
         return self.can_fetch_more() or self.child_count()
 
     def _fetch_success_cond(self, db_map, chunk):
