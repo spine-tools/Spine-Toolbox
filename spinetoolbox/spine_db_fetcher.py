@@ -78,6 +78,7 @@ class SpineDBFetcher(QObject):
     def can_fetch_more(self, item_type):
         return not self._fetched.get(item_type, False) or self._chunks.get(item_type, [])
 
+    @busy_effect
     def fetch_more(self, item_type, success_cond=None):
         """Fetches items from the database.
 

@@ -234,12 +234,14 @@ class SpineDBManager(QObject):
         }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
         typed_db_map_data = {}
         for item_type, signal in ordered_signals.items():
-            db_map_ids = {db_map: ids_per_type.get(item_type) for db_map, ids_per_type in db_map_typed_ids.items()}
-            db_map_data = {
-                db_map: [self._pop_item(db_map, item_type, id_) for id_ in ids]
-                for db_map, ids in db_map_ids.items()
-                if ids
-            }
+            db_map_data = {}
+            for db_map, ids_per_type in db_map_typed_ids.items():
+                ids = ids_per_type.get(item_type, [])
+                for id_ in ids:
+                    item = self._pop_item(db_map, item_type, id_)
+                    if not item:
+                        continue
+                    db_map_data.setdefault(db_map, []).append(item)
             if any(db_map_data.values()):
                 typed_db_map_data[item_type] = db_map_data
                 signal.emit(db_map_data)
@@ -1953,6 +1955,7 @@ class SpineDBManager(QObject):
         if item_type == "relationship_class":
             item["object_class_id_list"] = [int(id_) for id_ in item["object_class_id_list"].split(",")]
         elif item_type == "relationship":
+            item["object_class_id_list"] = [int(id_) for id_ in item["object_class_id_list"].split(",")]
             item["object_id_list"] = [int(id_) for id_ in item["object_id_list"].split(",")]
         elif item_type == "parameter_definition":
             item.pop("parsed_value", None)
