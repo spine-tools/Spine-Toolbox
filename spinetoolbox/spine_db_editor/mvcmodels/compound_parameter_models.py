@@ -71,7 +71,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if self._super_can_fetch_more.get(parent, False):
             super().fetchMore(parent)
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self.item_type)
+            success_cond = lambda x, db_map=db_map: self._fetch_success_cond(db_map, x)
+            self.db_mngr.fetch_more(db_map, self.item_type, success_cond=success_cond)
+
+    def _fetch_success_cond(self, db_map, item):
+        if not self.single_models:
+            return True
+        return any(m.db_map == db_map and item["entity_class_id"] == m.entity_class_id for m in self.single_models)
 
     def _make_header(self):
         raise NotImplementedError()

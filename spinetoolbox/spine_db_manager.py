@@ -292,6 +292,7 @@ class SpineDBManager(QObject):
         if typed_db_map_data:
             self.items_removed_from_cache.emit(typed_db_map_data)
 
+    @busy_effect
     def get_db_map_cache(self, db_map):
         self._get_fetcher(db_map).fetch_all()
         return self._cache.setdefault(db_map, {})

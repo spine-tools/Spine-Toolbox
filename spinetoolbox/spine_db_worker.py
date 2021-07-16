@@ -169,7 +169,15 @@ class SpineDBWorker(QObject):
             getattr(db_map, method_name)(*items, readd=True)
             items = [self._db_mngr.db_to_cache(db_map, item_type, item) for item in items]
             self._db_mngr.cache_items_for_fetching(db_map, item_type, items)
-            self._db_mngr.fetch_more(db_map, item_type)
+            if item_type not in ("parameter_value", "parameter_definition"):
+                self._db_mngr.fetch_more(db_map, item_type)
+                continue
+            # For parameter values and definitions, we need to fetch object and relationship independently
+            # because the UI is also split into object and relationship
+            if any(x.get("object_class_id") for x in items):
+                self._db_mngr.fetch_more(db_map, item_type, success_cond=lambda x: bool(x.get("object_class_id")))
+            if any(x.get("relationship_class_id") for x in items):
+                self._db_mngr.fetch_more(db_map, item_type, success_cond=lambda x: bool(x.get("relationship_class_id")))
 
     def remove_items(self, db_map_typed_ids):
         """Removes items from database.

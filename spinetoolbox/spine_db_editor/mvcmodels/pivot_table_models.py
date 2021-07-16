@@ -58,7 +58,11 @@ class PivotTableModelBase(QAbstractTableModel):
 
     def fetchMore(self, parent=QModelIndex()):
         for db_map in self._parent.db_maps:
-            self.db_mngr.fetch_more(db_map, self.item_type)
+            success_cond = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
+            self.db_mngr.fetch_more(db_map, self.item_type, success_cond=success_cond)
+
+    def _fetch_success_cond(self, db_map, item):
+        return True
 
     @property
     def item_type(self):
@@ -707,6 +711,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "parameter_value"
 
+    def _fetch_success_cond(self, db_map, item):
+        entity_class_id = self._parent.current_class_id[db_map]
+        return item["entity_class_id"] == entity_class_id
+
     def db_map_object_ids(self, index):
         """
         Returns db_map and object ids for given index. Used by PivotTableView.
@@ -1097,6 +1105,10 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     @property
     def item_type(self):
         return "relationship"
+
+    def _fetch_success_cond(self, db_map, item):
+        entity_class_id = self._parent.current_class_id[db_map]
+        return item["class_id"] == entity_class_id
 
     def call_reset_model(self, pivot=None):
         """See base class."""
