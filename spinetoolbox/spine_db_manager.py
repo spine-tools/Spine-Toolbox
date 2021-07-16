@@ -49,7 +49,7 @@ from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, 
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, signal_waiter
+from .helpers import get_upgrade_db_promt_text, signal_waiter, CacheItem
 
 
 @busy_effect
@@ -282,7 +282,7 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -317,12 +317,7 @@ class SpineDBManager(QObject):
     def get_db_map_cache(self, db_map):
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all()
-        result = {}
-        for cache in (self._cache.get(db_map, {}), fetcher.cache):
-            for item_type, items in cache.items():
-                for id_, item in items.items():
-                    result.setdefault(item_type, {})[id_] = CacheItem(**item)
-        return result
+        return CombinedCache(self._cache.setdefault(db_map, {}), fetcher.cache)
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -2121,16 +2116,10 @@ class SpineDBManager(QObject):
         return item
 
 
-class CacheItem(dict):
-    """A dictionary that behaves kinda like a row from a query result.
+class CombinedCache:
+    def __init__(self, d1, d2):
+        self._d1 = d1
+        self._d2 = d2
 
-    It is used to store items in a cache, so we can access them as if they were rows from a query result.
-    This is mainly because we want to use the cache as a replacement for db queries in some methods.
-    """
-
-    def __getattr__(self, name):
-        """Overridden method to return the dictionary key named after the attribute, or None if it doesn't exist."""
-        return self.get(name)
-
-    def _asdict(self):
-        return dict(**self)
+    def get(self, key, default):
+        return {**self._d1.get(key, default), **self._d2.get(key, default)}

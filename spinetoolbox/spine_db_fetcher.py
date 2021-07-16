@@ -18,7 +18,7 @@ SpineDBFetcher class.
 
 import itertools
 from PySide2.QtCore import Signal, Slot, QObject
-from spinetoolbox.helpers import busy_effect, signal_waiter
+from spinetoolbox.helpers import busy_effect, signal_waiter, CacheItem
 
 # FIXME: We need to invalidate cache here as user makes changes (update, remove)
 
@@ -65,7 +65,7 @@ class SpineDBFetcher(QObject):
         self._fetch_all_requested.connect(self._fetch_all)
 
     def cache_items(self, item_type, items):
-        self.cache.setdefault(item_type, {}).update({x["id"]: x for x in items})
+        self.cache.setdefault(item_type, {}).update({x["id"]: CacheItem(**x) for x in items})
 
     def get_item(self, item_type, id_):
         return self.cache.get(item_type, {}).get(id_, {})
