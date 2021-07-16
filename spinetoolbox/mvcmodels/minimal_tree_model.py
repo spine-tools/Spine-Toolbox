@@ -123,8 +123,6 @@ class TreeItem:
         if position < 0 or position > self.child_count():
             return False
         children = list(children)
-        if not children:
-            return True
         for child in children:
             child.parent_item = self
         self.model.beginInsertRows(self.index(), position, position + len(children) - 1)

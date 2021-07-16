@@ -27,7 +27,6 @@ class EntityRootItem(MultiDBTreeItem):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._fetch_recursive = True
         self.fetch_more()
 
     @property
@@ -194,10 +193,14 @@ class ObjectClassItem(EntityClassItem):
 
     def _get_children_ids(self, db_map):
         """see super class."""
-        return [x["id"] for x in self.db_mngr.get_items(db_map, "object") if x["class_id"] == self.db_map_id(db_map)]
+        return [
+            x["id"]
+            for x in self.db_mngr.get_items(db_map, "object")
+            if self._fetch_success_cond(self.db_map_id(db_map), x)
+        ]
 
-    def _fetch_success_cond(self, db_map, chunk):
-        return any(x["class_id"] == self.db_map_id(db_map) for x in chunk)
+    def _fetch_success_cond(self, db_map, item):
+        return item["class_id"] == self.db_map_id(db_map)
 
 
 class RelationshipClassItemBase(EntityClassItem):
@@ -228,11 +231,13 @@ class RelationshipClassItem(RelationshipClassItemBase):
     def _get_children_ids(self, db_map):
         """see super class."""
         return [
-            x["id"] for x in self.db_mngr.get_items(db_map, "relationship") if x["class_id"] == self.db_map_id(db_map)
+            x["id"]
+            for x in self.db_mngr.get_items(db_map, "relationship")
+            if self._fetch_success_cond(self.db_map_id(db_map), x)
         ]
 
-    def _fetch_success_cond(self, db_map, chunk):
-        return any(x["class_id"] == self.db_map_id(db_map) for x in chunk)
+    def _fetch_success_cond(self, db_map, item):
+        return item["class_id"] == self.db_map_id(db_map)
 
 
 class ObjectRelationshipClassItem(RelationshipClassItemBase):

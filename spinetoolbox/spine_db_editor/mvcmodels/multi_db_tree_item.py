@@ -39,7 +39,6 @@ class MultiDBTreeItem(TreeItem):
             db_map_id = {}
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
-        self._fetch_recursive = False
         self._fetched_once = False
 
     @property
@@ -208,7 +207,7 @@ class MultiDBTreeItem(TreeItem):
             self._fetched_once = True
         return self.can_fetch_more() or self.child_count()
 
-    def _fetch_success_cond(self, db_map, chunk):
+    def _fetch_success_cond(self, db_map, item):
         return True
 
     def can_fetch_more(self):
@@ -217,7 +216,6 @@ class MultiDBTreeItem(TreeItem):
             self.db_mngr.can_fetch_more(db_map, child_type) or self._get_children_ids(db_map) for db_map in self.db_maps
         ):
             return False
-        self._fetch_recursive = True
         return True
 
     def fetch_more(self):
@@ -226,7 +224,7 @@ class MultiDBTreeItem(TreeItem):
         if child_type is None:
             return
         for db_map in self.db_maps:
-            success_cond = lambda chunk, db_map=db_map: self._fetch_success_cond(db_map, chunk)
+            success_cond = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
             self.db_mngr.fetch_more(db_map, child_type, success_cond=success_cond)
         # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
         # This is needed for object items that are created *after* the relationship classes are fetched.
@@ -331,9 +329,6 @@ class MultiDBTreeItem(TreeItem):
         if not super().insert_children(position, *children):
             return False
         self._refresh_child_map()
-        if self._fetch_recursive:
-            for child in list(children):
-                child.fetch_more()
         return True
 
     def remove_children(self, position, count):

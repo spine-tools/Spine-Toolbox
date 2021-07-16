@@ -108,6 +108,8 @@ class EntityTreeView(CopyTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
+        if end < start:
+            self.model().layoutChanged.emit()
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)

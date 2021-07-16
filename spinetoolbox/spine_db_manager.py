@@ -899,15 +899,15 @@ class SpineDBManager(QObject):
         self._get_fetcher(db_map).fetch_more(item_type, success_cond=success_cond)
 
     @staticmethod
-    def get_db_items(query, chunk_size=1000):
+    def get_db_items(query, query_chunk_size=1000, iter_chunk_size=100):
         """Runs the given query and yields results by chunks of given size.
 
         Yields:
             generator(list)
         """
-        it = (x._asdict() for x in query.yield_per(chunk_size).enable_eagerloads(False))
+        it = (x._asdict() for x in query.yield_per(query_chunk_size).enable_eagerloads(False))
         while True:
-            chunk = list(itertools.islice(it, chunk_size // 10))
+            chunk = list(itertools.islice(it, iter_chunk_size))
             yield chunk
             if not chunk:
                 break

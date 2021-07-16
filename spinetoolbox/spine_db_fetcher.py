@@ -16,8 +16,11 @@ SpineDBFetcher class.
 :date:   13.3.2020
 """
 
+import itertools
 from PySide2.QtCore import Signal, Slot, QObject
-from spinetoolbox.helpers import busy_effect
+from spinetoolbox.helpers import busy_effect, signal_waiter
+
+# FIXME: We need to invalidate cache here as user makes changes (update, remove)
 
 
 class SpineDBFetcher(QObject):
@@ -71,12 +74,12 @@ class SpineDBFetcher(QObject):
         }
         self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
         self._fetched = {item_type: False for item_type in self._getters}
-        self._chunks = {}
+        self._cache = {}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
 
     def can_fetch_more(self, item_type):
-        return not self._fetched.get(item_type, False) or self._chunks.get(item_type, [])
+        return not self._fetched.get(item_type, False) or self._cache.get(item_type, {})
 
     @busy_effect
     def fetch_more(self, item_type, success_cond=None):
@@ -88,13 +91,17 @@ class SpineDBFetcher(QObject):
         if not self.can_fetch_more(item_type):
             return
         if success_cond is None:
-            success_cond = lambda chunk: True
-        chunks = self._chunks.get(item_type, [])
-        for k, chunk in enumerate(chunks):
-            if success_cond(chunk):
+            success_cond = lambda x: True
+        items = self._cache.get(item_type, {})
+        args = [iter(items)] * 100
+        for keys in itertools.zip_longest(*args):
+            keys = set(keys) - {None}
+            chunk = [items[k] for k in keys]
+            if any(success_cond(x) for x in chunk):
+                for k in keys:
+                    del items[k]
                 signal = self._signals.get(item_type)
                 signal.emit({self._db_map: chunk})
-                chunks.pop(k)
                 return
         self._fetch_more_requested.emit(item_type, success_cond)
 
@@ -111,9 +118,8 @@ class SpineDBFetcher(QObject):
             chunk = next(iterator, [])
             if not chunk:
                 self._fetched[item_type] = True
-                break
-            if success_cond(chunk):
+            if not chunk or any(success_cond(x) for x in chunk):
                 signal = self._signals.get(item_type)
                 signal.emit({self._db_map: chunk})
                 break
-            self._chunks.setdefault(item_type, []).append(chunk)
+            self._cache.setdefault(item_type, {}).update({x["id"]: x for x in chunk})
