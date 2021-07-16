@@ -28,7 +28,7 @@ class SpineDBFetcher(QObject):
 
     _fetch_more_requested = Signal(str, object)
     _fetch_all_requested = Signal()
-    _all_fetched = Signal()
+    _fetch_all_finished = Signal()
 
     def __init__(self, db_mngr, db_map):
         """Initializes the fetcher object.
@@ -77,16 +77,21 @@ class SpineDBFetcher(QObject):
         self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
         self._fetched = {item_type: False for item_type in self._getters}
         self._cache = {}
-        self._can_fetch_all = True
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._fetch_all_requested.connect(self._fetch_all)
+
+    def cache_items(self, item_type, items):
+        self._cache.setdefault(item_type, {}).update({x["id"]: x for x in items})
+
+    def get_item(self, item_type, id_):
+        return self._cache.get(item_type, {}).get(id_, {})
 
     def can_fetch_more(self, item_type):
         return not self._fetched.get(item_type, False) or self._cache.get(item_type, {})
 
     @busy_effect
-    def fetch_more(self, item_type, success_cond=None):
+    def fetch_more(self, item_type, success_cond=None, iter_chunk_size=100):
         """Fetches items from the database.
 
         Args:
@@ -95,9 +100,9 @@ class SpineDBFetcher(QObject):
         if not self.can_fetch_more(item_type):
             return
         if success_cond is None:
-            success_cond = lambda x: True
+            success_cond = lambda _: True
         items = self._cache.get(item_type, {})
-        args = [iter(items)] * 100
+        args = [iter(items)] * iter_chunk_size
         for keys in itertools.zip_longest(*args):
             keys = set(keys) - {None}
             chunk = [items[k] for k in keys]
@@ -122,19 +127,19 @@ class SpineDBFetcher(QObject):
             chunk = next(iterator, [])
             if not chunk:
                 self._fetched[item_type] = True
+                return
             if not chunk or any(success_cond(x) for x in chunk):
                 signal = self._signals.get(item_type)
                 signal.emit({self._db_map: chunk})
                 break
-            self._cache.setdefault(item_type, {}).update({x["id"]: x for x in chunk})
+            self.cache_items(item_type, chunk)
 
     def fetch_all(self):
-        if not self._can_fetch_all:
+        if not any(self.can_fetch_more(item_type) for item_type in self._fetched):
             return
-        with signal_waiter(self._all_fetched) as waiter:
+        with signal_waiter(self._fetch_all_finished) as waiter:
             self._fetch_all_requested.emit()
             waiter.wait()
-        self._can_fetch_all = True
 
     @Slot()
     def _fetch_all(self):
@@ -143,7 +148,7 @@ class SpineDBFetcher(QObject):
     @busy_effect
     def _do_fetch_all(self):
         for item_type in self._fetched:
-            self._do_fetch_more(item_type, lambda chunk: False)
+            self._do_fetch_more(item_type, lambda _: False)
         for item_type, data in self._cache.items():
             self._db_mngr.cache_items(item_type, {self._db_map: data.values()})
-        self._all_fetched.emit()
+        self._fetch_all_finished.emit()

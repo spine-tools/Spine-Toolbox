@@ -232,9 +232,11 @@ class MultiDBTreeItem(TreeItem):
         self.append_children_by_id(db_map_ids)
 
     def _get_children_ids(self, db_map):
-        """Returns a list of children ids.
-        Must be reimplemented in subclasses."""
-        raise NotImplementedError()
+        """Returns a list of children ids."""
+        child_type = self.child_item_class.item_type
+        if child_type is None:
+            return []
+        return [x["id"] for x in self.db_mngr.get_items(db_map, child_type) if self._fetch_success_cond(db_map, x)]
 
     def append_children_by_id(self, db_map_ids):
         """

@@ -163,15 +163,6 @@ class SpineDBEditorBase(QMainWindow):
         new_redo_action = self.db_mngr.redo_action[self.first_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
 
-    def _make_busy(self):
-        self.silenced = True
-        self.setCursor(QCursor(Qt.BusyCursor))
-
-    def _make_iddle(self):
-        self.silenced = False
-        self.unsetCursor()
-        self._fetcher = None
-
     @Slot(bool)
     def load_previous_urls(self, _=False):
         urls = self.url_toolbar.get_previous_urls()

@@ -194,6 +194,50 @@ class SpineDBManager(QObject):
         self._worker.connect_signals()
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
+    def _get_fetcher(self, db_map):
+        """Returns a fetcher.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            SpineDBFetcher
+        """
+        if db_map not in self._fetchers:
+            self._fetchers[db_map] = SpineDBFetcher(self, db_map)
+        return self._fetchers[db_map]
+
+    def can_fetch_more(self, db_map, item_type):
+        """Whether or not we can fetch more items of given type from given db.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str): the type of items to fetch, e.g. "object_class"
+
+        Returns:
+            bool
+        """
+        if db_map.connection.closed:
+            return False
+        return self._get_fetcher(db_map).can_fetch_more(item_type)
+
+    def fetch_more(self, db_map, item_type, success_cond=None, iter_chunk_size=100):
+        """Fetches more items of given type from given db.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str): the type of items to fetch, e.g. "object_class"
+            success_cond (func, optional): A function that receives a dictionary item and returns a boolean.
+                If given, we keep fetching until one of the items passes the condition.
+            iter_chunk_size (int, optional): fetches items by chunks of the given size
+        """
+        if db_map.connection.closed:
+            return
+        self._get_fetcher(db_map).fetch_more(item_type, success_cond=success_cond, iter_chunk_size=iter_chunk_size)
+
+    def cache_items_for_fetching(self, db_map, item_type, items):
+        self._get_fetcher(db_map).cache_items(item_type, items)
+
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
         It works for both insert and update operations.
@@ -247,6 +291,10 @@ class SpineDBManager(QObject):
                 signal.emit(db_map_data)
         if typed_db_map_data:
             self.items_removed_from_cache.emit(typed_db_map_data)
+
+    def get_db_map_cache(self, db_map):
+        self._get_fetcher(db_map).fetch_all()
+        return self._cache.setdefault(db_map, {})
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -626,7 +674,9 @@ class SpineDBManager(QObject):
         Returns:
             dict
         """
-        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
+        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {}) or self._get_fetcher(db_map).get_item(
+            item_type, id_
+        )
 
     def get_item_by_field(self, db_map, item_type, field, value):
         """Returns the first item of the given type in the given db map
@@ -658,10 +708,6 @@ class SpineDBManager(QObject):
             list
         """
         return [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
-
-    def get_db_map_cache(self, db_map):
-        self._get_fetcher(db_map).fetch_all()
-        return self._cache.setdefault(db_map, {})
 
     def get_items(self, db_map, item_type):
         """Returns all the items of the given type in the given db map,
@@ -875,29 +921,6 @@ class SpineDBManager(QObject):
         if not alternative_id_list:
             return []
         return [int(id_) for id_ in alternative_id_list.split(",")]
-
-    def _get_fetcher(self, db_map):
-        """Returns a fetcher.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Returns:
-            SpineDBFetcher
-        """
-        if db_map not in self._fetchers:
-            self._fetchers[db_map] = SpineDBFetcher(self, db_map)
-        return self._fetchers[db_map]
-
-    def can_fetch_more(self, db_map, item_type):
-        if db_map.connection.closed:
-            return False
-        return self._get_fetcher(db_map).can_fetch_more(item_type)
-
-    def fetch_more(self, db_map, item_type, success_cond=None):
-        if db_map.connection.closed:
-            return
-        self._get_fetcher(db_map).fetch_more(item_type, success_cond=success_cond)
 
     @staticmethod
     def get_db_items(query, query_chunk_size=1000, iter_chunk_size=100):

@@ -31,6 +31,7 @@ from spinedb_api import (
     create_new_spine_database,
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spinetoolbox.helpers import busy_effect
 
 
 class SpineDBWorker(QObject):
@@ -41,7 +42,7 @@ class SpineDBWorker(QObject):
     _get_metadata_per_parameter_value_called = Signal(object, list, dict)
     _close_db_map_called = Signal(object)
     _add_or_update_items_called = Signal(object, str, str, bool, str)
-    _readd_items_called = Signal(object, str, str, str)
+    _readd_items_called = Signal(object, str, str)
     _remove_items_called = Signal(object)
     _commit_session_called = Signal(object, str, object)
     _rollback_session_called = Signal(object)
@@ -134,12 +135,16 @@ class SpineDBWorker(QObject):
             check (bool): Whether or not to check integrity
         """
         if readd:
-            self._readd_items_called.emit(db_map_data, method_name, item_type, signal_name)
+            self._readd_items_called.emit(db_map_data, method_name, item_type)
         else:
             self._add_or_update_items_called.emit(db_map_data, method_name, item_type, check, signal_name)
 
     @Slot(object, str, str, bool, str)
     def _add_or_update_items(self, db_map_data, method_name, item_type, check, signal_name):
+        self._do_add_or_update_items(db_map_data, method_name, item_type, check, signal_name)
+
+    @busy_effect
+    def _do_add_or_update_items(self, db_map_data, method_name, item_type, check, signal_name):
         signal = getattr(self._db_mngr, signal_name)
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
@@ -154,24 +159,32 @@ class SpineDBWorker(QObject):
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
 
-    @Slot(object, str, str, str)
-    def _readd_items(self, db_map_data, method_name, item_type, signal_name):
-        signal = getattr(self._db_mngr, signal_name)
+    @Slot(object, str, str)
+    def _readd_items(self, db_map_data, method_name, item_type):
+        self._do_readd_items(db_map_data, method_name, item_type)
+
+    @busy_effect
+    def _do_readd_items(self, db_map_data, method_name, item_type):
         for db_map, items in db_map_data.items():
             getattr(db_map, method_name)(*items, readd=True)
             items = [self._db_mngr.db_to_cache(db_map, item_type, item) for item in items]
-            signal.emit({db_map: items})
+            self._db_mngr.cache_items_for_fetching(db_map, item_type, items)
+            self._db_mngr.fetch_more(db_map, item_type)
 
     def remove_items(self, db_map_typed_ids):
-        self._remove_items_called.emit(db_map_typed_ids)
-
-    @Slot(object)
-    def _remove_items(self, db_map_typed_ids):
         """Removes items from database.
 
         Args:
             db_map_typed_ids (dict): lists of items to remove, keyed by item type (str), keyed by DiffDatabaseMapping
         """
+        self._remove_items_called.emit(db_map_typed_ids)
+
+    @Slot(object)
+    def _remove_items(self, db_map_typed_ids):
+        self._do_remove_items(db_map_typed_ids)
+
+    @busy_effect
+    def _do_remove_items(self, db_map_typed_ids):
         db_map_error_log = dict()
         for db_map, ids_per_type in db_map_typed_ids.items():
             try:

@@ -1178,10 +1178,12 @@ class SignalWaiter(QObject):
     def __init__(self):
         super().__init__()
         self._triggered = False
+        self.args = ()
 
-    def trigger(self):
+    def trigger(self, *args):
         """Signal receiving slot."""
         self._triggered = True
+        self.args = args
 
     def wait(self):
         """Wait for signal to be received."""
