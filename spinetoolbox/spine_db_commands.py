@@ -193,7 +193,9 @@ class SpineDBCommand(AgedUndoCommand):
         def redo(self):
             super().redo()
             self.completed_signal.connect(self.receive_items_changed)
-            func(self)
+            with signal_waiter(self.completed_signal) as waiter:
+                func(self)
+                waiter.wait()
 
         return redo
 
@@ -314,6 +316,15 @@ class UpdateItemsCommand(SpineDBCommand):
             self.undo_db_map_data, self.method_name, self.item_type, self.completed_signal_name, check=False
         )
 
+    @Slot(object)
+    def receive_items_changed(self, db_map_data):
+        super().receive_items_changed(db_map_data)
+        self.redo_db_map_data = {
+            db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
+            for db_map, data in db_map_data.items()
+        }
+        self._check = False
+
     def data(self):
         return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map]}
 
@@ -330,6 +341,7 @@ class RemoveItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not any(typed_data.values()):
             self.setObsolete(True)
+        typed_data = db_map.cascading_ids(cache=self.db_mngr.get_db_map_cache(db_map), **typed_data)
         self.redo_db_map_typed_data = {db_map: typed_data}
         self.undo_typed_db_map_data = {}
         self.setText(f"remove items from '{db_map.codename}'")

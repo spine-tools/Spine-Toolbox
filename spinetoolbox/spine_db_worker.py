@@ -26,7 +26,6 @@ from spinedb_api import (
     SpineDBAPIError,
     SpineDBVersionError,
     ParameterValueEncoder,
-    get_data_for_import,
     import_data,
     export_data,
     create_new_spine_database,
@@ -124,6 +123,16 @@ class SpineDBWorker(QObject):
             d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
 
     def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
+        """Adds or updates items in db.
+
+        Args:
+            db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
+            method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
+            item_type (str): item type
+            signal_name (str) : signal attribute of SpineDBManager to emit if successful
+            readd (bool): Whether or not to readd items
+            check (bool): Whether or not to check integrity
+        """
         if readd:
             self._readd_items_called.emit(db_map_data, method_name, item_type, signal_name)
         else:
@@ -131,15 +140,6 @@ class SpineDBWorker(QObject):
 
     @Slot(object, str, str, bool, str)
     def _add_or_update_items(self, db_map_data, method_name, item_type, check, signal_name):
-        """Adds or updates items in db.
-
-        Args:
-            db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
-            method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
-            item_type (str): item type
-            check (bool): Whether or not to check integrity
-            signal_name (str) : signal attribute of SpineDBManager to emit if successful
-        """
         signal = getattr(self._db_mngr, signal_name)
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
@@ -154,19 +154,8 @@ class SpineDBWorker(QObject):
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
 
-    def readd_items(self, db_map_data, method_name, item_type, signal_name):
-        self._readd_items_called.emit(db_map_data, method_name, item_type, signal_name)
-
     @Slot(object, str, str, str)
     def _readd_items(self, db_map_data, method_name, item_type, signal_name):
-        """Adds or updates items in db.
-
-        Args:
-            db_map_data (dict): lists of items to add or update keyed by DiffDatabaseMapping
-            method_name (str): attribute of DiffDatabaseMapping to call for performing the operation
-            item_type (str): item type
-            signal_name (str) : signal attribute of SpineDBManager to emit if successful
-        """
         signal = getattr(self._db_mngr, signal_name)
         for db_map, items in db_map_data.items():
             getattr(db_map, method_name)(*items, readd=True)
@@ -183,9 +172,6 @@ class SpineDBWorker(QObject):
         Args:
             db_map_typed_ids (dict): lists of items to remove, keyed by item type (str), keyed by DiffDatabaseMapping
         """
-        db_map_typed_ids = {
-            db_map: db_map.cascading_ids(**ids_per_type) for db_map, ids_per_type in db_map_typed_ids.items()
-        }
         db_map_error_log = dict()
         for db_map, ids_per_type in db_map_typed_ids.items():
             try:

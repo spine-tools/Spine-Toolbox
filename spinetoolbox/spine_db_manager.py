@@ -660,6 +660,7 @@ class SpineDBManager(QObject):
         return [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
 
     def get_db_map_cache(self, db_map):
+        self._get_fetcher(db_map).fetch_all()
         return self._cache.setdefault(db_map, {})
 
     def get_items(self, db_map, item_type):
