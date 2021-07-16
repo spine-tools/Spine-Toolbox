@@ -52,9 +52,9 @@ class MultiDBTreeModel(MinimalTreeModel):
         """Builds tree."""
         self.beginResetModel()
         self._invisible_root_item = TreeItem(self)
-        self.endResetModel()
         self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
         self._invisible_root_item.append_children(self._root_item)
+        self.endResetModel()
 
     def columnCount(self, parent=QModelIndex()):
         return 2

@@ -57,38 +57,21 @@ class SpineDBFetcher(QObject):
             "tool_feature": self._db_mngr.get_tool_features,
             "tool_feature_method": self._db_mngr.get_tool_feature_methods,
         }
-        self._signals = {
-            "object_class": self._db_mngr.object_classes_added,
-            "relationship_class": self._db_mngr.relationship_classes_added,
-            "parameter_definition": self._db_mngr.parameter_definitions_added,
-            "object": self._db_mngr.objects_added,
-            "relationship": self._db_mngr.relationships_added,
-            "entity_group": self._db_mngr.entity_groups_added,
-            "parameter_value": self._db_mngr.parameter_values_added,
-            "parameter_value_list": self._db_mngr.parameter_value_lists_added,
-            "alternative": self._db_mngr.alternatives_added,
-            "scenario": self._db_mngr.scenarios_added,
-            "scenario_alternative": self._db_mngr.scenario_alternatives_added,
-            "feature": self._db_mngr.features_added,
-            "tool": self._db_mngr.tools_added,
-            "tool_feature": self._db_mngr.tool_features_added,
-            "tool_feature_method": self._db_mngr.tool_feature_methods_added,
-        }
         self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
         self._fetched = {item_type: False for item_type in self._getters}
-        self._cache = {}
+        self.cache = {}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._fetch_all_requested.connect(self._fetch_all)
 
     def cache_items(self, item_type, items):
-        self._cache.setdefault(item_type, {}).update({x["id"]: x for x in items})
+        self.cache.setdefault(item_type, {}).update({x["id"]: x for x in items})
 
     def get_item(self, item_type, id_):
-        return self._cache.get(item_type, {}).get(id_, {})
+        return self.cache.get(item_type, {}).get(id_, {})
 
     def can_fetch_more(self, item_type):
-        return not self._fetched.get(item_type, False) or self._cache.get(item_type, {})
+        return not self._fetched.get(item_type, False) or self.cache.get(item_type, {})
 
     @busy_effect
     def fetch_more(self, item_type, success_cond=None, iter_chunk_size=100):
@@ -101,7 +84,7 @@ class SpineDBFetcher(QObject):
             return
         if success_cond is None:
             success_cond = lambda _: True
-        items = self._cache.get(item_type, {})
+        items = self.cache.get(item_type, {})
         args = [iter(items)] * iter_chunk_size
         for keys in itertools.zip_longest(*args):
             keys = set(keys) - {None}
@@ -109,7 +92,7 @@ class SpineDBFetcher(QObject):
             if any(success_cond(x) for x in chunk):
                 for k in keys:
                     del items[k]
-                signal = self._signals.get(item_type)
+                signal = self._db_mngr.added_signals.get(item_type)
                 signal.emit({self._db_map: chunk})
                 return
         self._fetch_more_requested.emit(item_type, success_cond)
@@ -128,8 +111,8 @@ class SpineDBFetcher(QObject):
             if not chunk:
                 self._fetched[item_type] = True
                 return
-            if not chunk or any(success_cond(x) for x in chunk):
-                signal = self._signals.get(item_type)
+            if any(success_cond(x) for x in chunk):
+                signal = self._db_mngr.added_signals.get(item_type)
                 signal.emit({self._db_map: chunk})
                 break
             self.cache_items(item_type, chunk)
@@ -147,8 +130,6 @@ class SpineDBFetcher(QObject):
 
     @busy_effect
     def _do_fetch_all(self):
-        for item_type in self._fetched:
+        for item_type in self._getters:
             self._do_fetch_more(item_type, lambda _: False)
-        for item_type, data in self._cache.items():
-            self._db_mngr.cache_items(item_type, {self._db_map: data.values()})
         self._fetch_all_finished.emit()

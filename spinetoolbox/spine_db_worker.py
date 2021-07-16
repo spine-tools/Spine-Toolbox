@@ -42,7 +42,7 @@ class SpineDBWorker(QObject):
     _get_metadata_per_parameter_value_called = Signal(object, list, dict)
     _close_db_map_called = Signal(object)
     _add_or_update_items_called = Signal(object, str, str, bool, str)
-    _readd_items_called = Signal(object, str, str)
+    _readd_items_called = Signal(object, str, str, str)
     _remove_items_called = Signal(object)
     _commit_session_called = Signal(object, str, object)
     _rollback_session_called = Signal(object)
@@ -135,7 +135,7 @@ class SpineDBWorker(QObject):
             check (bool): Whether or not to check integrity
         """
         if readd:
-            self._readd_items_called.emit(db_map_data, method_name, item_type)
+            self._readd_items_called.emit(db_map_data, method_name, item_type, signal_name)
         else:
             self._add_or_update_items_called.emit(db_map_data, method_name, item_type, check, signal_name)
 
@@ -159,25 +159,25 @@ class SpineDBWorker(QObject):
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
 
-    @Slot(object, str, str)
-    def _readd_items(self, db_map_data, method_name, item_type):
-        self._do_readd_items(db_map_data, method_name, item_type)
+    @Slot(object, str, str, str)
+    def _readd_items(self, db_map_data, method_name, item_type, signal_name):
+        self._do_readd_items(db_map_data, method_name, item_type, signal_name)
 
     @busy_effect
-    def _do_readd_items(self, db_map_data, method_name, item_type):
+    def _do_readd_items(self, db_map_data, method_name, item_type, signal_name):
+        signal = getattr(self._db_mngr, signal_name)
         for db_map, items in db_map_data.items():
             getattr(db_map, method_name)(*items, readd=True)
-            items = [self._db_mngr.db_to_cache(db_map, item_type, item) for item in items]
-            self._db_mngr.cache_items_for_fetching(db_map, item_type, items)
-            if item_type not in ("parameter_value", "parameter_definition"):
-                self._db_mngr.fetch_more(db_map, item_type)
-                continue
-            # For parameter values and definitions, we need to fetch object and relationship independently
-            # because the UI is also split into object and relationship
-            if any(x.get("object_class_id") for x in items):
-                self._db_mngr.fetch_more(db_map, item_type, success_cond=lambda x: bool(x.get("object_class_id")))
-            if any(x.get("relationship_class_id") for x in items):
-                self._db_mngr.fetch_more(db_map, item_type, success_cond=lambda x: bool(x.get("relationship_class_id")))
+            visible = []
+            hidden = []
+            for item in items:
+                item = self._db_mngr.db_to_cache(db_map, item_type, item)
+                if item.pop("visible", True):
+                    visible.append(item)
+                else:
+                    hidden.append(item)
+            self._db_mngr.cache_items_for_fetching(db_map, item_type, hidden)
+            signal.emit({db_map: visible})
 
     def remove_items(self, db_map_typed_ids):
         """Removes items from database.

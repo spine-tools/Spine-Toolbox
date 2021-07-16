@@ -140,32 +140,66 @@ class SpineDBManager(QObject):
         self._cache = {}
         self._icon_mngr = {}
         self.signaller = SpineDBSignaller(self)
+        self.added_signals = {
+            "object_class": self.object_classes_added,
+            "relationship_class": self.relationship_classes_added,
+            "parameter_value_list": self.parameter_value_lists_added,
+            "parameter_definition": self.parameter_definitions_added,
+            "alternative": self.alternatives_added,
+            "scenario": self.scenarios_added,
+            "scenario_alternative": self.scenario_alternatives_added,
+            "object": self.objects_added,
+            "relationship": self.relationships_added,
+            "entity_group": self.entity_groups_added,
+            "parameter_value": self.parameter_values_added,
+            "feature": self.features_added,
+            "tool": self.tools_added,
+            "tool_feature": self.tool_features_added,
+            "tool_feature_method": self.tool_feature_methods_added,
+        }
+        self.updated_signals = {
+            "object_class": self.object_classes_updated,
+            "relationship_class": self.relationship_classes_updated,
+            "parameter_value_list": self.parameter_value_lists_updated,
+            "parameter_definition": self.parameter_definitions_updated,
+            "alternative": self.alternatives_updated,
+            "scenario": self.scenarios_updated,
+            "scenario_alternative": self.scenario_alternatives_updated,
+            "object": self.objects_updated,
+            "relationship": self.relationships_updated,
+            "parameter_value": self.parameter_values_updated,
+            "feature": self.features_updated,
+            "tool": self.tools_updated,
+            "tool_feature": self.tool_features_updated,
+            "tool_feature_method": self.tool_feature_methods_updated,
+        }
+        self.removed_signals = {
+            "parameter_value": self.parameter_values_removed,
+            "entity_group": self.entity_groups_removed,
+            "relationship": self.relationships_removed,
+            "object": self.objects_removed,
+            "scenario_alternative": self.scenario_alternatives_removed,
+            "scenario": self.scenarios_removed,
+            "alternative": self.alternatives_removed,
+            "tool_feature_method": self.tool_feature_methods_removed,
+            "tool_feature": self.tool_features_removed,
+            "feature": self.features_removed,
+            "tool": self.tools_removed,
+            "parameter_definition": self.parameter_definitions_removed,
+            "parameter_value_list": self.parameter_value_lists_removed,
+            "relationship_class": self.relationship_classes_removed,
+            "object_class": self.object_classes_removed,
+        }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
         self.connect_signals()
 
     def connect_signals(self):
         """Connects signals."""
         # Cache
-        ordered_signals = {
-            "object_class": (self.object_classes_added, self.object_classes_updated),
-            "relationship_class": (self.relationship_classes_added, self.relationship_classes_updated),
-            "parameter_value_list": (self.parameter_value_lists_added, self.parameter_value_lists_updated),
-            "parameter_definition": (self.parameter_definitions_added, self.parameter_definitions_updated),
-            "alternative": (self.alternatives_added, self.alternatives_updated),
-            "scenario": (self.scenarios_added, self.scenarios_updated),
-            "scenario_alternative": (self.scenario_alternatives_added, self.scenario_alternatives_updated),
-            "object": (self.objects_added, self.objects_updated),
-            "relationship": (self.relationships_added, self.relationships_updated),
-            "entity_group": (self.entity_groups_added,),
-            "parameter_value": (self.parameter_values_added, self.parameter_values_updated),
-            "feature": (self.features_added, self.features_updated),
-            "tool": (self.tools_added, self.tools_updated),
-            "tool_feature": (self.tool_features_added, self.tool_features_updated),
-            "tool_feature_method": (self.tool_feature_methods_added, self.tool_feature_methods_updated),
-        }
-        for item_type, signals in ordered_signals.items():
-            for signal in signals:
-                signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
-        self.session_rolled_back.connect(self._refetch)
+        for item_type, signal in self.added_signals.items():
+            signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        for item_type, signal in self.updated_signals.items():
+            signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        self.session_rolled_back.connect(self._clear_fetchers)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
         # Refresh (after caching, so items are there when listeners receive signals)
@@ -248,7 +282,7 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
 
     def _pop_item(self, db_map, item_type, id_):
         return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
@@ -259,33 +293,20 @@ class SpineDBManager(QObject):
         Args:
             db_map_typed_ids
         """
-        ordered_signals = {
-            "parameter_value": self.parameter_values_removed,
-            "entity_group": self.entity_groups_removed,
-            "relationship": self.relationships_removed,
-            "object": self.objects_removed,
-            "scenario_alternative": self.scenario_alternatives_removed,
-            "scenario": self.scenarios_removed,
-            "alternative": self.alternatives_removed,
-            "tool_feature_method": self.tool_feature_methods_removed,
-            "tool_feature": self.tool_features_removed,
-            "feature": self.features_removed,
-            "tool": self.tools_removed,
-            "parameter_definition": self.parameter_definitions_removed,
-            "parameter_value_list": self.parameter_value_lists_removed,
-            "relationship_class": self.relationship_classes_removed,
-            "object_class": self.object_classes_removed,
-        }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
         typed_db_map_data = {}
-        for item_type, signal in ordered_signals.items():
+        for item_type, signal in self.removed_signals.items():
             db_map_data = {}
             for db_map, ids_per_type in db_map_typed_ids.items():
                 ids = ids_per_type.get(item_type, [])
                 for id_ in ids:
                     item = self._pop_item(db_map, item_type, id_)
-                    if not item:
+                    if item:
+                        item["visible"] = True
+                        db_map_data.setdefault(db_map, []).append(item)
                         continue
-                    db_map_data.setdefault(db_map, []).append(item)
+                    item = self._get_fetcher(db_map).cache.get(item_type, {}).pop(id_, {})
+                    if item:
+                        db_map_data.setdefault(db_map, []).append(item)
             if any(db_map_data.values()):
                 typed_db_map_data[item_type] = db_map_data
                 signal.emit(db_map_data)
@@ -294,8 +315,14 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def get_db_map_cache(self, db_map):
-        self._get_fetcher(db_map).fetch_all()
-        return self._cache.setdefault(db_map, {})
+        fetcher = self._get_fetcher(db_map)
+        fetcher.fetch_all()
+        result = {}
+        for cache in (self._cache.get(db_map, {}), fetcher.cache):
+            for item_type, items in cache.items():
+                for id_, item in items.items():
+                    result.setdefault(item_type, {})[id_] = CacheItem(**item)
+        return result
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -562,15 +589,16 @@ class SpineDBManager(QObject):
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
-        refreshed_db_maps = set()
-        for db_map in db_maps:
-            if self._cache.pop(db_map, None) is not None:
-                refreshed_db_maps.add(db_map)
+        refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self._cache)
         if refreshed_db_maps:
-            self._refetch(refreshed_db_maps)
             self.session_refreshed.emit(refreshed_db_maps)
+        for db_map in refreshed_db_maps:
+            cache = self._cache.pop(db_map)
+            for item_type, items in cache.items():
+                signal = self.added_signals[item_type]
+                signal.emit({db_map: list(items.values())})
 
-    def _refetch(self, db_maps):
+    def _clear_fetchers(self, db_maps):
         for db_map in db_maps:
             fetcher = self._fetchers.pop(db_map, None)
             if fetcher is not None:
