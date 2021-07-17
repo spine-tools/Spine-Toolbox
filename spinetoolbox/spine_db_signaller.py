@@ -17,6 +17,7 @@ Spine DB Signaller class.
 """
 
 from PySide2.QtCore import Slot, QObject
+from .helpers import busy_effect
 
 
 class SpineDBSignaller(QObject):
@@ -270,6 +271,7 @@ class SpineDBSignaller(QObject):
     def _shared_db_map_data(db_map_data, db_maps):
         return {db_map: data for db_map, data in db_map_data.items() if db_map in db_maps}
 
+    @busy_effect
     def _call_in_listeners(self, callback, db_map_data):
         for listener, db_maps in self.listeners.items():
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)

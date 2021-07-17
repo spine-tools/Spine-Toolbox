@@ -236,7 +236,11 @@ class MultiDBTreeItem(TreeItem):
         child_type = self.child_item_class.item_type
         if child_type is None:
             return []
-        return [x["id"] for x in self.db_mngr.get_items(db_map, child_type) if self._fetch_success_cond(db_map, x)]
+        return [
+            x["id"]
+            for x in self.db_mngr.get_items(db_map, child_type)
+            if self._fetch_success_cond(db_map, x) and x["id"] not in self._child_map.get(db_map, {})
+        ]
 
     def append_children_by_id(self, db_map_ids):
         """

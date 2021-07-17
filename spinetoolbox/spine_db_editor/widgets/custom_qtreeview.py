@@ -17,7 +17,7 @@ Classes for custom QTreeView.
 """
 
 from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import Signal, Slot, Qt, QEvent
+from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
@@ -50,6 +50,10 @@ class EntityTreeView(CopyTreeView):
         self._cube_pen_icon = QIcon(":/icons/menu_icons/cube_pen.svg")
         self._cubes_plus_icon = QIcon(":/icons/menu_icons/cubes_plus.svg")
         self._cubes_pen_icon = QIcon(":/icons/menu_icons/cubes_pen.svg")
+        self._fetch_more_timer = QTimer(self)
+        self._fetch_more_timer.setSingleShot(True)
+        self._fetch_more_timer.setInterval(100)
+        self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -108,12 +112,32 @@ class EntityTreeView(CopyTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
-        if end < start:
-            self.model().layoutChanged.emit()
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
         self._refresh_selected_indexes()
+
+    def setModel(self, model):
+        old_model = self.model()
+        if old_model:
+            old_model.layoutChanged.disconnect(self._fetch_more_visible)
+        super().setModel(model)
+        model.layoutChanged.connect(self._fetch_more_visible)
+
+    @Slot()
+    def _fetch_more_visible(self):
+        model = self.model()
+        for item in model.visit_all():
+            index = model.index_from_item(item)
+            if not self.isExpanded(index):
+                continue
+            last = model.index(model.rowCount(index) - 1, 0, index)
+            if self.visualRect(last).intersects(self.viewport().rect()) and model.canFetchMore(index):
+                model.fetchMore(index)
+
+    def verticalScrollbarValueChanged(self, value):
+        super().verticalScrollbarValueChanged(value)
+        self._fetch_more_timer.start()
 
     @Slot("QModelIndex")
     def _resize_first_column_to_contents(self, _index=None):

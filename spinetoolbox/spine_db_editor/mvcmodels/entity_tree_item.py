@@ -25,10 +25,6 @@ class EntityRootItem(MultiDBTreeItem):
 
     item_type = "root"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fetch_more()
-
     @property
     def display_id(self):
         """"See super class."""
