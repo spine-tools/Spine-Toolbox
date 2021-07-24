@@ -288,12 +288,12 @@ class GraphViewMixin:
         for index in self.selected_tree_inds.get("object_class", {}):
             item = index.model().item_from_index(index)
             for db_map in item.db_maps:
-                object_ids = set((db_map, id_) for id_ in item._get_children_ids(db_map))
+                object_ids = set((db_map, id_) for id_ in item.get_fetched_children_ids(db_map))
                 selected_object_ids.update(object_ids)
         for index in self.selected_tree_inds.get("relationship_class", {}):
             item = index.model().item_from_index(index)
             for db_map in item.db_maps:
-                relationship_ids = set((db_map, id_) for id_ in item._get_children_ids(db_map))
+                relationship_ids = set((db_map, id_) for id_ in item.get_fetched_children_ids(db_map))
                 selected_relationship_ids.update(relationship_ids)
         return selected_object_ids, selected_relationship_ids
 

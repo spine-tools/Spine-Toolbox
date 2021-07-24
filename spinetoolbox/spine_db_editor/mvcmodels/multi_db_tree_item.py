@@ -242,6 +242,9 @@ class MultiDBTreeItem(TreeItem):
             if self._fetch_success_cond(db_map, x) and x["id"] not in self._child_map.get(db_map, {})
         ]
 
+    def get_fetched_children_ids(self, db_map):
+        return self._child_map.get(db_map, {})
+
     def append_children_by_id(self, db_map_ids):
         """
         Appends children by id.
