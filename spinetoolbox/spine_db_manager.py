@@ -18,7 +18,7 @@ The SpineDBManager class
 
 import itertools
 import json
-from PySide2.QtCore import Qt, QObject, Signal, Slot, QThread
+from PySide2.QtCore import Qt, QObject, Signal, QThread
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (
@@ -37,25 +37,19 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     TimePattern,
     Map,
+    get_data_for_import,
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from .spine_db_icon_manager import SpineDBIconManager
-from .helpers import busy_effect, SignalWaiter
+from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
-from .spine_db_commands import (
-    AgedUndoStack,
-    AddItemsCommand,
-    CheckAddParameterValuesCommand,
-    UpdateItemsCommand,
-    CheckUpdateParameterValuesCommand,
-    RemoveItemsCommand,
-)
+from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text
+from .helpers import get_upgrade_db_promt_text, signal_waiter, CacheItem
 
 
 @busy_effect
@@ -64,20 +58,8 @@ def do_create_new_spine_database(url):
     create_new_spine_database(url)
 
 
-def _grouper(iterable, n):
-    it = iter(iterable)
-    while True:
-        chunk = list(itertools.islice(it, n))
-        if not chunk:
-            return
-        yield chunk
-
-
-class SpineDBManagerBase(QObject):
-    """Class to manage DBs within a project.
-
-    TODO: Expand description, how it works, the cache, the signals, etc.
-    """
+class SpineDBManager(QObject):
+    """Class to manage DBs within a project."""
 
     error_msg = Signal(object)
     session_refreshed = Signal(set)
@@ -94,7 +76,6 @@ class SpineDBManagerBase(QObject):
     parameter_definitions_added = Signal(object)
     parameter_values_added = Signal(object)
     parameter_value_lists_added = Signal(object)
-    parameter_tags_added = Signal(object)
     features_added = Signal(object)
     tools_added = Signal(object)
     tool_features_added = Signal(object)
@@ -110,7 +91,6 @@ class SpineDBManagerBase(QObject):
     parameter_definitions_removed = Signal(object)
     parameter_values_removed = Signal(object)
     parameter_value_lists_removed = Signal(object)
-    parameter_tags_removed = Signal(object)
     features_removed = Signal(object)
     tools_removed = Signal(object)
     tool_features_removed = Signal(object)
@@ -125,8 +105,6 @@ class SpineDBManagerBase(QObject):
     parameter_definitions_updated = Signal(object)
     parameter_values_updated = Signal(object)
     parameter_value_lists_updated = Signal(object)
-    parameter_tags_updated = Signal(object)
-    parameter_definition_tags_set = Signal(object)
     features_updated = Signal(object)
     tools_updated = Signal(object)
     tool_features_updated = Signal(object)
@@ -137,54 +115,162 @@ class SpineDBManagerBase(QObject):
     scenario_alternatives_added = Signal(object)
     scenario_alternatives_updated = Signal(object)
     scenario_alternatives_removed = Signal(object)
-    parameter_definition_tags_added = Signal(object)
-    parameter_definition_tags_removed = Signal(object)
-    # For tests
-    data_imported = Signal()
+    # Fetched
+    db_map_fetched = Signal(object)
 
     GROUP_SEP = " \u01C0 "
 
-    def __init__(self, parent, cache, icon_mngr):
+    def __init__(self, settings, parent):
         """Initializes the instance.
 
         Args:
+            settings (QSettings): Toolbox settings
             parent (QObject, optional): parent object
         """
         super().__init__(parent)
-        self._cache = cache
-        self._icon_mngr = icon_mngr
+        self.qsettings = settings
+        self._db_maps = {}
+        self._worker_thread = QThread()
+        # self._worker_thread = qApp.thread()
+        self._worker = SpineDBWorker(self)
+        self._fetchers = {}
+        self.undo_stack = {}
+        self.undo_action = {}
+        self.redo_action = {}
+        self._cache = {}
+        self._icon_mngr = {}
         self.signaller = SpineDBSignaller(self)
+        self.added_signals = {
+            "object_class": self.object_classes_added,
+            "relationship_class": self.relationship_classes_added,
+            "parameter_value_list": self.parameter_value_lists_added,
+            "parameter_definition": self.parameter_definitions_added,
+            "alternative": self.alternatives_added,
+            "scenario": self.scenarios_added,
+            "scenario_alternative": self.scenario_alternatives_added,
+            "object": self.objects_added,
+            "relationship": self.relationships_added,
+            "entity_group": self.entity_groups_added,
+            "parameter_value": self.parameter_values_added,
+            "feature": self.features_added,
+            "tool": self.tools_added,
+            "tool_feature": self.tool_features_added,
+            "tool_feature_method": self.tool_feature_methods_added,
+        }
+        self.updated_signals = {
+            "object_class": self.object_classes_updated,
+            "relationship_class": self.relationship_classes_updated,
+            "parameter_value_list": self.parameter_value_lists_updated,
+            "parameter_definition": self.parameter_definitions_updated,
+            "alternative": self.alternatives_updated,
+            "scenario": self.scenarios_updated,
+            "scenario_alternative": self.scenario_alternatives_updated,
+            "object": self.objects_updated,
+            "relationship": self.relationships_updated,
+            "parameter_value": self.parameter_values_updated,
+            "feature": self.features_updated,
+            "tool": self.tools_updated,
+            "tool_feature": self.tool_features_updated,
+            "tool_feature_method": self.tool_feature_methods_updated,
+        }
+        self.removed_signals = {
+            "parameter_value": self.parameter_values_removed,
+            "entity_group": self.entity_groups_removed,
+            "relationship": self.relationships_removed,
+            "object": self.objects_removed,
+            "scenario_alternative": self.scenario_alternatives_removed,
+            "scenario": self.scenarios_removed,
+            "alternative": self.alternatives_removed,
+            "tool_feature_method": self.tool_feature_methods_removed,
+            "tool_feature": self.tool_features_removed,
+            "feature": self.features_removed,
+            "tool": self.tools_removed,
+            "parameter_definition": self.parameter_definitions_removed,
+            "parameter_value_list": self.parameter_value_lists_removed,
+            "relationship_class": self.relationship_classes_removed,
+            "object_class": self.object_classes_removed,
+        }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
+        self.connect_signals()
 
     def connect_signals(self):
         """Connects signals."""
         # Cache
-        ordered_signals = {
-            "object_class": (self.object_classes_added, self.object_classes_updated),
-            "relationship_class": (self.relationship_classes_added, self.relationship_classes_updated),
-            "parameter_tag": (self.parameter_tags_added, self.parameter_tags_updated),
-            "parameter_value_list": (self.parameter_value_lists_added, self.parameter_value_lists_updated),
-            "parameter_definition": (self.parameter_definitions_added, self.parameter_definitions_updated),
-            "parameter_definition_tag": (self.parameter_definition_tags_added,),
-            "alternative": (self.alternatives_added, self.alternatives_updated),
-            "scenario": (self.scenarios_added, self.scenarios_updated),
-            "scenario_alternative": (self.scenario_alternatives_added, self.scenario_alternatives_updated),
-            "object": (self.objects_added, self.objects_updated),
-            "relationship": (self.relationships_added, self.relationships_updated),
-            "entity_group": (self.entity_groups_added,),
-            "parameter_value": (self.parameter_values_added, self.parameter_values_updated),
-            "feature": (self.features_added, self.features_updated),
-            "tool": (self.tools_added, self.tools_updated),
-            "tool_feature": (self.tool_features_added, self.tool_features_updated),
-            "tool_feature_method": (self.tool_feature_methods_added, self.tool_feature_methods_updated),
-        }
-        for item_type, signals in ordered_signals.items():
-            for signal in signals:
-                signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        for item_type, signal in self.added_signals.items():
+            signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        for item_type, signal in self.updated_signals.items():
+            signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        self.session_rolled_back.connect(self._clear_fetchers)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
+        # Refresh (after caching, so items are there when listeners receive signals)
+        self.alternatives_updated.connect(self._cascade_refresh_parameter_values_by_alternative)
+        self.object_classes_updated.connect(self._cascade_refresh_relationship_classes)
+        self.object_classes_updated.connect(self._cascade_refresh_parameter_definitions)
+        self.object_classes_updated.connect(self._cascade_refresh_parameter_values_by_entity_class)
+        self.relationship_classes_updated.connect(self._cascade_refresh_parameter_definitions)
+        self.relationship_classes_updated.connect(self._cascade_refresh_parameter_values_by_entity_class)
+        self.objects_updated.connect(self._cascade_refresh_relationships_by_object)
+        self.objects_updated.connect(self._cascade_refresh_parameter_values_by_entity)
+        self.relationships_updated.connect(self._cascade_refresh_parameter_values_by_entity)
+        self.parameter_definitions_updated.connect(self._cascade_refresh_parameter_values_by_definition)
+        self.parameter_definitions_updated.connect(self._cascade_refresh_features_by_paremeter_definition)
+        self.parameter_value_lists_added.connect(self._cascade_refresh_parameter_definitions_by_value_list)
+        self.parameter_value_lists_updated.connect(self._cascade_refresh_parameter_definitions_by_value_list)
+        self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_paremeter_value_list)
+        self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_value_list)
+        self.features_updated.connect(self._cascade_refresh_tool_features_by_feature)
+        self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
+        self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
+        self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
+        self._worker.connect_signals()
+        qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
+
+    def _get_fetcher(self, db_map):
+        """Returns a fetcher.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            SpineDBFetcher
+        """
+        if db_map not in self._fetchers:
+            self._fetchers[db_map] = SpineDBFetcher(self, db_map)
+        return self._fetchers[db_map]
+
+    def can_fetch_more(self, db_map, item_type):
+        """Whether or not we can fetch more items of given type from given db.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str): the type of items to fetch, e.g. "object_class"
+
+        Returns:
+            bool
+        """
+        if db_map.connection.closed:
+            return False
+        return self._get_fetcher(db_map).can_fetch_more(item_type)
+
+    def fetch_more(self, db_map, item_type, success_cond=None, iter_chunk_size=100):
+        """Fetches more items of given type from given db.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str): the type of items to fetch, e.g. "object_class"
+            success_cond (func, optional): A function that receives a dictionary item and returns a boolean.
+                If given, we keep fetching until one of the items passes the condition.
+            iter_chunk_size (int, optional): fetches items by chunks of the given size
+        """
+        if db_map.connection.closed:
+            return
+        self._get_fetcher(db_map).fetch_more(item_type, success_cond=success_cond, iter_chunk_size=iter_chunk_size)
+
+    def cache_items_for_fetching(self, db_map, item_type, items):
+        self._get_fetcher(db_map).cache_items(item_type, items)
 
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
@@ -196,7 +282,42 @@ class SpineDBManagerBase(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = item
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {})[item["id"]] = CacheItem(**item)
+
+    def _pop_item(self, db_map, item_type, id_):
+        return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
+
+    def uncache_items(self, db_map_typed_ids):
+        """Removes data from cache.
+
+        Args:
+            db_map_typed_ids
+        """
+        typed_db_map_data = {}
+        for item_type, signal in self.removed_signals.items():
+            db_map_data = {}
+            for db_map, ids_per_type in db_map_typed_ids.items():
+                ids = ids_per_type.get(item_type, [])
+                for id_ in ids:
+                    item = self._pop_item(db_map, item_type, id_)
+                    if item:
+                        item["visible"] = True
+                        db_map_data.setdefault(db_map, []).append(item)
+                        continue
+                    item = self._get_fetcher(db_map).cache.get(item_type, {}).pop(id_, {})
+                    if item:
+                        db_map_data.setdefault(db_map, []).append(item)
+            if any(db_map_data.values()):
+                typed_db_map_data[item_type] = db_map_data
+                signal.emit(db_map_data)
+        if typed_db_map_data:
+            self.items_removed_from_cache.emit(typed_db_map_data)
+
+    @busy_effect
+    def get_db_map_cache(self, db_map):
+        fetcher = self._get_fetcher(db_map)
+        fetcher.fetch_all()
+        return CombinedCache(self._cache.setdefault(db_map, {}), fetcher.cache)
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -219,32 +340,6 @@ class SpineDBManagerBase(QObject):
         """
         for db_map, object_classes in db_map_data.items():
             self.get_icon_mngr(db_map).update_icon_caches(object_classes)
-
-
-class MiniSpineDBManager(SpineDBManagerBase):
-    def __init__(self, parent, cache, icon_mngr):
-        super().__init__(parent, cache, icon_mngr)
-        self.connect_signals()
-
-
-class SpineDBManager(SpineDBManagerBase):
-    def __init__(self, settings, parent):
-        """Initializes the instance.
-
-        Args:
-            settings (QSettings): Toolbox settings
-            parent (QObject, optional): parent object
-        """
-        super().__init__(parent, cache={}, icon_mngr={})
-        self.qsettings = settings
-        self._db_maps = {}
-        self._worker_thread = QThread()
-        self._worker = SpineDBWorker(self)
-        self._fetchers = []
-        self.undo_stack = {}
-        self.undo_action = {}
-        self.redo_action = {}
-        self.connect_signals()
 
     @property
     def worker_thread(self):
@@ -304,14 +399,13 @@ class SpineDBManager(SpineDBManagerBase):
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
-        waiter = SignalWaiter()
-        self._worker.connection_closed.connect(waiter.trigger)
         self._worker.close_db_map(db_map)
-        waiter.wait()
-        self._worker.connection_closed.disconnect(waiter.trigger)
         del self.undo_stack[db_map]
         del self.undo_action[db_map]
         del self.redo_action[db_map]
+        fetcher = self._fetchers.pop(db_map, None)
+        if fetcher is not None:
+            fetcher.deleteLater()
 
     def close_all_sessions(self):
         """Closes connections to all database mappings."""
@@ -480,51 +574,30 @@ class SpineDBManager(SpineDBManagerBase):
             # Commit session and don't show message box
             return QMessageBox.Save
 
-    def get_fetcher(self):
-        """Returns a fetcher.
-
-        Returns:
-           SpineDBFetcher
-        """
-        mini = MiniSpineDBManager(self.parent(), self._cache, self._icon_mngr)
-        fetcher = SpineDBFetcher(self, mini)
-        self._fetchers.append(fetcher)
-        return fetcher
-
-    def fetch_next(self):
-        """Starts the next fetcher in line."""
-        if not self._fetchers:
-            return
-        fetcher = self._fetchers[0]
-        if fetcher.started:
-            # The fetcher was started and is not finished
-            return
-        if fetcher.prepared:
-            fetcher.finished.connect(self._handle_fetcher_finished)
-            fetcher.start()
-
-    @Slot()
-    def _handle_fetcher_finished(self):
-        """
-        Cleans up things after fetcher has finished working.
-        """
-        fetcher = self._fetchers.pop(0)
-        fetcher.clean_up()
-        self.fetch_next()
-
     def clean_up(self):
+        while self._fetchers:
+            _, fetcher = self._fetchers.popitem()
+            fetcher.deleteLater()
         self._worker_thread.quit()
         self._worker_thread.wait()
         self._worker_thread.deleteLater()
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
-        refreshed_db_maps = set()
-        for db_map in db_maps:
-            if self._cache.pop(db_map, None) is not None:
-                refreshed_db_maps.add(db_map)
+        refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self._cache)
         if refreshed_db_maps:
             self.session_refreshed.emit(refreshed_db_maps)
+        for db_map in refreshed_db_maps:
+            cache = self._cache.pop(db_map)
+            for item_type, items in cache.items():
+                signal = self.added_signals[item_type]
+                signal.emit({db_map: list(items.values())})
+
+    def _clear_fetchers(self, db_maps):
+        for db_map in db_maps:
+            fetcher = self._fetchers.pop(db_map, None)
+            if fetcher is not None:
+                fetcher.deleteLater()
 
     def commit_session(self, *db_maps, cookie=None):
         """
@@ -576,11 +649,6 @@ class SpineDBManager(SpineDBManagerBase):
         answer = message_box.exec_()
         return answer == QMessageBox.Ok
 
-    def connect_signals(self):
-        super().connect_signals()
-        self._worker.connect_signals()
-        qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
-
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an icon renderer for a given entity class.
 
@@ -630,7 +698,9 @@ class SpineDBManager(SpineDBManagerBase):
         Returns:
             dict
         """
-        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
+        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {}) or self._get_fetcher(db_map).get_item(
+            item_type, id_
+        )
 
     def get_item_by_field(self, db_map, item_type, field, value):
         """Returns the first item of the given type in the given db map
@@ -872,43 +942,45 @@ class SpineDBManager(SpineDBManagerBase):
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
         alternative_id_list = self.get_item(db_map, "scenario", scen_id).get("alternative_id_list")
-        if alternative_id_list is None:
+        if not alternative_id_list:
             return []
         return [int(id_) for id_ in alternative_id_list.split(",")]
 
     @staticmethod
-    def get_db_items(query, chunk_size=1000):
+    def get_db_items(query, query_chunk_size=1000, iter_chunk_size=100):
         """Runs the given query and yields results by chunks of given size.
 
         Yields:
             generator(list)
         """
-        it = (x._asdict() for x in query.yield_per(chunk_size).enable_eagerloads(False))
+        it = (x._asdict() for x in query.yield_per(query_chunk_size).enable_eagerloads(False))
         while True:
-            chunk = list(itertools.islice(it, chunk_size))
-            if not chunk:
-                return
+            chunk = list(itertools.islice(it, iter_chunk_size))
             yield chunk
+            if not chunk:
+                break
 
     @staticmethod
-    def _make_query(db_map, sq_name, ids=(), key=("id",)):
+    def _make_query(db_map, sq_name, order_by=("id",), filter_by=None):
         """Makes a database query
 
         Args:
             db_map (DatabaseMappingBase): database map
             sq_name (str): name of the subquery
-            ids (Iterable of int): ids by which the query should be filtered
+            order (Iterable): key for order by
 
         Returns:
             Alias: database subquery
         """
+        if filter_by is None:
+            filter_by = {}
         sq = getattr(db_map, sq_name)
-        query = db_map.query(sq).order_by(*[getattr(sq.c, k) for k in key])
-        if ids:
-            query = query.filter(db_map.in_(sq.c.id, ids))
+        query = db_map.query(sq).order_by(*[getattr(sq.c, k) for k in order_by])
+        for k, v in filter_by.items():
+            query = query.filter(db_map.in_(getattr(sq.c, k), v))
         return query
 
-    def get_alternatives(self, db_map, ids=()):
+    def get_alternatives(self, db_map, **kwargs):
         """Returns alternatives from database.
 
         Args:
@@ -918,9 +990,9 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "alternative_sq", ids=ids, key=["name"]))
+        yield from self.get_db_items(self._make_query(db_map, "alternative_sq", order_by=["name"], **kwargs))
 
-    def get_scenarios(self, db_map, ids=()):
+    def get_scenarios(self, db_map, **kwargs):
         """Returns scenarios from database.
 
         Args:
@@ -929,9 +1001,9 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "wide_scenario_sq", ids=ids, key=["name"]))
+        yield from self.get_db_items(self._make_query(db_map, "wide_scenario_sq", order_by=["name"], **kwargs))
 
-    def get_scenario_alternatives(self, db_map, ids=()):
+    def get_scenario_alternatives(self, db_map, **kwargs):
         """Returns scenario alternatives from database.
 
         Args:
@@ -940,9 +1012,9 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "scenario_alternative_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "scenario_alternative_sq", **kwargs))
 
-    def get_object_classes(self, db_map, ids=()):
+    def get_object_classes(self, db_map, **kwargs):
         """Returns object classes from database.
 
         Args:
@@ -951,9 +1023,9 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "object_class_sq", ids=ids, key=["name"]))
+        yield from self.get_db_items(self._make_query(db_map, "object_class_sq", order_by=["name"], **kwargs))
 
-    def get_objects(self, db_map, ids=()):
+    def get_objects(self, db_map, **kwargs):
         """Returns objects from database.
 
         Args:
@@ -962,9 +1034,9 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "ext_object_sq", ids=ids, key=["class_id", "name"]))
+        yield from self.get_db_items(self._make_query(db_map, "ext_object_sq", order_by=["class_id", "name"], **kwargs))
 
-    def get_relationship_classes(self, db_map, ids=()):
+    def get_relationship_classes(self, db_map, **kwargs):
         """Returns relationship classes from database.
 
         Args:
@@ -973,9 +1045,11 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "wide_relationship_class_sq", ids=ids, key=["name"]))
+        yield from self.get_db_items(
+            self._make_query(db_map, "wide_relationship_class_sq", order_by=["name"], **kwargs)
+        )
 
-    def get_relationships(self, db_map, ids=()):
+    def get_relationships(self, db_map, **kwargs):
         """Returns relationships from database.
 
         Args:
@@ -985,10 +1059,10 @@ class SpineDBManager(SpineDBManagerBase):
             list: dictionary items
         """
         yield from self.get_db_items(
-            self._make_query(db_map, "wide_relationship_sq", ids=ids, key=["class_id", "object_name_list"])
+            self._make_query(db_map, "wide_relationship_sq", order_by=["class_id", "object_name_list"], **kwargs)
         )
 
-    def get_entity_groups(self, db_map, ids=()):
+    def get_entity_groups(self, db_map, **kwargs):
         """Returns entity groups from database.
 
         Args:
@@ -997,9 +1071,11 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "ext_entity_group_sq", ids=ids, key=["member_name"]))
+        yield from self.get_db_items(
+            self._make_query(db_map, "ext_entity_group_sq", order_by=["member_name"], **kwargs)
+        )
 
-    def get_object_parameter_definitions(self, db_map, ids=()):
+    def get_object_parameter_definitions(self, db_map, **kwargs):
         """Returns object parameter definitions from database.
 
         Args:
@@ -1010,11 +1086,11 @@ class SpineDBManager(SpineDBManagerBase):
         """
         yield from self.get_db_items(
             self._make_query(
-                db_map, "object_parameter_definition_sq", ids=ids, key=["object_class_name", "parameter_name"]
+                db_map, "object_parameter_definition_sq", order_by=["object_class_name", "parameter_name"], **kwargs
             )
         )
 
-    def get_relationship_parameter_definitions(self, db_map, ids=()):
+    def get_relationship_parameter_definitions(self, db_map, **kwargs):
         """Returns relationship parameter definitions from database.
 
         Args:
@@ -1027,12 +1103,12 @@ class SpineDBManager(SpineDBManagerBase):
             self._make_query(
                 db_map,
                 "relationship_parameter_definition_sq",
-                ids=ids,
-                key=["relationship_class_name", "parameter_name"],
+                order_by=["relationship_class_name", "parameter_name"],
+                **kwargs,
             )
         )
 
-    def get_parameter_definitions(self, db_map, ids=()):
+    def get_parameter_definitions(self, db_map, **kwargs):
         """Returns both object and relationship parameter definitions.
 
         Args:
@@ -1041,21 +1117,14 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_object_parameter_definitions(db_map, ids=ids)
-        yield from self.get_relationship_parameter_definitions(db_map, ids=ids)
+        for obj_chunk, rel_chunk in itertools.zip_longest(
+            self.get_object_parameter_definitions(db_map, **kwargs),
+            self.get_relationship_parameter_definitions(db_map, **kwargs),
+            fillvalue=[],
+        ):
+            yield obj_chunk + rel_chunk
 
-    def get_parameter_definition_tags(self, db_map, ids=()):
-        """Returns parameter definition tags.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "parameter_definition_tag_sq", ids=ids))
-
-    def get_object_parameter_values(self, db_map, ids=()):
+    def get_object_parameter_values(self, db_map, **kwargs):
         """Returns object parameter values from database.
 
         Args:
@@ -1066,11 +1135,14 @@ class SpineDBManager(SpineDBManagerBase):
         """
         yield from self.get_db_items(
             self._make_query(
-                db_map, "object_parameter_value_sq", ids=ids, key=["object_class_name", "object_name", "parameter_name"]
+                db_map,
+                "object_parameter_value_sq",
+                order_by=["object_class_name", "object_name", "parameter_name"],
+                **kwargs,
             )
         )
 
-    def get_relationship_parameter_values(self, db_map, ids=()):
+    def get_relationship_parameter_values(self, db_map, **kwargs):
         """Returns relationship parameter values from database.
 
         Args:
@@ -1083,12 +1155,12 @@ class SpineDBManager(SpineDBManagerBase):
             self._make_query(
                 db_map,
                 "relationship_parameter_value_sq",
-                ids=ids,
-                key=["relationship_class_name", "object_name_list", "parameter_name"],
+                order_by=["relationship_class_name", "object_name_list", "parameter_name"],
+                **kwargs,
             )
         )
 
-    def get_parameter_values(self, db_map, ids=()):
+    def get_parameter_values(self, db_map, **kwargs):
         """Returns both object and relationship parameter values.
 
         Args:
@@ -1097,10 +1169,14 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_object_parameter_values(db_map, ids=ids)
-        yield from self.get_relationship_parameter_values(db_map, ids=ids)
+        for obj_chunk, rel_chunk in itertools.zip_longest(
+            self.get_object_parameter_values(db_map, **kwargs),
+            self.get_relationship_parameter_values(db_map, **kwargs),
+            fillvalue=[],
+        ):
+            yield obj_chunk + rel_chunk
 
-    def get_parameter_value_lists(self, db_map, ids=()):
+    def get_parameter_value_lists(self, db_map, **kwargs):
         """Returns parameter_value lists from database.
 
         Args:
@@ -1109,20 +1185,11 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "wide_parameter_value_list_sq", ids=ids, key=["name"]))
+        yield from self.get_db_items(
+            self._make_query(db_map, "wide_parameter_value_list_sq", order_by=["name"], **kwargs)
+        )
 
-    def get_parameter_tags(self, db_map, ids=()):
-        """Get parameter tags from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "parameter_tag_sq", ids=ids, key=["tag"]))
-
-    def get_features(self, db_map, ids=()):
+    def get_features(self, db_map, **kwargs):
         """Returns features from database.
 
         Args:
@@ -1132,10 +1199,12 @@ class SpineDBManager(SpineDBManagerBase):
             list: dictionary items
         """
         yield from self.get_db_items(
-            self._make_query(db_map, "ext_feature_sq", ids=ids, key=["entity_class_name", "parameter_definition_name"])
+            self._make_query(
+                db_map, "ext_feature_sq", order_by=["entity_class_name", "parameter_definition_name"], **kwargs
+            )
         )
 
-    def get_tools(self, db_map, ids=()):
+    def get_tools(self, db_map, **kwargs):
         """Get tools from database.
 
         Args:
@@ -1144,9 +1213,9 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "tool_sq", ids=ids, key=["name"]))
+        yield from self.get_db_items(self._make_query(db_map, "tool_sq", order_by=["name"], **kwargs))
 
-    def get_tool_features(self, db_map, ids=()):
+    def get_tool_features(self, db_map, **kwargs):
         """Returns tool features from database.
 
         Args:
@@ -1155,9 +1224,9 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "tool_feature_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "tool_feature_sq", **kwargs))
 
-    def get_tool_feature_methods(self, db_map, ids=()):
+    def get_tool_feature_methods(self, db_map, **kwargs):
         """Returns tool feature methods from database.
 
         Args:
@@ -1166,7 +1235,7 @@ class SpineDBManager(SpineDBManagerBase):
         Yields:
             list: dictionary items
         """
-        yield from self.get_db_items(self._make_query(db_map, "tool_feature_method_sq", ids=ids))
+        yield from self.get_db_items(self._make_query(db_map, "tool_feature_method_sq", **kwargs))
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -1177,10 +1246,44 @@ class SpineDBManager(SpineDBManagerBase):
                 to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
-        self._worker.import_data(db_map_data, command_text)
+        db_map_error_log = dict()
+        for db_map, data in db_map_data.items():
+            cache = self.get_db_map_cache(db_map)
+            try:
+                data_for_import = get_data_for_import(db_map, cache=cache, **data)
+            except (TypeError, ValueError) as err:
+                msg = f"Failed to import data: {err}. Please check that your data source has the right format."
+                db_map_error_log.setdefault(db_map, []).append(msg)
+                continue
+            macro = AgedUndoCommand()
+            macro.setText(command_text)
+            child_cmds = []
+            # NOTE: we push the import macro before adding the children,
+            # because we *need* to call redo() on the children one by one so the data gets in gradually
+            self.undo_stack[db_map].push(macro)
+            for item_type, (to_add, to_update, import_error_log) in data_for_import:
+                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
+                if to_add:
+                    add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=macro, check=False)
+                    with signal_waiter(add_cmd.completed_signal) as waiter:
+                        add_cmd.redo()
+                        waiter.wait()
+                    child_cmds.append(add_cmd)
+                if to_update:
+                    upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=macro, check=False)
+                    with signal_waiter(upd_cmd.completed_signal) as waiter:
+                        upd_cmd.redo()
+                        waiter.wait()
+                    child_cmds.append(upd_cmd)
+            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+                # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
+                macro.setObsolete(True)
+                self.undo_stack[db_map].undo()
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
 
-    def add_or_update_items(self, db_map_data, method_name, get_method_name, signal_name):
-        self._worker.add_or_update_items(db_map_data, method_name, get_method_name, signal_name)
+    def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
+        self._worker.add_or_update_items(db_map_data, method_name, item_type, signal_name, readd=readd, check=check)
 
     def add_alternatives(self, db_map_data):
         """Adds alternatives to db.
@@ -1272,15 +1375,6 @@ class SpineDBManager(SpineDBManagerBase):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_value"))
 
-    def check_add_parameter_values(self, db_map_data):
-        """Adds parameter values in db *with* checking integrity.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(CheckAddParameterValuesCommand(self, db_map, data))
-
     def add_parameter_value_lists(self, db_map_data):
         """Adds parameter_value lists to db.
 
@@ -1289,15 +1383,6 @@ class SpineDBManager(SpineDBManagerBase):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_value_list"))
-
-    def add_parameter_tags(self, db_map_data):
-        """Adds parameter tags to db.
-
-        Args:
-            db_map_data (dict): lists of items to add keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(AddItemsCommand(self, db_map, data, "parameter_tag"))
 
     def add_features(self, db_map_data):
         """Adds features to db.
@@ -1407,15 +1492,6 @@ class SpineDBManager(SpineDBManagerBase):
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_value"))
 
-    def check_update_parameter_values(self, db_map_data):
-        """Updates parameter values in db *with* checking integrity.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(CheckUpdateParameterValuesCommand(self, db_map, data))
-
     def update_expanded_parameter_values(self, db_map_data):
         """Updates expanded parameter values in db without checking integrity.
 
@@ -1448,15 +1524,6 @@ class SpineDBManager(SpineDBManagerBase):
         """
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_value_list"))
-
-    def update_parameter_tags(self, db_map_data):
-        """Updates parameter tags in db.
-
-        Args:
-            db_map_data (dict): lists of items to update keyed by DiffDatabaseMapping
-        """
-        for db_map, data in db_map_data.items():
-            self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, data, "parameter_tag"))
 
     def update_features(self, db_map_data):
         """Updates features in db.
@@ -1500,15 +1567,24 @@ class SpineDBManager(SpineDBManagerBase):
         Args:
             db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
         """
-        self._worker.set_scenario_alternatives(db_map_data)
-
-    def set_parameter_definition_tags(self, db_map_data):
-        """Sets parameter_definition tags in db.
-
-        Args:
-            db_map_data (dict): lists of items to set keyed by DiffDatabaseMapping
-        """
-        self._worker.set_parameter_definition_tags(db_map_data)
+        for db_map, data in db_map_data.items():
+            macro = AgedUndoCommand()
+            macro.setText(f"set scenario alternatives in {db_map.codename}")
+            self.undo_stack[db_map].push(macro)
+            child_cmds = []
+            cache = self.get_db_map_cache(db_map)
+            items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
+            if ids_to_remove:
+                rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove}, parent=macro)
+                rm_cmd.redo()
+                child_cmds.append(rm_cmd)
+            if items_to_add:
+                add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative", parent=macro)
+                add_cmd.redo()
+                child_cmds.append(add_cmd)
+            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+                macro.setObsolete(True)
+                self.undo_stack[db_map].undo()
 
     def remove_items(self, db_map_typed_ids):
         for db_map, ids_per_type in db_map_typed_ids.items():
@@ -1522,48 +1598,6 @@ class SpineDBManager(SpineDBManagerBase):
             db_map_typed_ids (dict): lists of items to remove, keyed by item type (str), keyed by DiffDatabaseMapping
         """
         self._worker.remove_items(db_map_typed_ids)
-
-    def _pop_item(self, db_map, item_type, id_):
-        return self._cache.get(db_map, {}).get(item_type, {}).pop(id_, {})
-
-    def uncache_items(self, db_map_typed_ids):
-        """Removes data from cache.
-
-        Args:
-            db_map_typed_ids
-        """
-        ordered_signals = {
-            "parameter_value": self.parameter_values_removed,
-            "entity_group": self.entity_groups_removed,
-            "relationship": self.relationships_removed,
-            "object": self.objects_removed,
-            "scenario_alternative": self.scenario_alternatives_removed,
-            "scenario": self.scenarios_removed,
-            "alternative": self.alternatives_removed,
-            "parameter_definition_tag": self.parameter_definition_tags_removed,
-            "tool_feature_method": self.tool_feature_methods_removed,
-            "tool_feature": self.tool_features_removed,
-            "feature": self.features_removed,
-            "tool": self.tools_removed,
-            "parameter_definition": self.parameter_definitions_removed,
-            "parameter_value_list": self.parameter_value_lists_removed,
-            "parameter_tag": self.parameter_tags_removed,
-            "relationship_class": self.relationship_classes_removed,
-            "object_class": self.object_classes_removed,
-        }  # NOTE: The rule here is, if table A has a fk that references table B, then A must come *before* B
-        typed_db_map_data = {}
-        for item_type, signal in ordered_signals.items():
-            db_map_ids = {db_map: ids_per_type.get(item_type) for db_map, ids_per_type in db_map_typed_ids.items()}
-            db_map_data = {
-                db_map: [self._pop_item(db_map, item_type, id_) for id_ in ids]
-                for db_map, ids in db_map_ids.items()
-                if ids
-            }
-            if any(db_map_data.values()):
-                signal.emit(db_map_data)
-                typed_db_map_data[item_type] = db_map_data
-        if typed_db_map_data:
-            self.items_removed_from_cache.emit(typed_db_map_data)
 
     @staticmethod
     def db_map_ids(db_map_data):
@@ -1581,83 +1615,118 @@ class SpineDBManager(SpineDBManagerBase):
         """Finds and returns cascading relationship classes for the given object_class ids."""
         db_map_cascading_data = dict()
         for db_map, object_class_ids in db_map_ids.items():
-            object_class_ids = {str(id_) for id_ in object_class_ids}
-            db_map_cascading_data[db_map] = [
-                item
-                for item in self.get_items(db_map, "relationship_class")
-                if object_class_ids.intersection(item["object_class_id_list"].split(","))
-            ]
+            object_class_names = {id_: self.get_item(db_map, "object_class", id_)["name"] for id_ in object_class_ids}
+            for item in self.get_items(db_map, "relationship_class"):
+                object_class_id_list = [int(id_) for id_ in item["object_class_id_list"].split(",")]
+                object_class_name_list = item["object_class_name_list"].split(",")
+                dirty = False
+                for k, id_ in enumerate(object_class_id_list):
+                    name = object_class_names.get(id_)
+                    if name is not None:
+                        dirty = True
+                        object_class_name_list[k] = name
+                if dirty:
+                    item["object_class_name_list"] = ",".join(object_class_name_list)
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_entities(self, db_map_ids, item_type):
         """Finds and returns cascading entities for the given entity_class ids."""
+        # FIXME: Use this to cascade refresh!!!
         db_map_cascading_data = dict()
+        class_item_type = {"object": "object_class", "relationship": "relationship_class"}[item_type]
         for db_map, class_ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, item_type) if item["class_id"] in class_ids
-            ]
+            class_names = {id_: self.get_item(db_map, class_item_type, id_)["name"] for id_ in class_ids}
+            for item in self.get_items(db_map, item_type):
+                class_name = class_names.get(item["class_id"])
+                if class_name is not None:
+                    item["class_name"] = class_name
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_relationships(self, db_map_ids):
         """Finds and returns cascading relationships for the given object ids."""
         db_map_cascading_data = dict()
         for db_map, object_ids in db_map_ids.items():
-            object_ids = {str(id_) for id_ in object_ids}
-            db_map_cascading_data[db_map] = [
-                item
-                for item in self.get_items(db_map, "relationship")
-                if object_ids.intersection(item["object_id_list"].split(","))
-            ]
+            object_names = {id_: self.get_item(db_map, "object", id_)["name"] for id_ in object_ids}
+            for item in self.get_items(db_map, "relationship"):
+                object_id_list = [int(id_) for id_ in item["object_id_list"].split(",")]
+                object_name_list = item["object_name_list"].split(",")
+                dirty = False
+                for k, id_ in enumerate(object_id_list):
+                    name = object_names.get(id_)
+                    if name is not None:
+                        dirty = True
+                        object_name_list[k] = name
+                if dirty:
+                    item["object_name_list"] = ",".join(object_name_list)
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_parameter_data(self, db_map_ids, item_type):
         """Finds and returns cascading parameter definitions or values for the given entity_class ids."""
         db_map_cascading_data = dict()
         for db_map, entity_class_ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, item_type) if item["entity_class_id"] in entity_class_ids
-            ]
+            object_class_names = {
+                id_: self.get_item(db_map, "object_class", id_).get("name") for id_ in entity_class_ids
+            }
+            relationship_classes = {id_: self.get_item(db_map, "relationship_class", id_) for id_ in entity_class_ids}
+            for item in self.get_items(db_map, item_type):
+                object_class_name = object_class_names.get(item["entity_class_id"])
+                relationship_class = relationship_classes.get(item["entity_class_id"])
+                if object_class_name is not None:
+                    item["object_class_name"] = object_class_name
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
+                elif relationship_class:
+                    item["relationship_class_name"] = relationship_class["name"]
+                    item["object_class_name_list"] = relationship_class["object_class_name_list"]
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_parameter_definitions_by_value_list(self, db_map_ids):
         """Finds and returns cascading parameter definitions for the given parameter_value_list ids."""
         db_map_cascading_data = dict()
         for db_map, value_list_ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item
-                for item in self.get_items(db_map, "parameter_definition")
-                if item["value_list_id"] in value_list_ids
-            ]
-        return db_map_cascading_data
-
-    def find_cascading_parameter_definitions_by_tag(self, db_map_ids):
-        """Finds and returns cascading parameter definitions for the given parameter_tag ids."""
-        db_map_cascading_data = dict()
-        for db_map, tag_ids in db_map_ids.items():
-            tag_ids = {str(id_) for id_ in tag_ids}
-            db_map_cascading_data[db_map] = [
-                item
-                for item in self.get_items(db_map, "parameter_definition")
-                if tag_ids.intersection((item["parameter_tag_id_list"] or "0").split(","))
-            ]  # NOTE: 0 is 'untagged'
+            value_list_names = {
+                id_: self.get_item(db_map, "parameter_value_list", id_)["name"] for id_ in value_list_ids
+            }
+            for item in self.get_items(db_map, "parameter_definition"):
+                value_list_name = value_list_names.get(item["value_list_id"])
+                if value_list_name:
+                    item["value_list_name"] = value_list_name
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_entity(self, db_map_ids):
         """Finds and returns cascading parameter values for the given entity ids."""
         db_map_cascading_data = dict()
         for db_map, entity_ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, "parameter_value") if item["entity_id"] in entity_ids
-            ]
+            object_names = {id_: self.get_item(db_map, "object", id_).get("name") for id_ in entity_ids}
+            relationships = {id_: self.get_item(db_map, "relationship", id_) for id_ in entity_ids}
+            for item in self.get_items(db_map, "parameter_value"):
+                object_name = object_names.get(item["entity_id"])
+                relationship = relationships.get(item["entity_id"])
+                if object_name is not None:
+                    item["object_name"] = object_name
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
+                elif relationship:
+                    item["object_name_list"] = relationship["object_name_list"]
+                    item["object_id_list"] = relationship["object_id_list"]
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_definition(self, db_map_ids):
         """Finds and returns cascading parameter values for the given parameter_definition ids."""
         db_map_cascading_data = dict()
-        for db_map, definition_ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, "parameter_value") if item["parameter_id"] in definition_ids
-            ]
+        for db_map, param_def_ids in db_map_ids.items():
+            parameter_names = {
+                id_: self.get_item(db_map, "parameter_definition", id_)["parameter_name"] for id_ in param_def_ids
+            }
+            for item in self.get_items(db_map, "parameter_value"):
+                parameter_name = parameter_names.get(item["parameter_id"])
+                if parameter_name is not None:
+                    item["parameter_name"] = parameter_name
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_groups_by_entity(self, db_map_ids):
@@ -1682,55 +1751,173 @@ class SpineDBManager(SpineDBManagerBase):
         """Finds and returns cascading parameter values for the given alternative ids."""
         db_map_cascading_data = dict()
         for db_map, alt_ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, "parameter_value") if item["alternative_id"] in alt_ids
-            ]
-        return db_map_cascading_data
-
-    def find_cascading_scenario_alternatives_by_alternative(self, db_map_ids):
-        """Finds and returns cascading scenario_alternatives for the given alternative ids."""
-        db_map_cascading_data = dict()
-        for db_map, alt_ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, "scenario_alternative") if item["alternative_id"] in alt_ids
-            ]
-        return db_map_cascading_data
-
-    def find_cascading_scenario_alternatives_by_scenario(self, db_map_ids):
-        """Finds and returns cascading scenario_alternatives for the given scenario ids."""
-        db_map_cascading_data = dict()
-        for db_map, scen_ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, "scenario_alternative") if item["scenario_id"] in scen_ids
-            ]
+            alternative_names = {id_: self.get_item(db_map, "alternative", id_)["name"] for id_ in alt_ids}
+            for item in self.get_items(db_map, "parameter_value"):
+                alternative_name = alternative_names.get(item["alternative_id"])
+                if alternative_name is not None:
+                    item["alternative_name"] = alternative_name
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_features_by_parameter_definition(self, db_map_ids):
         """Finds and returns cascading features for the given parameter definition ids."""
         db_map_cascading_data = dict()
         for db_map, ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, "feature") if item["parameter_definition_id"] in ids
-            ]
+            parameters = {id_: self.get_item(db_map, "parameter_definition", id_) for id_ in ids}
+            for item in self.get_items(db_map, "feature"):
+                parameter = parameters.get(item["parameter_definition_id"])
+                if parameter:
+                    item["parameter_definition_name"] = parameter["parameter_name"]
+                    item["parameter_value_list_id"] = parameter["value_list_id"]
+                    item["parameter_value_list_name"] = parameter["value_list_name"]
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_features_by_parameter_value_list(self, db_map_ids):
         """Finds and returns cascading features for the given parameter value list ids."""
         db_map_cascading_data = dict()
         for db_map, ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, "feature") if item["parameter_value_list_id"] in ids
-            ]
+            value_list_names = {id_: self.get_item(db_map, "parameter_value_list", id_)["name"] for id_ in ids}
+            for item in self.get_items(db_map, "feature"):
+                value_list_name = value_list_names.get(item["parameter_value_list_id"])
+                if value_list_name is not None:
+                    item["parameter_value_list_name"] = value_list_name
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
     def find_cascading_tool_features_by_feature(self, db_map_ids):
         """Finds and returns cascading tool features for the given feature ids."""
         db_map_cascading_data = dict()
         for db_map, ids in db_map_ids.items():
-            db_map_cascading_data[db_map] = [
-                item for item in self.get_items(db_map, "tool_feature") if item["feature_id"] in ids
-            ]
+            for item in self.get_items(db_map, "tool_feature"):
+                if item["feature_id"] in ids:
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
+
+    def _refresh_scenario_alternatives(self, db_map_data):
+        """Refreshes cached scenarios when updating scenario alternatives.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_scenario_data = {}
+        for db_map, data in db_map_data.items():
+            alternative_id_lists = {}
+            for item in data:
+                alternative_id_list = alternative_id_lists.setdefault(item["scenario_id"], {})
+                item = self.get_item(db_map, "scenario_alternative", item["id"])
+                if item:
+                    alternative_id_list[item["rank"]] = item["alternative_id"]
+            for scenario_id, alternative_id_list in alternative_id_lists.items():
+                sorted_ranks = sorted(alternative_id_list)
+                alternative_id_list = [alternative_id_list[r] for r in sorted_ranks]
+                alternative_name_list = [
+                    self.get_item(db_map, "alternative", id_)["name"] for id_ in alternative_id_list
+                ]
+                scenario = self.get_item(db_map, "scenario", scenario_id)
+                scenario["alternative_id_list"] = ",".join(str(id_) for id_ in alternative_id_list)
+                scenario["alternative_name_list"] = ",".join(alternative_name_list)
+                db_map_scenario_data.setdefault(db_map, []).append(scenario)
+        self.scenarios_updated.emit(db_map_scenario_data)
+
+    def _cascade_refresh_relationship_classes(self, db_map_data):
+        """Refreshes cached relationship classes when updating object classes.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_relationship_classes(self.db_map_ids(db_map_data))
+        self.relationship_classes_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_relationships_by_object(self, db_map_data):
+        """Refreshed cached relationships in cascade when updating objects.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data))
+        self.relationships_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_definitions(self, db_map_data):
+        """Refreshes cached parameter definitions in cascade when updating entity classes.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter_definition")
+        self.parameter_definitions_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
+        """Refreshes cached parameter definitions when updating parameter_value lists.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self.db_map_ids(db_map_data))
+        self.parameter_definitions_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
+        """Refreshes cached parameter values in cascade when updating entity classes.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter_value")
+        self.parameter_values_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_values_by_entity(self, db_map_data):
+        """Refreshes cached parameter values in cascade when updating entities.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.db_map_ids(db_map_data))
+        self.parameter_values_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_values_by_alternative(self, db_map_data):
+        """Refreshes cached parameter values in cascade when updating alternatives.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self.db_map_ids(db_map_data))
+        self.parameter_values_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_values_by_definition(self, db_map_data):
+        """Refreshes cached parameter values in cascade when updating parameter definitions.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
+        self.parameter_values_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_features_by_paremeter_definition(self, db_map_data):
+        """Refreshes cached features in cascade when updating parameter definitions.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_features_by_parameter_definition(self.db_map_ids(db_map_data))
+        self.features_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_features_by_paremeter_value_list(self, db_map_data):
+        """Refreshes cached features in cascade when updating parameter value lists.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_features_by_parameter_value_list(self.db_map_ids(db_map_data))
+        self.features_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_tool_features_by_feature(self, db_map_data):
+        """Refreshes cached tool features in cascade when updating features.
+
+        Args:
+            db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_tool_features_by_feature(self.db_map_ids(db_map_data))
+        self.tool_features_updated.emit(db_map_cascading_data)
 
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
         self._worker.export_data(caller, db_map_item_ids, file_path, file_filter)
@@ -1799,3 +1986,140 @@ class SpineDBManager(SpineDBManagerBase):
             multi_db_editor.activateWindow()
         else:
             multi_db_editor.raise_()
+
+    @staticmethod
+    def cache_to_db(item_type, item):
+        """
+        Returns the db equivalent of a cache item.
+
+        Args:
+            item_type (str): The item type
+            item (dict): The item in the cache
+
+        Returns:
+            dict
+        """
+        item = item.copy()
+        if item_type == "relationship_class":
+            item["object_class_id_list"] = [int(id_) for id_ in item["object_class_id_list"].split(",")]
+        elif item_type == "relationship":
+            item["object_class_id_list"] = [int(id_) for id_ in item["object_class_id_list"].split(",")]
+            item["object_id_list"] = [int(id_) for id_ in item["object_id_list"].split(",")]
+        elif item_type == "parameter_definition":
+            item.pop("parsed_value", None)
+            item["name"] = item.pop("parameter_name")
+            item["parameter_value_list_id"] = item.pop("value_list_id")
+        elif item_type == "parameter_value":
+            item.pop("parsed_value", None)
+            item["parameter_definition_id"] = item.pop("parameter_id")
+        elif item_type == "parameter_value_list":
+            item.pop("split_value_list", None)
+            item.pop("split_parsed_value_list", None)
+            item["value_list"] = [bytes(val, "UTF8") for val in item["value_list"].split(";")]
+        elif item_type == "entity_group":
+            item["entity_class_id"] = item["class_id"]
+            item["entity_id"] = item["group_id"]
+        return item
+
+    def db_to_cache(self, db_map, item_type, item):
+        """
+        Returns the cache equivalent of a db item.
+
+        Args:
+            db_map (DiffDatabaseMapping): the db map
+            item_type (str): The item type
+            item (dict): The item in the db
+
+        Returns:
+            dict
+        """
+        item = item.copy()
+        if item_type == "object_class":
+            item["display_icon"] = item.get("display_icon")
+        elif item_type == "object":
+            item["class_name"] = self.get_item(db_map, "object_class", item["class_id"])["name"]
+        elif item_type == "relationship_class":
+            item["object_class_name_list"] = ",".join(
+                self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
+            )
+            item["object_class_id_list"] = ",".join(str(id_) for id_ in item["object_class_id_list"])
+        elif item_type == "relationship":
+            item["class_name"] = self.get_item(db_map, "relationship_class", item["class_id"])["name"]
+            item["object_name_list"] = ",".join(
+                self.get_item(db_map, "object", id_)["name"] for id_ in item["object_id_list"]
+            )
+            item["object_id_list"] = ",".join(str(id_) for id_ in item["object_id_list"])
+            item["object_class_name_list"] = ",".join(
+                self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
+            )
+            item["object_class_id_list"] = ",".join(str(id_) for id_ in item["object_class_id_list"])
+        elif item_type == "parameter_definition":
+            item["parameter_name"] = item.pop("name", item.get("parameter_name"))
+            object_class = self.get_item(db_map, "object_class", item["entity_class_id"])
+            relationship_class = self.get_item(db_map, "relationship_class", item["entity_class_id"])
+            if object_class:
+                item["object_class_id"] = object_class["id"]
+                item["object_class_name"] = object_class["name"]
+            if relationship_class:
+                item["relationship_class_id"] = relationship_class["id"]
+                item["relationship_class_name"] = relationship_class["name"]
+                item["object_class_id_list"] = relationship_class["object_class_id_list"]
+                item["object_class_name_list"] = relationship_class["object_class_name_list"]
+            item["value_list_id"] = value_list_id = item.pop("parameter_value_list_id", item.get("value_list_id"))
+            item["value_list_name"] = self.get_item(db_map, "parameter_value_list", value_list_id).get("name")
+            item["default_value"] = item.get("default_value")
+            item["default_type"] = item.get("default_type")
+            item["description"] = item.get("description")
+        elif item_type == "parameter_value":
+            item["parameter_id"] = parameter_id = item.pop("parameter_definition_id", item.get("parameter_id"))
+            param_def = self.get_item(db_map, "parameter_definition", parameter_id)
+            item["parameter_name"] = param_def["parameter_name"]
+            item["entity_class_id"] = param_def["entity_class_id"]
+            object_class_id = param_def.get("object_class_id")
+            relationship_class_id = param_def.get("relationship_class_id")
+            if object_class_id:
+                item["object_class_id"] = object_class_id
+                item["object_class_name"] = param_def["object_class_name"]
+                item["object_id"] = object_id = item["entity_id"]
+                item["object_name"] = self.get_item(db_map, "object", object_id)["name"]
+            if relationship_class_id:
+                item["relationship_class_id"] = relationship_class_id
+                item["relationship_class_name"] = param_def["relationship_class_name"]
+                item["object_class_id_list"] = param_def["object_class_id_list"]
+                item["object_class_name_list"] = param_def["object_class_name_list"]
+                item["relationship_id"] = relationship_id = item["entity_id"]
+                relationship = self.get_item(db_map, "relationship", relationship_id)
+                item["object_id_list"] = relationship["object_id_list"]
+                item["object_name_list"] = relationship["object_name_list"]
+            item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
+        elif item_type == "parameter_value_list":
+            item["value_list"] = ";".join(str(val, "UTF8") for val in item["value_list"])
+        elif item_type == "entity_group":
+            item["class_id"] = item["entity_class_id"]
+            item["group_id"] = item["entity_id"]
+        elif item_type == "scenario":
+            item["active"] = item.get("active", False)
+        elif item_type == "feature":
+            param_def = self.get_item(db_map, "parameter_definition", item["parameter_definition_id"])
+            item["parameter_definition_name"] = param_def["parameter_name"]
+            item["entity_class_id"] = entity_class_id = self.get_item(db_map, "parameter_definition", param_def["id"])[
+                "entity_class_id"
+            ]
+            item["entity_class_name"] = self.get_item(db_map, "object_class", entity_class_id).get(
+                "name"
+            ) or self.get_item(db_map, "relationship_class", entity_class_id).get("name")
+            item["parameter_value_list_name"] = self.get_item(
+                db_map, "parameter_value_list", item["parameter_value_list_id"]
+            ).get("name")
+        elif item_type == "tool_feature":
+            item["required"] = item.get("required", False)
+        return item
+
+
+class CombinedCache:
+    def __init__(self, d1, d2):
+        self._d1 = d1
+        self._d2 = d2
+
+    def get(self, key, default):
+        return {**self._d1.get(key, default), **self._d2.get(key, default)}

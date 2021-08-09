@@ -23,13 +23,13 @@ import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
 from .test_SpineDBEditorUpdate import TestSpineDBEditorUpdateMixin
 from .test_SpineDBEditorRemove import TestSpineDBEditorRemoveMixin
 from .test_SpineDBEditorFilter import TestSpineDBEditorFilterMixin
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditor(
@@ -289,13 +289,10 @@ class TestSpineDBEditor(
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self.db_mngr = SpineDBManager(mock_settings, None)
-            self.db_mngr.fetch_db_maps_for_listener = lambda *args: None
-
+            self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self.db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+            self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
             self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": "database"})
-            self.mock_db_map = self.spine_db_editor.first_db_map
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
 
     def tearDown(self):
@@ -307,7 +304,6 @@ class TestSpineDBEditor(
         ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.spine_db_editor.close()
             mock_save_w_s.assert_called_once()
-        QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
         self.db_mngr.close_all_sessions()
         self.db_mngr.clean_up()
         self.spine_db_editor.deleteLater()

@@ -481,7 +481,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.cross_hairs_items.clear()
         self.viewport().unsetCursor()
 
-    def _cross_hairs_has_valid_taget(self):
+    def _cross_hairs_has_valid_target(self):
         return (
             self._hovered_obj_item.db_map == self.cross_hairs_items[0].db_map
             and self._hovered_obj_item.entity_class_id in self.relationship_class["object_class_ids_to_go"]
@@ -495,7 +495,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if event.buttons() & Qt.RightButton or not self._hovered_obj_item:
             self.clear_cross_hairs_items()
             return
-        if self._cross_hairs_has_valid_taget():
+        if self._cross_hairs_has_valid_target():
             self.relationship_class["object_class_ids_to_go"].remove(self._hovered_obj_item.entity_class_id)
             if self.relationship_class["object_class_ids_to_go"]:
                 # Add hovered as member and keep going, we're not done yet
@@ -539,7 +539,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         obj_items = [item for item in self.items(pos) if isinstance(item, ObjectItem)]
         self._hovered_obj_item = next(iter(obj_items), None)
         if self._hovered_obj_item is not None:
-            if self._cross_hairs_has_valid_taget():
+            if self._cross_hairs_has_valid_target():
                 if len(self.relationship_class["object_class_ids_to_go"]) == 1:
                     self.cross_hairs_items[0].set_check_icon()
                 else:

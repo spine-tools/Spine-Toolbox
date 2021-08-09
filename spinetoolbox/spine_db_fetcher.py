@@ -16,94 +16,120 @@ SpineDBFetcher class.
 :date:   13.3.2020
 """
 
+import itertools
 from PySide2.QtCore import Signal, Slot, QObject
+from spinetoolbox.helpers import busy_effect, signal_waiter, CacheItem
+
+# FIXME: We need to invalidate cache here as user makes changes (update, remove)
 
 
 class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
-    finished = Signal()
-    _started = Signal()
+    _fetch_more_requested = Signal(str, object)
+    _fetch_all_requested = Signal()
+    _fetch_all_finished = Signal()
 
-    def __init__(self, db_mngr, mini):
+    def __init__(self, db_mngr, db_map):
         """Initializes the fetcher object.
 
         Args:
-            db_mngr (SpineDBManager): used for fetching.
-            mini (MiniSpineDBManager): used for signalling about the fetching.
-                It has the same cache and icon_mngr as db_mngr but not the same signaller.
-                This means we can signal only to a specific listener.
+            db_mngr (SpineDBManager): used for fetching
+            db_map (DiffDatabaseMapping): The db to fetch
         """
         super().__init__()
         self._db_mngr = db_mngr
-        self._mini = mini
+        self._db_map = db_map
+        self._getters = {
+            "object_class": self._db_mngr.get_object_classes,
+            "relationship_class": self._db_mngr.get_relationship_classes,
+            "parameter_definition": self._db_mngr.get_parameter_definitions,
+            "object": self._db_mngr.get_objects,
+            "relationship": self._db_mngr.get_relationships,
+            "entity_group": self._db_mngr.get_entity_groups,
+            "parameter_value": self._db_mngr.get_parameter_values,
+            "parameter_value_list": self._db_mngr.get_parameter_value_lists,
+            "alternative": self._db_mngr.get_alternatives,
+            "scenario": self._db_mngr.get_scenarios,
+            "scenario_alternative": self._db_mngr.get_scenario_alternatives,
+            "feature": self._db_mngr.get_features,
+            "tool": self._db_mngr.get_tools,
+            "tool_feature": self._db_mngr.get_tool_features,
+            "tool_feature_method": self._db_mngr.get_tool_feature_methods,
+        }
+        self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
+        self._fetched = {item_type: False for item_type in self._getters}
+        self.cache = {}
         self.moveToThread(db_mngr.worker_thread)
-        self._started.connect(self._do_work)
-        self._db_maps = None
-        self._tablenames = None
-        self.prepared = False
-        self.started = False
-        self._stopped = False
+        self._fetch_more_requested.connect(self._fetch_more)
+        self._fetch_all_requested.connect(self._fetch_all)
 
-    def clean_up(self):
-        self.deleteLater()
+    def cache_items(self, item_type, items):
+        self.cache.setdefault(item_type, {}).update({x["id"]: CacheItem(**x) for x in items})
 
-    def fetch(self, listener, db_maps, tablenames=None):
-        """Fetches items from the database and emit added signals.
+    def get_item(self, item_type, id_):
+        return self.cache.get(item_type, {}).get(id_, {})
+
+    def can_fetch_more(self, item_type):
+        return not self._fetched.get(item_type, False) or self.cache.get(item_type, {})
+
+    @busy_effect
+    def fetch_more(self, item_type, success_cond=None, iter_chunk_size=100):
+        """Fetches items from the database.
 
         Args:
-            db_maps (Iterable of DatabaseMappingBase): database maps to fetch
-            tablenames (list, optional): If given, only fetches tables in this list, otherwise fetches them all
+            item_type (str): the type of items to fetch, e.g. "object_class"
         """
-        for db_map in db_maps:
-            self._mini.signaller.add_db_map_listener(db_map, listener)
-        self._db_maps = db_maps
-        self._tablenames = tablenames
-        self.prepared = True
-        self._db_mngr.fetch_next()
+        if not self.can_fetch_more(item_type):
+            return
+        if success_cond is None:
+            success_cond = lambda _: True
+        items = self.cache.get(item_type, {})
+        args = [iter(items)] * iter_chunk_size
+        for keys in itertools.zip_longest(*args):
+            keys = set(keys) - {None}
+            chunk = [items[k] for k in keys]
+            if any(success_cond(x) for x in chunk):
+                for k in keys:
+                    del items[k]
+                signal = self._db_mngr.added_signals.get(item_type)
+                signal.emit({self._db_map: chunk})
+                return
+        self._fetch_more_requested.emit(item_type, success_cond)
 
-    def start(self):
-        self.started = True
-        self._started.emit()
+    @Slot(str, object)
+    def _fetch_more(self, item_type, success_cond):
+        self._do_fetch_more(item_type, success_cond)
 
-    def stop(self):
-        self._stopped = True
-        self.finished.emit()
+    @busy_effect
+    def _do_fetch_more(self, item_type, success_cond):
+        iterator = self._iterators.get(item_type)
+        if iterator is None:
+            return
+        while True:
+            chunk = next(iterator, [])
+            if not chunk:
+                self._fetched[item_type] = True
+                return
+            if any(success_cond(x) for x in chunk):
+                signal = self._db_mngr.added_signals.get(item_type)
+                signal.emit({self._db_map: chunk})
+                break
+            self.cache_items(item_type, chunk)
+
+    def fetch_all(self):
+        if not any(self.can_fetch_more(item_type) for item_type in self._fetched):
+            return
+        with signal_waiter(self._fetch_all_finished) as waiter:
+            self._fetch_all_requested.emit()
+            waiter.wait()
 
     @Slot()
-    def _do_work(self):
-        getter_signal_lookup = {
-            "object_class": (self._db_mngr.get_object_classes, self._mini.object_classes_added),
-            "relationship_class": (self._db_mngr.get_relationship_classes, self._mini.relationship_classes_added),
-            "parameter_definition": (self._db_mngr.get_parameter_definitions, self._mini.parameter_definitions_added),
-            "parameter_definition_tag": (
-                self._db_mngr.get_parameter_definition_tags,
-                self._mini.parameter_definition_tags_added,
-            ),
-            "object": (self._db_mngr.get_objects, self._mini.objects_added),
-            "relationship": (self._db_mngr.get_relationships, self._mini.relationships_added),
-            "entity_group": (self._db_mngr.get_entity_groups, self._mini.entity_groups_added),
-            "parameter_value": (self._db_mngr.get_parameter_values, self._mini.parameter_values_added),
-            "parameter_value_list": (self._db_mngr.get_parameter_value_lists, self._mini.parameter_value_lists_added),
-            "parameter_tag": (self._db_mngr.get_parameter_tags, self._mini.parameter_tags_added),
-            "alternative": (self._db_mngr.get_alternatives, self._mini.alternatives_added),
-            "scenario": (self._db_mngr.get_scenarios, self._mini.scenarios_added),
-            "scenario_alternative": (self._db_mngr.get_scenario_alternatives, self._mini.scenario_alternatives_added),
-            "feature": (self._db_mngr.get_features, self._mini.features_added),
-            "tool": (self._db_mngr.get_tools, self._mini.tools_added),
-            "tool_feature": (self._db_mngr.get_tool_features, self._mini.tool_features_added),
-            "tool_feature_method": (self._db_mngr.get_tool_feature_methods, self._mini.tool_feature_methods_added),
-        }
-        if self._tablenames is None:
-            self._tablenames = getter_signal_lookup.keys()
-        for tablename in self._tablenames:
-            getter_signal = getter_signal_lookup.get(tablename)
-            if getter_signal is None:
-                continue
-            getter, signal = getter_signal
-            for db_map in self._db_maps:
-                for chunk in getter(db_map):
-                    if self._stopped:
-                        return
-                    signal.emit({db_map: chunk})
-        self.finished.emit()
+    def _fetch_all(self):
+        self._do_fetch_all()
+
+    @busy_effect
+    def _do_fetch_all(self):
+        for item_type in self._getters:
+            self._do_fetch_more(item_type, lambda _: False)
+        self._fetch_all_finished.emit()

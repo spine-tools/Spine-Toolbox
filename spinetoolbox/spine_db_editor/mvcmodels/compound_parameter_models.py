@@ -16,7 +16,7 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtCore import Qt, Signal, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
 from ...helpers import rows_to_row_count_tuples
@@ -41,7 +41,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     and one empty parameter model.
     """
 
-    data_for_single_model_received = Signal(object, int, list)
+    _data_for_single_model_received = Signal(object, int, list)
     """Emitted by the fetcher when there's data for another single model."""
 
     def __init__(self, parent, db_mngr, *db_maps):
@@ -60,7 +60,24 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_valid = True
         self._auto_filter_menus = {}
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
-        self.data_for_single_model_received.connect(self.create_and_append_single_model)
+        self._super_can_fetch_more = {}
+        self._data_for_single_model_received.connect(self._create_and_append_single_model)
+
+    def canFetchMore(self, parent=QModelIndex()):
+        self._super_can_fetch_more[parent] = super().canFetchMore(parent)
+        return True
+
+    def fetchMore(self, parent=QModelIndex()):
+        if self._super_can_fetch_more.get(parent, False):
+            super().fetchMore(parent)
+        for db_map in self.db_maps:
+            success_cond = lambda x, db_map=db_map: self._fetch_success_cond(db_map, x)
+            self.db_mngr.fetch_more(db_map, self.item_type, success_cond=success_cond)
+
+    def _fetch_success_cond(self, db_map, item):
+        if not self.single_models:
+            return True
+        return any(m.db_map == db_map and item["entity_class_id"] == m.entity_class_id for m in self.single_models)
 
     def _make_header(self):
         raise NotImplementedError()
@@ -386,12 +403,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids = [item["id"] for item in class_items]
-                self.data_for_single_model_received.emit(db_map, entity_class_id, ids)
+                self._data_for_single_model_received.emit(db_map, entity_class_id, ids)
                 self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.receive_parameter_data_added(db_map_data)
 
     @Slot(object, int, list)
-    def create_and_append_single_model(self, db_map, entity_class_id, ids):
+    def _create_and_append_single_model(self, db_map, entity_class_id, ids):
         model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
         model.reset_model(ids)
         single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
@@ -537,9 +554,6 @@ class CompoundParameterDefinitionMixin:
     def item_type(self):
         return "parameter_definition"
 
-    def receive_parameter_definition_tags_set(self, db_map_data):
-        self._emit_data_changed_for_column("parameter_tag_list")
-
 
 class CompoundParameterValueMixin:
     """Handles signals from db mngr for parameter_value models."""
@@ -585,15 +599,7 @@ class CompoundObjectParameterDefinitionModel(
     """
 
     def _make_header(self):
-        return [
-            "object_class_name",
-            "parameter_name",
-            "value_list_name",
-            "parameter_tag_list",
-            "default_value",
-            "description",
-            "database",
-        ]
+        return ["object_class_name", "parameter_name", "value_list_name", "default_value", "description", "database"]
 
 
 class CompoundRelationshipParameterDefinitionModel(
@@ -609,7 +615,6 @@ class CompoundRelationshipParameterDefinitionModel(
             "object_class_name_list",
             "parameter_name",
             "value_list_name",
-            "parameter_tag_list",
             "default_value",
             "description",
             "database",

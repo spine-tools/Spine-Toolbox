@@ -153,7 +153,7 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr.register_listener(self, *self.db_maps)
         self.init_models()
         self.init_add_undo_redo_actions()
-        self.fetch_db_maps()
+        self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
         self.restore_ui()
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
@@ -162,24 +162,6 @@ class SpineDBEditorBase(QMainWindow):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
         new_redo_action = self.db_mngr.redo_action[self.first_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
-
-    def fetch_db_maps(self, *db_maps):
-        if not db_maps:
-            db_maps = self.db_maps
-        self._fetcher = self.db_mngr.get_fetcher()
-        self._fetcher.finished.connect(self._make_iddle)
-        self._make_busy()
-        self._fetcher.fetch(self, db_maps)
-        self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
-
-    def _make_busy(self):
-        self.silenced = True
-        self.setCursor(QCursor(Qt.BusyCursor))
-
-    def _make_iddle(self):
-        self.silenced = False
-        self.unsetCursor()
-        self._fetcher = None
 
     @Slot(bool)
     def load_previous_urls(self, _=False):
@@ -212,6 +194,10 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None}, create=True)
 
@@ -237,7 +223,6 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         menu.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_parameter_tag.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_exports.toggleViewAction())
         return menu
@@ -372,10 +357,6 @@ class SpineDBEditorBase(QMainWindow):
     def init_models(self):
         """Initializes models."""
         self.parameter_value_list_model.build_tree()
-        for item in self.parameter_value_list_model.visit_all():
-            index = self.parameter_value_list_model.index_from_item(item)
-            self.ui.treeView_parameter_value_list.expand(index)
-        self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
         self.ui.treeView_parameter_value_list.header().hide()
 
     @Slot(str)
@@ -606,7 +587,6 @@ class SpineDBEditorBase(QMainWindow):
     def reload_session(self, db_maps):
         """Reloads data from given db_maps."""
         self.init_models()
-        self.fetch_db_maps(*db_maps)
 
     @Slot(bool)
     def refresh_session(self, checked=False):
@@ -629,9 +609,10 @@ class SpineDBEditorBase(QMainWindow):
         if cookie is self:
             msg = f"All changes in {db_names} committed successfully."
             self.msg.emit(msg)
-        else:  # Commit done by an 'outside force'.
-            self.reload_session(db_maps)
-            self.msg.emit(f"Databases {db_names} reloaded from an external action.")
+            return
+        # Commit done by an 'outside force'.
+        self.reload_session(db_maps)
+        self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
@@ -707,9 +688,6 @@ class SpineDBEditorBase(QMainWindow):
     def receive_parameter_value_lists_added(self, db_map_data):
         self.log_changes("added", "parameter_value_list", db_map_data)
 
-    def receive_parameter_tags_added(self, db_map_data):
-        self.log_changes("added", "parameter_tag", db_map_data)
-
     def receive_features_added(self, db_map_data):
         self.log_changes("added", "feature", db_map_data)
 
@@ -749,9 +727,6 @@ class SpineDBEditorBase(QMainWindow):
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.log_changes("updated", "parameter_value_list", db_map_data)
 
-    def receive_parameter_tags_updated(self, db_map_data):
-        self.log_changes("updated", "parameter_tag", db_map_data)
-
     def receive_features_updated(self, db_map_data):
         self.log_changes("updated", "feature", db_map_data)
 
@@ -763,9 +738,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tool_feature_methods_updated(self, db_map_data):
         self.log_changes("updated", "tool_feature_method", db_map_data)
-
-    def receive_parameter_definition_tags_set(self, db_map_data):
-        self.log_changes("set", "parameter_definition tag", db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
         self.log_changes("removed", "scenarios", db_map_data)
@@ -796,9 +768,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.log_changes("removed", "parameter_value_list", db_map_data)
-
-    def receive_parameter_tags_removed(self, db_map_data):
-        self.log_changes("removed", "parameter_tag", db_map_data)
 
     def receive_features_removed(self, db_map_data):
         self.log_changes("removed", "feature", db_map_data)
@@ -957,9 +926,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
         )
         self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_tag, Qt.Vertical
-        )
-        self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
         self.tabify_and_raise(
@@ -982,10 +948,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_tool_feature_tree,
             self.ui.dockWidget_parameter_value_list,
             self.ui.dockWidget_alternative_scenario_tree,
-            self.ui.dockWidget_parameter_tag,
         ]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.3 * height, 0.1 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.4 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot("QAction")
@@ -1005,7 +970,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_relationship_parameter_value.hide()
         self.ui.dockWidget_relationship_parameter_definition.hide()
         self.ui.dockWidget_parameter_value_list.hide()
-        self.ui.dockWidget_parameter_tag.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
@@ -1027,7 +991,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Vertical
         )
         self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,
@@ -1046,13 +1009,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
-        docks = [
-            self.ui.dockWidget_alternative_scenario_tree,
-            self.ui.dockWidget_parameter_value_list,
-            self.ui.dockWidget_parameter_tag,
-        ]
+        docks = [self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.4 * height, 0.4 * height, 0.2 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.5 * height, 0.5 * height], Qt.Vertical)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 

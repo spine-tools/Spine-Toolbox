@@ -15,14 +15,13 @@ Unit tests for Database editor's ``graphics_items`` module.
 :authors: A. Soininen (VTT)
 :date:    16.4.2021
 """
-import math
 import unittest
 from unittest import mock
 from PySide2.QtCore import QPointF
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.graphics_items import ArcItem, ObjectItem, RelationshipItem
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from ..mock_helpers import TestSpineDBManager
 
 
 class TestRelationshipItem(unittest.TestCase):
@@ -38,7 +37,7 @@ class TestRelationshipItem(unittest.TestCase):
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            cls._db_mngr = SpineDBManager(mock_settings, None)
+            cls._db_mngr = TestSpineDBManager(mock_settings, None)
             cls._db_mngr.fetch_db_maps_for_listener = lambda *args: None
 
             logger = mock.MagicMock()
@@ -48,10 +47,6 @@ class TestRelationshipItem(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        while cls._db_mngr._fetchers:
-            # Wait for fetchers to finish, otherwise DB manager may try to double-delete them
-            # in the clean_up() call below.
-            QApplication.processEvents()
         with mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
         ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):

@@ -32,8 +32,7 @@ from ..widgets.custom_delegates import (
 class PivotTableModelBase(QAbstractTableModel):
 
     _V_HEADER_WIDTH = 5
-    _FETCH_STEP_COUNT = 64
-    _MIN_FETCH_COUNT = 512
+    _MAX_FETCH_COUNT = 1000
     _FETCH_DELAY = 0
 
     def __init__(self, parent):
@@ -54,6 +53,17 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
+    def canFetchMore(self, parent=QModelIndex()):
+        return True
+
+    def fetchMore(self, parent=QModelIndex()):
+        for db_map in self._parent.db_maps:
+            success_cond = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
+            self.db_mngr.fetch_more(db_map, self.item_type, success_cond=success_cond)
+
+    def _fetch_success_cond(self, db_map, item):
+        return True
+
     @property
     def item_type(self):
         """Returns the item type."""
@@ -71,8 +81,7 @@ class PivotTableModelBase(QAbstractTableModel):
 
     @Slot()
     def fetch_more_rows(self):
-        max_count = max(self._MIN_FETCH_COUNT, len(self.model.rows) // self._FETCH_STEP_COUNT + 1)
-        count = min(max_count, len(self.model.rows) - self._data_row_count)
+        count = min(self._MAX_FETCH_COUNT, len(self.model.rows) - self._data_row_count)
         if not count:
             return
         first = self.headerRowCount() + self.dataRowCount()
@@ -82,8 +91,7 @@ class PivotTableModelBase(QAbstractTableModel):
 
     @Slot()
     def fetch_more_columns(self):
-        max_count = max(self._MIN_FETCH_COUNT, len(self.model.rows) // self._FETCH_STEP_COUNT + 1)
-        count = min(max_count, len(self.model.columns) - self._data_column_count)
+        count = min(self._MAX_FETCH_COUNT, len(self.model.columns) - self._data_column_count)
         if not count:
             return
         first = self.headerColumnCount() + self.dataColumnCount()
@@ -703,6 +711,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "parameter_value"
 
+    def _fetch_success_cond(self, db_map, item):
+        entity_class_id = self._parent.current_class_id[db_map]
+        return item["entity_class_id"] == entity_class_id
+
     def db_map_object_ids(self, index):
         """
         Returns db_map and object ids for given index. Used by PivotTableView.
@@ -902,39 +914,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             self._update_parameter_values(to_update)
         return True
 
-    def _checked_parameter_values(self, db_map_data):
-        db_map_value_lists = {}
-        db_map_par_def_ids = {
-            db_map: {item["parameter_definition_id"] for item in items} for db_map, items in db_map_data.items()
-        }
-        for db_map, par_def_ids in db_map_par_def_ids.items():
-            for par_def_id in par_def_ids:
-                param_val_list_id = self.db_mngr.get_item(db_map, "parameter_definition", par_def_id).get(
-                    "parameter_value_list_id"
-                )
-                if not param_val_list_id:
-                    continue
-                param_val_list = self.db_mngr.get_item(db_map, "parameter_value_list", param_val_list_id)
-                value_list = param_val_list.get("value_list")
-                if not value_list:
-                    continue
-                db_map_value_lists.setdefault(db_map, {})[par_def_id] = value_list.split(";")
-        db_map_checked_items = {}
-        for db_map, items in db_map_data.items():
-            for item in items:
-                par_def_id = item["parameter_definition_id"]
-                value_list = db_map_value_lists.get(db_map, {}).get(par_def_id)
-                if value_list and item["value"] not in value_list:
-                    continue
-                db_map_checked_items.setdefault(db_map, []).append(item)
-        return db_map_checked_items
-
     def _add_parameter_values(self, db_map_data):
-        db_map_data = self._checked_parameter_values(db_map_data)
         self.db_mngr.add_parameter_values(db_map_data)
 
     def _update_parameter_values(self, db_map_data):
-        db_map_data = self._checked_parameter_values(db_map_data)
         self.db_mngr.update_parameter_values(db_map_data)
 
     def get_set_data_delayed(self, index):
@@ -1122,6 +1105,10 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     @property
     def item_type(self):
         return "relationship"
+
+    def _fetch_success_cond(self, db_map, item):
+        entity_class_id = self._parent.current_class_id[db_map]
+        return item["class_id"] == entity_class_id
 
     def call_reset_model(self, pivot=None):
         """See base class."""

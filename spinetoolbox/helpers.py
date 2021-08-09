@@ -25,8 +25,9 @@ import logging
 import datetime
 import shutil
 import re
-import matplotlib
 import pathlib
+from contextlib import contextmanager
+import matplotlib
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
@@ -1180,21 +1181,33 @@ def load_plugin_specifications(plugin_dict, spec_factories, app_settings, logger
     return {name: plugin_specs}
 
 
-class SignalWaiter:
+class SignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
     def __init__(self):
+        super().__init__()
         self._triggered = False
+        self.args = ()
 
-    @Slot()
-    def trigger(self):
+    def trigger(self, *args):
         """Signal receiving slot."""
         self._triggered = True
+        self.args = args
 
     def wait(self):
         """Wait for signal to be received."""
         while not self._triggered:
             QApplication.processEvents()
+
+
+@contextmanager
+def signal_waiter(signal):
+    waiter = SignalWaiter()
+    signal.connect(waiter.trigger)
+    try:
+        yield waiter
+    finally:
+        signal.disconnect(waiter.trigger)
 
 
 class CustomSyntaxHighlighter(QSyntaxHighlighter):
@@ -1249,3 +1262,18 @@ def inquire_index_name(model, column, title, parent_widget):
     if not ok:
         return
     model.setHeaderData(column, Qt.Horizontal, new_name)
+
+
+class CacheItem(dict):
+    """A dictionary that behaves kinda like a row from a query result.
+
+    It is used to store items in a cache, so we can access them as if they were rows from a query result.
+    This is mainly because we want to use the cache as a replacement for db queries in some methods.
+    """
+
+    def __getattr__(self, name):
+        """Overridden method to return the dictionary key named after the attribute, or None if it doesn't exist."""
+        return self.get(name)
+
+    def _asdict(self):
+        return dict(**self)

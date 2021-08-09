@@ -17,7 +17,7 @@ Classes for custom QTreeView.
 """
 
 from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import Signal, Slot, Qt, QEvent
+from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
@@ -50,6 +50,10 @@ class EntityTreeView(CopyTreeView):
         self._cube_pen_icon = QIcon(":/icons/menu_icons/cube_pen.svg")
         self._cubes_plus_icon = QIcon(":/icons/menu_icons/cubes_plus.svg")
         self._cubes_pen_icon = QIcon(":/icons/menu_icons/cubes_pen.svg")
+        self._fetch_more_timer = QTimer(self)
+        self._fetch_more_timer.setSingleShot(True)
+        self._fetch_more_timer.setInterval(100)
+        self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -112,6 +116,28 @@ class EntityTreeView(CopyTreeView):
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
         self._refresh_selected_indexes()
+
+    def setModel(self, model):
+        old_model = self.model()
+        if old_model:
+            old_model.layoutChanged.disconnect(self._fetch_more_visible)
+        super().setModel(model)
+        model.layoutChanged.connect(self._fetch_more_timer.start)
+
+    @Slot()
+    def _fetch_more_visible(self):
+        model = self.model()
+        for item in model.visit_all():
+            index = model.index_from_item(item)
+            if not self.isExpanded(index):
+                continue
+            last = model.index(model.rowCount(index) - 1, 0, index)
+            if self.visualRect(last).intersects(self.viewport().rect()) and model.canFetchMore(index):
+                model.fetchMore(index)
+
+    def verticalScrollbarValueChanged(self, value):
+        super().verticalScrollbarValueChanged(value)
+        self._fetch_more_timer.start()
 
     @Slot("QModelIndex")
     def _resize_first_column_to_contents(self, _index=None):
@@ -662,58 +688,3 @@ class ParameterValueListTreeView(ItemTreeView):
         self.model().db_mngr.update_parameter_value_lists(db_map_data_to_upd)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()
-
-
-class ParameterTagTreeView(ItemTreeView):
-    """Custom QTreeView class for the parameter_tag tree in SpineDBEditor."""
-
-    tag_selection_changed = Signal(dict)
-
-    def __init__(self, parent):
-        """Initialize the view."""
-        super().__init__(parent=parent)
-        self._selected_tag_ids = dict()
-
-    def connect_signals(self):
-        """Connects signals."""
-        super().connect_signals()
-        self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
-
-    def remove_selected(self):
-        """See base class."""
-        if not self.selectionModel().hasSelection():
-            return
-        db_map_typed_data_to_rm = {}
-        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
-        for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_tag": set()}
-            for tag_item in reversed(db_item.children[:-1]):
-                if tag_item.id and tag_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["parameter_tag"].add(tag_item.id)
-        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
-        self.selectionModel().clearSelection()
-
-    def update_actions_availability(self, item):
-        """See base class."""
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_selection_changed(self, selected, deselected):
-        """Emits tag_selection_changed with the current selection."""
-        selected_db_map_ids = self._db_map_tag_ids_from_selection(selected)
-        deselected_db_map_ids = self._db_map_tag_ids_from_selection(deselected)
-        for db_map, ids in selected_db_map_ids.items():
-            self._selected_tag_ids.setdefault(db_map, set()).update(ids)
-        for db_map, ids in deselected_db_map_ids.items():
-            self._selected_tag_ids[db_map].difference_update(ids)
-        self._selected_tag_ids = {db_map: ids for db_map, ids in self._selected_tag_ids.items() if ids}
-        self.tag_selection_changed.emit(self._selected_tag_ids)
-
-    def _db_map_tag_ids_from_selection(self, selection):
-        db_map_ids = {}
-        for index in selection.indexes():
-            if index.column() != 0:
-                continue
-            item = self.model().item_from_index(index)
-            if item.item_type == "parameter_tag" and item.id:
-                db_map_ids.setdefault(item.db_map, set()).add(item.id)
-        return db_map_ids

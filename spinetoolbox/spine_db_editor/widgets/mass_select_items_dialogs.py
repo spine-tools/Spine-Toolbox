@@ -38,8 +38,6 @@ class MassSelectItemsDialog(QDialog):
         "relationship_class",
         "parameter_value_list",
         "parameter_definition",
-        "parameter_tag",
-        "parameter_definition_tag",
         "object",
         "relationship",
         "entity_group",

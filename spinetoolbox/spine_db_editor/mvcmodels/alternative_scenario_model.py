@@ -40,17 +40,6 @@ class AlternativeScenarioModel(TreeModelBase):
     def _top_children():
         return [AlternativeRootItem(), ScenarioRootItem()]
 
-    def _alternative_or_scenario_ids_per_root_item(self, db_map_data, alternative_or_scenario):
-        root_number = {"alternative": 0, "scenario": 1}[alternative_or_scenario]
-        d = {}
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            root_item = db_item.child(root_number)
-            d[root_item] = [x["id"] for x in items]
-        return d
-
     def _scenario_ids_per_root_item(self, db_map_data):
         return self._ids_per_root_item(db_map_data, root_number=1)
 

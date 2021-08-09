@@ -41,6 +41,11 @@ class FeatureRootItem(EmptyChildRootItem):
     def empty_child(self):
         return FeatureLeafItem()
 
+    def fetch_more(self):
+        super().fetch_more()
+        self.db_mngr.fetch_more(self.db_map, "feature")
+        self.db_mngr.fetch_more(self.db_map, "parameter_value_list")
+
 
 class ToolRootItem(EmptyChildRootItem):
     """A tool root item."""
@@ -59,6 +64,10 @@ class ToolRootItem(EmptyChildRootItem):
 
     def empty_child(self):
         return ToolLeafItem()
+
+    def fetch_more(self):
+        super().fetch_more()
+        self.db_mngr.fetch_more(self.db_map, "tool")
 
 
 class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
@@ -177,6 +186,10 @@ class ToolFeatureRootItem(RootItem):
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDropEnabled
 
+    def fetch_more(self):
+        super().fetch_more()
+        self.db_mngr.fetch_more(self.db_map, "tool_feature")
+
 
 class ToolFeatureLeafItem(LeafItem):
     """A tool feature leaf item."""
@@ -256,6 +269,10 @@ class ToolFeatureMethodRootItem(EmptyChildRootItem):
 
     def empty_child(self):
         return ToolFeatureMethodLeafItem()
+
+    def fetch_more(self):
+        super().fetch_more()
+        self.db_mngr.fetch_more(self.db_map, "tool_feature_method")
 
 
 class ToolFeatureMethodLeafItem(LastGrayMixin, LeafItem):
