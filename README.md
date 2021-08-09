@@ -107,11 +107,31 @@ version of pip.
         pip install -r dev-requirements.txt
 
 You can now launch Spine Toolbox by running `spinetoolbox` when the environment 
-is active. To update, just pull or copy the latest changes from the repository 
-and run
+is active. 
 
-    pip install --upgrade -r requirements.txt [-r dev-requirements.txt]
+**To upgrade**, pull or copy the latest changes from the repository and run
 
+    pip install --upgrade -r requirements.txt
+
+**NOTE:** Even though `spinedb_api`, `spine_engine`, and `spine_items` are listed in spinetoolbox's `requirements.txt`, 
+the command above may not always upgrade these packages. This is because we do not bump the version number on every 
+commit. Before writing a bug report, **please make sure you are using the latest commit of these three packages 
+by doing the following:**
+
+To upgrade `spinedb_api`, run
+
+    pip uninstall -y spinedb-api && pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
+
+To upgrade `spine_engine`, run
+
+    pip uninstall -y spine-engine && pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
+
+To upgrade `spine_items`, run
+
+    pip uninstall -y spine-items && pip install --upgrade git+https://github.com/Spine-project/spine-items.git#egg=spine_items
+
+Or you can use the provided script `/bin/upgrade_spine_reqs.bat` (Windows) or `/bin/upgrade_spine_reqs.py` 
+(Other OS's) files to upgrade all three at once.
 
 ### Uninstalling a previous installation in a conda environment
 
@@ -135,9 +155,7 @@ See file `setup.py` and `requirements.txt` for packages required to run Spine To
 
 The requirements include three packages ([`spinedb_api`](https://github.com/Spine-project/Spine-Database-API),
 [`spine_engine`](https://github.com/Spine-project/spine-engine), and [`spine_items`](https://github.com/Spine-project/spine-items)),
-developed by the Spine project consortium. Since these packages are developed very actively at the moment, 
-they may get upgraded quite regularly whenever you run `python -m pip install --upgrade -r requirements.txt`.
-
+developed by the Spine project consortium.
 
 ### Building the User Guide
 
