@@ -20,8 +20,8 @@ import importlib
 import importlib.util
 import pkgutil
 from spine_engine.project_item.project_item_info import ProjectItemInfo
-from spine_engine.version import __version__ as curr_engine_version
-from spinedb_api.version import __version__ as curr_db_api_version
+from spine_engine import __version__ as curr_engine_version
+from spinedb_api import __version__ as curr_db_api_version
 from .version import __version__ as curr_toolbox_version
 from .project_item.project_item_factory import ProjectItemFactory
 
