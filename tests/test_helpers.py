@@ -286,7 +286,7 @@ class TestHelpers(unittest.TestCase):
     def test_load_tool_specification_from_file(self):
         """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
         spec_path = Path(__file__).parent / "test_resources" / "test_tool_spec.json"
-        specification_factories = load_item_specification_factories()
+        specification_factories = load_item_specification_factories("spine_items")
         logger = MagicMock()
         app_settings = QSettings("SpineProject", "Spine Toolbox")
         tool_spec = load_specification_from_file(str(spec_path), specification_factories, app_settings, logger)

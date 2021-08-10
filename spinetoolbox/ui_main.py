@@ -300,8 +300,8 @@ class ToolboxUI(QMainWindow):
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
-        self._item_categories, self.item_factories = load_project_items()
-        self._item_specification_factories = load_item_specification_factories()
+        self._item_categories, self.item_factories = load_project_items("spine_items")
+        self._item_specification_factories = load_item_specification_factories("spine_items")
 
     def set_work_directory(self, new_work_dir=None):
         """Creates a work directory if it does not exist or changes the current work directory to given.
@@ -1218,6 +1218,7 @@ class ToolboxUI(QMainWindow):
     def add_menu_actions(self):
         """Adds extra actions to Edit and View menu."""
         self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_itemlog.toggleViewAction())

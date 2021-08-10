@@ -10,4 +10,6 @@ under certain conditions; See files COPYING and COPYING.LESSER for details.
 """
 )
 print("")
+os.system("pip uninstall -y spinedb-api")
+print("")
 os.system("pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git")
