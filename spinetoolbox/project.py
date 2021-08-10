@@ -765,6 +765,7 @@ class SpineToolboxProject(MetaObject):
             "connections": connections,
             "node_successors": node_successors,
             "execution_permits": execution_permits,
+            "items_module_name": "spine_items",
             "settings": settings,
             "project_dir": self.project_dir,
         }
