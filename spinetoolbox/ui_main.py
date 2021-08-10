@@ -1213,6 +1213,7 @@ class ToolboxUI(QMainWindow):
     def add_menu_actions(self):
         """Adds extra actions to Edit and View menu."""
         self.ui.menuToolbars.addAction(self.main_toolbar.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_itemlog.toggleViewAction())
