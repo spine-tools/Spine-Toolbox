@@ -28,7 +28,7 @@ class TestLoadProjectItems(unittest.TestCase):
             QApplication()
 
     def test_load_project_items_finds_all_default_items(self):
-        categories, factories = load_project_items()
+        categories, factories = load_project_items("spine_items")
         expected_categories = {
             "Data Connection": "Data Connections",
             "Data Transformer": "Manipulators",

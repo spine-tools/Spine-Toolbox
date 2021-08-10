@@ -31,7 +31,7 @@ class TestSpineEngineWorker(unittest.TestCase):
 
     def test_empty_project_executes(self):
         dag = DirectedGraphHandler()
-        worker = SpineEngineWorker("", {}, dag, "test dag", {})
+        worker = SpineEngineWorker("", {"items_module_name": "spine_items"}, dag, "test dag", {})
         receiver = _Receiver(worker)
         try:
             worker.start()

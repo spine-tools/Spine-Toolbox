@@ -26,26 +26,24 @@ from .version import __version__ as curr_toolbox_version
 from .project_item.project_item_factory import ProjectItemFactory
 
 
-def load_project_items():
+def load_project_items(items_package_name):
     """
-    Loads the standard project item modules included in the Toolbox package.
+    Loads project item modules.
+
+    Args:
+        items_package_name (str): name of the package that contains the project items
 
     Returns:
         tuple of dict: two dictionaries; first maps item type to its category
             while second maps item type to item factory
     """
-    import spine_items  # pylint: disable=import-outside-toplevel
-
-    items_root = pathlib.Path(spine_items.__file__).parent
+    items = importlib.import_module(items_package_name)
+    items_root = pathlib.Path(items.__file__).parent
     categories = dict()
     factories = dict()
     for child in items_root.iterdir():
-        if (
-            child.is_dir()
-            and child.joinpath("__init__.py").exists()
-            or (child.is_dir() and child.joinpath("__init__.pyc").exists())
-        ):
-            spec = importlib.util.find_spec(f"spine_items.{child.stem}")
+        if child.is_dir() and (child.joinpath("__init__.py").exists() or child.joinpath("__init__.pyc").exists()):
+            spec = importlib.util.find_spec(f"{items_package_name}.{child.stem}")
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             module_material = _find_module_material(module)

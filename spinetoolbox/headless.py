@@ -132,7 +132,7 @@ class ExecuteProject(QObject):
             _Status: status code
         """
         app_settings = QSettings("SpineProject", "Spine Toolbox")
-        spec_factories = load_item_specification_factories()
+        spec_factories = load_item_specification_factories("spine_items")
         plugin_specifications = dict()
         for plugin_dir in plugins_dirs(app_settings):
             plugin_dict = load_plugin_dict(plugin_dir, self._logger)
@@ -178,6 +178,7 @@ class ExecuteProject(QObject):
                 "connections": connection_dicts,
                 "node_successors": node_successors,
                 "execution_permits": execution_permits,
+                "items_module_name": "spine_items",
                 "settings": settings,
                 "project_dir": project_dir,
             }
