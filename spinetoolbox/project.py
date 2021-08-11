@@ -662,11 +662,7 @@ class SpineToolboxProject(MetaObject):
                     f"(missing JSON key: {str(error)})."
                 )
                 continue
-            original_data_dir = item_dict.get("original_data_dir")
-            original_db_url = item_dict.get("original_db_url")
-            duplicate_files = item_dict.get("duplicate_files")
-            if original_data_dir is not None and original_db_url is not None and duplicate_files is not None:
-                project_item.copy_local_data(original_data_dir, original_db_url, duplicate_files)
+            project_item.copy_local_data(item_dict)
             self.add_item(project_item, silent)
 
     def remove_item_by_name(self, item_name, delete_data=False):
