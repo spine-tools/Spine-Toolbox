@@ -31,12 +31,6 @@ We provide three options for installing Spine Toolbox.
 
 This is the recommended way to install Spine Toolbox and keep it updated with new releases.
 
----
-**NOTE:** If you have previously installed Spine Toolbox in a conda environment, 
-please follow the steps [here](#uninstalling-a-previous-installation-in-a-conda-environment) to uninstall it.
-
----
-
 1. Install Python 3.8.
    - On Windows, open **Microsoft Store** from the start menu,
      enter ‘python’ in the search box, select Python 3.8, and press **Get**.
@@ -132,19 +126,6 @@ To upgrade `spine_items`, run
 
 Or you can use the provided script `/bin/upgrade_spine_reqs.bat` (Windows) or `/bin/upgrade_spine_reqs.py` 
 (Other OS's) files to upgrade all three at once.
-
-### Uninstalling a previous installation in a conda environment
-
-1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
-
-2. Activate the `spinetoolbox` environment by running
-
-        conda activate spinetoolbox
-
-3. Uninstall Spine Toolbox by running
-
-        pip uninstall spinetoolbox
-
 
 ### About requirements
 
