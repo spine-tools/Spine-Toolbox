@@ -235,7 +235,7 @@ class QProcessExecutionManager(ExecutionManager):
             if not self._silent:
                 self._logger.msg_error.emit("Unknown QProcess exit status [{0}]".format(exit_status))
             exit_code = -1
-        if not exit_code == 0:
+        if exit_code != 0:
             self.process_failed = True
         if not self.user_stopped:
             out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
