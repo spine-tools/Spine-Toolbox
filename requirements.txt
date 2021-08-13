@@ -61,7 +61,7 @@ python-editor >= 1.0.4
 python-gnupg >= 0.4.7
 pytz >= 2020.5
 pytzdata >= 2020.1
-pywin32 == 225;sys_platform=="win32"
+pywin32 >= 301;sys_platform=="win32"
 # 'ImportError: DLL load failed while importing win32api' error happens on Conda Python 3.8 if pywin32>=227.
 # dagster does not allow 226, so we are left with 225. The error happens when trying to execute anything in the
 # Python or Julia Console

@@ -14,7 +14,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Removed
 
 ### Fixed
-
+- Fixed 'ImportError: DLL load failed while importing win32api' on (Conda) Python 3.8 when trying to execute Tools
+  in Jupyter Console
 
 ## [0.6.1] - 2021-06-28
 

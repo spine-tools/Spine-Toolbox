@@ -187,17 +187,6 @@ not needed and there is a chance of conflicts between the packages.
 **Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support PySide2 
 version 5.15 (yet).
 
-#### ImportError: DLL load failed while importing win32api
-
-If you installed Spine Toolbox *without Conda* on **Python 3.8 on Windows**, 
-you may see this error when trying to execute a project item. The cause of this error 
-is the package `pywin32` version 225. To fix this error, upgrade the package to version 
-300 using the following command
-
-    pip install --upgrade "pywin32==300"
-
-After the process has finished, restart the application. **Note: pywin32 v301 does not work**.
-
 ## Contribution Guide
 
 All are welcome to contribute!
