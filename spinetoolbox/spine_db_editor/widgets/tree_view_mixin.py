@@ -88,6 +88,8 @@ class TreeViewMixin:
         self.tool_feature_model.db_maps = self.db_maps
         self.alternative_scenario_model.db_maps = self.db_maps
         self.parameter_value_list_model.db_maps = self.db_maps
+        self.object_tree_model.build_tree()
+        self.relationship_tree_model.build_tree()
         for view in (
             self.ui.treeView_tool_feature,
             self.ui.treeView_alternative_scenario,
@@ -98,8 +100,6 @@ class TreeViewMixin:
                 index = view.model().index_from_item(item)
                 view.expand(index)
             view.resizeColumnToContents(0)
-        self.object_tree_model.build_tree()
-        self.relationship_tree_model.build_tree()
 
     @Slot()
     def _expand_object_tree_root_index(self):

@@ -184,7 +184,6 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
         if role != Qt.EditRole:
             return False
         db_value, _ = to_database(value)
-        db_value = bytes(json.dumps(value), "UTF8")
         return self.set_data_in_db(db_value)
 
     def set_data_in_db(self, db_value):
