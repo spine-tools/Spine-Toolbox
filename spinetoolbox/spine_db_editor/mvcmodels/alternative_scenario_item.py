@@ -109,7 +109,7 @@ class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def fetch_more(self):
         if not self.id:
             return
-        self.append_children(ScenarioActiveItem(), ScenarioAlternativeRootItem())
+        self.append_children([ScenarioActiveItem(), ScenarioAlternativeRootItem()])
         self._fetched = True
 
     def handle_updated_in_db(self):
@@ -180,7 +180,7 @@ class ScenarioAlternativeRootItem(RootItem):
         if alt_count > curr_alt_count:
             added_count = alt_count - curr_alt_count
             children = [ScenarioAlternativeLeafItem() for _ in range(added_count)]
-            self.insert_children(curr_alt_count, *children)
+            self.insert_children(curr_alt_count, children)
         elif curr_alt_count > alt_count:
             removed_count = curr_alt_count - alt_count
             self.remove_children(alt_count, removed_count)

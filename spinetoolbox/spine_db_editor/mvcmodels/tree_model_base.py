@@ -52,8 +52,8 @@ class TreeModelBase(MinimalTreeModel):
         self.endResetModel()
         for db_map in self.db_maps:
             db_item = self._make_db_item(db_map)
-            self._invisible_root_item.append_children(db_item)
-            db_item.append_children(*self._top_children())
+            self._invisible_root_item.append_children([db_item])
+            db_item.append_children(self._top_children())
 
     @staticmethod
     def _make_db_item(db_map):

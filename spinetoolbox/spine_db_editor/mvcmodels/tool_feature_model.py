@@ -136,22 +136,22 @@ class ToolFeatureModel(TreeModelBase):
     def add_features(self, db_map_data):
         for root_item, ids in self._feature_ids_per_root_item(db_map_data).items():
             children = [FeatureLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, *children)
+            root_item.insert_children(root_item.child_count() - 1, children)
 
     def add_tools(self, db_map_data):
         for root_item, ids in self._tool_ids_per_root_item(db_map_data).items():
             children = [ToolLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, *children)
+            root_item.insert_children(root_item.child_count() - 1, children)
 
     def add_tool_features(self, db_map_data):
         for root_item, ids in self._tool_feature_ids_per_root_item(db_map_data).items():
             children = [ToolFeatureLeafItem(id_) for id_ in ids]
-            root_item.append_children(*children)
+            root_item.append_children(children)
 
     def add_tool_feature_methods(self, db_map_data):
         for root_item, ids in self._tool_feature_method_ids_per_root_item(db_map_data).items():
             children = [ToolFeatureMethodLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, *children)
+            root_item.insert_children(root_item.child_count() - 1, children)
 
     def update_features(self, db_map_data):
         for root_item, ids in self._feature_ids_per_root_item(db_map_data).items():

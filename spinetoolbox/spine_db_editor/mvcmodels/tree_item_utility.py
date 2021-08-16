@@ -70,9 +70,9 @@ class NonLazyTreeItem(TreeItem):
         """Disables lazy loading by returning False."""
         return False
 
-    def insert_children(self, position, *children):
+    def insert_children(self, position, children):
         """Fetches the children as they become parented."""
-        if not super().insert_children(position, *children):
+        if not super().insert_children(position, children):
             return False
         for child in children:
             child.fetch_more()
@@ -116,14 +116,14 @@ class EmptyChildMixin:
 
     def fetch_more(self):
         empty_child = self.empty_child()
-        self.append_children(empty_child)
+        self.append_children([empty_child])
         self._fetched = True
 
     def append_empty_child(self, row):
         """Appends empty child if the row is the last one."""
         if row == self.child_count() - 1:
             empty_child = self.empty_child()
-            self.append_children(empty_child)
+            self.append_children([empty_child])
 
 
 class NonLazyDBItem(NonLazyTreeItem):

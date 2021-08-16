@@ -110,19 +110,18 @@ class TreeItem:
     def index(self):
         return self.model.index_from_item(self)
 
-    def insert_children(self, position, *children):
+    def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
         Args:
             position (int): insert new items here
-            children (iter): insert items from this iterable
+            children (list of TreeItem): insert items from this iterable
         """
         bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
         if bad_types:
-            raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
+            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count():
             return False
-        children = list(children)
         for child in children:
             child.parent_item = self
         self.model.beginInsertRows(self.index(), position, position + len(children) - 1)
@@ -130,9 +129,9 @@ class TreeItem:
         self.model.endInsertRows()
         return True
 
-    def append_children(self, *children):
+    def append_children(self, children):
         """Append children at the end."""
-        return self.insert_children(self.child_count(), *children)
+        return self.insert_children(self.child_count(), children)
 
     def remove_children(self, position, count):
         """Removes count children starting from the given position."""

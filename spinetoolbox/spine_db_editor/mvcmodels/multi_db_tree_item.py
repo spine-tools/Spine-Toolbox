@@ -55,10 +55,10 @@ class MultiDBTreeItem(TreeItem):
         """"Returns an id for display based on the display key. This id must be the same across all db_maps.
         If it's not, this property becomes None and measures need to be taken (see update_children_by_id).
         """
-        ids = [tuple(self.db_map_data_field(db_map, field) for field in self.visual_key) for db_map in self.db_maps]
-        if len(set(ids)) != 1:
+        ids = {tuple(self.db_map_data_field(db_map, field) for field in self.visual_key) for db_map in self.db_maps}
+        if len(ids) != 1:
             return None
-        return ids[0]
+        return next(iter(ids))
 
     @property
     def display_data(self):
@@ -198,7 +198,7 @@ class MultiDBTreeItem(TreeItem):
                 # No match
                 existing_children[new_child.display_id] = new_child
                 unmerged.append(new_child)
-        self.append_children(*unmerged)
+        self.append_children(unmerged)
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
@@ -236,10 +236,11 @@ class MultiDBTreeItem(TreeItem):
         child_type = self.child_item_class.item_type
         if child_type is None:
             return []
+        child_map = self._child_map.get(db_map, {})
         return [
             x["id"]
             for x in self.db_mngr.get_items(db_map, child_type)
-            if self._fetch_success_cond(db_map, x) and x["id"] not in self._child_map.get(db_map, {})
+            if x["id"] not in child_map and self._fetch_success_cond(db_map, x)
         ]
 
     def get_fetched_children_ids(self, db_map):
@@ -255,6 +256,8 @@ class MultiDBTreeItem(TreeItem):
         new_children = []
         for db_map, ids in db_map_ids.items():
             new_children += self._create_new_children(db_map, ids)
+        if not new_children:
+            return
         self._merge_children(new_children)
 
     def remove_children_by_id(self, db_map_ids):
@@ -325,7 +328,7 @@ class MultiDBTreeItem(TreeItem):
         self._deep_refresh_children()
         self._merge_children(new_children)
 
-    def insert_children(self, position, *children):
+    def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
         Args:
@@ -335,7 +338,7 @@ class MultiDBTreeItem(TreeItem):
         bad_types = [type(child) for child in children if not isinstance(child, MultiDBTreeItem)]
         if bad_types:
             raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
-        if not super().insert_children(position, *children):
+        if not super().insert_children(position, children):
             return False
         self._refresh_child_map()
         return True

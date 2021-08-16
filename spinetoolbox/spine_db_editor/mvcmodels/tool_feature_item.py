@@ -156,7 +156,7 @@ class ToolLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def fetch_more(self):
         if not self.id:
             return
-        self.append_children(ToolFeatureRootItem())
+        self.append_children([ToolFeatureRootItem()])
         self._fetched = True
 
 
@@ -210,7 +210,7 @@ class ToolFeatureLeafItem(LeafItem):
         return dict(name=name, **item_data)
 
     def fetch_more(self):
-        self.append_children(ToolFeatureRequiredItem(), ToolFeatureMethodRootItem())
+        self.append_children([ToolFeatureRequiredItem(), ToolFeatureMethodRootItem()])
         self._fetched = True
 
     def add_item_to_db(self, db_item):

@@ -53,7 +53,7 @@ class MultiDBTreeModel(MinimalTreeModel):
         self.beginResetModel()
         self._invisible_root_item = TreeItem(self)
         self._root_item = self.root_item_type(self, dict.fromkeys(self.db_maps))
-        self._invisible_root_item.append_children(self._root_item)
+        self._invisible_root_item.append_children([self._root_item])
         self.endResetModel()
 
     def columnCount(self, parent=QModelIndex()):
@@ -64,12 +64,11 @@ class MultiDBTreeModel(MinimalTreeModel):
             return ("name", "database")[section]
         return None
 
-    def find_items(self, db_map, path_prefix, parent_items=(), fetch=False):
+    def find_items(self, db_map, path_prefix, fetch=False):
         """Returns items at given path prefix.
         """
-        if not parent_items:
-            # Start from the root node
-            parent_items = [self.root_item]
+        # Start from the root node
+        parent_items = [self.root_item]
         for id_ in path_prefix:
             parent_items = [
                 child for parent_item in parent_items for child in parent_item.find_children_by_id(db_map, id_)

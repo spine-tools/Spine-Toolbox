@@ -71,9 +71,9 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
     def fetch_more(self):
         self.db_mngr.fetch_more(self.db_map, "parameter_value_list")
         children = [ValueItem() for _ in self.value_list]
-        self.append_children(*children)
+        self.append_children(children)
         if self.id:
-            self.append_children(self.empty_child())
+            self.append_children([self.empty_child()])
 
     # pylint: disable=no-self-use
     def empty_child(self):
@@ -95,7 +95,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
             return True
         self._name = value
         self.parent_item.append_empty_child(self.child_number())
-        self.append_children(self.empty_child())
+        self.append_children([self.empty_child()])
         return True
 
     def set_child_data(self, child, value):
@@ -145,7 +145,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
         if value_count > curr_value_count:
             added_count = value_count - curr_value_count
             children = [ValueItem() for _ in range(added_count)]
-            self.insert_children(curr_value_count, *children)
+            self.insert_children(curr_value_count, children)
         elif curr_value_count > value_count:
             removed_count = curr_value_count - value_count
             self.remove_children(value_count, removed_count)
@@ -210,7 +210,7 @@ class ParameterValueListModel(TreeModelBase):
                     continue
                 list_item.handle_added_to_db(identifier=id_)
             children = [ListItem(id_) for id_ in ids.values()]
-            db_item.insert_children(db_item.child_count() - 1, *children)
+            db_item.insert_children(db_item.child_count() - 1, children)
 
     def update_parameter_value_lists(self, db_map_data):
         for root_item, items in self._items_per_db_item(db_map_data).items():

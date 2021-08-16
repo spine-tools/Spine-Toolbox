@@ -130,7 +130,7 @@ class EntityClassItem(MultiDBTreeItem):
             return
         self.model.layoutAboutToBeChanged.emit()
         group_children = list(reversed([self.children.pop(row) for row in sorted(rows, reverse=True)]))
-        self.insert_children(self._group_child_count, *group_children)
+        self.insert_children(self._group_child_count, group_children)
         self.model.layoutChanged.emit()
         self._group_child_count += len(group_children)
         self._refresh_child_map()
@@ -288,7 +288,7 @@ class ObjectItem(EntityItem):
 
     @property
     def child_item_class(self):
-        """Returns RelationshipClassItem."""
+        """Child class is always :class:`ObjectRelationshipClassItem`."""
         return ObjectRelationshipClassItem
 
     def default_parameter_data(self):
@@ -301,20 +301,25 @@ class ObjectItem(EntityItem):
 
     def has_children(self):
         """See base class."""
-        return super().has_children() or self.is_group()
+        return super().has_children() or self._has_members or self.is_group()
 
     def _fetch_success_cond(self, db_map, item):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         return object_class_id in {int(id_) for id_ in item["object_class_id_list"].split(",")}
 
+    def can_fetch_more(self):
+        if self.is_group():
+            return not self._has_members
+        return super().can_fetch_more()
+
     def fetch_more(self):
         """See base class."""
         super().fetch_more()
-        if not self.is_group() or self._has_members:
+        if self._has_members or not self.is_group():
             return
         # Insert member class item. Note that we pass the db_map_ids of the parent object class item
         db_map_ids = {db_map: self.parent_item.db_map_id(db_map) for db_map in self.db_maps}
-        self.insert_children(0, MemberObjectClassItem(self.model, db_map_ids))
+        self.insert_children(0, [MemberObjectClassItem(self.model, db_map_ids)])
         self._has_members = True
 
 

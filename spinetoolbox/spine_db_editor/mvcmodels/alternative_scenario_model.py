@@ -49,12 +49,12 @@ class AlternativeScenarioModel(TreeModelBase):
     def add_alternatives(self, db_map_data):
         for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
             children = [AlternativeLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, *children)
+            root_item.insert_children(root_item.child_count() - 1, children)
 
     def add_scenarios(self, db_map_data):
         for root_item, ids in self._scenario_ids_per_root_item(db_map_data).items():
             children = [ScenarioLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, *children)
+            root_item.insert_children(root_item.child_count() - 1, children)
 
     def update_alternatives(self, db_map_data):
         for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
