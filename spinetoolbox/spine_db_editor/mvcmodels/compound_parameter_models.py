@@ -57,15 +57,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_valid = True
         self._auto_filter_menus = {}
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
-        self._super_can_fetch_more = {}
 
     def canFetchMore(self, parent=QModelIndex()):
-        self._super_can_fetch_more[parent] = super().canFetchMore(parent)
-        return True
+        return any(self.db_mngr.can_fetch_more(db_map, self.item_type) for db_map in self.db_maps)
 
     def fetchMore(self, parent=QModelIndex()):
-        if self._super_can_fetch_more.get(parent, False):
-            super().fetchMore(parent)
         for db_map in self.db_maps:
             success_cond = lambda x, db_map=db_map: self._fetch_success_cond(db_map, x)
             self.db_mngr.fetch_more(db_map, self.item_type, success_cond=success_cond)
@@ -151,6 +147,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def init_model(self):
         """Initializes the model."""
         super().init_model()
+        self.empty_model.fetchMore()
         self._make_auto_filter_menus()
 
     def _make_auto_filter_menus(self):
