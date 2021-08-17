@@ -74,7 +74,7 @@ class SpineDBFetcher(QObject):
         return not self._fetched.get(item_type, False) or self.cache.get(item_type, {})
 
     @busy_effect
-    def fetch_more(self, item_type, success_cond=None, iter_chunk_size=100):
+    def fetch_more(self, item_type, success_cond=None, iter_chunk_size=1000):
         """Fetches items from the database.
 
         Args:

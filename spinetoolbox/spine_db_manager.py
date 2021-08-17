@@ -40,7 +40,6 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     TimePattern,
     Map,
-    DiffDatabaseMapping,
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from .spine_db_icon_manager import SpineDBIconManager
@@ -262,7 +261,7 @@ class SpineDBManager(QObject):
             return False
         return self._get_fetcher(db_map).can_fetch_more(item_type)
 
-    def fetch_more(self, db_map, item_type, success_cond=None, iter_chunk_size=100):
+    def fetch_more(self, db_map, item_type, success_cond=None, iter_chunk_size=1000):
         """Fetches more items of given type from given db.
 
         Args:
