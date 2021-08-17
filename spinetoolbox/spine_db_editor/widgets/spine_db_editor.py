@@ -584,10 +584,6 @@ class SpineDBEditorBase(QMainWindow):
         }
         QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))
 
-    def reload_session(self, db_maps):
-        """Reloads data from given db_maps."""
-        self.init_models()
-
     @Slot(bool)
     def refresh_session(self, checked=False):
         self.db_mngr.refresh_session(*self.db_maps)
@@ -611,14 +607,14 @@ class SpineDBEditorBase(QMainWindow):
             self.msg.emit(msg)
             return
         # Commit done by an 'outside force'.
-        self.reload_session(db_maps)
+        self.init_models()
         self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.reload_session(db_maps)
+        self.init_models()
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
@@ -627,7 +623,7 @@ class SpineDBEditorBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.reload_session(db_maps)
+        self.init_models()
         self.msg.emit("Session refreshed.")
 
     @Slot(bool)

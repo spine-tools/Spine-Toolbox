@@ -931,4 +931,4 @@ class TabularViewMixin:
     def receive_session_rolled_back(self, db_maps):
         """Reacts to session rolled back event."""
         super().receive_session_rolled_back(db_maps)
-        self.do_reload_pivot_table()
+        self.clear_pivot_table()
