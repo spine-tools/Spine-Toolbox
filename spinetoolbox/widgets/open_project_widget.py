@@ -78,9 +78,9 @@ class OpenProjectDialog(QDialog):
             if os.path.isdir(p):
                 start_index = self.file_model.index(p)
             else:
-                start_index = self.file_model.index(QDir.rootPath())
+                start_index = self.file_model.index(QDir.homePath())
         else:
-            start_index = self.file_model.index(QDir.rootPath())
+            start_index = self.file_model.index(QDir.homePath())
             self.ui.comboBox_current_path.setCurrentIndex(-1)
         self.file_model.directoryLoaded.connect(self.expand_and_resize)
         # Start browsing to start index immediately when dialog is shown

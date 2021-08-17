@@ -401,14 +401,15 @@ class ToolboxUI(QMainWindow):
         a Spine Toolbox project. Initial project name is the directory name.
         """
         recents = self.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+        home_dir = os.path.abspath(os.path.join(str(pathlib.Path.home())))
         if not recents:
-            initial_path = _program_root
+            initial_path = home_dir
         else:
             recents_lst = str(recents).split("\n")
             if not os.path.isdir(recents_lst[0]):
                 # Remove obsolete entry from recentProjectStorages
                 OpenProjectDialog.remove_directory_from_recents(recents_lst[0], self.qsettings())
-                initial_path = _program_root
+                initial_path = home_dir
             else:
                 initial_path = recents_lst[0]
         # noinspection PyCallByClass
@@ -475,7 +476,7 @@ class ToolboxUI(QMainWindow):
             else:
                 recents = self.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
                 if not recents:
-                    start_dir = ""
+                    start_dir = os.path.abspath(os.path.join(str(pathlib.Path.home())))
                 else:
                     start_dir = str(recents).split("\n")[0]
                 load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir=start_dir)
