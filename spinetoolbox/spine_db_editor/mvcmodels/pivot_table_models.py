@@ -1006,7 +1006,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         if not any(db_map_parameter_values.values()):
             return False
         data = self._load_full_parameter_value_data(db_map_parameter_values=db_map_parameter_values, action=action)
-        self.update_model(data)
+        self.receive_data_added_or_removed(data, action)
         return True
 
     def _load_empty_parameter_value_data(self, *args, **kwargs):
