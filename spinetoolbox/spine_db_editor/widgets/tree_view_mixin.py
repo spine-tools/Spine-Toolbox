@@ -87,6 +87,7 @@ class TreeViewMixin:
         self.relationship_tree_model.db_maps = self.db_maps
         self.tool_feature_model.db_maps = self.db_maps
         self.alternative_scenario_model.db_maps = self.db_maps
+        self.parameter_value_list_model.build_tree()
         self.parameter_value_list_model.db_maps = self.db_maps
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()

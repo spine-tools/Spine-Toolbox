@@ -196,6 +196,7 @@ class Ui_MainWindow(object):
         self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
         self.treeView_parameter_value_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.treeView_parameter_value_list.setUniformRowHeights(True)
+        self.treeView_parameter_value_list.header().setVisible(True)
 
         self.verticalLayout.addWidget(self.treeView_parameter_value_list)
 

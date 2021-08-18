@@ -20,23 +20,24 @@ from .tree_item_utility import NonLazyTreeItem
 
 
 class TreeModelBase(MinimalTreeModel):
-    """A base model to display items in a tree view.
-
-
-    Args:
-        parent (SpineDBEditor)
-        db_mngr (SpineDBManager)
-        db_maps (iter): DiffDatabaseMapping instances
-    """
+    """A base model to display items in a tree view."""
 
     def __init__(self, parent, db_mngr, *db_maps):
-        """Initialize class"""
+        """
+        Args:
+            parent (SpineDBEditor)
+            db_mngr (SpineDBManager)
+            *db_maps: DiffDatabaseMapping instances
+        """
         super().__init__(parent)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
 
     def columnCount(self, parent=QModelIndex()):
-        """Returns the number of columns under the given parent. Always 1.
+        """Returns the number of columns under the given parent. Always 2.
+
+        Returns:
+            int: column count
         """
         return 2
 

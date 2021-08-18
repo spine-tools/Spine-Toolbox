@@ -52,7 +52,7 @@ class SpineDBEditorBase(QMainWindow):
     """Base class for SpineDBEditor (i.e. Spine database editor)."""
 
     msg = Signal(str)
-    link_msg = Signal(str, "QVariant")
+    link_msg = Signal(str, object)
     msg_error = Signal(str)
     file_exported = Signal(str)
     sqlite_file_exported = Signal(str)
@@ -72,7 +72,6 @@ class SpineDBEditorBase(QMainWindow):
         self._change_notifiers = []
         self._changelog = []
         self.db_url = None
-        self._fetcher = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -356,8 +355,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def init_models(self):
         """Initializes models."""
-        self.parameter_value_list_model.build_tree()
-        self.ui.treeView_parameter_value_list.header().hide()
 
     @Slot(str)
     def add_message(self, msg):
@@ -370,12 +367,13 @@ class SpineDBEditorBase(QMainWindow):
             return
         self.notification_stack.push(msg)
 
-    @Slot(str, "QVariant")
+    @Slot(str, object)
     def add_link_msg(self, msg, open_link=None):
         """Pushes link message to notification stack.
 
         Args:
             msg (str): String to show in notification
+            open_link (Callable, optional): callback to invoke when notification's link is opened
         """
         if self.silenced:
             return
@@ -796,8 +794,6 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
 
     def tear_down(self):
-        if self._fetcher is not None:
-            self._fetcher.stop()
         if not self.db_mngr.unregister_listener(self, *self.db_maps):
             return False
         # Save UI form state

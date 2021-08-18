@@ -68,11 +68,6 @@ class TestSpineDBEditorUpdateMixin:
         self.assertEqual(pluto_fish_dog_item.item_type, "relationship_class")
         self.assertEqual(pluto_fish_dog_item.display_data, "octopus__dog")
 
-    @unittest.skip("TODO")
-    def test_update_relationships_in_object_tree_model(self):
-        """Test that relationships are updated in the object tree model."""
-        self.fail()
-
     def test_update_object_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
         model = self.spine_db_editor.object_parameter_definition_model

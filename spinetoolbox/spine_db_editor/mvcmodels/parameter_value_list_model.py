@@ -194,14 +194,7 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
 
 
 class ParameterValueListModel(TreeModelBase):
-    """A model to display parameter_value_list data in a tree view.
-
-
-    Args:
-        parent (SpineDBEditor)
-        db_mngr (SpineDBManager)
-        db_maps (iter): DiffDatabaseMapping instances
-    """
+    """A model to display parameter_value_list data in a tree view."""
 
     def add_parameter_value_lists(self, db_map_data):
         for db_item, items in self._items_per_db_item(db_map_data).items():
@@ -247,7 +240,7 @@ class ParameterValueListModel(TreeModelBase):
             index (QModelIndex)
 
         Returns:
-            function
+            Callable
         """
         item = self.item_from_index(index)
         return lambda value, item=item: item.set_data_in_db(value[0])
