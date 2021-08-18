@@ -227,7 +227,7 @@ class MemberObjectClassItem(ObjectClassItem):
         """Returns True, this item always has children."""
         return True
 
-    def _get_children_ids(self, db_map):
+    def _get_new_children_ids(self, db_map):
         """See base class."""
         return self.parent_item.db_map_member_ids(db_map)
 
@@ -338,7 +338,7 @@ class MemberObjectItem(ObjectItem):
     def can_fetch_more(self):
         return False
 
-    def _get_children_ids(self, db_map):
+    def _get_new_children_ids(self, db_map):
         return []
 
 
@@ -382,7 +382,7 @@ class RelationshipItem(EntityItem):
     def can_fetch_more(self):
         return False
 
-    def _get_children_ids(self, db_map):
+    def _get_new_children_ids(self, db_map):
         return []
 
     def is_valid(self):

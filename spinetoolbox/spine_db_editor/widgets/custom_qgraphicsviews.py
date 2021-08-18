@@ -124,7 +124,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         # self._parameter_heat_map_menu = self._menu.addMenu("Add heat map")
         # self._parameter_heat_map_menu.triggered.connect(self.add_heat_map)
         self._menu.addSeparator()
-        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.build_graph)
+        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
         self._export_as_pdf_action = self._menu.addAction("Export as PDF", self.export_as_pdf)
         self._menu.addSeparator()
         self._zoom_action = ToolBarWidgetAction("Zoom", self._menu, compact=True)

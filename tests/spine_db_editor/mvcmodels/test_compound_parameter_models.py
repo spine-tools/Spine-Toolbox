@@ -67,7 +67,7 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         self._db_mngr.fetch_all(self._db_map)
         definition_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [1]}, "parameter_definition")
         model.receive_parameter_data_added(definition_data)
-        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["oc", "p", None, "None", None, "test_db"]
@@ -115,7 +115,7 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         self._db_mngr.fetch_all(self._db_map)
         definition_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [2]}, "parameter_definition")
         model.receive_parameter_data_added(definition_data)
-        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["rc", "oc", "p", None, "None", None, "test_db"]
@@ -176,7 +176,7 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         )
         value_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [1]}, "parameter_value")
         model.receive_parameter_data_added(value_data)
-        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["oc", "o", "p", "Base", "23.0", "test_db"]
@@ -239,7 +239,7 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         )
         value_data = self._db_mngr.find_cascading_parameter_data({self._db_map: [2]}, "parameter_value")
         model.receive_parameter_data_added(value_data)
-        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["rc", "o", "p", "Base", "23.0", "test_db"]

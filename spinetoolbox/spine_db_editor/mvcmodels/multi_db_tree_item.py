@@ -213,7 +213,8 @@ class MultiDBTreeItem(TreeItem):
     def can_fetch_more(self):
         child_type = self.child_item_class.item_type
         if child_type is None or not any(
-            self.db_mngr.can_fetch_more(db_map, child_type) or self._get_children_ids(db_map) for db_map in self.db_maps
+            self.db_mngr.can_fetch_more(db_map, child_type) or self._get_pending_children_ids(db_map)
+            for db_map in self.db_maps
         ):
             return False
         return True
@@ -228,23 +229,29 @@ class MultiDBTreeItem(TreeItem):
             self.db_mngr.fetch_more(db_map, child_type, success_cond=success_cond)
         # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
         # This is needed for object items that are created *after* the relationship classes are fetched.
-        db_map_ids = {db_map: self._get_children_ids(db_map) for db_map in self.db_maps}
+        db_map_ids = {db_map: self._get_pending_children_ids(db_map) for db_map in self.db_maps}
         self.append_children_by_id(db_map_ids)
 
-    def _get_children_ids(self, db_map):
-        """Returns a list of children ids."""
+    def _get_pending_children_ids(self, db_map):
+        """Returns a list of children ids that are in the cache but not added."""
         child_type = self.child_item_class.item_type
         if child_type is None:
             return []
-        child_map = self._child_map.get(db_map, {})
         return [
             x["id"]
             for x in self.db_mngr.get_items(db_map, child_type)
-            if x["id"] not in child_map and self._fetch_success_cond(db_map, x)
+            if x["id"] not in self._child_map.get(db_map, {}) and self._fetch_success_cond(db_map, x)
         ]
 
-    def get_fetched_children_ids(self, db_map):
-        return self._child_map.get(db_map, {})
+    def fetch_more_if_possible(self):
+        if self.can_fetch_more():
+            self.fetch_more()
+
+    def get_all_children_ids(self, db_map):
+        child_type = self.child_item_class.item_type
+        if child_type is None:
+            return []
+        return [x["id"] for x in self.db_mngr.get_items(db_map, child_type) if self._fetch_success_cond(db_map, x)]
 
     def append_children_by_id(self, db_map_ids):
         """
