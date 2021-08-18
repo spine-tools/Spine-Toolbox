@@ -223,7 +223,7 @@ class SpineDBManager(QObject):
         self.parameter_value_lists_added.connect(self._cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_updated.connect(self._cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_updated.connect(self._cascade_refresh_features_by_paremeter_value_list)
-        self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_value_list)
+        self.parameter_value_lists_removed.connect(self._cascade_refresh_parameter_definitions_by_removed_value_list)
         self.features_updated.connect(self._cascade_refresh_tool_features_by_feature)
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
@@ -297,7 +297,7 @@ class SpineDBManager(QObject):
         """Removes data from cache.
 
         Args:
-            db_map_typed_ids
+            db_map_typed_ids (dict): items to remove
         """
         typed_db_map_data = {}
         for item_type, signal in self.removed_signals.items():
@@ -1718,6 +1718,18 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
+    def find_cascading_parameter_definitions_by_removed_value_list(self, db_map_ids):
+        """Finds and returns cascading parameter definitions for the given parameter_value_list ids that have been
+        removed."""
+        db_map_cascading_data = dict()
+        for db_map, value_list_ids in db_map_ids.items():
+            for item in self.get_items(db_map, "parameter_definition"):
+                if item["value_list_id"] in value_list_ids:
+                    item["value_list_id"] = None
+                    item["value_list_name"] = None
+                    db_map_cascading_data.setdefault(db_map, []).append(item)
+        return db_map_cascading_data
+
     def find_cascading_parameter_values_by_entity(self, db_map_ids):
         """Finds and returns cascading parameter values for the given entity ids."""
         db_map_cascading_data = dict()
@@ -1875,6 +1887,17 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self.db_map_ids(db_map_data))
+        self.parameter_definitions_updated.emit(db_map_cascading_data)
+
+    def _cascade_refresh_parameter_definitions_by_removed_value_list(self, db_map_data):
+        """Refreshes cached parameter definitions when removing parameter_value lists.
+
+        Args:
+            db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
+        """
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_removed_value_list(
+            self.db_map_ids(db_map_data)
+        )
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
