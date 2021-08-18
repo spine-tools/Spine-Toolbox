@@ -25,7 +25,7 @@ class TestSpineDBEditorAddMixin:
         root_item = self.spine_db_editor.object_tree_model.root_item
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
-        fish_item, dog_item = root_item.children
+        dog_item, fish_item = root_item.children
         self.assertEqual(fish_item.item_type, "object_class")
         self.assertEqual(fish_item.display_data, "fish")
         self.assertEqual(dog_item.item_type, "object_class")
@@ -39,7 +39,7 @@ class TestSpineDBEditorAddMixin:
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
-        fish_item, dog_item = root_item.children
+        dog_item, fish_item = root_item.children
         nemo_item = fish_item.child(0)
         pluto_item, scooby_item = dog_item.children
         self.assertEqual(nemo_item.item_type, "object")
@@ -59,11 +59,11 @@ class TestSpineDBEditorAddMixin:
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
-        fish_item, dog_item = root_item.children
+        dog_item, fish_item = root_item.children
         nemo_item = fish_item.child(0)
         pluto_item = dog_item.child(0)
-        nemo_dog_fish_item = nemo_item.child(1)
-        pluto_fish_dog_item = pluto_item.child(0)
+        nemo_dog_fish_item = nemo_item.child(0)
+        pluto_fish_dog_item = pluto_item.child(1)
         self.assertEqual(nemo_dog_fish_item.item_type, "relationship_class")
         self.assertEqual(nemo_dog_fish_item.display_data, "dog__fish")
         self.assertEqual(nemo_item.child_count(), 2)
@@ -80,12 +80,12 @@ class TestSpineDBEditorAddMixin:
         self.put_mock_relationships_in_db_mngr()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
-        fish_item, dog_item = root_item.children
+        dog_item, fish_item = root_item.children
         nemo_item = fish_item.child(0)
         pluto_item, scooby_item = dog_item.children
-        nemo_fish_dog_item, nemo_dog_fish_item = nemo_item.children
+        nemo_dog_fish_item, nemo_fish_dog_item = nemo_item.children
         pluto_fish_dog_item, pluto_dog_fish_item = pluto_item.children
-        scooby_fish_dog_item, scooby_dog_fish_item = scooby_item.children
+        scooby_dog_fish_item, scooby_fish_dog_item = scooby_item.children
         pluto_nemo_item1 = pluto_dog_fish_item.child(0)
         pluto_nemo_item2 = nemo_dog_fish_item.child(0)
         nemo_pluto_item1 = pluto_fish_dog_item.child(0)

@@ -387,7 +387,7 @@ class TestSpineDBEditor(
         self.fetch_object_tree_model()
         # Select fish item in object tree
         root_item = self.spine_db_editor.object_tree_model.root_item
-        fish_item = root_item.child(0)
+        fish_item = root_item.child(1)
         fish_index = self.spine_db_editor.object_tree_model.index_from_item(fish_item)
         self.spine_db_editor.ui.treeView_object.setCurrentIndex(fish_index)
         self.spine_db_editor.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
