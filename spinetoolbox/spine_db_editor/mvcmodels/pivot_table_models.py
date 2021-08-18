@@ -1325,10 +1325,10 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
 
         if source_row < self.sourceModel().headerRowCount() or source_row == self.sourceModel().rowCount() - 1:
             return True
-        if self.sourceModel().model.pivot_rows:
-            index = self.sourceModel().model._row_data_header[source_row - self.sourceModel().headerRowCount()]
-            return self.accept_index(index, self.sourceModel().model.pivot_rows)
-        return True
+        if not self.sourceModel().model.pivot_rows:
+            return True
+        index = self.sourceModel().model._row_data_header[source_row - self.sourceModel().headerRowCount()]
+        return self.accept_index(index, self.sourceModel().model.pivot_rows)
 
     def filterAcceptsColumn(self, source_column, source_parent):
         """Returns true if the item in the column indicated by the given source_column
@@ -1339,10 +1339,10 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
             or source_column == self.sourceModel().columnCount() - 1
         ):
             return True
-        if self.sourceModel().model.pivot_columns:
-            index = self.sourceModel().model._column_data_header[source_column - self.sourceModel().headerColumnCount()]
-            return self.accept_index(index, self.sourceModel().model.pivot_columns)
-        return True
+        if not self.sourceModel().model.pivot_columns:
+            return True
+        index = self.sourceModel().model._column_data_header[source_column - self.sourceModel().headerColumnCount()]
+        return self.accept_index(index, self.sourceModel().model.pivot_columns)
 
     def batch_set_data(self, indexes, values):
         indexes = [self.mapToSource(index) for index in indexes]

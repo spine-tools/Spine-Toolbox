@@ -130,7 +130,7 @@ class ObjectTreeModel(MultiDBTreeModel):
         return result
 
     def add_object_classes(self, db_map_data):
-        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        db_map_ids = {db_map: [x["id"] for x in data] for db_map, data in db_map_data.items()}
         self.root_item.append_children_by_id(db_map_ids)
 
     def add_objects(self, db_map_data):
@@ -245,7 +245,7 @@ class RelationshipTreeModel(MultiDBTreeModel):
         return result
 
     def add_relationship_classes(self, db_map_data):
-        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        db_map_ids = {db_map: [x["id"] for x in data] for db_map, data in db_map_data.items()}
         self.root_item.append_children_by_id(db_map_ids)
 
     def add_relationships(self, db_map_data):
