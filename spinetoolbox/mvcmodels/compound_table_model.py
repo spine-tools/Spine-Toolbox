@@ -96,6 +96,7 @@ class CompoundTableModel(MinimalTableModel):
         sub_model, _ = self._row_map[row]
         return sub_model
 
+    @Slot()
     def _refresh(self):
         """Refreshes the layout by computing a new row map."""
         self.layoutAboutToBeChanged.emit()

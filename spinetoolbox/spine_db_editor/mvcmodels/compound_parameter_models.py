@@ -54,9 +54,12 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._filter_class_ids = {}
-        self._filter_valid = True
         self._auto_filter_menus = {}
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
+        self._filter_timer = QTimer(self)
+        self._filter_timer.setSingleShot(True)
+        self._filter_timer.setInterval(100)
+        self._filter_timer.timeout.connect(self._refresh)
 
     def canFetchMore(self, parent=QModelIndex()):
         return any(self.db_mngr.can_fetch_more(db_map, self.item_type) for db_map in self.db_maps)
@@ -262,15 +265,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     def _invalidate_filter(self):
         """Sets the filter invalid."""
-        self._filter_valid = False
-        QTimer.singleShot(0, self._refresh_if_still_invalid)
-
-    @Slot()
-    def _refresh_if_still_invalid(self):
-        if self._filter_valid:
-            return
-        self._refresh()
-        self._filter_valid = True
+        self._filter_timer.start()
 
     def set_filter_class_ids(self, class_ids):
         if class_ids != self._filter_class_ids:
