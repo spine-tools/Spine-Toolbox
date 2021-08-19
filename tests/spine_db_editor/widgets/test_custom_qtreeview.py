@@ -122,6 +122,18 @@ class TestParameterValueListTreeViewWithInMemoryDatabase(_Base):
         self.assertEqual(new_name_index.data(), "Type new list name here...")
         self.assertEqual(model.rowCount(new_name_index), 0)
 
+    def test_add_list_then_remove_it(self):
+        list_name_index = self._append_value_list("a_value_list")
+        self.assertEqual(list_name_index.data(), "a_value_list")
+        view = self._db_editor.ui.treeView_parameter_value_list
+        view.selectionModel().select(list_name_index, QItemSelectionModel.ClearAndSelect)
+        view.remove_selected()
+        model = view.model()
+        root_index = model.index(0, 0)
+        self.assertEqual(model.rowCount(root_index), 1)
+        list_name_index = model.index(0, 0, root_index)
+        self.assertEqual(list_name_index.data(), "Type new list name here...")
+
     def test_add_two_parameter_value_list_values(self):
         list_name_index = self._append_value_list("a_value_list")
         model = self._db_editor.ui.treeView_parameter_value_list.model()

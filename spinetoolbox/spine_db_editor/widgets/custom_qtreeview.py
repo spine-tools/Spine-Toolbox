@@ -680,11 +680,11 @@ class ParameterValueListTreeView(ItemTreeView):
                 else:
                     # WIP lists, just remove everything selected
                     if list_item in items:
-                        db_item.remove_children(list_item.child_number(), list_item.child_number())
+                        db_item.remove_children(list_item.child_number(), 1)
                         continue
                     for value_item in reversed(list_item.children[:-1]):
                         if value_item in items:
-                            list_item.remove_children(value_item.child_number(), value_item.child_number())
+                            list_item.remove_children(value_item.child_number(), 1)
         self.model().db_mngr.update_parameter_value_lists(db_map_data_to_upd)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()

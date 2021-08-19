@@ -134,7 +134,15 @@ class TreeItem:
         return self.insert_children(self.child_count(), children)
 
     def remove_children(self, position, count):
-        """Removes count children starting from the given position."""
+        """Removes count children starting from the given position.
+
+        Args:
+            position (int): position of the first child to remove
+            count (int): number of children to remove
+
+        Returns:
+            bool: True if operation was successful, False otherwise
+        """
         first = position
         last = position + count - 1
         if first >= self.child_count() or first < 0:
