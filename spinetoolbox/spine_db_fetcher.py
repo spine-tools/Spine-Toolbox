@@ -60,6 +60,7 @@ class SpineDBFetcher(QObject):
         self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
         self._fetched = {item_type: False for item_type in self._getters}
         self.cache = {}
+        self._can_fetch_more_cache = {}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._fetch_all_requested.connect(self._fetch_all)
@@ -70,8 +71,21 @@ class SpineDBFetcher(QObject):
     def get_item(self, item_type, id_):
         return self.cache.get(item_type, {}).get(id_, {})
 
-    def can_fetch_more(self, item_type):
-        return not self._fetched.get(item_type, False) or self.cache.get(item_type, {})
+    def can_fetch_more(self, item_type, success_cond=None):
+        if success_cond is None:
+            success_cond = lambda _: True
+        if not self._fetched[item_type]:
+            return True
+        items = self.cache.get(item_type, {})
+        if not items:
+            return False
+        last_key = list(items)[-1]
+        cache_last_key, cache_result = self._can_fetch_more_cache.get((item_type, success_cond), (None, None))
+        if last_key == cache_last_key:
+            return cache_result
+        result = any(success_cond(x) for x in items.values())
+        self._can_fetch_more_cache[item_type, success_cond] = (last_key, result)
+        return result
 
     @busy_effect
     def fetch_more(self, item_type, success_cond=None, iter_chunk_size=1000):
@@ -87,7 +101,7 @@ class SpineDBFetcher(QObject):
         items = self.cache.get(item_type, {})
         args = [iter(items)] * iter_chunk_size
         for keys in itertools.zip_longest(*args):
-            keys = set(keys) - {None}
+            keys = set(keys) - {None}  # Remove fillvalues
             chunk = [items[k] for k in keys]
             if any(success_cond(x) for x in chunk):
                 for k in keys:
@@ -110,7 +124,7 @@ class SpineDBFetcher(QObject):
             chunk = next(iterator, [])
             if not chunk:
                 self._fetched[item_type] = True
-                return
+                break
             if any(success_cond(x) for x in chunk):
                 signal = self._db_mngr.added_signals.get(item_type)
                 signal.emit({self._db_map: chunk})

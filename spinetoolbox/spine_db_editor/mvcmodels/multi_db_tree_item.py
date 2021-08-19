@@ -41,6 +41,14 @@ class MultiDBTreeItem(TreeItem):
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
         self._fetched_once = False
+        # Make fetch success condition functions for all db maps
+        # This is needed for the memoization in SpineDBFetcher.can_fetch_more to work
+        self._db_map_success_conds = {
+            db_map: lambda item, db_map=db_map: self._fetch_success_cond(db_map, item) for db_map in self.db_maps
+        }
+
+    def set_data(self, column, value, role):
+        raise NotImplementedError()
 
     @property
     def db_mngr(self):
@@ -100,6 +108,7 @@ class MultiDBTreeItem(TreeItem):
     def add_db_map_id(self, db_map, id_):
         """Adds id for this item in the given db_map."""
         self._db_map_id[db_map] = id_
+        self._db_map_success_conds[db_map] = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
         index = self.index()
         sibling = index.sibling(index.row(), 1)
         self.model.dataChanged.emit(sibling, sibling)
@@ -187,6 +196,8 @@ class MultiDBTreeItem(TreeItem):
     def _merge_children(self, new_children):
         """Merges new children into this item. Ensures that each children has a valid display id afterwards.
         """
+        if not new_children:
+            return
         existing_children = {child.display_id: child for child in self.children}
         unmerged = []
         for new_child in new_children:
@@ -201,17 +212,17 @@ class MultiDBTreeItem(TreeItem):
                 unmerged.append(new_child)
         self._insert_children_sorted(unmerged)
 
-    def _insert_children_sorted(self, children):
+    def _insert_children_sorted(self, new_children):
         """Inserts and sorts children."""
-        if not children:
+        if not new_children:
             return
-        children = sorted(children, key=lambda x: x.display_id)
-        children_iter = iter(children)
-        child = next(children_iter)
+        new_children = sorted(new_children, key=lambda x: x.display_id)
+        new_children_iter = iter(new_children)
+        child = next(new_children_iter)
         display_ids = [child.display_id for child in self.children]
         lo = bisect.bisect_left(display_ids, child.display_id)
         chunk = [child]
-        for child in children_iter:
+        for child in new_children_iter:
             row = bisect.bisect_left(display_ids, child.display_id, lo=lo)
             if row == lo:
                 chunk.append(child)
@@ -233,12 +244,13 @@ class MultiDBTreeItem(TreeItem):
 
     def can_fetch_more(self):
         child_type = self.child_item_class.item_type
-        if child_type is None or not any(
-            self.db_mngr.can_fetch_more(db_map, child_type) or self._get_pending_children_ids(db_map)
-            for db_map in self.db_maps
-        ):
+        if child_type is None:
             return False
-        return True
+        return any(
+            self.db_mngr.can_fetch_more(db_map, child_type, success_cond=self._db_map_success_conds[db_map])
+            or self._get_pending_children_ids(db_map)
+            for db_map in self.db_maps
+        )
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
@@ -246,8 +258,7 @@ class MultiDBTreeItem(TreeItem):
         if child_type is None:
             return
         for db_map in self.db_maps:
-            success_cond = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
-            self.db_mngr.fetch_more(db_map, child_type, success_cond=success_cond)
+            self.db_mngr.fetch_more(db_map, child_type, success_cond=self._db_map_success_conds[db_map])
         # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
         # This is needed for object items that are created *after* the relationship classes are fetched.
         db_map_ids = {db_map: self._get_pending_children_ids(db_map) for db_map in self.db_maps}
@@ -284,8 +295,6 @@ class MultiDBTreeItem(TreeItem):
         new_children = []
         for db_map, ids in db_map_ids.items():
             new_children += self._create_new_children(db_map, ids)
-        if not new_children:
-            return
         self._merge_children(new_children)
 
     def remove_children_by_id(self, db_map_ids):

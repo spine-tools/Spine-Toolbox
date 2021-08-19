@@ -247,7 +247,7 @@ class SpineDBManager(QObject):
             self._fetchers[db_map] = SpineDBFetcher(self, db_map)
         return self._fetchers[db_map]
 
-    def can_fetch_more(self, db_map, item_type):
+    def can_fetch_more(self, db_map, item_type, success_cond=None):
         """Whether or not we can fetch more items of given type from given db.
 
         Args:
@@ -259,7 +259,7 @@ class SpineDBManager(QObject):
         """
         if db_map.connection.closed:
             return False
-        return self._get_fetcher(db_map).can_fetch_more(item_type)
+        return self._get_fetcher(db_map).can_fetch_more(item_type, success_cond=success_cond)
 
     def fetch_more(self, db_map, item_type, success_cond=None, iter_chunk_size=1000):
         """Fetches more items of given type from given db.

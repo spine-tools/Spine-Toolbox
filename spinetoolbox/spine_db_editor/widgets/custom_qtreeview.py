@@ -120,7 +120,7 @@ class EntityTreeView(CopyTreeView):
     def setModel(self, model):
         old_model = self.model()
         if old_model:
-            old_model.layoutChanged.disconnect(self._fetch_more_visible)
+            old_model.layoutChanged.disconnect(self._fetch_more_timer.start)
         super().setModel(model)
         model.layoutChanged.connect(self._fetch_more_timer.start)
 
