@@ -234,10 +234,12 @@ class MultiDBTreeItem(TreeItem):
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
-        if self.can_fetch_more() and not self._fetched_once:
-            self.fetch_more()
-            self._fetched_once = True
-        return self.can_fetch_more() or self.child_count()
+        if self.can_fetch_more():
+            if not self._fetched_once:
+                self.fetch_more()
+                self._fetched_once = True
+            return True
+        return self.child_count()
 
     def _fetch_success_cond(self, db_map, item):
         return True

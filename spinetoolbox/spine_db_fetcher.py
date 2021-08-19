@@ -79,12 +79,12 @@ class SpineDBFetcher(QObject):
         items = self.cache.get(item_type, {})
         if not items:
             return False
-        last_key = list(items)[-1]
-        cache_last_key, cache_result = self._can_fetch_more_cache.get((item_type, success_cond), (None, None))
-        if last_key == cache_last_key:
+        key = tuple(items)
+        cache_key, cache_result = self._can_fetch_more_cache.get((item_type, success_cond), (None, None))
+        if key == cache_key:
             return cache_result
         result = any(success_cond(x) for x in items.values())
-        self._can_fetch_more_cache[item_type, success_cond] = (last_key, result)
+        self._can_fetch_more_cache[item_type, success_cond] = (key, result)
         return result
 
     @busy_effect
