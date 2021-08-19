@@ -23,10 +23,17 @@ from ..helpers import ensure_window_is_on_screen, CharIconEngine
 
 
 class MultiTabWindow(QMainWindow):
+    """A main window that has a tab widget as its central widget."""
+
     _tab_slots = {}
 
-    def __init__(self, qsettings, settings_group, parent=None):
-        super().__init__(parent=parent, flags=Qt.Window)
+    def __init__(self, qsettings, settings_group):
+        """
+        Args:
+            qsettings (QSettings): Toolbox settings
+            settings_group (str): this window's settings group in ``qsettings``
+        """
+        super().__init__()
         self.qsettings = qsettings
         self.settings_group = settings_group
         self.tab_widget = QTabWidget(self)
@@ -43,26 +50,54 @@ class MultiTabWindow(QMainWindow):
             w.setFocusPolicy(Qt.ClickFocus)
 
     def _make_other(self):
+        """Creates a new MultiTabWindow of this type.
+
+        Returns:
+            MultiTabWindow: new MultiTabWindow
+        """
         raise NotImplementedError()
 
     def others(self):
+        """List of other MultiTabWindows of the same type.
+
+        Returns:
+            list of MultiTabWindow: other MutliTabWindows windows
+        """
         raise NotImplementedError()
 
     def _make_new_tab(self, *args, **kwargs):
+        """Creates a new tab.
+
+        Args:
+            *args: positional arguments neede to make a new tab
+            **kwargs: keyword arguments needed to make a new tab
+        """
         raise NotImplementedError()
 
     def show_plus_button_context_menu(self, global_pos):
+        """Opens a context menu for the tool bar.
+
+        Args:
+            global_pos (QPoint): menu position on screen
+        """
         raise NotImplementedError()
 
     @property
     def new_tab_title(self):
+        """Title for new tabs."""
         return "New tab"
 
     def connect_signals(self):
+        """Connects window's signals."""
         self.tab_widget.tabCloseRequested.connect(self._close_tab)
         self.tab_bar.plus_clicked.connect(self.add_new_tab)
 
     def name(self):
+        """Generates name based on the current tab and total tab count.
+
+        Returns:
+            str: a name
+        """
         name = self.tab_widget.tabText(self.tab_widget.currentIndex())
         other_tab_count = self.tab_widget.count() - 1
         if other_tab_count > 0:
@@ -72,12 +107,21 @@ class MultiTabWindow(QMainWindow):
         return name
 
     def all_tabs(self):
+        """Iterates over tab contents widgets.
+
+        Yields:
+            QWidget: tab contents widget
+        """
         for k in range(self.tab_widget.count()):
             yield self.tab_widget.widget(k)
 
     @Slot()
     def add_new_tab(self, *args, **kwargs):
         """Creates a new tab and adds it at the end of the tab bar.
+
+        Args:
+            *args: parameters forwarded to :func:`MutliTabWindow._make_new_tab`
+            **kwargs: parameters forwarded to :func:`MultiTabwindow._make_new_tab`
         """
         tab = self._make_new_tab(*args, **kwargs)
         self._add_connect_tab(tab, self.new_tab_title)
@@ -86,17 +130,32 @@ class MultiTabWindow(QMainWindow):
         """Creates a new tab and inserts it at the given index.
 
         Args:
-            index (int)
+            index (int): insertion point index
+            *args: parameters forwarded to :func:`MutliTabWindow._make_new_tab`
+            **kwargs: parameters forwarded to :func:`MultiTabwindow._make_new_tab`
         """
         tab = self._make_new_tab(*args, **kwargs)
         self._insert_connect_tab(index, tab, self.new_tab_title)
 
     def _add_connect_tab(self, tab, text):
+        """Appends a new tab and connects signals.
+
+        Args:
+            tab (QWidget): tab contents widget
+            text (str): appended tab title
+        """
         self.tab_widget.addTab(tab, text)
         self._connect_tab_signals(tab)
         self.tab_widget.setCurrentIndex(self.tab_widget.count() - 1)
 
     def _insert_connect_tab(self, index, tab, text):
+        """Inserts a new tab and connects signals.
+
+        Args:
+            index (int): insertion point index
+            tab (QWidget): tab contents widget
+            text (str): inserted tab title
+        """
         self.tab_widget.insertTab(index, tab, text)
         if not tab.windowTitle():
             tab.setWindowTitle(text)
@@ -104,14 +163,32 @@ class MultiTabWindow(QMainWindow):
         self.tab_widget.setCurrentIndex(index)
 
     def _remove_disconnect_tab(self, index):
+        """Disconnects and removes a tab.
+
+        Args:
+            index (int): tab index
+        """
         self._disconnect_tab_signals(index)
         self.tab_widget.removeTab(index)
 
     def _connect_tab(self, index):
+        """Connects signals from a tab contents widget.
+
+        Args:
+            index (int): tab index
+        """
         tab = self.tab_widget.widget(index)
         self._connect_tab_signals(tab)
 
     def _connect_tab_signals(self, tab):
+        """Connects signals from a tab contents widget.
+
+        Args:
+            tab (QWidget): tab contents widget
+
+        Returns:
+            bool: True if signals were connected successfully, False otherwise
+        """
         if tab in self._tab_slots:
             return False
         slot = lambda title, tab=tab: self._handle_tab_window_title_changed(tab, title)
@@ -121,6 +198,14 @@ class MultiTabWindow(QMainWindow):
         return True
 
     def _disconnect_tab_signals(self, index):
+        """Disconnects signals from given tab.
+
+        Args:
+            index (int): tab index
+
+        Returns:
+            bool: True if signals were disconnected successfully, False otherwise
+        """
         tab = self.tab_widget.widget(index)
         slot = self._tab_slots.pop(tab, None)
         if slot is None:
@@ -129,6 +214,12 @@ class MultiTabWindow(QMainWindow):
         return True
 
     def _handle_tab_window_title_changed(self, tab, title):
+        """Updates tab's title.
+
+        Args:
+            tab (QWidget): tab's content widget
+            title (str): new tab title; if emtpy, one will be generated
+        """
         dirty = tab.isWindowModified()
         for k in range(self.tab_widget.count()):
             if not title:
@@ -139,6 +230,14 @@ class MultiTabWindow(QMainWindow):
                 break
 
     def _take_tab(self, index):
+        """Removes a tab and returns its contents.
+
+        Args:
+            index (int): tab index
+
+        Returns:
+            tuple: widget the tab was holding and tab's title
+        """
         tab = self.tab_widget.widget(index)
         text = self.tab_widget.tabText(index)
         self._remove_disconnect_tab(index)
@@ -147,6 +246,12 @@ class MultiTabWindow(QMainWindow):
         return tab, text
 
     def move_tab(self, index, other=None):
+        """Moves a tab to another MultiTabWindow.
+
+        Args:
+            index (int): tab index
+            other (MultiTabWindow, optional): target window; if None, creates a new window
+        """
         if other is None:
             other = self._make_other()
             other.show()
@@ -171,15 +276,20 @@ class MultiTabWindow(QMainWindow):
 
         Args:
             hot_spot (QPoint): The anchor point of the drag in widget coordinates.
-            offset (int, optional): Horizontal offset of the tab in the bar.
+            offset (int): Horizontal offset of the tab in the bar.
         """
         self.setStyleSheet(f"QTabWidget::tab-bar {{left: {offset}px;}}")
         self._hot_spot = hot_spot
         self.grabMouse()
         self._others = self.others()
-        self._timer_id = self.startTimer(1000 / 60)  # 60 fps is supposed to be the maximum the eye can see
+        self._timer_id = self.startTimer(1000 // 60)  # 60 fps is supposed to be the maximum the eye can see
 
     def _frame_height(self):
+        """Calculates the total 'thickness' of window frame in vertical direction.
+
+        Returns:
+            int: frame height
+        """
         return self.frameGeometry().height() - self.geometry().height()
 
     def timerEvent(self, event):
@@ -212,15 +322,15 @@ class MultiTabWindow(QMainWindow):
                 index = self.tab_bar.count() - 1
             self._connect_tab(index)
 
-    def reattach(self, index, db_editor, text):
+    def reattach(self, index, tab, text):
         """Reattaches a tab that has been dragged over this window's tab bar.
 
         Args:
             index (int): Index in this widget's tab bar where the detached tab has been dragged.
-            db_editor (SpineDBEditor): The widget in the tab being dragged.
+            tab (QWidget): The widget in the tab being dragged.
             text (str): The title of the tab.
         """
-        self.tab_widget.insertTab(index, db_editor, text)
+        self.tab_widget.insertTab(index, tab, text)
         self.tab_widget.setCurrentIndex(index)
         self.tab_bar.start_dragging(index)
 
@@ -229,7 +339,7 @@ class MultiTabWindow(QMainWindow):
         """Closes the tab at index.
 
         Args:
-            index (int)
+            index (int): tab index
         """
         self.tab_widget.widget(index).close()
         self.tab_widget.removeTab(index)
@@ -237,12 +347,25 @@ class MultiTabWindow(QMainWindow):
             self.close()
 
     def set_current_tab(self, tab):
+        """Sets the tab that is shown on the window.
+
+        Args:
+            tab (QWidget): tab's contents widget
+        """
         index = self.tab_widget.indexOf(tab)
         if index is None:
             return
         self.tab_widget.setCurrentIndex(index)
 
     def make_context_menu(self, index):
+        """Creates a context menu for given tab.
+
+        Args:
+            index (int): tab index
+
+        Returns:
+            QMenu: context menu or None if tab was not found
+        """
         tab = self.tab_widget.widget(index)
         if tab is None:
             return None

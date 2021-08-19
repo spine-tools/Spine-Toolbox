@@ -21,7 +21,7 @@ import json
 from sqlalchemy.engine.url import URL
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu, QAbstractScrollArea, QTabBar
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon, QCursor
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from .custom_menus import MainMenu
@@ -45,7 +45,7 @@ from ...helpers import (
     CharIconEngine,
 )
 from ...spine_db_parcel import SpineDBParcel
-from ...config import MAINWINDOW_SS, APPLICATION_PATH
+from ...config import APPLICATION_PATH
 
 
 class SpineDBEditorBase(QMainWindow):
@@ -63,7 +63,7 @@ class SpineDBEditorBase(QMainWindow):
         Args:
             db_mngr (SpineDBManager): The manager to use
         """
-        super().__init__(flags=Qt.Window)
+        super().__init__()
         from ..ui.spine_db_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_mngr = db_mngr
@@ -78,7 +78,6 @@ class SpineDBEditorBase(QMainWindow):
         self.takeCentralWidget()
         self.url_toolbar = UrlToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
-        self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings
