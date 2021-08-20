@@ -75,8 +75,6 @@ class TreeViewMixin:
         super().connect_signals()
         self.ui.treeView_object.tree_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
         self.ui.treeView_relationship.tree_selection_changed.connect(self.ui.treeView_object.clear_any_selections)
-        self._object_classes_added.connect(self._expand_object_tree_root_index)
-        self._relationship_classes_added.connect(self._expand_relationship_tree_root_index)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
 
@@ -91,6 +89,8 @@ class TreeViewMixin:
         self.parameter_value_list_model.db_maps = self.db_maps
         self.object_tree_model.build_tree()
         self.relationship_tree_model.build_tree()
+        self.ui.treeView_object.expand(self.object_tree_model.root_index)
+        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
         for view in (
             self.ui.treeView_tool_feature,
             self.ui.treeView_alternative_scenario,
@@ -101,16 +101,6 @@ class TreeViewMixin:
                 index = view.model().index_from_item(item)
                 view.expand(index)
             view.resizeColumnToContents(0)
-
-    @Slot()
-    def _expand_object_tree_root_index(self):
-        qApp.processEvents()  # pylint: disable=undefined-variable
-        self.ui.treeView_object.expand(self.object_tree_model.root_index)
-
-    @Slot()
-    def _expand_relationship_tree_root_index(self):
-        qApp.processEvents()  # pylint: disable=undefined-variable
-        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
