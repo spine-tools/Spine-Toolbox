@@ -17,7 +17,7 @@ Classes for custom QDialogs to add edit and remove database items.
 """
 
 from functools import reduce
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout, QAction
 from PySide2.QtCore import Slot, Qt, QModelIndex
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
@@ -39,6 +39,9 @@ class ManageItemsDialogBase(QDialog):
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.horizontalHeader().setMinimumSectionSize(120)
         self.table_view.verticalHeader().setDefaultSectionSize(parent.default_row_height)
+        self._accept_action = QAction("OK", parent=self)
+        self._accept_action.setShortcut("Ctrl+Return")
+        self.addAction(self._accept_action)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         layout = QGridLayout(self)
@@ -51,7 +54,8 @@ class ManageItemsDialogBase(QDialog):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.button_box.accepted.connect(self.accept)
+        self._accept_action.triggered.connect(self.accept)
+        self.button_box.accepted.connect(self._accept_action.trigger)
         self.button_box.rejected.connect(self.reject)
 
     def resize_window_to_columns(self, height=None):
