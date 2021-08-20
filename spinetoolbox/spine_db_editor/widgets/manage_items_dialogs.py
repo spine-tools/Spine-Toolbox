@@ -18,7 +18,7 @@ Classes for custom QDialogs to add edit and remove database items.
 
 from functools import reduce
 from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, QModelIndex
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...helpers import busy_effect
@@ -95,11 +95,11 @@ class ManageItemsDialog(ManageItemsDialogBase):
         self.model.dataChanged.connect(self._handle_model_data_changed)
         self.model.modelReset.connect(self._handle_model_reset)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector")
+    @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         """Reimplement in subclasses to handle changes in model data."""
 
-    @Slot("QModelIndex", "QVariant")
+    @Slot(QModelIndex, object)
     def set_model_data(self, index, data):
         """Update model data."""
         if data is None:

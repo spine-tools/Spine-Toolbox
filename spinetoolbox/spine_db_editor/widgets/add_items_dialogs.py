@@ -226,10 +226,10 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
             try:
                 db_maps = [self.keyed_db_maps[x] for x in db_name_list]
             except KeyError as e:
-                self.parent().msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                self.parent().msg_error.emit(f"Invalid database {e} at row {i + 1}")
                 return
             if not name:
-                self.parent().msg_error.emit("Object class missing at row {0}".format(i + 1))
+                self.parent().msg_error.emit(f"Object class missing at row {i + 1}")
                 return
             if not display_icon:
                 display_icon = self.default_display_icon

@@ -17,7 +17,7 @@ Classes for custom QTreeView.
 """
 
 from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer
+from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
@@ -94,7 +94,7 @@ class EntityTreeView(CopyTreeView):
             QIcon(CharIconEngine("\uf100")), "Fully collapse", self.fully_collapse
         )
 
-    @Slot("QModelIndex", "EditTrigger", "QEvent")
+    @Slot(QModelIndex, int, QEvent)
     def edit(self, index, trigger, event):
         """Edit all selected items."""
         if trigger == self.EditKeyPressed:
@@ -139,11 +139,11 @@ class EntityTreeView(CopyTreeView):
         super().verticalScrollbarValueChanged(value)
         self._fetch_more_timer.start()
 
-    @Slot("QModelIndex")
+    @Slot(QModelIndex)
     def _resize_first_column_to_contents(self, _index=None):
         self.resizeColumnToContents(0)
 
-    @Slot("QItemSelection", "QItemSelection")
+    @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
         self._refresh_selected_indexes()
@@ -313,7 +313,7 @@ class ObjectTreeView(EntityTreeView):
 
     def _add_middle_actions(self):
         self._add_object_classes_action = self._menu.addAction(
-            self._cube_plus_icon, "Add objects classes", self.add_object_classes
+            self._cube_plus_icon, "Add object classes", self.add_object_classes
         )
         self._add_objects_action = self._menu.addAction(self._cube_plus_icon, "Add objects", self.add_objects)
         self._add_relationship_actions()
@@ -430,7 +430,7 @@ class ItemTreeView(CopyTreeView):
         self.collapsed.connect(self._resize_first_column_to_contents)
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
 
-    @Slot("QModelIndex")
+    @Slot(QModelIndex)
     def _resize_first_column_to_contents(self, _index=None):
         self.resizeColumnToContents(0)
 
@@ -567,7 +567,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
                 db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
         return db_map_ids
 
-    @Slot("QItemSelection", "QItemSelection")
+    @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Emits alternative_selection_changed with the current selection."""
         selected_db_map_alt_ids = self._db_map_alt_ids_from_selection(selected)
