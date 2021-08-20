@@ -335,7 +335,6 @@ class ObjectTreeView(EntityTreeView):
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
-        self._refresh_selected_indexes()
         self._do_find_next_relationship()
 
     def add_object_classes(self):
