@@ -188,33 +188,32 @@ class ObjectTreeModel(MultiDBTreeModel):
     def find_next_relationship_index(self, index):
         """Find and return next occurrence of relationship item."""
         if not index.isValid():
-            return
+            return None
         rel_item = self.item_from_index(index)
         if not rel_item.item_type == "relationship":
-            return
+            return None
         # Get all ancestors
         rel_cls_item = rel_item.parent_item
         obj_item = rel_cls_item.parent_item
-        # Get data from ancestors
-        # TODO: Is it enough to just use the first db_map?
-        db_map = rel_item.first_db_map
-        rel_data = rel_item.db_map_data(db_map)
-        rel_cls_data = rel_cls_item.db_map_data(db_map)
-        obj_data = obj_item.db_map_data(db_map)
-        # Get specific data for our searches
-        rel_cls_id = rel_cls_data['id']
-        obj_id = obj_data['id']
-        object_ids = list(reversed([int(id_) for id_ in rel_data['object_id_list'].split(",")]))
-        object_class_ids = list(reversed([int(id_) for id_ in rel_cls_data['object_class_id_list'].split(",")]))
-        # Find position in the relationship of the (grand parent) object,
-        # then use it to determine object_class and object id to look for
-        pos = object_ids.index(obj_id) - 1
-        object_id = object_ids[pos]
-        object_class_id = object_class_ids[pos]
-        # Return first node that passes all cascade filters
-        for parent_item in self.find_items(db_map, (object_class_id, object_id, rel_cls_id), fetch=True):
-            for item in parent_item.find_children(lambda child: child.display_id == rel_item.display_id):
-                return self.index_from_item(item)
+        for db_map in rel_item.db_maps:
+            # Get data from ancestors
+            rel_data = rel_item.db_map_data(db_map)
+            rel_cls_data = rel_cls_item.db_map_data(db_map)
+            obj_data = obj_item.db_map_data(db_map)
+            # Get specific data for our searches
+            rel_cls_id = rel_cls_data['id']
+            obj_id = obj_data['id']
+            object_ids = list(reversed([int(id_) for id_ in rel_data['object_id_list'].split(",")]))
+            object_class_ids = list(reversed([int(id_) for id_ in rel_cls_data['object_class_id_list'].split(",")]))
+            # Find position in the relationship of the (grand parent) object,
+            # then use it to determine object_class and object id to look for
+            pos = object_ids.index(obj_id) - 1
+            object_id = object_ids[pos]
+            object_class_id = object_class_ids[pos]
+            # Return first node that passes all cascade filters
+            for parent_item in self.find_items(db_map, (object_class_id, object_id, rel_cls_id), fetch=True):
+                for item in parent_item.find_children(lambda child: child.display_id == rel_item.display_id):
+                    return self.index_from_item(item)
         return None
 
 

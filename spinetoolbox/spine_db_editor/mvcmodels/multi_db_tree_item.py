@@ -28,17 +28,17 @@ class MultiDBTreeItem(TreeItem):
     """Item type identifier string. Should be set to a meaningful value by subclasses."""
     visual_key = ["name"]
 
-    def __init__(self, model=None, db_map_id=None):
+    def __init__(self, model=None, db_map_ids=None):
         """Init class.
 
         Args:
             db_mngr (SpineDBManager): a database manager
-            db_map_data (dict): maps instances of DiffDatabaseMapping to the id of the item in that db
+            db_map_ids (dict): maps instances of DiffDatabaseMapping to the id of the item in that db
         """
         super().__init__(model)
-        if db_map_id is None:
-            db_map_id = {}
-        self._db_map_id = db_map_id
+        if db_map_ids is None:
+            db_map_ids = {}
+        self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
         self._fetched_once = False
         # Make fetch success condition functions for all db maps
@@ -88,26 +88,26 @@ class MultiDBTreeItem(TreeItem):
     @property
     def first_db_map(self):
         """Returns the first associated db_map."""
-        return list(self._db_map_id.keys())[0]
+        return list(self._db_map_ids.keys())[0]
 
     @property
     def last_db_map(self):
         """Returns the last associated db_map."""
-        return list(self._db_map_id.keys())[-1]
+        return list(self._db_map_ids.keys())[-1]
 
     @property
     def db_maps(self):
         """Returns a list of all associated db_maps."""
-        return list(self._db_map_id.keys())
+        return list(self._db_map_ids.keys())
 
     @property
     def db_map_ids(self):
         """Returns dict with db_map as key and id as value"""
-        return {db_map: self.db_map_id(db_map) for db_map in self.db_maps}
+        return self._db_map_ids
 
     def add_db_map_id(self, db_map, id_):
         """Adds id for this item in the given db_map."""
-        self._db_map_id[db_map] = id_
+        self._db_map_ids[db_map] = id_
         self._db_map_success_conds[db_map] = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
         index = self.index()
         sibling = index.sibling(index.row(), 1)
@@ -115,13 +115,14 @@ class MultiDBTreeItem(TreeItem):
 
     def take_db_map(self, db_map):
         """Removes the mapping for given db_map and returns it."""
-        return self._db_map_id.pop(db_map, None)
+        return self._db_map_ids.pop(db_map, None)
 
     def _deep_refresh_children(self):
-        """Refreshes children after taking db_maps from them. Called after removing and updating children for this item."""
+        """Refreshes children after taking db_maps from them.
+        Called after removing and updating children for this item."""
         removed_rows = []
         for row, child in reversed(list(enumerate(self.children))):
-            if not child._db_map_id:
+            if not child._db_map_ids:
                 removed_rows.append(row)
         for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
             self.remove_children(row, count)
@@ -148,12 +149,11 @@ class MultiDBTreeItem(TreeItem):
 
         Returns:
             MultiDBTreeItem, NoneType
-
         """
         id_ = self.take_db_map(db_map)
         if id_ is None:
             return None
-        other = type(self)(model=self.model, db_map_id={db_map: id_})
+        other = type(self)(model=self.model, db_map_ids={db_map: id_})
         other_children = []
         for child in self.children:
             other_child = child.deep_take_db_map(db_map)
@@ -172,7 +172,7 @@ class MultiDBTreeItem(TreeItem):
 
     def db_map_id(self, db_map):
         """Returns the id for this item in given db_map or None if not present."""
-        return self._db_map_id.get(db_map)
+        return self._db_map_ids.get(db_map)
 
     def db_map_data(self, db_map):
         """Returns data for this item in given db_map or None if not present."""
@@ -241,7 +241,7 @@ class MultiDBTreeItem(TreeItem):
             return True
         return self.child_count()
 
-    def _fetch_success_cond(self, db_map, item):
+    def _fetch_success_cond(self, db_map, item):  # pylint: disable=no-self-use
         return True
 
     def can_fetch_more(self):
@@ -404,7 +404,7 @@ class MultiDBTreeItem(TreeItem):
 
     def find_children_by_id(self, db_map, *ids, reverse=True):
         """Generates children with the given ids in the given db_map.
-        If the first id is True, then generates *all* children with the given db_map."""
+        If the first id is None, then generates *all* children with the given db_map."""
         for row in self.find_rows_by_id(db_map, *ids, reverse=reverse):
             yield self._children[row]
 

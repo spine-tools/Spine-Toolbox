@@ -75,7 +75,6 @@ class MultiDBTreeModel(MinimalTreeModel):
             ]
             if fetch:
                 for parent_item in parent_items:
-                    parent = self.index_from_item(parent_item)
-                    if self.canFetchMore(parent):
-                        self.fetchMore(parent)
+                    if parent_item.can_fetch_more():
+                        parent_item.fetch_more()
         return parent_items

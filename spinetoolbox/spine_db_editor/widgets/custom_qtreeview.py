@@ -298,6 +298,7 @@ class ObjectTreeView(EntityTreeView):
         self._manage_members_action = None
         self._duplicate_object_action = None
         self._find_next_action = None
+        self._relationship_index = None
 
     def update_actions_availability(self):
         super().update_actions_availability()
@@ -332,6 +333,11 @@ class ObjectTreeView(EntityTreeView):
         super().connect_signals()
         self.doubleClicked.connect(self.find_next_relationship)
 
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
+        self._refresh_selected_indexes()
+        self._do_find_next_relationship()
+
     def add_object_classes(self):
         self._spine_db_editor.show_add_object_classes_form()
 
@@ -360,10 +366,16 @@ class ObjectTreeView(EntityTreeView):
 
     def find_next_relationship(self):
         """Finds the next occurrence of the relationship at the current index and expands it."""
-        index = self.currentIndex()
-        next_index = self.model().find_next_relationship_index(index)
+        self._relationship_index = self.currentIndex()
+        self._do_find_next_relationship()
+
+    def _do_find_next_relationship(self):
+        if self._relationship_index is None:
+            return
+        next_index = self.model().find_next_relationship_index(self._relationship_index)
         if not next_index:
             return
+        self._relationship_index = None
         self.setCurrentIndex(next_index)
         self.scrollTo(next_index)
         self.expand(next_index)

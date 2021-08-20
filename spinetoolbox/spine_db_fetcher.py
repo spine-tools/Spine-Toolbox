@@ -77,8 +77,6 @@ class SpineDBFetcher(QObject):
         if not self._fetched[item_type]:
             return True
         items = self.cache.get(item_type, {})
-        if not items:
-            return False
         key = tuple(items)
         cache_key, cache_result = self._can_fetch_more_cache.get((item_type, success_cond), (None, None))
         if key == cache_key:
