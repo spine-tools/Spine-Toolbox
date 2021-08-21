@@ -148,7 +148,7 @@ class EntityClassItem(MultiDBTreeItem):
             self._group_child_count -= removed_child_count
         return True
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         return item["class_id"] == self.db_map_id(db_map)
 
     def set_data(self, column, value, role):
@@ -192,9 +192,9 @@ class ObjectRelationshipClassItem(RelationshipClassItem):
         """See base class."""
         return False
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         object_id = self.parent_item.db_map_id(db_map)
-        return super()._fetch_success_cond(db_map, item) and object_id in {
+        return super().fetch_successful(db_map, item) and object_id in {
             int(id_) for id_ in item["object_id_list"].split(",")
         }
 
@@ -303,7 +303,7 @@ class ObjectItem(EntityItem):
         """See base class."""
         return super().has_children() or self._has_members or self.is_group()
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         return object_class_id in {int(id_) for id_ in item["object_class_id_list"].split(",")}
 

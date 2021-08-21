@@ -247,33 +247,40 @@ class SpineDBManager(QObject):
             self._fetchers[db_map] = SpineDBFetcher(self, db_map)
         return self._fetchers[db_map]
 
-    def can_fetch_more(self, db_map, item_type, success_cond=None):
+    def can_fetch_more(self, db_map, item_type, parent=None):
         """Whether or not we can fetch more items of given type from given db.
 
         Args:
             db_map (DiffDatabaseMapping)
             item_type (str): the type of items to fetch, e.g. "object_class"
+            parent (object, optional): The object that requests the fetching.
+                Can implement ``fetch_successful``, i.e., a function that receives a db_map and a dictionary-item
+                and returns a Boolean indicating whether or not to stop fetching.
 
         Returns:
             bool
         """
         if db_map.connection.closed:
             return False
-        return self._get_fetcher(db_map).can_fetch_more(item_type, success_cond=success_cond)
+        return self._get_fetcher(db_map).can_fetch_more(item_type, parent=parent)
 
-    def fetch_more(self, db_map, item_type, success_cond=None, iter_chunk_size=1000):
+    def fetch_more(self, db_map, item_type, parent=None, iter_chunk_size=1000):
         """Fetches more items of given type from given db.
 
         Args:
             db_map (DiffDatabaseMapping)
             item_type (str): the type of items to fetch, e.g. "object_class"
-            success_cond (func, optional): A function that receives a dictionary item and returns a boolean.
-                If given, we keep fetching until one of the items passes the condition.
+            parent (object, optional): The object that requests the fetching.
+                Can implement ``fetch_successful``, i.e., a function that receives a db_map and a dictionary-item
+                and returns a Boolean indicating whether or not to stop fetching.
+                If not implemented, then fetching is stopped immediately after one step.
+                Can also provide ``fully_fetched``, a ``Signal`` that gets emitted whenever fetching is complete.
+
             iter_chunk_size (int, optional): fetches items by chunks of the given size
         """
         if db_map.connection.closed:
             return
-        self._get_fetcher(db_map).fetch_more(item_type, success_cond=success_cond, iter_chunk_size=iter_chunk_size)
+        self._get_fetcher(db_map).fetch_more(item_type, parent=parent, iter_chunk_size=iter_chunk_size)
 
     def cache_items_for_fetching(self, db_map, item_type, items):
         self._get_fetcher(db_map).cache_items(item_type, items)

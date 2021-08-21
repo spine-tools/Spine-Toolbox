@@ -41,11 +41,6 @@ class MultiDBTreeItem(TreeItem):
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
         self._fetched_once = False
-        # Make fetch success condition functions for all db maps
-        # This is needed for the memoization in SpineDBFetcher.can_fetch_more to work
-        self._db_map_success_conds = {
-            db_map: lambda item, db_map=db_map: self._fetch_success_cond(db_map, item) for db_map in self.db_maps
-        }
 
     def set_data(self, column, value, role):
         raise NotImplementedError()
@@ -108,7 +103,6 @@ class MultiDBTreeItem(TreeItem):
     def add_db_map_id(self, db_map, id_):
         """Adds id for this item in the given db_map."""
         self._db_map_ids[db_map] = id_
-        self._db_map_success_conds[db_map] = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
         index = self.index()
         sibling = index.sibling(index.row(), 1)
         self.model.dataChanged.emit(sibling, sibling)
@@ -241,16 +235,18 @@ class MultiDBTreeItem(TreeItem):
             return True
         return self.child_count()
 
-    def _fetch_success_cond(self, db_map, item):  # pylint: disable=no-self-use
+    def fetch_successful(self, db_map, item):  # pylint: disable=no-self-use
         return True
+
+    def _handle_fully_fetched(self):
+        self.model.layoutChanged.emit()
 
     def can_fetch_more(self):
         child_type = self.child_item_class.item_type
         if child_type is None:
             return False
         return any(
-            self.db_mngr.can_fetch_more(db_map, child_type, success_cond=self._db_map_success_conds[db_map])
-            or self._get_pending_children_ids(db_map)
+            self.db_mngr.can_fetch_more(db_map, child_type, parent=self) or self._get_pending_children_ids(db_map)
             for db_map in self.db_maps
         )
 
@@ -260,7 +256,7 @@ class MultiDBTreeItem(TreeItem):
         if child_type is None:
             return
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, child_type, success_cond=self._db_map_success_conds[db_map])
+            self.db_mngr.fetch_more(db_map, child_type, parent=self)
         # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
         # This is needed for object items that are created *after* the relationship classes are fetched.
         db_map_ids = {db_map: self._get_pending_children_ids(db_map) for db_map in self.db_maps}
@@ -274,7 +270,7 @@ class MultiDBTreeItem(TreeItem):
         return [
             x["id"]
             for x in self.db_mngr.get_items(db_map, child_type)
-            if x["id"] not in self._child_map.get(db_map, {}) and self._fetch_success_cond(db_map, x)
+            if x["id"] not in self._child_map.get(db_map, {}) and self.fetch_successful(db_map, x)
         ]
 
     def fetch_more_if_possible(self):
@@ -285,7 +281,7 @@ class MultiDBTreeItem(TreeItem):
         child_type = self.child_item_class.item_type
         if child_type is None:
             return []
-        return [x["id"] for x in self.db_mngr.get_items(db_map, child_type) if self._fetch_success_cond(db_map, x)]
+        return [x["id"] for x in self.db_mngr.get_items(db_map, child_type) if self.fetch_successful(db_map, x)]
 
     def append_children_by_id(self, db_map_ids):
         """

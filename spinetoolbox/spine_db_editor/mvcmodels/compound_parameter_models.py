@@ -62,14 +62,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_timer.timeout.connect(self._refresh)
 
     def canFetchMore(self, parent=QModelIndex()):
-        return any(self.db_mngr.can_fetch_more(db_map, self.item_type) for db_map in self.db_maps)
+        return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self.db_maps)
 
     def fetchMore(self, parent=QModelIndex()):
         for db_map in self.db_maps:
-            success_cond = lambda x, db_map=db_map: self._fetch_success_cond(db_map, x)
-            self.db_mngr.fetch_more(db_map, self.item_type, success_cond=success_cond)
+            self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         return not self._filter_class_ids or item["entity_class_id"] in self._filter_class_ids.get(db_map, set())
 
     def _make_header(self):

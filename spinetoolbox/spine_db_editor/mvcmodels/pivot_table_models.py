@@ -54,14 +54,13 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
     def canFetchMore(self, parent=QModelIndex()):
-        return True
+        return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self._parent.db_maps)
 
     def fetchMore(self, parent=QModelIndex()):
         for db_map in self._parent.db_maps:
-            success_cond = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
-            self.db_mngr.fetch_more(db_map, self.item_type, success_cond=success_cond)
+            self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         return True
 
     @property
@@ -711,7 +710,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "parameter_value"
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         entity_class_id = self._parent.current_class_id[db_map]
         return item["entity_class_id"] == entity_class_id
 
@@ -1106,7 +1105,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "relationship"
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         entity_class_id = self._parent.current_class_id[db_map]
         return item["class_id"] == entity_class_id
 

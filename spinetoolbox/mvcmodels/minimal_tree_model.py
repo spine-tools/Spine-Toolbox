@@ -15,11 +15,13 @@ Models to represent items in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex
+from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject, Signal
 
 
-class TreeItem:
+class TreeItem(QObject):
     """A tree item that can fetch its children."""
+
+    fully_fetched = Signal()
 
     def __init__(self, model=None):
         """Initializes item.
@@ -27,11 +29,16 @@ class TreeItem:
         Args:
             model (MinimalTreeModel, NoneType): The model where the item belongs.
         """
+        super().__init__()
         self._model = model
         self._children = None
         self._parent_item = None
         self._fetched = False
         self.children = []
+        self.fully_fetched.connect(self._handle_fully_fetched)
+
+    def _handle_fully_fetched(self):
+        """Handles fully_fetched."""
 
     @property
     def model(self):

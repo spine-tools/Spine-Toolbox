@@ -77,9 +77,3 @@ class MultiDBTreeModel(MinimalTreeModel):
                 for parent_item in parent_items:
                     parent_item.fetch_more_if_possible()
         return parent_items
-
-    def canFetchMore(self, parent=QModelIndex()):
-        if not super().canFetchMore(parent):
-            self.layoutChanged.emit()
-            return False
-        return True

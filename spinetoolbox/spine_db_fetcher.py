@@ -17,7 +17,8 @@ SpineDBFetcher class.
 """
 
 import itertools
-from PySide2.QtCore import Signal, Slot, QObject
+from collections import OrderedDict
+from PySide2.QtCore import Signal, Slot, QObject, QTimer
 from spinetoolbox.helpers import busy_effect, signal_waiter, CacheItem
 
 # FIXME: We need to invalidate cache here as user makes changes (update, remove)
@@ -66,27 +67,34 @@ class SpineDBFetcher(QObject):
         self._fetch_all_requested.connect(self._fetch_all)
 
     def cache_items(self, item_type, items):
-        self.cache.setdefault(item_type, {}).update({x["id"]: CacheItem(**x) for x in items})
+        # NOTE: OrderedDict is so we can call `reversed()` in Python 3.7
+        self.cache.setdefault(item_type, OrderedDict()).update({x["id"]: CacheItem(**x) for x in items})
 
     def get_item(self, item_type, id_):
         return self.cache.get(item_type, {}).get(id_, {})
 
-    def can_fetch_more(self, item_type, success_cond=None):
-        if success_cond is None:
-            success_cond = lambda _: True
+    def _make_fetch_successful(self, parent):
+        try:
+            fetch_successful = parent.fetch_successful
+        except AttributeError:
+            return lambda _: True
+        return lambda item: fetch_successful(self._db_map, item)
+
+    def can_fetch_more(self, item_type, parent=None):
         if not self._fetched[item_type]:
             return True
+        fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, {})
         key = (next(reversed(items), None), len(items))
-        cache_key, cache_result = self._can_fetch_more_cache.get((item_type, success_cond), (None, None))
+        cache_key, cache_result = self._can_fetch_more_cache.get((item_type, parent), (None, None))
         if key == cache_key:
             return cache_result
-        result = any(success_cond(x) for x in items.values())
-        self._can_fetch_more_cache[item_type, success_cond] = (key, result)
+        result = any(fetch_successful(x) for x in items.values())
+        self._can_fetch_more_cache[item_type, parent] = (key, result)
         return result
 
     @busy_effect
-    def fetch_more(self, item_type, success_cond=None, iter_chunk_size=1000):
+    def fetch_more(self, item_type, parent=None, iter_chunk_size=1000):
         """Fetches items from the database.
 
         Args:
@@ -94,40 +102,44 @@ class SpineDBFetcher(QObject):
         """
         if not self.can_fetch_more(item_type):
             return
-        if success_cond is None:
-            success_cond = lambda _: True
+        fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, {})
         args = [iter(items)] * iter_chunk_size
         for keys in itertools.zip_longest(*args):
             keys = set(keys) - {None}  # Remove fillvalues
             chunk = [items[k] for k in keys]
-            if any(success_cond(x) for x in chunk):
+            if any(fetch_successful(x) for x in chunk):
                 for k in keys:
                     del items[k]
                 signal = self._db_mngr.added_signals.get(item_type)
                 signal.emit({self._db_map: chunk})
                 return
-        self._fetch_more_requested.emit(item_type, success_cond)
+        self._fetch_more_requested.emit(item_type, parent)
 
     @Slot(str, object)
-    def _fetch_more(self, item_type, success_cond):
-        self._do_fetch_more(item_type, success_cond)
+    def _fetch_more(self, item_type, parent):
+        self._do_fetch_more(item_type, parent)
 
     @busy_effect
-    def _do_fetch_more(self, item_type, success_cond):
+    def _do_fetch_more(self, item_type, parent):
         iterator = self._iterators.get(item_type)
         if iterator is None:
             return
+        fetch_successful = self._make_fetch_successful(parent)
         while True:
             chunk = next(iterator, [])
             if not chunk:
                 self._fetched[item_type] = True
                 break
-            if any(success_cond(x) for x in chunk):
+            if any(fetch_successful(x) for x in chunk):
                 signal = self._db_mngr.added_signals.get(item_type)
                 signal.emit({self._db_map: chunk})
-                break
+                return
             self.cache_items(item_type, chunk)
+        try:
+            parent.fully_fetched.emit()
+        except AttributeError:
+            pass
 
     def fetch_all(self):
         if not any(self.can_fetch_more(item_type) for item_type in self._fetched):
