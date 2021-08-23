@@ -422,17 +422,34 @@ class TestSpineDBFetcher(unittest.TestCase):
                     {
                         'id': 1,
                         'tool_id': 1,
+                        'tool_name': 'tool',
                         'feature_id': 1,
+                        'entity_class_id': 1,
+                        'entity_class_name': 'oc',
+                        'parameter_definition_id': 1,
+                        'parameter_definition_name': 'param',
                         'parameter_value_list_id': 1,
+                        'parameter_value_list_name': 'value_list',
                         'required': False,
-                        'commit_id': 2,
                     }
                 ]
             }
         )
         self.assertEqual(
             self._db_mngr.get_item(self._db_map, "tool_feature", 1),
-            {'commit_id': 2, 'feature_id': 1, 'id': 1, 'parameter_value_list_id': 1, 'required': False, 'tool_id': 1},
+            {
+                'id': 1,
+                'tool_id': 1,
+                'tool_name': 'tool',
+                'feature_id': 1,
+                'entity_class_id': 1,
+                'entity_class_name': 'oc',
+                'parameter_definition_id': 1,
+                'parameter_definition_name': 'param',
+                'parameter_value_list_id': 1,
+                'parameter_value_list_name': 'value_list',
+                'required': False,
+            },
         )
 
     def test_fetch_tool_feature_methods(self):
