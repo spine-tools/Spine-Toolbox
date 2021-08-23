@@ -84,7 +84,7 @@ class SpineDBFetcher(QObject):
         if not self._fetched[item_type]:
             return True
         fetch_successful = self._make_fetch_successful(parent)
-        items = self.cache.get(item_type, {})
+        items = self.cache.get(item_type, OrderedDict())
         key = (next(reversed(items), None), len(items))
         cache_key, cache_result = self._can_fetch_more_cache.get((item_type, parent), (None, None))
         if key == cache_key:
