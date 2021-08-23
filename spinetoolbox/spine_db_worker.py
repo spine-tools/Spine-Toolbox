@@ -16,11 +16,8 @@ The SpineDBWorker class
 :date:   2.10.2019
 """
 
-from dataclasses import dataclass, field
 import json
 import os
-from typing import Iterator
-
 from PySide2.QtCore import Qt, QObject, Signal, Slot
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
@@ -32,30 +29,13 @@ from spinedb_api import (
     import_data,
     export_data,
     create_new_spine_database,
-    get_data_for_import,
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinetoolbox.helpers import busy_effect
 
 
-@dataclass
-class ImportState:
-    db_map: DiffDatabaseMapping
-    data: dict
-    db_map_error_log: dict = field(default_factory=dict)
-    item_type: str = None
-    to_add: dict = None
-    to_update: dict = None
-    import_data_iterator: Iterator = None
-
-
 class SpineDBWorker(QObject):
     """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
-
-    init_getting_data_for_import = Signal(object)
-    """Starts a new import cycle."""
-    fetch_data_for_import = Signal(object)
-    """Fetches more data for importing."""
 
     _get_db_map_called = Signal()
     _get_metadata_per_entity_called = Signal(object, list, dict)
@@ -83,12 +63,10 @@ class SpineDBWorker(QObject):
     def connect_signals(self):
         # pylint: disable=undefined-variable
         connection = Qt.BlockingQueuedConnection if self.thread() is not qApp.thread() else Qt.DirectConnection
-        self.fetch_data_for_import.connect(self._get_next_data_for_import)
         self._get_db_map_called.connect(self._get_db_map, connection)
         self._get_metadata_per_entity_called.connect(self._get_metadata_per_entity, connection)
         self._get_metadata_per_parameter_value_called.connect(self._get_metadata_per_parameter_value, connection)
         self._close_db_map_called.connect(self._close_db_map)
-        self.init_getting_data_for_import.connect(self._initiate_data_for_import)
         self._add_or_update_items_called.connect(self._add_or_update_items)
         self._readd_items_called.connect(self._readd_items)
         self._remove_items_called.connect(self._remove_items)
@@ -144,36 +122,6 @@ class SpineDBWorker(QObject):
         for x in db_map.query(sq).filter(db_map.in_(sq.c.parameter_value_id, parameter_value_ids)):
             param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
             d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-
-    @Slot(object)
-    def _initiate_data_for_import(self, state):
-        """Starts generating data for importing using import functions.
-
-        Args:
-            state (ImportState): import state instance
-        """
-        cache = self._db_mngr.get_db_map_cache(state.db_map)
-        state.import_data_iterator = iter(get_data_for_import(state.db_map, cache=cache, **state.data))
-        self._get_next_data_for_import(state)
-
-    @Slot(object)
-    def _get_next_data_for_import(self, state):
-        """Fetches next import instruction.
-
-        Args:
-            state (ImportState): import state instance
-        """
-        import_error_log = []
-        try:
-            state.item_type, (state.to_add, state.to_update, import_error_log) = next(state.import_data_iterator)
-        except (TypeError, ValueError) as err:
-            msg = f"Failed to import data: {err}. Please check that your data source has the right format."
-            state.db_map_error_log.setdefault(state.db_map, []).append(msg)
-        except StopIteration:
-            self._db_mngr.import_cycle_completed.emit(state)
-            return
-        state.db_map_error_log.setdefault(state.db_map, []).extend([str(x) for x in import_error_log])
-        self._db_mngr.import_more_data.emit(state)
 
     def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
         """Adds or updates items in db.

@@ -16,17 +16,15 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
-from dataclasses import dataclass, field
 import itertools
 import json
-from typing import Iterator
-
 from PySide2.QtCore import Qt, QObject, Signal, QThread
 from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (
     is_empty,
     create_new_spine_database,
+    DatabaseMapping,
     SpineDBVersionError,
     SpineDBAPIError,
     from_database,
@@ -40,13 +38,14 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     TimePattern,
     Map,
+    get_data_for_import,
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from .spine_db_icon_manager import SpineDBIconManager
 from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
-from .spine_db_worker import ImportState, SpineDBWorker
+from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
@@ -67,8 +66,6 @@ class SpineDBManager(QObject):
     session_refreshed = Signal(set)
     session_committed = Signal(set, object)
     session_rolled_back = Signal(set)
-    import_more_data = Signal(object)
-    import_cycle_completed = Signal(object)
     # Added
     scenarios_added = Signal(object)
     alternatives_added = Signal(object)
@@ -204,8 +201,6 @@ class SpineDBManager(QObject):
         for item_type, signal in self.updated_signals.items():
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
         self.session_rolled_back.connect(self._clear_fetchers)
-        self.import_more_data.connect(self._push_single_import_command)
-        self.import_cycle_completed.connect(self._finish_import_cycle)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
         # Refresh (after caching, so items are there when listeners receive signals)
@@ -1235,56 +1230,41 @@ class SpineDBManager(QObject):
                 to `get_data_for_import`
             command_text (str, optional): What to call the command that condenses the operation.
         """
-        self._start_next_import_cycle(iter(db_map_data.items()), command_text)
-
-    def _start_next_import_cycle(self, db_map_data_iterator, command_text=None):
-        @dataclass
-        class State(ImportState):
-            db_map_data_iterator: Iterator = None
-            macro: AgedUndoCommand = field(default_factory=AgedUndoCommand)
-            child_cmds: list = field(default_factory=list)
-
-        try:
-            db_map, data = next(db_map_data_iterator)
-        except StopIteration:
-            return False
-        state = State(db_map, data, db_map_data_iterator=db_map_data_iterator)
-        state.macro.setText(command_text)
-        self.undo_stack[db_map].push(state.macro)
-        self._worker.init_getting_data_for_import.emit(state)
-        return True
-
-    def _push_single_import_command(self, state):
-        if state.to_add:
-            add_cmd = AddItemsCommand(
-                self, state.db_map, state.to_add, state.item_type, parent=state.macro, check=False
-            )
-            with signal_waiter(add_cmd.completed_signal) as waiter:
-                add_cmd.redo()
-                waiter.wait()
-            state.child_cmds.append(add_cmd)
-        if state.to_update:
-            upd_cmd = UpdateItemsCommand(
-                self, state.db_map, state.to_update, state.item_type, parent=state.macro, check=False
-            )
-            with signal_waiter(upd_cmd.completed_signal) as waiter:
-                upd_cmd.redo()
-                waiter.wait()
-            state.child_cmds.append(upd_cmd)
-        self._worker.fetch_data_for_import.emit(state)
-
-    def _finish_import_cycle(self, state):
-        new_cycle_started = self._start_next_import_cycle(state.db_map_data_iterator, state.macro.text())
-        if not new_cycle_started:
-            self._finish_importing(state)
-
-    def _finish_importing(self, state):
-        if state.child_cmds and all(cmd.isObsolete() for cmd in state.child_cmds):
-            # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
-            state.macro.setObsolete(True)
-            self.undo_stack[state.db_map].undo()
-        if any(state.db_map_error_log.values()):
-            self.error_msg.emit(state.db_map_error_log)
+        db_map_error_log = dict()
+        for db_map, data in db_map_data.items():
+            cache = self.get_db_map_cache(db_map)
+            try:
+                data_for_import = get_data_for_import(db_map, cache=cache, **data)
+            except (TypeError, ValueError) as err:
+                msg = f"Failed to import data: {err}. Please check that your data source has the right format."
+                db_map_error_log.setdefault(db_map, []).append(msg)
+                continue
+            macro = AgedUndoCommand()
+            macro.setText(command_text)
+            child_cmds = []
+            # NOTE: we push the import macro before adding the children,
+            # because we *need* to call redo() on the children one by one so the data gets in gradually
+            self.undo_stack[db_map].push(macro)
+            for item_type, (to_add, to_update, import_error_log) in data_for_import:
+                db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
+                if to_add:
+                    add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=macro, check=False)
+                    with signal_waiter(add_cmd.completed_signal) as waiter:
+                        add_cmd.redo()
+                        waiter.wait()
+                    child_cmds.append(add_cmd)
+                if to_update:
+                    upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=macro, check=False)
+                    with signal_waiter(upd_cmd.completed_signal) as waiter:
+                        upd_cmd.redo()
+                        waiter.wait()
+                    child_cmds.append(upd_cmd)
+            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+                # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
+                macro.setObsolete(True)
+                self.undo_stack[db_map].undo()
+        if any(db_map_error_log.values()):
+            self.error_msg.emit(db_map_error_log)
 
     def add_or_update_items(self, db_map_data, method_name, item_type, signal_name, readd=False, check=True):
         self._worker.add_or_update_items(db_map_data, method_name, item_type, signal_name, readd=readd, check=check)
