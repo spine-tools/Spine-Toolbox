@@ -162,10 +162,10 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(_Base):
         with mock.patch.object(self._db_editor, editor_method_name) as show_dialog_method:
             dialog_ref = _Reference()
 
-            def steal_dialog(**kwargs):
-                dialog_ref.value = dialog(self._db_editor, self._db_editor.db_mngr, *self._db_editor.db_maps, **kwargs)
+            def steal_dialog(*args):
+                dialog_ref.value = dialog(self._db_editor, *args, self._db_editor.db_mngr, *self._db_editor.db_maps)
 
-            show_dialog_method.side_effect = lambda **kwargs: steal_dialog(**kwargs)
+            show_dialog_method.side_effect = lambda *args: steal_dialog(*args)
             add_items_action.trigger()
             self.assertIsNotNone(dialog_ref.value)
             add_items_dialog = dialog_ref.value
