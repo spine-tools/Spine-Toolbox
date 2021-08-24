@@ -59,7 +59,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
         self._filter_timer.setInterval(100)
-        self._filter_timer.timeout.connect(self._refresh)
+        self._filter_timer.timeout.connect(self.refresh)
 
     def canFetchMore(self, parent=QModelIndex()):
         return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self.db_maps)
