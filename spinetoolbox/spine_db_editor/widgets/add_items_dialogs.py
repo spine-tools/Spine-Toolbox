@@ -798,7 +798,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
 
 
 class ObjectGroupDialogBase(QDialog):
-    def __init__(self, parent, object_class_item, db_mngr, *db_maps, object_item=None):
+    def __init__(self, parent, object_class_item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor): data store widget
@@ -808,7 +808,6 @@ class ObjectGroupDialogBase(QDialog):
         """
         super().__init__(parent)
         self.object_class_item = object_class_item
-        self.object_item = object_item
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self.db_map = db_maps[0]
@@ -869,8 +868,6 @@ class ObjectGroupDialogBase(QDialog):
             }
             for db_map in db_maps
         }
-        self.reset_list_widgets(db_maps[0].codename)
-        self.connect_signals()
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -937,6 +934,8 @@ class AddObjectGroupDialog(ObjectGroupDialogBase):
         self.setWindowTitle("Add object group")
         self.group_name_line_edit.setFocus()
         self.group_name_line_edit.setPlaceholderText("Type group name here")
+        self.reset_list_widgets(db_maps[0].codename)
+        self.connect_signals()
 
     def initial_member_ids(self):
         return set()
@@ -986,10 +985,13 @@ class ManageMembersDialog(ObjectGroupDialogBase):
             db_mngr (SpineDBManager)
             *db_maps: database mappings
         """
-        super().__init__(parent, object_item.parent_item, db_mngr, *db_maps, object_item=object_item)
+        super().__init__(parent, object_item.parent_item, db_mngr, *db_maps)
         self.setWindowTitle("Manage members")
         self.group_name_line_edit.setReadOnly(True)
         self.group_name_line_edit.setText(object_item.display_data)
+        self.object_item = object_item
+        self.reset_list_widgets(db_maps[0].codename)
+        self.connect_signals()
 
     def initial_member_ids(self):
         return set(self.object_item.db_map_member_ids(self.db_map))
@@ -1014,10 +1016,14 @@ class ManageMembersDialog(ObjectGroupDialogBase):
         ids_to_remove = [
             x["id"] for x in self.object_item.db_map_entity_groups(self.db_map) if x["member_id"] in removed
         ]
-        if items_to_add or ids_to_remove:
-            macro = AgedUndoCommand()
-            macro.setText(f"manage {self.object_item.display_data}'s members")
+        if not items_to_add and not ids_to_remove:
+            super().accept()
+            return
+        macro = AgedUndoCommand()
+        macro.setText(f"manage {self.object_item.display_data}'s members")
+        if items_to_add:
             AddItemsCommand(self.db_mngr, self.db_map, items_to_add, "entity_group", parent=macro)
+        if ids_to_remove:
             RemoveItemsCommand(self.db_mngr, self.db_map, {"entity_group": ids_to_remove}, parent=macro)
-            self.db_mngr.undo_stack[self.db_map].push(macro)
+        self.db_mngr.undo_stack[self.db_map].push(macro)
         super().accept()

@@ -97,15 +97,17 @@ class EntityClassItem(MultiDBTreeItem):
                 return QBrush(Qt.gray)
         return super().data(column, role)
 
+    def can_fetch_more(self):
+        if super().can_fetch_more():
+            return True
+        return any(self.db_mngr.can_fetch_more(db_map, "entity_group", parent=self) for db_map in self.db_maps)
+
     def fetch_more(self):
         """Fetches children from all associated databases and raises group children.
         """
         super().fetch_more()
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, "entity_group")
-        # Raise group children, in case the db items were fetched elsewhere.
-        rows = [row for row, child in enumerate(self.children) if child.is_group()]
-        self._raise_group_children_by_row(rows)
+            self.db_mngr.fetch_more(db_map, "entity_group", parent=self)
 
     def raise_group_children_by_id(self, db_map_ids):
         """
@@ -206,7 +208,8 @@ class MemberObjectClassItem(ObjectClassItem):
 
     @property
     def display_id(self):
-        return "members"
+        # Return an empty tuple so we never insert anything before this item (see _insert_children_sorted)
+        return ()
 
     @property
     def display_data(self):
@@ -220,16 +223,15 @@ class MemberObjectClassItem(ObjectClassItem):
     def _display_icon(self, for_group=False):
         """Returns icon for this item as if it was indeed an object class."""
         return self.db_mngr.entity_class_icon(
-            self.first_db_map, super().item_type, self.db_map_id(self.first_db_map), for_group=for_group
+            self.first_db_map, super().item_type, self.db_map_id(self.first_db_map), for_group=False
         )
 
     def has_children(self):
         """Returns True, this item always has children."""
         return True
 
-    def _get_new_children_ids(self, db_map):
-        """See base class."""
-        return self.parent_item.db_map_member_ids(db_map)
+    def fetch_successful(self, db_map, item):
+        return item["id"] in self.parent_item.db_map_member_ids(db_map)
 
     @property
     def child_item_class(self):
@@ -284,7 +286,7 @@ class ObjectItem(EntityItem):
     """An object item."""
 
     item_type = "object"
-    _has_members = False
+    _has_members_item = False
 
     @property
     def child_item_class(self):
@@ -299,28 +301,16 @@ class ObjectItem(EntityItem):
             database=self.first_db_map.codename,
         )
 
-    def has_children(self):
-        """See base class."""
-        return super().has_children() or self._has_members or self.is_group()
-
     def fetch_successful(self, db_map, item):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         return object_class_id in {int(id_) for id_ in item["object_class_id_list"].split(",")}
 
-    def can_fetch_more(self):
-        if self.is_group():
-            return not self._has_members
-        return super().can_fetch_more()
-
-    def fetch_more(self):
-        """See base class."""
-        super().fetch_more()
-        if self._has_members or not self.is_group():
-            return
-        # Insert member class item. Note that we pass the db_map_ids of the parent object class item
-        db_map_ids = {db_map: self.parent_item.db_map_id(db_map) for db_map in self.db_maps}
-        self.insert_children(0, [MemberObjectClassItem(self.model, db_map_ids)])
-        self._has_members = True
+    def members_item(self):
+        if not self._has_members_item:
+            # Insert members item. Note that we pass the db_map_ids of the parent object class item
+            super().insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
+            self._has_members_item = True
+        return self.child(0)
 
 
 class MemberObjectItem(ObjectItem):
@@ -337,9 +327,6 @@ class MemberObjectItem(ObjectItem):
 
     def can_fetch_more(self):
         return False
-
-    def _get_new_children_ids(self, db_map):
-        return []
 
 
 class RelationshipItem(EntityItem):
@@ -381,9 +368,6 @@ class RelationshipItem(EntityItem):
 
     def can_fetch_more(self):
         return False
-
-    def _get_new_children_ids(self, db_map):
-        return []
 
     def is_valid(self):
         """Checks that the grand parent object is still in the relationship."""

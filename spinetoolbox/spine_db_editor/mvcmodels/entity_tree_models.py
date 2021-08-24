@@ -126,7 +126,8 @@ class ObjectTreeModel(MultiDBTreeModel):
                 d.setdefault((item["class_id"], item["group_id"]), dict())[item["member_id"]] = None
             for (class_id, group_id), ids in d.items():
                 for parent_item in self.find_items(db_map, (class_id, group_id)):
-                    result.setdefault(parent_item, {})[db_map] = list(ids.keys())
+                    members_item = parent_item.members_item()
+                    result.setdefault(members_item, {})[db_map] = list(ids.keys())
         return result
 
     def add_object_classes(self, db_map_data):
@@ -146,6 +147,8 @@ class ObjectTreeModel(MultiDBTreeModel):
             parent_item.append_children_by_id(db_map_ids)
 
     def add_entity_groups(self, db_map_data):
+        for parent_item, db_map_ids in self._parent_entity_member_data(db_map_data).items():
+            parent_item.append_children_by_id(db_map_ids)
         for parent_item, db_map_ids in self._parent_entity_group_data(db_map_data).items():
             parent_item.raise_group_children_by_id(db_map_ids)
 
