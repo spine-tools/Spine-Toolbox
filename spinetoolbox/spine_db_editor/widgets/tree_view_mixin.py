@@ -185,16 +185,14 @@ class TreeViewMixin:
         parcel.inner_push_object_ids(db_map_obj_ids)
         self.db_mngr.duplicate_object(object_item.db_maps, parcel.data, orig_name, dup_name)
 
-    @Slot(bool)
-    def show_add_object_classes_form(self, checked=False):
+    def show_add_object_classes_form(self):
         """Shows dialog to add new object classes."""
         dialog = AddObjectClassesDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot(bool)
-    def show_add_objects_form(self, checked=False, class_name=""):
+    def show_add_objects_form(self, parent_item):
         """Shows dialog to add new objects."""
-        dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps, class_name=class_name)
+        dialog = AddObjectsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def show_add_object_group_form(self, object_class_item):
@@ -207,30 +205,18 @@ class TreeViewMixin:
         dialog = ManageMembersDialog(self, object_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot(bool)
-    def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
+    def show_add_relationship_classes_form(self, parent_item):
         """Shows dialog to add new relationship_class."""
-        dialog = AddRelationshipClassesDialog(
-            self, self.db_mngr, *self.db_maps, object_class_one_name=object_class_one_name
-        )
+        dialog = AddRelationshipClassesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_relationships_form(self, checked=False, relationship_class_key=None, object_names_by_class_name=None):
+    def show_add_relationships_form(self, parent_item):
         """Shows dialog to add new relationships."""
-        dialog = AddRelationshipsDialog(
-            self,
-            self.db_mngr,
-            *self.db_maps,
-            relationship_class_key=relationship_class_key,
-            object_names_by_class_name=object_names_by_class_name
-        )
+        dialog = AddRelationshipsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot(bool)
-    def show_manage_relationships_form(self, checked=False, relationship_class_key=None):
-        dialog = ManageRelationshipsDialog(
-            self, self.db_mngr, *self.db_maps, relationship_class_key=relationship_class_key
-        )
+    def show_manage_relationships_form(self, parent_item):
+        dialog = ManageRelationshipsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):

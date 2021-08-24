@@ -247,16 +247,15 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
 
 
 class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
-    """A dialog to query user's preferences for new objects.
-    """
+    """A dialog to query user's preferences for new objects."""
 
-    def __init__(self, parent, db_mngr, *db_maps, class_name=None, force_default=False):
+    def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
         """
         Args:
             parent (SpineDBEditor)
+            parent_item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
             *db_maps: DiffDatabaseMapping instances
-            class_name (str): default object_class name
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
@@ -269,13 +268,8 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object_class name', 'object name', 'description', 'databases'])
         self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
-        if class_name:
-            default_db_maps = [db_map for db_map, names in self.db_map_obj_cls_lookup.items() if class_name in names]
-            db_names = ",".join(
-                [db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
-            )
-        else:
-            db_names = ",".join(list(self.keyed_db_maps.keys()))
+        class_name = parent_item.display_data if parent_item.item_type != "root" else None
+        db_names = ",".join(x.codename for x in parent_item.db_maps)
         self.model.set_default_row(**{'object_class name': class_name, 'databases': db_names})
         self.model.clear()
 
@@ -317,13 +311,13 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
 class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
     """A dialog to query user's preferences for new relationship classes."""
 
-    def __init__(self, parent, db_mngr, *db_maps, object_class_one_name=None, force_default=False):
+    def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
         """
         Args:
             parent (SpineDBEditor)
+            parent_item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
             *db_maps: DiffDatabaseMapping instances
-            object_class_one_name (str): default object_class name
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
@@ -350,15 +344,8 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
             ['object_class name (1)', 'relationship_class name', 'description', 'databases']
         )
         self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
-        if object_class_one_name:
-            default_db_maps = [
-                db_map for db_map, names in self.db_map_obj_cls_lookup.items() if object_class_one_name in names
-            ]
-            db_names = ",".join(
-                [db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
-            )
-        else:
-            db_names = ",".join(list(self.keyed_db_maps.keys()))
+        object_class_one_name = parent_item.display_data if parent_item.item_type != "root" else None
+        db_names = ",".join(x.codename for x in parent_item.db_maps)
         self.model.set_default_row(**{'object_class name (1)': object_class_one_name, 'databases': db_names})
         self.model.clear()
 
@@ -504,22 +491,23 @@ class AddOrManageRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixi
 class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
     """A dialog to query user's preferences for new relationships."""
 
-    def __init__(
-        self, parent, db_mngr, *db_maps, relationship_class_key=(), object_names_by_class_name=None, force_default=False
-    ):
+    def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
         """
         Args:
             parent (SpineDBEditor)
+            parent_item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
             *db_maps: DiffDatabaseMapping instances
-            relationship_class_key (tuple(str,str)): relationships class name, object_class name list string
-            object_names_by_class_name (dict): mapping object_class names to default object names
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
-        if object_names_by_class_name is None:
-            object_names_by_class_name = {}
-        self.object_names_by_class_name = object_names_by_class_name
+        grand_parent_item = parent_item.parent_item
+        if grand_parent_item.item_type == "object":
+            object_name = grand_parent_item.display_data
+            object_class_name = grand_parent_item.parent_item.display_data
+            self.object_names_by_class_name = {object_class_name: object_name}
+        else:
+            self.object_names_by_class_name = {}
         self.relationship_class = None
         self.model.force_default = force_default
         self.setWindowTitle("Add relationships")
@@ -529,6 +517,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
             key for relationship_classes in self.db_map_rel_cls_lookup.values() for key in relationship_classes
         ]
         self.rel_cls_combo_box.addItems(["{0} ({1})".format(*key) for key in self.relationship_class_keys])
+        relationship_class_key = parent_item.display_id
         try:
             current_index = self.relationship_class_keys.index(relationship_class_key)
             self.reset_model(current_index)
@@ -546,18 +535,17 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         """Setup model according to current relationship_class selected in combobox.
         """
         self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
+        object_class_name_list = self.object_class_name_list.split(",")
+        header = object_class_name_list + ['relationship name', 'databases']
+        self.model.set_horizontal_header_labels(header)
         default_db_maps = [
             db_map
             for db_map, rel_cls_list in self.db_map_rel_cls_lookup.items()
             if (self.class_name, self.object_class_name_list) in rel_cls_list
         ]
-        object_class_name_list = self.object_class_name_list.split(",")
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        header = object_class_name_list + ['relationship name', 'databases']
-        self.model.set_horizontal_header_labels(header)
         defaults = {'databases': db_names}
-        if self.object_names_by_class_name is not None:
-            defaults.update(self.object_names_by_class_name)
+        defaults.update(self.object_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
 
@@ -638,10 +626,11 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     """A dialog to query user's preferences for managing relationships.
     """
 
-    def __init__(self, parent, db_mngr, *db_maps, relationship_class_key=None):
+    def __init__(self, parent, parent_item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor): data store widget
+            parent_item (MultiDBTreeItem)
             db_mngr (SpineDBManager): the manager to do the removal
             *db_maps: DiffDatabaseMapping instances
             relationship_class_key (str, optional): relationships class name, object_class name list string.
@@ -689,7 +678,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.new_items_model = MinimalTableModel(self, lazy=False)
         self.model.sub_models = [self.new_items_model, self.existing_items_model]
         self.db_combo_box.addItems([db_map.codename for db_map in db_maps])
-        self.reset_relationship_class_combo_box(db_maps[0].codename, relationship_class_key)
+        self.reset_relationship_class_combo_box(db_maps[0].codename, parent_item.display_id)
         self.connect_signals()
 
     def make_model(self):

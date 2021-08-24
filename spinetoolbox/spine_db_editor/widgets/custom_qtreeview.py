@@ -200,9 +200,7 @@ class EntityTreeView(CopyTreeView):
         self._spine_db_editor.show_remove_entity_tree_items_form(self._selected_indexes)
 
     def manage_relationships(self):
-        item = self._context_item
-        relationship_class_key = item.display_id
-        self._spine_db_editor.show_manage_relationships_form(relationship_class_key=relationship_class_key)
+        self._spine_db_editor.show_manage_relationships_form(self._context_item)
 
     def show_entity_metadata(self):
         """Shows entity's metadata."""
@@ -341,27 +339,13 @@ class ObjectTreeView(EntityTreeView):
         self._spine_db_editor.show_add_object_classes_form()
 
     def add_objects(self):
-        item = self._context_item
-        class_name = item.display_data if item.item_type != "root" else None
-        self._spine_db_editor.show_add_objects_form(class_name=class_name)
+        self._spine_db_editor.show_add_objects_form(self._context_item)
 
     def add_relationship_classes(self):
-        item = self._context_item
-        object_class_one_name = item.display_data if item.item_type != "root" else None
-        self._spine_db_editor.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
+        self._spine_db_editor.show_add_relationship_classes_form(self._context_item)
 
     def add_relationships(self):
-        item = self._context_item
-        relationship_class_key = item.display_id
-        if item.item_type != "root":
-            object_name = item.parent_item.display_data
-            object_class_name = item.parent_item.parent_item.display_data
-            object_names_by_class_name = {object_class_name: object_name}
-        else:
-            object_names_by_class_name = None
-        self._spine_db_editor.show_add_relationships_form(
-            relationship_class_key=relationship_class_key, object_names_by_class_name=object_names_by_class_name
-        )
+        self._spine_db_editor.show_add_relationships_form(self._context_item)
 
     def find_next_relationship(self):
         """Finds the next occurrence of the relationship at the current index and expands it."""
@@ -407,11 +391,10 @@ class RelationshipTreeView(EntityTreeView):
         self._add_relationship_classes_action.setEnabled(item.item_type == "root")
 
     def add_relationship_classes(self):
-        self._spine_db_editor.show_add_relationship_classes_form()
+        self._spine_db_editor.show_add_relationship_classes_form(self._context_item)
 
     def add_relationships(self):
-        relationship_class_key = self._context_item.display_id
-        self._spine_db_editor.show_add_relationships_form(relationship_class_key=relationship_class_key)
+        self._spine_db_editor.show_add_relationships_form(self._context_item)
 
 
 class ItemTreeView(CopyTreeView):

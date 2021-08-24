@@ -308,7 +308,7 @@ class ObjectItem(EntityItem):
     def members_item(self):
         if not self._has_members_item:
             # Insert members item. Note that we pass the db_map_ids of the parent object class item
-            super().insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
+            self.insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
             self._has_members_item = True
         return self.child(0)
 

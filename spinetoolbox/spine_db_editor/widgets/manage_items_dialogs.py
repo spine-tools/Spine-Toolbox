@@ -118,8 +118,7 @@ class ManageItemsDialog(ManageItemsDialogBase):
 
 
 class GetObjectClassesMixin:
-    """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog.
-    """
+    """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog."""
 
     def make_db_map_obj_cls_lookup(self):
         return {
@@ -145,8 +144,7 @@ class GetObjectClassesMixin:
 
 
 class GetObjectsMixin:
-    """Provides a method to retrieve objects for AddRelationshipsDialog and EditRelationshipsDialog.
-    """
+    """Provides a method to retrieve objects for AddRelationshipsDialog and EditRelationshipsDialog."""
 
     def make_db_map_obj_lookup(self):
         return {
@@ -179,8 +177,7 @@ class GetObjectsMixin:
 
 
 class GetRelationshipClassesMixin:
-    """Provides a method to retrieve relationships for AddRelationshipsDialog and EditRelationshipsDialog.
-    """
+    """Provides a method to retrieve relationship classes for AddRelationshipsDialog and EditRelationshipsDialog."""
 
     def make_db_map_rel_cls_lookup(self):
         return {
@@ -193,8 +190,7 @@ class GetRelationshipClassesMixin:
 
 
 class ShowIconColorEditorMixin:
-    """Provides methods to show an `IconColorEditor` upon request.
-    """
+    """Provides methods to show an `IconColorEditor` upon request."""
 
     @busy_effect
     def show_icon_color_editor(self, index):
