@@ -75,6 +75,10 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._context_menu_pos = None
 
     @property
+    def _qsettings(self):
+        return self._spine_db_editor.qsettings
+
+    @property
     def entity_items(self):
         return [x for x in self.scene().items() if isinstance(x, EntityItem) and x not in self.removed_items]
 

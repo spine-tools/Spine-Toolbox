@@ -44,6 +44,7 @@ class GraphViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.ui.graphicsView.connect_spine_db_editor(self)
         self._progress_bar = ProgressBarWidget()
         self._progress_bar.hide()
         self._progress_bar.stop_button.clicked.connect(self._stop_extending_graph)
@@ -66,7 +67,6 @@ class GraphViewMixin:
         self._thread_pool = QThreadPool()
         self.layout_gens = dict()
         self._layout_gen_id = None
-        self.ui.graphicsView.connect_spine_db_editor(self)
         self._extend_graph_timer = QTimer(self)
         self._extend_graph_timer.setSingleShot(True)
         self._extend_graph_timer.setInterval(100)
