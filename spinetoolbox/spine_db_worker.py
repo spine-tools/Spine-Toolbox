@@ -148,7 +148,7 @@ class SpineDBWorker(QObject):
         signal = getattr(self._db_mngr, signal_name)
         db_map_error_log = dict()
         for db_map, items in db_map_data.items():
-            cache = self._db_mngr.get_db_map_cache(db_map)
+            cache = self._db_mngr.get_db_map_cache(db_map, {item_type}, include_ancestors=True)
             items, errors = getattr(db_map, method_name)(*items, check=check, return_items=True, cache=cache)
             if errors:
                 db_map_error_log[db_map] = errors

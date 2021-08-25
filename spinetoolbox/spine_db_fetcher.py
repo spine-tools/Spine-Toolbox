@@ -18,7 +18,7 @@ SpineDBFetcher class.
 
 import itertools
 from collections import OrderedDict
-from PySide2.QtCore import Signal, Slot, QObject, QTimer
+from PySide2.QtCore import Signal, Slot, QObject
 from spinetoolbox.helpers import busy_effect, signal_waiter, CacheItem
 
 # FIXME: We need to invalidate cache here as user makes changes (update, remove)
@@ -28,7 +28,7 @@ class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
     _fetch_more_requested = Signal(str, object)
-    _fetch_all_requested = Signal()
+    _fetch_all_requested = Signal(set)
     _fetch_all_finished = Signal()
 
     def __init__(self, db_mngr, db_map):
@@ -141,19 +141,31 @@ class SpineDBFetcher(QObject):
         except AttributeError:
             pass
 
-    def fetch_all(self):
-        if not any(self.can_fetch_more(item_type) for item_type in self._fetched):
+    def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
+        if item_types is None:
+            item_types = set(self._getters)
+        if only_descendants:
+            item_types = {
+                descendant
+                for item_type in item_types
+                for descendant in self._db_map.descendant_tablenames.get(item_type, ())
+            }
+        if include_ancestors:
+            item_types |= {
+                ancestor for item_type in item_types for ancestor in self._db_map.ancestor_tablenames.get(item_type, ())
+            }
+        if not any(self.can_fetch_more(item_type) for item_type in item_types):
             return
         with signal_waiter(self._fetch_all_finished) as waiter:
-            self._fetch_all_requested.emit()
+            self._fetch_all_requested.emit(item_types)
             waiter.wait()
 
-    @Slot()
-    def _fetch_all(self):
-        self._do_fetch_all()
+    @Slot(set)
+    def _fetch_all(self, item_types):
+        self._do_fetch_all(item_types)
 
     @busy_effect
-    def _do_fetch_all(self):
-        for item_type in self._getters:
+    def _do_fetch_all(self, item_types):
+        for item_type in item_types:
             self._do_fetch_more(item_type, lambda _: False)
         self._fetch_all_finished.emit()
