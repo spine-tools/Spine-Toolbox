@@ -27,8 +27,8 @@ from spinetoolbox.helpers import busy_effect, signal_waiter, CacheItem
 class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
-    _fetch_more_requested = Signal(str, object)
-    _fetch_all_requested = Signal(set)
+    _fetch_more_requested = Signal(str, object, int)
+    _fetch_all_requested = Signal(set, int)
     _fetch_all_finished = Signal()
 
     def __init__(self, db_mngr, db_map):
@@ -59,8 +59,8 @@ class SpineDBFetcher(QObject):
             "tool_feature_method": self._db_mngr.get_tool_feature_methods,
         }
         self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
-        self._fetched = {item_type: False for item_type in self._getters}
         self.cache = {}
+        self._fetched = {item_type: False for item_type in self._getters}
         self._can_fetch_more_cache = {}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
@@ -85,13 +85,18 @@ class SpineDBFetcher(QObject):
             return True
         fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, OrderedDict())
-        key = (next(reversed(items), None), len(items))
-        cache_key, cache_result = self._can_fetch_more_cache.get((item_type, parent), (None, None))
-        if key == cache_key:
-            return cache_result
-        result = any(fetch_successful(x) for x in items.values())
-        self._can_fetch_more_cache[item_type, parent] = (key, result)
-        return result
+        try:
+            key = (next(reversed(items), None), len(items))
+            cache_key, cache_result = self._can_fetch_more_cache.get((item_type, parent), (None, None))
+            if key == cache_key:
+                return cache_result
+            result = any(fetch_successful(x) for x in items.values())
+            self._can_fetch_more_cache[item_type, parent] = (key, result)
+            return result
+        except RuntimeError:
+            # OrderedDict mutated during iteration
+            # This means the fetcher thread did something, and we need to start over
+            return self.can_fetch_more(item_type, parent=parent)
 
     @busy_effect
     def fetch_more(self, item_type, parent=None, iter_chunk_size=1000):
@@ -100,7 +105,16 @@ class SpineDBFetcher(QObject):
         Args:
             item_type (str): the type of items to fetch, e.g. "object_class"
         """
-        if not self.can_fetch_more(item_type):
+        self._fetch_more_requested.emit(item_type, parent, iter_chunk_size)
+
+    @Slot(str, object, int)
+    def _fetch_more(self, item_type, parent, iter_chunk_size):
+        self._do_fetch_more(item_type, parent, iter_chunk_size)
+
+    @busy_effect
+    def _do_fetch_more(self, item_type, parent, iter_chunk_size):
+        iterator = self._iterators.get(item_type)
+        if iterator is None:
             return
         fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, {})
@@ -114,18 +128,6 @@ class SpineDBFetcher(QObject):
                 signal = self._db_mngr.added_signals.get(item_type)
                 signal.emit({self._db_map: chunk})
                 return
-        self._fetch_more_requested.emit(item_type, parent)
-
-    @Slot(str, object)
-    def _fetch_more(self, item_type, parent):
-        self._do_fetch_more(item_type, parent)
-
-    @busy_effect
-    def _do_fetch_more(self, item_type, parent):
-        iterator = self._iterators.get(item_type)
-        if iterator is None:
-            return
-        fetch_successful = self._make_fetch_successful(parent)
         while True:
             chunk = next(iterator, [])
             if not chunk:
@@ -141,7 +143,7 @@ class SpineDBFetcher(QObject):
         except AttributeError:
             pass
 
-    def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
+    def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False, iter_chunk_size=1000):
         if item_types is None:
             item_types = set(self._getters)
         if only_descendants:
@@ -157,15 +159,15 @@ class SpineDBFetcher(QObject):
         if not any(self.can_fetch_more(item_type) for item_type in item_types):
             return
         with signal_waiter(self._fetch_all_finished) as waiter:
-            self._fetch_all_requested.emit(item_types)
+            self._fetch_all_requested.emit(item_types, iter_chunk_size)
             waiter.wait()
 
-    @Slot(set)
-    def _fetch_all(self, item_types):
-        self._do_fetch_all(item_types)
+    @Slot(set, int)
+    def _fetch_all(self, item_types, iter_chunk_size):
+        self._do_fetch_all(item_types, iter_chunk_size)
 
     @busy_effect
-    def _do_fetch_all(self, item_types):
+    def _do_fetch_all(self, item_types, iter_chunk_size):
         for item_type in item_types:
-            self._do_fetch_more(item_type, lambda _: False)
+            self._do_fetch_more(item_type, lambda _: False, iter_chunk_size)
         self._fetch_all_finished.emit()

@@ -97,18 +97,6 @@ class EntityClassItem(MultiDBTreeItem):
                 return QBrush(Qt.gray)
         return super().data(column, role)
 
-    def can_fetch_more(self):
-        if super().can_fetch_more():
-            return True
-        return any(self.db_mngr.can_fetch_more(db_map, "entity_group", parent=self) for db_map in self.db_maps)
-
-    def fetch_more(self):
-        """Fetches children from all associated databases and raises group children.
-        """
-        super().fetch_more()
-        for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, "entity_group", parent=self)
-
     def raise_group_children_by_id(self, db_map_ids):
         """
         Moves group children to the top of the list.
@@ -226,12 +214,8 @@ class MemberObjectClassItem(ObjectClassItem):
             self.first_db_map, super().item_type, self.db_map_id(self.first_db_map), for_group=False
         )
 
-    def has_children(self):
-        """Returns True, this item always has children."""
-        return True
-
     def fetch_successful(self, db_map, item):
-        return item["id"] in self.parent_item.db_map_member_ids(db_map)
+        return item["class_id"] == self.db_map_id(db_map) and item["group_id"] == self.parent_item.db_map_id(db_map)
 
     @property
     def child_item_class(self):
@@ -254,6 +238,16 @@ class MemberObjectClassItem(ObjectClassItem):
 class EntityItem(MultiDBTreeItem):
     """An entity item."""
 
+    _has_members_item = False
+
+    @property
+    def members_item(self):
+        if not self._has_members_item:
+            # Insert members item. Note that we pass the db_map_ids of the parent object class item
+            self.insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
+            self._has_members_item = True
+        return self.child(0)
+
     @property
     def display_icon(self):
         """Returns corresponding class icon."""
@@ -263,14 +257,11 @@ class EntityItem(MultiDBTreeItem):
         return [x["member_id"] for x in self.db_map_entity_groups(db_map)]
 
     def db_map_entity_groups(self, db_map):
+        # FIXME: We might need to fetch here
         return self.db_mngr.get_items_by_field(db_map, "entity_group", "group_id", self.db_map_id(db_map))
 
-    @property
-    def member_ids(self):
-        return {db_map: self.db_map_member_ids(db_map) for db_map in self.db_maps}
-
     def is_group(self):
-        return any(self.member_ids.values())
+        return self.members_item.has_children()
 
     def data(self, column, role=Qt.DisplayRole):
         if role == Qt.ToolTipRole:
@@ -286,7 +277,6 @@ class ObjectItem(EntityItem):
     """An object item."""
 
     item_type = "object"
-    _has_members_item = False
 
     @property
     def child_item_class(self):
@@ -305,22 +295,21 @@ class ObjectItem(EntityItem):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         return object_class_id in {int(id_) for id_ in item["object_class_id_list"].split(",")}
 
-    def members_item(self):
-        if not self._has_members_item:
-            # Insert members item. Note that we pass the db_map_ids of the parent object class item
-            self.insert_children(0, [MemberObjectClassItem(self.model, self.parent_item.db_map_ids.copy())])
-            self._has_members_item = True
-        return self.child(0)
-
 
 class MemberObjectItem(ObjectItem):
     """A member object item."""
 
-    item_type = "object"
+    item_type = "entity_group"
+    visual_key = ["member_name"]
 
     @property
     def display_icon(self):
         return self.parent_item.display_icon
+
+    @property
+    def display_data(self):
+        """"Returns the name for display."""
+        return self.db_map_data_field(self.first_db_map, "member_name")
 
     def has_children(self):
         return False

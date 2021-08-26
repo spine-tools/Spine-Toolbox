@@ -90,6 +90,7 @@ class ParameterNameDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
+        # FIXME: Make SearchBarEditor lazy
         editor = SearchBarEditor(self.parent(), parent)
         editor.set_data(
             index.data(Qt.DisplayRole),

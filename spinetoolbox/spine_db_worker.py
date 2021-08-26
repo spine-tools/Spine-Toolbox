@@ -267,10 +267,18 @@ class SpineDBWorker(QObject):
         else:
             raise ValueError()
 
+    def _is_url_available(self, url, logger):
+        # FIXME: needed?
+        if str(url) in self._db_maps:
+            message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
+            logger.msg_error.emit(message)
+            return False
+        return True
+
     def export_to_sqlite(self, file_path, data_for_export, caller):
         """Exports given data into SQLite file."""
         url = URL("sqlite", database=file_path)
-        if not self._db_mngr.is_url_available(url, caller):
+        if not self._is_url_available(url, caller):
             return
         create_new_spine_database(url)
         db_map = DatabaseMapping(url)

@@ -371,13 +371,6 @@ class SpineDBManager(QObject):
         url = str(url)
         return self._db_maps.get(url)
 
-    def is_url_available(self, url, logger):
-        if str(url) in self._db_maps:
-            message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
-            logger.msg_error.emit(message)
-            return False
-        return True
-
     def create_new_spine_database(self, url, logger):
         try:
             if not is_empty(url):
@@ -706,7 +699,9 @@ class SpineDBManager(QObject):
         Returns:
             dict
         """
-        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
+        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {}) or self._get_fetcher(db_map).get_item(
+            item_type, id_
+        )
 
     def get_item_by_field(self, db_map, item_type, field, value):
         """Returns the first item of the given type in the given db map
@@ -2007,20 +2002,6 @@ class SpineDBManager(QObject):
         """
         return DatabaseMapping.cache_to_db(item_type, item)
 
-    def _get_item(self, db_map, item_type, id_):
-        """Returns the item of the given type in the given db map that has the given id,
-        or an empty dict if not found. Also looks in fetching cache.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            item_type (str)
-            id_ (int)
-
-        Returns:
-            dict
-        """
-        return self.get_item(db_map, item_type, id_) or self._get_fetcher(db_map).get_item(item_type, id_)
-
     def db_to_cache(self, db_map, item_type, item):
         """
         Returns the cache equivalent of a db item.
@@ -2037,26 +2018,26 @@ class SpineDBManager(QObject):
         if item_type == "object_class":
             item["display_icon"] = item.get("display_icon")
         elif item_type == "object":
-            item["class_name"] = self._get_item(db_map, "object_class", item["class_id"])["name"]
+            item["class_name"] = self.get_item(db_map, "object_class", item["class_id"])["name"]
         elif item_type == "relationship_class":
             item["object_class_name_list"] = ",".join(
-                self._get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
+                self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
             )
             item["object_class_id_list"] = ",".join(str(id_) for id_ in item["object_class_id_list"])
         elif item_type == "relationship":
-            item["class_name"] = self._get_item(db_map, "relationship_class", item["class_id"])["name"]
+            item["class_name"] = self.get_item(db_map, "relationship_class", item["class_id"])["name"]
             item["object_name_list"] = ",".join(
-                self._get_item(db_map, "object", id_)["name"] for id_ in item["object_id_list"]
+                self.get_item(db_map, "object", id_)["name"] for id_ in item["object_id_list"]
             )
             item["object_id_list"] = ",".join(str(id_) for id_ in item["object_id_list"])
             item["object_class_name_list"] = ",".join(
-                self._get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
+                self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
             )
             item["object_class_id_list"] = ",".join(str(id_) for id_ in item["object_class_id_list"])
         elif item_type == "parameter_definition":
             item["parameter_name"] = item.pop("name", item.get("parameter_name"))
-            object_class = self._get_item(db_map, "object_class", item["entity_class_id"])
-            relationship_class = self._get_item(db_map, "relationship_class", item["entity_class_id"])
+            object_class = self.get_item(db_map, "object_class", item["entity_class_id"])
+            relationship_class = self.get_item(db_map, "relationship_class", item["entity_class_id"])
             if object_class:
                 item["object_class_id"] = object_class["id"]
                 item["object_class_name"] = object_class["name"]
@@ -2066,13 +2047,13 @@ class SpineDBManager(QObject):
                 item["object_class_id_list"] = relationship_class["object_class_id_list"]
                 item["object_class_name_list"] = relationship_class["object_class_name_list"]
             item["value_list_id"] = value_list_id = item.pop("parameter_value_list_id", item.get("value_list_id"))
-            item["value_list_name"] = self._get_item(db_map, "parameter_value_list", value_list_id).get("name")
+            item["value_list_name"] = self.get_item(db_map, "parameter_value_list", value_list_id).get("name")
             item["default_value"] = item.get("default_value")
             item["default_type"] = item.get("default_type")
             item["description"] = item.get("description")
         elif item_type == "parameter_value":
             item["parameter_id"] = parameter_id = item.pop("parameter_definition_id", item.get("parameter_id"))
-            param_def = self._get_item(db_map, "parameter_definition", parameter_id)
+            param_def = self.get_item(db_map, "parameter_definition", parameter_id)
             item["parameter_name"] = param_def["parameter_name"]
             item["entity_class_id"] = param_def["entity_class_id"]
             object_class_id = param_def.get("object_class_id")
@@ -2081,34 +2062,46 @@ class SpineDBManager(QObject):
                 item["object_class_id"] = object_class_id
                 item["object_class_name"] = param_def["object_class_name"]
                 item["object_id"] = object_id = item["entity_id"]
-                item["object_name"] = self._get_item(db_map, "object", object_id)["name"]
+                item["object_name"] = self.get_item(db_map, "object", object_id)["name"]
             if relationship_class_id:
                 item["relationship_class_id"] = relationship_class_id
                 item["relationship_class_name"] = param_def["relationship_class_name"]
                 item["object_class_id_list"] = param_def["object_class_id_list"]
                 item["object_class_name_list"] = param_def["object_class_name_list"]
                 item["relationship_id"] = relationship_id = item["entity_id"]
-                relationship = self._get_item(db_map, "relationship", relationship_id)
+                relationship = self.get_item(db_map, "relationship", relationship_id)
                 item["object_id_list"] = relationship["object_id_list"]
                 item["object_name_list"] = relationship["object_name_list"]
-            item["alternative_name"] = self._get_item(db_map, "alternative", item["alternative_id"])["name"]
+            item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
         elif item_type == "parameter_value_list":
             item["value_list"] = ";".join(str(val, "UTF8") for val in item["value_list"])
         elif item_type == "entity_group":
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
+            item["class_name"] = (
+                self.get_item(db_map, "object_class", item["class_id"])
+                or self.get_item(db_map, "relationship_class", item["class_id"])["name"]
+            )
+            item["group_name"] = (
+                self.get_item(db_map, "object", item["group_id"])
+                or self.get_item(db_map, "relationship", item["group_id"])
+            )["name"]
+            item["member_name"] = (
+                self.get_item(db_map, "object", item["member_id"])
+                or self.get_item(db_map, "relationship", item["member_id"])
+            )["name"]
         elif item_type == "scenario":
             item["active"] = item.get("active", False)
         elif item_type == "feature":
-            param_def = self._get_item(db_map, "parameter_definition", item["parameter_definition_id"])
+            param_def = self.get_item(db_map, "parameter_definition", item["parameter_definition_id"])
             item["parameter_definition_name"] = param_def["parameter_name"]
-            item["entity_class_id"] = entity_class_id = self._get_item(db_map, "parameter_definition", param_def["id"])[
+            item["entity_class_id"] = entity_class_id = self.get_item(db_map, "parameter_definition", param_def["id"])[
                 "entity_class_id"
             ]
-            item["entity_class_name"] = self._get_item(db_map, "object_class", entity_class_id).get(
+            item["entity_class_name"] = self.get_item(db_map, "object_class", entity_class_id).get(
                 "name"
-            ) or self._get_item(db_map, "relationship_class", entity_class_id).get("name")
-            item["parameter_value_list_name"] = self._get_item(
+            ) or self.get_item(db_map, "relationship_class", entity_class_id).get("name")
+            item["parameter_value_list_name"] = self.get_item(
                 db_map, "parameter_value_list", item["parameter_value_list_id"]
             ).get("name")
         elif item_type == "tool_feature":

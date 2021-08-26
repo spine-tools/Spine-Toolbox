@@ -105,6 +105,7 @@ class ParameterViewMixin:
             rel_cls_id (int)
             db_map (DiffDatabaseMapping)
         """
+        # FIXME: Make ObjectNameListEditor lazy
         relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id)
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []

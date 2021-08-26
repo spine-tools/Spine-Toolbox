@@ -123,11 +123,10 @@ class ObjectTreeModel(MultiDBTreeModel):
         for db_map, items in db_map_data.items():
             d = dict()
             for item in items:
-                d.setdefault((item["class_id"], item["group_id"]), dict())[item["member_id"]] = None
+                d.setdefault((item["class_id"], item["group_id"]), dict())[item["id"]] = None
             for (class_id, group_id), ids in d.items():
                 for parent_item in self.find_items(db_map, (class_id, group_id)):
-                    members_item = parent_item.members_item()
-                    result.setdefault(members_item, {})[db_map] = list(ids.keys())
+                    result.setdefault(parent_item.members_item, {})[db_map] = list(ids.keys())
         return result
 
     def add_object_classes(self, db_map_data):

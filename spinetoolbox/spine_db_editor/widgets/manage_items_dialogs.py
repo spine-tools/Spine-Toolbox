@@ -117,6 +117,9 @@ class ManageItemsDialog(ManageItemsDialogBase):
         self.resize_window_to_columns()
 
 
+# FIXME: We need to fully fetch the corresponding table before calling db_mngr.get_items
+
+
 class GetObjectClassesMixin:
     """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog."""
 

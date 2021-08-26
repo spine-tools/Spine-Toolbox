@@ -279,6 +279,7 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
                 name = item.get(self.entity_name_key)
                 db_map_names.setdefault(db_map, set()).add(name)
         # Build lookup dict
+        # FIXME: We might need to fetch here
         self._db_map_ent_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
@@ -342,6 +343,7 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
                 name = item.get("parameter_name")
                 db_map_names.setdefault(db_map, set()).add(name)
         # Build lookup dict
+        # FIXME: We might need to fetch here
         self._db_map_param_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
@@ -530,6 +532,7 @@ class MakeRelationshipOnTheFlyMixin:
                 item = self.db_mngr.get_item_by_field(db_map, "relationship_class", "name", name)
                 if item:
                     self._db_map_rel_cls_lookup.setdefault(db_map, {})[name] = item
+        # FIXME: We need to fetch all relationships before doing this
         self._db_map_existing_rels = {
             db_map: {self._make_unique_relationship_id(x) for x in self.db_mngr.get_items(db_map, "relationship")}
             for db_map in self._db_map_obj_lookup.keys() | self._db_map_rel_cls_lookup.keys()

@@ -187,10 +187,6 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
         self.layout().addWidget(self.table_view, 0, 0)
         self.layout().addWidget(self.remove_rows_button, 1, 0)
         self.layout().addWidget(self.button_box, 2, 0, -1, -1)
-        self.display_order = {
-            db_map: max((x["display_order"] for x in self.db_mngr.get_items(db_map, "object_class")), default=-1)
-            for db_map in self.db_maps
-        }
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
@@ -236,8 +232,6 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
             pre_item = {'name': name, 'description': description, 'display_icon': display_icon}
             for db_map in db_maps:
                 item = pre_item.copy()
-                self.display_order[db_map] += 1
-                item['display_order'] = self.display_order[db_map]
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
@@ -622,6 +616,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         super().accept()
 
 
+# FIXME: Make models lazy
 class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     """A dialog to query user's preferences for managing relationships.
     """
@@ -786,6 +781,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         super().accept()
 
 
+# FIXME: make models here lazy
 class ObjectGroupDialogBase(QDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
         """

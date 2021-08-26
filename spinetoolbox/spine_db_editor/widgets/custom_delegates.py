@@ -344,6 +344,9 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             return next(iter(value_list_ids))
 
 
+# FIXME: Make SearchBarEditor lazy
+
+
 class ValueListDelegate(ParameterDelegate):
     """A delegate for the parameter_value-list."""
 

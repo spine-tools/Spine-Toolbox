@@ -241,22 +241,25 @@ class MultiDBTreeItem(TreeItem):
     def _handle_fully_fetched(self):
         self.model.layoutChanged.emit()
 
+    @property
+    def fetch_item_type(self):
+        return self.child_item_class.item_type
+
     def can_fetch_more(self):
-        child_type = self.child_item_class.item_type
-        if child_type is None:
+        if self.fetch_item_type is None:
             return False
         return any(
-            self.db_mngr.can_fetch_more(db_map, child_type, parent=self) or self._get_pending_children_ids(db_map)
+            self.db_mngr.can_fetch_more(db_map, self.fetch_item_type, parent=self)
+            or self._get_pending_children_ids(db_map)
             for db_map in self.db_maps
         )
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
-        child_type = self.child_item_class.item_type
-        if child_type is None:
+        if self.fetch_item_type is None:
             return
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, child_type, parent=self)
+            self.db_mngr.fetch_more(db_map, self.fetch_item_type, parent=self)
         # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
         # This is needed for object items that are created *after* the relationship classes are fetched.
         db_map_ids = {db_map: self._get_pending_children_ids(db_map) for db_map in self.db_maps}
@@ -264,12 +267,11 @@ class MultiDBTreeItem(TreeItem):
 
     def _get_pending_children_ids(self, db_map):
         """Returns a list of children ids that are in the cache but not added."""
-        child_type = self.child_item_class.item_type
-        if child_type is None:
+        if self.fetch_item_type is None:
             return []
         return [
             x["id"]
-            for x in self.db_mngr.get_items(db_map, child_type)
+            for x in self.db_mngr.get_items(db_map, self.fetch_item_type)
             if x["id"] not in self._child_map.get(db_map, {}) and self.fetch_successful(db_map, x)
         ]
 
@@ -278,10 +280,11 @@ class MultiDBTreeItem(TreeItem):
             self.fetch_more()
 
     def get_all_children_ids(self, db_map):
-        child_type = self.child_item_class.item_type
-        if child_type is None:
+        if self.fetch_item_type is None:
             return []
-        return [x["id"] for x in self.db_mngr.get_items(db_map, child_type) if self.fetch_successful(db_map, x)]
+        return [
+            x["id"] for x in self.db_mngr.get_items(db_map, self.fetch_item_type) if self.fetch_successful(db_map, x)
+        ]
 
     def append_children_by_id(self, db_map_ids):
         """

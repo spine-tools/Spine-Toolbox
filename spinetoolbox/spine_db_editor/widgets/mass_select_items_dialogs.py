@@ -118,6 +118,7 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
 
     def accept(self):
         super().accept()
+        # FIXME: What happens if items not fetched? We need a function to purge in spinedb_api
         db_map_typed_data = {
             db_map: {
                 item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type)}

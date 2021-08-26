@@ -370,6 +370,7 @@ class GraphViewMixin:
                 self.dst_inds.append(object_ind)
 
     def _get_parameter_positions(self, parameter_name):
+        # FIXME: We might need to fetch all parameter values here!!!
         if not parameter_name:
             yield from []
         for db_map in self.db_maps:

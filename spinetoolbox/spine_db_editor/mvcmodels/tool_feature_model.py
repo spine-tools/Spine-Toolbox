@@ -57,6 +57,7 @@ class ToolFeatureModel(TreeModelBase):
         return entity_class_name + "/" + parameter_definition_name
 
     def _begin_set_features(self, db_map):
+        # FIXME: We need to fetch all parameter definitions before doing this
         parameter_definitions = self.db_mngr.get_items(db_map, "parameter_definition")
         key = lambda x: self.make_feature_name(
             x.get("object_class_name") or x.get("relationship_class_name"), x["parameter_name"]

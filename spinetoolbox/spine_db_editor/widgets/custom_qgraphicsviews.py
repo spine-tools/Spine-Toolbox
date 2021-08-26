@@ -274,6 +274,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def prune_selected_classes(self, checked=False):
         """Prunes selected items."""
+        # FIXME: inroduce self.prunned_class_ids rather
         db_map_class_ids = {}
         for x in self.selected_items:
             db_map_class_ids.setdefault(x.db_map, set()).add(x.entity_class_id)
@@ -366,6 +367,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in self.selected_items:
             db_map_ids.setdefault(item.db_map, set()).add(item.entity_id)
         db_map_typed_data = {}
+        # FIXME: We might need to fetch all parameter values here!!!
         for db_map, ids in db_map_ids.items():
             db_map_typed_data[db_map] = {
                 "parameter_value": set(
