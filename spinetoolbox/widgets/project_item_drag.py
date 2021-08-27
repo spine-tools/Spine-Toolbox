@@ -233,7 +233,7 @@ class ProjectItemSpecArray(QToolBar):
         self._button_new.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self._action_new = self.addWidget(self._button_new)
         self._action_new.setVisible(self._visible)
-        self._actions = []
+        self._actions = {}
         self._chopped_icon = _ChoppedIcon(self._icon, self.iconSize())
         self._button_filling = ShadeProjectItemSpecButton(self._toolbox, self.item_type, self._chopped_icon)
         self._button_filling.setParent(self)
@@ -278,18 +278,19 @@ class ProjectItemSpecArray(QToolBar):
             list(QAction)
             int or NoneType
         """
+        actions = [*self._actions.values()]
         if self.orientation() == Qt.Horizontal:
             get_point = lambda ref_geom: (ref_geom.right() + 1, ref_geom.top())
         else:
             get_point = lambda ref_geom: (ref_geom.left(), ref_geom.bottom() + 1)
         ref_widget = self._button_new
-        for i, act in enumerate(self._actions):
+        for i, act in enumerate(actions):
             ref_geom = ref_widget.geometry()
             x, y = get_point(ref_geom)
             if not self.actionAt(x, y):
-                return self._actions, i
+                return actions, i
             ref_widget = self.widgetForAction(act)
-        return self._actions, None
+        return actions, None
 
     def _add_filling(self, actions, ind):
         """Adds a button to fill empty space after the last visible action.
@@ -379,7 +380,7 @@ class ProjectItemSpecArray(QToolBar):
         spacing = 2  # additional space till next toolbar icon when collapsed
         if orientation is None:
             orientation = self.orientation()
-        widgets = [self.widgetForAction(a) for a in self._actions]
+        widgets = [self.widgetForAction(a) for a in self._actions.values()]
         for w in widgets:
             w.set_orientation(orientation)
         style = self.style()
@@ -436,7 +437,7 @@ class ProjectItemSpecArray(QToolBar):
 
     def set_visible(self, visible):
         self._visible = visible
-        for action in self._actions:
+        for action in self._actions.values():
             action.setVisible(self._visible)
         self._action_new.setVisible(self._visible)
 
@@ -448,17 +449,11 @@ class ProjectItemSpecArray(QToolBar):
     @Slot(QModelIndex, int, int)
     def _remove_specs(self, parent, first, last):
         for row in range(first, last + 1):
-            index = self._model.index(row, 0)
-            source_index = self._model.mapToSource(index)
-            spec = self._model.sourceModel().specification(source_index.row())
-            if spec.plugin:
-                continue
-            for i, action in enumerate(self._actions):
-                button = self.widgetForAction(action)
-                if button.spec_name == spec.name:
-                    self.removeAction(action)
-                    del self._actions[i]
-                    break
+            try:
+                action = self._actions.pop(row)
+                self.removeAction(action)
+            except KeyError:
+                pass  # Happens when Plugins are removed
         self._update_button_geom()
 
     def _change_spec_data(self, top_left, bottom_right, roles):
@@ -470,7 +465,7 @@ class ProjectItemSpecArray(QToolBar):
             button.spec_name = index.data()
 
     def _reset_specs(self):
-        for action in self._actions:
+        for action in self._actions.values():
             self.removeAction(action)
         self._actions.clear()
         for row in range(self._model.rowCount()):
@@ -488,4 +483,4 @@ class ProjectItemSpecArray(QToolBar):
         button.set_orientation(self.orientation())
         action = self.addWidget(button)
         action.setVisible(self._visible)
-        self._actions.insert(row, action)
+        self._actions[row] = action
