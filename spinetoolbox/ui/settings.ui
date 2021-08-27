@@ -767,124 +767,153 @@ p, li { white-space: pre-wrap; }
           <property name="title">
            <string>Julia</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout">
+          <layout class="QVBoxLayout" name="verticalLayout_16">
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_8">
+            <layout class="QHBoxLayout" name="horizontalLayout_14">
              <item>
-              <widget class="QLineEdit" name="lineEdit_julia_path">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia executable. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="placeholderText">
-                <string>Using Julia executable in system path</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
+              <layout class="QVBoxLayout" name="verticalLayout">
+               <item>
+                <widget class="QRadioButton" name="radioButton_use_julia_basic_console">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use basic Julia REPL to execute Julia Tool specs&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Basic Console</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="radioButton_use_julia_jupyter_console">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use Jupyter Console to execute Julia Tool specs. Select a Julia kernel spec to use this option.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Jupyter Console</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="Line" name="line_3">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QToolButton" name="toolButton_browse_julia">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia executable using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="icon">
-                <iconset resource="resources/resources_icons.qrc">
-                 <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_7">
-             <item>
-              <widget class="QLineEdit" name="lineEdit_julia_project_path">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia environment/project directory for Julia Tool specifications. Leave blank to use the default environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="text">
-                <string/>
-               </property>
-               <property name="placeholderText">
-                <string>Using Julia default project</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QToolButton" name="toolButton_browse_julia_project">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia project using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="text">
-                <string>...</string>
-               </property>
-               <property name="icon">
-                <iconset resource="resources/resources_icons.qrc">
-                 <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_9">
-             <item>
-              <widget class="QCheckBox" name="checkBox_use_julia_kernel">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute Julia Tool specifications in Spine Console / Jupyter Console.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="text">
-                <string>Use jupyter kernel:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="CustomQComboBox" name="comboBox_julia_kernel">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string>Open Julia kernel spec editor</string>
-               </property>
-               <property name="text">
-                <string>Kernel spec editor</string>
-               </property>
-              </widget>
+              <layout class="QVBoxLayout" name="verticalLayout_15">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_8">
+                 <item>
+                  <widget class="QLineEdit" name="lineEdit_julia_path">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia executable. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Using Julia executable in system path</string>
+                   </property>
+                   <property name="clearButtonEnabled">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="toolButton_browse_julia">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia executable using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="resources/resources_icons.qrc">
+                     <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_7">
+                 <item>
+                  <widget class="QLineEdit" name="lineEdit_julia_project_path">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia environment/project directory for Julia Tool specifications. Leave blank to use the default environment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Using Julia default project</string>
+                   </property>
+                   <property name="clearButtonEnabled">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="toolButton_browse_julia_project">
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia project using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>...</string>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="resources/resources_icons.qrc">
+                     <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_9">
+                 <item>
+                  <widget class="CustomQComboBox" name="comboBox_julia_kernel">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Julia kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="sizeAdjustPolicy">
+                    <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="pushButton_open_kernel_editor_julia">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="toolTip">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Julia kernel spec editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                   <property name="text">
+                    <string>Kernel spec editor</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
              </item>
             </layout>
            </item>
@@ -944,95 +973,120 @@ p, li { white-space: pre-wrap; }
            </size>
           </property>
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;These are the &lt;span style=&quot; font-weight:600;&quot;&gt;default settings&lt;/span&gt; for new Python Tool specs. You can override these for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Default settings&lt;/span&gt; for new Python Tool specs. Defaults can be changed for each Tool specification separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="title">
            <string>Python (default settings)</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_5">
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_10">
+            <layout class="QVBoxLayout" name="verticalLayout_14">
              <item>
-              <widget class="QLineEdit" name="lineEdit_python_path">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>20</height>
-                </size>
-               </property>
+              <widget class="QRadioButton" name="radioButton_use_python_basic_console">
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter for Python Console. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute Python Tool specifications in basic Python REPL.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
-               <property name="placeholderText">
-                <string>Using current Python interpreter</string>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
+               <property name="text">
+                <string>Basic Console</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QToolButton" name="toolButton_browse_python">
+              <widget class="QRadioButton" name="radioButton_use_python_jupyter_console">
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Use Jupyter Console to execute Python Tool specs. Select a Python kernel spec to use this option.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
-               <property name="icon">
-                <iconset resource="resources/resources_icons.qrc">
-                 <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+               <property name="text">
+                <string>Jupyter Console</string>
                </property>
               </widget>
              </item>
             </layout>
            </item>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_11">
+            <widget class="Line" name="line_2">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout_5">
              <item>
-              <widget class="QCheckBox" name="checkBox_use_python_kernel">
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute Python Tool specifications in Python Console / Jupyter Console.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="text">
-                <string>Use jupyter kernel:</string>
-               </property>
-              </widget>
+              <layout class="QHBoxLayout" name="horizontalLayout_10">
+               <item>
+                <widget class="QLineEdit" name="lineEdit_python_path">
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter for Python Console. Leave blank to use the Python that was used in launching Spine Toolbox.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="placeholderText">
+                  <string>Using current Python interpreter</string>
+                 </property>
+                 <property name="clearButtonEnabled">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QToolButton" name="toolButton_browse_python">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </item>
              <item>
-              <widget class="CustomQComboBox" name="comboBox_python_kernel">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QComboBox::AdjustToMinimumContentsLength</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>Open Python kernel spec editor</string>
-               </property>
-               <property name="text">
-                <string>Kernel spec editor</string>
-               </property>
-              </widget>
+              <layout class="QHBoxLayout" name="horizontalLayout_11">
+               <item>
+                <widget class="CustomQComboBox" name="comboBox_python_kernel">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select a Python kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:600;&quot;&gt;default setting&lt;/span&gt; for new Python Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QComboBox::AdjustToMinimumContentsLength</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_open_kernel_editor_python">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Python kernel spec editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Kernel spec editor</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </item>
             </layout>
            </item>
@@ -1305,18 +1359,24 @@ p, li { white-space: pre-wrap; }
   <tabstop>textEdit_project_description</tabstop>
   <tabstop>lineEdit_gams_path</tabstop>
   <tabstop>toolButton_browse_gams</tabstop>
-  <tabstop>comboBox_julia_kernel</tabstop>
-  <tabstop>pushButton_open_kernel_editor_julia</tabstop>
+  <tabstop>radioButton_use_julia_basic_console</tabstop>
+  <tabstop>radioButton_use_julia_jupyter_console</tabstop>
   <tabstop>lineEdit_julia_path</tabstop>
   <tabstop>toolButton_browse_julia</tabstop>
   <tabstop>lineEdit_julia_project_path</tabstop>
   <tabstop>toolButton_browse_julia_project</tabstop>
+  <tabstop>comboBox_julia_kernel</tabstop>
+  <tabstop>pushButton_open_kernel_editor_julia</tabstop>
   <tabstop>pushButton_install_julia</tabstop>
   <tabstop>pushButton_add_up_spine_opt</tabstop>
-  <tabstop>comboBox_python_kernel</tabstop>
-  <tabstop>pushButton_open_kernel_editor_python</tabstop>
+  <tabstop>radioButton_use_python_basic_console</tabstop>
+  <tabstop>radioButton_use_python_jupyter_console</tabstop>
   <tabstop>lineEdit_python_path</tabstop>
   <tabstop>toolButton_browse_python</tabstop>
+  <tabstop>comboBox_python_kernel</tabstop>
+  <tabstop>pushButton_open_kernel_editor_python</tabstop>
+  <tabstop>lineEdit_conda_path</tabstop>
+  <tabstop>toolButton_browse_conda</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
   <tabstop>checkBox_object_tree_sticky_selection</tabstop>
   <tabstop>checkBox_relationship_items_follow</tabstop>
