@@ -2174,7 +2174,7 @@ class ToolboxUI(QMainWindow):
                 self.msg_error.emit("No kernel selected. Go to Settings->Tools to select a kernel for Julia")
                 return
             c = JupyterConsoleWidget(self, k_name, owner=None)
-            self._base_julia_console = ConsoleWindow(self, c)
+            self._base_julia_console = ConsoleWindow(self, c, "julia")
             self._base_julia_console.start()
         else:
             if self._base_julia_console.isMinimized():
@@ -2190,25 +2190,20 @@ class ToolboxUI(QMainWindow):
                 self.msg_error.emit("No kernel selected. Go to Settings->Tools to select a kernel for Python")
                 return
             c = JupyterConsoleWidget(self, k_name, owner=None)
-            self._base_python_console = ConsoleWindow(self, c)
+            self._base_python_console = ConsoleWindow(self, c, "python")
             self._base_python_console.start()
         else:
             if self._base_python_console.isMinimized():
                 self._base_python_console.showNormal()
             self._base_python_console.activateWindow()
 
-    def destroy_base_console(self, console_window_title):
-        """Destroys the Python or Julia Console window reference.
+    def destroy_base_python_console(self):
+        self._base_python_console.deleteLater()
+        self._base_python_console = None
 
-        Args:
-            console_window_title (str): Used in determining which console ref to destroy
-        """
-        if "python" in console_window_title.lower():
-            self._base_python_console.deleteLater()  # Not strictly necessary because of the Qt.WA_DeleteOnClose attr.
-            self._base_python_console = None
-        else:
-            self._base_julia_console.deleteLater()
-            self._base_julia_console = None
+    def destroy_julia_console(self):
+        self._base_julia_console.deleteLater()
+        self._base_julia_console = None
 
     def make_jupyter_console(self, item, kernel_name, connection_file):
         """Creates a new JupyterConsoleWidget for given connection file if none exists yet, and returns it.
