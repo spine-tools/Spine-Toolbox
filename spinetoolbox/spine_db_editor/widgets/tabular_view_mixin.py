@@ -303,7 +303,7 @@ class TabularViewMixin:
             data.update(db_map_data)
         return data
 
-    def _get_parameter_value_or_def_ids(self, item_type):
+    def _get_db_map_parameter_value_or_def_ids(self, item_type):
         """Returns a dict mapping db maps to a list of integer parameter (value or def) ids from the current class.
 
         Args:
@@ -329,7 +329,7 @@ class TabularViewMixin:
         Returns:
             dict
         """
-        db_map_ids = self._get_parameter_value_or_def_ids(item_type)
+        db_map_ids = self._get_db_map_parameter_value_or_def_ids(item_type)
         return {
             db_map: [self.db_mngr.get_item(db_map, item_type, id_) for id_ in ids] for db_map, ids in db_map_ids.items()
         }
@@ -353,7 +353,7 @@ class TabularViewMixin:
         if db_map_parameter_ids is None:
             db_map_parameter_ids = {
                 db_map: [(db_map, id_) for id_ in ids]
-                for db_map, ids in self._get_parameter_value_or_def_ids("parameter_definition").items()
+                for db_map, ids in self._get_db_map_parameter_value_or_def_ids("parameter_definition").items()
             }
         if db_map_alternative_ids is None:
             db_map_alternative_ids = {

@@ -662,7 +662,7 @@ class SpineDBManager(QObject):
         Returns:
             QSvgRenderer: requested renderer or None if no entity class was found
         """
-        entity_class = self.get_item(db_map, entity_type, entity_class_id, only_visible=True)
+        entity_class = self.get_item(db_map, entity_type, entity_class_id)
         if not entity_class:
             return None
         if entity_type == "object_class":
@@ -687,7 +687,7 @@ class SpineDBManager(QObject):
         renderer = self.entity_class_renderer(db_map, entity_type, entity_class_id, for_group=for_group)
         return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
-    def get_item(self, db_map, item_type, id_, only_visible=False):
+    def get_item(self, db_map, item_type, id_, only_visible=True):
         """Returns the item of the given type in the given db map that has the given id,
         or an empty dict if not found.
 
@@ -707,10 +707,10 @@ class SpineDBManager(QObject):
         fetcher.fetch_all(item_types={item_type})
         return item or fetcher.get_item(item_type, id_)
 
-    def get_field(self, db_map, item_type, id_, field, only_visible=False):
+    def get_field(self, db_map, item_type, id_, field, only_visible=True):
         return self.get_item(db_map, item_type, id_, only_visible=only_visible).get(field)
 
-    def get_items(self, db_map, item_type, only_visible=False):
+    def get_items(self, db_map, item_type, only_visible=True):
         """Returns a list of the items of the given type in the given db map.
 
         Args:
@@ -728,7 +728,7 @@ class SpineDBManager(QObject):
         fetcher.fetch_all(item_types={item_type})
         return items + list(fetcher.cache.get(item_type, {}).values())
 
-    def get_items_by_field(self, db_map, item_type, field, value, only_visible=False):
+    def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
         """Returns a list of items of the given type in the given db map that have the given value
         for the given field.
 
@@ -743,7 +743,7 @@ class SpineDBManager(QObject):
         """
         return [x for x in self.get_items(db_map, item_type, only_visible=only_visible) if x.get(field) == value]
 
-    def get_item_by_field(self, db_map, item_type, field, value, only_visible=False):
+    def get_item_by_field(self, db_map, item_type, field, value, only_visible=True):
         """Returns the first item of the given type in the given db map
         that has the given value for the given field
         Returns an empty dictionary if none found.
@@ -813,7 +813,7 @@ class SpineDBManager(QObject):
         Returns:
             any
         """
-        item = self.get_item(db_map, item_type, id_, only_visible=True)
+        item = self.get_item(db_map, item_type, id_)
         if not item:
             return None
         value_field, type_field = {
@@ -924,7 +924,7 @@ class SpineDBManager(QObject):
             index (int): The value item index
             role (int, optional)
         """
-        item = self.get_item(db_map, "parameter_value_list", id_, only_visible=True)
+        item = self.get_item(db_map, "parameter_value_list", id_)
         if not item:
             return None
         self._split_and_parse_value_list(item)
@@ -942,7 +942,7 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value_list id
             role (int, optional)
         """
-        item = self.get_item(db_map, "parameter_value_list", id_, only_visible=True)
+        item = self.get_item(db_map, "parameter_value_list", id_)
         if not item:
             return []
         self._split_and_parse_value_list(item)
@@ -951,7 +951,7 @@ class SpineDBManager(QObject):
         return [self._format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
-        alternative_id_list = self.get_item(db_map, "scenario", scen_id, only_visible=True).get("alternative_id_list")
+        alternative_id_list = self.get_item(db_map, "scenario", scen_id).get("alternative_id_list")
         if not alternative_id_list:
             return []
         return [int(id_) for id_ in alternative_id_list.split(",")]
@@ -1598,7 +1598,7 @@ class SpineDBManager(QObject):
                 d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
         return d
 
-    def find_cascading_relationship_classes(self, db_map_ids, only_visible=False):
+    def find_cascading_relationship_classes(self, db_map_ids, only_visible=True):
         """Finds and returns cascading relationship classes for the given object_class ids."""
         db_map_cascading_data = dict()
         for db_map, object_class_ids in db_map_ids.items():
@@ -1620,7 +1620,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_entities(self, db_map_ids, item_type, only_visible=False):
+    def find_cascading_entities(self, db_map_ids, item_type, only_visible=True):
         """Finds and returns cascading entities for the given entity_class ids."""
         # FIXME: Use this to cascade refresh!!!
         db_map_cascading_data = dict()
@@ -1636,7 +1636,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_relationships(self, db_map_ids, only_visible=False):
+    def find_cascading_relationships(self, db_map_ids, only_visible=True):
         """Finds and returns cascading relationships for the given object ids."""
         db_map_cascading_data = dict()
         for db_map, object_ids in db_map_ids.items():
@@ -1657,7 +1657,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_parameter_data(self, db_map_ids, item_type, only_visible=False):
+    def find_cascading_parameter_data(self, db_map_ids, item_type, only_visible=True):
         """Finds and returns cascading parameter definitions or values for the given entity_class ids."""
         db_map_cascading_data = dict()
         for db_map, entity_class_ids in db_map_ids.items():
@@ -1681,7 +1681,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_parameter_definitions_by_value_list(self, db_map_ids, only_visible=False):
+    def find_cascading_parameter_definitions_by_value_list(self, db_map_ids, only_visible=True):
         """Finds and returns cascading parameter definitions for the given parameter_value_list ids."""
         db_map_cascading_data = dict()
         for db_map, value_list_ids in db_map_ids.items():
@@ -1696,7 +1696,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_parameter_definitions_by_removed_value_list(self, db_map_ids, only_visible=False):
+    def find_cascading_parameter_definitions_by_removed_value_list(self, db_map_ids, only_visible=True):
         """Finds and returns cascading parameter definitions for the given parameter_value_list ids that have been
         removed."""
         db_map_cascading_data = dict()
@@ -1708,7 +1708,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_parameter_values_by_entity(self, db_map_ids, only_visible=False):
+    def find_cascading_parameter_values_by_entity(self, db_map_ids, only_visible=True):
         """Finds and returns cascading parameter values for the given entity ids."""
         db_map_cascading_data = dict()
         for db_map, entity_ids in db_map_ids.items():
@@ -1730,7 +1730,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_parameter_values_by_definition(self, db_map_ids, only_visible=False):
+    def find_cascading_parameter_values_by_definition(self, db_map_ids, only_visible=True):
         """Finds and returns cascading parameter values for the given parameter_definition ids."""
         db_map_cascading_data = dict()
         for db_map, param_def_ids in db_map_ids.items():
@@ -1745,7 +1745,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_groups_by_entity(self, db_map_ids, only_visible=False):
+    def find_groups_by_entity(self, db_map_ids, only_visible=True):
         """Finds and returns groups for the given entity ids."""
         db_map_group_data = dict()
         for db_map, entity_ids in db_map_ids.items():
@@ -1756,7 +1756,7 @@ class SpineDBManager(QObject):
             ]
         return db_map_group_data
 
-    def find_groups_by_member(self, db_map_ids, only_visible=False):
+    def find_groups_by_member(self, db_map_ids, only_visible=True):
         """Finds and returns groups for the given entity ids."""
         db_map_group_data = dict()
         for db_map, member_ids in db_map_ids.items():
@@ -1767,7 +1767,7 @@ class SpineDBManager(QObject):
             ]
         return db_map_group_data
 
-    def find_cascading_parameter_values_by_alternative(self, db_map_ids, only_visible=False):
+    def find_cascading_parameter_values_by_alternative(self, db_map_ids, only_visible=True):
         """Finds and returns cascading parameter values for the given alternative ids."""
         db_map_cascading_data = dict()
         for db_map, alt_ids in db_map_ids.items():
@@ -1781,7 +1781,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_features_by_parameter_definition(self, db_map_ids, only_visible=False):
+    def find_cascading_features_by_parameter_definition(self, db_map_ids, only_visible=True):
         """Finds and returns cascading features for the given parameter definition ids."""
         db_map_cascading_data = dict()
         for db_map, ids in db_map_ids.items():
@@ -1797,7 +1797,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_features_by_parameter_value_list(self, db_map_ids, only_visible=False):
+    def find_cascading_features_by_parameter_value_list(self, db_map_ids, only_visible=True):
         """Finds and returns cascading features for the given parameter value list ids."""
         db_map_cascading_data = dict()
         for db_map, ids in db_map_ids.items():
@@ -1812,7 +1812,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def find_cascading_tool_features_by_feature(self, db_map_ids, only_visible=False):
+    def find_cascading_tool_features_by_feature(self, db_map_ids, only_visible=True):
         """Finds and returns cascading tool features for the given feature ids."""
         db_map_cascading_data = dict()
         for db_map, ids in db_map_ids.items():
@@ -1821,7 +1821,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def _refresh_scenario_alternatives(self, db_map_data, only_visible=False):
+    def _refresh_scenario_alternatives(self, db_map_data, only_visible=True):
         """Refreshes cached scenarios when updating scenario alternatives.
 
         Args:
@@ -1854,9 +1854,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationship_classes(
-            self.db_map_ids(db_map_data), only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_relationship_classes(self.db_map_ids(db_map_data))
         self.relationship_classes_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_relationships_by_object(self, db_map_data):
@@ -1865,7 +1863,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data), only_visible=True)
+        db_map_cascading_data = self.find_cascading_relationships(self.db_map_ids(db_map_data))
         self.relationships_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_definitions(self, db_map_data):
@@ -1874,9 +1872,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(
-            self.db_map_ids(db_map_data), "parameter_definition", only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter_definition")
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
@@ -1885,9 +1881,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(
-            self.db_map_ids(db_map_data), only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self.db_map_ids(db_map_data))
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_definitions_by_removed_value_list(self, db_map_data):
@@ -1897,7 +1891,7 @@ class SpineDBManager(QObject):
             db_map_data (dict): lists of removed items keyed by DiffDatabaseMapping
         """
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_removed_value_list(
-            self.db_map_ids(db_map_data), only_visible=True
+            self.db_map_ids(db_map_data)
         )
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
@@ -1907,9 +1901,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_data(
-            self.db_map_ids(db_map_data), "parameter_value", only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_parameter_data(self.db_map_ids(db_map_data), "parameter_value")
         self.parameter_values_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_values_by_entity(self, db_map_data):
@@ -1918,9 +1910,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(
-            self.db_map_ids(db_map_data), only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self.db_map_ids(db_map_data))
         self.parameter_values_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_values_by_alternative(self, db_map_data):
@@ -1929,9 +1919,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(
-            self.db_map_ids(db_map_data), only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_parameter_values_by_alternative(self.db_map_ids(db_map_data))
         self.parameter_values_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_parameter_values_by_definition(self, db_map_data):
@@ -1940,9 +1928,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(
-            self.db_map_ids(db_map_data), only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self.db_map_ids(db_map_data))
         self.parameter_values_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_features_by_paremeter_definition(self, db_map_data):
@@ -1951,9 +1937,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_features_by_parameter_definition(
-            self.db_map_ids(db_map_data), only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_features_by_parameter_definition(self.db_map_ids(db_map_data))
         self.features_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_features_by_paremeter_value_list(self, db_map_data):
@@ -1962,9 +1946,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_features_by_parameter_value_list(
-            self.db_map_ids(db_map_data), only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_features_by_parameter_value_list(self.db_map_ids(db_map_data))
         self.features_updated.emit(db_map_cascading_data)
 
     def _cascade_refresh_tool_features_by_feature(self, db_map_data):
@@ -1973,9 +1955,7 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of updated items keyed by DiffDatabaseMapping
         """
-        db_map_cascading_data = self.find_cascading_tool_features_by_feature(
-            self.db_map_ids(db_map_data), only_visible=True
-        )
+        db_map_cascading_data = self.find_cascading_tool_features_by_feature(self.db_map_ids(db_map_data))
         self.tool_features_updated.emit(db_map_cascading_data)
 
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):

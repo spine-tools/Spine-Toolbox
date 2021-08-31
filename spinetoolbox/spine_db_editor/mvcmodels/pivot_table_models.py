@@ -131,9 +131,7 @@ class PivotTableModelBase(QAbstractTableModel):
         if not data:
             return
         self.model.update_model(data)
-        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
-        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
-        self.dataChanged.emit(top_left, bottom_right)
+        self._emit_all_data_changed()
 
     def add_to_model(self, db_map_data):
         if not db_map_data:
@@ -149,6 +147,12 @@ class PivotTableModelBase(QAbstractTableModel):
             self.beginInsertColumns(QModelIndex(), first, first + column_count - 1)
             self._data_column_count += column_count
             self.endInsertColumns()
+        self._emit_all_data_changed()
+
+    def _emit_all_data_changed(self):
+        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
+        self.dataChanged.emit(top_left, bottom_right)
 
     def remove_from_model(self, data):
         if not data:
@@ -526,7 +530,7 @@ class TopLeftHeaderItem:
 
     def _get_header_data_from_db(self, item_type, header_id, field_name, role):
         db_map, id_ = header_id
-        item = self.db_mngr.get_item(db_map, item_type, id_, only_visible=True)
+        item = self.db_mngr.get_item(db_map, item_type, id_)
         if role in (Qt.DisplayRole, Qt.EditRole):
             return item.get(field_name)
         if role == Qt.ToolTipRole:
@@ -749,13 +753,9 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         _, parameter_id = header_ids[-3]
         _, alternative_id = header_ids[-2]
         db_map = header_ids[-1]
-        object_names = [self.db_mngr.get_item(db_map, "object", id_, only_visible=True)["name"] for id_ in objects_ids]
-        parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id, only_visible=True).get(
-            "parameter_name", ""
-        )
-        alternative_name = self.db_mngr.get_item(db_map, "alternative", alternative_id, only_visible=True).get(
-            "name", ""
-        )
+        object_names = [self.db_mngr.get_item(db_map, "object", id_)["name"] for id_ in objects_ids]
+        parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("parameter_name", "")
+        alternative_name = self.db_mngr.get_item(db_map, "alternative", alternative_id).get("name", "")
         return object_names, parameter_name, alternative_name, db_map.codename
 
     def index_name(self, index):
@@ -1153,11 +1153,9 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     def _batch_set_relationship_data(self, row_map, column_map, data, values):
         def relationship_to_add(db_map, header_ids):
             rel_cls_name = self.db_mngr.get_item(
-                db_map, "relationship_class", self._parent.current_class_id.get(db_map), only_visible=True
+                db_map, "relationship_class", self._parent.current_class_id.get(db_map)
             )["name"]
-            object_names = [
-                self.db_mngr.get_item(db_map, "object", id_, only_visible=True)["name"] for id_ in header_ids
-            ]
+            object_names = [self.db_mngr.get_item(db_map, "object", id_)["name"] for id_ in header_ids]
             name = rel_cls_name + "_" + "__".join(object_names)
             return dict(object_id_list=list(header_ids), class_id=self._parent.current_class_id.get(db_map), name=name)
 
@@ -1327,7 +1325,6 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false.
         """
-
         if source_row < self.sourceModel().headerRowCount() or source_row == self.sourceModel().rowCount() - 1:
             return True
         if not self.sourceModel().model.pivot_rows:

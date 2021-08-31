@@ -67,9 +67,7 @@ class SingleParameterModel(MinimalTableModel):
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id, only_visible=True)[
-            "name"
-        ]
+        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
 
     @property
     def entity_class_id_key(self):
@@ -121,7 +119,7 @@ class SingleParameterModel(MinimalTableModel):
         return self.db_item_from_id(id_)
 
     def db_item_from_id(self, id_):
-        return self.db_mngr.get_item(self.db_map, self.item_type, id_, only_visible=True)
+        return self.db_mngr.get_item(self.db_map, self.item_type, id_)
 
     def db_items(self):
         return [self._db_item(row) for row in range(self.rowCount())]
@@ -197,7 +195,7 @@ class SingleParameterModel(MinimalTableModel):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
-            item = self.db_mngr.get_item(self.db_map, self.item_type, id_, only_visible=True)
+            item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ToolTipRole:
                 description = self.get_field_item(field, item).get("description", None)
                 if description not in (None, ""):
@@ -231,7 +229,7 @@ class SingleParameterModel(MinimalTableModel):
         raise NotImplementedError()
 
     def _filter_accepts_row(self, row):
-        item = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row], only_visible=True)
+        item = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])
         return self.filter_accepts_item(item)
 
     def filter_accepts_item(self, item):
@@ -272,7 +270,7 @@ class SingleParameterModel(MinimalTableModel):
         if id_field_item_type is None:
             return {}
         id_field, item_type = id_field_item_type
-        data = self.db_mngr.get_item(self.db_map, self.item_type, id_, only_visible=True)
+        data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
         item_id = data.get(id_field)
         return self.db_mngr.get_item(self.db_map, item_type, item_id)
 

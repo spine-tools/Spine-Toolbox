@@ -195,7 +195,7 @@ class LeafItem(NonLazyTreeItem):
     def item_data(self):
         if not self.id:
             return self._item_data
-        return self.db_mngr.get_item(self.db_map, self.item_type, self.id, only_visible=True)
+        return self.db_mngr.get_item(self.db_map, self.item_type, self.id)
 
     @property
     def name(self):

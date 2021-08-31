@@ -171,7 +171,7 @@ class MultiDBTreeItem(TreeItem):
     def db_map_data(self, db_map):
         """Returns data for this item in given db_map or None if not present."""
         id_ = self.db_map_id(db_map)
-        return self.db_mngr.get_item(db_map, self.item_type, id_, only_visible=True)
+        return self.db_mngr.get_item(db_map, self.item_type, id_)
 
     def db_map_data_field(self, db_map, field, default=None):
         """Returns field from data for this item in given db_map or None if not found."""
@@ -271,7 +271,7 @@ class MultiDBTreeItem(TreeItem):
             return []
         return [
             x["id"]
-            for x in self.db_mngr.get_items(db_map, self.fetch_item_type, only_visible=True)
+            for x in self.db_mngr.get_items(db_map, self.fetch_item_type)
             if x["id"] not in self._child_map.get(db_map, {}) and self.fetch_successful(db_map, x)
         ]
 
