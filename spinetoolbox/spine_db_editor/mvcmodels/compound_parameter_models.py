@@ -69,7 +69,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
 
     def fetch_successful(self, db_map, item):
-        return not self._filter_class_ids or item["entity_class_id"] in self._filter_class_ids.get(db_map, set())
+        model = self._create_single_model(db_map, item["entity_class_id"])
+        return self.filter_accepts_model(model) and model.filter_accepts_item(item)
 
     def _make_header(self):
         raise NotImplementedError()
@@ -272,30 +273,30 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self._invalidate_filter()
 
     @Slot(str, dict)
-    def set_auto_filter(self, field, auto_filter):
+    def set_auto_filter(self, field, values):
         """Updates and applies the auto filter.
 
         Args:
             field (str): the field name
-            auto_filter (dict): mapping db_map to entity_class id to accepted values for the field
+            values (dict): mapping db_map to entity_class id to accepted values for the field
         """
-        self.set_compound_auto_filter(field, auto_filter)
+        self._set_compound_auto_filter(field, values)
         for model in self.accepted_single_models():
-            self.set_single_auto_filter(model, field)
+            self._set_single_auto_filter(model, field)
 
-    def set_compound_auto_filter(self, field, auto_filter):
+    def _set_compound_auto_filter(self, field, values):
         """Sets the auto filter for given column in the compound model.
 
         Args:
             field (str): the field name
-            auto_filter (dict): maps tuple (database map, entity_class id) to list of accepted ids for the field
+            values (dict): maps tuple (database map, entity_class id) to list of accepted ids for the field
         """
-        if self._auto_filter.setdefault(field, {}) == auto_filter:
+        if self._auto_filter.setdefault(field, {}) == values:
             return
-        self._auto_filter[field] = auto_filter
+        self._auto_filter[field] = values
         self._invalidate_filter()
 
-    def set_single_auto_filter(self, model, field):
+    def _set_single_auto_filter(self, model, field):
         """Sets the auto filter for given column in the given single model.
 
         Args:
@@ -306,10 +307,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             bool: True if the auto-filtered values were updated, None otherwise
         """
         values = self._auto_filter[field].get(model.db_map, {}).get(model.entity_class_id, {})
-        if values == model._auto_filter.get(field, {}):
-            return
-        model._auto_filter[field] = values
-        self._invalidate_filter()
+        if model.set_auto_filter(field, values):
+            self._invalidate_filter()
 
     def _row_map_for_model(self, model):
         """Returns the row map for the given model.
@@ -386,7 +385,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.empty_model.receive_parameter_data_added(db_map_data)
 
     def _create_single_model(self, db_map, entity_class_id):
-        return self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
+        model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
+        for field in self._auto_filter:
+            self._set_single_auto_filter(model, field)
+        return model
 
     def _create_and_append_single_model(self, db_map, entity_class_id, ids):
         model = self._create_single_model(db_map, entity_class_id)
