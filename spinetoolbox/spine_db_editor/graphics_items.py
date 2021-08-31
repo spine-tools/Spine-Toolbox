@@ -107,7 +107,7 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def entity_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["name"]
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id, only_visible=True)["name"]
 
     @property
     def entity_class_type(self):
@@ -115,11 +115,13 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def entity_class_id(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)["class_id"]
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id, only_visible=True)["class_id"]
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
+        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id, only_visible=True)[
+            "name"
+        ]
 
     @property
     def db_map(self):
@@ -147,7 +149,7 @@ class EntityItem(QGraphicsRectItem):
 
     def db_map_data(self, _db_map):
         # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
-        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id)
+        return self.db_mngr.get_item(self.db_map, self.entity_type, self.entity_id, only_visible=True)
 
     def db_map_id(self, _db_map):
         # NOTE: Needed by EditObjectsDialog and EditRelationshipsDialog
@@ -316,19 +318,21 @@ class RelationshipItem(EntityItem):
 
     @property
     def object_class_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship_class", self.entity_class_id)["object_class_id_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship_class", self.entity_class_id, only_visible=True)[
+            "object_class_id_list"
+        ]
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_name_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id, only_visible=True)["object_name_list"]
 
     @property
     def object_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["object_id_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id, only_visible=True)["object_id_list"]
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id)["class_name"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.entity_id, only_visible=True)["class_name"]
 
     @property
     def db_representation(self):

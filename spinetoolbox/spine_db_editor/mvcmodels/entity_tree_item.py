@@ -206,7 +206,7 @@ class MemberObjectClassItem(ObjectClassItem):
     def db_map_data(self, db_map):
         """Returns data for this item as if it was indeed an object class."""
         id_ = self.db_map_id(db_map)
-        return self.db_mngr.get_item(db_map, super().item_type, id_)
+        return self.db_mngr.get_item(db_map, super().item_type, id_, only_visible=True)
 
     def _display_icon(self, for_group=False):
         """Returns icon for this item as if it was indeed an object class."""

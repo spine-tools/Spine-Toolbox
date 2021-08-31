@@ -67,7 +67,9 @@ class SingleParameterModel(MinimalTableModel):
 
     @property
     def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id)["name"]
+        return self.db_mngr.get_item(self.db_map, self.entity_class_type, self.entity_class_id, only_visible=True)[
+            "name"
+        ]
 
     @property
     def entity_class_id_key(self):
@@ -119,7 +121,7 @@ class SingleParameterModel(MinimalTableModel):
         return self.db_item_from_id(id_)
 
     def db_item_from_id(self, id_):
-        return self.db_mngr.get_item(self.db_map, self.item_type, id_)
+        return self.db_mngr.get_item(self.db_map, self.item_type, id_, only_visible=True)
 
     def db_items(self):
         return [self._db_item(row) for row in range(self.rowCount())]
@@ -195,7 +197,7 @@ class SingleParameterModel(MinimalTableModel):
             if field == "database":
                 return self.db_map.codename
             id_ = self._main_data[index.row()]
-            item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+            item = self.db_mngr.get_item(self.db_map, self.item_type, id_, only_visible=True)
             if role == Qt.ToolTipRole:
                 description = self.get_field_item(field, item).get("description", None)
                 if description not in (None, ""):

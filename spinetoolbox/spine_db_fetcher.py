@@ -125,7 +125,7 @@ class SpineDBFetcher(QObject):
             if any(fetch_successful(x) for x in chunk):
                 for k in keys:
                     del items[k]
-                signal = self._db_mngr.added_signals.get(item_type)
+                signal = self._db_mngr.added_signals[item_type]
                 signal.emit({self._db_map: chunk})
                 return
         while True:
@@ -134,7 +134,7 @@ class SpineDBFetcher(QObject):
                 self._fetched[item_type] = True
                 break
             if any(fetch_successful(x) for x in chunk):
-                signal = self._db_mngr.added_signals.get(item_type)
+                signal = self._db_mngr.added_signals[item_type]
                 signal.emit({self._db_map: chunk})
                 return
             self.cache_items(item_type, chunk)
@@ -168,6 +168,11 @@ class SpineDBFetcher(QObject):
 
     @busy_effect
     def _do_fetch_all(self, item_types, iter_chunk_size):
+        class _Parent:
+            def fetch_successful(self, *args):
+                return False
+
+        parent = _Parent()
         for item_type in item_types:
-            self._do_fetch_more(item_type, lambda _: False, iter_chunk_size)
+            self._do_fetch_more(item_type, parent, iter_chunk_size)
         self._fetch_all_finished.emit()

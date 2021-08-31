@@ -61,7 +61,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
         if not self.id:
             return self._name
         try:
-            return self.db_mngr.get_item(self.db_map, "parameter_value_list", self.id)["name"]
+            return self.db_mngr.get_item(self.db_map, "parameter_value_list", self.id, only_visible=True)["name"]
         except KeyError:
             return "<removed>"
 

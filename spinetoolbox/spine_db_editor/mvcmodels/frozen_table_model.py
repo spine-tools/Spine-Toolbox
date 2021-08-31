@@ -80,11 +80,11 @@ class FrozenTableModel(QAbstractItemModel):
             index_id = self._data[0][index.column()]
             if index_id == "parameter":
                 db_map, id_ = header_id
-                item = self.db_mngr.get_item(db_map, "parameter_definition", id_)
+                item = self.db_mngr.get_item(db_map, "parameter_definition", id_, only_visible=True)
                 name = item.get("parameter_name")
             elif index_id == "alternative":
                 db_map, id_ = header_id
-                item = self.db_mngr.get_item(db_map, "alternative", id_)
+                item = self.db_mngr.get_item(db_map, "alternative", id_, only_visible=True)
                 name = item.get("name")
             elif index_id == "index":
                 _, index = header_id
@@ -95,7 +95,7 @@ class FrozenTableModel(QAbstractItemModel):
                 name = header_id.codename
             else:
                 db_map, id_ = header_id
-                item = self.db_mngr.get_item(db_map, "object", id_)
+                item = self.db_mngr.get_item(db_map, "object", id_, only_visible=True)
                 name = item.get("name")
             if role == Qt.DisplayRole:
                 return name

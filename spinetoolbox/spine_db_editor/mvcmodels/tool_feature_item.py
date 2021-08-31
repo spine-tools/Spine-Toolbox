@@ -84,7 +84,7 @@ class FeatureLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def item_data(self):
         if not self.id:
             return self._item_data
-        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id, only_visible=True)
         if not item_data:
             return {}
         name = self.model.make_feature_name(item_data["entity_class_name"], item_data["parameter_definition_name"])
@@ -200,7 +200,7 @@ class ToolFeatureLeafItem(LeafItem):
 
     @property
     def item_data(self):
-        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id, only_visible=True)
         if not item_data:
             return {}
         feature_data = self.db_mngr.get_item(self.db_map, "feature", item_data["feature_id"])
@@ -290,7 +290,7 @@ class ToolFeatureMethodLeafItem(LastGrayMixin, LeafItem):
     def item_data(self):
         if not self.id:
             return self._item_data
-        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+        item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id, only_visible=True)
         if not item_data:
             return {}
         name = self.db_mngr.get_value_list_item(

@@ -171,7 +171,7 @@ class MultiDBTreeItem(TreeItem):
     def db_map_data(self, db_map):
         """Returns data for this item in given db_map or None if not present."""
         id_ = self.db_map_id(db_map)
-        return self.db_mngr.get_item(db_map, self.item_type, id_)
+        return self.db_mngr.get_item(db_map, self.item_type, id_, only_visible=True)
 
     def db_map_data_field(self, db_map, field, default=None):
         """Returns field from data for this item in given db_map or None if not found."""
@@ -271,7 +271,7 @@ class MultiDBTreeItem(TreeItem):
             return []
         return [
             x["id"]
-            for x in self.db_mngr.get_items(db_map, self.fetch_item_type)
+            for x in self.db_mngr.get_items(db_map, self.fetch_item_type, only_visible=True)
             if x["id"] not in self._child_map.get(db_map, {}) and self.fetch_successful(db_map, x)
         ]
 
@@ -279,12 +279,10 @@ class MultiDBTreeItem(TreeItem):
         if self.can_fetch_more():
             self.fetch_more()
 
-    def get_all_children_ids(self, db_map):
+    def get_children_ids(self, db_map):
         if self.fetch_item_type is None:
             return []
-        return [
-            x["id"] for x in self.db_mngr.get_items(db_map, self.fetch_item_type) if self.fetch_successful(db_map, x)
-        ]
+        return list(self._child_map.get(db_map, {}))
 
     def append_children_by_id(self, db_map_ids):
         """
