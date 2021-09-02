@@ -87,11 +87,15 @@ class SpineDBFetcher(QObject):
         items = self.cache.get(item_type, OrderedDict())
         try:
             key = (next(reversed(items), None), len(items))
-            cache_key, cache_result = self._can_fetch_more_cache.get((item_type, parent), (None, None))
+            try:
+                fetch_id = parent.fetch_id()
+            except AttributeError:
+                fetch_id = parent
+            cache_key, cache_result = self._can_fetch_more_cache.get((item_type, fetch_id), (None, None))
             if key == cache_key:
                 return cache_result
             result = any(fetch_successful(x) for x in items.values())
-            self._can_fetch_more_cache[item_type, parent] = (key, result)
+            self._can_fetch_more_cache[item_type, fetch_id] = (key, result)
             return result
         except RuntimeError:
             # OrderedDict mutated during iteration

@@ -72,6 +72,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         model = self._create_single_model(db_map, item["entity_class_id"])
         return self.filter_accepts_model(model) and model.filter_accepts_item(item)
 
+    def fetch_id(self):
+        return str(self.__dict__)
+
     def _make_header(self):
         raise NotImplementedError()
 
