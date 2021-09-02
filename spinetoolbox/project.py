@@ -496,7 +496,7 @@ class SpineToolboxProject(MetaObject):
             return False
         if name_status == ItemNameStatus.SHORT_NAME_EXISTS:
             msg = f"Project item using directory <b>{shorten(new_name)}</b> already exists"
-            self._logger.error_box("Invalid name", msg)
+            self._logger.error_box.emit("Invalid name", msg)
             return False
         item = self._project_items.pop(previous_name)
         resources_to_predecessors = item.resources_for_direct_predecessors()
