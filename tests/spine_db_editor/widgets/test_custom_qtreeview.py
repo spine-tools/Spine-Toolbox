@@ -117,7 +117,7 @@ class _EntityTreeViewTestBase(_Base):
             add_items_action.trigger()
             arguments_list = mock_dialog.call_args_list
         for arguments in arguments_list:
-            add_items_dialog = dialog_class(*arguments.args)
+            add_items_dialog = dialog_class(*arguments[0])
             with signal_waiter(add_items_dialog.model.rowsInserted) as waiter:
                 QApplication.processEvents()
                 waiter.wait()
@@ -150,7 +150,7 @@ class _EntityTreeViewTestBase(_Base):
             edit_items_action.trigger()
             arguments_list = mock_dialog.call_args_list
         for arguments in arguments_list:
-            edit_items_dialog = dialog_class(*arguments.args)
+            edit_items_dialog = dialog_class(*arguments[0])
             for column, entry in new_entries.items():
                 item_name_index = edit_items_dialog.model.index(0, column)
                 edit_items_dialog.set_model_data(item_name_index, entry)
@@ -168,7 +168,7 @@ class _EntityTreeViewTestBase(_Base):
             remove_items_action.trigger()
             arguments_list = mock_dialog.call_args_list
         for arguments in arguments_list:
-            edit_items_dialog = dialog_class(*arguments.args)
+            edit_items_dialog = dialog_class(*arguments[0])
             edit_items_dialog.accept()
 
     def _remove_object_class(self):
