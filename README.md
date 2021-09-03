@@ -39,11 +39,11 @@ This works best for users that want to just use Spine Toolbox but also keep it u
 
 2. Open a terminal (e.g., Command Prompt on Windows).
 
-3. Get the latest version of `pip` by running - pip is a package manager for Python
+3. Get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-4. Install [pipx](https://pypa.github.io/pipx/) - pipx allows to create an isolated environment for Spine Toolbox to avoid package conflicts
+4. Install [pipx](https://pypa.github.io/pipx/) (pipx allows to create an isolated environment for Spine Toolbox to avoid package conflicts with other Python tools)
 
         python -m pip install pipx
         python -m pipx ensurepath
