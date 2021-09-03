@@ -194,6 +194,9 @@ class MemberObjectClassItem(ObjectClassItem):
 
     item_type = "members"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     @property
     def display_id(self):
         # Return an empty tuple so we never insert anything before this item (see _insert_children_sorted)

@@ -36,7 +36,7 @@ from PySide2.QtWidgets import (
     QSplitter,
     QDialogButtonBox,
 )
-from PySide2.QtCore import Slot, Qt, QSize
+from PySide2.QtCore import Slot, Qt, QSize, QModelIndex
 from PySide2.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
@@ -372,7 +372,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         self.model.header.pop(column)
         self.model.removeColumns(column, 1)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector")
+    @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
             return
@@ -543,7 +543,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.model.set_default_row(**defaults)
         self.model.clear()
 
-    @Slot("QModelIndex", "QModelIndex", "QVector")
+    @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
             return
