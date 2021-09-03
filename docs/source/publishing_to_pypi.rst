@@ -1,9 +1,9 @@
-.. _Publising to PyPI:
+.. _Publishing to PyPI:
 
-Publising to PyPI
-=================
+Publishing to PyPI
+==================
 
-This document describes the prerequisities and workflow to publish Spine Toolbox
+This document describes the prerequisites and workflow to publish Spine Toolbox
 (or any Python package) to `The Python Package Index (PyPI) <https://pypi.org>`_.
 For a complete tutorial, see `Packaging Python Projects <https://packaging.python.org/tutorials/packaging-projects/>`_.
 
