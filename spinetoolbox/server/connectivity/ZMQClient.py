@@ -41,7 +41,8 @@ class ZMQClient:
         """
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.REQ)
-        self._socket.connect(protocol+"://"+remoteHost+":"+str(remotePort))
+        ret=self._socket.connect(protocol+"://"+remoteHost+":"+str(remotePort))
+        #print("ZMQClient(): socket.connect() return value: %d"%ret)
         print("ZMQClient(): Connection established to %s:%d"%(remoteHost,remotePort))
 
 
@@ -56,10 +57,13 @@ class ZMQClient:
         """
 
         #check if folder and file exist
-        print("ZMQClient.send(): path exists: %s file exists: %s."%(os.path.isdir(fileLocation),os.path.exists(fileLocation+fileName)))
+        print("ZMQClient.send(): path %s exists: %s file %s exists: %s."%(fileLocation,os.path.isdir(fileLocation),fileName,os.path.exists(fileLocation+fileName)))
         if os.path.isdir(fileLocation)==False or os.path.exists(fileLocation+fileName)==False:
-            print("ZMQClient.send(): invalid path or file.")
+            #print("ZMQClient.send(): invalid path or file.")
             raise ValueError("invalid path or file.")
+
+        if text == None:
+           raise ValueError("invalid input text")
 
         #Read file content
         f=open(fileLocation+fileName,'rb')

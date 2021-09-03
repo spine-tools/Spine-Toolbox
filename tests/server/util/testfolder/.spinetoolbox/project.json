@@ -1,0 +1,57 @@
+{
+    "project": {
+        "version": 6,
+        "name": "helloworld",
+        "description": "",
+        "specifications": {
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/helloworld.json"
+                },
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/helloworld2.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "from": [
+                    "Data Connection 1",
+                    "left"
+                ],
+                "to": [
+                    "helloworld",
+                    "right"
+                ]
+            }
+        ]
+    },
+    "items": {
+        "helloworld": {
+            "type": "Tool",
+            "description": "",
+            "x": -91.6640625,
+            "y": -5.609375,
+            "specification": "helloworld2",
+            "execute_in_work": true,
+            "cmd_line_args": []
+        },
+        "Data Connection 1": {
+            "type": "Data Connection",
+            "description": "",
+            "x": 62.7109375,
+            "y": 8.609375,
+            "references": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "input2.txt"
+                }
+            ]
+        }
+    }
+}
