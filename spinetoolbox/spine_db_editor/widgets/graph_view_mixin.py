@@ -254,7 +254,7 @@ class GraphViewMixin:
         self._progress_bar.set_layout_generator(layout_gen)
         self._progress_bar.show()
         layout_gen.layout_available.connect(self._complete_graph)
-        layout_gen.finished.connect(self.layout_gens.pop)
+        layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_))  # Lambda to avoid issues in Python 3.7
         self._thread_pool.start(layout_gen)
 
     def _stop_layout_generators(self):
