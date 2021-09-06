@@ -483,7 +483,8 @@ class GraphViewMixin:
 
     def add_objects_at_position(self, pos):
         self._pos_for_added_objects = pos
-        dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps)
+        parent_item = self.object_tree_model.root_item
+        dialog = AddObjectsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def get_pdf_file_path(self):
