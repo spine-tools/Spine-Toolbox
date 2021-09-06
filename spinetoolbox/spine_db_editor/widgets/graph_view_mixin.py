@@ -336,18 +336,18 @@ class GraphViewMixin:
         """Updates data for graph according to selection in trees."""
         object_ids, relationship_ids = self._get_selected_entity_ids()
         relationship_ids.update(self.added_relationship_ids)
-        prunned_entity_ids = {id_ for ids in self.ui.graphicsView.prunned_entity_ids.values() for id_ in ids}
-        object_ids -= prunned_entity_ids
-        relationship_ids -= prunned_entity_ids
+        pruned_entity_ids = {id_ for ids in self.ui.graphicsView.pruned_entity_ids.values() for id_ in ids}
+        object_ids -= pruned_entity_ids
+        relationship_ids -= pruned_entity_ids
         relationships = self._get_all_relationships_for_graph(object_ids, relationship_ids)
         object_id_lists = dict()
         for db_map, relationship in relationships:
-            if (db_map, relationship["id"]) in prunned_entity_ids:
+            if (db_map, relationship["id"]) in pruned_entity_ids:
                 continue
             object_id_list = [
                 (db_map, id_)
                 for id_ in (int(x) for x in relationship["object_id_list"].split(","))
-                if (db_map, id_) not in prunned_entity_ids
+                if (db_map, id_) not in pruned_entity_ids
             ]
             if len(object_id_list) < 2:
                 continue
