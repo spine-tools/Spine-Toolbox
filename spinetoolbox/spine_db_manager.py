@@ -2152,5 +2152,8 @@ class CombinedCache:
         self._d1 = d1
         self._d2 = d2
 
+    def __getitem__(self, key):
+        return self.get(key, {})
+
     def get(self, key, default):
         return {**self._d1.get(key, default), **self._d2.get(key, default)}
