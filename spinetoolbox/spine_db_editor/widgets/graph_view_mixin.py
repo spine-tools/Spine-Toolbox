@@ -502,4 +502,5 @@ class GraphViewMixin:
             event (QCloseEvent): Closing event
         """
         super().closeEvent(event)
+        self.scene.deleteLater()
         self.scene = None
