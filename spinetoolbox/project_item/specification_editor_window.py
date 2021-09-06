@@ -64,15 +64,16 @@ class ChangeSpecPropertyCommand(QUndoCommand):
 
 
 class SpecificationEditorWindowBase(QMainWindow):
-    def __init__(self, toolbox, specification=None, item=None):
-        """Base class for spec editors.
+    """Base class for spec editors."""
 
+    def __init__(self, toolbox, specification=None, item=None):
+        """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             specification (ProjectItemSpecification, optional): If given, the form is pre-filled with this specification
             item (ProjectItem, optional): Sets the spec for this item if accepted
         """
-        super().__init__(parent=toolbox)  # Inherit stylesheet from ToolboxUI
+        super().__init__()
         # Class attributes
         self._toolbox = toolbox
         self._original_spec_name = None if specification is None else specification.name
@@ -84,7 +85,6 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._ui.setupUi(self)
         self._ui_error = QErrorMessage(self)
         self._ui_error.setWindowTitle("Error")
-        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowTitle(specification.name if specification else "")
         # Restore ui
         self._restore_dock_widgets()

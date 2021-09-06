@@ -62,7 +62,7 @@ class EmptyRowModel(MinimalTableModel):
         self._fetched = False
         super().reset_model(main_data)
 
-    @Slot(QModelIndex, QModelIndex, "QVector<int>")
+    @Slot(QModelIndex, QModelIndex, list)
     def _handle_data_changed(self, top_left, bottom_right, roles=None):
         """Insert a new last empty row in case the previous one has been filled
         with any data other than the defaults."""

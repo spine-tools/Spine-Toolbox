@@ -267,7 +267,8 @@ class AddItemsCommand(SpineDBCommand):
         }
         self.undo_db_map_typed_ids = {
             db_map: db_map.cascading_ids(
-                cache=self.db_mngr.get_db_map_cache(db_map), **{self.item_type: {x["id"] for x in data}}
+                cache=self.db_mngr.get_db_map_cache(db_map, {self.item_type}, only_descendants=True),
+                **{self.item_type: {x["id"] for x in data}},
             )
             for db_map, data in db_map_data.items()
         }
@@ -341,7 +342,9 @@ class RemoveItemsCommand(SpineDBCommand):
         super().__init__(db_mngr, db_map, parent=parent)
         if not any(typed_data.values()):
             self.setObsolete(True)
-        typed_data = db_map.cascading_ids(cache=self.db_mngr.get_db_map_cache(db_map), **typed_data)
+        typed_data = db_map.cascading_ids(
+            cache=self.db_mngr.get_db_map_cache(db_map, set(typed_data), only_descendants=True), **typed_data
+        )
         self.redo_db_map_typed_data = {db_map: typed_data}
         self.undo_typed_db_map_data = {}
         self.setText(f"remove items from '{db_map.codename}'")

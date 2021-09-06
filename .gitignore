@@ -3,7 +3,7 @@
 *.sqlite
 *.egg-info
 *.log
-.venv/
+.venv*/
 .eggs/
 .spyderproject
 build/

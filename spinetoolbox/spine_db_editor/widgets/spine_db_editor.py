@@ -21,7 +21,7 @@ import json
 from sqlalchemy.engine.url import URL
 from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu, QAbstractScrollArea, QTabBar
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon, QCursor
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from .custom_menus import MainMenu
@@ -45,14 +45,14 @@ from ...helpers import (
     CharIconEngine,
 )
 from ...spine_db_parcel import SpineDBParcel
-from ...config import MAINWINDOW_SS, APPLICATION_PATH
+from ...config import APPLICATION_PATH
 
 
 class SpineDBEditorBase(QMainWindow):
     """Base class for SpineDBEditor (i.e. Spine database editor)."""
 
     msg = Signal(str)
-    link_msg = Signal(str, "QVariant")
+    link_msg = Signal(str, object)
     msg_error = Signal(str)
     file_exported = Signal(str)
     sqlite_file_exported = Signal(str)
@@ -63,7 +63,7 @@ class SpineDBEditorBase(QMainWindow):
         Args:
             db_mngr (SpineDBManager): The manager to use
         """
-        super().__init__(flags=Qt.Window)
+        super().__init__()
         from ..ui.spine_db_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_mngr = db_mngr
@@ -72,14 +72,12 @@ class SpineDBEditorBase(QMainWindow):
         self._change_notifiers = []
         self._changelog = []
         self.db_url = None
-        self._fetcher = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.takeCentralWidget()
         self.url_toolbar = UrlToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
-        self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings
@@ -356,8 +354,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def init_models(self):
         """Initializes models."""
-        self.parameter_value_list_model.build_tree()
-        self.ui.treeView_parameter_value_list.header().hide()
 
     @Slot(str)
     def add_message(self, msg):
@@ -370,12 +366,13 @@ class SpineDBEditorBase(QMainWindow):
             return
         self.notification_stack.push(msg)
 
-    @Slot(str, "QVariant")
+    @Slot(str, object)
     def add_link_msg(self, msg, open_link=None):
         """Pushes link message to notification stack.
 
         Args:
             msg (str): String to show in notification
+            open_link (Callable, optional): callback to invoke when notification's link is opened
         """
         if self.silenced:
             return
@@ -584,10 +581,6 @@ class SpineDBEditorBase(QMainWindow):
         }
         QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))
 
-    def reload_session(self, db_maps):
-        """Reloads data from given db_maps."""
-        self.init_models()
-
     @Slot(bool)
     def refresh_session(self, checked=False):
         self.db_mngr.refresh_session(*self.db_maps)
@@ -611,14 +604,14 @@ class SpineDBEditorBase(QMainWindow):
             self.msg.emit(msg)
             return
         # Commit done by an 'outside force'.
-        self.reload_session(db_maps)
+        self.init_models()
         self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.reload_session(db_maps)
+        self.init_models()
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
@@ -627,7 +620,7 @@ class SpineDBEditorBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.reload_session(db_maps)
+        self.init_models()
         self.msg.emit("Session refreshed.")
 
     @Slot(bool)
@@ -800,8 +793,6 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
 
     def tear_down(self):
-        if self._fetcher is not None:
-            self._fetcher.stop()
         if not self.db_mngr.unregister_listener(self, *self.db_maps):
             return False
         # Save UI form state

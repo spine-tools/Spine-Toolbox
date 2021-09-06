@@ -54,14 +54,13 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
     def canFetchMore(self, parent=QModelIndex()):
-        return True
+        return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self._parent.db_maps)
 
     def fetchMore(self, parent=QModelIndex()):
         for db_map in self._parent.db_maps:
-            success_cond = lambda item, db_map=db_map: self._fetch_success_cond(db_map, item)
-            self.db_mngr.fetch_more(db_map, self.item_type, success_cond=success_cond)
+            self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         return True
 
     @property
@@ -132,9 +131,7 @@ class PivotTableModelBase(QAbstractTableModel):
         if not data:
             return
         self.model.update_model(data)
-        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
-        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
-        self.dataChanged.emit(top_left, bottom_right)
+        self._emit_all_data_changed()
 
     def add_to_model(self, db_map_data):
         if not db_map_data:
@@ -150,6 +147,12 @@ class PivotTableModelBase(QAbstractTableModel):
             self.beginInsertColumns(QModelIndex(), first, first + column_count - 1)
             self._data_column_count += column_count
             self.endInsertColumns()
+        self._emit_all_data_changed()
+
+    def _emit_all_data_changed(self):
+        top_left = self.index(self.headerRowCount(), self.headerColumnCount())
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
+        self.dataChanged.emit(top_left, bottom_right)
 
     def remove_from_model(self, data):
         if not data:
@@ -711,7 +714,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "parameter_value"
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         entity_class_id = self._parent.current_class_id[db_map]
         return item["entity_class_id"] == entity_class_id
 
@@ -1006,7 +1009,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         if not any(db_map_parameter_values.values()):
             return False
         data = self._load_full_parameter_value_data(db_map_parameter_values=db_map_parameter_values, action=action)
-        self.update_model(data)
+        self.receive_data_added_or_removed(data, action)
         return True
 
     def _load_empty_parameter_value_data(self, *args, **kwargs):
@@ -1106,7 +1109,7 @@ class RelationshipPivotTableModel(PivotTableModelBase):
     def item_type(self):
         return "relationship"
 
-    def _fetch_success_cond(self, db_map, item):
+    def fetch_successful(self, db_map, item):
         entity_class_id = self._parent.current_class_id[db_map]
         return item["class_id"] == entity_class_id
 
@@ -1322,13 +1325,12 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false.
         """
-
         if source_row < self.sourceModel().headerRowCount() or source_row == self.sourceModel().rowCount() - 1:
             return True
-        if self.sourceModel().model.pivot_rows:
-            index = self.sourceModel().model._row_data_header[source_row - self.sourceModel().headerRowCount()]
-            return self.accept_index(index, self.sourceModel().model.pivot_rows)
-        return True
+        if not self.sourceModel().model.pivot_rows:
+            return True
+        index = self.sourceModel().model._row_data_header[source_row - self.sourceModel().headerRowCount()]
+        return self.accept_index(index, self.sourceModel().model.pivot_rows)
 
     def filterAcceptsColumn(self, source_column, source_parent):
         """Returns true if the item in the column indicated by the given source_column
@@ -1339,10 +1341,10 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
             or source_column == self.sourceModel().columnCount() - 1
         ):
             return True
-        if self.sourceModel().model.pivot_columns:
-            index = self.sourceModel().model._column_data_header[source_column - self.sourceModel().headerColumnCount()]
-            return self.accept_index(index, self.sourceModel().model.pivot_columns)
-        return True
+        if not self.sourceModel().model.pivot_columns:
+            return True
+        index = self.sourceModel().model._column_data_header[source_column - self.sourceModel().headerColumnCount()]
+        return self.accept_index(index, self.sourceModel().model.pivot_columns)
 
     def batch_set_data(self, indexes, values):
         indexes = [self.mapToSource(index) for index in indexes]

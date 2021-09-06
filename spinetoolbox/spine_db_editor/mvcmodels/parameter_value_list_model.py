@@ -60,7 +60,10 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
     def name(self):
         if not self.id:
             return self._name
-        return self.db_mngr.get_item(self.db_map, "parameter_value_list", self.id)["name"]
+        try:
+            return self.db_mngr.get_item(self.db_map, "parameter_value_list", self.id)["name"]
+        except KeyError:
+            return "<removed>"
 
     @property
     def value_list(self):
@@ -71,9 +74,9 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
     def fetch_more(self):
         self.db_mngr.fetch_more(self.db_map, "parameter_value_list")
         children = [ValueItem() for _ in self.value_list]
-        self.append_children(*children)
+        self.append_children(children)
         if self.id:
-            self.append_children(self.empty_child())
+            self.append_children([self.empty_child()])
 
     # pylint: disable=no-self-use
     def empty_child(self):
@@ -95,7 +98,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
             return True
         self._name = value
         self.parent_item.append_empty_child(self.child_number())
-        self.append_children(self.empty_child())
+        self.append_children([self.empty_child()])
         return True
 
     def set_child_data(self, child, value):
@@ -145,7 +148,7 @@ class ListItem(LastGrayMixin, AllBoldMixin, EditableMixin, NonLazyTreeItem):
         if value_count > curr_value_count:
             added_count = value_count - curr_value_count
             children = [ValueItem() for _ in range(added_count)]
-            self.insert_children(curr_value_count, *children)
+            self.insert_children(curr_value_count, children)
         elif curr_value_count > value_count:
             removed_count = curr_value_count - value_count
             self.remove_children(value_count, removed_count)
@@ -184,7 +187,6 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
         if role != Qt.EditRole:
             return False
         db_value, _ = to_database(value)
-        db_value = bytes(json.dumps(value), "UTF8")
         return self.set_data_in_db(db_value)
 
     def set_data_in_db(self, db_value):
@@ -192,14 +194,7 @@ class ValueItem(LastGrayMixin, EditableMixin, NonLazyTreeItem):
 
 
 class ParameterValueListModel(TreeModelBase):
-    """A model to display parameter_value_list data in a tree view.
-
-
-    Args:
-        parent (SpineDBEditor)
-        db_mngr (SpineDBManager)
-        db_maps (iter): DiffDatabaseMapping instances
-    """
+    """A model to display parameter_value_list data in a tree view."""
 
     def add_parameter_value_lists(self, db_map_data):
         for db_item, items in self._items_per_db_item(db_map_data).items():
@@ -211,7 +206,7 @@ class ParameterValueListModel(TreeModelBase):
                     continue
                 list_item.handle_added_to_db(identifier=id_)
             children = [ListItem(id_) for id_ in ids.values()]
-            db_item.insert_children(db_item.child_count() - 1, *children)
+            db_item.insert_children(db_item.child_count() - 1, children)
 
     def update_parameter_value_lists(self, db_map_data):
         for root_item, items in self._items_per_db_item(db_map_data).items():
@@ -245,7 +240,7 @@ class ParameterValueListModel(TreeModelBase):
             index (QModelIndex)
 
         Returns:
-            function
+            Callable
         """
         item = self.item_from_index(index)
         return lambda value, item=item: item.set_data_in_db(value[0])

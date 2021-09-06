@@ -215,7 +215,7 @@ class ParameterDelegate(QStyledItemDelegate):
         db_mngr (SpineDBManager): database manager
     """
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent, db_mngr):
         """
@@ -272,7 +272,7 @@ class DatabaseNameDelegate(ParameterDelegate):
 class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     """A delegate for the either the value or the default value."""
 
-    parameter_value_editor_requested = Signal("QModelIndex")
+    parameter_value_editor_requested = Signal(QModelIndex)
 
     def __init__(self, parent, db_mngr):
         super().__init__(parent, db_mngr)
@@ -342,6 +342,9 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         }
         if len(value_list_ids) == 1:
             return next(iter(value_list_ids))
+
+
+# FIXME: Make SearchBarEditor lazy
 
 
 class ValueListDelegate(ParameterDelegate):
@@ -467,7 +470,7 @@ class ObjectNameListDelegate(ParameterDelegate):
 class ToolFeatureDelegate(QStyledItemDelegate):
     """A delegate for the tool feature tree."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     @staticmethod
     def _get_names(item, model):
@@ -541,7 +544,7 @@ class ToolFeatureDelegate(QStyledItemDelegate):
 class AlternativeScenarioDelegate(QStyledItemDelegate):
     """A delegate for the alternative scenario tree."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -587,8 +590,8 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
 class ParameterValueListDelegate(QStyledItemDelegate):
     """A delegate for the parameter value list tree."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
-    parameter_value_editor_requested = Signal("QModelIndex")
+    data_committed = Signal(QModelIndex, object)
+    parameter_value_editor_requested = Signal(QModelIndex)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -615,7 +618,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
         self.parameter_value_editor_requested.emit(index)
 
     def _close_editor(self, editor, index):
-        """Closes editor. Needed by SearchBarEditor."""
+        """Closes editor."""
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
@@ -624,7 +627,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
     """A custom delegate for the model in {Add/Edit}ItemDialogs.
     """
 
-    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
+    data_committed = Signal(QModelIndex, object)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -673,7 +676,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectClassesDialog.
     """
 
-    icon_color_editor_requested = Signal("QModelIndex")
+    icon_color_editor_requested = Signal(QModelIndex)
 
     def createEditor(self, parent, option, index):
         """Return editor."""

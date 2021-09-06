@@ -48,7 +48,6 @@ class SingleParameterModel(MinimalTableModel):
         self.db_map = db_map
         self.entity_class_id = entity_class_id
         self._auto_filter = dict()  # Maps field to accepted ids for that field
-        self._filter_parameter_ids = dict()
 
     @property
     def item_type(self):
@@ -229,29 +228,24 @@ class SingleParameterModel(MinimalTableModel):
         """Update items in db. Required by batch_set_data"""
         raise NotImplementedError()
 
-    def set_filter_parameter_ids(self, parameter_ids):
-        if self._filter_parameter_ids == parameter_ids:
+    def _filter_accepts_row(self, row):
+        item = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])
+        return self.filter_accepts_item(item)
+
+    def filter_accepts_item(self, item):
+        return self._auto_filter_accepts_item(item)
+
+    def set_auto_filter(self, field, values):
+        if values == self._auto_filter.get(field, {}):
             return False
-        self._filter_parameter_ids = parameter_ids
+        self._auto_filter[field] = values
         return True
 
-    def _filter_accepts_row(self, row):
-        return self._parameter_filter_accepts_row(row) and self._auto_filter_accepts_row(row)
-
-    def _parameter_filter_accepts_row(self, row):
-        """Returns the result of the parameter filter."""
-        if not self._filter_parameter_ids:
-            return True
-        parameter_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[
-            self.parameter_definition_id_key
-        ]
-        return parameter_id in self._filter_parameter_ids.get((self.db_map, self.entity_class_id), set())
-
-    def _auto_filter_accepts_row(self, row):
+    def _auto_filter_accepts_item(self, item):
         """Returns the result of the auto filter."""
         if self._auto_filter is None:
             return False
-        item_id = self._main_data[row]
+        item_id = item["id"]
         for accepted_ids in self._auto_filter.values():
             if accepted_ids and item_id not in accepted_ids:
                 return False
@@ -265,7 +259,6 @@ class SingleParameterModel(MinimalTableModel):
         """Returns a item from the db_mngr.get_item depending on the field.
         If a field doesn't correspond to a item in the database then an empty dict is returned.
         """
-        data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
         header_to_id = {
             "object_class_name": ("entity_class_id", "object_class"),
             "relationship_class_name": ("entity_class_id", "relationship_class"),
@@ -273,9 +266,11 @@ class SingleParameterModel(MinimalTableModel):
             "object_name_list": ("entity_id", "relationship"),
             "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
         }
-        if field not in header_to_id:
+        id_field_item_type = header_to_id.get(field)
+        if id_field_item_type is None:
             return {}
-        id_field, item_type = header_to_id[field]
+        id_field, item_type = id_field_item_type
+        data = self.db_mngr.get_item(self.db_map, self.item_type, id_)
         item_id = data.get(id_field)
         return self.db_mngr.get_item(self.db_map, item_type, item_id)
 
@@ -329,11 +324,9 @@ class SingleParameterValueMixin(
 ):
     """A parameter_value model for a single entity_class."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._filter_db_map_class_entity_ids = dict()
-        self._filter_alternative_ids = set()
-        self._filter_entity_ids = set()
+    _filter_db_map_class_entity_ids = dict()
+    _filter_alternative_ids = set()
+    _filter_entity_ids = set()
 
     @property
     def item_type(self):
@@ -370,29 +363,27 @@ class SingleParameterValueMixin(
         self._filter_alternative_ids = alternative_ids
         return True
 
-    def _filter_accepts_row(self, row):
-        """Reimplemented to also account for the entity filter."""
+    def filter_accepts_item(self, item):
+        """Reimplemented to also account for the entity and alternative filter."""
         return (
-            self._parameter_filter_accepts_row(row)
-            and self._entity_filter_accepts_row(row)
-            and self._auto_filter_accepts_row(row)
-            and self._alternative_filter_accepts_row(row)
+            super().filter_accepts_item(item)
+            and self._entity_filter_accepts_item(item)
+            and self._alternative_filter_accepts_item(item)
         )
 
-    def _entity_filter_accepts_row(self, row):
+    def _entity_filter_accepts_item(self, item):
         """Returns the result of the entity filter."""
         if not self._filter_db_map_class_entity_ids:
             return True
-        entity_id_key = {"object_class": "object_id", "relationship_class": "relationship_id"}[self.entity_class_type]
-        entity_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])[entity_id_key]
+        entity_id = item["entity_id"]
         return entity_id in self._filter_entity_ids
 
-    def _alternative_filter_accepts_row(self, row):
+    def _alternative_filter_accepts_item(self, item):
         """Returns the result of the alternative filter."""
         if not self._filter_alternative_ids:
             return True
-        alt_id = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])["alternative_id"]
-        return alt_id in self._filter_alternative_ids
+        alternative_id = item["alternative_id"]
+        return alternative_id in self._filter_alternative_ids
 
     def update_items_in_db(self, items):
         """Update items in db.

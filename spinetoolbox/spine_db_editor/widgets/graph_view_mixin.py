@@ -31,7 +31,7 @@ from ..graphics_items import (
     CrossHairsRelationshipItem,
     CrossHairsArcItem,
 )
-from .graph_layout_generator import GraphLayoutGenerator
+from .graph_layout_generator import GraphLayoutGenerator, ProgressBarWidget
 from .add_items_dialogs import AddObjectsDialog, AddReadyRelationshipsDialog
 
 
@@ -44,7 +44,12 @@ class GraphViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        QHBoxLayout(self.ui.graphicsView)
+        self.ui.graphicsView.connect_spine_db_editor(self)
+        self._progress_bar = ProgressBarWidget()
+        self._progress_bar.hide()
+        self._progress_bar.stop_button.clicked.connect(self._stop_extending_graph)
+        layout = QHBoxLayout(self.ui.graphicsView)
+        layout.addWidget(self._progress_bar)
         self._persistent = False
         self._owes_graph = False
         self.scene = None
@@ -56,13 +61,21 @@ class GraphViewMixin:
         self.relationship_ids = list()
         self.src_inds = list()
         self.dst_inds = list()
-        self._relationships_being_added = False
-        self._adding_objects_at_pos = None
+        self._adding_relationships = False
+        self._pos_for_added_objects = None
         self.added_relationship_ids = set()
         self._thread_pool = QThreadPool()
         self.layout_gens = dict()
         self._layout_gen_id = None
-        self.ui.graphicsView.connect_spine_db_editor(self)
+        self._extend_graph_timer = QTimer(self)
+        self._extend_graph_timer.setSingleShot(True)
+        self._extend_graph_timer.setInterval(100)
+        self._extend_graph_timer.timeout.connect(self.build_graph)
+        self._extending_graph = False
+
+    @Slot(bool)
+    def _stop_extending_graph(self, _=False):
+        self._extending_graph = False
 
     def init_models(self):
         super().init_models()
@@ -87,17 +100,19 @@ class GraphViewMixin:
         added_ids = {(db_map, x["id"]) for db_map, objects in db_map_data.items() for x in objects}
         restored_ids = self.restore_removed_entities(added_ids)
         added_ids -= restored_ids
-        if added_ids and self._adding_objects_at_pos is not None:
+        if added_ids and self._pos_for_added_objects is not None:
             spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
             gen = GraphLayoutGenerator(None, len(added_ids), spread=spread)
             gen.run()
-            x = self._adding_objects_at_pos.x()
-            y = self._adding_objects_at_pos.y()
+            x = self._pos_for_added_objects.x()
+            y = self._pos_for_added_objects.y()
             for dx, dy, object_id in zip(gen.x, gen.y, added_ids):
                 object_item = ObjectItem(self, x + dx, y + dy, self.VERTEX_EXTENT, object_id)
                 self.scene.addItem(object_item)
                 object_item.apply_zoom(self.ui.graphicsView.zoom_factor)
-            self._adding_objects_at_pos = None
+            self._pos_for_added_objects = None
+        elif self._extending_graph:
+            self._extend_graph_timer.start()
 
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added to the db.
@@ -110,10 +125,12 @@ class GraphViewMixin:
         added_ids = {(db_map, x["id"]) for db_map, relationships in db_map_data.items() for x in relationships}
         restored_ids = self.restore_removed_entities(added_ids)
         added_ids -= restored_ids
-        if added_ids and self._relationships_being_added:
+        if added_ids and self._adding_relationships:
             self.added_relationship_ids.update(added_ids)
             self.build_graph(persistent=True)
             self._end_add_relationships()
+        elif self._extending_graph:
+            self._extend_graph_timer.start()
 
     def receive_object_classes_updated(self, db_map_data):
         super().receive_object_classes_updated(db_map_data)
@@ -209,10 +226,12 @@ class GraphViewMixin:
             QTimer.singleShot(100, self.build_graph)
 
     @Slot(dict)
-    def rebuild_graph(self, selected):
+    def rebuild_graph(self, selected=None):
         """Stores the given selection of entity tree indexes and builds graph."""
-        self.selected_tree_inds = selected
+        if selected is not None:
+            self.selected_tree_inds = selected
         self.added_relationship_ids.clear()
+        self._extending_graph = True
         self.build_graph()
 
     def build_graph(self, persistent=False):
@@ -232,9 +251,10 @@ class GraphViewMixin:
         self._update_graph_data()
         self._layout_gen_id = monotonic()
         self.layout_gens[self._layout_gen_id] = layout_gen = self._make_layout_generator()
-        layout_gen.show_progress_widget(self.ui.graphicsView)
+        self._progress_bar.set_layout_generator(layout_gen)
+        self._progress_bar.show()
         layout_gen.layout_available.connect(self._complete_graph)
-        layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_))  # pylint: disable=unnecessary-lambda
+        layout_gen.finished.connect(self.layout_gens.pop)
         self._thread_pool.start(layout_gen)
 
     def _stop_layout_generators(self):
@@ -271,6 +291,10 @@ class GraphViewMixin:
             set: selected relationship ids
         """
         if "root" in self.selected_tree_inds:
+            for db_map in self.db_maps:
+                for item_type in ("object", "relationship"):
+                    if self.db_mngr.can_fetch_more(db_map, item_type):
+                        self.db_mngr.fetch_more(db_map, item_type)
             return (
                 set((db_map, x["id"]) for db_map in self.db_maps for x in self.db_mngr.get_items(db_map, "object")),
                 set(),
@@ -287,13 +311,15 @@ class GraphViewMixin:
                 selected_relationship_ids.add(db_map_id)
         for index in self.selected_tree_inds.get("object_class", {}):
             item = index.model().item_from_index(index)
+            item.fetch_more_if_possible()
             for db_map in item.db_maps:
-                object_ids = set((db_map, id_) for id_ in item.get_fetched_children_ids(db_map))
+                object_ids = set((db_map, id_) for id_ in item.get_children_ids(db_map))
                 selected_object_ids.update(object_ids)
         for index in self.selected_tree_inds.get("relationship_class", {}):
             item = index.model().item_from_index(index)
+            item.fetch_more_if_possible()
             for db_map in item.db_maps:
-                relationship_ids = set((db_map, id_) for id_ in item.get_fetched_children_ids(db_map))
+                relationship_ids = set((db_map, id_) for id_ in item.get_children_ids(db_map))
                 selected_relationship_ids.update(relationship_ids)
         return selected_object_ids, selected_relationship_ids
 
@@ -344,6 +370,7 @@ class GraphViewMixin:
                 self.dst_inds.append(object_ind)
 
     def _get_parameter_positions(self, parameter_name):
+        # FIXME: We might need to fetch all parameter values here!!!
         if not parameter_name:
             yield from []
         for db_map in self.db_maps:
@@ -449,13 +476,13 @@ class GraphViewMixin:
         dialog.show()
 
     def _begin_add_relationships(self):
-        self._relationships_being_added = True
+        self._adding_relationships = True
 
     def _end_add_relationships(self):
-        self._relationships_being_added = False
+        self._adding_relationships = False
 
     def add_objects_at_position(self, pos):
-        self._adding_objects_at_pos = pos
+        self._pos_for_added_objects = pos
         dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 

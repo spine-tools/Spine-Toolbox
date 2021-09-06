@@ -37,7 +37,6 @@ class ParameterViewMixin:
         self.filter_class_ids = {}
         self.filter_entity_ids = {}
         self.filter_alternative_ids = {}
-        self.filter_parameter_ids = {}
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr)
         self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr)
@@ -106,6 +105,7 @@ class ParameterViewMixin:
             rel_cls_id (int)
             db_map (DiffDatabaseMapping)
         """
+        # FIXME: Make ObjectNameListEditor lazy
         relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id)
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []
@@ -149,7 +149,6 @@ class ParameterViewMixin:
         """Resets filters."""
         for model in self._parameter_models:
             model.set_filter_class_ids(self.filter_class_ids)
-            model.set_filter_parameter_ids(self.filter_parameter_ids)
         for model in self._parameter_value_models:
             model.set_filter_entity_ids(self.filter_entity_ids)
             model.set_filter_alternative_ids(self.filter_alternative_ids)

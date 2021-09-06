@@ -40,7 +40,7 @@ class TestSpineDBEditorRemoveMixin:
         self.put_mock_objects_in_db_mngr()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
-        fish_item = root_item.child(0)
+        fish_item = root_item.child(1)
         self.assertEqual(fish_item.child_count(), 1)
         self.db_mngr.objects_removed.emit({self.mock_db_map: [self.nemo_object]})
         self.assertEqual(fish_item.child_count(), 0)
@@ -68,15 +68,15 @@ class TestSpineDBEditorRemoveMixin:
         self.put_mock_relationships_in_db_mngr()
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
-        dog_item = root_item.child(0)
-        pluto_item = dog_item.child(0)
-        pluto_fish_dog_item = pluto_item.child(0)
-        relationships = [x.display_data for x in pluto_fish_dog_item.children]
-        self.assertEqual(pluto_fish_dog_item.child_count(), 2)
+        fish_item = root_item.child(1)
+        nemo_item = fish_item.child(0)
+        nemo_fish_dog_item = nemo_item.child(1)
+        relationships = [x.display_data for x in nemo_fish_dog_item.children]
+        self.assertEqual(nemo_fish_dog_item.child_count(), 2)
         self.assertEqual(relationships[0], "pluto")
         self.assertEqual(relationships[1], "scooby")
         self.db_mngr.relationships_removed.emit({self.mock_db_map: [self.nemo_pluto_rel]})
-        self.assertEqual(pluto_fish_dog_item.child_count(), 1)
+        self.assertEqual(nemo_fish_dog_item.child_count(), 1)
 
     def test_remove_object_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""

@@ -19,7 +19,7 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 import math
 from PySide2.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Slot, Qt, QTimeLine, QSettings, QRectF
+from PySide2.QtCore import Slot, Qt, QTimeLine, QRectF
 from spine_engine.project_item.connection import Connection
 from ..project_item_icon import ProjectItemIcon
 from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
@@ -45,7 +45,10 @@ class CustomQGraphicsView(QGraphicsView):
         self._items_fitting_zoom = 1.0
         self._max_zoom = 10.0
         self._min_zoom = 0.1
-        self._qsettings = QSettings("SpineProject", "Spine Toolbox")
+
+    @property
+    def _qsettings(self):
+        raise NotImplementedError()
 
     @property
     def zoom_factor(self):
@@ -287,6 +290,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._toolbox = None
+
+    @property
+    def _qsettings(self):
+        return self._toolbox.qsettings()
 
     def set_ui(self, toolbox):
         """Set a new scene into the Design View when app is started."""

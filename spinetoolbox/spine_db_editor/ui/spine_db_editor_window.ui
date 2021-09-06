@@ -147,6 +147,9 @@
        <property name="uniformRowHeights">
         <bool>true</bool>
        </property>
+       <attribute name="headerVisible">
+        <bool>true</bool>
+       </attribute>
       </widget>
      </item>
     </layout>

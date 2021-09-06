@@ -1,4 +1,5 @@
 # Spine Toolbox
+Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
 [![Python](https://img.shields.io/badge/python-3.7%20|%203.8-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
@@ -6,7 +7,7 @@
 [![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
 [![PyPI version](https://badge.fury.io/py/spinetoolbox.svg)](https://badge.fury.io/py/spinetoolbox)
 
-An application to define, manage, and execute various energy system simulation models.
+Spine Toolbox is an open source Python package to manage data, scenarios and workflows for modelling and simulation. You can have your local workflow, but work as a team through version control and SQL databases.
 
 ## Programming language
 
@@ -25,24 +26,24 @@ Guide.
 
 ## Installation
 
-We provide three options for installing Spine Toolbox.
+We provide three options for installing Spine Toolbox: [Python/pipx](#installation-with-python-and-pipx), [Windows installation file](#windows-64-bit-installer-package), and [git](#installation-from-sources-using-git).
 
-### Standard Python Installation (recommended)
+### Installation with Python and pipx
 
-This is the recommended way to install Spine Toolbox and keep it updated with new releases.
+This works best for users that want to just use Spine Toolbox but also keep it updated with new releases.
 
-1. Install Python 3.8.
+1. If you don't yet have Python 3.7 or 3.8, then install Python 3.8.
    - On Windows, open **Microsoft Store** from the start menu,
      enter ‘python’ in the search box, select Python 3.8, and press **Get**.
    - On OS X and Linux, get [the latest release from Python.org](https://www.python.org/downloads/).
 
 2. Open a terminal (e.g., Command Prompt on Windows).
 
-3. Get the latest version of `pip` by running
+3. Get the latest version of `pip` (pip is a package manager for Python)
 
         python -m pip install --upgrade pip
 
-4. Install [pipx](https://pypa.github.io/pipx/) by running
+4. Install [pipx](https://pypa.github.io/pipx/) (pipx allows to create an isolated environment for Spine Toolbox to avoid package conflicts with other Python tools)
 
         python -m pip install pipx
         python -m pipx ensurepath
@@ -66,8 +67,7 @@ To update Spine Toolbox to the latest available release, open a terminal and run
 
 Windows installer packages are published periodically
 but not as frequently as the standard Python installation above.
-This option is suitable for users who cannot install Python or don’t need to get 
-the most recent updates.
+This option is suitable for users who cannot install Python or don’t need to get the most recent updates. This should be the most stable option.
 Download the latest installer package from [here](https://github.com/Spine-project/Spine-Toolbox/releases),
 run it, and follow the instructions to install Spine Toolbox.
 
@@ -186,17 +186,6 @@ not needed and there is a chance of conflicts between the packages.
 
 **Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support PySide2 
 version 5.15 (yet).
-
-#### ImportError: DLL load failed while importing win32api
-
-If you installed Spine Toolbox *without Conda* on **Python 3.8 on Windows**, 
-you may see this error when trying to execute a project item. The cause of this error 
-is the package `pywin32` version 225. To fix this error, upgrade the package to version 
-300 using the following command
-
-    pip install --upgrade "pywin32==300"
-
-After the process has finished, restart the application. **Note: pywin32 v301 does not work**.
 
 ## Contribution Guide
 

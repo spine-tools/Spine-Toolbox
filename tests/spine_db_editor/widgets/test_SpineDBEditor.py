@@ -23,13 +23,13 @@ import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import CompoundParameterModel
 from .test_SpineDBEditorAdd import TestSpineDBEditorAddMixin
 from .test_SpineDBEditorUpdate import TestSpineDBEditorUpdateMixin
 from .test_SpineDBEditorRemove import TestSpineDBEditorRemoveMixin
 from .test_SpineDBEditorFilter import TestSpineDBEditorFilterMixin
-from ...mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditor(
@@ -289,7 +289,7 @@ class TestSpineDBEditor(
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self.db_mngr = TestSpineDBManager(mock_settings, None)
+            self.db_mngr = SpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
             self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": "database"})
@@ -387,7 +387,7 @@ class TestSpineDBEditor(
         self.fetch_object_tree_model()
         # Select fish item in object tree
         root_item = self.spine_db_editor.object_tree_model.root_item
-        fish_item = root_item.child(0)
+        fish_item = root_item.child(1)
         fish_index = self.spine_db_editor.object_tree_model.index_from_item(fish_item)
         self.spine_db_editor.ui.treeView_object.setCurrentIndex(fish_index)
         self.spine_db_editor.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
@@ -399,27 +399,6 @@ class TestSpineDBEditor(
         for row in range(model.rowCount()):
             row_data.append(tuple(model.index(row, h(field)).data() for field in ("object_class_name", "database")))
         self.assertIn(("fish", "database"), row_data)
-
-    @unittest.skip("TODO")
-    def test_set_object_parameter_value_defaults(self):
-        """Test that defaults are set in relationship parameter_definition
-        models according the object tree selection.
-        """
-        self.fail()
-
-    @unittest.skip("TODO")
-    def test_set_relationship_parameter_definition_defaults(self):
-        """Test that defaults are set in relationship parameter_definition
-        models according the object tree selection.
-        """
-        self.fail()
-
-    @unittest.skip("TODO")
-    def test_set_relationship_parameter_value_defaults(self):
-        """Test that defaults are set in relationship parameter_definition
-        models according the object tree selection.
-        """
-        self.fail()
 
 
 if __name__ == '__main__':

@@ -17,6 +17,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixed
 
+## [0.6.3] - 2021-09-03
+
+### Added
+- Plenty of stability improvements and bug fixes
+
+### Fixed
+- Fixed 'ImportError: DLL load failed while importing win32api' on (Conda) Python 3.8 when trying to execute Tools
+  in Jupyter Console
 
 ## [0.6.1] - 2021-06-28
 
@@ -42,10 +50,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Deprecated
 - GdxExporter has been deprecated. Use the general purpose Exporter item instead.
   GdxExporter will be removed in a future release. Please replace existing items by Exporter.
-
-### Removed
-
-### Fixed
 
 ## [0.6.0-final.2] - 2021-06-03
 

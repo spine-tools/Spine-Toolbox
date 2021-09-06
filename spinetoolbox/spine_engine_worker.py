@@ -74,10 +74,9 @@ def _handle_prompt_arrived(prompt, engine_mngr):
         info_text = ""
         text = prompt["text"]
     item_name = prompt["item_name"]
-    box_title = f"{item_name}"
     # pylint: disable=undefined-variable
     box = QMessageBox(
-        QMessageBox.Question, box_title, text, buttons=QMessageBox.Yes | QMessageBox.No, parent=qApp.activeWindow()
+        QMessageBox.Question, item_name, text, buttons=QMessageBox.Yes | QMessageBox.No, parent=qApp.activeWindow()
     )
     if info_text:
         box.setInformativeText(info_text)

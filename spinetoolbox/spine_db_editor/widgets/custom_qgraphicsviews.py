@@ -75,6 +75,10 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._context_menu_pos = None
 
     @property
+    def _qsettings(self):
+        return self._spine_db_editor.qsettings
+
+    @property
     def entity_items(self):
         return [x for x in self.scene().items() if isinstance(x, EntityItem) and x not in self.removed_items]
 
@@ -124,7 +128,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         # self._parameter_heat_map_menu = self._menu.addMenu("Add heat map")
         # self._parameter_heat_map_menu.triggered.connect(self.add_heat_map)
         self._menu.addSeparator()
-        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.build_graph)
+        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
         self._export_as_pdf_action = self._menu.addAction("Export as PDF", self.export_as_pdf)
         self._menu.addSeparator()
         self._zoom_action = ToolBarWidgetAction("Zoom", self._menu, compact=True)
@@ -270,6 +274,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def prune_selected_classes(self, checked=False):
         """Prunes selected items."""
+        # FIXME: inroduce self.prunned_class_ids rather
         db_map_class_ids = {}
         for x in self.selected_items:
             db_map_class_ids.setdefault(x.db_map, set()).add(x.entity_class_id)
@@ -362,6 +367,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in self.selected_items:
             db_map_ids.setdefault(item.db_map, set()).add(item.entity_id)
         db_map_typed_data = {}
+        # FIXME: We might need to fetch all parameter values here!!!
         for db_map, ids in db_map_ids.items():
             db_map_typed_data[db_map] = {
                 "parameter_value": set(

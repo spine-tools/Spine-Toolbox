@@ -17,8 +17,8 @@ Classes for custom QDialogs to add edit and remove database items.
 """
 
 from functools import reduce
-from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout, QAction
+from PySide2.QtCore import Slot, Qt, QModelIndex
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...helpers import busy_effect
@@ -39,6 +39,9 @@ class ManageItemsDialogBase(QDialog):
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.horizontalHeader().setMinimumSectionSize(120)
         self.table_view.verticalHeader().setDefaultSectionSize(parent.default_row_height)
+        self._accept_action = QAction("OK", parent=self)
+        self._accept_action.setShortcut("Ctrl+Return")
+        self.addAction(self._accept_action)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         layout = QGridLayout(self)
@@ -51,7 +54,8 @@ class ManageItemsDialogBase(QDialog):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.button_box.accepted.connect(self.accept)
+        self._accept_action.triggered.connect(self.accept)
+        self.button_box.accepted.connect(self._accept_action.trigger)
         self.button_box.rejected.connect(self.reject)
 
     def resize_window_to_columns(self, height=None):
@@ -95,11 +99,11 @@ class ManageItemsDialog(ManageItemsDialogBase):
         self.model.dataChanged.connect(self._handle_model_data_changed)
         self.model.modelReset.connect(self._handle_model_reset)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector")
+    @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         """Reimplement in subclasses to handle changes in model data."""
 
-    @Slot("QModelIndex", "QVariant")
+    @Slot(QModelIndex, object)
     def set_model_data(self, index, data):
         """Update model data."""
         if data is None:
@@ -113,9 +117,11 @@ class ManageItemsDialog(ManageItemsDialogBase):
         self.resize_window_to_columns()
 
 
+# FIXME: We need to fully fetch the corresponding table before calling db_mngr.get_items
+
+
 class GetObjectClassesMixin:
-    """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog.
-    """
+    """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog."""
 
     def make_db_map_obj_cls_lookup(self):
         return {
@@ -141,8 +147,7 @@ class GetObjectClassesMixin:
 
 
 class GetObjectsMixin:
-    """Provides a method to retrieve objects for AddRelationshipsDialog and EditRelationshipsDialog.
-    """
+    """Provides a method to retrieve objects for AddRelationshipsDialog and EditRelationshipsDialog."""
 
     def make_db_map_obj_lookup(self):
         return {
@@ -175,8 +180,7 @@ class GetObjectsMixin:
 
 
 class GetRelationshipClassesMixin:
-    """Provides a method to retrieve relationships for AddRelationshipsDialog and EditRelationshipsDialog.
-    """
+    """Provides a method to retrieve relationship classes for AddRelationshipsDialog and EditRelationshipsDialog."""
 
     def make_db_map_rel_cls_lookup(self):
         return {
@@ -189,8 +193,7 @@ class GetRelationshipClassesMixin:
 
 
 class ShowIconColorEditorMixin:
-    """Provides methods to show an `IconColorEditor` upon request.
-    """
+    """Provides methods to show an `IconColorEditor` upon request."""
 
     @busy_effect
     def show_icon_color_editor(self, index):

@@ -277,9 +277,10 @@ class SpineDBSignaller(QObject):
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 try:
-                    getattr(listener, callback)(shared_db_map_data)
+                    method = getattr(listener, callback)
                 except AttributeError:
-                    pass
+                    continue
+                method(shared_db_map_data)
 
     @Slot(set)
     def receive_session_refreshed(self, db_maps):

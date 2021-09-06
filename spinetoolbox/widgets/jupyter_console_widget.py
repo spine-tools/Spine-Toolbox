@@ -70,7 +70,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
 
     def name(self):
         """Returns console name for display purposes."""
-        return f"Jupyter {self._target_kernel_name} Console - {self.owner_names}"
+        return f"{self._target_kernel_name} on Jupyter Console - {self.owner_names}"
 
     @property
     def owner_names(self):
@@ -141,10 +141,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         new_k_name_anchor = "<a style='color:#99CCFF;' title='{0}' href='#'>{1}</a>".format(k_path, self.kernel_name)
         self._toolbox.msg.emit(f"*** Starting {self.name()} (kernel {new_k_name_anchor}) ***")
         self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
-        km = QtKernelManager(kernel_name="conda-env-3-calliope-py")
-        conda_exe = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
-        conda_exe = resolve_conda_executable(conda_exe)
-        km.kernel_spec_manager = CondaKernelSpecManager(conda_exe=conda_exe)
+        km = QtKernelManager(kernel_name=self.kernel_name)
         try:
             blackhole = open(os.devnull, 'w')
             cf = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0  # Don't show console when frozen

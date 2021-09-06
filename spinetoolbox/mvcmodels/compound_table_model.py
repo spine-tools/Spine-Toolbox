@@ -96,13 +96,14 @@ class CompoundTableModel(MinimalTableModel):
         sub_model, _ = self._row_map[row]
         return sub_model
 
+    @Slot()
     def refresh(self):
         """Refreshes the layout by computing a new row map."""
         self.layoutAboutToBeChanged.emit()
-        self.do_refresh()
+        self._do_refresh()
         self.layoutChanged.emit()
 
-    def do_refresh(self):
+    def _do_refresh(self):
         """Recomputes the row and inverse row maps."""
         self._row_map.clear()
         self._inv_row_map.clear()
@@ -121,8 +122,7 @@ class CompoundTableModel(MinimalTableModel):
             self._inv_row_map[model_row_tup] = self.rowCount()
             self._row_map.append(model_row_tup)
 
-    @staticmethod
-    def _row_map_for_model(model):
+    def _row_map_for_model(self, model):
         """Returns row map for given model.
         The base class implementation just returns all model rows.
 
