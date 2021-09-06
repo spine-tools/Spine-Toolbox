@@ -19,9 +19,12 @@ from enum import auto, Enum, unique
 from itertools import takewhile, chain
 import os
 import json
+import networkx as nx
 from PySide2.QtCore import Signal
-from spine_engine.project_item.connection import Connection
-from spine_engine.spine_engine import ExecutionDirection
+
+from spine_engine.exception import EngineInitFailed
+from spine_engine.project_item.connection import Connection, Jump
+from spine_engine.spine_engine import ExecutionDirection, validate_jumps
 from spine_engine.utils.helpers import shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .metaobject import MetaObject
@@ -48,8 +51,6 @@ class SpineToolboxProject(MetaObject):
     """Emitted after project has been renamed."""
     project_about_to_be_torn_down = Signal()
     """Emitted before project is being torn down."""
-    dag_execution_finished = Signal()
-    """Emitted after a single DAG execution has finished."""
     project_execution_about_to_start = Signal()
     """Emitted just before the entire project is executed."""
     project_execution_finished = Signal()
@@ -60,6 +61,12 @@ class SpineToolboxProject(MetaObject):
     """Emitted before connection removal."""
     connection_replaced = Signal(object, object)
     """Emitted after a connection has been replaced by another."""
+    jump_added = Signal(object)
+    """Emitted after a jump has been added."""
+    jump_about_to_be_removed = Signal(object)
+    """Emitted before a jump is removed."""
+    jump_replaced = Signal(object, object)
+    """Emitted after a jump has been replaced by another."""
     item_added = Signal(str)
     """Emitted after a project item has been added."""
     item_about_to_be_removed = Signal(str)
@@ -91,6 +98,7 @@ class SpineToolboxProject(MetaObject):
         self._project_items = dict()
         self._specifications = dict(enumerate(plugin_specs))
         self._connections = list()
+        self._jumps = list()
         self._logger = logger
         self._settings = settings
         self.dag_handler = DirectedGraphHandler()
@@ -149,7 +157,7 @@ class SpineToolboxProject(MetaObject):
             name (str): New project name
         """
         super().set_name(name)
-        self._logger.msg.emit("Project name changed to <b>{0}</b>".format(self.name))
+        self._logger.msg.emit(f"Project name changed to <b>{self.name}</b>")
         self.renamed.emit(name)
 
     def set_description(self, description):
@@ -172,7 +180,7 @@ class SpineToolboxProject(MetaObject):
             if spec.plugin is not None:
                 continue
             if not spec.save():
-                self._logger.msg_error.emit("Failed to save specification <b>spec.name</b>.")
+                self._logger.msg_error.emit(f"Failed to save specification <b>{spec.name}</b>.")
                 return False
             serialized_path = serialize_path(spec.definition_file_path, self.project_dir)
             serialized_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
@@ -182,6 +190,7 @@ class SpineToolboxProject(MetaObject):
             "description": self.description,
             "specifications": serialized_spec_paths,
             "connections": [connection.to_dict() for connection in self._connections],
+            "jumps": [jump.to_dict() for jump in self._jumps],
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         saved_dict = dict(project=project_dict, items=items_dict)
@@ -239,6 +248,10 @@ class SpineToolboxProject(MetaObject):
         connection_dicts = project_info["project"]["connections"]
         for connection in map(Connection.from_dict, connection_dicts):
             self.add_connection(connection, silent=True)
+        self._logger.msg.emit("Restoring jumps...")
+        jump_dicts = project_info["project"].get("jumps", [])
+        for jump in map(Jump.from_dict, jump_dicts):
+            self.add_jump(jump, silent=True)
         return True
 
     def _load_project_dict(self):
@@ -632,6 +645,71 @@ class SpineToolboxProject(MetaObject):
         self._connections.append(new_connection)
         self.connection_replaced.emit(existing_connection, new_connection)
 
+    def add_jump(self, jump, silent=False):
+        """Adds a jump to project.
+
+        Args:
+            jump (Jump): jump to add
+            silent (bool): if True, don't log messages
+        """
+        self._jumps.append(jump)
+        self.jump_added.emit(jump)
+        return True
+
+    def find_jump(self, source_name, destination_name):
+        """Searches for a jump between given items.
+
+        Args:
+            source_name (str): source item's name
+            destination_name (str): destination item's name
+
+        Returns:
+            Jump: connection instance or None if there is no jump
+        """
+        for jump in self._jumps:
+            if jump.source == source_name and jump.destination == destination_name:
+                return jump
+        return None
+
+    def remove_jump(self, jump):
+        """Removes a jump from the project.
+
+        Args:
+            jump (Jump): jump to remove
+        """
+        self.jump_about_to_be_removed.emit(jump)
+        self._jumps.remove(jump)
+
+    def replace_jump(self, existing_jump, new_jump):
+        """Replaces an existing jump between items.
+
+        Args:
+            existing_jump (Jump): an established jump
+            new_jump (Jump): jump to replace by
+        """
+        self._jumps.remove(existing_jump)
+        self._jumps.append(new_jump)
+        self.jump_replaced.emit(existing_jump, new_jump)
+
+    def jump_issues(self, jump):
+        """Checks if jump is OK.
+
+        Args:
+            jump (Jump): jump to check
+
+        Returns:
+            list of str: list of issues, if any
+        """
+        issues = list()
+        dag = self.dag_handler.dag_with_node(jump.source)
+        if not dag.has_node(jump.destination):
+            issues.append("Loop cannot span over separate DAGs.")
+        try:
+            validate_jumps(self._jumps, dag)
+        except EngineInitFailed as issue:
+            issues.append(str(issue))
+        return issues
+
     def restore_project_items(self, items_dict, item_factories, silent):
         """Restores project items from dictionary.
 
@@ -730,6 +808,8 @@ class SpineToolboxProject(MetaObject):
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
             worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings)
+            if worker is None:
+                continue
             worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
             self._engine_workers.append(worker)
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
@@ -743,7 +823,7 @@ class SpineToolboxProject(MetaObject):
     def create_engine_worker(self, dag, execution_permits, dag_identifier, settings):
         node_successors = self.get_node_successors(dag, dag_identifier)
         if node_successors is None:
-            return
+            return None
         items = {}
         specifications = {}
         items_in_dag = {name: item for name, item in self._project_items.items() if name in node_successors}
@@ -755,10 +835,12 @@ class SpineToolboxProject(MetaObject):
                 spec_dict["definition_file_path"] = spec.definition_file_path
                 specifications.setdefault(project_item.item_type(), list()).append(spec_dict)
         connections = [c.to_dict() for c in self._connections]
+        jumps = [j.to_dict() for j in self._jumps]
         data = {
             "items": items,
             "specifications": specifications,
             "connections": connections,
+            "jumps": jumps,
             "node_successors": node_successors,
             "execution_permits": execution_permits,
             "items_module_name": "spine_items",
@@ -766,7 +848,7 @@ class SpineToolboxProject(MetaObject):
             "project_dir": self.project_dir,
         }
         server_address = self._settings.value("appSettings/engineServerAddress", defaultValue="")
-        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items_in_dag)
+        worker = SpineEngineWorker(server_address, data, dag, dag_identifier, items_in_dag, self._logger)
         return worker
 
     def _handle_engine_worker_finished(self, worker):
@@ -777,7 +859,7 @@ class SpineToolboxProject(MetaObject):
         }
         outcome = finished_outcomes.get(worker.engine_final_state())
         if outcome is not None:
-            outcome[0].emit("<b>DAG {0} {1}</b>".format(worker.dag_identifier, outcome[1]))
+            outcome[0].emit(f"<b>DAG {worker.dag_identifier} {outcome[1]}</b>")
         if any(worker.engine_final_state() not in finished_outcomes for worker in self._engine_workers):
             return
         # Only after all workers have finished, notify changes and handle successful executions.

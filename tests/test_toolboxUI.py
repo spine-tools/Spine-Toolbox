@@ -171,7 +171,7 @@ class TestToolboxUI(unittest.TestCase):
         # Check that project contains four items
         self.assertEqual(self.toolbox.project_item_model.n_items(), 4)
         # Check that design view has three links
-        links = self.toolbox.ui.graphicsView.links()
+        links = [item for item in self.toolbox.ui.graphicsView.scene().items() if isinstance(item, Link)]
         self.assertEqual(len(links), 3)
         # Check project items have the right links
         index_a = self.toolbox.project_item_model.find_item("a")

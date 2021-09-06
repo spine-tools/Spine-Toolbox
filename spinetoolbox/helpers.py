@@ -16,6 +16,7 @@ General helper functions and classes.
 :date:   10.1.2018
 """
 
+from enum import Enum, unique
 import itertools
 import os
 import glob
@@ -65,6 +66,14 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     from pandas.plotting import register_matplotlib_converters
 
     register_matplotlib_converters()
+
+
+@unique
+class LinkType(Enum):
+    """Graphics scene's link types."""
+
+    CONNECTION = "connection"
+    JUMP = "jump"
 
 
 def home_dir():

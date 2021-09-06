@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- Support for loops has been added. Loops can be created using a special *loop link* which is initiated by
+  holding down the **Alt** key while drawing a new link in Design view.
 
 ### Changed
 

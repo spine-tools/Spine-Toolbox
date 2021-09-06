@@ -11,7 +11,6 @@
 
 """
 Contains SpineEngineWorker.
-
 :authors: M. Marin (KTH)
 :date:   14.10.2020
 """
@@ -19,7 +18,9 @@ Contains SpineEngineWorker.
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from PySide2.QtWidgets import QMessageBox
-from spine_engine.spine_engine import ItemExecutionFinishState
+
+from spine_engine.exception import EngineInitFailed
+from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from .spine_engine_manager import make_engine_manager
 from .helpers import get_upgrade_db_promt_text
 
@@ -70,6 +71,7 @@ def _handle_prompt_arrived(prompt, engine_mngr):
         expected = prompt["expected"]
         text, info_text = get_upgrade_db_promt_text(url, current, expected)
     else:
+        info_text = ""
         text = prompt["text"]
     item_name = prompt["item_name"]
     # pylint: disable=undefined-variable
@@ -83,6 +85,20 @@ def _handle_prompt_arrived(prompt, engine_mngr):
     engine_mngr.answer_prompt(item_name, accepted)
 
 
+@Slot(list)
+def _mark_all_items_failed(items):
+    """Fails all project items.
+
+    Args:
+        items (list of ProjectItem): project items
+    """
+    for item in items:
+        icon = item.get_icon()
+        icon.execution_icon.mark_execution_finished(ItemExecutionFinishState.FAILURE)
+        if hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_stopped.emit()
+
+
 class SpineEngineWorker(QObject):
 
     finished = Signal()
@@ -92,8 +108,9 @@ class SpineEngineWorker(QObject):
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
     _prompt_arrived = Signal(dict, object)
+    _all_items_failed = Signal(list)
 
-    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items):
+    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, logger):
         """
         Args:
             engine_server_address (str): Address of engine server if any
@@ -101,6 +118,7 @@ class SpineEngineWorker(QObject):
             dag (DirectedGraphHandler)
             dag_identifier (str)
             project_items (dict): mapping from project item name to :class:`ProjectItem`
+            logger (LoggerInterface): a logger
         """
         super().__init__()
         self._engine_data = engine_data
@@ -110,6 +128,7 @@ class SpineEngineWorker(QObject):
         self._engine_final_state = "UNKNOWN"
         self._executing_items = []
         self._project_items = project_items
+        self._logger = logger
         self.event_messages = {}
         self.process_messages = {}
         self.successful_executions = []
@@ -176,13 +195,21 @@ class SpineEngineWorker(QObject):
                 but saved in internal dicts.
         """
         self._connect_log_signals(silent)
+        self._all_items_failed.connect(_mark_all_items_failed)
         self._dag_execution_started.emit(list(self._project_items.values()))
         self._thread.start()
 
     @Slot()
     def do_work(self):
         """Does the work and emits finished when done."""
-        self._engine_mngr.run_engine(self._engine_data)
+        try:
+            self._engine_mngr.run_engine(self._engine_data)
+        except EngineInitFailed as error:
+            self._logger.msg_error.emit(f"Failed to start engine: {error}")
+            self._engine_final_state = str(SpineEngineState.FAILED)
+            self._all_items_failed.emit(list(self._project_items.values()))
+            self.finished.emit()
+            return
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
             self._process_event(event_type, data)

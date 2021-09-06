@@ -16,51 +16,14 @@ Unit tests for DirectedGraphHandler class.
 :date:   18.4.2019
 """
 
-from tempfile import TemporaryDirectory
 import unittest
-import logging
-import sys
-from PySide2.QtWidgets import QApplication
 import networkx as nx
-from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.dag_handler import DirectedGraphHandler
-from .mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestDirectedGraphHandler(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        """Runs once before any tests in this class."""
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
-        )
-
     def setUp(self):
-        """Runs before each test. Makes an instance of ToolboxUI class.
-        We want the ToolboxUI to start with the default settings and without a project
-        """
-        self._temp_dir = TemporaryDirectory()
-        self.toolbox = create_toolboxui_with_project(self._temp_dir.name)
         self.dag_handler = DirectedGraphHandler()
-
-    def tearDown(self):
-        """Runs after each test. Use this to free resources after a test if needed."""
-        clean_up_toolbox(self.toolbox)
-        self._temp_dir.cleanup()
-        self.dag_handler = None
-
-    def test_project_is_open(self):
-        """Test that project is open and that it has no project items."""
-        self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
-        n = self.toolbox.project_item_model.n_items()
-        self.assertTrue(n == 0)
 
     def test_dags(self):
         """Test that dag_handler has been created and dags() method returns an empty list."""

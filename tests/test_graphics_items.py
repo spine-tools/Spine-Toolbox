@@ -51,7 +51,7 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(icon.x(), 0)
         self.assertEqual(icon.y(), 0)
         self.assertEqual(icon.incoming_links(), [])
-        self.assertEqual(icon.outgoing_links(), [])
+        self.assertEqual(icon.outgoing_connection_links(), [])
 
     def test_finalize(self):
         icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
@@ -76,7 +76,7 @@ class TestProjectItemIcon(unittest.TestCase):
         link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"), connection)
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
-        self.assertEqual(source_icon.outgoing_links(), [link])
+        self.assertEqual(source_icon.outgoing_connection_links(), [link])
         self.assertEqual(target_icon.incoming_links(), [link])
 
     def test_drag_icon(self):

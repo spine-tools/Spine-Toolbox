@@ -1015,6 +1015,14 @@
     <string>F7</string>
    </property>
   </action>
+  <action name="actionTake_link">
+   <property name="text">
+    <string>Take link</string>
+   </property>
+   <property name="toolTip">
+    <string>Change link's destination.</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

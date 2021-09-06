@@ -15,8 +15,16 @@ QUndoCommand subclasses for modifying the project.
 :authors: M. Marin (KTH)
 :date:   12.2.2020
 """
+from enum import IntEnum, unique
 from PySide2.QtWidgets import QUndoCommand
-from spine_engine.project_item.connection import Connection
+from spine_engine.project_item.connection import Connection, Jump
+
+
+@unique
+class Id(IntEnum):
+    """Id numbers for project commands."""
+
+    JUMP_CONDITION = 1
 
 
 class SpineToolboxCommand(QUndoCommand):
@@ -323,6 +331,108 @@ class RemoveConnectionsCommand(SpineToolboxCommand):
     def undo(self):
         for connection_dict in self._connections_dict.values():
             self._project.add_connection(Connection.from_dict(connection_dict), silent=True)
+
+
+class AddJumpCommand(SpineToolboxCommand):
+    def __init__(self, project, source_name, source_position, destination_name, destination_position):
+        """Command to add a jump between project items.
+
+        Args:
+            project (SpineToolboxProject): project
+            source_name (str): source item's name
+            source_position (str): link's position on source item's icon
+            destination_name (str): destination item's name
+            destination_position (str): link's position on destination item's icon
+        """
+        super().__init__()
+        self._project = project
+        self._source_name = source_name
+        self._destination_name = destination_name
+        self._jump_dict = Jump(source_name, source_position, destination_name, destination_position).to_dict()
+        replaced_jump = self._project.find_jump(source_name, destination_name)
+        self._replaced_jump_dict = replaced_jump.to_dict() if replaced_jump is not None else None
+        self._jump_name = f"jump from {source_name} to {destination_name}"
+
+    def redo(self):
+        if self._replaced_jump_dict is None:
+            success = self._project.add_jump(Jump.from_dict(self._jump_dict))
+            if not success:
+                self.setObsolete(True)
+        else:
+            self._project.replace_jump(Jump.from_dict(self._replaced_jump_dict), Jump.from_dict(self._jump_dict))
+        action = "add" if self._replaced_jump_dict is None else "replace"
+        self.setText(f"{action} {self._jump_name}")
+
+    def undo(self):
+        if self._replaced_jump_dict is None:
+            jump = self._project.find_jump(self._source_name, self._destination_name)
+            self._project.remove_jump(jump)
+        else:
+            jump = self._project.find_jump(self._source_name, self._destination_name)
+            self._project.replace_jump(jump, Jump.from_dict(self._replaced_jump_dict))
+
+
+class RemoveJumpsCommand(SpineToolboxCommand):
+    """Command to remove jumps."""
+
+    def __init__(self, project, jumps):
+        """
+        Args:
+            project (SpineToolboxProject): project
+            jumps (list of Jump): the jumps
+        """
+        super().__init__()
+        self._project = project
+        self._jump_dicts = {(j.source, j.destination): j.to_dict() for j in jumps}
+        if not jumps:
+            self.setObsolete(True)
+        elif len(jumps) == 1:
+            j = jumps[0]
+            self.setText(f"remove loop from {j.source} to {j.destination}")
+        else:
+            self.setText("remove multiple loops")
+
+    def redo(self):
+        for source, destination in self._jump_dicts:
+            jump = self._project.find_jump(source, destination)
+            self._project.remove_jump(jump)
+
+    def undo(self):
+        for jump_dict in self._jump_dicts.values():
+            self._project.add_jump(Jump.from_dict(jump_dict), silent=True)
+
+
+class SetJumpConditionCommand(SpineToolboxCommand):
+    """Command to set jump condition."""
+
+    def __init__(self, jump_properties, jump, condition):
+        """
+        Args:
+            jump_properties (JumpPropertiesWidget): jump's properties tab
+            jump (Jump): target jump
+            condition (str): jump condition
+        """
+        super().__init__()
+        self._jump_properties = jump_properties
+        self._jump = jump
+        self._condition = condition
+        self._previous_condition = jump.condition
+        self.setText("change loop condition")
+
+    def id(self):
+        return Id.JUMP_CONDITION
+
+    def mergeWith(self, other):
+        if not isinstance(other, SetJumpConditionCommand) or self._jump is not other._jump:
+            return False
+        self._condition = other._condition
+        return True
+
+    def redo(self):
+        self._jump_properties.set_condition(self._jump, self._condition)
+
+    def undo(self):
+        self._jump_properties.set_condition(self._jump, self._previous_condition)
 
 
 class SetFiltersOnlineCommand(SpineToolboxCommand):
