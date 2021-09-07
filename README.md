@@ -39,8 +39,7 @@ This works best for users that want to just use Spine Toolbox but also keep it u
 
 3. Install the latest Spine Toolbox release from PyPi by running
 
-
-    pip install spinetoolbox
+        pip install spinetoolbox
 
 That’s it!
 
