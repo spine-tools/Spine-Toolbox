@@ -200,9 +200,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._hide_classes_menu.setEnabled(bool(self._items_per_db_map_class))
         self._prune_classes_menu.clear()
         self._prune_classes_menu.setEnabled(bool(self._items_per_db_map_class))
-        for key in self._items_per_db_map_class - self.hidden_items.keys():
+        for key in sorted(self._items_per_db_map_class - self.hidden_items.keys()):
             self._hide_classes_menu.addAction(key)
-        for key in self._items_per_db_map_class.keys() - self.pruned_entity_ids.keys():
+        for key in sorted(self._items_per_db_map_class.keys() - self.pruned_entity_ids.keys()):
             self._prune_classes_menu.addAction(key)
         # FIXME: The heap map doesn't seem to be working nicely
         # self._parameter_heat_map_menu.setEnabled(has_graph)
@@ -318,7 +318,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.pruned_entity_ids[key] = {
             (db_map, x["id"])
             for item_type in ("object", "relationship")
-            for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", class_id)
+            for x in self.db_mngr.get_items_by_field(db_map, item_type, "class_id", class_id)
         }
         self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
