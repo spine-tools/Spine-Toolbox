@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 - Support for loops has been added. Loops can be created using a special *loop link* which is initiated by
   holding down the **Alt** key while drawing a new link in Design view.
+- Performance boost for Spine Db Editor when working with large databases.
 
 ### Changed
 
@@ -16,6 +17,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Removed
 
 ### Fixed
+- Spine Db Editor Graph View works on Python 3.7 again.
+- Spine Db Editor Graph View 'Add objects' and 'Save position' actions.
 
 ## [0.6.3] - 2021-09-03
 
