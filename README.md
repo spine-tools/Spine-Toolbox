@@ -26,44 +26,34 @@ Guide.
 
 ## Installation
 
-We provide three options for installing Spine Toolbox: [Python/pipx](#installation-with-python-and-pipx), [Windows installation file](#windows-64-bit-installer-package), and [git](#installation-from-sources-using-git).
+We provide three options for installing Spine Toolbox: [PyPi](#installation-with-python-and-pipx), [Windows installation file](#windows-64-bit-installer-package), and [git](#installation-from-sources-using-git).
 
-### Installation with Python and pipx
+### 1. Installation from PyPI (Python Package Index)
 
 This works best for users that want to just use Spine Toolbox but also keep it updated with new releases.
 
 1. If you don't yet have Python 3.7 or 3.8, then install Python 3.8.
-   - On Windows, open **Microsoft Store** from the start menu,
-     enter ‘python’ in the search box, select Python 3.8, and press **Get**.
-   - On OS X and Linux, get [the latest release from Python.org](https://www.python.org/downloads/).
+   - Get [the latest 3.8 release from Python.org](https://www.python.org/downloads/release/python-3810/) or from the Windows Store.
 
 2. Open a terminal (e.g., Command Prompt on Windows).
 
-3. Get the latest version of `pip` (pip is a package manager for Python)
+3. Install the latest Spine Toolbox release from PyPi by running
 
-        python -m pip install --upgrade pip
 
-4. Install [pipx](https://pypa.github.io/pipx/) (pipx allows to create an isolated environment for Spine Toolbox to avoid package conflicts with other Python tools)
-
-        python -m pip install pipx
-        python -m pipx ensurepath
-        
-5. Install the latest Spine Toolbox release by running
-
-        pipx install spinetoolbox
+    pip install spinetoolbox
 
 That’s it!
 
 To launch Spine Toolbox, open a terminal and run
 
-    spinetoolbox
+    python -m spinetoolbox
 
-To update Spine Toolbox to the latest available release, open a terminal and run
+To upgrade Spine Toolbox to the latest available release, open a terminal and run
 
-    pipx upgrade spinetoolbox
+    pip install --upgrade spinetoolbox
 
 
-### Windows 64-bit Installer Package
+### 2. Windows 64-bit Installer Package
 
 Windows installer packages are published periodically
 but not as frequently as the standard Python installation above.
@@ -72,7 +62,7 @@ Download the latest installer package from [here](https://github.com/Spine-proje
 run it, and follow the instructions to install Spine Toolbox.
 
 
-### Installation from sources using GIT
+### 3. Installation from sources using GIT
 
 This option is for the developers and other contributors who want to debug or 
 edit the Spine Toolbox source code.
@@ -124,8 +114,8 @@ To upgrade `spine_items`, run
 
     pip uninstall -y spine-items && pip install --upgrade git+https://github.com/Spine-project/spine-items.git#egg=spine_items
 
-Or you can use the provided script `/bin/upgrade_spine_reqs.bat` (Windows) or `/bin/upgrade_spine_reqs.py` 
-(Other OS's) files to upgrade all three at once.
+**Or you can use the provided scripts `/bin/upgrade_spine_reqs.bat` on Windows or `/bin/upgrade_spine_reqs.py` 
+on Other OS's to upgrade all three at once.**
 
 ### About requirements
 
@@ -156,6 +146,13 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 #### Installation fails
 
 Please make sure you are using Python 3.7 or Python 3.8 to install the requirements.
+
+#### Installation from PyPI fails due to package requirement conflictions
+Spine Toolbox release versions from PyPI require some very specific versions of the dependant 
+packages. This may cause problems when installing the app (`pip install spinetoolbox`) to 
+an existing environment. In this case, please use [pipx](https://pypa.github.io/pipx/) for 
+installing Spine Toolbox in an isolated environment or use Mini/Anaconda as an environment 
+manager.
 
 #### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
