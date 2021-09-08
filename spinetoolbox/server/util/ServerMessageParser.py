@@ -16,7 +16,7 @@ Parser for JSON-based messages exchanged between server and clients.
 """
 
 import json
-from ServerMessage import ServerMessage
+from spinetoolbox.server.util.ServerMessage import ServerMessage
 
 class ServerMessageParser:
   

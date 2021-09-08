@@ -37,11 +37,13 @@ class test_ZMQClient:
         msgData = f.read()
         f.close()
         msgDataJson=json.dumps(msgData)
-        
+        print("test_ZMQClient(): converted JSON: %s"%msgDataJson)
+
         i=0
         while i <10:
             eventsData=client.send(msgDataJson,"./","test_zipfile.zip")
             #print(len(eventsData))
+            print(eventsData)
             if len(eventsData)!=31:
                 return -1
             print("test msg %d sent/received, data size received: %d"%(i,len(eventsData)))

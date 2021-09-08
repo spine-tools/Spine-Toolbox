@@ -17,16 +17,16 @@ A Zero-MQ client for exchanging messages between the toolbox and the remote serv
 
 
 import sys
-sys.path.append('./../util')
+#sys.path.append('./../util')
 import os
 import zmq
 import json
 import time
 import random
 
-from ServerMessage import ServerMessage
-from ServerMessageParser import ServerMessageParser
-from EventDataConverter import EventDataConverter
+from spinetoolbox.server.util.ServerMessage import ServerMessage
+from spinetoolbox.server.util.ServerMessageParser import ServerMessageParser
+from spinetoolbox.server.util.EventDataConverter import EventDataConverter
 
 
 class ZMQClient:
@@ -75,6 +75,7 @@ class ZMQClient:
         msg_parts=[]
         listFiles=[fileName]
         msg=ServerMessage("execute",str(randomId),text,listFiles)
+        print("ZMQClient(): msg to be sent (without file) : %s"%msg.toJSON())
         part1Bytes = bytes(msg.toJSON(), 'utf-8')
         msg_parts.append(part1Bytes)
         msg_parts.append(fileData)
