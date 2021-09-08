@@ -24,7 +24,7 @@ import json
 import pathlib
 import numpy as np
 from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, QModelIndex, QPoint, Qt, Signal, Slot, QSettings, QUrl
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -1475,9 +1475,10 @@ class ToolboxUI(QMainWindow):
     @staticmethod
     def get_all_multi_tab_spec_editors(item_type):
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
-            widget = QWidget.find(window.winId())
-            if isinstance(widget, MultiTabSpecEditor) and widget.item_type == item_type:
-                yield widget
+            if isinstance(window, QWindow):
+                widget = QWidget.find(window.winId())
+                if isinstance(widget, MultiTabSpecEditor) and widget.item_type == item_type:
+                    yield widget
 
     def _get_existing_spec_editor(self, item_type, specification, item):
         for multi_tab_editor in self.get_all_multi_tab_spec_editors(item_type):
