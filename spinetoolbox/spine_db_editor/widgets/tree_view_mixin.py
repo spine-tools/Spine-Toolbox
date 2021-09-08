@@ -438,3 +438,50 @@ class TreeViewMixin:
     def receive_tool_feature_methods_removed(self, db_map_data):
         super().receive_tool_feature_methods_removed(db_map_data)
         self.tool_feature_model.remove_tool_feature_methods(db_map_data)
+
+    def restore_ui(self):
+        """Restores UI state from previous session."""
+        super().restore_ui()
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        header_states = (
+            self.qsettings.value("altScenTreeHeaderState"),
+            self.qsettings.value("toolFeatTreeHeaderState"),
+            self.qsettings.value("parValLstTreeHeaderState"),
+            self.qsettings.value("objTreeHeaderState"),
+            self.qsettings.value("relTreeHeaderState"),
+        )
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()
+        views = (
+            self.ui.treeView_alternative_scenario.header(),
+            self.ui.treeView_tool_feature.header(),
+            self.ui.treeView_parameter_value_list.header(),
+            self.ui.treeView_object.header(),
+            self.ui.treeView_relationship.header(),
+        )
+        for view, state in zip(views, header_states):
+            if state:
+                curr_state = view.saveState()
+                view.restoreState(state)
+                if view.count() != view.model().columnCount():
+                    # This can happen when switching to a version where the model has a different header
+                    view.restoreState(curr_state)
+
+    def save_window_state(self):
+        """Saves window state parameters (size, position, state) via QSettings."""
+        super().save_window_state()
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        h = self.ui.treeView_alternative_scenario.header()
+        self.qsettings.setValue("altScenTreeHeaderState", h.saveState())
+        h = self.ui.treeView_tool_feature.header()
+        self.qsettings.setValue("toolFeatTreeHeaderState", h.saveState())
+        h = self.ui.treeView_parameter_value_list.header()
+        self.qsettings.setValue("parValLstTreeHeaderState", h.saveState())
+        h = self.ui.treeView_object.header()
+        self.qsettings.setValue("objTreeHeaderState", h.saveState())
+        h = self.ui.treeView_relationship.header()
+        self.qsettings.setValue("relTreeHeaderState", h.saveState())
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()
