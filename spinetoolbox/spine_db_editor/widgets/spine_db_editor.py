@@ -206,6 +206,7 @@ class SpineDBEditorBase(QMainWindow):
             QMenu
         """
         menu = QMenu(self)
+        menu.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
