@@ -269,7 +269,7 @@ class SpineDBWorker(QObject):
 
     def _is_url_available(self, url, logger):
         # FIXME: needed?
-        if str(url) in self._db_maps:
+        if str(url) in self._db_mngr.db_urls:
             message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
             logger.msg_error.emit(message)
             return False

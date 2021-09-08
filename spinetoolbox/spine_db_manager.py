@@ -358,6 +358,10 @@ class SpineDBManager(QObject):
     def db_maps(self):
         return set(self._db_maps.values())
 
+    @property
+    def db_urls(self):
+        return set(self._db_maps)
+
     def db_map(self, url):
         """
         Returns a database mapping for given URL.
