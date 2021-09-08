@@ -194,13 +194,15 @@ class MemberObjectClassItem(ObjectClassItem):
 
     item_type = "members"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     @property
     def display_id(self):
         # Return an empty tuple so we never insert anything before this item (see _insert_children_sorted)
         return ()
+
+    def db_map_id_for_row_map(self, db_map):
+        # Return an id that never collides with other ids from actual db elements.
+        # This is because this item coexists with relationship_class items *at the same level*
+        return 0
 
     @property
     def display_data(self):
