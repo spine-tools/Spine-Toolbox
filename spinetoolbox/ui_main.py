@@ -990,11 +990,7 @@ class ToolboxUI(QMainWindow):
         else:
             msg += "<br><br><b>Warning: Item data will be permanently lost after this operation.</b>"
         message_box = QMessageBox(
-            QMessageBox.Question,
-            "Remove All Items",
-            msg,
-            buttons=QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self,
+            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
         )
         message_box.button(QMessageBox.Ok).setText("Remove Items")
         answer = message_box.exec_()
@@ -1479,10 +1475,9 @@ class ToolboxUI(QMainWindow):
     @staticmethod
     def get_all_multi_tab_spec_editors(item_type):
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
-            if isinstance(window, QWidget):
-                widget = QWidget.find(window.winId())
-                if isinstance(widget, MultiTabSpecEditor) and widget.item_type == item_type:
-                    yield widget
+            widget = QWidget.find(window.winId())
+            if isinstance(widget, MultiTabSpecEditor) and widget.item_type == item_type:
+                yield widget
 
     def _get_existing_spec_editor(self, item_type, specification, item):
         for multi_tab_editor in self.get_all_multi_tab_spec_editors(item_type):
