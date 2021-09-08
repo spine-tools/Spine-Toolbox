@@ -586,13 +586,12 @@ class SpineDBManager(QObject):
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self._cache)
-        if refreshed_db_maps:
-            self.session_refreshed.emit(refreshed_db_maps)
+        if not refreshed_db_maps:
+            return
         for db_map in refreshed_db_maps:
-            cache = self._cache.pop(db_map)
-            for item_type, items in cache.items():
-                signal = self.added_signals[item_type]
-                signal.emit({db_map: list(items.values())})
+            self._cache.pop(db_map, None)
+        self._clear_fetchers(refreshed_db_maps)
+        self.session_refreshed.emit(refreshed_db_maps)
 
     def _clear_fetchers(self, db_maps):
         for db_map in db_maps:
