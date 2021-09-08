@@ -56,6 +56,10 @@ class TestFilePackager(unittest.TestCase):
         with self.assertRaises(ValueError):
             FilePackager.package('./testfolder','./','')
 
+    def test_packaging_removing(self): 
+        FilePackager.package('./testfolder','./','testing')
+        FilePackager.deleteFile('./testing.zip')
+        self.assertEqual(os.path.isfile('./testing.zip'),False)
 
 
 if __name__ == '__main__':

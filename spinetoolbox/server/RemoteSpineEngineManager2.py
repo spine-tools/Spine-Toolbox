@@ -109,13 +109,13 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
                 #print("get_engine_event() transforming data: %s"%eventData[1])
                 dataDict=ast.literal_eval(eventData[1])
                 #dataDict=json.loads(eventData[1])
-                print(type(dataDict))
-                print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
+                #print(type(dataDict))
+                #print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
                 return (eventData[0],dataDict)
             except:   #these exceptions are needed due to some dict-strings being returned without quotes
                       # and status code (not a dict string) see: SpineEngine._process_event()
                 if eventData[1].find('{')==-1:
-                    print("get_engine_event() Failure in parsing, returning a status code.")
+                    #print("get_engine_event() Failure in parsing, returning a status code.")
                     return (eventData[0],eventData[1])
                 quotedData=self._addQuotesToDictString(eventData[1])
                 #print("get_engine_event() Failure in parsing, modified quotes to str: %s"%quotedData)
@@ -162,6 +162,9 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
                 print("RemoteSpineEngineManager2.run() %d of event+data items received."%len(dataEvents))
                 self._outputData=dataEvents
                 self._outputDataIteratorIndex=0
+
+                #remove the transferred ZIP-file
+                FilePackager.deleteFile(self._inputData['project_dir']+"/"+RemoteSpineEngineManager2.ZipFileName+".zip")
 
                 #change state to REPLY_RECEIVED
                 self._state=RemoteSpineEngineManagerState2.REPLY_RECEIVED

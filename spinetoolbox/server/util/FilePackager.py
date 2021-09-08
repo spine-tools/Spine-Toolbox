@@ -44,3 +44,23 @@ class FilePackager:
 
         print('FilePackager.package() source folder: %s, dest-folder+file name: %s'%(sourceFolder,destinationFolder+zipFileName,))
         shutil.make_archive(destinationFolder+zipFileName, 'zip', sourceFolder)        
+
+
+    @staticmethod
+    def deleteFile(file):
+        """
+        Deletes the file at the provided location (includes the folder).
+        Args:
+            file: File to be deleted. 
+        """
+         #check input
+        if file==None:
+            raise ValueError('invalid input to FileExtractor.deleteFile()')
+        if len(file)==0:
+            raise ValueError('invalid input to FileExtractor.deleteFile()')
+
+        if os.path.exists(file)==False:
+            raise ValueError('provided file %s doesn''t exist'%file)  
+
+        os.remove(file) 
+        print("FileExtractor.deleteFile(): Removed file: %s"%file)   
