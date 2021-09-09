@@ -279,9 +279,13 @@ class SpineEngineWorker(QObject):
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
                 f"Unable to find kernel spec <b>{msg['kernel_name']}</b>. "
-                "For Python Tools, select a kernel spec in the Tool specification editor."
-                "For Julia Tools, select a kernel spec from File->Settings->Tools."
+                "<br/>For Python Tools, select a kernel spec in the Tool specification editor."
+                "<br/>For Julia Tools, select a kernel spec from File->Settings->Tools."
             )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg["type"] == "conda_not_found":
+            msg_text = (f"{msg['error']}<br/>Couldn't call Conda. Set up <b>Conda executable</b> "
+                        f"in <b>File->Settings->Tools</b>.")
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
             msg_text = f"Execution on kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
