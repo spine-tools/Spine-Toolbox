@@ -391,15 +391,12 @@ class MultiDBTreeItem(TreeItem):
         super().clear_children()
         self._child_map.clear()
 
-    def db_map_id_for_row_map(self, db_map):
-        return self.db_map_id(db_map)
-
     def _refresh_child_map(self):
         """Recomputes the child map."""
         self._child_map.clear()
         for row, child in enumerate(self.children):
             for db_map in child.db_maps:
-                id_ = child.db_map_id_for_row_map(db_map)
+                id_ = child.db_map_id(db_map)
                 self._child_map.setdefault(db_map, dict())[id_] = row
 
     def find_children_by_id(self, db_map, *ids, reverse=True):
