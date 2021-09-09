@@ -521,6 +521,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     def mousePressEvent(self, event):
         """Handles relationship creation if one it's in process."""
+        self._previous_mouse_pos = event.pos()
         if not self.cross_hairs_items:
             super().mousePressEvent(event)
             return
@@ -551,7 +552,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self._update_cross_hairs_pos(event.pos())
             return
         super().mouseMoveEvent(event)
-        if not self.itemAt(event.pos()) and (event.buttons() & Qt.LeftButton != 0):
+        if (
+            not self.itemAt(event.pos())
+            and (event.buttons() & Qt.LeftButton != 0)
+            and self.dragMode() != self.RubberBandDrag
+        ):
             if self._previous_mouse_pos is not None:
                 delta = event.pos() - self._previous_mouse_pos
                 self._scroll_scene_by(delta.x(), delta.y())
@@ -582,6 +587,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.cross_hairs_items[0].set_normal_icon()
 
     def mouseReleaseEvent(self, event):
+        self._previous_mouse_pos = None
         if not self.cross_hairs_items:
             super().mouseReleaseEvent(event)
 
