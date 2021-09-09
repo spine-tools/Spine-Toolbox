@@ -27,7 +27,14 @@ from enum import Enum
 
 #from spinetoolbox.server.util.ServerMessage import ServerMessage
 from spinetoolbox.server.connectivity.ZMQClient import ZMQClient
-from spinetoolbox.spine_engine_manager import SpineEngineManagerBase
+
+#to avoid circular dependency
+try:
+    from spinetoolbox.spine_engine_manager import SpineEngineManagerBase
+except ImportError:
+    import sys
+    SpineEngineManagerBase = sys.modules['spinetoolbox.spine_engine_manager.SpineEngineManagerBase']
+
 from spinetoolbox.server.util.FilePackager import FilePackager
 
 #states of this class 
@@ -110,17 +117,17 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
                 dataDict=ast.literal_eval(eventData[1])
                 #dataDict=json.loads(eventData[1])
                 #print(type(dataDict))
-                #print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
+                print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
                 return (eventData[0],dataDict)
             except:   #these exceptions are needed due to some dict-strings being returned without quotes
                       # and status code (not a dict string) see: SpineEngine._process_event()
                 if eventData[1].find('{')==-1:
-                    #print("get_engine_event() Failure in parsing, returning a status code.")
+                    print("get_engine_event() Failure in parsing, returning a status code.")
                     return (eventData[0],eventData[1])
                 quotedData=self._addQuotesToDictString(eventData[1])
                 #print("get_engine_event() Failure in parsing, modified quotes to str: %s"%quotedData)
                 dataDict=ast.literal_eval(quotedData)
-                #print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
+                print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
                 return (eventData[0],dataDict)
 
         else:
@@ -177,7 +184,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
 
 
     def _addQuotesToDictString(self,str):
-        newStr=str.replace('\': <','\': \'')
+        newStr=str.replace('\': <','\': \'<')
         retStr=newStr.replace('}','\'}')
         return retStr
 

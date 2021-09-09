@@ -19,6 +19,7 @@ Contains SpineEngineManagerBase.
 import socket
 import json
 
+#from spinetoolbox.server.RemoteSpineEngineManager2 import RemoteSpineEngineManager2
 
 class SpineEngineManagerBase:
     def run_engine(self, engine_data):
@@ -274,8 +275,10 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
 
         return get_persistent_history_item(persistent_key, index)
 
+from spinetoolbox.server.RemoteSpineEngineManager2 import RemoteSpineEngineManager2
 
 def make_engine_manager(engine_server_address):
     if not engine_server_address:
-        return LocalSpineEngineManager()
+        return RemoteSpineEngineManager2("tcp","193.166.160.216",5555)
+        #return LocalSpineEngineManager()
     return RemoteSpineEngineManager(engine_server_address)

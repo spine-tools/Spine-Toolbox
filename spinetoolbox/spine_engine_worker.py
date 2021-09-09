@@ -15,7 +15,7 @@ Contains SpineEngineWorker.
 :authors: M. Marin (KTH)
 :date:   14.10.2020
 """
-
+import time
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from PySide2.QtWidgets import QMessageBox
@@ -183,6 +183,8 @@ class SpineEngineWorker(QObject):
     def do_work(self):
         """Does the work and emits finished when done."""
         self._engine_mngr.run_engine(self._engine_data)
+        #time.sleep(1)
+        #print("spine_engine_worker.do_work() getting events after 1s sleep")
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
             self._process_event(event_type, data)
@@ -202,6 +204,13 @@ class SpineEngineWorker(QObject):
             "kernel_execution_msg": self._handle_kernel_execution_msg,
             "prompt": self._handle_prompt,
         }.get(event_type)
+
+        #debugs
+        if event_type=='exec_finished':
+            data['item_state']=ItemExecutionFinishState.SUCCESS
+            print("spine_engine_worker._process_event(): exec_fininshed data %s and type %s"%(data,type(data)))
+            print("spine_engine_worker._process_event(): item_state type: %s"%type(data['item_state']))
+
         if handler is None:
             return
         handler(data)
