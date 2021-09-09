@@ -278,7 +278,7 @@ class SpineEngineWorker(QObject):
             item.jupyter_console_requested.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
-                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>. "
+                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>"
                 "<br/>For Python Tools, select a kernel spec in the Tool specification editor."
                 "<br/>For Julia Tools, select a kernel spec from File->Settings->Tools."
             )
