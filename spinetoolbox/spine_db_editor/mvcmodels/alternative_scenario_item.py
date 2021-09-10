@@ -130,7 +130,10 @@ class ScenarioActiveItem(NonLazyTreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
-            active = "yes" if self.parent_item.item_data["active"] else "no"
+            try:
+                active = "yes" if self.parent_item.item_data["active"] else "no"
+            except KeyError as e:
+                print(e)
             return "active: " + active
         return super().data(column, role)
 

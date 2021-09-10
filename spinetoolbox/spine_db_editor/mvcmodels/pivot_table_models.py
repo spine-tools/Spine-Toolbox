@@ -76,7 +76,7 @@ class PivotTableModelBase(QAbstractTableModel):
         Args:
             parent (SpineDBEditor)
         """
-        super().__init__()
+        super().__init__(parent)
         self._parent = parent
         self.db_mngr = parent.db_mngr
         self.model = PivotModel()

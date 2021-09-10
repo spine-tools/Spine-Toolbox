@@ -38,7 +38,7 @@ from ..mvcmodels.frozen_table_model import FrozenTableModel
 
 
 class TabularViewMixin:
-    """Provides the pivot table and its frozen table for the DS form."""
+    """Provides the pivot table and its frozen table for the Database editor."""
 
     _PARAMETER_VALUE = "&Value"
     _INDEX_EXPANSION = "&Index"

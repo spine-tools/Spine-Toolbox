@@ -20,6 +20,7 @@ import os
 import json
 from sqlalchemy.engine.url import URL
 from PySide2.QtWidgets import (
+    QAction,
     QMainWindow,
     QErrorMessage,
     QDockWidget,
@@ -30,7 +31,7 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QDialog,
 )
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -452,7 +453,7 @@ class SpineDBEditorBase(QMainWindow):
         try:
             db_map = DatabaseMapping(url)
         except (SpineDBAPIError, SpineDBVersionError) as err:
-            self.msg.emit(f"Could'n import file {filename}: {str(err)}")
+            self.msg.emit(f"Couldn't import file {filename}: {str(err)}")
             return
         data = export_data(db_map)
         self.import_data(data)
@@ -463,7 +464,7 @@ class SpineDBEditorBase(QMainWindow):
         try:
             mapped_data, errors = get_mapped_data_from_xlsx(file_path)
         except Exception as err:  # pylint: disable=broad-except
-            self.msg.emit(f"Could'n import file {filename}: {str(err)}")
+            self.msg.emit(f"Couldn't import file {filename}: {str(err)}")
             raise err  # NOTE: This is so the programmer gets to see the traceback
         if errors:
             msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
@@ -655,7 +656,7 @@ class SpineDBEditorBase(QMainWindow):
         dialog.show()
 
     @busy_effect
-    @Slot("QModelIndex")
+    @Slot(QModelIndex)
     def show_parameter_value_editor(self, index, plain=False):
         """Shows the parameter_value editor for the given index of given table view.
         """
@@ -919,6 +920,30 @@ class SpineDBEditorBase(QMainWindow):
             return
         super().closeEvent(event)
 
+    def scenario_items(self, db_map):
+        """Gathers scenario items from alternative scenario tree for given database.
+
+        Args:
+            db_map (DiffDatabaseMapping): database map
+
+        Returns:
+            list of CachedItem: scenario items
+        """
+        model = self.ui.treeView_alternative_scenario.model()
+        db_index = None
+        for row in range(model.rowCount()):
+            db_index = model.index(row, 0)
+            item = model.item_from_index(db_index)
+            if item.db_map is db_map:
+                break
+        if db_index is None:
+            raise RuntimeError("Database item not found in alternative/scenario model.")
+        scenario_root_index = model.index(1, 0, db_index)
+        return [
+            model.item_from_index(model.index(row, 0, scenario_root_index))
+            for row in range(model.rowCount(scenario_root_index))
+        ]
+
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
@@ -1053,7 +1078,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.4 * height], Qt.Vertical)
         self.end_style_change()
 
-    @Slot("QAction")
+    @Slot(QAction)
     def apply_pivot_style(self, _action):
         """Applies the pivot style, inspired in the former tabular view."""
         self.begin_style_change()
