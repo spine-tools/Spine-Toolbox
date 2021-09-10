@@ -284,8 +284,10 @@ class SpineEngineWorker(QObject):
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "conda_not_found":
-            msg_text = (f"{msg['error']}<br/>Couldn't call Conda. Set up <b>Conda executable</b> "
-                        f"in <b>File->Settings->Tools</b>.")
+            msg_text = (
+                f"{msg['error']}<br/>Couldn't call Conda. Set up <b>Conda executable</b> "
+                f"in <b>File->Settings->Tools</b>."
+            )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
             msg_text = f"Execution on kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"

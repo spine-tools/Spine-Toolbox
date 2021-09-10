@@ -37,6 +37,7 @@ from spinetoolbox.helpers import busy_effect
 class SpineDBWorker(QObject):
     """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
 
+    session_rolled_back = Signal(set)
     _get_db_map_called = Signal()
     _get_metadata_per_entity_called = Signal(object, list, dict)
     _get_metadata_per_parameter_value_called = Signal(object, list, dict)
@@ -235,13 +236,12 @@ class SpineDBWorker(QObject):
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
                 self._db_mngr.undo_stack[db_map].clear()
-                del self._db_mngr._cache[db_map]
             except SpineDBAPIError as e:
                 db_map_error_log[db_map] = e.msg
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
         if rolled_db_maps:
-            self._db_mngr.session_rolled_back.emit(rolled_db_maps)
+            self.session_rolled_back.emit(rolled_db_maps)
 
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
         self._export_data_called.emit(caller, db_map_item_ids, file_path, file_filter)

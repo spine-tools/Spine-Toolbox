@@ -226,6 +226,7 @@ class SpineDBManager(QObject):
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
+        self._worker.session_rolled_back.connect(self._finish_rolling_back)
         self._worker.connect_signals()
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
@@ -596,6 +597,16 @@ class SpineDBManager(QObject):
             self._cache.pop(db_map, None)
         self._clear_fetchers(refreshed_db_maps)
         self.session_refreshed.emit(refreshed_db_maps)
+
+    def _finish_rolling_back(self, rolled_back_db_maps):
+        """Clears caches and emits ``session_rolled_back`` signal.
+
+        Args:
+            rolled_back_db_maps (set of DiffDatabaseMap): database maps that have been rolled back
+        """
+        for db_map in rolled_back_db_maps:
+            del self._cache[db_map]
+        self.session_rolled_back.emit(rolled_back_db_maps)
 
     def _clear_fetchers(self, db_maps):
         for db_map in db_maps:
