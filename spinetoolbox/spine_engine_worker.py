@@ -206,10 +206,9 @@ class SpineEngineWorker(QObject):
         }.get(event_type)
 
         #debugs
-        if event_type=='exec_finished':
-            data['item_state']=ItemExecutionFinishState.SUCCESS
-            print("spine_engine_worker._process_event(): exec_fininshed data %s and type %s"%(data,type(data)))
-            print("spine_engine_worker._process_event(): item_state type: %s"%type(data['item_state']))
+        #if event_type=='exec_finished':
+        #    print("spine_engine_worker._process_event(): exec_fininshed data %s and type %s"%(data,type(data)))
+        #    print("spine_engine_worker._process_event(): item_state type: %s"%type(data['item_state']))
 
         if handler is None:
             return

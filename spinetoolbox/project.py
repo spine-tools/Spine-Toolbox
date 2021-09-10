@@ -776,6 +776,7 @@ class SpineToolboxProject(MetaObject):
             "COMPLETED": [self._logger.msg_success, "completed successfully"],
         }
         outcome = finished_outcomes.get(worker.engine_final_state())
+        #print("project._handle_engine_worker_finished() worker state: %s"%outcome)
         if outcome is not None:
             outcome[0].emit("<b>DAG {0} {1}</b>".format(worker.dag_identifier, outcome[1]))
         if any(worker.engine_final_state() not in finished_outcomes for worker in self._engine_workers):

@@ -28,6 +28,8 @@ from enum import Enum
 #from spinetoolbox.server.util.ServerMessage import ServerMessage
 from spinetoolbox.server.connectivity.ZMQClient import ZMQClient
 
+from spine_engine.spine_engine import ItemExecutionFinishState
+
 #to avoid circular dependency
 try:
     from spinetoolbox.spine_engine_manager import SpineEngineManagerBase
@@ -70,7 +72,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
             raise ValueError("invalid input values (protocol,remoteHost) to RemoteSpineEngineManager2.")
 
         threading.Thread.__init__(self)
-        print("RemoteSpineEngineManager()")
+        #print("RemoteSpineEngineManager()")
         self.zmqClient=ZMQClient(protocol,remoteHost,remotePort)
         self._state=RemoteSpineEngineManagerState2.IDLE
         self._requestPending=False
@@ -113,25 +115,26 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
                 self._state=RemoteSpineEngineManagerState2.IDLE 
 
             try:
+                dataDict={}
                 #print("get_engine_event() transforming data: %s"%eventData[1])
-                dataDict=ast.literal_eval(eventData[1])
+                #handle execution state transformation, see returned data from SpineEngine._process_event()
+                if eventData[1].find('\'item_state\': <')!=-1:  
+                    dataDict=self._transformExecutionState(eventData[1])
+                else:
+                    dataDict=ast.literal_eval(eventData[1])
                 #dataDict=json.loads(eventData[1])
                 #print(type(dataDict))
-                print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
+                #print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
                 return (eventData[0],dataDict)
-            except:   #these exceptions are needed due to some dict-strings being returned without quotes
-                      # and status code (not a dict string) see: SpineEngine._process_event()
+            except:   #this exception is needed due to status code return (not a dict string), see: SpineEngine._process_event()                      
                 if eventData[1].find('{')==-1:
-                    print("get_engine_event() Failure in parsing, returning a status code.")
+                    print("get_engine_event() Handled exception in parsing, returning a status code.")
                     return (eventData[0],eventData[1])
-                quotedData=self._addQuotesToDictString(eventData[1])
-                #print("get_engine_event() Failure in parsing, modified quotes to str: %s"%quotedData)
-                dataDict=ast.literal_eval(quotedData)
-                print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
-                return (eventData[0],dataDict)
-
+                else:
+                    print("get_engine_event() Failure in parsing,returning empty..")
+                    return (None,None)
         else:
-            print("get_engine_event(): returning empty tuple, reply has not been received yet.")
+            #print("get_engine_event(): returning empty tuple, reply has not been received yet.")
             return (None,None)
 
 
@@ -147,31 +150,47 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
         while(self._state!=RemoteSpineEngineManagerState2.CLOSED):
             #run request 
             if self._requestPending==True and self._state==RemoteSpineEngineManagerState2.IDLE:
+                #debugging
+                runStartTimeMs=round(time.time()*1000.0)
                 #change state
                 print("RemoteSpineEngineManager2.run() Started running..")
                 self._state==RemoteSpineEngineManagerState2.RUNNING
 
                 #transform dict to JSON string
                 jsonTxt=json.dumps(self._inputData)
-                print("RemoteSpineEngineManager2.run() Sending data: %s"%jsonTxt)
+                #print("RemoteSpineEngineManager2.run() Sending data: %s"%jsonTxt)
 
                 jsonTxt=json.dumps(jsonTxt)
-                print("RemoteSpineEngineManager2.run() Data after conversion: %s"%jsonTxt)
+                #print("RemoteSpineEngineManager2.run() Data after conversion: %s"%jsonTxt)
+                runStartTimeMs=round(time.time()*1000.0)
+
+                #Debugging
+                runStopTimeMs=round(time.time()*1000.0)
+                print("RemoteSpineEngineManager2.run() run time after JSON encoding %d ms"%(runStopTimeMs-runStartTimeMs))
+                runStartTimeMs=round(time.time()*1000.0)
  
                 #get folder from input data, and package it
                 print("RemoteSpineEngineManager2.run() Packaging folder %s.."%self._inputData['project_dir'])
                 FilePackager.package(self._inputData['project_dir'],self._inputData['project_dir']+"/",RemoteSpineEngineManager2.ZipFileName)
                             
+                #Debugging
+                runStopTimeMs=round(time.time()*1000.0)
+                print("RemoteSpineEngineManager2.run() run time after packaging %d ms"%(runStopTimeMs-runStartTimeMs))
+                runStartTimeMs=round(time.time()*1000.0)
                 #send request to the remote client, and listen for a response
                 dataEvents=self.zmqClient.send(jsonTxt,self._inputData['project_dir']+"/",RemoteSpineEngineManager2.ZipFileName+".zip")
-                print("RemoteSpineEngineManager2.run() received a response:")
-                print(dataEvents)
+                #print("RemoteSpineEngineManager2.run() received a response:")
+                #print(dataEvents)
                 print("RemoteSpineEngineManager2.run() %d of event+data items received."%len(dataEvents))
                 self._outputData=dataEvents
                 self._outputDataIteratorIndex=0
 
                 #remove the transferred ZIP-file
                 FilePackager.deleteFile(self._inputData['project_dir']+"/"+RemoteSpineEngineManager2.ZipFileName+".zip")
+
+                #debugging
+                runStopTimeMs=round(time.time()*1000.0)
+                print("RemoteSpineEngineManager2.run() duration of transfer %d ms"%(runStopTimeMs-runStartTimeMs))
 
                 #change state to REPLY_RECEIVED
                 self._state=RemoteSpineEngineManagerState2.REPLY_RECEIVED
@@ -181,6 +200,38 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
                 time.sleep(0.01)
 
         print("RemoteSpineEngineManager2.run()..out")
+
+
+
+    def _transformExecutionState(self,data):
+        #first add quotes around execution state
+        quotedStr=self._addQuotesToDictString(data)
+        #print("RemoteSpineEngineManager2._transformExecutionState() Quoted str: %s"%quotedStr)
+        tempDict=ast.literal_eval(quotedStr)
+        stateStr=tempDict['item_state']
+        #print("RemoteSpineEngineManager2._transformExecutionState() state str: %s"%stateStr)
+        state=None
+        #transfrom string state into enum
+        if stateStr=='<ItemExecutionFinishState.SUCCESS: 1>':
+            state=ItemExecutionFinishState.SUCCESS
+        elif stateStr=='<ItemExecutionFinishState.FAILURE = 2>':
+            state=ItemExecutionFinishState.FAILURE
+        elif stateStr=='<ItemExecutionFinishState.SKIPPED = 3>':
+            state=ItemExecutionFinishState.SKIPPED
+        elif stateStr=='<ItemExecutionFinishState.EXCLUDED = 4>':
+            state=ItemExecutionFinishState.EXCLUDED
+        elif stateStr=='<ItemExecutionFinishState.STOPPED = 5>':
+            state=ItemExecutionFinishState.STOPPED
+        elif stateStr=='<ItemExecutionFinishState.NEVER_FINISHED = 6>':
+            state=ItemExecutionFinishState.NEVER_FINISHED
+        if state!=None:
+            tempDict['item_state']=state
+            #print("RemoteSpineEngineManager2._transformExecutionState() Returning transformed dict:")
+            print(tempDict)
+            return tempDict
+        else:
+            print("RemoteSpineEngineManager2._transformExecutionState() Failure in parsing")
+            return tempDict
 
 
     def _addQuotesToDictString(self,str):
