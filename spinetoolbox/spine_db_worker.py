@@ -45,8 +45,8 @@ class SpineDBWorker(QObject):
     _add_or_update_items_called = Signal(object, str, str, bool, str)
     _readd_items_called = Signal(object, str, str, str)
     _remove_items_called = Signal(object)
-    _commit_session_called = Signal(object, str, object)
-    _rollback_session_called = Signal(object)
+    _commit_session_called = Signal(object, str, dict, object)
+    _rollback_session_called = Signal(object, dict)
     _export_data_called = Signal(object, object, str, str)
     _duplicate_object_called = Signal(list, dict, str, str)
 
@@ -206,17 +206,35 @@ class SpineDBWorker(QObject):
         self._db_mngr.uncache_items(db_map_typed_ids)
 
     def commit_session(self, dirty_db_maps, commit_msg, cookie=None):
-        self._commit_session_called.emit(dirty_db_maps, commit_msg, cookie)
+        """Initiates commit session action for given database maps in the worker thread.
 
-    @Slot(object, str, object)
-    def _commit_session(self, dirty_db_maps, commit_msg, cookie=None):
+        Args:
+            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to commit
+            commit_msg (str): commit message
+            cookie (Any): a cookie to include in session_committed signal
+        """
+        # Make sure that the worker thread has a reference to undo stacks even if they get deleted
+        # in the GUI thread.
+        undo_stacks = {db_map: self._db_mngr.undo_stack[db_map] for db_map in dirty_db_maps}
+        self._commit_session_called.emit(dirty_db_maps, commit_msg, undo_stacks, cookie)
+
+    @Slot(object, str, dict, object)
+    def _commit_session(self, dirty_db_maps, commit_msg, undo_stacks, cookie=None):
+        """Commits session for given database maps.
+
+        Args:
+            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to commit
+            commit_msg (str): commit message
+            undo_stacks (dict of AgedUndoStack): undo stacks that outlive the DB manager
+            cookie (Any): a cookie to include in session_committed signal
+        """
         db_map_error_log = {}
         committed_db_maps = set()
         for db_map in dirty_db_maps:
             try:
                 db_map.commit_session(commit_msg)
                 committed_db_maps.add(db_map)
-                self._db_mngr.undo_stack[db_map].setClean()
+                undo_stacks[db_map].setClean()
             except SpineDBAPIError as e:
                 db_map_error_log[db_map] = e.msg
         if any(db_map_error_log.values()):
@@ -225,17 +243,31 @@ class SpineDBWorker(QObject):
             self._db_mngr.session_committed.emit(committed_db_maps, cookie)
 
     def rollback_session(self, dirty_db_maps):
-        self._rollback_session_called.emit(dirty_db_maps)
+        """Initiates rollback session action for given database maps in the worker thread.
 
-    @Slot(object)
-    def _rollback_session(self, dirty_db_maps):
+        Args:
+            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to roll back
+        """
+        # Make sure that the worker thread has a reference to undo stacks even if they get deleted
+        # in the GUI thread.
+        undo_stacks = {db_map: self._db_mngr.undo_stack[db_map] for db_map in dirty_db_maps}
+        self._rollback_session_called.emit(dirty_db_maps, undo_stacks)
+
+    @Slot(object, dict)
+    def _rollback_session(self, dirty_db_maps, undo_stacks):
+        """Rolls back session for given database maps.
+
+        Args:
+            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to roll back
+            undo_stacks (dict of AgedUndoStack): undo stacks that outlive the DB manager
+        """
         db_map_error_log = {}
         rolled_db_maps = set()
         for db_map in dirty_db_maps:
             try:
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
-                self._db_mngr.undo_stack[db_map].clear()
+                undo_stacks[db_map].clear()
             except SpineDBAPIError as e:
                 db_map_error_log[db_map] = e.msg
         if any(db_map_error_log.values()):
