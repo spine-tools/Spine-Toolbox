@@ -81,6 +81,7 @@ Spine Toolbox coding style follows PEP-8_ style guide for Python code with the f
 * `Google style`_ docstrings with the title and input parameters are required for all classes, functions, and methods.
   For small functions or methods only the summary is necessary. Return types are highly recommended but not required
   if it is obvious what the function or method returns.
+* Use double-quoted strings instead of single-quoted strings (e.g. ``"hello"``).
 * Other deviations from PEP-8 can be discussed.
 
 
@@ -195,7 +196,7 @@ Here’s an example workflow. Your username is ``yourname`` and you’re submitt
 
 **Making your Changes**
 
-1. Add an entry to CHANGELOG.md crediting yourself.
+1. Add an entry to CHANGELOG.md.
 2. Write tests expecting the correct/fixed functionality; make sure they fail.
 3. Hack, hack, hack.
 4. Run tests again, making sure they pass.
