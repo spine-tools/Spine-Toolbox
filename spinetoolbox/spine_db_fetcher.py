@@ -21,8 +21,6 @@ from collections import OrderedDict
 from PySide2.QtCore import Signal, Slot, QObject
 from spinetoolbox.helpers import busy_effect, signal_waiter, CacheItem
 
-# FIXME: We need to invalidate cache here as user makes changes (update, remove)
-
 
 class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
@@ -160,7 +158,8 @@ class SpineDBFetcher(QObject):
             item_types |= {
                 ancestor for item_type in item_types for ancestor in self._db_map.ancestor_tablenames.get(item_type, ())
             }
-        if not any(self.can_fetch_more(item_type) for item_type in item_types):
+        item_types = {item_type for item_type in item_types if self.can_fetch_more(item_type)}
+        if not item_types:
             return
         with signal_waiter(self._fetch_all_finished) as waiter:
             self._fetch_all_requested.emit(item_types, iter_chunk_size)
