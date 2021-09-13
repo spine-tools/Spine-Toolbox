@@ -179,7 +179,7 @@ class test_RemoteSpineEngineManager:
 
     @staticmethod
     def run_DAG_loop(protocol,host,port):
-        manager=RemoteSpineEngineManager2(protocol,host,port)
+        #manager=RemoteSpineEngineManager2(protocol,host,port)
         #prepare data
         dict_data = test_RemoteSpineEngineManager._dict_data(items={'helloworld': {'type': 'Tool', 'description': '', 'x': -91.6640625,
             'y': -5.609375, 'specification': 'helloworld2', 'execute_in_work': True, 'cmd_line_args': []},
@@ -205,19 +205,20 @@ class test_RemoteSpineEngineManager:
         print("run_DAG(): sending request with data:")
         print(dict_data)
         for x in range(0, 3):
+            manager=RemoteSpineEngineManager2(protocol,host,port)
             manager.run_engine(dict_data)
             while True:
                 event,data=manager.get_engine_event()
                 if event!=None and data!=None:
                     #print("event type: %s, data type: %s"%(type(event),type(data)))
-                    print("Received event: %s"%event)
-                    print("Received data: %s"%data)
+                    #print("Received event: %s"%event)
+                    #print("Received data: %s"%data)
                     if event=='dag_exec_finished':
                         break
                 else:
                     time.sleep(0.1)
 
-        manager.stop_engine()
+        #manager.stop_engine()
 
 
     @staticmethod
@@ -237,7 +238,7 @@ class test_RemoteSpineEngineManager:
 
 test_RemoteSpineEngineManager.invalid_config()
 test_RemoteSpineEngineManager.invalid_config2()
-#test_RemoteSpineEngineManager.run_DAG_noreading("tcp","193.166.160.216",5555)
+test_RemoteSpineEngineManager.run_DAG_noreading("tcp","193.166.160.216",5555)
 #test_RemoteSpineEngineManager.run_DAG_empty_response("tcp","193.166.160.216",5555)
-#test_RemoteSpineEngineManager.run_DAG("tcp","193.166.160.216",5555)
-test_RemoteSpineEngineManager.run_DAG_loop("tcp","193.166.160.216",5555)
+test_RemoteSpineEngineManager.run_DAG("tcp","193.166.160.216",5555)
+#test_RemoteSpineEngineManager.run_DAG_loop("tcp","193.166.160.216",5555)

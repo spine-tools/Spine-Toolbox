@@ -43,7 +43,7 @@ from spinetoolbox.server.util.FilePackager import FilePackager
 class RemoteSpineEngineManagerState2(Enum):
     IDLE = 1 #no requests pending and events+data of an earlier request has been extracted with get_event()
     RUNNING = 2  #request is being processed with the remote server 
-    REPLY_RECEIVED = 3 # a reply has been received fromn the remote server
+    REPLY_RECEIVED = 3 # a reply has been received from the remote server
     CLOSED = 4 # the manager has been closed
 
     def __str__(self):
@@ -111,8 +111,8 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
             self._outputDataIteratorIndex+=1
 
             if self._outputDataIteratorIndex==len(self._outputData):
-                print("get_engine_event() all events+data has been received, returning to IDLE")
-                self._state=RemoteSpineEngineManagerState2.IDLE 
+                print("get_engine_event() all events+data has been received, returning to CLOSED")
+                self._state=RemoteSpineEngineManagerState2.CLOSED 
 
             try:
                 dataDict={}
@@ -227,7 +227,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
         if state!=None:
             tempDict['item_state']=state
             #print("RemoteSpineEngineManager2._transformExecutionState() Returning transformed dict:")
-            print(tempDict)
+            #print(tempDict)
             return tempDict
         else:
             print("RemoteSpineEngineManager2._transformExecutionState() Failure in parsing")

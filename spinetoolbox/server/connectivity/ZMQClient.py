@@ -75,7 +75,7 @@ class ZMQClient:
         msg_parts=[]
         listFiles=[fileName]
         msg=ServerMessage("execute",str(randomId),text,listFiles)
-        print("ZMQClient(): msg to be sent (without file) : %s"%msg.toJSON())
+        print("ZMQClient(): msg to be sent : %s"%msg.toJSON())
         part1Bytes = bytes(msg.toJSON(), 'utf-8')
         msg_parts.append(part1Bytes)
         msg_parts.append(fileData)
