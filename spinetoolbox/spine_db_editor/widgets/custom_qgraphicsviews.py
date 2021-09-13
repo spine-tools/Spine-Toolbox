@@ -318,7 +318,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.pruned_entity_ids[key] = {
             (db_map, x["id"])
             for item_type in ("object", "relationship")
-            for x in self.db_mngr.get_items_by_field(db_map, item_type, "class_id", class_id)
+            for x in self.db_mngr.get_items_by_field(db_map, item_type, "class_id", class_id, only_visible=False)
         }
         self._restore_pruned_menu.addAction(key)
         self._spine_db_editor.build_graph()
@@ -395,14 +395,13 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in self.selected_items:
             db_map_ids.setdefault(item.db_map, set()).add(item.entity_id)
         db_map_typed_data = {}
-        # FIXME: We might need to fetch all parameter values here!!!
         for db_map, ids in db_map_ids.items():
             db_map_typed_data[db_map] = {
                 "parameter_value": set(
                     pv["id"]
                     for parameter_name in (self.pos_x_parameter, self.pos_y_parameter)
                     for pv in self.db_mngr.get_items_by_field(
-                        db_map, "parameter_value", "parameter_name", parameter_name
+                        db_map, "parameter_value", "parameter_name", parameter_name, only_visible=False
                     )
                     if pv["entity_id"] in ids
                 )

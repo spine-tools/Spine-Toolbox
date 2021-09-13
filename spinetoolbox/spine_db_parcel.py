@@ -43,11 +43,10 @@ class SpineDBParcel:
         return self._data
 
     def _get_fields(self, db_map, item_type, field, ids):
-        # FIXME: We need to fetch all the items here
         if ids is Asterisk:
-            fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type)}
+            fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type, only_visible=False)}
         else:
-            fields = {self.db_mngr.get_field(db_map, item_type, id_, field) for id_ in ids}
+            fields = {self.db_mngr.get_field(db_map, item_type, id_, field, only_visible=False) for id_ in ids}
         fields.discard(None)
         return fields
 

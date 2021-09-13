@@ -34,6 +34,8 @@ from ..mvcmodels.pivot_table_models import (
 )
 from ..mvcmodels.frozen_table_model import FrozenTableModel
 
+# FIXME: only_visible=False???
+
 
 class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""

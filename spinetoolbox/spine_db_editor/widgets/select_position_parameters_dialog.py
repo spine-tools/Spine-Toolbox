@@ -90,14 +90,13 @@ class ParameterNameDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
-        # FIXME: Make SearchBarEditor lazy
         editor = SearchBarEditor(self.parent(), parent)
         editor.set_data(
             index.data(Qt.DisplayRole),
             {
                 x["parameter_name"]
                 for db_map in self.db_maps
-                for x in self.db_mngr.get_items(db_map, "parameter_definition")
+                for x in self.db_mngr.get_items(db_map, "parameter_definition", only_visible=False)
             },
         )
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))

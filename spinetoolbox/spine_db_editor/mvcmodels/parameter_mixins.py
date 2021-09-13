@@ -536,7 +536,6 @@ class MakeRelationshipOnTheFlyMixin:
                 item = self.db_mngr.get_item_by_field(db_map, "relationship_class", "name", name, only_visible=False)
                 if item:
                     self._db_map_rel_cls_lookup.setdefault(db_map, {})[name] = item
-        # FIXME: We need to fetch all relationships before doing this
         self._db_map_existing_rels = {
             db_map: {
                 self._make_unique_relationship_id(x)

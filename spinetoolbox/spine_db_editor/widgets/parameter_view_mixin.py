@@ -105,15 +105,17 @@ class ParameterViewMixin:
             rel_cls_id (int)
             db_map (DiffDatabaseMapping)
         """
-        # FIXME: Make ObjectNameListEditor lazy
-        relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id)
+        relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id, only_visible=False)
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []
         object_names_lists = []
         for id_ in object_class_id_list.split(","):
             id_ = int(id_)
-            object_class_name = self.db_mngr.get_item(db_map, "object_class", id_).get("name")
-            object_names_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_)]
+            object_class_name = self.db_mngr.get_item(db_map, "object_class", id_, only_visible=False).get("name")
+            object_names_list = [
+                x["name"]
+                for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_, only_visible=False)
+            ]
             object_class_names.append(object_class_name)
             object_names_lists.append(object_names_list)
         object_name_list = index.data(Qt.EditRole)

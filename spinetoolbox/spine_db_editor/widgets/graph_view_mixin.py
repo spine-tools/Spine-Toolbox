@@ -370,11 +370,12 @@ class GraphViewMixin:
                 self.dst_inds.append(object_ind)
 
     def _get_parameter_positions(self, parameter_name):
-        # FIXME: We might need to fetch all parameter values here!!!
         if not parameter_name:
             yield from []
         for db_map in self.db_maps:
-            for p in self.db_mngr.get_items_by_field(db_map, "parameter_value", "parameter_name", parameter_name):
+            for p in self.db_mngr.get_items_by_field(
+                db_map, "parameter_value", "parameter_name", parameter_name, only_visible=False
+            ):
                 pos = from_database(p["value"], p["type"])
                 if isinstance(pos, float):
                     yield (db_map, p["entity_id"]), pos
