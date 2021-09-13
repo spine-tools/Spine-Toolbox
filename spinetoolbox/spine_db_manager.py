@@ -316,11 +316,9 @@ class SpineDBManager(QObject):
                     item = self._get_fetcher(db_map).cache.get(item_type, {}).pop(id_, {})
                     if item:
                         db_map_data.setdefault(db_map, []).append(item)
-            if any(db_map_data.values()):
-                typed_db_map_data[item_type] = db_map_data
-                signal.emit(db_map_data)
-        if typed_db_map_data:
-            self.items_removed_from_cache.emit(typed_db_map_data)
+            typed_db_map_data[item_type] = db_map_data
+            signal.emit(db_map_data)
+        self.items_removed_from_cache.emit(typed_db_map_data)
 
     @busy_effect
     def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):

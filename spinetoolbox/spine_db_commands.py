@@ -180,6 +180,7 @@ class SpineDBCommand(AgedUndoCommand):
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.completed_signal = None
+        self._done_once = False
 
     @staticmethod
     def redomethod(func):
@@ -192,8 +193,12 @@ class SpineDBCommand(AgedUndoCommand):
 
         def redo(self):
             super().redo()
-            self.completed_signal.connect(self.receive_items_changed)
-            func(self)
+            with signal_waiter(self.completed_signal) as waiter:
+                func(self)
+                waiter.wait()
+                if not self._done_once:
+                    self.receive_items_changed(*waiter.args)
+                    self._done_once = True
 
         return redo
 
@@ -208,9 +213,8 @@ class SpineDBCommand(AgedUndoCommand):
 
         return undo
 
-    @Slot(object)
     def receive_items_changed(self, _):
-        self.completed_signal.disconnect(self.receive_items_changed)
+        raise NotImplementedError()
 
     def data(self):
         """Returns data to present this command in a DBHistoryDialog."""
@@ -256,9 +260,10 @@ class AddItemsCommand(SpineDBCommand):
         self.db_mngr.do_remove_items(self.undo_db_map_typed_ids)
         self._readd = True
 
-    @Slot(object)
     def receive_items_changed(self, db_map_data):
-        super().receive_items_changed(db_map_data)
+        if not db_map_data.get(self.db_map):
+            self.setObsolete(True)
+            return
         self.redo_db_map_data = {
             db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
             for db_map, data in db_map_data.items()
@@ -317,9 +322,10 @@ class UpdateItemsCommand(SpineDBCommand):
             self.undo_db_map_data, self.method_name, self.item_type, self.completed_signal_name, check=False
         )
 
-    @Slot(object)
     def receive_items_changed(self, db_map_data):
-        super().receive_items_changed(db_map_data)
+        if not db_map_data.get(self.db_map):
+            self.setObsolete(True)
+            return
         self.redo_db_map_data = {
             db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
             for db_map, data in db_map_data.items()
@@ -364,9 +370,10 @@ class RemoveItemsCommand(SpineDBCommand):
                 self.db_mngr.add_or_update_items(db_map_data, method_name, item_type, emit_signal_name, readd=True)
                 waiter.wait()
 
-    @Slot(object)
     def receive_items_changed(self, typed_db_map_data):
-        super().receive_items_changed(typed_db_map_data)
+        if not any(db_map_data.get(self.db_map) for db_map_data in typed_db_map_data.values()):
+            self.setObsolete(True)
+            return
         self.undo_typed_db_map_data = {
             item_type: {
                 self.db_map: [self.db_mngr.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]
