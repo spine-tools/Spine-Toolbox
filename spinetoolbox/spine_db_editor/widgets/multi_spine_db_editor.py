@@ -30,7 +30,14 @@ from ...config import MAINWINDOW_SS
 
 
 class MultiSpineDBEditor(MultiTabWindow):
+    """Database editor's tabbed main window."""
+
     def __init__(self, db_mngr, db_url_codenames=None):
+        """
+        Args:
+            db_mngr (SpineDBManager): database manager
+            db_url_codenames (dict, optional): mapping from database URL to its codename
+        """
         super().__init__(db_mngr.qsettings, "spineDBEditor")
         self.db_mngr = db_mngr
         self.settings_form = SpineDBEditorSettingsWidget(self)

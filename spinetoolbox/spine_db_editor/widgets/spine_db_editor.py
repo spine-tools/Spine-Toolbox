@@ -19,7 +19,17 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu, QAbstractScrollArea, QTabBar
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QErrorMessage,
+    QDockWidget,
+    QMessageBox,
+    QMenu,
+    QAbstractScrollArea,
+    QTabBar,
+    QCheckBox,
+    QDialog,
+)
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
@@ -36,6 +46,7 @@ from ...widgets.notification import ChangeNotifier
 from ...widgets.notification import NotificationStack
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
+from ...widgets.commit_dialog import CommitDialog
 from ...helpers import (
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
@@ -588,12 +599,26 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def commit_session(self, checked=False):
-        """Commits session."""
-        self.db_mngr.commit_session(*self.db_maps, cookie=self)
+        """Commits dirty database maps."""
+        dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
+        if not dirty_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        commit_msg = self._get_commit_msg(db_names)
+        if not commit_msg:
+            return
+        self.db_mngr.commit_session(commit_msg, *dirty_db_maps, cookie=self)
 
     @Slot(bool)
     def rollback_session(self, checked=False):
-        self.db_mngr.rollback_session(*self.db_maps)
+        """Rolls back dirty datbase maps."""
+        dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
+        if not dirty_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        if not self._get_rollback_confirmation(db_names):
+            return
+        self.db_mngr.rollback_session(*dirty_db_maps)
 
     def receive_session_committed(self, db_maps, cookie):
         db_maps = set(self.db_maps) & set(db_maps)
@@ -794,11 +819,94 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
 
     def tear_down(self):
-        if not self.db_mngr.unregister_listener(self, *self.db_maps):
-            return False
-        # Save UI form state
+        """Performs clean up duties.
+
+        Returns:
+            bool: True if editor is ready to close, False otherwise
+        """
+        dirty_or_orphan = self.db_mngr.dirty_or_orphan(self, *self.db_maps)
+        commit_dirty = False
+        commit_msg = ""
+        if dirty_or_orphan:
+            answer = self._prompt_to_commit_changes()
+            if answer == QMessageBox.Cancel:
+                return False
+            db_names = ", ".join([db_map.codename for db_map in dirty_or_orphan])
+            if answer == QMessageBox.Save:
+                commit_dirty = True
+                commit_msg = self._get_commit_msg(db_names)
+                if not commit_msg:
+                    return False
+        self.db_mngr.unregister_listener(self, commit_dirty, commit_msg, *self.db_maps)
         self.save_window_state()
         return True
+
+    def _prompt_to_commit_changes(self):
+        """Prompts the user to commit or rollback changes to 'dirty' db maps.
+
+        Returns:
+            int: QMessageBox status code
+        """
+        commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
+        if commit_at_exit == 0:
+            # Don't commit session and don't show message box
+            return QMessageBox.Discard
+        if commit_at_exit == 1:  # Default
+            # Show message box
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle(self.windowTitle())
+            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
+            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msg.button(QMessageBox.Save).setText("Commit and close ")
+            msg.button(QMessageBox.Discard).setText("Discard changes and close")
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
+                # Save preference
+                preference = "2" if answer == QMessageBox.Save else "0"
+                self.qsettings.setValue("appSettings/commitAtExit", preference)
+            return answer
+        if commit_at_exit == 2:
+            # Commit session and don't show message box
+            return QMessageBox.Save
+
+    def _get_commit_msg(self, db_names):
+        """Prompts user for commit message.
+
+        Args:
+            db_names (Iterable of str): database names
+
+        Returns:
+            str: commit message
+        """
+        dialog = CommitDialog(self, db_names)
+        answer = dialog.exec_()
+        if answer == QDialog.Accepted:
+            return dialog.commit_msg
+
+    def _get_rollback_confirmation(self, db_names):
+        """Prompts user for confirmation before rolling back the session.
+
+        Args:
+            db_names (Iterable of str): database names
+
+        Returns:
+            bool: True if user confirmed, False otherwise
+        """
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            f"Rollback changes in {db_names}",
+            "Are you sure? "
+            "All your changes since the last commit will be reverted and removed from the undo/redo stack.",
+            QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self,
+        )
+        message_box.button(QMessageBox.Ok).setText("Rollback")
+        answer = message_box.exec_()
+        return answer == QMessageBox.Ok
 
     def closeEvent(self, event):
         """Handle close window.

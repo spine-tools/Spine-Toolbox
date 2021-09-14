@@ -132,7 +132,6 @@ class SpineDBManager(QObject):
         self.qsettings = settings
         self._db_maps = {}
         self._worker_thread = QThread()
-        # self._worker_thread = qApp.thread()
         self._worker = SpineDBWorker(self)
         self._fetchers = {}
         self.undo_stack = {}
@@ -505,29 +504,17 @@ class SpineDBManager(QObject):
             except AttributeError:
                 pass
 
-    def unregister_listener(self, listener, *db_maps):
+    def unregister_listener(self, listener, commit_dirty, commit_msg, *db_maps):
         """Unregisters given listener from given db_map signals.
         If any of the db_maps becomes an orphan and is dirty, prompts user to commit or rollback.
 
         Args:
             listener (object)
-            db_maps (DiffDatabaseMapping)
-
-        Returns:
-            bool: True if operation was successful, False otherwise
+            commit_dirty (bool): True to commit dirty database mapping, False to roll back
+            commit_msg (str): commit message
+            *db_maps (DiffDatabaseMapping)
         """
-        is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        is_orphan = lambda db_map: not set(self.signaller.db_map_listeners(db_map)) - {listener}
-        dirty_orphan_db_maps = [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
-        if dirty_orphan_db_maps:
-            answer = self._prompt_to_commit_changes()
-            if answer == QMessageBox.Cancel:
-                return False
-            db_names = ", ".join([db_map.codename for db_map in dirty_orphan_db_maps])
-            if answer == QMessageBox.Save:
-                commit_msg = self._get_commit_msg(db_names)
-                if not commit_msg:
-                    return False
+        dirty_orphan_db_maps = self.dirty_or_orphan(listener, *db_maps)
         for db_map in db_maps:
             self.signaller.remove_db_map_listener(db_map, listener)
             try:
@@ -536,47 +523,43 @@ class SpineDBManager(QObject):
             except AttributeError:
                 pass
         if dirty_orphan_db_maps:
-            if answer == QMessageBox.Save:
+            if commit_dirty:
                 self._worker.commit_session(dirty_orphan_db_maps, commit_msg)
             else:
                 self._worker.rollback_session(dirty_orphan_db_maps)
         for db_map in db_maps:
             if not self.signaller.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
-        return True
 
-    def _prompt_to_commit_changes(self):
-        """Prompts the user to commit or rollback changes to 'dirty' db maps.
+    def dirty(self, *db_maps):
+        """Checks which of the given database mappings are dirty.
 
-        Returns:
-            bool: True to commit, False to rollback, None to do nothing
+        Args:
+            *db_maps: mappings to check
+
+        Return:
+            list of DiffDatabaseMapping: dirty  mappings
         """
-        commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
-        if commit_at_exit == 0:
-            # Don't commit session and don't show message box
-            return QMessageBox.Discard
-        if commit_at_exit == 1:  # Default
-            # Show message box
-            parent = qApp.activeWindow()  # pylint: disable=undefined-variable
-            msg = QMessageBox(parent)
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle(parent.windowTitle())
-            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
-            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            msg.button(QMessageBox.Save).setText("Commit and close ")
-            msg.button(QMessageBox.Discard).setText("Discard changes and close")
-            chkbox = QCheckBox()
-            chkbox.setText("Do not ask me again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()
-            if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
-                # Save preference
-                preference = "2" if answer == QMessageBox.Save else "0"
-                self.qsettings.setValue("appSettings/commitAtExit", preference)
-            return answer
-        if commit_at_exit == 2:
-            # Commit session and don't show message box
-            return QMessageBox.Save
+        return [db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()]
+
+    def dirty_or_orphan(self, listener, *db_maps):
+        """Checks which of the given database mappings are dirty or orphaned.
+
+        Args:
+            listener (Any): a listener object
+            *db_maps: mappings to check
+
+        Return:
+            list of DiffDatabaseMapping: dirty or orphaned mappings
+        """
+
+        def is_dirty(db_map):
+            return not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
+
+        def is_orphan(db_map):
+            return not set(self.signaller.db_map_listeners(db_map)) - {listener}
+
+        return [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
 
     def clean_up(self):
         while self._fetchers:
@@ -612,55 +595,25 @@ class SpineDBManager(QObject):
             if fetcher is not None:
                 fetcher.deleteLater()
 
-    def commit_session(self, *db_maps, cookie=None):
+    def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
         """
         Commits the current session.
 
         Args:
-            *db_maps: database maps to commit
+            commit_msg (str): commit message for all database maps
+            *dirty_db_maps: dirty database maps to commit
             cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
         """
-        dirty_db_maps = [
-            db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        ]
-        if not dirty_db_maps:
-            return
-        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
-        commit_msg = self._get_commit_msg(db_names)
-        if not commit_msg:
-            return
         self._worker.commit_session(dirty_db_maps, commit_msg, cookie)
 
-    @staticmethod
-    def _get_commit_msg(db_names):
-        dialog = CommitDialog(qApp.activeWindow(), db_names)  # pylint: disable=undefined-variable
-        answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            return dialog.commit_msg
+    def rollback_session(self, *dirty_db_maps):
+        """
+        Rolls back the current session.
 
-    def rollback_session(self, *db_maps):
-        dirty_db_maps = [
-            db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        ]
-        if not dirty_db_maps:
-            return
-        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
-        if not self._get_rollback_confirmation(db_names):
-            return
+        Args:
+            *dirty_db_maps: dirty database maps to commit
+        """
         self._worker.rollback_session(dirty_db_maps)
-
-    @staticmethod
-    def _get_rollback_confirmation(db_names):
-        message_box = QMessageBox(
-            QMessageBox.Question,
-            f"Rollback changes in {db_names}",
-            "Are you sure? All your changes since the last commit will be reverted and removed from the undo/redo stack.",
-            QMessageBox.Ok | QMessageBox.Cancel,
-            parent=qApp.activeWindow(),  # pylint: disable=undefined-variable
-        )
-        message_box.button(QMessageBox.Ok).setText("Rollback")
-        answer = message_box.exec_()
-        return answer == QMessageBox.Ok
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an icon renderer for a given entity class.
@@ -973,7 +926,7 @@ class SpineDBManager(QObject):
         """Runs the given query and yields results by chunks of given size.
 
         Yields:
-            generator(list)
+            list: chunk of items
         """
         it = (x._asdict() for x in query.yield_per(query_chunk_size).enable_eagerloads(False))
         while True:
