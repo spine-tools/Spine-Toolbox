@@ -19,12 +19,14 @@ Unit tests for SpineDBEditor classes.
 import unittest
 from unittest import mock
 import logging
-import os
 import sys
-from PySide2.QtWidgets import QApplication, QAction, QMessageBox
+from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog
+from tests.mock_helpers import access_database
 
 
 class TestAddItemsDialog(unittest.TestCase):
@@ -44,18 +46,14 @@ class TestAddItemsDialog(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of SpineDBEditor class."""
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
-        ) as confirm_close_dialog, mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
-        ):
-            confirm_close_dialog.exec_.return_value = QMessageBox.Cancel
-            self.mock_db_mngr = mock.MagicMock()
-            self.mock_db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
-            self.mock_db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
-            self.mock_db_map = mock.MagicMock()
-            self.mock_db_map.codename = "mock_db"
-            self._db_editor = SpineDBEditor(self.mock_db_mngr, self.mock_db_map)
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
+            mock_settings = mock.Mock()
+            mock_settings.value.side_effect = lambda *args, **kwargs: 0
+            self._db_mngr = SpineDBManager(mock_settings, None)
+            logger = mock.MagicMock()
+            url = "sqlite:///"
+            self._db_map = self._db_mngr.get_db_map(url, logger, codename="mock_db", create=True)
+            self._db_editor = SpineDBEditor(self._db_mngr, {url: "mock_db"})
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -63,22 +61,18 @@ class TestAddItemsDialog(unittest.TestCase):
         """
         with mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ) as mock_save_w_s, mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
-        ) as confirm_close_dialog:
-            confirm_close_dialog.exec_.return_value = QMessageBox.Cancel
+        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self._db_editor.close()
-            mock_save_w_s.assert_called_once()
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.connection.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
         self._db_editor.deleteLater()
         self._db_editor = None
-        try:
-            os.remove('mock_db.sqlite')
-        except OSError:
-            pass
 
     def test_add_object_classes(self):
         """Test object classes are added through the manager when accepting the dialog."""
-        dialog = AddObjectClassesDialog(self._db_editor, self.mock_db_mngr, self.mock_db_map)
+        dialog = AddObjectClassesDialog(self._db_editor, self._db_mngr, self._db_map)
         model = dialog.model
         header = model.header
         model.fetchMore()
@@ -86,22 +80,15 @@ class TestAddItemsDialog(unittest.TestCase):
         indexes = [model.index(0, header.index(field)) for field in ('object_class name', 'databases')]
         values = ['fish', 'mock_db']
         model.batch_set_data(indexes, values)
-
-        def _add_object_classes(db_map_data):
-            self.assertTrue(self.mock_db_map in db_map_data)
-            data = db_map_data[self.mock_db_map]
-            self.assertEqual(len(data), 1)
-            item = data[0]
-            self.assertTrue("name" in item)
-            self.assertEqual(item["name"], "fish")
-
-        self.mock_db_mngr.add_object_classes.side_effect = _add_object_classes
         dialog.accept()
-        self.mock_db_mngr.add_object_classes.assert_called_once()
+        self._commit_changes_to_database("Add object class.")
+        with access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
+            self.assertEqual(len(db_access.data), 1)
+            self.assertEqual(db_access.data[0].name, "fish")
 
     def test_do_not_add_object_classes_with_invalid_db(self):
         """Test object classes aren't added when the database is not correct."""
-        dialog = AddObjectClassesDialog(self._db_editor, self.mock_db_mngr, self.mock_db_map)
+        dialog = AddObjectClassesDialog(self._db_editor, self._db_mngr, self._db_map)
         self._db_editor.msg_error = mock.NonCallableMagicMock()
         self._db_editor.msg_error.attach_mock(mock.MagicMock(), "emit")
         model = dialog.model
@@ -112,8 +99,14 @@ class TestAddItemsDialog(unittest.TestCase):
         values = ['fish', 'gibberish']
         model.batch_set_data(indexes, values)
         dialog.accept()
-        self.mock_db_mngr.add_object_classes.assert_not_called()
         self._db_editor.msg_error.emit.assert_called_with("Invalid database 'gibberish' at row 1")
+
+    def _commit_changes_to_database(self, commit_message):
+        with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
+            commit_msg.return_value = commit_message
+            with signal_waiter(self._db_mngr.session_committed) as waiter:
+                self._db_editor.ui.actionCommit.trigger()
+                waiter.wait()
 
 
 if __name__ == '__main__':

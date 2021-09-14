@@ -16,12 +16,11 @@ Unit tests for DB editor's custom ``QTreeView`` classes.
 :date:   17.8.2021
 """
 import os.path
-from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 from types import MethodType
 import unittest
 from unittest import mock
-from PySide2.QtCore import QObject, Qt, Signal, Slot, QItemSelectionModel
+from PySide2.QtCore import Qt, QItemSelectionModel
 from PySide2.QtWidgets import QApplication
 
 from spinedb_api import (
@@ -49,6 +48,7 @@ from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.helpers import signal_waiter
+from tests.mock_helpers import access_database
 
 
 class _Base(unittest.TestCase):
@@ -209,7 +209,7 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(_EntityTreeViewTestBase):
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), "database")
         self._commit_changes_to_database("Add object class.")
-        with _access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "an_object_class")
 
@@ -228,10 +228,10 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(_EntityTreeViewTestBase):
         object_database_index = model.index(0, 1, class_index)
         self.assertEqual(object_database_index.data(), "database")
         self._commit_changes_to_database("Add object.")
-        with _access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "an_object_class")
-        with _access_database(self._db_mngr, self._db_map, "object_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "object_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "an_object")
 
@@ -254,7 +254,7 @@ class TestObjectTreeViewWithInitiallyEmptyDatabase(_EntityTreeViewTestBase):
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), "database")
         self._commit_changes_to_database("Add object and relationship classes.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "a_relationship_class")
             self.assertEqual(db_access.data[0].object_class_name_list, "an_object_class")
@@ -320,7 +320,7 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
         class_index = model.index(0, 0, root_index)
         self.assertEqual(class_index.data(), "renamed_class")
         self._commit_changes_to_database("Rename object class.")
-        with _access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "renamed_class")
 
@@ -343,7 +343,7 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
         object_index = model.index(0, 0, class_index)
         self.assertEqual(object_index.data(), "renamed_object")
         self._commit_changes_to_database("Rename object.")
-        with _access_database(self._db_mngr, self._db_map, "object_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "object_sq") as db_access:
             self.assertEqual(len(db_access.data), 2)
             self.assertEqual(db_access.data[0].name, "renamed_object")
 
@@ -358,7 +358,7 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
             waiter.wait()
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove object class.")
-        with _access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "object_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 0)
 
     def test_remove_object(self):
@@ -381,7 +381,7 @@ class TestObjectTreeViewWithExistingData(_EntityTreeViewTestBase):
         object_index = model.index(0, 0, class_index)
         self.assertEqual(object_index.data(), "object_2")
         self._commit_changes_to_database("Remove object.")
-        with _access_database(self._db_mngr, self._db_map, "object_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "object_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "object_2")
 
@@ -424,7 +424,7 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(_EntityTreeViewTestBase
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), "database")
         self._commit_changes_to_database("Add object and relationship classes.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "a_relationship_class")
             self.assertEqual(db_access.data[0].object_class_name_list, "an_object_class")
@@ -449,7 +449,7 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(_EntityTreeViewTestBase
         relationship_database_index = model.index(0, 1, class_index)
         self.assertEqual(relationship_database_index.data(), "database")
         self._commit_changes_to_database("Add an object and a relationship.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "a_relationship")
             self.assertEqual(db_access.data[0].object_name_list, "an_object")
@@ -548,7 +548,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         class_index = model.index(0, 0, root_index)
         self.assertEqual(class_index.data(), "renamed_class")
         self._commit_changes_to_database("Rename relationship class.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "renamed_class")
 
@@ -569,7 +569,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
             self._rename_relationship("renamed_relationship")
             waiter.wait()
         self._commit_changes_to_database("Rename relationship.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
             self.assertEqual(len(db_access.data), 2)
             names = {i.name for i in db_access.data}
             self.assertEqual(names, {"renamed_relationship", "relationship_class_object_11__object_22"})
@@ -592,7 +592,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
             waiter.wait()
         self.assertEqual(relationship_index.data(), "object_12 ǀ object_21")
         self._commit_changes_to_database("Change relationship's objects.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
             self.assertEqual(len(db_access.data), 2)
             objects = {i.object_name_list for i in db_access.data}
             self.assertEqual(objects, {"object_12,object_21", "object_11,object_22"})
@@ -611,7 +611,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
             waiter.wait()
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove relationship class.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 0)
 
     def test_remove_relationship(self):
@@ -632,7 +632,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
             waiter.wait()
         self.assertEqual(model.rowCount(class_index), 1)
         self._commit_changes_to_database("Remove relationship.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "relationship_class_object_11__object_22")
 
@@ -653,7 +653,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         QApplication.processEvents()
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove object class.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_class_sq") as db_access:
             self.assertEqual(len(db_access.data), 0)
 
     def test_removing_object_removes_corresponding_relationship(self):
@@ -683,7 +683,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         relationship_index = model.index(0, 0, class_index)
         self.assertEqual(relationship_index.data(), "object_11 ǀ object_22")
         self._commit_changes_to_database("Remove object.")
-        with _access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "wide_relationship_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "relationship_class_object_11__object_22")
 
@@ -770,7 +770,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_ParameterValueLi
             QApplication.processEvents()
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Add parameter value list.")
-        with _access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
             self.assertEqual(len(db_access.data), 2)
             for i, expected_value in enumerate(("value_1", "value_2")):
                 self.assertEqual(db_access.data[i].name, "a_value_list")
@@ -824,7 +824,7 @@ class TestParameterValueListTreeViewWithExistingData(_ParameterValueListTreeView
         list_name_index = model.index(1, 0, root_index)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Remove parameter value list value.")
-        with _access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
             self.assertEqual(len(db_access.data), 1)
             self.assertEqual(db_access.data[0].name, "value_list_1")
             self.assertEqual(from_database(db_access.data[0].value), "value_2")
@@ -844,7 +844,7 @@ class TestParameterValueListTreeViewWithExistingData(_ParameterValueListTreeView
         self.assertEqual(model.rowCount(list_name_index), 0)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Remove parameter value list.")
-        with _access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
             self.assertEqual(len(db_access.data), 0)
 
     def test_removing_all_values_from_list_removes_the_list_too(self):
@@ -863,7 +863,7 @@ class TestParameterValueListTreeViewWithExistingData(_ParameterValueListTreeView
         self.assertEqual(model.rowCount(list_name_index), 0)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Remove parameter value list.")
-        with _access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
             self.assertEqual(len(db_access.data), 0)
 
     def test_change_value(self):
@@ -878,7 +878,7 @@ class TestParameterValueListTreeViewWithExistingData(_ParameterValueListTreeView
         self.assertEqual(model.index(0, 0, list_name_index).data(), "new_value")
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Update parameter value list value.")
-        with _access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
             self.assertEqual(len(db_access.data), 2)
             for i, expected_value in enumerate(("new_value", "value_2")):
                 self.assertEqual(db_access.data[i].name, "value_list_1")
@@ -902,41 +902,11 @@ class TestParameterValueListTreeViewWithExistingData(_ParameterValueListTreeView
         list_name_index = model.index(1, 0, root_index)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Rename parameter value list.")
-        with _access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
+        with access_database(self._db_mngr, self._db_map, "parameter_value_list_sq") as db_access:
             self.assertEqual(len(db_access.data), 2)
             for i, expected_value in enumerate(("value_1", "value_2")):
                 self.assertEqual(db_access.data[i].name, "new_list_name")
                 self.assertEqual(from_database(db_access.data[i].value), expected_value)
-
-
-@contextmanager
-def _access_database(db_mngr, db_map, subquery_name):
-    db_map_access = _DBMapAccess(subquery_name, db_mngr.worker_thread)
-    with signal_waiter(db_map_access.finished) as waiter:
-        db_map_access.fetch_data.emit(db_map)
-        waiter.wait()
-    try:
-        yield db_map_access
-    finally:
-        db_map_access.deleteLater()
-
-
-class _DBMapAccess(QObject):
-
-    fetch_data = Signal(object)
-    finished = Signal()
-
-    def __init__(self, subquery_name, thread):
-        super().__init__()
-        self.data = None
-        self._subquery_name = subquery_name
-        self.moveToThread(thread)
-        self.fetch_data.connect(self._do_subquery)
-
-    @Slot(object)
-    def _do_subquery(self, db_map):
-        self.data = db_map.query(getattr(db_map, self._subquery_name)).all()
-        self.finished.emit()
 
 
 if __name__ == '__main__':

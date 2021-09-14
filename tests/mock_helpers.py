@@ -15,10 +15,13 @@ Classes and functions that can be shared among unit test modules.
 :author: P. Savolainen (VTT)
 :date:   18.4.2019
 """
-
+from contextlib import contextmanager
 from unittest import mock
+
+from PySide2.QtCore import QObject, Signal, Slot
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -309,3 +312,57 @@ class TestSpineDBManager(SpineDBManager):
         fetcher = self._get_fetcher(db_map)
         for item_type in fetcher._getters:
             fetcher.fetch_more(item_type)
+
+
+@contextmanager
+def access_database(db_mngr, db_map, subquery_name):
+    """A context manager to access databases in database manager.
+
+    Args:
+        db_mngr (SpineDBManager): database manager that contains the DB mapping
+        db_map (DiffDatabaseMapping): database mapping to access
+        subquery_name (str): name of the query in db_map to access
+    """
+    db_map_access = DBMapAccess(subquery_name, db_mngr.worker_thread)
+    with signal_waiter(db_map_access.finished) as waiter:
+        db_map_access.fetch_data.emit(db_map)
+        waiter.wait()
+    try:
+        yield db_map_access
+    finally:
+        db_map_access.deleteLater()
+
+
+class DBMapAccess(QObject):
+    """Helper class that accesses given database map in database manager's worker thread.
+
+    Attributes:
+        data (list): query result after ``finished`` has been emitted
+    """
+
+    fetch_data = Signal(object)
+    """Starts querying data using a database mapping."""
+    finished = Signal()
+    """Emitted when the query has finished."""
+
+    def __init__(self, subquery_name, thread):
+        """
+        Args:
+            subquery_name (str): database mapping's subquery attribute
+            thread (QThread): thread that connected to the database
+        """
+        super().__init__()
+        self.data = None
+        self._subquery_name = subquery_name
+        self.moveToThread(thread)
+        self.fetch_data.connect(self._do_subquery)
+
+    @Slot(object)
+    def _do_subquery(self, db_map):
+        """Queries the database.
+
+        Args:
+            db_map (DatabaseMappingBase): database map to query
+        """
+        self.data = db_map.query(getattr(db_map, self._subquery_name)).all()
+        self.finished.emit()
