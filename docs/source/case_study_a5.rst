@@ -438,7 +438,7 @@ Specifying object parameter values
    d. ``state_coeff`` is the reservoir 'efficienty' (always 1, meaning that there aren't any loses).
    e. ``node_state_cap`` is the maximum level of the reservoirs.
    
-   To do this in one single step, simply select ``node`` in the *Object tree* and paste the follwing values in the first empty cell:
+   To do this in one single step, simply select ``node`` in the *Object tree* and paste the following values in the first empty cell:
 
    .. literalinclude:: data/cs-a5-node-parameter-values.txt
 
@@ -563,7 +563,7 @@ Specifying parameter values of the relationships
    .. literalinclude:: data/cs-a5-connection__node__node-relationship-parameter-values.txt
 
 
-#. When you're ready, commit all changes to the database via the main menue (**Alt + F**).
+#. When you're ready, commit all changes to the database via the main menu (**Alt + F**).
 
 
 Executing the workflow
