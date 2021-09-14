@@ -577,6 +577,7 @@ def _filter_and_check(xs, ys):
                 filtered_xs.append(x_type(x))
                 filtered_ys.append(y_type(y))
             except (ParameterValueFormatError, TypeError, ValueError):
+                # pylint: disable=raise-missing-from
                 raise PlottingError("Cannot plot a mixture of different types of data")
     return filtered_xs, filtered_ys
 

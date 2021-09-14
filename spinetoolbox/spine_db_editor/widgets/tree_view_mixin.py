@@ -75,8 +75,6 @@ class TreeViewMixin:
         super().connect_signals()
         self.ui.treeView_object.tree_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
         self.ui.treeView_relationship.tree_selection_changed.connect(self.ui.treeView_object.clear_any_selections)
-        self._object_classes_added.connect(self._expand_object_tree_root_index)
-        self._relationship_classes_added.connect(self._expand_relationship_tree_root_index)
         self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
         self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
 
@@ -87,7 +85,12 @@ class TreeViewMixin:
         self.relationship_tree_model.db_maps = self.db_maps
         self.tool_feature_model.db_maps = self.db_maps
         self.alternative_scenario_model.db_maps = self.db_maps
+        self.parameter_value_list_model.build_tree()
         self.parameter_value_list_model.db_maps = self.db_maps
+        self.object_tree_model.build_tree()
+        self.relationship_tree_model.build_tree()
+        self.ui.treeView_object.expand(self.object_tree_model.root_index)
+        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
         for view in (
             self.ui.treeView_tool_feature,
             self.ui.treeView_alternative_scenario,
@@ -98,18 +101,6 @@ class TreeViewMixin:
                 index = view.model().index_from_item(item)
                 view.expand(index)
             view.resizeColumnToContents(0)
-        self.object_tree_model.build_tree()
-        self.relationship_tree_model.build_tree()
-
-    @Slot()
-    def _expand_object_tree_root_index(self):
-        qApp.processEvents()  # pylint: disable=undefined-variable
-        self.ui.treeView_object.expand(self.object_tree_model.root_index)
-
-    @Slot()
-    def _expand_relationship_tree_root_index(self):
-        qApp.processEvents()  # pylint: disable=undefined-variable
-        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
 
     @Slot("QItemSelection", "QItemSelection")
     def _handle_object_tree_selection_changed(self, selected, deselected):
@@ -194,16 +185,14 @@ class TreeViewMixin:
         parcel.inner_push_object_ids(db_map_obj_ids)
         self.db_mngr.duplicate_object(object_item.db_maps, parcel.data, orig_name, dup_name)
 
-    @Slot(bool)
-    def show_add_object_classes_form(self, checked=False):
+    def show_add_object_classes_form(self):
         """Shows dialog to add new object classes."""
         dialog = AddObjectClassesDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot(bool)
-    def show_add_objects_form(self, checked=False, class_name=""):
+    def show_add_objects_form(self, parent_item):
         """Shows dialog to add new objects."""
-        dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps, class_name=class_name)
+        dialog = AddObjectsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def show_add_object_group_form(self, object_class_item):
@@ -216,30 +205,18 @@ class TreeViewMixin:
         dialog = ManageMembersDialog(self, object_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot(bool)
-    def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
+    def show_add_relationship_classes_form(self, parent_item):
         """Shows dialog to add new relationship_class."""
-        dialog = AddRelationshipClassesDialog(
-            self, self.db_mngr, *self.db_maps, object_class_one_name=object_class_one_name
-        )
+        dialog = AddRelationshipClassesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_relationships_form(self, checked=False, relationship_class_key=None, object_names_by_class_name=None):
+    def show_add_relationships_form(self, parent_item):
         """Shows dialog to add new relationships."""
-        dialog = AddRelationshipsDialog(
-            self,
-            self.db_mngr,
-            *self.db_maps,
-            relationship_class_key=relationship_class_key,
-            object_names_by_class_name=object_names_by_class_name
-        )
+        dialog = AddRelationshipsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    @Slot(bool)
-    def show_manage_relationships_form(self, checked=False, relationship_class_key=None):
-        dialog = ManageRelationshipsDialog(
-            self, self.db_mngr, *self.db_maps, relationship_class_key=relationship_class_key
-        )
+    def show_manage_relationships_form(self, parent_item):
+        dialog = ManageRelationshipsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def edit_entity_tree_items(self, selected_indexes):
@@ -461,3 +438,50 @@ class TreeViewMixin:
     def receive_tool_feature_methods_removed(self, db_map_data):
         super().receive_tool_feature_methods_removed(db_map_data)
         self.tool_feature_model.remove_tool_feature_methods(db_map_data)
+
+    def restore_ui(self):
+        """Restores UI state from previous session."""
+        super().restore_ui()
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        header_states = (
+            self.qsettings.value("altScenTreeHeaderState"),
+            self.qsettings.value("toolFeatTreeHeaderState"),
+            self.qsettings.value("parValLstTreeHeaderState"),
+            self.qsettings.value("objTreeHeaderState"),
+            self.qsettings.value("relTreeHeaderState"),
+        )
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()
+        views = (
+            self.ui.treeView_alternative_scenario.header(),
+            self.ui.treeView_tool_feature.header(),
+            self.ui.treeView_parameter_value_list.header(),
+            self.ui.treeView_object.header(),
+            self.ui.treeView_relationship.header(),
+        )
+        for view, state in zip(views, header_states):
+            if state:
+                curr_state = view.saveState()
+                view.restoreState(state)
+                if view.count() != view.model().columnCount():
+                    # This can happen when switching to a version where the model has a different header
+                    view.restoreState(curr_state)
+
+    def save_window_state(self):
+        """Saves window state parameters (size, position, state) via QSettings."""
+        super().save_window_state()
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        h = self.ui.treeView_alternative_scenario.header()
+        self.qsettings.setValue("altScenTreeHeaderState", h.saveState())
+        h = self.ui.treeView_tool_feature.header()
+        self.qsettings.setValue("toolFeatTreeHeaderState", h.saveState())
+        h = self.ui.treeView_parameter_value_list.header()
+        self.qsettings.setValue("parValLstTreeHeaderState", h.saveState())
+        h = self.ui.treeView_object.header()
+        self.qsettings.setValue("objTreeHeaderState", h.saveState())
+        h = self.ui.treeView_relationship.header()
+        self.qsettings.setValue("relTreeHeaderState", h.saveState())
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()

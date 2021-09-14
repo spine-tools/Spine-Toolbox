@@ -19,7 +19,7 @@ Unit tests for the plotting module.
 import unittest
 from unittest.mock import Mock, MagicMock, PropertyMock, patch
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtWidgets import QApplication, QAction
+from PySide2.QtWidgets import QApplication, QAction, QMessageBox
 from spinedb_api import DateTime, from_database, Map, TimeSeries, TimeSeriesVariableResolution, to_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from spinetoolbox.plotting import (
@@ -41,12 +41,15 @@ db = Mock()
 def _make_pivot_proxy_model():
     """Returns a prefilled PivotTableModel."""
     db_mngr = MagicMock()
-    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, role: from_database(id_)
+    db_mngr.get_value.side_effect = lambda db_map, item_type, id_, role: from_database(*id_)
     mock_db_map = MagicMock()
     mock_db_map.codename = "codename"
     db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
     db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
-    with patch.object(SpineDBEditor, "restore_ui"), patch.object(SpineDBEditor, "show"):
+    with patch(
+        "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
+    ) as confirm_close_dialog, patch.object(SpineDBEditor, "restore_ui"), patch.object(SpineDBEditor, "show"):
+        confirm_close_dialog.exec_.return_value = QMessageBox.Cancel
         spine_db_editor = SpineDBEditor(db_mngr, mock_db_map)
     spine_db_editor.create_header_widget = lambda *args, **kwargs: None
     simple_map = Map(["a", "b"], [-1.1, -2.2])
@@ -77,27 +80,24 @@ def _make_pivot_proxy_model():
         ],
     )
     data = {
-        ('1', 'int_col', 'base_alternative'): '-3',
-        ('2', 'int_col', 'base_alternative'): '-1',
-        ('3', 'int_col', 'base_alternative'): '2',
-        ('1', 'float_col', 'base_alternative'): '1.1',
-        ('2', 'float_col', 'base_alternative'): '1.2',
-        ('3', 'float_col', 'base_alternative'): '1.3',
-        (
-            '1',
-            'time_series_col',
-            'base_alternative',
-        ): '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
-        (
-            '2',
-            'time_series_col',
-            'base_alternative',
-        ): '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
-        (
-            '3',
-            'time_series_col',
-            'base_alternative',
-        ): '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
+        ('1', 'int_col', 'base_alternative'): (b'-3', None),
+        ('2', 'int_col', 'base_alternative'): (b'-1', None),
+        ('3', 'int_col', 'base_alternative'): (b'2', None),
+        ('1', 'float_col', 'base_alternative'): (b'1.1', None),
+        ('2', 'float_col', 'base_alternative'): (b'1.2', None),
+        ('3', 'float_col', 'base_alternative'): (b'1.3', None),
+        ('1', 'time_series_col', 'base_alternative'): (
+            b'{"data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
+            "time_series",
+        ),
+        ('2', 'time_series_col', 'base_alternative'): (
+            b'{"index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
+            "time_series",
+        ),
+        ('3', 'time_series_col', 'base_alternative'): (
+            b'{"data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
+            "time_series",
+        ),
         ("1", "map_col", "base_alternative"): to_database(simple_map),
         ("2", "map_col", "base_alternative"): to_database(nested_map),
         ("3", "map_col", "base_alternative"): to_database(nested_map_with_time_series),
@@ -122,13 +122,16 @@ class _MockParameterModel(QAbstractTableModel):
     def __init__(self):
         super().__init__()
         self._table = [
-            ["label1", "-2.3"],
-            ["label2", "-0.5"],
+            ["label1", (b"-2.3", None)],
+            ["label2", (b"-0.5", None)],
             [
                 "label3",
-                '{"type": "time_series", "index": {"start": "2019-07-11T09:00", "resolution": "3 days"}, "data": [0.5, 2.3]}',
+                (
+                    b'{"index": {"start": "2019-07-11T09:00", "resolution": "3 days"}, "data": [0.5, 2.3]}',
+                    "time_series",
+                ),
             ],
-            ["label4", '{"type": "time_series", "data": [["2019-07-11T09:00", -5.0], ["2019-07-17T10:35", -3.3]]}'],
+            ["label4", (b'{"data": [["2019-07-11T09:00", -5.0], ["2019-07-17T10:35", -3.3]]}', "time_series")],
         ]
 
     def rowCount(self, parent=QModelIndex()):
@@ -140,7 +143,8 @@ class _MockParameterModel(QAbstractTableModel):
     def data(self, index, role=Qt.DisplayRole):
         if role != PARSED_ROLE:
             return None
-        return from_database(self._table[index.row()][index.column()])
+        row, column = index.row(), index.column()
+        return from_database(*self._table[row][column])
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         return "value"

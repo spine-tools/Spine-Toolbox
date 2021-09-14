@@ -15,6 +15,7 @@ Contains PluginManager class.
 :author: M. Marin (KTH)
 :date:   21.2.2021
 """
+import itertools
 import os
 import json
 import urllib.request
@@ -23,6 +24,7 @@ import shutil
 from PySide2.QtCore import Qt, Signal, Slot, QObject, QThread
 from spine_engine.utils.serialization import serialize_path, deserialize_path, deserialize_remote_path
 from .config import PLUGINS_PATH, PLUGIN_REGISTRY_URL
+from .helpers import load_plugin_dict, load_plugin_specifications, plugins_dirs
 from .widgets.toolbars import PluginToolBar
 from .widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog
 
@@ -53,9 +55,9 @@ def _download_plugin(plugin, plugin_local_dir):
     for serialized in specifications.get("Tool", ()):
         spec_file = deserialize_path(serialized, plugin_local_dir)
         with open(spec_file) as fh:
-            spect_dict = json.load(fh)
-        includes = spect_dict["includes"]
-        includes_main_path = spect_dict.get("includes_main_path", ".")
+            spec_dict = json.load(fh)
+        includes = spec_dict["includes"]
+        includes_main_path = spec_dict.get("includes_main_path", ".")
         spec_dir = os.path.dirname(spec_file)
         includes_main_path = os.path.join(spec_dir, includes_main_path)
         includes = [os.path.join(includes_main_path, include) for include in includes]
@@ -90,59 +92,37 @@ class PluginManager:
         for specs in self._plugin_specs.values():
             yield from specs
 
-    def load_plugins(self):
-        search_paths = {PLUGINS_PATH}
-        search_paths |= set(
-            self._toolbox.qsettings().value("appSettings/pluginSearchPaths", defaultValue="").split(";")
-        )
-        # Plugind dirs are top-level dirs in all search paths
-        plugin_dirs = []
-        for path in search_paths:
-            try:
-                top_level_items = [os.path.join(path, item) for item in os.listdir(path)]
-            except FileNotFoundError:
-                continue
-            plugin_dirs += [item for item in top_level_items if os.path.isdir(item)]
-        for plugin_dir in plugin_dirs:
+    def load_installed_plugins(self):
+        """Loads installed plugins and adds their specifications to toolbars."""
+        for plugin_dir in plugins_dirs(self._toolbox.qsettings()):
             self.load_individual_plugin(plugin_dir)
         self._toolbox.refresh_toolbars()
 
     def load_individual_plugin(self, plugin_dir):
-        """Loads plugin from directory and returns all the specs in a list.
+        """Loads plugin from directory.
 
         Args:
             plugin_dir (str): path of plugin dir with "plugin.json" in it.
-
-        Returns:
-            list(ProjectItemSpecification)
         """
-        plugin_file = os.path.join(plugin_dir, "plugin.json")
-        if not os.path.isfile(plugin_file):
+        plugin_dict = load_plugin_dict(plugin_dir, self._toolbox)
+        if plugin_dict is None:
             return
-        with open(plugin_file, "r") as fh:
-            try:
-                plugin_dict = json.load(fh)
-            except json.decoder.JSONDecodeError:
-                self._toolbox.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Invalid JSON.")
-                return
-        try:
-            name = plugin_dict["name"]
-            plugin_dict["plugin_dir"] = plugin_dir
-            self._installed_plugins[name] = plugin_dict
-            specifications = plugin_dict["specifications"]
-        except KeyError as key:
-            self._toolbox.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Key '{key}' not found.")
+        plugin_specs = load_plugin_specifications(
+            plugin_dict, self._toolbox.item_specification_factories(), self._toolbox.qsettings(), self._toolbox
+        )
+        if plugin_specs is None:
             return
-        deserialized_paths = [deserialize_path(path, plugin_dir) for paths in specifications.values() for path in paths]
-        plugin_specs = self._plugin_specs[name] = []
-        for path in deserialized_paths:
-            spec = self._toolbox.load_specification_from_file(path)
-            if not spec:
-                continue
-            spec.plugin = name
-            plugin_specs.append(spec)
+        name = plugin_dict["name"]
+        self._installed_plugins[name] = plugin_dict
+        disabled_plugins = set()
+        if self._toolbox.project() is not None:
+            for spec in itertools.chain(*plugin_specs.values()):
+                spec_id = self._toolbox.project().add_specification(spec, save_to_disk=False)
+                if spec_id is None:
+                    disabled_plugins.add(spec.name)
+        self._plugin_specs.update(plugin_specs)
         toolbar = self._plugin_toolbars[name] = PluginToolBar(name, parent=self._toolbox)
-        toolbar.setup(plugin_specs)
+        toolbar.setup(plugin_specs, disabled_plugins)
         self._toolbox.addToolBar(Qt.TopToolBarArea, toolbar)
 
     def _create_worker(self):
@@ -222,17 +202,14 @@ class PluginManager:
         """
         plugin_dict = self._installed_plugins.pop(plugin_name)
         plugin_dir = plugin_dict["plugin_dir"]
-        # Remove specs from model
-        specifications = plugin_dict["specifications"]
-        deserialized_paths = [deserialize_path(path, plugin_dir) for paths in specifications.values() for path in paths]
-        for path in deserialized_paths:
-            spec_dict = self._toolbox.parse_specification_file(path)
-            row = self._toolbox.specification_model.specification_row(spec_dict["name"])
-            if row >= 0:
-                self._toolbox.do_remove_specification(row, ask_verification=False)
+        self._plugin_specs.pop(plugin_name, None)
+        if self._toolbox.project() is not None:
+            for spec in list(self._toolbox.project().specifications()):
+                if spec.plugin == plugin_name:
+                    self._toolbox.project().remove_specification(spec.name)
         # Remove plugin dir
         shutil.rmtree(plugin_dir)
-        self._plugin_toolbars[plugin_name].deleteLater()
+        self._plugin_toolbars.pop(plugin_name).deleteLater()
         self._toolbox.refresh_toolbars()
 
     @Slot(str)

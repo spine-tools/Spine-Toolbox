@@ -57,13 +57,9 @@ class TestProjectItem(unittest.TestCase):
         project.items_dir = "item_directory/"
         item = ProjectItem("item name", "Item's description.", -2.3, 5.5, project)
         item.item_type = MagicMock(return_value="item type")
-        point = NonCallableMagicMock()
-        point.x = MagicMock(return_value=-2.3)
-        point.y = MagicMock(return_value=5.5)
-        sceneBoundingRect = NonCallableMagicMock()
-        sceneBoundingRect.center = MagicMock(return_value=point)
         icon = NonCallableMagicMock()
-        icon.sceneBoundingRect = MagicMock(return_value=sceneBoundingRect)
+        icon.x.return_value = -2.3
+        icon.y.return_value = 5.5
         item.get_icon = MagicMock(return_value=icon)
         item_dict = item.item_dict()
         expected = {"type": "item type", "description": "Item's description.", "x": -2.3, "y": 5.5}

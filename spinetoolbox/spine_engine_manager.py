@@ -41,6 +41,15 @@ class SpineEngineManagerBase:
         """Stops engine currently running."""
         raise NotImplementedError()
 
+    def answer_prompt(self, item_name, accepted):
+        """Answers prompt.
+
+        Args:
+            item_name (str): The item that emitted the prompt
+            accepted (bool): The user's decision.
+        """
+        raise NotImplementedError()
+
     def restart_kernel(self, connection_file):
         """Restarts the jupyter kernel associated to given connection file.
 
@@ -54,6 +63,58 @@ class SpineEngineManagerBase:
 
         Args:
             connection_file (str): path of connection file
+        """
+        raise NotImplementedError()
+
+    def issue_persistent_command(self, persistent_key, command):
+        """Issues a command to a persistent process.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+            command (str): command to issue
+
+        Returns:
+            generator: stdio and stderr messages (dictionaries with two keys: type, and data)
+        """
+        raise NotImplementedError()
+
+    def restart_persistent(self, persistent_key):
+        """Restart a persistent process.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+        """
+        raise NotImplementedError()
+
+    def interrupt_persistent(self, persistent_key):
+        """Interrupts a persistent process.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+        """
+        raise NotImplementedError()
+
+    def get_persistent_completions(self, persistent_key, text):
+        """Returns a list of auto-completion options from given text.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+            text (str): text to complete
+
+        Returns:
+            list of str
+        """
+        raise NotImplementedError()
+
+    def get_persistent_history_item(self, persistent_key, index):
+        """Returns an item from persistent history.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+            index (int): index of the history item, most recent first
+
+        Returns:
+            str: history item or empty string if none
         """
         raise NotImplementedError()
 
@@ -83,6 +144,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         """See base class."""
         self._send("stop_engine", self._engine_id, receive=False)
 
+    def answer_prompt(self, item_name, accepted):
+        """See base class."""
+        raise NotImplementedError()
+
     def restart_kernel(self, connection_file):
         """See base class."""
         self._send("restart_kernel", connection_file)
@@ -90,6 +155,22 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
     def shutdown_kernel(self, connection_file):
         """See base class."""
         self._send("shutdown_kernel", connection_file)
+
+    def issue_persistent_command(self, persistent_key, command):
+        """See base class."""
+        raise NotImplementedError()
+
+    def restart_persistent(self, persistent_key):
+        """See base class."""
+        raise NotImplementedError()
+
+    def interrupt_persistent(self, persistent_key):
+        """See base class."""
+        raise NotImplementedError()
+
+    def get_persistent_completions(self, persistent_key, text):
+        """See base class."""
+        raise NotImplementedError()
 
     def _send(self, request, *args, receive=True):
         """
@@ -134,7 +215,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         self._engine = None
 
     def run_engine(self, engine_data):
-        from spine_engine.spine_engine import SpineEngine
+        from spine_engine.spine_engine import SpineEngine  # pylint: disable=import-outside-toplevel
 
         self._engine = SpineEngine(**engine_data)
 
@@ -144,19 +225,54 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
     def stop_engine(self):
         self._engine.stop()
 
+    def answer_prompt(self, item_name, accepted):
+        self._engine.answer_prompt(item_name, accepted)
+
     def restart_kernel(self, connection_file):
-        from spine_engine.execution_managers import get_kernel_manager
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.kernel_execution_manager import get_kernel_manager
 
         km = get_kernel_manager(connection_file)
         if km is not None:
             km.restart_kernel(now=True)
 
     def shutdown_kernel(self, connection_file):
-        from spine_engine.execution_managers import pop_kernel_manager
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.kernel_execution_manager import pop_kernel_manager
 
         km = pop_kernel_manager(connection_file)
         if km is not None:
             km.shutdown_kernel(now=True)
+
+    def issue_persistent_command(self, persistent_key, command):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.persistent_execution_manager import issue_persistent_command
+
+        yield from issue_persistent_command(persistent_key, command)
+
+    def restart_persistent(self, persistent_key):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.persistent_execution_manager import restart_persistent
+
+        restart_persistent(persistent_key)
+
+    def interrupt_persistent(self, persistent_key):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.persistent_execution_manager import interrupt_persistent
+
+        interrupt_persistent(persistent_key)
+
+    def get_persistent_completions(self, persistent_key, text):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.persistent_execution_manager import get_persistent_completions
+
+        return get_persistent_completions(persistent_key, text)
+
+    def get_persistent_history_item(self, persistent_key, index):
+        # pylint: disable=import-outside-toplevel
+        from spine_engine.execution_managers.persistent_execution_manager import get_persistent_history_item
+
+        return get_persistent_history_item(persistent_key, index)
 
 
 def make_engine_manager(engine_server_address):

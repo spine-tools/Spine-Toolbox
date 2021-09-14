@@ -17,8 +17,10 @@ Contains a class for storing project items.
 """
 import logging
 from copy import copy
-from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
+from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel, Slot
 from PySide2.QtGui import QIcon, QFont
+
+from ..project_tree_item import LeafProjectTreeItem
 
 
 class ProjectItemModel(QAbstractItemModel):
@@ -31,10 +33,59 @@ class ProjectItemModel(QAbstractItemModel):
         """
         super().__init__(parent)
         self._root = root
+        self._project = None
 
     def root(self):
         """Returns the root item."""
         return self._root
+
+    def connect_to_project(self, project):
+        """Connects the model to a project.
+
+        Args:
+            project (SpineToolboxProject): project to connect to
+        """
+        self.remove_leaves()
+        self._project = project
+        project.project_about_to_be_torn_down.connect(self.remove_leaves)
+        project.item_added.connect(self._add_leaf_item)
+        project.item_about_to_be_removed.connect(self._remove_leaf_item)
+        project.item_renamed.connect(self._rename_item)
+
+    @Slot(str)
+    def _add_leaf_item(self, name):
+        """Adds a leaf item to the model
+
+        Args:
+            name (str): project item's name
+        """
+        project_item = self._project.get_item(name)
+        leaf_item = LeafProjectTreeItem(project_item)
+        category_index = self.find_category(project_item.item_category())
+        self.insert_item(leaf_item, category_index)
+
+    @Slot(str)
+    def _remove_leaf_item(self, name):
+        """Removes a leaf item from the model.
+
+        Args:
+            name (str): project item's name
+        """
+        project_item = self._project.get_item(name)
+        leaf_item = self.get_item(name)
+        category_index = self.find_category(project_item.item_category())
+        self.remove_item(leaf_item, category_index)
+
+    @Slot(str, str)
+    def _rename_item(self, old_name, new_name):
+        """Renames a leaf item.
+
+        Args:
+            old_name (str): item's old name
+            new_name (str): item's new name
+        """
+        leaf_index = self.find_item(old_name)
+        self.set_leaf_item_name(leaf_index, new_name)
 
     def rowCount(self, parent=QModelIndex()):
         """Reimplemented rowCount method.
@@ -200,7 +251,7 @@ class ProjectItemModel(QAbstractItemModel):
             name (str): Project item name
 
         Returns:
-            category item or None if the category was not found
+            CategoryProjectTreeItem: category item or None if the category was not found
         """
         for category in self.root().children():
             for item in category.children():
@@ -231,7 +282,7 @@ class ProjectItemModel(QAbstractItemModel):
         """Removes item from project.
 
         Args:
-            item (BaseProjectTreeItem): Project item to remove
+            item (BaseProjectTreeItem): Item to remove
             parent (QModelIndex): Parent of item that is to be removed
 
         Returns:
@@ -303,17 +354,6 @@ class ProjectItemModel(QAbstractItemModel):
         category_inds = [self.index(row, 0) for row in range(self.rowCount())]
         return {ind: copy(ind.internalPointer().children()) for ind in category_inds}
 
-    def short_name_reserved(self, short_name):
-        """Checks if the directory name derived from the name of the given item is in use.
-
-        Args:
-            short_name (str): Item short name
-
-        Returns:
-            bool: True if short name is taken, False if it is available.
-        """
-        return short_name in set(item.short_name for item in self.items())
-
     def leaf_indexes(self):
         """Yields leaf indexes."""
         for row in range(self.rowCount()):
@@ -321,6 +361,7 @@ class ProjectItemModel(QAbstractItemModel):
             for inner_row in range(self.rowCount(category_index)):
                 yield self.index(inner_row, 0, category_index)
 
+    @Slot()
     def remove_leaves(self):
         self.beginResetModel()
         for row in range(self.rowCount()):

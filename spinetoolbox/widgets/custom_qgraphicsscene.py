@@ -21,7 +21,8 @@ from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPointF, QEven
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsScene
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..project_item_icon import ProjectItemIcon
-from ..link import Link, LinkDrawer
+from ..link import JumpLink, JumpLinkDrawer, Link, ConnectionLinkDrawer
+from ..helpers import LinkType
 from .project_item_drag import ProjectItemDragMixin
 
 
@@ -72,13 +73,16 @@ class DesignGraphicsScene(CustomGraphicsScene):
         bg_color = settings.value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
         self.bg_origin = None
-        self.link_drawer = LinkDrawer(toolbox)
-        self.link_drawer.hide()
+        self._connection_drawer = ConnectionLinkDrawer(toolbox)
+        self._connection_drawer.hide()
+        self._jump_drawer = JumpLinkDrawer(toolbox)
+        self._jump_drawer.hide()
+        self.link_drawer = None
         self.connect_signals()
 
     def mouseMoveEvent(self, event):
         """Moves link drawer."""
-        if self.link_drawer.isVisible():
+        if self.link_drawer is not None:
             self.link_drawer.tip = event.scenePos()
             self.link_drawer.update_geometry()
             event.setButtons(Qt.NoButton)  # this is so super().mouseMoveEvent sends hover events to connector buttons
@@ -86,9 +90,9 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def mousePressEvent(self, event):
         """Puts link drawer to sleep and log message if it looks like the user doesn't know what they're doing."""
-        was_drawing = self.link_drawer.isVisible()
+        was_drawing = self.link_drawer is not None
         super().mousePressEvent(event)
-        if was_drawing and self.link_drawer.isVisible():
+        if was_drawing and self.link_drawer is not None:
             self.link_drawer.sleep()
             if event.button() == Qt.LeftButton:
                 self.emit_connection_failed()
@@ -96,7 +100,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
     def mouseReleaseEvent(self, event):
         """Makes link if drawer is released over a valid connector button."""
         super().mouseReleaseEvent(event)
-        if not self.link_drawer.isVisible() or self.link_drawer.src_connector.isUnderMouse():
+        if self.link_drawer is None or self.link_drawer.src_connector.isUnderMouse():
             return
         if self.link_drawer.dst_connector is None:
             self.link_drawer.sleep()
@@ -112,7 +116,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
     def keyPressEvent(self, event):
         """Puts link drawer to sleep if user presses ESC."""
         super().keyPressEvent(event)
-        if self.link_drawer.isVisible() and event.key() == Qt.Key_Escape:
+        if self.link_drawer is not None and event.key() == Qt.Key_Escape:
             self.link_drawer.sleep()
 
     def connect_signals(self):
@@ -134,9 +138,9 @@ class DesignGraphicsScene(CustomGraphicsScene):
         for item in self.selectedItems():
             if isinstance(item, ProjectItemIcon):
                 project_item_icons.append(item)
-            elif isinstance(item, Link):
+            elif isinstance(item, (Link, JumpLink)):
                 links.append(item)
-        # Set active project item, active link, and executed item in toolbox
+        # Set active project item and active link in toolbox
         active_project_item = (
             self._toolbox.project_item_model.get_item(project_item_icons[0].name()).project_item
             if len(project_item_icons) == 1
@@ -273,3 +277,11 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 painter.drawEllipse(ref + QPointF(0, j * radius), radius, radius)
         painter.setPen(QPen(self.bg_color.darker(110)))
         painter.drawEllipse(self.bg_origin, 2 * radius, 2 * radius)
+
+    def select_link_drawer(self, drawer_type):
+        """Selects current link drawer.
+
+        Args:
+            drawer_type (LinkType): selected link drawer's type
+        """
+        self.link_drawer = self._connection_drawer if drawer_type == LinkType.CONNECTION else self._jump_drawer

@@ -16,6 +16,7 @@ Provides the main() function.
 :date:   4.10.2019
 """
 import os
+import multiprocessing
 import PySide2
 
 dirname = os.path.dirname(PySide2.__file__)
@@ -28,42 +29,6 @@ import sys
 import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
-from .spinedb_api_version_check import spinedb_api_version_check
-
-# pylint: disable=wrong-import-position
-# Check for spinedb_api version before we try to import possibly non-existent stuff below.
-if not spinedb_api_version_check():
-    sys.exit(1)
-
-from .spine_engine_version_check import spine_engine_version_check
-
-# Check for spine_engine version before we try to import possibly non-existent stuff below.
-if not spine_engine_version_check():
-    sys.exit(1)
-
-from .load_project_items import upgrade_project_items
-
-if sys.argv[-1] == "--skip-project-items-upgrade":
-    _skip_project_items_upgrade = True
-    sys.argv.pop()
-else:
-    _skip_project_items_upgrade = False
-
-if not _skip_project_items_upgrade and upgrade_project_items():
-    # Restart, otherwise the newer version is not picked.
-    # Not even importlib.reload(site) or importlib.invalidate_caches() are sufficient,
-    # because of .pyc files.
-    # We use `subprocess.run()` because `os.execl()` doesn't immediately replaces the current program on Windows
-    import subprocess
-
-    try:
-        subprocess.run(
-            [sys.executable, os.path.join(os.path.dirname(__file__), "__main__.py"), "--skip-project-items-upgrade"],
-            check=True,
-        )
-    except subprocess.CalledProcessError as err:
-        sys.exit(err.returncode)
-    sys.exit(0)
 
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
 from . import resources_icons_rc  # pylint: disable=unused-import
@@ -77,6 +42,7 @@ from .helpers import pyside2_version_check
 
 def main():
     """Creates main window GUI and starts main event loop."""
+    multiprocessing.freeze_support()
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
@@ -85,7 +51,7 @@ def main():
     )
     if not pyside2_version_check():
         return 1
-
+    _add_pywin32_system32_to_path()
     parser = _make_argument_parser()
     args = parser.parse_args()
     if args.execute_only:
@@ -111,3 +77,14 @@ def _make_argument_parser():
     parser.add_argument("--execute-only", help="execute given project only, do not open the GUI", action="store_true")
     parser.add_argument("project", help="project to open at startup", nargs="?", default="")
     return parser
+
+
+def _add_pywin32_system32_to_path():
+    """Adds a directory to PATH on Windows that is required to make pywin32 work
+    on (Conda) Python 3.8. See https://github.com/Spine-project/Spine-Toolbox/issues/1230."""
+    if not sys.platform == "win32":
+        return
+    if sys.version_info[0:2] == (3, 8):
+        p = os.path.join(sys.exec_prefix, "Lib", "site-packages", "pywin32_system32")
+        if os.path.exists(p):
+            os.environ["PATH"] = p + ";" + os.environ["PATH"]

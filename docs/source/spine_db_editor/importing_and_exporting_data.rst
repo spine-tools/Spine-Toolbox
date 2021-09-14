@@ -15,7 +15,7 @@ The SQLite import/export uses the Spine database format.
 The JSON and Excel import/export use a specific format described below.
 
 
-.. tip:: To get a JSON or Excel file template you can simply export an existing Spine database
+.. tip:: To create a template file with the JSON or Excel format you can simply export an existing Spine database
    into one of those formats.
 
 Excel format
@@ -29,7 +29,7 @@ Each sheet can have one of four different formats:
   .. image:: img/excel_object_sheet.png
      :align: center
 
-2. Object class with time-series parameter data:
+2. Object class with indexed parameter data:
 
    .. image:: img/excel_object_sheet_timeseries.png
       :align: center
@@ -39,10 +39,11 @@ Each sheet can have one of four different formats:
    .. image:: img/excel_relationship_sheet.png
       :align: center
 
-4. Relationship class with time-series parameter data:
+4. Relationship class with indexed parameter data:
 
    .. image:: img/excel_relationship_sheet_timeseries.png
       :align: center
+
 
 JSON format
 ~~~~~~~~~~~
@@ -186,12 +187,9 @@ Example::
 Importing
 =========
 
-To import a file, go to **File --> Import**.
+To import a file, select **File --> Import** from the hamburger menu.
 The *Import file* dialog will pop up.
 Select the file type (SQLite, JSON, or Excel), enter the path of the file to import, and accept the dialog.
-
-.. note:: Changes from import operations are not committed immediately to any databases.
-   You need to commit them separately (see :ref:`committing_and_rolling_back`).
 
 .. tip:: You can undo import operations using **Edit -> Undo**.
 
@@ -201,8 +199,8 @@ Exporting
 Mass export
 ~~~~~~~~~~~
 
-To export items in mass, go to **File --> Export**.
-The *Mass export items* dialog will pop up:
+To export items in mass, select **File --> Export** from the hamburger menu.
+The *Export items* dialog will pop up:
 
 .. image:: img/mass_export_items_dialog.png
    :align: center
@@ -218,7 +216,7 @@ Selective export
 
 To export a specific subset of items, select the corresponding items in either *Object tree*
 and *Relationship tree*, right click on the selection to bring the context menu,
-and select **Export selected**.
+and select **Export**.
 
 The *Export file* dialog will pop up.
 Select the file type (SQLite, JSON, or Excel), enter the path of the file to export, and accept the dialog.
@@ -227,7 +225,8 @@ Select the file type (SQLite, JSON, or Excel), enter the path of the file to exp
 Session export
 ~~~~~~~~~~~~~~
 
-To export only uncommitted changes made in the current session, go to **File --> Export session**.
+To export only uncommitted changes made in the current session, select **File --> Export session** from
+the hamburger menu.
 
 The *Export file* dialog will pop up.
 Select the file type (SQLite, JSON, or Excel), enter the path of the file to export, and accept the dialog.
@@ -243,10 +242,3 @@ a button with the file name is created in the *Exports* bar at the bottom of the
 To open the file in your registered program, press that button.
 To open the containing folder, 
 click on the arrow next to the file name and select **Open containing folder** from the popup menu.
-
-To add an exported SQLite file to a *Data Store* item in the current project,
-click on the arrow next to the file name and select **Add to project** from the popup menu.
-The *Add SQLite file to Project* dialog will pop up.
-Select a *Data Store* item from the list to become the host of the exported file.
-Alternatively, you can create a new *Data Store* item by typing in the last row.
-When you're done, press **OK**.

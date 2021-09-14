@@ -18,11 +18,10 @@ Contains classes for handling DAGs.
 
 import logging
 import random
-from PySide2.QtCore import Signal, QObject
 import networkx as nx
 
 
-class DirectedGraphHandler(QObject):
+class DirectedGraphHandler:
     """Class for manipulating graphs according to user's actions."""
 
     def __init__(self):
@@ -287,19 +286,3 @@ class DirectedGraphHandler(QObject):
             h.remove_edge(*edge)
             result.append(edge)
         return result
-
-    @staticmethod
-    def export_to_graphml(g, path):
-        """Export given graph to a path in GraphML format.
-
-        Args:
-            g (DiGraph): Graph to export
-            path (str): Full output path for GraphML file
-
-        Returns:
-            bool: Operation success status
-        """
-        if not nx.is_directed_acyclic_graph(g):
-            return False
-        nx.write_graphml(g, path, prettyprint=True)
-        return True

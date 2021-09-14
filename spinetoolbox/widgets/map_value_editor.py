@@ -27,7 +27,7 @@ from .time_series_variable_resolution_editor import TimeSeriesVariableResolution
 
 
 class MapValueEditor(ParameterValueEditorBase):
-    """Dialog for editing parameter values in Database editor."""
+    """Dialog for editing parameter values in Map value editor."""
 
     def __init__(self, index, parent=None):
         """
@@ -47,7 +47,7 @@ class MapValueEditor(ParameterValueEditorBase):
 
         super().__init__(index, editors, parent)
         self._model = index.model()
-        self.setWindowTitle(f"Edit map value")
+        self.setWindowTitle("Edit map value")
         self._select_editor(index.data(Qt.EditRole))
 
     def _set_data(self, value):

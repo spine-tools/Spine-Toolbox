@@ -63,43 +63,6 @@ class CustomContextMenu(QMenu):
         return self.option
 
 
-class ProjectItemContextMenu(CustomContextMenu):
-    """Context menu for project items in the Project tree widget and in the Design View."""
-
-    def __init__(self, parent, position):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (ToolboxUI)
-            position (QPoint): Position on screen
-        """
-        super().__init__(parent, position)
-        self.add_action("Copy")
-        self.add_action("Paste")
-        self.add_action("Duplicate")
-        self.addSeparator()
-        self.add_action("Open directory...")
-        self.addSeparator()
-        self.add_action("Rename")
-        self.add_action("Remove item")
-
-
-class LinkContextMenu(CustomContextMenu):
-    """Context menu class for connection links."""
-
-    def __init__(self, parent, position, link):
-        """
-        Args:
-            parent (QWidget): Parent for menu widget (ToolboxUI)
-            position (QPoint): Position on screen
-            link (Link(QGraphicsPathItem)): Link that requested the menu
-        """
-        super().__init__(parent, position)
-        self.add_action("Remove connection")
-        self.add_action("Take connection")
-        if link.has_parallel_link():
-            self.add_action("Send to bottom")
-
-
 class OpenProjectDialogComboBoxContextMenu(CustomContextMenu):
     def __init__(self, parent, position):
         """
@@ -151,7 +114,7 @@ class ItemSpecificationMenu(CustomPopupMenu):
         self._toolbox = toolbox
         self.index = QPersistentModelIndex(index)
         self.add_action("Edit specification", lambda item=item: toolbox.edit_specification(self.index, item))
-        self.add_action("Remove specification", lambda: toolbox.remove_specification(self.index.row()))
+        self.add_action("Remove specification", lambda: toolbox.remove_specification(self.index))
         self.add_action("Open specification file...", lambda: toolbox.open_specification_file(self.index))
 
 

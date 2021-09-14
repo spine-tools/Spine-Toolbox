@@ -147,6 +147,9 @@
        <property name="uniformRowHeights">
         <bool>true</bool>
        </property>
+       <attribute name="headerVisible">
+        <bool>true</bool>
+       </attribute>
       </widget>
      </item>
     </layout>
@@ -763,52 +766,6 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_parameter_tag">
-   <property name="windowTitle">
-    <string>Parameter tag</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>2</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents_9">
-    <layout class="QVBoxLayout" name="verticalLayout_9">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="ParameterTagTreeView" name="treeView_parameter_tag">
-       <property name="contextMenuPolicy">
-        <enum>Qt::DefaultContextMenu</enum>
-       </property>
-       <property name="accessibleName">
-        <string>parameter value list</string>
-       </property>
-       <property name="editTriggers">
-        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
-       </property>
-       <property name="selectionMode">
-        <enum>QAbstractItemView::ExtendedSelection</enum>
-       </property>
-       <property name="uniformRowHeights">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-  </widget>
   <widget class="QDockWidget" name="dockWidget_tool_feature_tree">
    <property name="windowTitle">
     <string>Tool/Feature tree</string>
@@ -1152,11 +1109,6 @@
   </customwidget>
   <customwidget>
    <class>AlternativeScenarioTreeView</class>
-   <extends>QTreeView</extends>
-   <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>ParameterTagTreeView</class>
    <extends>QTreeView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtreeview.h</header>
   </customwidget>

@@ -16,14 +16,45 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtCore import Slot, Qt
-from PySide2.QtWidgets import QToolBar, QLabel, QToolButton
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QToolBar, QLabel, QToolButton, QAbstractButton
 from PySide2.QtGui import QIcon, QPainter
 from ..helpers import make_icon_toolbar_ss, ColoredIcon
 from .project_item_drag import ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
 
 
-class PluginToolBar(QToolBar):
+class ToolBar(QToolBar):
+    """Base class for Toolbox toolbars."""
+
+    def __init__(self, name, toolbox):
+        """
+        Args:
+            name (str): toolbar's name
+            toolbox (ToolboxUI): Toolbox main window
+        """
+        super().__init__(name, parent=toolbox)
+        self.setObjectName(name.replace(" ", "_"))
+        self._toolbox = toolbox
+
+    def set_color(self, color):
+        """Sets toolbar's background color.
+
+        Args:
+            color (QColor): background color
+        """
+        raise NotImplementedError()
+
+    def set_project_actions_enabled(self, enabled):
+        """Enables or disables project related actions.
+
+        Args:
+            enabled (bool): True to enable actions, False to disable
+        """
+        for button in self.findChildren(QAbstractButton):
+            button.setEnabled(enabled)
+
+
+class PluginToolBar(ToolBar):
     """A plugin toolbar."""
 
     def __init__(self, name, parent):
@@ -32,40 +63,50 @@ class PluginToolBar(QToolBar):
         Args:
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__(name, parent=parent)  # Inherits stylesheet from ToolboxUI
+        super().__init__(name, parent)  # Inherits stylesheet from ToolboxUI
         self._name = name
-        self._toolbox = parent
-        self.setObjectName(name.replace(" ", "_"))
 
-    def setup(self, plugin_specs):
+    def setup(self, plugin_specs, disabled_names):
+        """Sets up the toolbar.
+
+        Args:
+            plugin_specs (dict): mapping from specification name to specification
+            disabled_names (Iterable of str): specifications that should be disabled
+        """
         self.addWidget(PaddingLabel(self._name))
-        for spec in plugin_specs:
-            factory = self._toolbox.item_factories[spec.item_type]
-            icon = QIcon(factory.icon())
-            button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
-            button.setIconSize(self.iconSize())
-            self.addWidget(button)
+        for specs in plugin_specs.values():
+            for spec in specs:
+                factory = self._toolbox.item_factories[spec.item_type]
+                icon = QIcon(factory.icon())
+                button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
+                button.setIconSize(self.iconSize())
+                if spec.name in disabled_names:
+                    button.setEnabled(False)
+                self.addWidget(button)
 
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
 
 
-class MainToolBar(QToolBar):
+class MainToolBar(ToolBar):
     """The main application toolbar: Items | Execute"""
 
     _SEPARATOR = ";;"
 
-    def __init__(self, parent):
+    def __init__(self, execute_project_action, execute_selection_action, stop_execution_action, parent):
         """
-
         Args:
+            execute_project_action (QAction): action to execute project
+            execute_selection_action (QAction): action to execute selected items
+            stop_execution_action (QAction): action to stop execution
             parent (ToolboxUI): QMainWindow instance
         """
-        super().__init__("Main Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
-        self._toolbox = parent
-        self.setObjectName("Main_Toolbar")
+        super().__init__("Main Toolbar", parent)  # Inherits stylesheet from ToolboxUI
+        self._execute_project_action = execute_project_action
         self.execute_project_button = None
+        self._execute_selection_action = execute_selection_action
         self.execute_selection_button = None
+        self._stop_execution_action = stop_execution_action
         self.stop_execution_button = None
         self._buttons = []
         self._spec_arrays = []
@@ -97,11 +138,13 @@ class MainToolBar(QToolBar):
             if item_type in ordered_item_types:
                 continue
             self._add_project_item_button(item_type, factory, colored)
-        self._add_tool_button(
+        self._make_tool_button(
             QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
         )
 
     def _add_project_item_button(self, item_type, factory, colored):
+        if factory.is_deprecated():
+            return
         icon_file_type = factory.icon()
         icon_color = factory.icon_color().darker(120)
         icon = ColoredIcon(icon_file_type, icon_color, self.iconSize(), colored=colored)
@@ -122,56 +165,46 @@ class MainToolBar(QToolBar):
             w.set_colored_icons(colored)
         self.update()
 
-    def _add_tool_button(self, icon, tip, slot):
+    def _make_tool_button(self, icon, tip, slot):
+        """Makes a new tool button and adds it to the toolbar.
+
+        Args:
+            icon (QIcon): button's icon
+            tip (str): button's tooltip
+            slot (Callable): slot where to connect button's clicked signal
+
+        Returns:
+            QToolButton: created button
+        """
         button = QToolButton()
         button.setIcon(icon)
         button.setToolTip(f"<p>{tip}</p>")
         button.clicked.connect(slot)
-        button.setStyleSheet("QToolButton{padding: 2px}")
-        self.addWidget(button)
+        self._add_tool_button(button)
         return button
 
+    def _add_tool_button(self, button):
+        """Adds a button to the toolbar.
+
+        Args:
+            button (QToolButton): button to add
+        """
+        button.setStyleSheet("QToolButton{padding: 2px}")
+        self.addWidget(button)
+
     def add_execute_buttons(self):
+        """Adds project execution buttons to the toolbar."""
         self.addSeparator()
         self.addWidget(PaddingLabel("Execute"))
-        self.execute_project_button = self._add_tool_button(
-            QIcon(":/icons/menu_icons/play-circle-solid.svg"), "Execute project", self.execute_project
-        )
-        self.execute_selection_button = self._add_tool_button(
-            QIcon(":/icons/menu_icons/play-circle-regular.svg"), "Execute selection", self.execute_selected
-        )
-        self.stop_execution_button = self._add_tool_button(
-            QIcon(":/icons/menu_icons/stop-circle-regular.svg"), "Stop execution", self.stop_execution
-        )
-        self.execute_project_button.setEnabled(False)  # Will become enabled when user adds items
-        self.execute_selection_button.setEnabled(False)  # Will become enabled when user selects something
-        self.stop_execution_button.setEnabled(False)  # Will become enabled when user executes something
-
-    @Slot(bool)
-    def execute_project(self, checked=False):
-        """Slot for handling the Execute project tool button clicked signal."""
-        if not self._toolbox.project():
-            self._toolbox.msg.emit("Please create a new project or open an existing one first")
-            return
-        self._toolbox.project().execute_project()
-        return
-
-    @Slot(bool)
-    def execute_selected(self, checked=False):
-        """Slot for handling the Execute selected tool button clicked signal."""
-        if not self._toolbox.project():
-            self._toolbox.msg.emit("Please create a new project or open an existing one first")
-            return
-        self._toolbox.project().execute_selected()
-        return
-
-    @Slot(bool)
-    def stop_execution(self, checked=False):
-        """Slot for handling the Stop execution tool button clicked signal."""
-        if not self._toolbox.project():
-            self._toolbox.msg.emit("Please create a new project or open an existing one first")
-            return
-        self._toolbox.project().stop()
+        self.execute_project_button = QToolButton()
+        self.execute_project_button.setDefaultAction(self._execute_project_action)
+        self._add_tool_button(self.execute_project_button)
+        self.execute_selection_button = QToolButton()
+        self.execute_selection_button.setDefaultAction(self._execute_selection_action)
+        self._add_tool_button(self.execute_selection_button)
+        self.stop_execution_button = QToolButton()
+        self.stop_execution_button.setDefaultAction(self._stop_execution_action)
+        self._add_tool_button(self.stop_execution_button)
 
     def dragLeaveEvent(self, event):
         event.accept()

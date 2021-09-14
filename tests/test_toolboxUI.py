@@ -23,7 +23,9 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication
+
+import spinetoolbox.ui_main
+from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtCore import Qt, QPoint, QItemSelectionModel, QPointF, QMimeData
 from PySide2.QtTest import QTest
 from PySide2.QtGui import QDropEvent
@@ -169,7 +171,7 @@ class TestToolboxUI(unittest.TestCase):
         # Check that project contains four items
         self.assertEqual(self.toolbox.project_item_model.n_items(), 4)
         # Check that design view has three links
-        links = self.toolbox.ui.graphicsView.links()
+        links = [item for item in self.toolbox.ui.graphicsView.scene().items() if isinstance(item, Link)]
         self.assertEqual(len(links), 3)
         # Check project items have the right links
         index_a = self.toolbox.project_item_model.find_item("a")
@@ -246,7 +248,7 @@ class TestToolboxUI(unittest.TestCase):
         ), mock.patch("PySide2.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
-        add_dc(self.toolbox.project(), "DC")
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
         self.toolbox.save_project()
         self.assertTrue(self.toolbox.undo_stack.isClean())
         self.assertTrue(self.toolbox.close_project())
@@ -276,7 +278,7 @@ class TestToolboxUI(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             create_project(self.toolbox, project_dir)
             ds1 = "DS1"
-            add_ds(self.toolbox.project(), ds1)
+            add_ds(self.toolbox.project(), self.toolbox.item_factories, ds1)
             n_items = self.toolbox.project_item_model.n_items()
             self.assertEqual(n_items, 1)  # Check that the project contains one item
             ds_ind = self.toolbox.project_item_model.find_item(ds1)
@@ -306,8 +308,8 @@ class TestToolboxUI(unittest.TestCase):
             create_project(self.toolbox, project_dir)
             ds1 = "DS1"
             ds2 = "DS2"
-            add_ds(self.toolbox.project(), ds1)
-            add_ds(self.toolbox.project(), ds2)
+            add_ds(self.toolbox.project(), self.toolbox.item_factories, ds1)
+            add_ds(self.toolbox.project(), self.toolbox.item_factories, ds2)
             n_items = self.toolbox.project_item_model.n_items()
             self.assertEqual(n_items, 2)
             ds1_ind = self.toolbox.project_item_model.find_item(ds1)
@@ -339,8 +341,8 @@ class TestToolboxUI(unittest.TestCase):
             create_project(self.toolbox, project_dir)
             ds1 = "DS1"
             ds2 = "DS2"
-            add_ds(self.toolbox.project(), ds1)
-            add_ds(self.toolbox.project(), ds2)
+            add_ds(self.toolbox.project(), self.toolbox.item_factories, ds1)
+            add_ds(self.toolbox.project(), self.toolbox.item_factories, ds2)
             n_items = self.toolbox.project_item_model.n_items()
             self.assertEqual(n_items, 2)
             ds1_ind = self.toolbox.project_item_model.find_item(ds1)
@@ -373,7 +375,7 @@ class TestToolboxUI(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
-        add_dc(self.toolbox.project(), dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 1)  # Check that the project contains one item
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
@@ -398,8 +400,8 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
-        add_dc(self.toolbox.project(), dc1, x=0, y=0)
-        add_dc(self.toolbox.project(), dc2, x=100, y=100)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc2, x=100, y=100)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)  # Check the number of project items
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
@@ -428,7 +430,7 @@ class TestToolboxUI(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
-        add_dc(self.toolbox.project(), dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         gv = self.toolbox.ui.graphicsView
         dc1_item = self.toolbox.project_item_model.item(dc1_index).project_item
@@ -453,8 +455,8 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
-        add_dc(self.toolbox.project(), dc1, x=0, y=0)
-        add_dc(self.toolbox.project(), dc2, x=100, y=100)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc2, x=100, y=100)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)  # Check the number of project items
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
@@ -496,8 +498,8 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
-        add_dc(self.toolbox.project(), dc1, x=0, y=0)
-        add_dc(self.toolbox.project(), dc2, x=100, y=100)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc2, x=100, y=100)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)  # Check the number of project items
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
@@ -543,8 +545,8 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
-        add_dc(self.toolbox.project(), dc1, x=0, y=0)
-        add_dc(self.toolbox.project(), dc2, x=100, y=100)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc2, x=100, y=100)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 2)  # Check the number of project items
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
@@ -609,7 +611,7 @@ class TestToolboxUI(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
-        add_dc(self.toolbox.project(), dc1)
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1)
         # Check the size of project item model
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 1)
@@ -623,20 +625,16 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(n_items_in_design_view, 1)
         # NOW REMOVE DC1
         dc1_ind = self.toolbox.project_item_model.find_item(dc1)
-        self.toolbox._project.remove_project_items(dc1_ind)
+        self.toolbox.ui.treeView_project.selectionModel().select(dc1_ind, QItemSelectionModel.ClearAndSelect)
+        with mock.patch.object(spinetoolbox.ui_main.QMessageBox, "exec_") as mock_message_box_exec:
+            mock_message_box_exec.return_value = QMessageBox.Ok
+            self.toolbox.ui.actionRemove.trigger()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 0)  # Check the number of project items
         dags = self.toolbox.project().dag_handler.dags()
         self.assertEqual(0, len(dags))  # Number of DAGs (DiGraph) objects in project
         items_in_design_view = self.toolbox.ui.graphicsView.scene().items()
         n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
         self.assertEqual(n_items_in_design_view, 0)
-
-    def test_load_tool_specification_from_file(self):
-        """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
-        spec_path = os.path.abspath(os.path.join(os.curdir, "tests", "test_resources", "test_tool_spec.json"))
-        tool_spec = self.toolbox.load_specification_from_file(spec_path)
-        self.assertIsNotNone(tool_spec)
-        self.assertEqual(tool_spec.name, "Python Tool Specification")
 
     def test_add_and_remove_specification(self):
         """Tests that adding and removing a specification
@@ -672,7 +670,9 @@ class TestToolboxUI(unittest.TestCase):
         # Now, remove the Tool Spec from the model
         index = self.toolbox.specification_model.specification_index("Python Tool Specification")
         self.assertTrue(index.isValid())
-        self.toolbox.remove_specification(index.row(), ask_verification=False)
+        with mock.patch.object(spinetoolbox.ui_main.QMessageBox, "exec_") as mock_message_box_exec:
+            mock_message_box_exec.return_value = QMessageBox.Ok
+            self.toolbox.remove_specification(index)
         # Tool spec model must be empty again
         self.assertEqual(0, self.toolbox.specification_model.rowCount())
 
@@ -786,7 +786,7 @@ class TestToolboxUI(unittest.TestCase):
     def test_copy_project_item_to_clipboard(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
-        add_dc(self.toolbox.project(), "data_connection")
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, "data_connection")
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
         self.toolbox.ui.actionCopy.triggered.emit()
@@ -802,7 +802,7 @@ class TestToolboxUI(unittest.TestCase):
     def test_paste_project_item_from_clipboard(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
-        add_dc(self.toolbox.project(), "data_connection")
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, "data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
@@ -815,7 +815,7 @@ class TestToolboxUI(unittest.TestCase):
     def test_duplicate_project_item(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
-        add_dc(self.toolbox.project(), "data_connection")
+        add_dc(self.toolbox.project(), self.toolbox.item_factories, "data_connection")
         self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
         item_index = self.toolbox.project_item_model.find_item("data_connection")
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)

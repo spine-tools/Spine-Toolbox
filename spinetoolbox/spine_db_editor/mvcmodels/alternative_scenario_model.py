@@ -40,17 +40,6 @@ class AlternativeScenarioModel(TreeModelBase):
     def _top_children():
         return [AlternativeRootItem(), ScenarioRootItem()]
 
-    def _alternative_or_scenario_ids_per_root_item(self, db_map_data, alternative_or_scenario):
-        root_number = {"alternative": 0, "scenario": 1}[alternative_or_scenario]
-        d = {}
-        for db_item in self._invisible_root_item.children:
-            items = db_map_data.get(db_item.db_map)
-            if not items:
-                continue
-            root_item = db_item.child(root_number)
-            d[root_item] = [x["id"] for x in items]
-        return d
-
     def _scenario_ids_per_root_item(self, db_map_data):
         return self._ids_per_root_item(db_map_data, root_number=1)
 
@@ -60,12 +49,12 @@ class AlternativeScenarioModel(TreeModelBase):
     def add_alternatives(self, db_map_data):
         for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
             children = [AlternativeLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, *children)
+            root_item.insert_children(root_item.child_count() - 1, children)
 
     def add_scenarios(self, db_map_data):
         for root_item, ids in self._scenario_ids_per_root_item(db_map_data).items():
             children = [ScenarioLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, *children)
+            root_item.insert_children(root_item.child_count() - 1, children)
 
     def update_alternatives(self, db_map_data):
         for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():

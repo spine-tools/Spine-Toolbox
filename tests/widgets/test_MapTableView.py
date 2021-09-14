@@ -39,14 +39,15 @@ class TestMapTableView(unittest.TestCase):
         QApplication.clipboard().setText(self._original_clip)
 
     def test_copy_without_selection_returns_false(self):
-        model = MapModel(Map([], [], float))
         table_view = MapTableView()
+        model = MapModel(Map([], [], float), table_view)
         table_view.setModel(model)
         self.assertFalse(table_view.copy())
+        table_view.deleteLater()
 
     def test_copy_selection(self):
-        model = MapModel(Map(["A"], [2.3]))
         table_view = MapTableView()
+        model = MapModel(Map(["A"], [2.3]), table_view)
         table_view.setModel(model)
         for column in (0, 1):
             table_view.selectionModel().select(model.index(0, column), QItemSelectionModel.Select)
@@ -54,16 +55,18 @@ class TestMapTableView(unittest.TestCase):
         clip = StringIO(QApplication.clipboard().text())
         table = [row for row in csv.reader(clip, delimiter="\t")]
         self.assertEqual(table, [["A", "2.3"]])
+        table_view.deleteLater()
 
     def test_paste_without_selection_returns_false(self):
-        model = MapModel(Map(["A"], [2.3]))
         table_view = MapTableView()
+        model = MapModel(Map(["A"], [2.3]), table_view)
         table_view.setModel(model)
         self.assertFalse(table_view.paste())
+        table_view.deleteLater()
 
     def test_paste_to_empty_table(self):
-        model = MapModel(Map([], [], str))
         table_view = MapTableView()
+        model = MapModel(Map([], [], str), table_view)
         table_view.setModel(model)
         table_view.selectionModel().select(model.index(0, 0), QItemSelectionModel.Select)
         self._write_to_clipboard([["A", 2.3]])
@@ -71,10 +74,11 @@ class TestMapTableView(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.value(), Map(["A"], [2.3]))
+        table_view.deleteLater()
 
     def test_paste_to_single_cell_pastes_everything(self):
-        model = MapModel(Map(["A"], [2.3]))
         table_view = MapTableView()
+        model = MapModel(Map(["A"], [2.3]), table_view)
         table_view.setModel(model)
         table_view.selectionModel().select(model.index(0, 0), QItemSelectionModel.Select)
         self._write_to_clipboard([["V", -5.5], ["W", -6.6]])
@@ -82,10 +86,11 @@ class TestMapTableView(unittest.TestCase):
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.value(), Map(["V", "W"], [-5.5, -6.6]))
+        table_view.deleteLater()
 
     def test_paste_large_data_to_small_selection_cuts_data(self):
-        model = MapModel(Map(["A", "B", "C"], [2.3, 3.2, 4.3]))
         table_view = MapTableView()
+        model = MapModel(Map(["A", "B", "C"], [2.3, 3.2, 4.3]), table_view)
         table_view.setModel(model)
         for row in (0, 1):
             table_view.selectionModel().select(model.index(row, 0), QItemSelectionModel.Select)
@@ -95,6 +100,7 @@ class TestMapTableView(unittest.TestCase):
         self.assertEqual(model.columnCount(), 3)
         m = model.value()
         self.assertEqual(model.value(), Map(["Q", "V", "C"], [2.3, 3.2, 4.3]))
+        table_view.deleteLater()
 
     @staticmethod
     def _write_to_clipboard(data):

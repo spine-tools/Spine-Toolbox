@@ -16,34 +16,31 @@ Window for the 'base' Julia Console and Python Console.
 :date: 5.2.2021
 """
 
-from PySide2.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QFrame
-from PySide2.QtCore import Qt, QPoint
+from PySide2.QtWidgets import QMainWindow
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
 
 
 class ConsoleWindow(QMainWindow):
     """Class for a separate window for the Python or Julia Console."""
 
-    def __init__(self, toolbox, spine_console):
+    def __init__(self, toolbox, spine_console, language):
         """
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            spine_console (SpineConsoleWidget): Qt Console
+            spine_console (JupyterConsoleWidget): Qt Console
+            language (str): 'python' or 'julia'
         """
         super().__init__()  # Setting the parent inherits the stylesheet
         self._toolbox = toolbox
         self._console = spine_console
-        # Make UI
-        self.vertical_layout = QVBoxLayout(self)
-        self.vertical_layout.setContentsMargins(0, 0, 0, 0)
-        self.vertical_layout.setSpacing(0)
-        self.vertical_layout.addWidget(self._console)
+        self._language = language
         self.setCentralWidget(self._console)
         self.setWindowTitle(self._console.name())
-        if "python" in self._console.name().lower():
+        if language == "python":
             self.setWindowIcon(QIcon(":/icons/python.svg"))
-        else:
+        elif language == "julia":
             self.setWindowIcon(QIcon(":icons/julia-dots.svg"))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -60,5 +57,8 @@ class ConsoleWindow(QMainWindow):
             e (QCloseEvent): Event
         """
         self._console.shutdown_kernel()
-        self._toolbox.destroy_base_console(self.windowTitle())
+        if self._language == "python":
+            self._toolbox.destroy_base_python_console()
+        elif self._language == "julia":
+            self._toolbox.destroy_base_julia_console()
         super().closeEvent(e)

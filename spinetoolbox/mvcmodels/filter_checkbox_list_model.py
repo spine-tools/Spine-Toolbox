@@ -309,6 +309,8 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         return self.source_model.canFetchMore()
 
     def fetchMore(self, parent=QModelIndex()):
+        if self.source_model is None:
+            return
         row_count_before = self.rowCount()
         self.source_model.fetchMore()
         # If fetching the source model doesn't bring any new data, emit layoutChanged to fetch more again.
@@ -327,16 +329,17 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
             if row == lo:
                 consecutive_items.append(item)
                 continue
-            count = len(consecutive_items)
-            self.beginInsertRows(self.index(0, 0), lo, lo + count - 1)
-            self._data[lo:lo] = consecutive_items
-            self.endInsertRows()
+            count = self._do_insert_rows(consecutive_items, lo)
             consecutive_items = [item]
             lo = row + count
-        count = len(consecutive_items)
-        self.beginInsertRows(self.index(0, 0), lo, lo + count - 1)
-        self._data[lo:lo] = consecutive_items
+        self._do_insert_rows(consecutive_items, lo)
+
+    def _do_insert_rows(self, rows, pos):
+        count = len(rows)
+        self.beginInsertRows(self.index(0, 0), pos, pos + count - 1)
+        self._data[pos:pos] = rows
         self.endInsertRows()
+        return count
 
 
 class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):

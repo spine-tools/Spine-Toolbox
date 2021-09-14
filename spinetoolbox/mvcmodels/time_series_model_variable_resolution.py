@@ -24,15 +24,7 @@ from .indexed_value_table_model import IndexedValueTableModel
 
 
 class TimeSeriesModelVariableResolution(IndexedValueTableModel):
-    """
-    A model for variable resolution time series type parameter values.
-
-    Attributes:
-        series (TimeSeriesVariableResolution): a time series
-    """
-
-    def __init__(self, series):
-        super().__init__(series, "Time stamp", "Values")
+    """A model for variable resolution time series type parameter values."""
 
     def flags(self, index):
         """Returns the flags for given model index."""
@@ -61,7 +53,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             count (int): number of stamps/values to insert
             parent (QModelIndex): index to a parent model
         Returns:
-            True if the insertion was successful
+            bool: True if the insertion was successful
         """
         self.beginInsertRows(parent, row, row + count - 1)
         old_indexes = self._value.indexes
@@ -116,7 +108,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             count (int): how many stamps/values to remove
             parent (QModelIndex): an index to the parent model
         Returns:
-            True if the operation was successful.
+            bool: True if the operation was successful.
         """
         if len(self._value) == 1:
             return False
@@ -150,7 +142,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             value (numpy.datetime64, float): a new stamp or value
             role (int): a role
         Returns:
-            True if the operation was successful
+            bool: True if the operation was successful
         """
         if not index.isValid() or role != Qt.EditRole:
             return False

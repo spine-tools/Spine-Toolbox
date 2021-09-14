@@ -25,7 +25,6 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ..mvcmodels.parameter_tag_model import ParameterTagModel
 
 
 class ParameterViewMixin:
@@ -38,10 +37,6 @@ class ParameterViewMixin:
         self.filter_class_ids = {}
         self.filter_entity_ids = {}
         self.filter_alternative_ids = {}
-        self.filter_tag_ids = dict()
-        self.tag_filter_class_ids = {}
-        self.filter_parameter_ids = {}
-        self.parameter_tag_model = ParameterTagModel(self, self.db_mngr)
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr)
         self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr)
@@ -66,8 +61,6 @@ class ParameterViewMixin:
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
             view.connect_spine_db_editor(self)
-        self.ui.treeView_parameter_tag.setModel(self.parameter_tag_model)
-        self.ui.treeView_parameter_tag.connect_spine_db_editor(self)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -75,7 +68,6 @@ class ParameterViewMixin:
         self.ui.treeView_alternative_scenario.alternative_selection_changed.connect(
             self._handle_alternative_selection_changed
         )
-        self.ui.treeView_parameter_tag.tag_selection_changed.connect(self._handle_tag_selection_changed)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_relationship.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
@@ -85,16 +77,10 @@ class ParameterViewMixin:
     def init_models(self):
         """Initializes models."""
         super().init_models()
-        self.parameter_tag_model.db_maps = self.db_maps
         self.object_parameter_value_model.db_maps = self.db_maps
         self.relationship_parameter_value_model.db_maps = self.db_maps
         self.object_parameter_definition_model.db_maps = self.db_maps
         self.relationship_parameter_definition_model.db_maps = self.db_maps
-        self.parameter_tag_model.build_tree()
-        for item in self.parameter_tag_model.visit_all():
-            index = self.parameter_tag_model.index_from_item(item)
-            self.ui.treeView_parameter_tag.expand(index)
-        self.ui.treeView_parameter_tag.resizeColumnToContents(0)
         self.object_parameter_value_model.init_model()
         self.object_parameter_definition_model.init_model()
         self.relationship_parameter_value_model.init_model()
@@ -119,14 +105,17 @@ class ParameterViewMixin:
             rel_cls_id (int)
             db_map (DiffDatabaseMapping)
         """
-        relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id)
+        relationship_class = self.db_mngr.get_item(db_map, "relationship_class", rel_cls_id, only_visible=False)
         object_class_id_list = relationship_class.get("object_class_id_list")
         object_class_names = []
         object_names_lists = []
         for id_ in object_class_id_list.split(","):
             id_ = int(id_)
-            object_class_name = self.db_mngr.get_item(db_map, "object_class", id_).get("name")
-            object_names_list = [x["name"] for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_)]
+            object_class_name = self.db_mngr.get_item(db_map, "object_class", id_, only_visible=False).get("name")
+            object_names_list = [
+                x["name"]
+                for x in self.db_mngr.get_items_by_field(db_map, "object", "class_id", id_, only_visible=False)
+            ]
             object_class_names.append(object_class_name)
             object_names_lists.append(object_names_list)
         object_name_list = index.data(Qt.EditRole)
@@ -158,29 +147,10 @@ class ParameterViewMixin:
         set_and_apply_default_rows(self.relationship_parameter_definition_model, default_data)
         set_and_apply_default_rows(self.relationship_parameter_value_model, default_data)
 
-    def _get_filter_class_ids(self):
-        """Returns filter class ids by combining filter class ids from entity tree *and* parameter_tag toolbar.
-
-        Returns:
-            dict, NoneType: mapping db maps to sets of ids, or None if no filter (none shall pass)
-        """
-        if self.tag_filter_class_ids is None:
-            return None
-        filter_class_ids = dict()
-        for db_map in self.filter_class_ids.keys() | self.tag_filter_class_ids.keys():
-            if db_map not in self.filter_class_ids:
-                filter_class_ids[db_map] = self.tag_filter_class_ids[db_map]
-            elif db_map not in self.tag_filter_class_ids:
-                filter_class_ids[db_map] = self.filter_class_ids[db_map]
-            else:
-                filter_class_ids[db_map] = self.tag_filter_class_ids[db_map] & self.filter_class_ids[db_map]
-        return filter_class_ids
-
     def reset_filters(self):
         """Resets filters."""
         for model in self._parameter_models:
-            model.set_filter_class_ids(self._get_filter_class_ids())
-            model.set_filter_parameter_ids(self.filter_parameter_ids)
+            model.set_filter_class_ids(self.filter_class_ids)
         for model in self._parameter_value_models:
             model.set_filter_entity_ids(self.filter_entity_ids)
             model.set_filter_alternative_ids(self.filter_alternative_ids)
@@ -248,25 +218,6 @@ class ParameterViewMixin:
         self.filter_alternative_ids = {db_map: alt_ids.copy() for db_map, alt_ids in selected_db_map_alt_ids.items()}
         self.reset_filters()
 
-    @Slot(dict)
-    def _handle_tag_selection_changed(self, selected_db_map_tag_ids):
-        """Resets filter according to selection in parameter_tag tree view."""
-        filter_parameters = self.db_mngr.find_cascading_parameter_definitions_by_tag(selected_db_map_tag_ids)
-        self.filter_parameter_ids = {}
-        for db_map, params in filter_parameters.items():
-            for param in params:
-                self.filter_parameter_ids.setdefault((db_map, param["entity_class_id"]), set()).add(param["id"])
-        if selected_db_map_tag_ids and not any(filter_parameters.values()):
-            # There are tags selected but no matching parameter definitions ~> no class shall pass
-            self.tag_filter_class_ids = None
-            self.reset_filters()
-            return
-        self.tag_filter_class_ids = {}
-        for db_map, params in filter_parameters.items():
-            for param in params:
-                self.tag_filter_class_ids.setdefault(db_map, set()).add(param["entity_class_id"])
-        self.reset_filters()
-
     def restore_ui(self):
         """Restores UI state from previous session."""
         super().restore_ui()
@@ -315,24 +266,6 @@ class ParameterViewMixin:
         self.object_parameter_value_model.receive_alternatives_updated(db_map_data)
         self.relationship_parameter_value_model.receive_alternatives_updated(db_map_data)
 
-    def receive_parameter_tags_fetched(self, db_map_data):
-        super().receive_parameter_tags_fetched(db_map_data)
-        self.parameter_tag_model.add_parameter_tags(db_map_data)
-
-    def receive_parameter_definitions_fetched(self, db_map_data):
-        super().receive_parameter_definitions_added(db_map_data)
-        self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
-        self.relationship_parameter_definition_model.receive_parameter_data_added(db_map_data)
-
-    def receive_parameter_values_fetched(self, db_map_data):
-        super().receive_parameter_values_added(db_map_data)
-        self.object_parameter_value_model.receive_parameter_data_added(db_map_data)
-        self.relationship_parameter_value_model.receive_parameter_data_added(db_map_data)
-
-    def receive_parameter_tags_added(self, db_map_data):
-        super().receive_parameter_tags_added(db_map_data)
-        self.parameter_tag_model.add_parameter_tags(db_map_data)
-
     def receive_parameter_definitions_added(self, db_map_data):
         super().receive_parameter_definitions_added(db_map_data)
         self.object_parameter_definition_model.receive_parameter_data_added(db_map_data)
@@ -342,10 +275,6 @@ class ParameterViewMixin:
         super().receive_parameter_values_added(db_map_data)
         self.object_parameter_value_model.receive_parameter_data_added(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_added(db_map_data)
-
-    def receive_parameter_tags_updated(self, db_map_data):
-        super().receive_parameter_tags_updated(db_map_data)
-        self.parameter_tag_model.update_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_updated(self, db_map_data):
         super().receive_parameter_definitions_updated(db_map_data)
@@ -357,11 +286,6 @@ class ParameterViewMixin:
         self.object_parameter_value_model.receive_parameter_data_updated(db_map_data)
         self.relationship_parameter_value_model.receive_parameter_data_updated(db_map_data)
 
-    def receive_parameter_definition_tags_set(self, db_map_data):
-        super().receive_parameter_definition_tags_set(db_map_data)
-        self.object_parameter_definition_model.receive_parameter_definition_tags_set(db_map_data)
-        self.relationship_parameter_definition_model.receive_parameter_definition_tags_set(db_map_data)
-
     def receive_object_classes_removed(self, db_map_data):
         super().receive_object_classes_removed(db_map_data)
         self.object_parameter_definition_model.receive_entity_classes_removed(db_map_data)
@@ -371,10 +295,6 @@ class ParameterViewMixin:
         super().receive_relationship_classes_removed(db_map_data)
         self.relationship_parameter_definition_model.receive_entity_classes_removed(db_map_data)
         self.relationship_parameter_value_model.receive_entity_classes_removed(db_map_data)
-
-    def receive_parameter_tags_removed(self, db_map_data):
-        super().receive_parameter_tags_removed(db_map_data)
-        self.parameter_tag_model.remove_parameter_tags(db_map_data)
 
     def receive_parameter_definitions_removed(self, db_map_data):
         super().receive_parameter_definitions_removed(db_map_data)

@@ -19,7 +19,6 @@ Custom editors for model/view programming.
 
 from PySide2.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide2.QtWidgets import (
-    QComboBox,
     QLineEdit,
     QTableView,
     QStyledItemDelegate,
@@ -442,7 +441,7 @@ class IconColorEditor(QDialog):
         if not text:
             return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
         searchterms = self.icon_mngr.model.index(source_row, 0, source_parent).data(Qt.UserRole + 1)
-        return any([text in term for term in searchterms])
+        return any(text in term for term in searchterms)
 
     def connect_signals(self):
         """Connects signals to slots."""

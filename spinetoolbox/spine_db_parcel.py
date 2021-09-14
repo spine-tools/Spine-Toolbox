@@ -44,9 +44,9 @@ class SpineDBParcel:
 
     def _get_fields(self, db_map, item_type, field, ids):
         if ids is Asterisk:
-            fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type)}
+            fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type, only_visible=False)}
         else:
-            fields = {self.db_mngr.get_field(db_map, item_type, id_, field) for id_ in ids}
+            fields = {self.db_mngr.get_field(db_map, item_type, id_, field, only_visible=False) for id_ in ids}
         fields.discard(None)
         return fields
 
@@ -87,6 +87,9 @@ class SpineDBParcel:
                 }
                 for db_map, ids in db_map_ids.items()
             }
+        )
+        self.push_relationship_class_ids(
+            {db_map: self._get_fields(db_map, "relationship", "class_id", ids) for db_map, ids in db_map_ids.items()}
         )
 
     def push_parameter_value_list_ids(self, db_map_ids):

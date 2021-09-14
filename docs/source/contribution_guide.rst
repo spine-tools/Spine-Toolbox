@@ -30,7 +30,8 @@ Before submitting a bug report, please do the following:
    problem with a dependency (other libraries, etc.). Try upgrading/downgrading those as well.
 4. **Search the project’s bug/issue tracker to make sure it’s not a known issue.** If you
    don’t find a pre-existing issue, consider checking with the maintainers in case the problem
-   is non-bug-related.
+   is non-bug-related. `Spine Toolbox issue tracker is here
+   <https://github.com/Spine-project/Spine-Toolbox/issues>`_.
 
 
 What to Put in Your Bug Report
@@ -58,7 +59,7 @@ The developers of Spine Toolbox are happy to hear new ideas for features or impr
 The format for requesting new features is free. Just fill out the required fields on the issue tracker and give a
 description of the new feature. A picture accompanying the description is a good way to get your idea into development
 faster. But before you make a new issue, check that there isn't a related idea already open in the issue tracker. If
-you have an idea on how to improve an existing issue, just join the conversation.
+you have an idea on how to improve an existing idea, just join the conversation.
 
 
 Submitting features/bugfixes
@@ -76,17 +77,18 @@ breaks with the greater community - just follow along.
 
 Spine Toolbox coding style follows PEP-8_ style guide for Python code with the following variations:
 
-* Maximum line length is 120 characters. Longer lines are acceptable if there's a sound reason.
+* Maximum line length is 120 characters. Longer lines are acceptable for a good reason.
 * `Google style`_ docstrings with the title and input parameters are required for all classes, functions, and methods.
   For small functions or methods only the summary is necessary. Return types are highly recommended but not required
   if it is obvious what the function or method returns.
-* Other deviations from PEP-8 can be discussed if there are good reasons.
+* Use double-quoted strings instead of single-quoted strings (e.g. ``"hello"``).
+* Other deviations from PEP-8 can be discussed.
 
 
 Commit messages
 ---------------
 The commit message should tell *what* was changed and *why*. Details on *how* it was done can usually be left out, 
-if the code itself is self-explanatory (remeber source comments too!). Separate the subject line from the body with 
+if the code itself is self-explanatory (remember source comments too!). Separate the subject line from the body with
 a blank line. The subjet line (max. 50 chars) should explain in condensed form what happened using imperative mood, 
 i.e. using verbs like 'change', 'fix' or 'add'. Start the subject line with a capital letter. 
 Do not use the issue number on the subject line, as it does not tell much to a person who’s not aware of that 
@@ -118,21 +120,23 @@ Spine Toolbox uses Sphinx to create HTML pages from restructured text (.rst) fil
 plain text files that are formatted in a way that Sphinx understands and is able to turn them into HTML.
 Please see this `brief introduction <http://www.sphinx-doc.org/en/stable/rest.html>`_ for more on reStructured text.
 You can modify the existing or create new .rst files into ``docs/source`` directory. When you are done editing, run
-``bin/build_doc.bat`` on Windows or ``bin/build_doc.sh`` on Linux to build the HTML pages. The created pages are
-found in ``docs/build/html`` directory. 
+``bin/build_doc.bat`` on Windows or ``bin/build_doc.py`` on other systems to build the HTML pages to check the result
+before making a commit. The created pages are found in ``docs/build/html`` directory. After a commit, the User Guide is
+built automatically by readthedocs.org. The latest User Guide is available in
+`<https://spine-toolbox.readthedocs.io/en/latest/>`_.
 
 
 Contributing to the Spine Toolbox Graphical User Interface
 ----------------------------------------------------------
 If you want to change or add new widgets into the application, you need to use the ``bin\build_ui.bat`` (Windows) or
-``bin/build_ui.sh`` (Linux) scripts. The main design of the widgets should be done with Qt Designer (``designer.exe``
-or ``designer``) that is included with PySide2. The files produced by Qt Designer are XML files (.ui). You can
-also embed graphics (e.g. icons, logos, etc.) into the application by using Qt Designer. When you are done
+``bin/build_ui.py`` (other systems) scripts. The main design of the widgets should be done with Qt Designer
+(``designer.exe`` or ``designer``) that is included with PySide2. The files produced by Qt Designer are XML files (.ui).
+You can also embed graphics (e.g. icons, logos, etc.) into the application by using Qt Designer. When you are done
 modifying widgets in the designer, you need to run the ``build_ui`` script for the changes to take effect.
 This script uses tools provided in the PySide2 package to turn .ui files into Python files, in essence
 rebuilding the whole Spine Toolbox user interface.
 
-Styling the widgets should be done with `Qt Style Sheets`_ in code. Avoid using style sheets in Qt Designer.
+Styling the widgets should be done with `Qt Style Sheets`_ in code. Please avoid using style sheets in Qt Designer.
 
 
 Version Control Branching
@@ -147,10 +151,11 @@ New branches should in general be based on the latest ``master`` branch.
 In case you want to include a new feature still in development, you can also start working from its branch.
 The developers will backport any relevant bug-fixes to previous or upcoming releases under preparation.
 
-If you need to use code from an upstream branch, please use `git-rebase <https://git-scm.com/book/en/v2/Git-Branching-Rebasing>`_ 
-*if you have not shared your work with others yet*. For example: You started working on an issue, but now the upstream 
-branch (``master``) has some new commits you would like to have in your branch too. If you have not yet pushed your 
-branch, you can now rebase your changes on top of the upstream branch:
+If you need to use code from an upstream branch, please use
+`git-rebase <https://git-scm.com/book/en/v2/Git-Branching-Rebasing>`_ *if you have not shared your work with
+others yet*. For example: You started working on an issue, but now the upstream branch (``master``) has some
+new commits you would like to have in your branch too. If you have not yet pushed your branch, you can now
+rebase your changes on top of the upstream branch:
 
 .. code-block:: bash
 
@@ -162,7 +167,8 @@ Avoid merging the upstream branch to your issue branch if it’s not necessary.
 This will lead to a more linear and cleaner history.
 
 Finally, make a pull request from your branch so that the developers can review your changes. 
-You might be asked to make additional changes or clarifications or add tests to prove the new feature works as intended.
+You might be asked to make additional changes or clarifications or add tests to prove the new feature works
+as intended.
 
 
 Test-driven development is your friend
@@ -174,6 +180,7 @@ It is recommended to use test-first development as it really helps make features
 and identifies potential edge cases earlier instead of later. Writing tests before the implementation
 is strongly encouraged.
 
+See :ref:`Unit testing guidelines` for more information.
 
 Full example
 ------------
@@ -189,7 +196,7 @@ Here’s an example workflow. Your username is ``yourname`` and you’re submitt
 
 **Making your Changes**
 
-1. Add changelog entry crediting yourself.
+1. Add an entry to CHANGELOG.md.
 2. Write tests expecting the correct/fixed functionality; make sure they fail.
 3. Hack, hack, hack.
 4. Run tests again, making sure they pass.

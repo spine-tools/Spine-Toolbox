@@ -16,7 +16,6 @@ Classes for custom QDialogs for julia setup.
 :date:   13.5.2018
 """
 
-import sys
 import os
 from enum import IntEnum, auto
 
@@ -38,6 +37,7 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QCursor
+from spine_engine.utils.helpers import resolve_python_interpreter
 from ..execution_managers import QProcessExecutionManager
 from ..config import APPLICATION_PATH
 from .custom_qwidgets import HyperTextLabel, QWizardProcessPage, LabelWithCopyButton
@@ -210,13 +210,16 @@ class InstallJuliaPage(QWizardProcessPage):
             "--symlink_dir",
             self.field("symlink_dir"),
         ]
-        # NOTE: sys.executable works for the development version, since `jill` has been added as dependency.
-        # But what about the frozen version?
-        self._exec_mngr = QProcessExecutionManager(self, sys.executable, args, semisilent=True)
+        # Resolve Python in this order
+        # 1. sys.executable when not frozen
+        # 2. PATH python if frozen (This fails if no jill installed)
+        # 3. If no PATH python, uses embedded python <install_dir>/tools/python.exe
+        python = resolve_python_interpreter("")
+        self._exec_mngr = QProcessExecutionManager(self, python, args, semisilent=True)
         self.completeChanged.emit()
         self._exec_mngr.execution_finished.connect(self._handle_julia_install_finished)
         self.msg_success.emit("Julia installation started")
-        cmd = sys.executable + " " + " ".join(args)
+        cmd = python + " " + " ".join(args)
         self.msg.emit(f"$ <b>{cmd}<b/>")
         qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
@@ -274,7 +277,7 @@ class FailurePage(QWizardPage):
 
     def initializePage(self):
         self._label.setText(
-            "Apologies. You may install Julia manually "
+            "Apologies. Please install Julia manually "
             "from <a title='julia downloads' href='https://julialang.org/downloads/'>here</a>."
         )
 

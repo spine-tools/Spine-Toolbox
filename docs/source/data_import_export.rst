@@ -29,7 +29,7 @@ but using an Importer item is preferred because then the process is documented a
 
 The heart of Importer is the **Import Editor** window in which the mappings from source data
 to Spine database entities are set up. The editor window can be accessed
-by the **Import Editor...** button in Importer's Properties tab.
+by the **Import Editor...** button in Importer's Properties dock.
 Note, that you have to select one of the files in the **Source files** list before clicking the button.
 
 .. image:: img/importer_properties.png
@@ -86,15 +86,15 @@ By default data is mapped to columns but it is also possible to create pivot tab
 Exporter saves its settings or export **mappings** as a specification
 that can be reused by other exporters or even other projects.
 The specification can be edited in *Exporter specification editor*
-which is accessible by the |wrench| button in the item's Properties tab
+which is accessible by the |wrench| button in the item's Properties dock
 or by double clicking exporter's icon on the Design view.
 A specification that is not associated with any specific Exporter project item can be created
 and edited from the Main toolbar.
 
-Properties tab
-~~~~~~~~~~~~~~
+Properties dock
+~~~~~~~~~~~~~~~
 
-Exporter's Properties tab controls project item specific settings
+Exporter's Properties dock controls project item specific settings
 that are not part of the item's specification.
 
 .. image:: img/exporter_properties.png
@@ -127,7 +127,8 @@ such as csv, may end up exporting multiple files.
 See the sections below for format specific intricacies.
 
 When opened for the first time Specification editor looks like in the figure below.
-The window consists of dock widgets which can be reorganized to suit the user's needs.
+The window is tabbed allowing multiple specifications to be edited at the same time.
+Each tab consists of dock widgets which can be reorganized to suit the user's needs.
 The 'hamburger' menu on the top right corner gives access to some important actions
 such as *Save* and *Close*. *Undo* and *redo* can be found from the menu as well.
 
@@ -140,17 +141,26 @@ The *Description* field allows for an additional explanatory text.
 
 The current output format can be changed by the *Format* combobox on *Export options* dock.
 
-Specification's mappings are listed in the *Mappings* dock.
+.. image:: img/exporter_mappings_dock.png
+   :align: center
+
+Specification's mappings are listed in the *Mappings* dock shown above.
 The *Add* button adds a new mapping while the *Remove* button removes selected mappings.
 Mappings can be renamed by double clicking their names on the list.
 The checkbox in front of mapping's name shows if the mapping is currently enabled.
-Use the *Enable or disable all* button to toggle the enabled state of all mappings at once.
+Use the *Toggle enabled* button to toggle the enabled state of all mappings at once.
 
 The tables defined by the mappings are written in the order shown on the mapping list's *Write order* column.
 This may be important if the tables need to be in certain order in the output file
 or when multiple mappings output to a single table.
 Mappings can be sorted by their write order by clicking the header of the *Write order* column.
 The *Write earlier* and *Write later* buttons move the currently selected mapping up and down the list.
+
+.. image:: img/exporter_mapping_options_dock.png
+   :align: center
+
+.. image:: img/exporter_mapping_specification_dock.png
+   :align: center
 
 Currently selected mapping is edited using the controls in *Mapping options* and *Mapping specification* docks.
 The *Mapping options* dock contains controls that apply to the mapping as a whole,
@@ -164,7 +174,7 @@ while the *Relationship classes* option outputs relationship classes and relatio
 Checking the *Always export header* checkbox outputs a table that has fixed headers
 even if the table is otherwise empty.
 If *Item type* is Relationship class,
-the *Number of dimensions* spinbox can be used to specify the maximum number
+the *Relationship dimensions* spinbox can be used to specify the maximum number
 of relationships' dimensions that the mapping is able to handle.
 Parameters can be outputted by choosing their value type using the *Parameter type* combobox.
 The *Value* choice adds rows to *Mapping specification* for parameter values associated with
@@ -172,18 +182,19 @@ individual entities while *Default value* allows outputting parameters' default 
 The maximum number of value dimensions in case of indexed values
 (time series, maps, time patterns, arrays)
 the mapping can handle is controlled by the *Parameter dimensions* spinbox.
-The *Fixed table name* checkbox inserts a special row to *Mapping specification*
-which can be used to give a fixed table name to mapping's output table.
+The *Fixed table name* checkbox enables giving a user defined table name to the mapping's output table.
 In case the mapping is pivoted and *Mapping specification* contains items that are *hidden*,
 it is possible that a number of data elements end up in the same output table cell.
 The *Group function* combobox offers some basic functions to aggregate such data into the cells.
 
 The contents of the table on the *Mapping specification* dock depends on choices on *Mapping options*,
-e.g. the item type, parameter type or if the mapping has a fixed table name.
+e.g. the item type, parameter type or dimensions.
 Each row corresponds to an item in the database: object class names, object names, parameter values etc.
+The item's name is given in the *Mapping type* column.
+The colors help to identify the corresponding elements in the preview.
 The *Map to* column defines the **position** of the item,
 that is, where the item is written or otherwise used when the output tables are generated.
-By default, a plain integral number on this column means that the item is written to that column in the output table.
+By default, a plain integral number in this column means that the item is written to that column in the output table.
 From the other choices, *hidden* means that the item will not show on the output.
 *Table name*, on the other hand, uses the item as output table names.
 For example, outputting object classes as table names will generate one new table for every object class
@@ -222,9 +233,12 @@ using the *Header* column in *Mapping specification* dock.
 Note that checking the *Always export header* option in the *Mapping options* dock outputs the fixed headers
 even if there is no other data in a table.
 
-The *Mapping specification* dock's *Filter* column provides refined control on which database items the mapping maps.
+The *Mapping specification* dock's *Filter* column provides refined control on which database items the mapping outputs.
 The column uses `regular expressions <https://en.wikipedia.org/wiki/Regular_expression>`_
 to filter what gets outputted. See _`Basic regular expression for filtering`.
+
+.. image:: img/exporter_preview_docks.png
+   :align: center
 
 A preview of what will be written to the output is available in the preview dock widgets.
 A database connection is needed to generate the preview.
@@ -232,6 +246,7 @@ The *Preview controls* dock provides widgets to choose an existing database or t
 Once a database is available and the preview is enabled the mappings and the tables they would output
 are listed on the *Preview tables* dock.
 Selecting a table from the list shows the table's contents on the *Preview contents* dock.
+The colors on the table correspond to the colors in *Mapping specification* dock.
 
 Basic regular expressions for filtering
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -263,7 +278,7 @@ Csv files are flat text files and therefore do not directly support multiple tab
 Instead, multiple tables are handled as separate output files.
 
 Only mappings that output an **anonymous table**
-actually write to the file specified on the Exporter's properties tab.
+actually write to the file specified on the Exporter's properties dock.
 Named tables get written to files named after the table plus the :literal:`.csv` extension.
 For example, a table named :literal:`node` would result in a file called `node.csv`.
 
@@ -291,7 +306,7 @@ GAMS gdx export
    However, you do not need to own a GAMS license as the demo version works just as well.
 
 .. note::
-   The bitness (32 or 64bit) of GAMS has to match the bitness of the Python interpreter.
+   The bitness (32 or 64bit) of GAMS must match the bitness of the Python interpreter.
 
 The gdx backend turns the output tables to GAMS sets, parameters and scalars following the rules below:
 
@@ -370,12 +385,12 @@ Rather, user has to specify the desired exporting order using the *GdxExporter* 
 GdxExporter Project Item
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The image below shows the settings tab of *GdxExporter* with two *Data Sources* connected to it.
+The image below shows the properties dock of *GdxExporter* with two *Data Sources* connected to it.
 
 .. image:: img/gdx_exporter_properties.png
    :align: center
 
-For each connected *Data Store* a box with the database's URL and export file name field is shown on the tab.
+For each connected *Data Store* a box with the database's URL and export file name field is shown on the dock.
 The *Settings...* buttons open *Gdx Export settings* windows to allow editing database specific export parameters
 such as the order in which entities are exported from the database.
 

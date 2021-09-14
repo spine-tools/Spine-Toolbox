@@ -106,7 +106,12 @@ class ParameterViewFilterMenu(FilterMenuBase):
         entity_class_id = db_item.get(self._source_model.entity_class_id_key)
         item_id = db_item["id"]
         identifier = (db_map, entity_class_id, item_id)
-        value = db_map.codename if self._field == "database" else db_item[self._field]
+        if self._field == "database":
+            value = db_map.codename
+        elif self._field.endswith("value") and db_item[self._field] is not None:
+            value = str(db_item[self._field], "UTF8")
+        else:
+            value = db_item[self._field]
         self._inv_menu_data[identifier] = value
         if value not in self._menu_data:
             self._menu_data[value] = {identifier}

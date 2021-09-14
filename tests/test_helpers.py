@@ -15,13 +15,18 @@ Unit tests for the helpers module.
 :authors: A. Soininen (VTT)
 :date:   23.3.2020
 """
+import os
 import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
+
+from PySide2.QtCore import QSettings
 from PySide2.QtGui import QTextDocument
 from PySide2.QtWidgets import QApplication, QLineEdit
+
+from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.helpers import (
     add_message_to_document,
     copy_files,
@@ -34,6 +39,7 @@ from spinetoolbox.helpers import (
     format_string_list,
     get_datetime,
     interpret_icon_id,
+    load_specification_from_file,
     make_icon_id,
     recursive_overwrite,
     rename_dir,
@@ -276,6 +282,17 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(unique_name("Prefix", ["aaa"]), "Prefix 1")
         self.assertEqual(unique_name("Prefix", ["Prefix 1"]), "Prefix 2")
         self.assertEqual(unique_name("Prefix", ["Prefix 2"]), "Prefix 1")
+
+    def test_load_tool_specification_from_file(self):
+        """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
+        spec_path = Path(__file__).parent / "test_resources" / "test_tool_spec.json"
+        specification_factories = load_item_specification_factories("spine_items")
+        logger = MagicMock()
+        app_settings = QSettings("SpineProject", "Spine Toolbox")
+        tool_spec = load_specification_from_file(str(spec_path), specification_factories, app_settings, logger)
+        self.assertIsNotNone(tool_spec)
+        self.assertEqual(tool_spec.name, "Python Tool Specification")
+        app_settings.deleteLater()
 
 
 if __name__ == "__main__":

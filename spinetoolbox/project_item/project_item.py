@@ -57,11 +57,9 @@ class ProjectItem(MetaObject):
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
-        self.undo_specification = None
         self._log_document = None
         self._filter_log_documents = {}
-        self.julia_console = None
-        self.python_console = None
+        self.console = None
         self._filter_consoles = {}
 
     def create_data_dir(self):
@@ -171,12 +169,15 @@ class ProjectItem(MetaObject):
         """Returns the specification for this item."""
         return self._specification
 
+    def undo_specification(self):
+        return self._specification
+
     def set_specification(self, specification):
         """Pushes a new SetItemSpecificationCommand to the toolbox' undo stack.
         """
         if specification == self._specification:
             return
-        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification))
+        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification, self.undo_specification()))
 
     def do_set_specification(self, specification):
         """Sets specification for this item. Removes specification if None given as argument.
@@ -186,12 +187,8 @@ class ProjectItem(MetaObject):
         """
         if specification and specification.item_type != self.item_type():
             return False
-        self.undo_specification = self._specification
         self._specification = specification
         return True
-
-    def undo_set_specification(self):
-        self.do_set_specification(self.undo_specification)
 
     def set_icon(self, icon):
         """
@@ -269,6 +266,15 @@ class ProjectItem(MetaObject):
         """Notifies direct predecessors that item's resources have changed."""
         self._project.notify_resource_changes_to_predecessors(self)
 
+    def _resource_to_predecessors_replaced(self, old, new):
+        """Notifies direct predecessors that one of item's resources has been replaced.
+
+        Args:
+            old (ProjectItemResource): old resource
+            new (ProjectItemResource): new resource
+        """
+        self._project.notify_resource_replacement_to_predecessors(self, old, new)
+
     def upstream_resources_updated(self, resources):
         """Notifies item that resources from direct predecessors have changed.
 
@@ -276,15 +282,40 @@ class ProjectItem(MetaObject):
             resources (list of ProjectItemResource): new resources from upstream
         """
 
+    def replace_resource_from_upstream(self, old, new):
+        """Replaces an existing resource from direct predecessor by a new one.
+
+        Args:
+            old (ProjectItemResource): old resource
+            new (ProjectItemResource): new resource
+        """
+
     def _resources_to_successors_changed(self):
         """Notifies direct successors that item's resources have changed."""
         self._project.notify_resource_changes_to_successors(self)
+
+    def _resource_to_successors_replaced(self, old, new):
+        """Notifies direct successors that one of item's resources has been replaced.
+
+        Args:
+            old (ProjectItemResource): old resource
+            new (ProjectItemResource): new resource
+        """
+        self._project.notify_resource_replacement_to_successors(self, old, new)
 
     def downstream_resources_updated(self, resources):
         """Notifies item that resources from direct successors have changed.
 
         Args:
             resources (list of ProjectItemResource): new resources from downstream
+        """
+
+    def replace_resource_from_downstream(self, old, new):
+        """Replaces an existing resource from direct successor by a new one.
+
+        Args:
+            old (ProjectItemResource): old resource
+            new (ProjectItemResource): new resource
         """
 
     def invalidate_workflow(self, edges):
@@ -309,8 +340,8 @@ class ProjectItem(MetaObject):
         return {
             "type": self.item_type(),
             "description": self.description,
-            "x": self.get_icon().sceneBoundingRect().center().x(),
-            "y": self.get_icon().sceneBoundingRect().center().y(),
+            "x": self.get_icon().x(),
+            "y": self.get_icon().y(),
         }
 
     @staticmethod
@@ -328,14 +359,12 @@ class ProjectItem(MetaObject):
         y = item_dict["y"]
         return description, x, y
 
-    def copy_local_data(self, original_data_dir, original_url, duplicate_items):
+    def copy_local_data(self, item_dict):
         """
         Copies local data linked to a duplicated project item.
 
         Args:
-            original_data_dir (str): original dir of duplicated ProjectItem
-            original_url (dict): original url of the duplicated ProjectItem
-            duplicate_items (bool): Flag indicating if linked files should be copied
+            item_dict (dict): serialized item
         """
 
     @staticmethod
@@ -478,7 +507,11 @@ class ProjectItem(MetaObject):
             document = self._create_filter_log_document(filter_id)
         else:
             document = self._create_log_document()
+        scrollbar = self._project._toolbox.ui.textBrowser_itemlog.verticalScrollBar()
+        scrollbar_at_max = scrollbar.value() == scrollbar.maximum()
         add_message_to_document(document, message)
+        if scrollbar_at_max:  # if scrollbar was at maximum before document was appended -> scroll to bottom
+            self._project._toolbox.ui.textBrowser_itemlog.scroll_to_bottom()
 
     def add_event_message(self, filter_id, msg_type, msg_text):
         """Adds a message to the log document.

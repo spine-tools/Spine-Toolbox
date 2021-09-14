@@ -34,6 +34,8 @@ from ..mvcmodels.pivot_table_models import (
 )
 from ..mvcmodels.frozen_table_model import FrozenTableModel
 
+# FIXME: only_visible=False???
+
 
 class TabularViewMixin:
     """Provides the pivot table and its frozen table for the DS form."""
@@ -49,9 +51,6 @@ class TabularViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._pending_index = None
-        # current state of ui
-        self.current_class_item = None  # Current QModelIndex selected in one of the entity tree views
         self.current_class_type = None
         self.current_class_id = {}  # Mapping from db_map to class_id
         self.current_class_name = None
@@ -137,6 +136,12 @@ class TabularViewMixin:
         """
         return index.column() == 0 and not index.parent().parent().isValid()
 
+    @Slot("QAction")
+    def _handle_pivot_action_triggered(self, action):
+        self.current_input_type = action.text()
+        # NOTE: Changing the action also triggers a call to `_handle_pivot_table_visibility_changed` with `visible = True`
+        # See `SpineDBEditor` class.
+
     @Slot(bool)
     def _handle_pivot_table_visibility_changed(self, visible):
         if not visible:
@@ -145,8 +150,7 @@ class TabularViewMixin:
             return
         self.pivot_actions[self.current_input_type].setChecked(True)
         self.ui.dockWidget_frozen_table.setVisible(True)
-        if self._pending_index is not None:
-            QTimer.singleShot(100, lambda: self.reload_pivot_table(self._pending_index))
+        self.do_reload_pivot_table()
 
     @Slot(bool)
     def _handle_frozen_table_visibility_changed(self, visible):
@@ -166,12 +170,30 @@ class TabularViewMixin:
         self._handle_entity_tree_current_changed(current)
 
     def _handle_entity_tree_current_changed(self, current_index):
-        if self.current_input_type == self._SCENARIO_ALTERNATIVE:
+        self._update_class_attributes(current_index)
+        if self.current_input_type != self._SCENARIO_ALTERNATIVE and self.ui.dockWidget_pivot_table.isVisible():
+            self.do_reload_pivot_table()
+
+    def _update_class_attributes(self, current_index):
+        """Updates current class (type and id) and reloads pivot table for it."""
+        current_class_item = self._get_current_class_item(current_index)
+        if current_class_item is None:
             return
-        if not self.ui.dockWidget_pivot_table.isVisible():
-            self._pending_index = current_index
+        class_id = current_class_item.db_map_ids
+        if self.current_class_id == class_id:
             return
-        self.reload_pivot_table(current_index=current_index)
+        self.current_class_id = class_id
+        self.current_class_type = current_class_item.item_type
+        self.current_class_name = current_class_item.display_data
+
+    @staticmethod
+    def _get_current_class_item(current_index):
+        item = current_index.model().item_from_index(current_index)
+        while item.item_type != "root":
+            if item.item_type in ("object_class", "relationship_class"):
+                return item
+            item = item.parent_item
+        return None
 
     @staticmethod
     def _make_get_id(action):
@@ -283,7 +305,7 @@ class TabularViewMixin:
             data.update(db_map_data)
         return data
 
-    def _get_parameter_value_or_def_ids(self, item_type):
+    def _get_db_map_parameter_value_or_def_ids(self, item_type):
         """Returns a dict mapping db maps to a list of integer parameter (value or def) ids from the current class.
 
         Args:
@@ -309,7 +331,7 @@ class TabularViewMixin:
         Returns:
             dict
         """
-        db_map_ids = self._get_parameter_value_or_def_ids(item_type)
+        db_map_ids = self._get_db_map_parameter_value_or_def_ids(item_type)
         return {
             db_map: [self.db_mngr.get_item(db_map, item_type, id_) for id_ in ids] for db_map, ids in db_map_ids.items()
         }
@@ -333,7 +355,7 @@ class TabularViewMixin:
         if db_map_parameter_ids is None:
             db_map_parameter_ids = {
                 db_map: [(db_map, id_) for id_ in ids]
-                for db_map, ids in self._get_parameter_value_or_def_ids("parameter_definition").items()
+                for db_map, ids in self._get_db_map_parameter_value_or_def_ids("parameter_definition").items()
             }
         if db_map_alternative_ids is None:
             db_map_alternative_ids = {
@@ -469,45 +491,12 @@ class TabularViewMixin:
             return (rows, columns, frozen, frozen_value)
         return None
 
-    def reload_pivot_table(self, current_index=None):
-        """Updates current class (type and id) and reloads pivot table for it."""
-        self._pending_index = None
-        if current_index is not None:
-            self.current_class_item = self._get_current_class_item(current_index)
-        if self.current_class_item is None:
-            self.current_class_id = {}
-            self.clear_pivot_table()
-            return
-        class_id = self.current_class_item.db_map_ids
-        if self.current_class_id == class_id:
-            return
-        self.clear_pivot_table()
-        self.current_class_type = self.current_class_item.item_type
-        self.current_class_id = class_id
-        self.current_class_name = self.current_class_item.display_data
-        self.do_reload_pivot_table()
-
-    @staticmethod
-    def _get_current_class_item(current_index):
-        item = current_index.model().item_from_index(current_index)
-        while item.item_type != "root":
-            if item.item_type in ("object_class", "relationship_class"):
-                return item
-            item = item.parent_item
-        return None
-
-    @Slot("QAction")
-    def _handle_pivot_action_triggered(self, action):
-        self.current_input_type = action.text()
-        if self.ui.pivot_table.isVisible():
-            self.do_reload_pivot_table()
-
     @busy_effect
     def do_reload_pivot_table(self):
-        """Reloads pivot table. """
-        qApp.processEvents()  # pylint: disable=undefined-variable
+        """Reloads pivot table."""
         if not self._can_build_pivot_table():
             return
+        self.clear_pivot_table()
         self.pivot_table_model = {
             self._PARAMETER_VALUE: ParameterValuePivotTableModel,
             self._RELATIONSHIP: RelationshipPivotTableModel,
@@ -698,10 +687,8 @@ class TabularViewMixin:
 
     @Slot(str, set, bool)
     def change_filter(self, identifier, valid_values, has_filter):
-        if has_filter:
-            self.pivot_table_proxy.set_filter(identifier, valid_values)
-        else:
-            self.pivot_table_proxy.set_filter(identifier, None)  # None means everything passes
+        # None means everything passes
+        self.pivot_table_proxy.set_filter(identifier, valid_values if has_filter else None)
 
     def reload_frozen_table(self):
         """Resets the frozen model according to new selection in entity trees."""
@@ -946,4 +933,4 @@ class TabularViewMixin:
     def receive_session_rolled_back(self, db_maps):
         """Reacts to session rolled back event."""
         super().receive_session_rolled_back(db_maps)
-        self.reload_pivot_table()
+        self.clear_pivot_table()

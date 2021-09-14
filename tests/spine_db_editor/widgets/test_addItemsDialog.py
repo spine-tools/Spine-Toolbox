@@ -21,7 +21,7 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtWidgets import QApplication, QAction
+from PySide2.QtWidgets import QApplication, QAction, QMessageBox
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog
@@ -44,15 +44,18 @@ class TestAddItemsDialog(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of SpineDBEditor class."""
-        with mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
+        ) as confirm_close_dialog, mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
         ):
+            confirm_close_dialog.exec_.return_value = QMessageBox.Cancel
             self.mock_db_mngr = mock.MagicMock()
             self.mock_db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
             self.mock_db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
             self.mock_db_map = mock.MagicMock()
             self.mock_db_map.codename = "mock_db"
-            self.ds_view_form = SpineDBEditor(self.mock_db_mngr, self.mock_db_map)
+            self._db_editor = SpineDBEditor(self.mock_db_mngr, self.mock_db_map)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -60,11 +63,14 @@ class TestAddItemsDialog(unittest.TestCase):
         """
         with mock.patch(
             "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ) as mock_save_w_s:
-            self.ds_view_form.close()
+        ) as mock_save_w_s, mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
+        ) as confirm_close_dialog:
+            confirm_close_dialog.exec_.return_value = QMessageBox.Cancel
+            self._db_editor.close()
             mock_save_w_s.assert_called_once()
-        self.ds_view_form.deleteLater()
-        self.ds_view_form = None
+        self._db_editor.deleteLater()
+        self._db_editor = None
         try:
             os.remove('mock_db.sqlite')
         except OSError:
@@ -72,7 +78,7 @@ class TestAddItemsDialog(unittest.TestCase):
 
     def test_add_object_classes(self):
         """Test object classes are added through the manager when accepting the dialog."""
-        dialog = AddObjectClassesDialog(self.ds_view_form, self.mock_db_mngr, self.mock_db_map)
+        dialog = AddObjectClassesDialog(self._db_editor, self.mock_db_mngr, self.mock_db_map)
         model = dialog.model
         header = model.header
         model.fetchMore()
@@ -95,9 +101,9 @@ class TestAddItemsDialog(unittest.TestCase):
 
     def test_do_not_add_object_classes_with_invalid_db(self):
         """Test object classes aren't added when the database is not correct."""
-        dialog = AddObjectClassesDialog(self.ds_view_form, self.mock_db_mngr, self.mock_db_map)
-        self.ds_view_form.msg_error = mock.NonCallableMagicMock()
-        self.ds_view_form.msg_error.attach_mock(mock.MagicMock(), "emit")
+        dialog = AddObjectClassesDialog(self._db_editor, self.mock_db_mngr, self.mock_db_map)
+        self._db_editor.msg_error = mock.NonCallableMagicMock()
+        self._db_editor.msg_error.attach_mock(mock.MagicMock(), "emit")
         model = dialog.model
         header = model.header
         model.fetchMore()
@@ -107,7 +113,7 @@ class TestAddItemsDialog(unittest.TestCase):
         model.batch_set_data(indexes, values)
         dialog.accept()
         self.mock_db_mngr.add_object_classes.assert_not_called()
-        self.ds_view_form.msg_error.emit.assert_called_with("Invalid database 'gibberish' at row 1")
+        self._db_editor.msg_error.emit.assert_called_with("Invalid database 'gibberish' at row 1")
 
 
 if __name__ == '__main__':

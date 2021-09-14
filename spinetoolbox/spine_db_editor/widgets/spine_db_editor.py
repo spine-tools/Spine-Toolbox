@@ -19,9 +19,19 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu, QAbstractScrollArea, QTabBar
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QErrorMessage,
+    QDockWidget,
+    QMessageBox,
+    QMenu,
+    QAbstractScrollArea,
+    QTabBar,
+    QCheckBox,
+    QDialog,
+)
 from PySide2.QtCore import Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon, QCursor
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from .custom_menus import MainMenu
@@ -36,6 +46,7 @@ from ...widgets.notification import ChangeNotifier
 from ...widgets.notification import NotificationStack
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
+from ...widgets.commit_dialog import CommitDialog
 from ...helpers import (
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
@@ -45,14 +56,14 @@ from ...helpers import (
     CharIconEngine,
 )
 from ...spine_db_parcel import SpineDBParcel
-from ...config import MAINWINDOW_SS, APPLICATION_PATH
+from ...config import APPLICATION_PATH
 
 
 class SpineDBEditorBase(QMainWindow):
     """Base class for SpineDBEditor (i.e. Spine database editor)."""
 
     msg = Signal(str)
-    link_msg = Signal(str, "QVariant")
+    link_msg = Signal(str, object)
     msg_error = Signal(str)
     file_exported = Signal(str)
     sqlite_file_exported = Signal(str)
@@ -63,7 +74,7 @@ class SpineDBEditorBase(QMainWindow):
         Args:
             db_mngr (SpineDBManager): The manager to use
         """
-        super().__init__(flags=Qt.Window)
+        super().__init__()
         from ..ui.spine_db_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_mngr = db_mngr
@@ -72,14 +83,12 @@ class SpineDBEditorBase(QMainWindow):
         self._change_notifiers = []
         self._changelog = []
         self.db_url = None
-        self._fetcher = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.takeCentralWidget()
         self.url_toolbar = UrlToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
-        self.setStyleSheet(MAINWINDOW_SS)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings
@@ -153,7 +162,7 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr.register_listener(self, *self.db_maps)
         self.init_models()
         self.init_add_undo_redo_actions()
-        self.fetch_db_maps()
+        self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
         self.restore_ui()
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
@@ -162,24 +171,6 @@ class SpineDBEditorBase(QMainWindow):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
         new_redo_action = self.db_mngr.redo_action[self.first_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
-
-    def fetch_db_maps(self, *db_maps):
-        if not db_maps:
-            db_maps = self.db_maps
-        self._fetcher = self.db_mngr.get_fetcher()
-        self._fetcher.finished.connect(self._make_iddle)
-        self._make_busy()
-        self._fetcher.fetch(self, db_maps)
-        self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
-
-    def _make_busy(self):
-        self.silenced = True
-        self.setCursor(QCursor(Qt.BusyCursor))
-
-    def _make_iddle(self):
-        self.silenced = False
-        self.unsetCursor()
-        self._fetcher = None
 
     @Slot(bool)
     def load_previous_urls(self, _=False):
@@ -212,6 +203,10 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None}, create=True)
 
@@ -222,6 +217,7 @@ class SpineDBEditorBase(QMainWindow):
             QMenu
         """
         menu = QMenu(self)
+        menu.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
@@ -237,7 +233,6 @@ class SpineDBEditorBase(QMainWindow):
         menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         menu.addAction(self.ui.dockWidget_alternative_scenario_tree.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_parameter_tag.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_exports.toggleViewAction())
         return menu
@@ -371,12 +366,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def init_models(self):
         """Initializes models."""
-        self.parameter_value_list_model.build_tree()
-        for item in self.parameter_value_list_model.visit_all():
-            index = self.parameter_value_list_model.index_from_item(item)
-            self.ui.treeView_parameter_value_list.expand(index)
-        self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
-        self.ui.treeView_parameter_value_list.header().hide()
 
     @Slot(str)
     def add_message(self, msg):
@@ -389,12 +378,13 @@ class SpineDBEditorBase(QMainWindow):
             return
         self.notification_stack.push(msg)
 
-    @Slot(str, "QVariant")
+    @Slot(str, object)
     def add_link_msg(self, msg, open_link=None):
         """Pushes link message to notification stack.
 
         Args:
             msg (str): String to show in notification
+            open_link (Callable, optional): callback to invoke when notification's link is opened
         """
         if self.silenced:
             return
@@ -589,40 +579,19 @@ class SpineDBEditorBase(QMainWindow):
         s += "</ul>"
         return s
 
-    @staticmethod
-    def _metadata_per_entity(db_map, entity_ids):
-        d = {}
-        sq = db_map.ext_entity_metadata_sq
-        for x in db_map.query(sq).filter(db_map.in_(sq.c.entity_id, entity_ids)):
-            d.setdefault(x.entity_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        return d
-
     def show_db_map_entity_metadata(self, db_map_ids):
         metadata = {
-            db_map.codename: self._metadata_per_entity(db_map, entity_ids) for db_map, entity_ids in db_map_ids.items()
+            db_map.codename: self.db_mngr.get_metadata_per_entity(db_map, entity_ids)
+            for db_map, entity_ids in db_map_ids.items()
         }
         QMessageBox.information(self, "Entity metadata", self._parse_db_map_metadata(metadata))
 
-    @staticmethod
-    def _metadata_per_parameter_value(db_map, param_val_ids):
-        d = {}
-        sq = db_map.ext_parameter_value_metadata_sq
-        for x in db_map.query(sq).filter(db_map.in_(sq.c.parameter_value_id, param_val_ids)):
-            param_val_name = (x.entity_name, x.parameter_name, x.alternative_name)
-            d.setdefault(param_val_name, {}).setdefault(x.metadata_name, []).append(x.metadata_value)
-        return d
-
     def show_db_map_parameter_value_metadata(self, db_map_ids):
         metadata = {
-            db_map.codename: self._metadata_per_parameter_value(db_map, param_val_ids)
+            db_map.codename: self.db_mngr.get_metadata_per_parameter_value(db_map, param_val_ids)
             for db_map, param_val_ids in db_map_ids.items()
         }
         QMessageBox.information(self, "Parameter value metadata", self._parse_db_map_metadata(metadata))
-
-    def reload_session(self, db_maps):
-        """Reloads data from given db_maps."""
-        self.init_models()
-        self.fetch_db_maps(*db_maps)
 
     @Slot(bool)
     def refresh_session(self, checked=False):
@@ -630,12 +599,26 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def commit_session(self, checked=False):
-        """Commits session."""
-        self.db_mngr.commit_session(*self.db_maps, cookie=self)
+        """Commits dirty database maps."""
+        dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
+        if not dirty_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        commit_msg = self._get_commit_msg(db_names)
+        if not commit_msg:
+            return
+        self.db_mngr.commit_session(commit_msg, *dirty_db_maps, cookie=self)
 
     @Slot(bool)
     def rollback_session(self, checked=False):
-        self.db_mngr.rollback_session(*self.db_maps)
+        """Rolls back dirty datbase maps."""
+        dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
+        if not dirty_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        if not self._get_rollback_confirmation(db_names):
+            return
+        self.db_mngr.rollback_session(*dirty_db_maps)
 
     def receive_session_committed(self, db_maps, cookie):
         db_maps = set(self.db_maps) & set(db_maps)
@@ -645,15 +628,16 @@ class SpineDBEditorBase(QMainWindow):
         if cookie is self:
             msg = f"All changes in {db_names} committed successfully."
             self.msg.emit(msg)
-        else:  # Commit done by an 'outside force'.
-            self.reload_session(db_maps)
-            self.msg.emit(f"Databases {db_names} reloaded from an external action.")
+            return
+        # Commit done by an 'outside force'.
+        self.init_models()
+        self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.reload_session(db_maps)
+        self.init_models()
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
@@ -662,7 +646,7 @@ class SpineDBEditorBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.reload_session(db_maps)
+        self.init_models()
         self.msg.emit("Session refreshed.")
 
     @Slot(bool)
@@ -672,10 +656,10 @@ class SpineDBEditorBase(QMainWindow):
 
     @busy_effect
     @Slot("QModelIndex")
-    def show_parameter_value_editor(self, index):
+    def show_parameter_value_editor(self, index, plain=False):
         """Shows the parameter_value editor for the given index of given table view.
         """
-        editor = ParameterValueEditor(index, parent=self)
+        editor = ParameterValueEditor(index, parent=self, plain=plain)
         editor.show()
 
     def receive_error_msg(self, db_map_error_log):
@@ -723,9 +707,6 @@ class SpineDBEditorBase(QMainWindow):
     def receive_parameter_value_lists_added(self, db_map_data):
         self.log_changes("added", "parameter_value_list", db_map_data)
 
-    def receive_parameter_tags_added(self, db_map_data):
-        self.log_changes("added", "parameter_tag", db_map_data)
-
     def receive_features_added(self, db_map_data):
         self.log_changes("added", "feature", db_map_data)
 
@@ -765,9 +746,6 @@ class SpineDBEditorBase(QMainWindow):
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.log_changes("updated", "parameter_value_list", db_map_data)
 
-    def receive_parameter_tags_updated(self, db_map_data):
-        self.log_changes("updated", "parameter_tag", db_map_data)
-
     def receive_features_updated(self, db_map_data):
         self.log_changes("updated", "feature", db_map_data)
 
@@ -779,9 +757,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_tool_feature_methods_updated(self, db_map_data):
         self.log_changes("updated", "tool_feature_method", db_map_data)
-
-    def receive_parameter_definition_tags_set(self, db_map_data):
-        self.log_changes("set", "parameter_definition tag", db_map_data)
 
     def receive_scenarios_removed(self, db_map_data):
         self.log_changes("removed", "scenarios", db_map_data)
@@ -812,9 +787,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.log_changes("removed", "parameter_value_list", db_map_data)
-
-    def receive_parameter_tags_removed(self, db_map_data):
-        self.log_changes("removed", "parameter_tag", db_map_data)
 
     def receive_features_removed(self, db_map_data):
         self.log_changes("removed", "feature", db_map_data)
@@ -847,13 +819,94 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
 
     def tear_down(self):
-        if self._fetcher is not None:
-            self._fetcher.stop()
-        if not self.db_mngr.unregister_listener(self, *self.db_maps):
-            return False
-        # Save UI form state
+        """Performs clean up duties.
+
+        Returns:
+            bool: True if editor is ready to close, False otherwise
+        """
+        dirty_or_orphan = self.db_mngr.dirty_or_orphan(self, *self.db_maps)
+        commit_dirty = False
+        commit_msg = ""
+        if dirty_or_orphan:
+            answer = self._prompt_to_commit_changes()
+            if answer == QMessageBox.Cancel:
+                return False
+            db_names = ", ".join([db_map.codename for db_map in dirty_or_orphan])
+            if answer == QMessageBox.Save:
+                commit_dirty = True
+                commit_msg = self._get_commit_msg(db_names)
+                if not commit_msg:
+                    return False
+        self.db_mngr.unregister_listener(self, commit_dirty, commit_msg, *self.db_maps)
         self.save_window_state()
         return True
+
+    def _prompt_to_commit_changes(self):
+        """Prompts the user to commit or rollback changes to 'dirty' db maps.
+
+        Returns:
+            int: QMessageBox status code
+        """
+        commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
+        if commit_at_exit == 0:
+            # Don't commit session and don't show message box
+            return QMessageBox.Discard
+        if commit_at_exit == 1:  # Default
+            # Show message box
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle(self.windowTitle())
+            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
+            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msg.button(QMessageBox.Save).setText("Commit and close ")
+            msg.button(QMessageBox.Discard).setText("Discard changes and close")
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
+                # Save preference
+                preference = "2" if answer == QMessageBox.Save else "0"
+                self.qsettings.setValue("appSettings/commitAtExit", preference)
+            return answer
+        if commit_at_exit == 2:
+            # Commit session and don't show message box
+            return QMessageBox.Save
+
+    def _get_commit_msg(self, db_names):
+        """Prompts user for commit message.
+
+        Args:
+            db_names (Iterable of str): database names
+
+        Returns:
+            str: commit message
+        """
+        dialog = CommitDialog(self, db_names)
+        answer = dialog.exec_()
+        if answer == QDialog.Accepted:
+            return dialog.commit_msg
+
+    def _get_rollback_confirmation(self, db_names):
+        """Prompts user for confirmation before rolling back the session.
+
+        Args:
+            db_names (Iterable of str): database names
+
+        Returns:
+            bool: True if user confirmed, False otherwise
+        """
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            f"Rollback changes in {db_names}",
+            "Are you sure? "
+            "All your changes since the last commit will be reverted and removed from the undo/redo stack.",
+            QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self,
+        )
+        message_box.button(QMessageBox.Ok).setText("Rollback")
+        answer = message_box.exec_()
+        return answer == QMessageBox.Ok
 
     def closeEvent(self, event):
         """Handle close window.
@@ -973,9 +1026,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_alternative_scenario_tree, Qt.Vertical
         )
         self.splitDockWidget(
-            self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_tag, Qt.Vertical
-        )
-        self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_relationship_parameter_value, Qt.Vertical
         )
         self.tabify_and_raise(
@@ -998,10 +1048,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_tool_feature_tree,
             self.ui.dockWidget_parameter_value_list,
             self.ui.dockWidget_alternative_scenario_tree,
-            self.ui.dockWidget_parameter_tag,
         ]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.3 * height, 0.1 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.4 * height], Qt.Vertical)
         self.end_style_change()
 
     @Slot("QAction")
@@ -1021,7 +1070,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_relationship_parameter_value.hide()
         self.ui.dockWidget_relationship_parameter_definition.hide()
         self.ui.dockWidget_parameter_value_list.hide()
-        self.ui.dockWidget_parameter_tag.hide()
         docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.6 * width, 0.2 * width], Qt.Horizontal)
@@ -1043,7 +1091,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_tool_feature_tree, Qt.Vertical
         )
         self.splitDockWidget(self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list, Qt.Vertical)
-        self.splitDockWidget(self.ui.dockWidget_parameter_value_list, self.ui.dockWidget_parameter_tag, Qt.Vertical)
         self.tabify_and_raise(
             [
                 self.ui.dockWidget_object_parameter_value,
@@ -1062,13 +1109,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value]
         height = sum(d.size().height() for d in docks)
         self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Vertical)
-        docks = [
-            self.ui.dockWidget_alternative_scenario_tree,
-            self.ui.dockWidget_parameter_value_list,
-            self.ui.dockWidget_parameter_tag,
-        ]
+        docks = [self.ui.dockWidget_alternative_scenario_tree, self.ui.dockWidget_parameter_value_list]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.4 * height, 0.4 * height, 0.2 * height], Qt.Vertical)
+        self.resizeDocks(docks, [0.5 * height, 0.5 * height], Qt.Vertical)
         self.end_style_change()
         self.ui.graphicsView.reset_zoom()
 

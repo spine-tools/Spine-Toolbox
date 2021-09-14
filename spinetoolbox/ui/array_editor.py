@@ -13,13 +13,16 @@
 ################################################################################
 ## Form generated from reading UI file 'array_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.14.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
 from spinetoolbox.widgets.plot_widget import PlotWidget
@@ -62,6 +65,8 @@ class Ui_Form(object):
 
         self.array_table_view = ArrayTableView(self.verticalLayoutWidget)
         self.array_table_view.setObjectName(u"array_table_view")
+        self.array_table_view.horizontalHeader().setStretchLastSection(True)
+        self.array_table_view.verticalHeader().setVisible(False)
 
         self.verticalLayout_3.addWidget(self.array_table_view)
 

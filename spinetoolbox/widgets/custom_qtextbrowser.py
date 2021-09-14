@@ -84,6 +84,7 @@ class CustomQTextBrowser(QTextBrowser):
         Args:
             text (str): text to add
         """
+        scrollbar_at_max = self.verticalScrollBar().value() == self.verticalScrollBar().maximum()
         cursor = add_message_to_document(self._original_document, text)
         block_count = self._original_document.blockCount()
         if block_count > self._max_blocks:
@@ -94,7 +95,8 @@ class CustomQTextBrowser(QTextBrowser):
                 cursor.removeSelectedText()
                 cursor.deleteChar()  # Remove the trailing newline
         if self.document() == self._original_document:
-            self.scroll_to_bottom()
+            if scrollbar_at_max:
+                self.scroll_to_bottom()
 
     def contextMenuEvent(self, event):
         """Reimplemented method to add a clear action into the default context menu.

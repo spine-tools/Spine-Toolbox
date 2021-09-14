@@ -11,15 +11,18 @@
 
 """
 Contains SpineEngineWorker.
-
 :authors: M. Marin (KTH)
 :date:   14.10.2020
 """
 
 import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
+from PySide2.QtWidgets import QMessageBox
+
+from spine_engine.exception import EngineInitFailed
+from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from .spine_engine_manager import make_engine_manager
-from spine_engine.spine_engine import ItemExecutionFinishState
+from .helpers import get_upgrade_db_promt_text
 
 
 @Slot(list)
@@ -45,7 +48,7 @@ def _handle_node_execution_finished(item, direction, state, item_state):
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_stopped.emit()
         if state == "RUNNING":
-            excluded = True if item_state == ItemExecutionFinishState.EXCLUDED else False
+            excluded = item_state == ItemExecutionFinishState.EXCLUDED
             icon.run_execution_leave_animation(excluded)
 
 
@@ -59,6 +62,43 @@ def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
     item.add_process_message(filter_id, msg_type, msg_text)
 
 
+@Slot(dict, object)
+def _handle_prompt_arrived(prompt, engine_mngr):
+    prompt_type = prompt["type"]
+    if prompt_type == "upgrade_db":
+        url = prompt["url"]
+        current = prompt["current"]
+        expected = prompt["expected"]
+        text, info_text = get_upgrade_db_promt_text(url, current, expected)
+    else:
+        info_text = ""
+        text = prompt["text"]
+    item_name = prompt["item_name"]
+    # pylint: disable=undefined-variable
+    box = QMessageBox(
+        QMessageBox.Question, item_name, text, buttons=QMessageBox.Yes | QMessageBox.No, parent=qApp.activeWindow()
+    )
+    if info_text:
+        box.setInformativeText(info_text)
+    answer = box.exec_()
+    accepted = answer == QMessageBox.Yes
+    engine_mngr.answer_prompt(item_name, accepted)
+
+
+@Slot(list)
+def _mark_all_items_failed(items):
+    """Fails all project items.
+
+    Args:
+        items (list of ProjectItem): project items
+    """
+    for item in items:
+        icon = item.get_icon()
+        icon.execution_icon.mark_execution_finished(ItemExecutionFinishState.FAILURE)
+        if hasattr(icon, "animation_signaller"):
+            icon.animation_signaller.animation_stopped.emit()
+
+
 class SpineEngineWorker(QObject):
 
     finished = Signal()
@@ -67,8 +107,10 @@ class SpineEngineWorker(QObject):
     _node_execution_finished = Signal(object, object, object, object)
     _event_message_arrived = Signal(object, str, str, str)
     _process_message_arrived = Signal(object, str, str, str)
+    _prompt_arrived = Signal(dict, object)
+    _all_items_failed = Signal(list)
 
-    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items):
+    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, logger):
         """
         Args:
             engine_server_address (str): Address of engine server if any
@@ -76,6 +118,7 @@ class SpineEngineWorker(QObject):
             dag (DirectedGraphHandler)
             dag_identifier (str)
             project_items (dict): mapping from project item name to :class:`ProjectItem`
+            logger (LoggerInterface): a logger
         """
         super().__init__()
         self._engine_data = engine_data
@@ -85,6 +128,7 @@ class SpineEngineWorker(QObject):
         self._engine_final_state = "UNKNOWN"
         self._executing_items = []
         self._project_items = project_items
+        self._logger = logger
         self.event_messages = {}
         self.process_messages = {}
         self.successful_executions = []
@@ -141,6 +185,7 @@ class SpineEngineWorker(QObject):
         self._node_execution_finished.connect(_handle_node_execution_finished)
         self._event_message_arrived.connect(_handle_event_message_arrived)
         self._process_message_arrived.connect(_handle_process_message_arrived)
+        self._prompt_arrived.connect(_handle_prompt_arrived)
 
     def start(self, silent=False):
         """Connects log signals.
@@ -150,13 +195,21 @@ class SpineEngineWorker(QObject):
                 but saved in internal dicts.
         """
         self._connect_log_signals(silent)
+        self._all_items_failed.connect(_mark_all_items_failed)
         self._dag_execution_started.emit(list(self._project_items.values()))
         self._thread.start()
 
     @Slot()
     def do_work(self):
         """Does the work and emits finished when done."""
-        self._engine_mngr.run_engine(self._engine_data)
+        try:
+            self._engine_mngr.run_engine(self._engine_data)
+        except EngineInitFailed as error:
+            self._logger.msg_error.emit(f"Failed to start engine: {error}")
+            self._engine_final_state = str(SpineEngineState.FAILED)
+            self._all_items_failed.emit(list(self._project_items.values()))
+            self.finished.emit()
+            return
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
             self._process_event(event_type, data)
@@ -172,11 +225,16 @@ class SpineEngineWorker(QObject):
             "event_msg": self._handle_event_msg,
             "process_msg": self._handle_process_msg,
             "standard_execution_msg": self._handle_standard_execution_msg,
+            "persistent_execution_msg": self._handle_persistent_execution_msg,
             "kernel_execution_msg": self._handle_kernel_execution_msg,
+            "prompt": self._handle_prompt,
         }.get(event_type)
         if handler is None:
             return
         handler(data)
+
+    def _handle_prompt(self, prompt):
+        self._prompt_arrived.emit(prompt, self._engine_mngr)
 
     def _handle_standard_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
@@ -192,32 +250,58 @@ class SpineEngineWorker(QObject):
                 item, msg["filter_id"], "msg_warning", "\tExecution is in progress. See messages below (stdout&stderr)"
             )
 
+    def _handle_persistent_execution_msg(self, msg):
+        item = self._project_items[msg["item_name"]]
+        if msg["type"] == "persistent_started":
+            item.persistent_console_requested.emit(msg["filter_id"], msg["key"], msg["language"])
+        elif msg["type"] == "persistent_failed_to_start":
+            msg_text = (
+                f"Unable to start persistent process <b>{msg['args']}</b>: {msg['error']}."
+                "Please go to Settings->Tools and check your setup."
+            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg["type"] == "stdin":
+            item.persistent_stdin_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "stdout":
+            item.persistent_stdout_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "stderr":
+            item.persistent_stderr_available.emit(msg["filter_id"], msg["data"])
+        elif msg["type"] == "execution_started":
+            self._event_message_arrived.emit(
+                item, msg["filter_id"], "msg", f"*** Starting execution on persistent process <b>{msg['args']}</b> ***"
+            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
+
     def _handle_kernel_execution_msg(self, msg):
         item = self._project_items[msg["item_name"]]
-        language = msg["language"].capitalize()
         if msg["type"] == "kernel_started":
-            console_requested_signal = {
-                "julia": item.julia_console_requested,
-                "python": item.python_console_requested,
-            }.get(msg["language"])
-            if console_requested_signal is not None:
-                console_requested_signal.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
+            item.jupyter_console_requested.emit(msg["filter_id"], msg["kernel_name"], msg["connection_file"])
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (
-                f"\tUnable to find specification for {language} kernel <b>{msg['kernel_name']}</b>. "
-                f"Go to Settings->Tools to select a valid {language} kernel."
+                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>"
+                "<br/>For Python Tools, select a kernel spec in the Tool specification editor."
+                "<br/>For Julia Tools, select a kernel spec from File->Settings->Tools."
+            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg["type"] == "conda_not_found":
+            msg_text = (
+                f"{msg['error']}<br/>Couldn't call Conda. Set up <b>Conda executable</b> "
+                f"in <b>File->Settings->Tools</b>."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_failed_to_start":
-            msg_text = f"\tExecution on {language} kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
+            msg_text = f"Execution on kernel <b>{msg['kernel_name']}</b> failed to start: {msg['error']}"
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
+        elif msg["type"] == "kernel_spec_exe_not_found":
+            msg_text = (
+                f"Invalid kernel spec ({msg['kernel_name']}). File <b>{msg['kernel_exe_path']}</b> " f"does not exist."
+            )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg["type"] == "execution_started":
             self._event_message_arrived.emit(
-                item, msg["filter_id"], "msg", f"\tStarting program on {language} kernel <b>{msg['kernel_name']}</b>"
+                item, msg["filter_id"], "msg", f"*** Starting execution on kernel spec <b>{msg['kernel_name']}</b> ***"
             )
-            self._event_message_arrived.emit(
-                item, msg["filter_id"], "msg_warning", f"See {language} Console for messages."
-            )
+            self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
 
     def _handle_process_msg(self, data):
         self._do_handle_process_msg(**data)

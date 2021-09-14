@@ -17,13 +17,15 @@ Classes and functions that can be shared among unit test modules.
 """
 
 from unittest import mock
+from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.ui_main import ToolboxUI
+from spinetoolbox.spine_db_manager import SpineDBManager
 
 
 def create_toolboxui():
     """Returns ToolboxUI, where QSettings among others has been mocked."""
-    with mock.patch("spinetoolbox.plugin_manager.PluginManager.load_plugins"), mock.patch(
+    with mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"), mock.patch(
         "spinetoolbox.ui_main.QSettings.value"
     ) as mock_qsettings_value:
         mock_qsettings_value.side_effect = qsettings_value_side_effect
@@ -47,7 +49,7 @@ def create_toolboxui_with_project(project_dir):
     ), mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
         "spinetoolbox.widgets.open_project_widget.OpenProjectDialog.update_recents"
     ), mock.patch(
-        "spinetoolbox.plugin_manager.PluginManager.load_plugins"
+        "spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"
     ):
         mock_qsettings_value.side_effect = qsettings_value_side_effect
         toolbox = ToolboxUI()
@@ -58,12 +60,11 @@ def create_toolboxui_with_project(project_dir):
 def clean_up_toolbox(toolbox):
     """Cleans up toolbox and project."""
     if toolbox.project():
-        toolbox.project().tear_down()
-        toolbox.project().deleteLater()
+        toolbox.close_project(ask_confirmation=False)
+        QApplication.processEvents()  # Makes sure Design view animations finish properly.
     toolbox.db_mngr.close_all_sessions()
     toolbox.db_mngr.clean_up()
     toolbox.db_mngr = None
-    toolbox.project_item_model.remove_leaves()
     # Delete undo stack explicitly to prevent emitting certain signals well after ToolboxUI has been destroyed.
     toolbox.undo_stack.deleteLater()
     toolbox.deleteLater()
@@ -85,11 +86,12 @@ def qsettings_value_side_effect(key, defaultValue="0"):
     return defaultValue
 
 
-def add_ds(project, name, x=0.0, y=0.0):
+def add_ds(project, item_factories, name, x=0.0, y=0.0):
     """Helper function to create a Data Store to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -98,15 +100,16 @@ def add_ds(project, name, x=0.0, y=0.0):
         DataStore: added project item
     """
     item_dict = {name: {"type": "Data Store", "description": "", "url": dict(), "x": x, "y": y}}
-    project.add_project_items(item_dict)
+    project.restore_project_items(item_dict, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_dc(project, name, x=0, y=0):
+def add_dc(project, item_factories, name, x=0, y=0):
     """Helper function to create a Data Connection to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -115,15 +118,16 @@ def add_dc(project, name, x=0, y=0):
         DataConnection: added project item
     """
     item_dict = {name: {"type": "Data Connection", "description": "", "references": list(), "x": x, "y": y}}
-    project.add_project_items(item_dict)
+    project.restore_project_items(item_dict, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_tool(project, name, tool_spec="", x=0, y=0):
+def add_tool(project, item_factories, name, tool_spec="", x=0, y=0):
     """Helper function to create a Tool to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         tool_spec (str): Tool specification's name
         x (float): item's x coordinate
@@ -135,15 +139,16 @@ def add_tool(project, name, tool_spec="", x=0, y=0):
     item = {
         name: {"type": "Tool", "description": "", "specification": tool_spec, "execute_in_work": False, "x": x, "y": y}
     }
-    project.add_project_items(item)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_view(project, name, x=0, y=0):
+def add_view(project, item_factories, name, x=0, y=0):
     """Helper function to create a View to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -152,15 +157,16 @@ def add_view(project, name, x=0, y=0):
         View: added project item
     """
     item = {name: {"type": "View", "description": "", "x": x, "y": y}}
-    project.add_project_items(item)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_importer(project, name, x=0, y=0):
+def add_importer(project, item_factories, name, x=0, y=0):
     """Helper function to create an Importer to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -169,15 +175,16 @@ def add_importer(project, name, x=0, y=0):
         Importer: added project item
     """
     item = {name: {"type": "Importer", "description": "", "specification": "", "x": x, "y": y}}
-    project.add_project_items(item)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_gimlet(project, name, x=0, y=0):
+def add_gimlet(project, item_factories, name, x=0, y=0):
     """Helper function to create a Gimlet to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -186,15 +193,16 @@ def add_gimlet(project, name, x=0, y=0):
         Gimlet: added project item
     """
     item = {name: {"type": "Gimlet", "description": "", "x": x, "y": y}}
-    project.add_project_items(item)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_data_transformer(project, name, x=0, y=0):
+def add_data_transformer(project, item_factories, name, x=0, y=0):
     """Helper function to create a Data Transformer to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -202,16 +210,17 @@ def add_data_transformer(project, name, x=0, y=0):
     Returns:
         DataTransformer: added project item
     """
-    item = {name: {"type": "Data Transformer", "description": "", "x": x, "y": y}}
-    project.add_project_items(item)
+    item = {name: {"type": "Data Transformer", "description": "", "x": x, "y": y, "specification": ""}}
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_exporter(project, name, x=0, y=0):
+def add_exporter(project, item_factories, name, x=0, y=0):
     """Helper function to create an Exporter to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -220,15 +229,16 @@ def add_exporter(project, name, x=0, y=0):
         Exporter: added project item
     """
     item = {name: {"type": "Exporter", "description": "", "x": x, "y": y, "specification": None}}
-    project.add_project_items(item)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
-def add_gdx_exporter(project, name, x=0, y=0):
+def add_gdx_exporter(project, item_factories, name, x=0, y=0):
     """Helper function to create a GdxExporter to given project.
 
     Args:
         project (SpineToolboxProject): project where to add the item
+        item_factories (dict): mapping from item type to ProjectItemFactory
         name (str): item's name
         x (float): item's x coordinate
         y (float): item's y coordinate
@@ -237,7 +247,7 @@ def add_gdx_exporter(project, name, x=0, y=0):
         GdxExporter: added project item
     """
     item = {name: {"type": "GdxExporter", "description": "", "x": x, "y": y, "settings_packs": None}}
-    project.add_project_items(item)
+    project.restore_project_items(item, item_factories, silent=True)
     return project.get_item(name)
 
 
@@ -282,3 +292,20 @@ class MockInstantQProcess(mock.Mock):
     def start(self, *args, **kwargs):
         for slot in self.finished.slots:
             slot(*self._finished_args)
+
+
+class TestSpineDBManager(SpineDBManager):
+    @property
+    def worker_thread(self):
+        return QApplication.instance().thread()
+
+    def clean_up(self):
+        while self._fetchers:
+            _, fetcher = self._fetchers.popitem()
+            fetcher.deleteLater()
+        self.deleteLater()
+
+    def fetch_all(self, db_map):
+        fetcher = self._get_fetcher(db_map)
+        for item_type in fetcher._getters:
+            fetcher.fetch_more(item_type)

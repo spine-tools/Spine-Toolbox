@@ -17,7 +17,7 @@ Classes for custom QListView.
 """
 
 import textwrap
-from PySide2.QtCore import Qt, Signal, Slot, QMimeData
+from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QMimeData
 from PySide2.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QFont, QIconEngine
 from PySide2.QtWidgets import QToolButton, QApplication, QToolBar, QWidgetAction
 from ..helpers import CharIconEngine, make_icon_background
@@ -134,7 +134,6 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
     @spec_name.setter
     def spec_name(self, spec_name):
         self._spec_name = spec_name
-        self._index = self._toolbox.specification_model.specification_index(self.spec_name)
         self.setText(self._spec_name)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{self.spec_name}</b> item.</p>")
 
@@ -142,10 +141,12 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
         return ",".join([self.item_type, self.spec_name])
 
     def contextMenuEvent(self, event):
-        self._toolbox.show_specification_context_menu(self._index, event.globalPos())
+        index = self._toolbox.specification_model.specification_index(self.spec_name)
+        self._toolbox.show_specification_context_menu(index, event.globalPos())
 
     def mouseDoubleClickEvent(self, event):
-        self._toolbox.edit_specification(self._index, None)
+        index = self._toolbox.specification_model.specification_index(self.spec_name)
+        self._toolbox.edit_specification(index, None)
 
 
 class ShadeMixin:
@@ -238,7 +239,8 @@ class ProjectItemSpecArray(QToolBar):
         self._button_filling.setParent(self)
         self._button_filling.setVisible(False)
         self._model.rowsInserted.connect(self._insert_specs)
-        self._model.rowsRemoved.connect(self._remove_specs)
+        self._model.rowsAboutToBeRemoved.connect(self._remove_specs)
+        self._model.dataChanged.connect(self._change_spec_data)
         self._model.modelReset.connect(self._reset_specs)
         self._button_visible.clicked.connect(self.toggle_visibility)
         self._button_new.clicked.connect(self._show_spec_form)
@@ -444,11 +446,23 @@ class ProjectItemSpecArray(QToolBar):
             self._add_spec(row)
         self._update_button_geom()
 
+    @Slot(QModelIndex, int, int)
     def _remove_specs(self, parent, first, last):
         for row in range(first, last + 1):
-            action = self._actions.pop(row)
-            self.removeAction(action)
+            try:
+                action = self._actions.pop(row)
+                self.removeAction(action)
+            except KeyError:
+                pass  # Happens when Plugins are removed
         self._update_button_geom()
+
+    def _change_spec_data(self, top_left, bottom_right, roles):
+        if Qt.DisplayRole not in roles:
+            return
+        for row in range(top_left.row(), bottom_right.row() + 1):
+            index = self._model.index(row, 0)
+            button = self.widgetForAction(self._actions[row])
+            button.spec_name = index.data()
 
     def _reset_specs(self):
         for action in self._actions.values():

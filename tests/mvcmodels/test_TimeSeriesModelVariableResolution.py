@@ -17,7 +17,7 @@ Unit tests for the TimeSeriesModelVariableResolution class.
 """
 
 import unittest
-from PySide2.QtCore import Qt
+from PySide2.QtCore import QObject, Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
@@ -29,9 +29,16 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
+    def setUp(self):
+        self._parent = QObject()
+
+    def tearDown(self):
+        self._parent.deleteLater()
+
     def test_data(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [-5.0, 7.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [-5.0, 7.0], True, False),
+            self._parent,
         )
         for role in [Qt.DisplayRole, Qt.EditRole]:
             model_index = model.index(0, 0)
@@ -41,7 +48,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
 
     def test_flags(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [-5.0, 7.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [-5.0, 7.0], True, False),
+            self._parent,
         )
         for row in range(2):
             for column in range(2):
@@ -50,7 +58,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
 
     def test_insertRows_at_the_beginning(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False),
+            self._parent,
         )
         self.assertTrue(model.insertRows(0, 1))
         self.assertEqual(
@@ -62,7 +71,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
 
     def test_insertRows_at_the_beginning_with_only_one_value(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00"], [-5.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00"], [-5.0], True, False), self._parent
         )
         self.assertTrue(model.insertRows(0, 1))
         self.assertEqual(
@@ -72,7 +81,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
 
     def test_insertRows_single_row_in_the_middle(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False),
+            self._parent,
         )
         self.assertTrue(model.insertRows(1, 1))
         self.assertEqual(
@@ -84,7 +94,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
 
     def test_insertRows_multiple_rows_in_the_middle(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False),
+            self._parent,
         )
         self.assertTrue(model.insertRows(1, 3))
         self.assertEqual(
@@ -99,7 +110,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
 
     def test_insertRows_in_the_end(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False),
+            self._parent,
         )
         self.assertTrue(model.insertRows(2, 1))
         self.assertEqual(
@@ -111,7 +123,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
 
     def test_insertRows_in_the_end_with_only_one_value(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00"], [-5.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00"], [-5.0], True, False), self._parent
         )
         self.assertTrue(model.insertRows(1, 1))
         self.assertEqual(
@@ -123,7 +135,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(
                 ["2019-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, -5.0, 7.0], True, False
-            )
+            ),
+            self._parent,
         )
         self.assertTrue(model.removeRows(0, 1))
         self.assertEqual(
@@ -135,7 +148,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(
                 ["2019-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, -5.0, 7.0], True, False
-            )
+            ),
+            self._parent,
         )
         self.assertTrue(model.removeRows(1, 1))
         self.assertEqual(
@@ -146,7 +160,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(
                 ["2019-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, -5.0, 7.0], True, False
-            )
+            ),
+            self._parent,
         )
         self.assertTrue(model.removeRows(2, 1))
         self.assertEqual(
@@ -158,20 +173,22 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(
                 ["2019-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, -5.0, 7.0], True, False
-            )
+            ),
+            self._parent,
         )
         self.assertTrue(model.removeRows(0, 3))
         self.assertEqual(model.value, TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], True, False))
 
     def test_removing_last_row_fails(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], True, False), self._parent
         )
         self.assertFalse(model.removeRows(0, 1))
 
     def test_reset_updates_indexes(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [2.3, -5.0], True, False)
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T08:15"], [2.3, -5.0], True, False),
+            self._parent,
         )
         model.reset(TimeSeriesVariableResolution(["1991-01-01T13:30", "1992-01-01T13:30"], [7.0, -4.0], False, True))
         self.assertEqual(
@@ -181,7 +198,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
 
     def test_setData(self):
         model = TimeSeriesModelVariableResolution(
-            TimeSeriesVariableResolution(["1991-01-01T13:30", "1992-01-01T13:30"], [2.3, -5.0], True, False)
+            TimeSeriesVariableResolution(["1991-01-01T13:30", "1992-01-01T13:30"], [2.3, -5.0], True, False),
+            self._parent,
         )
         model_index = model.index(0, 1)
         model.setData(model_index, -4.0)
@@ -194,7 +212,8 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(
                 ["2019-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, -5.0, 7.0], True, False
-            )
+            ),
+            self._parent,
         )
         indexes = [model.index(0, 0), model.index(1, 1), model.index(2, 1)]
         values = ["2018-07-05T12:00", 55.5, -55.5]

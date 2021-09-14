@@ -17,6 +17,7 @@ Spine DB Signaller class.
 """
 
 from PySide2.QtCore import Slot, QObject
+from .helpers import busy_effect
 
 
 class SpineDBSignaller(QObject):
@@ -59,7 +60,6 @@ class SpineDBSignaller(QObject):
         self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_definitions_added)
         self.db_mngr.parameter_values_added.connect(self.receive_parameter_values_added)
         self.db_mngr.parameter_value_lists_added.connect(self.receive_parameter_value_lists_added)
-        self.db_mngr.parameter_tags_added.connect(self.receive_parameter_tags_added)
         self.db_mngr.features_added.connect(self.receive_features_added)
         self.db_mngr.tools_added.connect(self.receive_tools_added)
         self.db_mngr.tool_features_added.connect(self.receive_tool_features_added)
@@ -74,8 +74,6 @@ class SpineDBSignaller(QObject):
         self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
         self.db_mngr.parameter_values_updated.connect(self.receive_parameter_values_updated)
         self.db_mngr.parameter_value_lists_updated.connect(self.receive_parameter_value_lists_updated)
-        self.db_mngr.parameter_tags_updated.connect(self.receive_parameter_tags_updated)
-        self.db_mngr.parameter_definition_tags_set.connect(self.receive_parameter_definition_tags_set)
         self.db_mngr.features_updated.connect(self.receive_features_updated)
         self.db_mngr.tools_updated.connect(self.receive_tools_updated)
         self.db_mngr.tool_features_updated.connect(self.receive_tool_features_updated)
@@ -91,7 +89,6 @@ class SpineDBSignaller(QObject):
         self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
         self.db_mngr.parameter_values_removed.connect(self.receive_parameter_values_removed)
         self.db_mngr.parameter_value_lists_removed.connect(self.receive_parameter_value_lists_removed)
-        self.db_mngr.parameter_tags_removed.connect(self.receive_parameter_tags_removed)
         self.db_mngr.features_removed.connect(self.receive_features_removed)
         self.db_mngr.tools_removed.connect(self.receive_tools_removed)
         self.db_mngr.tool_features_removed.connect(self.receive_tool_features_removed)
@@ -141,10 +138,6 @@ class SpineDBSignaller(QObject):
     @Slot(object)
     def receive_parameter_value_lists_added(self, db_map_data):
         self._call_in_listeners("receive_parameter_value_lists_added", db_map_data)
-
-    @Slot(object)
-    def receive_parameter_tags_added(self, db_map_data):
-        self._call_in_listeners("receive_parameter_tags_added", db_map_data)
 
     @Slot(object)
     def receive_features_added(self, db_map_data):
@@ -199,10 +192,6 @@ class SpineDBSignaller(QObject):
         self._call_in_listeners("receive_parameter_value_lists_updated", db_map_data)
 
     @Slot(object)
-    def receive_parameter_tags_updated(self, db_map_data):
-        self._call_in_listeners("receive_parameter_tags_updated", db_map_data)
-
-    @Slot(object)
     def receive_features_updated(self, db_map_data):
         self._call_in_listeners("receive_features_updated", db_map_data)
 
@@ -217,10 +206,6 @@ class SpineDBSignaller(QObject):
     @Slot(object)
     def receive_tool_feature_methods_updated(self, db_map_data):
         self._call_in_listeners("receive_tool_feature_methods_updated", db_map_data)
-
-    @Slot(object)
-    def receive_parameter_definition_tags_set(self, db_map_data):
-        self._call_in_listeners("receive_parameter_definition_tags_set", db_map_data)
 
     @Slot(object)
     def receive_scenarios_removed(self, db_map_data):
@@ -263,10 +248,6 @@ class SpineDBSignaller(QObject):
         self._call_in_listeners("receive_parameter_value_lists_removed", db_map_data)
 
     @Slot(object)
-    def receive_parameter_tags_removed(self, db_map_data):
-        self._call_in_listeners("receive_parameter_tags_removed", db_map_data)
-
-    @Slot(object)
     def receive_features_removed(self, db_map_data):
         self._call_in_listeners("receive_features_removed", db_map_data)
 
@@ -290,14 +271,16 @@ class SpineDBSignaller(QObject):
     def _shared_db_map_data(db_map_data, db_maps):
         return {db_map: data for db_map, data in db_map_data.items() if db_map in db_maps}
 
+    @busy_effect
     def _call_in_listeners(self, callback, db_map_data):
         for listener, db_maps in self.listeners.items():
             shared_db_map_data = self._shared_db_map_data(db_map_data, db_maps)
             if shared_db_map_data:
                 try:
-                    getattr(listener, callback)(shared_db_map_data)
+                    method = getattr(listener, callback)
                 except AttributeError:
-                    pass
+                    continue
+                method(shared_db_map_data)
 
     @Slot(set)
     def receive_session_refreshed(self, db_maps):

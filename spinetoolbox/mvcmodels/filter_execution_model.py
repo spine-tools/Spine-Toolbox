@@ -46,7 +46,7 @@ class FilterExecutionModel(QAbstractItemModel):
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if section == 0 and orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return "Execution filters"
+            return "Executions"
 
     def data(self, index, role=Qt.DisplayRole):
         if self._item is None:
@@ -57,6 +57,5 @@ class FilterExecutionModel(QAbstractItemModel):
     def get_log_document(self, filter_id):
         return self._item.filter_log_documents[filter_id]
 
-    def get_consoles(self, filter_id):
-        consoles = self._item.filter_consoles.get(filter_id, {})
-        return consoles.get("python"), consoles.get("julia")
+    def get_console(self, filter_id):
+        return self._item.filter_consoles.get(filter_id)

@@ -25,13 +25,13 @@ class CommitDialog(QDialog):
     """
 
     def __init__(self, parent, *db_names):
-        """Initialize class.
-
+        """
         Args:
             parent (QWidget): the parent widget
-            db_names (str): database names
+            db_names (Iterable of str): database names
         """
         super().__init__(parent)
+        self.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowModality(Qt.ApplicationModal)
         self.commit_msg = None
         self.setWindowTitle('Commit changes to {}'.format(",".join(db_names)))

@@ -8,9 +8,7 @@
              :width: 16
 .. |execute_project| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
              :width: 16
-.. |new| image:: ../../spinetoolbox/ui/resources/menu_icons/file.svg
-             :width: 16
-.. |save| image:: ../../spinetoolbox/ui/resources/menu_icons/save_solid.svg
+.. |file-regular| image:: ../../spinetoolbox/ui/resources/file-regular.svg
              :width: 16
 .. |add_tool_specification| image:: ../../spinetoolbox/ui/resources/wrench_plus.svg
               :width: 16
@@ -129,29 +127,34 @@ Configuring SpineOpt
 ~~~~~~~~~~~~~~~~~~~~
 
 #. To use SpineOpt in your project, you need to create a Tool specification for it.
-   Click on the *add new specific item* button |add_tool_specification| in the tool bar,
-   and select **Create Tool Specification...** from the drop-down menu.
-   The *Edit Tool Specification* form will popup:
+   Click on the small arrow next to the Tool icon |tool_icon| (in the *Main* section of the tool bar),
+   and press **New...**
+   The *Tool specification editor* will popup:
 
-   .. image:: img/edit_tool_specification_new_program_file.png
+   .. image:: img/edit_tool_specification_blank.png
          :align: center
 
 #. Type ‘SpineOpt’ as the name of the specification and select ‘Julia’ as the type.
    Unselect *Execute in work directory*. 
 
-#. Click on |new| (marked in red in the image above) and chose *make new main program...* to create a new Julia file.
+#. Press |file-regular| next to *Main program file* to create a new Julia file.
    Enter a file name, e.g. ‘run_spineopt.jl’, and click **Save**.
 
-#. Back in the *Edit Tool Specification* form, click **Ok** to save the specification and leave the form.
-
-#. To add content to the main program file, right click on the newly created 'SpineOpt' item in the tool bar and chose *Edit main program file...*. This will open the file in your default editor. Enter the following text in it: 
+#. Back in the *Tool specification editor* form, select the file you just created under *Main program file*.
+   Then, enter the following text in the text editor to the right: 
 
    .. code-block:: julia
 
       using SpineOpt
+
       run_spineopt(ARGS...)
 
-   Save this file and return to Spine Toolbox.
+   At this point, the form should be looking similar to this:
+
+   .. image:: img/edit_tool_specification_spine_opt.png
+         :align: center
+
+#. Press **Ctrl+S** to save everything, then close the *Tool specification editor*.
 
 
 Setting up project
@@ -246,6 +249,14 @@ Importing the SpineOpt database template
 
 #. From the editor menu (Alt + F), select **Session -> Commit**.
    Enter ‘Import SpineOpt template’ as message in the popup dialog, and click **Commit**.
+
+
+.. note:: The SpineOpt template contains the fundamental object and relationship classes,
+   as well as parameter definitions, that SpineOpt recognizes and expects.
+   You can think of it as the *generic structure* of the model,
+   as opposed to the *specific data* for a particular instance.
+   In the remainder of this section, we will add that specific data for the Skellefte river.
+
 
 Creating objects
 ~~~~~~~~~~~~~~~~

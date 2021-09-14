@@ -1,11 +1,13 @@
 # Spine Toolbox
+Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
 [![Python](https://img.shields.io/badge/python-3.7%20|%203.8-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Unit tests](https://github.com/Spine-project/Spine-Toolbox/workflows/Unit%20tests/badge.svg)](https://github.com/Spine-project/Spine-Toolbox/actions?query=workflow%3A"Unit+tests")
 [![codecov](https://codecov.io/gh/Spine-project/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/Spine-project/Spine-Toolbox)
+[![PyPI version](https://badge.fury.io/py/spinetoolbox.svg)](https://badge.fury.io/py/spinetoolbox)
 
-An application to define, manage, and execute various energy system simulation models.
+Spine Toolbox is an open source Python package to manage data, scenarios and workflows for modelling and simulation. You can have your local workflow, but work as a team through version control and SQL databases.
 
 ## Programming language
 
@@ -22,88 +24,97 @@ documentation, original graphics and other material are released under the
 Licenses of all packages used by Spine Toolbox are listed in the Spine Toolbox User 
 Guide.
 
+## Installation
 
-## Official releases
+We provide three options for installing Spine Toolbox: [PyPi](#installation-with-python-and-pipx), [Windows installation file](#windows-64-bit-installer-package), and [git](#installation-from-sources-using-git).
 
-Release versions of Spine Toolbox can be found 
-[here](https://drive.google.com/drive/folders/1t-AIIwRMl3HiYgka4ex5bCccI2gpbspK)
-(only available for 64-bit Windows for now). Download the latest version, install and
-run `spinetoolbox.exe`.
+### 1. Installation from PyPI (Python Package Index)
 
-## Development version
+This works best for users that want to just use Spine Toolbox but also keep it updated with new releases.
 
-The development version of Spine Toolbox is in the master branch on this repository, and it has all the latest features and bug-fixes.
-Please note that this version has passed automated testing, but has not been completely manually tested.
+1. If you don't yet have Python 3.7 or 3.8, then install Python 3.8.
+   - Get [the latest 3.8 release from Python.org](https://www.python.org/downloads/release/python-3810/) or from the Windows Store.
 
-### Installation
+2. Open a terminal (e.g., Command Prompt on Windows).
 
-1. Do you have Conda? If yes, go directly to step 2. Otherwise, install either [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
-(recommended) or [Anaconda](https://www.anaconda.com/distribution/) (good alternative).
+3. Install the latest Spine Toolbox release from PyPi by running
 
-2. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
+        pip install spinetoolbox
 
-3. Create a new environment by typing:
+That’s it!
 
-        conda create -n spinetoolbox python=3.7
+To launch Spine Toolbox, open a terminal and run
 
-4. Activate the new environment:
+    python -m spinetoolbox
 
-        conda activate spinetoolbox
+To upgrade Spine Toolbox to the latest available release, open a terminal and run
 
-5. Install **git** in the new environment:
-
-        conda install -c anaconda git
-
-6. Clone the Spine Toolbox repository from GitHub to your computer:
-
-        git clone https://github.com/Spine-project/Spine-Toolbox.git
-
-7. Navigate to your clone's root:
-
-        cd Spine-Toolbox
-
-8. Install requirements using **pip**:
-
-        python -m pip install -r requirements.txt
-
-9. Run:
-
-        python -m spinetoolbox
+    pip install --upgrade spinetoolbox
 
 
-### Running
+### 2. Windows 64-bit Installer Package
 
-1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
-
-2. Activate the `spinetoolbox` environment:
-
-        conda activate spinetoolbox
-
-3. Run:
-
-        python -m spinetoolbox
-
-### Upgrading
+Windows installer packages are published periodically
+but not as frequently as the standard Python installation above.
+This option is suitable for users who cannot install Python or don’t need to get the most recent updates. This should be the most stable option.
+Download the latest installer package from [here](https://github.com/Spine-project/Spine-Toolbox/releases),
+run it, and follow the instructions to install Spine Toolbox.
 
 
-1. Open [Anaconda Prompt](https://docs.anaconda.com/_images/win-anaconda-prompt1.png).
+### 3. Installation from sources using GIT
 
-2. Activate the `spinetoolbox` environment:
+This option is for the developers and other contributors who want to debug or 
+edit the Spine Toolbox source code.
+First, follow the instructions above to install Python and get the latest 
+version of pip.
 
-        conda activate spinetoolbox
+1. Clone or download the source code from this repository.
+   
+2. Browse to the folder and create a virtual environment using
 
-3. Navigate to your Spine Toolbox clone's root:
+        python -m venv .venv
 
-        cd Spine-Toolbox
+   (Advanced users can also manage the environment using 
+   [conda](https://docs.conda.io/projects/conda/), but this is not covered here.)
+    
+3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
+   or `source .venv/bin/activate` (bash, zsh). 
 
-4. Pull the latest contents of the Spine Toolbox repository:
+4. Make sure that the terminal prompt indicates the active environment, 
+   and install Spine Toolbox by running
 
-        git pull
+        pip install -r requirements.txt
+    
+5. (Optional) Install additional development packages with
 
-5. Upgrade requirements using **pip**:
+        pip install -r dev-requirements.txt
 
-        python -m pip install --upgrade -r requirements.txt
+You can now launch Spine Toolbox by running `spinetoolbox` when the environment 
+is active. 
 
+**To upgrade**, pull or copy the latest changes from the repository and run
+
+    pip install --upgrade -r requirements.txt
+
+**NOTE:** Even though `spinedb_api`, `spine_engine`, and `spine_items` are listed in spinetoolbox's `requirements.txt`, 
+the command above may not always upgrade these packages. This is because we do not bump the version number on every 
+commit. Before writing a bug report, **please make sure you are using the latest commit of these three packages 
+by doing the following:**
+
+To upgrade `spinedb_api`, run
+
+    pip uninstall -y spinedb-api && pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
+
+To upgrade `spine_engine`, run
+
+    pip uninstall -y spine-engine && pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
+
+To upgrade `spine_items`, run
+
+    pip uninstall -y spine-items && pip install --upgrade git+https://github.com/Spine-project/spine-items.git#egg=spine_items
+
+**Or you can use the provided scripts `/bin/upgrade_spine_reqs.bat` on Windows or `/bin/upgrade_spine_reqs.py` 
+on Other OS's to upgrade all three at once.**
 
 ### About requirements
 
@@ -114,14 +125,7 @@ See file `setup.py` and `requirements.txt` for packages required to run Spine To
 
 The requirements include three packages ([`spinedb_api`](https://github.com/Spine-project/Spine-Database-API),
 [`spine_engine`](https://github.com/Spine-project/spine-engine), and [`spine_items`](https://github.com/Spine-project/spine-items)),
-developed by the Spine project consortium. Since these packages are developed very actively at the moment, 
-they may get upgraded quite regularly whenever you run `python -m pip install --upgrade -r requirements.txt`.
-
-In some cases (if you forget to run `python -m pip install --upgrade -r requirements.txt` after `git pull`),
-the application will refuse to start unless you upgrade these packages.
-Just follow the instructions that will appear in the Anaconda Prompt
-(or simply, run `python -m pip install --upgrade -r requirements.txt`).
-
+developed by the Spine project consortium.
 
 ### Building the User Guide
 
@@ -142,13 +146,20 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 Please make sure you are using Python 3.7 or Python 3.8 to install the requirements.
 
+#### Installation from PyPI fails due to package requirement conflictions
+Spine Toolbox release versions from PyPI require some very specific versions of the dependant 
+packages. This may cause problems when installing the app (`pip install spinetoolbox`) to 
+an existing environment. In this case, please use [pipx](https://pypa.github.io/pipx/) for 
+installing Spine Toolbox in an isolated environment or use Mini/Anaconda as an environment 
+manager.
+
 #### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
 following commands in a terminal may help:
 
 ```shell
-sudo apt install libpq-dev
-sudo apt-get install unixodbc-dev
+$ sudo apt install libpq-dev
+$ sudo apt-get install unixodbc-dev
 ```
 
 #### Problems in starting the application
@@ -171,19 +182,6 @@ not needed and there is a chance of conflicts between the packages.
 
 **Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support PySide2 
 version 5.15 (yet).
-
-#### ImportError: DLL load failed while importing win32api
-
-If you installed Spine Toolbox *without Conda* on **Python 3.8 on Windows**, 
-you may see this error when trying to execute a project item. The cause of this error 
-is the package `pywin32` version 225. To fix this error, upgrade the package with the 
-following command
-
-```shell
-pip install --upgrade pywin32
-```
-
-to the latest version and restart the application.
 
 ## Contribution Guide
 
@@ -218,9 +216,7 @@ The project root includes a configuration file for `pylint`.
 Unit tests are located in the `tests` directory.
 You can run the entire test suite from project root by
 
-```shell
-python -m unittest
-```
+    python -m unittest
 
 ### Reporting bugs
 If you think you have found a bug, please check the following before creating a new 
@@ -249,3 +245,14 @@ out the required fields on the issue tracker and give a description of the new f
 A picture accompanying the description is a good way to get your idea into development
 faster. But before you make a new issue, please check that there isn't a related idea 
 already open in the issue tracker.
+
+&nbsp;
+<hr>
+<center>
+<table width=500px frame="none">
+<tr>
+<td valign="middle" width=100px>
+<img src=https://europa.eu/european-union/sites/europaeu/files/docs/body/flag_yellow_low.jpg alt="EU emblem" width=100%></td>
+<td valign="middle">This project has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 774629.</td>
+</table>
+</center>

@@ -16,8 +16,9 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
+from spinedb_api.parameter_value import join_value_and_type
 from ...helpers import rows_to_row_count_tuples
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
@@ -40,9 +41,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     and one empty parameter model.
     """
 
-    data_for_single_model_received = Signal(object, int, list)
-    """Emitted by the fetcher when there's data for another single model."""
-
     def __init__(self, parent, db_mngr, *db_maps):
         """Initializes model.
 
@@ -56,10 +54,26 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._filter_class_ids = {}
-        self._filter_valid = True
         self._auto_filter_menus = {}
         self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
-        self.data_for_single_model_received.connect(self.create_and_append_single_model)
+        self._filter_timer = QTimer(self)
+        self._filter_timer.setSingleShot(True)
+        self._filter_timer.setInterval(100)
+        self._filter_timer.timeout.connect(self.refresh)
+
+    def canFetchMore(self, parent=QModelIndex()):
+        return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self.db_maps)
+
+    def fetchMore(self, parent=QModelIndex()):
+        for db_map in self.db_maps:
+            self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
+
+    def fetch_successful(self, db_map, item):
+        model = self._create_single_model(db_map, item["entity_class_id"])
+        return self.filter_accepts_model(model) and model.filter_accepts_item(item)
+
+    def fetch_id(self):
+        return str(self.__dict__)
 
     def _make_header(self):
         raise NotImplementedError()
@@ -139,6 +153,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def init_model(self):
         """Initializes the model."""
         super().init_model()
+        self.empty_model.fetchMore()
         self._make_auto_filter_menus()
 
     def _make_auto_filter_menus(self):
@@ -226,8 +241,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return True
 
     def _class_filter_accepts_model(self, model):
-        if self._filter_class_ids is None:
-            return False
         if not self._filter_class_ids:
             return True
         return model.entity_class_id in self._filter_class_ids.get(model.db_map, set())
@@ -255,51 +268,38 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     def _invalidate_filter(self):
         """Sets the filter invalid."""
-        self._filter_valid = False
-        QTimer.singleShot(0, self._refresh_if_still_invalid)
-
-    @Slot()
-    def _refresh_if_still_invalid(self):
-        if self._filter_valid:
-            return
-        self.refresh()
-        self._filter_valid = True
+        self._filter_timer.start()
 
     def set_filter_class_ids(self, class_ids):
         if class_ids != self._filter_class_ids:
             self._filter_class_ids = class_ids
             self._invalidate_filter()
 
-    def set_filter_parameter_ids(self, parameter_ids):
-        for model in self.single_models:
-            if model.set_filter_parameter_ids(parameter_ids):
-                self._invalidate_filter()
-
     @Slot(str, dict)
-    def set_auto_filter(self, field, auto_filter):
+    def set_auto_filter(self, field, values):
         """Updates and applies the auto filter.
 
         Args:
             field (str): the field name
-            auto_filter (dict): mapping db_map to entity_class id to accepted values for the field
+            values (dict): mapping db_map to entity_class id to accepted values for the field
         """
-        self.set_compound_auto_filter(field, auto_filter)
+        self._set_compound_auto_filter(field, values)
         for model in self.accepted_single_models():
-            self.set_single_auto_filter(model, field)
+            self._set_single_auto_filter(model, field)
 
-    def set_compound_auto_filter(self, field, auto_filter):
+    def _set_compound_auto_filter(self, field, values):
         """Sets the auto filter for given column in the compound model.
 
         Args:
             field (str): the field name
-            auto_filter (dict): maps tuple (database map, entity_class id) to list of accepted ids for the field
+            values (dict): maps tuple (database map, entity_class id) to list of accepted ids for the field
         """
-        if self._auto_filter.setdefault(field, {}) == auto_filter:
+        if self._auto_filter.setdefault(field, {}) == values:
             return
-        self._auto_filter[field] = auto_filter
+        self._auto_filter[field] = values
         self._invalidate_filter()
 
-    def set_single_auto_filter(self, model, field):
+    def _set_single_auto_filter(self, model, field):
         """Sets the auto filter for given column in the given single model.
 
         Args:
@@ -310,10 +310,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             bool: True if the auto-filtered values were updated, None otherwise
         """
         values = self._auto_filter[field].get(model.db_map, {}).get(model.entity_class_id, {})
-        if values == model._auto_filter.get(field, {}):
-            return
-        model._auto_filter[field] = values
-        self._invalidate_filter()
+        if model.set_auto_filter(field, values):
+            self._invalidate_filter()
 
     def _row_map_for_model(self, model):
         """Returns the row map for the given model.
@@ -353,7 +351,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for model in self._models_with_db_map(db_map):
                 if model.entity_class_id in ids:
                     self.sub_models.remove(model)
-        self.do_refresh()
+        self._do_refresh()
         self.layoutChanged.emit()
 
     def _items_per_class(self, items):
@@ -385,15 +383,20 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids = [item["id"] for item in class_items]
-                self.data_for_single_model_received.emit(db_map, entity_class_id, ids)
+                self._create_and_append_single_model(db_map, entity_class_id, ids)
                 self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.receive_parameter_data_added(db_map_data)
 
-    @Slot(object, int, list)
-    def create_and_append_single_model(self, db_map, entity_class_id, ids):
+    def _create_single_model(self, db_map, entity_class_id):
         model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
+        for field in self._auto_filter:
+            self._set_single_auto_filter(model, field)
+        return model
+
+    def _create_and_append_single_model(self, db_map, entity_class_id, ids):
+        model = self._create_single_model(db_map, entity_class_id)
         model.reset_model(ids)
-        single_row_map = super()._row_map_for_model(model)  # NOTE: super() is to get all (unfiltered) rows
+        single_row_map = self._row_map_for_model(model)
         self._insert_single_row_map(single_row_map)
         self.sub_models.insert(len(self.single_models), model)
 
@@ -431,7 +434,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                     del model._main_data[row : row + count]
             for class_items in items_per_class.values():
                 self._do_remove_data_from_filter_menus(db_map, class_items)
-        self.do_refresh()
+        self._do_refresh()
         self.layoutChanged.emit()
 
     def _emit_data_changed_for_column(self, field):
@@ -466,7 +469,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             },
             "parameter_value": {"object_class": "object_name", "relationship_class": "object_name_list"},
         }[self.item_type][self.entity_class_type]
-        entity_name = item[entity_name_key].replace(",", self.db_mngr._GROUP_SEP)
+        entity_name = item[entity_name_key].replace(",", self.db_mngr.GROUP_SEP)
         return entity_name + " - " + item["parameter_name"]
 
     def get_set_data_delayed(self, index):
@@ -481,11 +484,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """
         sub_model = self.sub_model_at_row(index.row())
         if sub_model == self.empty_model:
-            return lambda value, index=index: self.setData(index, value)
+            return lambda value_and_type, index=index: self.setData(index, join_value_and_type(*value_and_type))
         id_ = self.item_at_row(index.row())
         value_field = {"parameter_value": "value", "parameter_definition": "default_value"}[self.item_type]
-        return lambda value, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
-            [{"id": id_, value_field: value}]
+        return lambda value_and_type, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
+            [{"id": id_, value_field: join_value_and_type(*value_and_type)}]
         )
 
     def get_entity_class_id(self, index, db_map):
@@ -536,12 +539,12 @@ class CompoundParameterDefinitionMixin:
     def item_type(self):
         return "parameter_definition"
 
-    def receive_parameter_definition_tags_set(self, db_map_data):
-        self._emit_data_changed_for_column("parameter_tag_list")
-
 
 class CompoundParameterValueMixin:
     """Handles signals from db mngr for parameter_value models."""
+
+    _filter_entity_ids = dict()
+    _filter_alternative_ids = dict()
 
     @property
     def item_type(self):
@@ -558,14 +561,22 @@ class CompoundParameterValueMixin:
         raise NotImplementedError()
 
     def set_filter_entity_ids(self, entity_ids):
+        self._filter_entity_ids = entity_ids
         for model in self.single_models:
             if model.set_filter_entity_ids(entity_ids):
                 self._invalidate_filter()
 
     def set_filter_alternative_ids(self, alternative_ids):
+        self._filter_alternative_ids = alternative_ids
         for model in self.single_models:
             if model.set_filter_alternative_ids(alternative_ids):
                 self._invalidate_filter()
+
+    def _create_single_model(self, db_map, entity_class_id):
+        model = super()._create_single_model(db_map, entity_class_id)
+        model.set_filter_entity_ids(self._filter_entity_ids)
+        model.set_filter_alternative_ids(self._filter_alternative_ids)
+        return model
 
     def receive_alternatives_updated(self, db_map_data):
         """Updated alternative column
@@ -584,15 +595,7 @@ class CompoundObjectParameterDefinitionModel(
     """
 
     def _make_header(self):
-        return [
-            "object_class_name",
-            "parameter_name",
-            "value_list_name",
-            "parameter_tag_list",
-            "default_value",
-            "description",
-            "database",
-        ]
+        return ["object_class_name", "parameter_name", "value_list_name", "default_value", "description", "database"]
 
 
 class CompoundRelationshipParameterDefinitionModel(
@@ -608,7 +611,6 @@ class CompoundRelationshipParameterDefinitionModel(
             "object_class_name_list",
             "parameter_name",
             "value_list_name",
-            "parameter_tag_list",
             "default_value",
             "description",
             "database",

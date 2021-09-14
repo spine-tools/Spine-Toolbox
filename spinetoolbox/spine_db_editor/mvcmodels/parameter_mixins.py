@@ -16,7 +16,7 @@ Miscelaneous mixins for parameter models
 :date:   4.10.2019
 """
 
-from PySide2.QtCore import Qt
+from spinedb_api.parameter_value import split_value_and_type
 
 
 def _parse_csv_list(csv_list):
@@ -45,6 +45,14 @@ class ConvertToDBMixin:
             list: error log
         """
         item = item.copy()
+        value_field, type_field = {
+            "parameter_value": ("value", "type"),
+            "parameter_definition": ("default_value", "default_type"),
+        }[self.item_type]
+        if value_field in item:
+            value, value_type = split_value_and_type(item[value_field])
+            item[value_field] = value
+            item[type_field] = value_type
         return item, []
 
 
@@ -73,7 +81,7 @@ class FillInAlternativeIdMixin(ConvertToDBMixin):
         self._db_map_alt_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "alternative", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "alternative", "name", name, only_visible=False)
                 if item:
                     self._db_map_alt_lookup.setdefault(db_map, {})[name] = item
 
@@ -143,7 +151,7 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         self._db_map_value_list_lookup.clear()
         for db_map, names in db_map_value_list_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "parameter_value_list", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "parameter_value_list", "name", name, only_visible=False)
                 if item:
                     self._db_map_value_list_lookup.setdefault(db_map, {})[name] = item
 
@@ -185,63 +193,6 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         return []
 
 
-class MakeParameterTagMixin(ConvertToDBMixin):
-    """Makes parameter_tag items."""
-
-    def __init__(self, *args, **kwargs):
-        """Initializes lookup dicts."""
-        super().__init__(*args, **kwargs)
-        self._db_map_tag_lookup = dict()
-
-    def build_lookup_dictionary(self, db_map_data):
-        """Builds a name lookup dictionary for the given data.
-
-        Args:
-            db_map_data (dict): lists of model items keyed by DiffDatabaseMapping
-        """
-        super().build_lookup_dictionary(db_map_data)
-        # Group data by name
-        db_map_parameter_tags = dict()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                parameter_tag_list = item.get("parameter_tag_list")
-                parameter_tag_list = _parse_csv_list(parameter_tag_list)
-                if parameter_tag_list:
-                    db_map_parameter_tags.setdefault(db_map, set()).update(parameter_tag_list)
-        # Build lookup dict
-        self._db_map_tag_lookup.clear()
-        for db_map, tags in db_map_parameter_tags.items():
-            for tag in tags:
-                item = self.db_mngr.get_item_by_field(db_map, "parameter_tag", "tag", tag)
-                if item:
-                    self._db_map_tag_lookup.setdefault(db_map, {})[tag] = item
-
-    def _make_parameter_definition_tag(self, item, db_map):
-        """Returns a db parameter_definition tag item (id-based) from the given model parameter_definition item (name-based).
-
-        Args:
-            item (dict): the model parameter_definition item
-            db_map (DiffDatabaseMapping): the database where the resulting item belongs
-
-        Returns:
-            dict: the db parameter_definition tag item
-            list: error log
-        """
-        parameter_tag_list = item.pop("parameter_tag_list", None)
-        parsed_parameter_tag_list = _parse_csv_list(parameter_tag_list)
-        if parsed_parameter_tag_list is None:
-            return None, [f"Unable to parse {parameter_tag_list}"] if parameter_tag_list else []
-        parameter_tag_id_list = []
-        for tag in parsed_parameter_tag_list:
-            if tag == "":
-                break
-            tag_item = self._db_map_tag_lookup.get(db_map, {}).get(tag)
-            if not tag_item:
-                return None, [f"Unknown tag {tag}"]
-            parameter_tag_id_list.append(str(tag_item["id"]))
-        return ({"id": item["id"], "parameter_tag_id_list": ",".join(parameter_tag_id_list)}, [])
-
-
 class FillInEntityClassIdMixin(ConvertToDBMixin):
     """Fills in entity_class ids."""
 
@@ -267,7 +218,7 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
         self._db_map_ent_cls_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", name, only_visible=False)
                 if item:
                     self._db_map_ent_cls_lookup.setdefault(db_map, {})[name] = item
 
@@ -331,7 +282,9 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
         self._db_map_ent_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                items = self.db_mngr.get_items_by_field(db_map, self.entity_type, self.entity_name_key_in_cache, name)
+                items = self.db_mngr.get_items_by_field(
+                    db_map, self.entity_type, self.entity_name_key_in_cache, name, only_visible=False
+                )
                 if items:
                     self._db_map_ent_lookup.setdefault(db_map, {})[name] = items
 
@@ -396,7 +349,9 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
             for name in names:
                 items = [
                     x
-                    for x in self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", name)
+                    for x in self.db_mngr.get_items_by_field(
+                        db_map, "parameter_definition", "parameter_name", name, only_visible=False
+                    )
                     if self.entity_class_id_key in x
                 ]
                 if items:
@@ -481,7 +436,9 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
                 return ["Unable to infer entity_class."]
             entity_class_id = entity_class_ids.pop()
             item[self.entity_class_id_key] = entity_class_id
-            entity_class_name = self.db_mngr.get_item(db_map, self.entity_class_type, entity_class_id)["name"]
+            entity_class_name = self.db_mngr.get_item(
+                db_map, self.entity_class_type, entity_class_id, only_visible=False
+            )["name"]
             # TODO: Try to find a better place for this, and emit dataChanged
             self._main_data[row][self.header.index(self.entity_class_name_key)] = entity_class_name
         # At this point we're sure the entity_class_id is there
@@ -534,51 +491,6 @@ class ImposeEntityClassIdMixin(ConvertToDBMixin):
         return []
 
 
-class ValidateValueInListMixin(ConvertToDBMixin):
-    """Validates that the chosen value is in the value list if one set."""
-
-    def _convert_to_db(self, item, db_map):
-        """Returns a db item (id-based) from the given model item (name-based).
-
-        Args:
-            item (dict): the model item
-            db_map (DiffDatabaseMapping): the database where the resulting item belongs
-
-        Returns:
-            dict: the db item
-            list: error log
-        """
-        item, err = super()._convert_to_db(item, db_map)
-        value = item.get("value")
-        if value is None:
-            return item, err
-        param_def_id = self._get_parameter_definition_id(db_map, item)
-        param_def = self.db_mngr.get_item(db_map, "parameter_definition", param_def_id)
-        value_list = self.db_mngr.get_parameter_value_list(db_map, param_def.get("value_list_id"), role=Qt.EditRole)
-        if value_list and value not in value_list:
-            item["has_valid_value_from_list"] = False
-            msg = (
-                f"Invalid value '{value}' for parameter '{param_def['parameter_name']}', "
-                f"valid values are {', '.join(value_list)}"
-            )
-            return item, err + [msg]
-        return item, err
-
-    def _get_parameter_definition_id(self, db_map, item):
-        raise NotImplementedError()
-
-
-class ValidateValueInListForInsertMixin(ValidateValueInListMixin):
-    def _get_parameter_definition_id(self, db_map, item):
-        return item.get("parameter_definition_id")
-
-
-class ValidateValueInListForUpdateMixin(ValidateValueInListMixin):
-    def _get_parameter_definition_id(self, db_map, item):
-        param_val = self.db_mngr.get_item(db_map, "parameter_value", item["id"])
-        return param_val.get("parameter_id")
-
-
 class MakeRelationshipOnTheFlyMixin:
     """Makes relationships on the fly."""
 
@@ -615,17 +527,20 @@ class MakeRelationshipOnTheFlyMixin:
         self._db_map_obj_lookup.clear()
         for db_map, names in db_map_object_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "object", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "object", "name", name, only_visible=False)
                 if item:
                     self._db_map_obj_lookup.setdefault(db_map, {})[name] = item
         self._db_map_rel_cls_lookup.clear()
         for db_map, names in db_map_rel_cls_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "relationship_class", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "relationship_class", "name", name, only_visible=False)
                 if item:
                     self._db_map_rel_cls_lookup.setdefault(db_map, {})[name] = item
         self._db_map_existing_rels = {
-            db_map: {self._make_unique_relationship_id(x) for x in self.db_mngr.get_items(db_map, "relationship")}
+            db_map: {
+                self._make_unique_relationship_id(x)
+                for x in self.db_mngr.get_items(db_map, "relationship", only_visible=False)
+            }
             for db_map in self._db_map_obj_lookup.keys() | self._db_map_rel_cls_lookup.keys()
         }
 

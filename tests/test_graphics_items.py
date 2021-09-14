@@ -51,7 +51,7 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(icon.x(), 0)
         self.assertEqual(icon.y(), 0)
         self.assertEqual(icon.incoming_links(), [])
-        self.assertEqual(icon.outgoing_links(), [])
+        self.assertEqual(icon.outgoing_connection_links(), [])
 
     def test_finalize(self):
         icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
@@ -76,11 +76,11 @@ class TestProjectItemIcon(unittest.TestCase):
         link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"), connection)
         link.src_connector.links.append(link)
         link.dst_connector.links.append(link)
-        self.assertEqual(source_icon.outgoing_links(), [link])
+        self.assertEqual(source_icon.outgoing_connection_links(), [link])
         self.assertEqual(target_icon.incoming_links(), [link])
 
     def test_drag_icon(self):
-        item = add_view(self._toolbox.project(), "View")
+        item = add_view(self._toolbox.project(), self._toolbox.item_factories, "View")
         icon = item.get_icon()
         self.assertEqual(icon.x(), 0.0)
         self.assertEqual(icon.y(), 0.0)
@@ -90,8 +90,8 @@ class TestProjectItemIcon(unittest.TestCase):
         icon.mouseReleaseEvent(QGraphicsSceneMouseEvent(QEvent.GraphicsSceneMouseRelease))
         self.assertEqual(icon.x(), 99.0)
         self.assertEqual(icon.y(), 88.0)
-        self.assertEqual(self._toolbox.undo_stack.count(), 2)  # First in the stack is Add item command
-        move_command = self._toolbox.undo_stack.command(1)
+        self.assertEqual(self._toolbox.undo_stack.count(), 1)
+        move_command = self._toolbox.undo_stack.command(0)
         self.assertIsInstance(move_command, MoveIconCommand)
 
 
@@ -156,7 +156,7 @@ class TestLink(unittest.TestCase):
         with patch("spinetoolbox.ui_main.SpineDBManager.thread", new_callable=PropertyMock) as mock_thread:
             mock_thread.return_value = QApplication.instance().thread()
             self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
-        type(self._toolbox.db_mngr).thread = PropertyMock(return_value=QApplication.instance().thread())
+        type(self._toolbox.db_mngr).worker_thread = PropertyMock(return_value=QApplication.instance().thread())
         source_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))
         source_item_icon.update_name_item("source icon")
         destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.gray))

@@ -29,10 +29,12 @@ To open multiple databases in Spine database editor:
 From the command line
 =====================
 
-To open a single SQLite database in Spine database editor, use the ``open_spine_db_editor.py`` script
-in the ``bin`` folder::
+To open a single database in Spine database editor, use the ``spine-db-editor`` 
+application which comes with Spine Toolbox::
 
-    open_spine_db_editor.py "...path of the database file..."
+    spine-db-editor "...url of the database..." 
+
+Note that for e.g. an SQLite database, the url should start with ‘sqlite:’.
 
 
 Knowing the UI
@@ -48,9 +50,10 @@ The form has the following main UI components:
 - *Pivot table* and *Frozen table*: they present data for a given class in the form of a pivot table,
   optionally with frozen dimensions.
 - *Entity graph*: it presents the structure of classes and entities in the shape of a graph.
-- *Parameter value list*: it presents parameter value lists available in the database.
-- *Parameter tag toolbar*: it presents parameter tags defined in the database.
+- *Tool/Feature tree*: it presents tools, features, and methods defined in the databases.
+- *Parameter value list*: it presents parameter value lists available in the databases.
+- *Alternative/Scenario tree*: it presents scenarios and alternatives defined in the databases.
+- *Parameter tag*: it presents parameter tags defined in the databases.
 
-.. tip:: You can show or hide form components using the **View** menu,
-   or select among three predefined layout styles: **Stacked style**, **Pivot style**, and **Graph style**.
+.. tip:: You can customize the UI from the **View** and **Pivot** sections in the hamburger menu.
 

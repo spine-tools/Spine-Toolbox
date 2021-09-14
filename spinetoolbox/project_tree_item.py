@@ -170,25 +170,18 @@ class CategoryProjectTreeItem(BaseProjectTreeItem):
 class LeafProjectTreeItem(BaseProjectTreeItem):
     """Class for leaf items in the project item tree."""
 
-    def __init__(self, project_item, toolbox):
+    def __init__(self, project_item):
         """
         Args:
             project_item (ProjectItem): the real project item this item represents
-            toolbox (ToolboxUI): a toolbox instance
         """
         super().__init__(project_item.name, project_item.description)
         self._project_item = project_item
-        self._toolbox = toolbox
 
     @property
     def project_item(self):
         """the project item linked to this leaf"""
         return self._project_item
-
-    @property
-    def toolbox(self):
-        """the toolbox instance"""
-        return self._toolbox
 
     def add_child(self, child_item):
         """See base class."""

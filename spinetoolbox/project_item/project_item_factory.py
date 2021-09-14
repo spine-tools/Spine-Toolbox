@@ -30,6 +30,15 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
+    def is_deprecated():
+        """Queries if item is deprecated.
+
+        Returns:
+            bool: True if item is deprecated, False otherwise
+        """
+        return False
+
+    @staticmethod
     def icon():
         """
         Returns the icon resource path.
@@ -45,7 +54,7 @@ class ProjectItemFactory:
         Returns the icon color.
 
         Returns:
-            QIcon
+            QColor: icon's color
         """
         raise NotImplementedError()
 

@@ -22,9 +22,11 @@ import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 from spine_engine import SpineEngineState
+from spine_engine.exception import EngineInitFailed
+from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
 from .dag_handler import DirectedGraphHandler
-from .helpers import make_settings_dict_for_engine
+from .helpers import make_settings_dict_for_engine, plugins_dirs, load_plugin_dict, load_plugin_specifications
 from .spine_engine_manager import make_engine_manager
 
 
@@ -130,6 +132,19 @@ class ExecuteProject(QObject):
         Returns:
             _Status: status code
         """
+        app_settings = QSettings("SpineProject", "Spine Toolbox")
+        spec_factories = load_item_specification_factories("spine_items")
+        plugin_specifications = dict()
+        for plugin_dir in plugins_dirs(app_settings):
+            plugin_dict = load_plugin_dict(plugin_dir, self._logger)
+            if plugin_dict is None:
+                continue
+            specs = load_plugin_specifications(plugin_dict, spec_factories, app_settings, self._logger)
+            if specs is None:
+                continue
+            for spec_list in specs.values():
+                for spec in spec_list:
+                    plugin_specifications.setdefault(spec.item_type, []).append(spec)
         project_dir = pathlib.Path(self._args.project).resolve()
         project_file_path = project_dir / ".spinetoolbox" / "project.json"
         try:
@@ -145,8 +160,12 @@ class ExecuteProject(QObject):
         item_dicts, specification_dicts, connection_dicts, dag_handler = open_project(
             project_dict, project_dir, self._logger
         )
+        for item_type, plugin_specs in plugin_specifications.items():
+            for spec in plugin_specs:
+                spec_dict = spec.to_dict()
+                spec_dict["definition_file_path"] = spec.definition_file_path
+                specification_dicts.setdefault(item_type, []).append(spec_dict)
         dags = dag_handler.dags()
-        app_settings = QSettings("SpineProject", "Spine Toolbox")
         settings = make_settings_dict_for_engine(app_settings)
         for dag in dags:
             node_successors = dag_handler.node_successors(dag)
@@ -160,12 +179,17 @@ class ExecuteProject(QObject):
                 "connections": connection_dicts,
                 "node_successors": node_successors,
                 "execution_permits": execution_permits,
+                "items_module_name": "spine_items",
                 "settings": settings,
                 "project_dir": project_dir,
             }
             engine_server_address = app_settings.value("appSettings/engineServerAddress", defaultValue="")
             engine_manager = make_engine_manager(engine_server_address)
-            engine_manager.run_engine(engine_data)
+            try:
+                engine_manager.run_engine(engine_data)
+            except EngineInitFailed as error:
+                self._logger.msg_error.emit(f"Engine failed to start: {error}")
+                return _Status.ERROR
             while True:
                 event_type, data = engine_manager.get_engine_event()
                 self._process_engine_event(event_type, data)

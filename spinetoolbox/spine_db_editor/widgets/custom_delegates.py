@@ -21,10 +21,13 @@ from PySide2.QtCore import QModelIndex, QPoint, Qt, Signal
 from PySide2.QtWidgets import QStyledItemDelegate
 from PySide2.QtGui import QFontMetrics
 from spinedb_api import to_database
+from spinedb_api.parameter_value import join_value_and_type
 from ...widgets.custom_editors import CustomLineEditor, SearchBarEditor, CheckListEditor, ParameterValueLineEditor
 from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ...helpers import object_icon
+
+# FIXME: only_visible=False ???
 
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
@@ -149,7 +152,7 @@ class ParameterPivotTableDelegate(QStyledItemDelegate):
         """Send signal."""
         data = editor.data()
         if isinstance(editor, ParameterValueLineEditor):
-            data = to_database(data)
+            data = join_value_and_type(*to_database(data))
         self.data_committed.emit(index, data)
 
     def setEditorData(self, editor, index):
@@ -214,7 +217,7 @@ class ParameterDelegate(QStyledItemDelegate):
         db_mngr (SpineDBManager): database manager
     """
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent, db_mngr):
         """
@@ -271,7 +274,7 @@ class DatabaseNameDelegate(ParameterDelegate):
 class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     """A delegate for the either the value or the default value."""
 
-    parameter_value_editor_requested = Signal("QModelIndex")
+    parameter_value_editor_requested = Signal(QModelIndex)
 
     def __init__(self, parent, db_mngr):
         super().__init__(parent, db_mngr)
@@ -280,8 +283,11 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
     def setModelData(self, editor, model, index):
         """Send signal."""
         display_value = editor.data()
-        db_value = self._db_value_list_lookup.get(display_value, to_database(display_value))
-        self.data_committed.emit(index, db_value)
+        if display_value in self._db_value_list_lookup:
+            value = self._db_value_list_lookup[display_value]
+        else:
+            value = join_value_and_type(*to_database(display_value))
+        self.data_committed.emit(index, value)
 
     def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
         """Emits the signal to request a standalone `ParameterValueEditor` from parent widget."""
@@ -312,7 +318,7 @@ class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
 
 
 class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
-    """A delegate for the either the default value."""
+    """A delegate for the default value."""
 
     def _get_value_list_id(self, index, db_map):
         """Returns a value list item for the given index and db_map."""
@@ -338,25 +344,6 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         }
         if len(value_list_ids) == 1:
             return next(iter(value_list_ids))
-
-
-class TagListDelegate(ParameterDelegate):
-    """A delegate for the parameter_tag list."""
-
-    def createEditor(self, parent, option, index):
-        """Returns editor."""
-        db_map = self._get_db_map(index)
-        if not db_map:
-            return None
-        editor = CheckListEditor(self.parent(), parent)
-        all_parameter_tag_list = [x["tag"] for x in self.db_mngr.get_items(db_map, "parameter_tag")]
-        try:
-            parameter_tag_list = index.data(Qt.EditRole).split(",")
-        except AttributeError:
-            # Gibberish in the cell
-            parameter_tag_list = []
-        editor.set_data(all_parameter_tag_list, parameter_tag_list)
-        return editor
 
 
 class ValueListDelegate(ParameterDelegate):
@@ -482,7 +469,7 @@ class ObjectNameListDelegate(ParameterDelegate):
 class ToolFeatureDelegate(QStyledItemDelegate):
     """A delegate for the tool feature tree."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     @staticmethod
     def _get_names(item, model):
@@ -556,7 +543,7 @@ class ToolFeatureDelegate(QStyledItemDelegate):
 class AlternativeScenarioDelegate(QStyledItemDelegate):
     """A delegate for the alternative scenario tree."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -602,8 +589,8 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
 class ParameterValueListDelegate(QStyledItemDelegate):
     """A delegate for the parameter value list tree."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
-    parameter_value_editor_requested = Signal("QModelIndex")
+    data_committed = Signal(QModelIndex, object)
+    parameter_value_editor_requested = Signal(QModelIndex)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -630,7 +617,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
         self.parameter_value_editor_requested.emit(index)
 
     def _close_editor(self, editor, index):
-        """Closes editor. Needed by SearchBarEditor."""
+        """Closes editor."""
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
@@ -639,7 +626,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
     """A custom delegate for the model in {Add/Edit}ItemDialogs.
     """
 
-    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
+    data_committed = Signal(QModelIndex, object)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -688,7 +675,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectClassesDialog.
     """
 
-    icon_color_editor_requested = Signal("QModelIndex")
+    icon_color_editor_requested = Signal(QModelIndex)
 
     def createEditor(self, parent, option, index):
         """Return editor."""

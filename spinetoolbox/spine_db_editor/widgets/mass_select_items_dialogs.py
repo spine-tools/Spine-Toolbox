@@ -38,8 +38,6 @@ class MassSelectItemsDialog(QDialog):
         "relationship_class",
         "parameter_value_list",
         "parameter_definition",
-        "parameter_tag",
-        "parameter_definition_tag",
         "object",
         "relationship",
         "entity_group",
@@ -99,7 +97,7 @@ class MassSelectItemsDialog(QDialog):
     @Slot()
     def _set_item_check_box_enabled(self):
         """Set the enabled property on item check boxes depending on the state of db_map check boxes."""
-        enabled = any([x.isChecked() for x in self.db_map_check_boxes.values()])
+        enabled = any(x.isChecked() for x in self.db_map_check_boxes.values())
         for check_box in self.item_check_boxes.values():
             check_box.setEnabled(enabled)
 
@@ -122,7 +120,7 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
         super().accept()
         db_map_typed_data = {
             db_map: {
-                item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type)}
+                item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type, only_visible=False)}
                 for item_type, check_box in self.item_check_boxes.items()
                 if check_box.isChecked()
             }

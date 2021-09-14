@@ -20,9 +20,7 @@ import sys
 import os
 from pathlib import Path
 
-REQUIRED_SPINE_ENGINE_VERSION = "0.9.34"
-REQUIRED_SPINEDB_API_VERSION = "0.11.50"
-PREFERRED_SPINE_ITEMS_VERSION = "0.6.50"
+# NOTE: All required Python package versions are in setup.cfg
 LATEST_PROJECT_VERSION = 6
 
 # For the Add/Update SpineOpt wizard
@@ -40,12 +38,12 @@ _frozen = getattr(sys, "frozen", False)
 _path_to_executable = os.path.dirname(sys.executable if _frozen else __file__)
 APPLICATION_PATH = os.path.realpath(_path_to_executable)
 _program_root = APPLICATION_PATH if _frozen else os.path.join(APPLICATION_PATH, os.path.pardir)
-DEFAULT_WORK_DIR = os.path.abspath(os.path.join(_program_root, "work"))
+DEFAULT_WORK_DIR = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "work"))
 if _frozen:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "html"))
 else:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "build", "html"))
-ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/latest"
+ONLINE_DOCUMENTATION_URL = "https://spine-toolbox.readthedocs.io/en/master/"
 
 PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "plugins"))
 

@@ -18,7 +18,14 @@ Classes for drawing graphics items on QGraphicsScene.
 
 from math import atan2, sin, cos, pi
 from PySide2.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
-from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, QGraphicsEllipseItem, QStyle
+from PySide2.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsPathItem,
+    QGraphicsTextItem,
+    QGraphicsEllipseItem,
+    QStyle,
+    QToolTip,
+)
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
@@ -32,13 +39,17 @@ class LinkBase(QGraphicsPathItem):
     Mainly provides the ``update_geometry`` method for 'drawing' the link on the scene.
     """
 
-    def __init__(self, toolbox):
+    def __init__(self, toolbox, src_connector, dst_connector):
         """
         Args:
             toolbox (ToolboxUI): main UI class instance
+            src_connector (ConnectorButton, optional): Source connector button
+            dst_connector (ConnectorButton): Destination connector button
         """
         super().__init__()
         self._toolbox = toolbox
+        self.src_connector = src_connector
+        self.dst_connector = dst_connector
         self.arrow_angle = pi / 4
         self.setCursor(Qt.PointingHandCursor)
 
@@ -248,7 +259,6 @@ class _LinkIcon(QGraphicsEllipseItem):
         self._datapkg_renderer = QSvgRenderer()
         self._datapkg_renderer.load(":/icons/datapkg.svg")
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-        self._block_updates = False
 
     def update_icon(self):
         """Sets the icon (filter, datapkg, or none), depending on Connection state."""
@@ -267,7 +277,6 @@ class _LinkIcon(QGraphicsEllipseItem):
             self.setVisible(True)
             self._text_item.setVisible(True)
             self._text_item.setPlainText("\uf0b0")
-            self._svg_item.setPos(0, 0)
             self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
             self._svg_item.setVisible(False)
             return
@@ -275,9 +284,63 @@ class _LinkIcon(QGraphicsEllipseItem):
         self._text_item.setVisible(False)
         self._svg_item.setVisible(False)
 
+    def wipe_out(self):
+        """Cleans up icon's resources."""
+        self._text_item.deleteLater()
+        self._svg_item.deleteLater()
+        self._datapkg_renderer.deleteLater()
+
+
+class _JumpIcon(QGraphicsEllipseItem):
+    """An icon to show over a JumpLink."""
+
+    _NORMAL_COLOR = QColor("black")
+    _ISSUE_COLOR = QColor("red")
+
+    def __init__(self, x, y, w, h, jump_link):
+        super().__init__(x, y, w, h, jump_link)
+        self._jump_link = jump_link
+        self.setBrush(qApp.palette().window())  # pylint: disable=undefined-variable
+        self._text_item = QGraphicsTextItem(self)
+        font = QFont('Font Awesome 5 Free Solid')
+        self._text_item.setFont(font)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setAcceptHoverEvents(True)
+
+    def update_icon(self):
+        """Sets the icon depending on Jump state."""
+        issues = self._jump_link.issues()
+        if issues:
+            self._text_item.setDefaultTextColor(self._ISSUE_COLOR)
+            self._text_item.setPlainText("\uf06a")
+            self._text_item.setPos(
+                self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center() + QPointF(0.0, 0.5)
+            )
+            self.setToolTip(issues[0])
+        else:
+            self._text_item.setDefaultTextColor(self._NORMAL_COLOR)
+            self._text_item.setPlainText("\uf1ce")
+            self._text_item.setPos(
+                self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center() + QPointF(0.0, 0.5)
+            )
+            self.setToolTip("")
+
+    def wipe_out(self):
+        """Cleans up icon's resources."""
+        self._text_item.deleteLater()
+        self._renderer.deleteLater()
+
+    def hoverEnterEvent(self, event):
+        QToolTip.showText(event.screenPos(), self.toolTip())
+
+    def hoverLeaveEvent(self, event):
+        QToolTip.hideText()
+
 
 class Link(LinkBase):
     """A graphics item to represent the connection between two project items."""
+
+    _COLOR = QColor(255, 255, 0, 200)
 
     def __init__(self, toolbox, src_connector, dst_connector, connection):
         """
@@ -285,26 +348,22 @@ class Link(LinkBase):
             toolbox (ToolboxUI): main UI class instance
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
-            connection (spine_engine.project_item.Connection): connection this link represents
+            connection (spine_engine.project_item.connection.Connection): connection this link represents
         """
-        super().__init__(toolbox)
+        super().__init__(toolbox, src_connector, dst_connector)
         self._connection = connection
-        self.src_connector = src_connector  # QGraphicsRectItem
-        self.dst_connector = dst_connector
         self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
         self._link_icon_extent = 4 * self.magic_number
         self._link_icon = _LinkIcon(0, 0, self._link_icon_extent, self._link_icon_extent, self)
         self._link_icon.setPen(self.normal_pen)
         self._link_icon.update_icon()
-        self.setToolTip(f"<html><p>Connection {self._connection.name}</p></html>")
-        self.setBrush(QBrush(QColor(255, 255, 0, 204)))
+        self.setBrush(QBrush(self._COLOR))
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
         self.update_geometry()
-        self._color = QColor(255, 255, 0, 204)
         self._exec_color = None
         self.resource_filter_model = ResourceFilterModel(self._connection, toolbox.undo_stack, toolbox)
 
@@ -321,7 +380,7 @@ class Link(LinkBase):
         item = self._toolbox.project_item_model.get_item(self.connection.source).project_item
         self._toolbox.project().notify_resource_changes_to_successors(item)
         if self is self._toolbox.active_link:
-            self._toolbox.link_properties_widget.load_connection_options()
+            self._toolbox.link_properties_widgets[Link].load_connection_options()
 
     @property
     def name(self):
@@ -352,7 +411,7 @@ class Link(LinkBase):
         animation.setEndValue(1.0)
         animation.setDuration(duration)
         animation.valueChanged.connect(self._handle_execution_animation_value_changed)
-        animation.finished.connect(lambda: self.setBrush(self._color))
+        animation.finished.connect(lambda: self.setBrush(self._COLOR))
         animation.finished.connect(animation.deleteLater)
         return animation
 
@@ -360,24 +419,12 @@ class Link(LinkBase):
     def _handle_execution_animation_value_changed(self, step):
         gradient = QLinearGradient(self.src_center, self.dst_center)
         delta = 8 * self.magic_number / QLineF(self.src_center, self.dst_center).length()
-        gradient.setColorAt(0, self._color)
-        gradient.setColorAt(max(0.0, step - delta), self._color)
+        gradient.setColorAt(0, self._COLOR)
+        gradient.setColorAt(max(0.0, step - delta), self._COLOR)
         gradient.setColorAt(step, self._exec_color)
-        gradient.setColorAt(min(1.0, step + delta), self._color)
-        gradient.setColorAt(1.0, self._color)
+        gradient.setColorAt(min(1.0, step + delta), self._COLOR)
+        gradient.setColorAt(1.0, self._COLOR)
         self.setBrush(gradient)
-
-    def has_parallel_link(self):
-        """Returns whether or not this link entirely overlaps another."""
-        self.parallel_link = next(
-            iter(l for l in self.dst_connector.outgoing_links() if l.dst_connector == self.src_connector), None
-        )
-        return self.parallel_link is not None
-
-    def send_to_bottom(self):
-        """Stacks this link before the parallel one if any."""
-        if self.parallel_link:
-            self.stackBefore(self.parallel_link)
 
     def mousePressEvent(self, e):
         """Ignores event if there's a connector button underneath,
@@ -427,6 +474,7 @@ class Link(LinkBase):
 
     def wipe_out(self):
         """Removes any trace of this item from the system."""
+        self._link_icon.wipe_out()
         self.src_connector.links.remove(self)
         self.dst_connector.links.remove(self)
         scene = self.scene()
@@ -434,21 +482,115 @@ class Link(LinkBase):
             scene.removeItem(self)
 
 
-class LinkDrawer(LinkBase):
-    """An item for drawing links between project items."""
+class JumpLink(LinkBase):
+    """A graphics icon to represent a jump connection between items."""
+
+    def __init__(self, toolbox, src_connector, dst_connector, jump):
+        """
+        Args:
+            toolbox (ToolboxUI): main UI class instance
+            src_connector (ConnectorButton): Source connector button
+            dst_connector (ConnectorButton): Destination connector button
+            jump (spine_engine.project_item.connection.Jump): connection this link represents
+        """
+        super().__init__(toolbox, src_connector, dst_connector)
+        self._jump = jump
+        self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
+        self.normal_pen = QPen(Qt.black, 0.5)
+        self._icon_extent = 2.5 * self.magic_number
+        self._icon = _JumpIcon(0, 0, self._icon_extent, self._icon_extent, self)
+        self._icon.setPen(self.normal_pen)
+        self._icon.update_icon()
+        self._color = QColor(128, 0, 255, 200)
+        brush = QBrush(self._color)
+        self.setBrush(brush)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.setZValue(0.6)
+        self.update_geometry()
+        self._exec_color = None
+
+    @property
+    def jump(self):
+        return self._jump
+
+    def issues(self):
+        """Checks if jump is well-defined.
+
+        Returns:
+            list of str: issues regarding the jump
+        """
+        return self._toolbox.project().jump_issues(self.jump)
+
+    def wipe_out(self):
+        """Removes any trace of this item from the system."""
+        self.src_connector.links.remove(self)
+        self.dst_connector.links.remove(self)
+        scene = self.scene()
+        if scene:
+            scene.removeItem(self)
+
+    def do_update_geometry(self, guide_path):
+        """See base class."""
+        super().do_update_geometry(guide_path)
+        center = guide_path.pointAtPercent(0.5)
+        self._icon.setPos(center - 0.5 * QPointF(self._icon_extent, self._icon_extent))
+
+    def contextMenuEvent(self, e):
+        """Selects the link and shows context menu.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        self.setSelected(True)
+        self._toolbox.show_link_context_menu(e.screenPos(), self)
+
+    def mousePressEvent(self, e):
+        """Ignores event if there's a connector button underneath,
+        to allow creation of new links.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
+            e.ignore()
+
+    def paint(self, painter, option, widget=None):
+        """Sets a dashed pen if selected."""
+        if option.state & QStyle.State_Selected:
+            option.state &= ~QStyle.State_Selected
+            self.setPen(self.selected_pen)
+        else:
+            self.setPen(self.normal_pen)
+        super().paint(painter, option, widget)
+
+    def make_execution_animation(self, excluded):
+        """Returns an animation to play when execution 'passes' through this link.
+
+        Returns:
+            QVariantAnimation
+        """
+        animation = QVariantAnimation()
+        animation.finished.connect(animation.deleteLater())
+        return animation
+
+    def update_geometry(self, curved_links=None):
+        """Forces curved links."""
+        super().update_geometry(curved_links=True)
+
+
+class LinkDrawerBase(LinkBase):
+    """A base class for items intended for drawing links between project items."""
 
     def __init__(self, toolbox):
         """
         Args:
             toolbox (ToolboxUI): main UI class instance
         """
-        super().__init__(toolbox)
-        self.src_connector = None
-        self.dst_connector = None
+        super().__init__(toolbox, None, None)
         self.tip = None
-        self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
-        self.setZValue(1)  # LinkDrawer should be on top of every other item
+        self.setZValue(1)  # A drawer should be on top of every other item.
 
     @property
     def src_rect(self):
@@ -472,19 +614,17 @@ class LinkDrawer(LinkBase):
 
     def add_link(self):
         """Makes link between source and destination connectors."""
-        self._toolbox.ui.graphicsView.add_link(self.src_connector, self.dst_connector)
-        self.sleep()
+        raise NotImplementedError()
 
     def wake_up(self, src_connector):
         """Sets the source connector, shows this item and adds it to the scene.
         After calling this, the scene is in link drawing mode.
 
         Args:
-            src_connector (ConnectorButton)
+            src_connector (ConnectorButton): source connector
         """
         src_connector.scene().addItem(self)
         self.src_connector = src_connector
-        self.src_connector.set_friend_connectors_enabled(False)
         self.tip = src_connector.sceneBoundingRect().center()
         self.update_geometry()
         self.show()
@@ -493,7 +633,47 @@ class LinkDrawer(LinkBase):
         """Removes this drawer from the scene, clears its source and destination connectors, and hides it.
         After calling this, the scene is no longer in link drawing mode.
         """
-        self.scene().removeItem(self)
-        self.src_connector.set_friend_connectors_enabled(True)
-        self.src_connector = self.dst_connector = self.tip = None
+        scene = self.scene()
+        scene.removeItem(self)
+        scene.link_drawer = self.src_connector = self.dst_connector = self.tip = None
         self.hide()
+
+
+class ConnectionLinkDrawer(LinkDrawerBase):
+    """An item for drawing connection links between project items."""
+
+    def __init__(self, toolbox):
+        """
+        Args:
+            toolbox (ToolboxUI): main UI class instance
+        """
+        super().__init__(toolbox)
+        self.setBrush(QBrush(QColor(255, 255, 0, 100)))
+
+    def add_link(self):
+        self._toolbox.ui.graphicsView.add_link(self.src_connector, self.dst_connector)
+        self.sleep()
+
+    def wake_up(self, src_connector):
+        super().wake_up(src_connector)
+        self.src_connector.set_friend_connectors_enabled(False)
+
+    def sleep(self):
+        self.src_connector.set_friend_connectors_enabled(True)
+        super().sleep()
+
+
+class JumpLinkDrawer(LinkDrawerBase):
+    """An item for drawing jump connections between project items."""
+
+    def __init__(self, toolbox):
+        """
+        Args:
+            toolbox (ToolboxUI): main UI class instance
+        """
+        super().__init__(toolbox)
+        self.setBrush(QBrush(QColor(128, 0, 255, 100)))
+
+    def add_link(self):
+        self._toolbox.ui.graphicsView.add_jump(self.src_connector, self.dst_connector)
+        self.sleep()

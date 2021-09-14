@@ -15,12 +15,12 @@ Unit tests for :class:`AlternativeScenarioModel`.
 :date:    21.1.2021
 """
 import unittest
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock
 from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_scenario_model import AlternativeScenarioModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from ...mock_helpers import TestSpineDBManager
 
 
 class TestAlternativeScenarioModel(unittest.TestCase):
@@ -32,11 +32,7 @@ class TestAlternativeScenarioModel(unittest.TestCase):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
-        with unittest.mock.patch(
-            "spinetoolbox.spine_db_manager.SpineDBManager.thread", new_callable=PropertyMock
-        ) as mock_thread:
-            mock_thread.return_value = QApplication.instance().thread()
-            self._db_mngr = SpineDBManager(app_settings, None)
+        self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_editor = SpineDBEditor(self._db_mngr)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 
@@ -92,6 +88,7 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         model.build_tree()
         model.add_alternatives({self._db_map: [{"id": 2}]})
         model.add_scenarios({self._db_map: [{"id": 1}]})
+        model.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
         data = self._model_data_to_dict(model)
         expected = [
             [
@@ -157,6 +154,7 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         model.add_scenarios({self._db_map: [{"id": 1}]})
         self._db_mngr.update_alternatives({self._db_map: [{"id": 2, "name": "renamed"}]})
         model.update_alternatives({self._db_map: [{"id": 2}]})
+        model.update_scenarios({self._db_map: [{"id": 1, "alternative_id_list": "2"}]})
         data = self._model_data_to_dict(model)
         expected = [
             [

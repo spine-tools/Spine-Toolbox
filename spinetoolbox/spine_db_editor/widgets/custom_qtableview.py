@@ -29,7 +29,6 @@ from .tabular_view_header_widget import TabularViewHeaderWidget
 from .custom_delegates import (
     DatabaseNameDelegate,
     ParameterDefaultValueDelegate,
-    TagListDelegate,
     ValueListDelegate,
     ParameterValueDelegate,
     ParameterNameDelegate,
@@ -236,7 +235,6 @@ class ParameterDefinitionTableView(ParameterTableView):
 
     def create_delegates(self):
         super().create_delegates()
-        self._make_delegate("parameter_tag_list", TagListDelegate)
         self._make_delegate("value_list_name", ValueListDelegate)
         delegate = self._make_delegate("default_value", ParameterDefaultValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)

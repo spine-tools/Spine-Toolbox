@@ -15,11 +15,13 @@ Models to represent items in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex
+from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex, QObject, Signal
 
 
-class TreeItem:
+class TreeItem(QObject):
     """A tree item that can fetch its children."""
+
+    fully_fetched = Signal()
 
     def __init__(self, model=None):
         """Initializes item.
@@ -27,18 +29,23 @@ class TreeItem:
         Args:
             model (MinimalTreeModel, NoneType): The model where the item belongs.
         """
+        super().__init__()
         self._model = model
         self._children = None
         self._parent_item = None
         self._fetched = False
         self.children = []
+        self.fully_fetched.connect(self._handle_fully_fetched)
+
+    def _handle_fully_fetched(self):
+        """Handles fully_fetched."""
 
     @property
     def model(self):
         return self._model
 
     @property
-    def child_item_type(self):
+    def child_item_class(self):
         """Returns the type of child items. Reimplement in subclasses to return something more meaningful."""
         return TreeItem
 
@@ -110,19 +117,18 @@ class TreeItem:
     def index(self):
         return self.model.index_from_item(self)
 
-    def insert_children(self, position, *children):
+    def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
         Args:
             position (int): insert new items here
-            children (iter): insert items from this iterable
+            children (list of TreeItem): insert items from this iterable
         """
         bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
         if bad_types:
-            raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
+            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count():
             return False
-        children = list(children)
         for child in children:
             child.parent_item = self
         self.model.beginInsertRows(self.index(), position, position + len(children) - 1)
@@ -130,12 +136,20 @@ class TreeItem:
         self.model.endInsertRows()
         return True
 
-    def append_children(self, *children):
+    def append_children(self, children):
         """Append children at the end."""
-        return self.insert_children(self.child_count(), *children)
+        return self.insert_children(self.child_count(), children)
 
     def remove_children(self, position, count):
-        """Removes count children starting from the given position."""
+        """Removes count children starting from the given position.
+
+        Args:
+            position (int): position of the first child to remove
+            count (int): number of children to remove
+
+        Returns:
+            bool: True if operation was successful, False otherwise
+        """
         first = position
         last = position + count - 1
         if first >= self.child_count() or first < 0:

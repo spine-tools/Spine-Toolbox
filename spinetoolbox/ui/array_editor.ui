@@ -69,7 +69,14 @@
         </layout>
        </item>
        <item>
-        <widget class="ArrayTableView" name="array_table_view"/>
+        <widget class="ArrayTableView" name="array_table_view">
+         <attribute name="horizontalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+         <attribute name="verticalHeaderVisible">
+          <bool>false</bool>
+         </attribute>
+        </widget>
        </item>
       </layout>
      </widget>

@@ -35,8 +35,11 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         QApplication.clipboard().clear()
         self._table_view = TimeSeriesFixedResolutionTableView(parent=None)
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [1.1, 2.2, 3.3, 4.4], False, False)
-        model = TimeSeriesModelFixedResolution(series)
+        model = TimeSeriesModelFixedResolution(series, self._table_view)
         self._table_view.setModel(model)
+
+    def tearDown(self):
+        self._table_view.deleteLater()
 
     def test_copy_single_cell(self):
         selection_model = self._table_view.selectionModel()

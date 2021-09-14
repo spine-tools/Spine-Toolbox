@@ -49,7 +49,7 @@ def make_heat_map(x, y, values):
 
 
 class ProgressBarWidget(QWidget):
-    def __init__(self, layout_generator):
+    def __init__(self):
         super().__init__()
         self.setAttribute(Qt.WA_DeleteOnClose)
         inner_widget = QWidget(self)
@@ -57,31 +57,41 @@ class ProgressBarWidget(QWidget):
         layout.addStretch()
         layout.addWidget(inner_widget)
         layout.addStretch()
-        inner_layout = QVBoxLayout(inner_widget)
-        label = QLabel()
-        label.setStyleSheet("QLabel{color:white; font-weight: bold; font-size:18px;}")
-        label.setAlignment(Qt.AlignHCenter)
-        progress_bar = QProgressBar()
-        progress_bar.setRange(0, layout_generator.iterations - 1)
-        progress_bar.setTextVisible(False)
+        self._label = QLabel()
+        self._label.setStyleSheet("QLabel{color:white; font-weight: bold; font-size:18px;}")
+        self._label.setAlignment(Qt.AlignHCenter)
+        self._progress_bar = QProgressBar()
         button_box = QDialogButtonBox()
         button_box.setCenterButtons(True)
-        previews_button = button_box.addButton("Show previews", QDialogButtonBox.NoRole)
-        previews_button.setCheckable(True)
-        previews_button.toggled.connect(layout_generator.set_show_previews)
-        previews_button.toggled.connect(
-            lambda checked: previews_button.setText(f"{'Hide' if checked else 'Show'} previews")
+        self._previews_button = button_box.addButton("Show previews", QDialogButtonBox.NoRole)
+        self._previews_button.setCheckable(True)
+        self._previews_button.toggled.connect(
+            lambda checked: self._previews_button.setText(f"{'Hide' if checked else 'Show'} previews")
         )
-        cancel_button = button_box.addButton("Cancel", QDialogButtonBox.NoRole)
-        cancel_button.clicked.connect(layout_generator.stop)
+        self.stop_button = button_box.addButton("Stop", QDialogButtonBox.NoRole)
+        inner_layout = QVBoxLayout(inner_widget)
         inner_layout.addStretch()
-        inner_layout.addWidget(label)
-        inner_layout.addWidget(progress_bar)
+        inner_layout.addWidget(self._label)
+        inner_layout.addWidget(self._progress_bar)
         inner_layout.addWidget(button_box)
         inner_layout.addStretch()
-        layout_generator.finished.connect(self.close)
-        layout_generator.progressed.connect(progress_bar.setValue)
-        layout_generator.msg.connect(label.setText)
+        self._layout_gen = None
+
+    def set_layout_generator(self, layout_generator):
+        if self._layout_gen is not None:
+            self._layout_gen.finished.disconnect(self.hide)
+            self._layout_gen.progressed.disconnect(self._progress_bar.setValue)
+            self._layout_gen.msg.disconnect(self._progress_bar.setFormat)
+            self._previews_button.toggled.disconnect(self._layout_gen.set_show_previews)
+            self.stop_button.clicked.disconnect(self._layout_gen.stop)
+        self._layout_gen = layout_generator
+        self._label.setText(f"Processing {self._layout_gen.vertex_count} elements")
+        self._progress_bar.setRange(0, self._layout_gen.iterations - 1)
+        self._previews_button.toggled.connect(self._layout_gen.set_show_previews)
+        self.stop_button.clicked.connect(self._layout_gen.stop)
+        self._layout_gen.finished.connect(self.hide)
+        self._layout_gen.progressed.connect(self._progress_bar.setValue)
+        self._layout_gen.msg.connect(self._progress_bar.setFormat)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -130,23 +140,13 @@ class GraphLayoutGenerator(QRunnable):
         self.layout_available = self._signals.layout_available
         self.progressed = self._signals.progressed
         self.msg = self._signals.msg
-        self._progress_bar = None
         self._stopped = False
         self.x = None
         self.y = None
 
-    def show_progress_widget(self, parent):
-        self._progress_bar = ProgressBarWidget(self)
-        parent.layout().addWidget(self._progress_bar)
-        self._progress_bar.show()
-
     @Slot(bool)
     def stop(self, _checked=False):
         self._stopped = True
-        try:
-            self._progress_bar.close()
-        except RuntimeError:
-            pass
 
     @Slot(bool)
     def set_show_previews(self, checked):

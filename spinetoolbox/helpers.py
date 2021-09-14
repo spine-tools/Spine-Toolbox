@@ -16,39 +16,44 @@ General helper functions and classes.
 :date:   10.1.2018
 """
 
+from enum import Enum, unique
 import itertools
 import os
-import sys
 import glob
 import json
 import logging
 import datetime
 import shutil
 import re
+import pathlib
+from contextlib import contextmanager
 import matplotlib
-from PySide2.QtGui import QCursor
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog
+from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
 from PySide2.QtGui import (
+    QCursor,
     QImageReader,
     QPixmap,
-    QPainter,
     QIcon,
     QIconEngine,
-    QFont,
     QStandardItemModel,
     QStandardItem,
     QDesktopServices,
     QKeySequence,
     QTextCursor,
     QPalette,
+    QSyntaxHighlighter,
+    QTextCharFormat,
+    QBrush,
     QColor,
+    QFont,
+    QPainter,
 )
-import spine_engine
-from .config import DEFAULT_WORK_DIR, REQUIRED_SPINE_ENGINE_VERSION
-
+from spine_engine.utils.serialization import deserialize_path
+from spinedb_api.spine_io.gdx_utils import find_gams_directory
+from .config import DEFAULT_WORK_DIR, PLUGINS_PATH
 
 if os.name == "nt":
     import ctypes
@@ -61,6 +66,19 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     from pandas.plotting import register_matplotlib_converters
 
     register_matplotlib_converters()
+
+
+@unique
+class LinkType(Enum):
+    """Graphics scene's link types."""
+
+    CONNECTION = "connection"
+    JUMP = "jump"
+
+
+def home_dir():
+    """Returns user's home dir"""
+    return str(pathlib.Path.home())
 
 
 def format_log_message(msg_type, message, show_datetime=True):
@@ -257,41 +275,6 @@ def pyside2_version_check():
     return True
 
 
-def spine_engine_version_check():
-    """Check if spine engine package is the correct version and explain how to upgrade if it is not.
-
-    Returns:
-        bool: True if Spine Engine is of correct version, False otherwise
-    """
-    try:
-        current_version = spine_engine.__version__
-        current_split = [int(x) for x in current_version.split(".")]
-        required_split = [int(x) for x in REQUIRED_SPINE_ENGINE_VERSION.split(".")]
-        if current_split >= required_split:
-            return True
-    except AttributeError:
-        current_version = "not reported"
-    script = "upgrade_spine_engine.bat" if sys.platform == "win32" else "upgrade_spine_engine.py"
-    print(
-        """SPINE ENGINE OUTDATED.
-
-        Spine Toolbox failed to start because spine_engine is outdated.
-        (Required version is {0}, whereas current is {1})
-        Please upgrade spine_engine to v{0} and start Spine Toolbox again.
-
-        To upgrade, run script '{2}' in the '/bin' folder.
-
-        Or upgrade it manually by running,
-
-            pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
-
-        """.format(
-            REQUIRED_SPINE_ENGINE_VERSION, current_version, script
-        )
-    )
-    return False
-
-
 def get_datetime(show, date=True):
     """Returns date and time string for appending into Event Log messages.
 
@@ -308,7 +291,7 @@ def get_datetime(show, date=True):
     time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
     if not date:
         return "[{}] ".format(time_str)
-    date_str = "{}-{:02d}-{:02d}".format(t.day, t.month, t.year)
+    date_str = "{:02d}-{:02d}-{:02d}".format(t.day, t.month, t.year)
     return "[{} {}] ".format(date_str, time_str)
 
 
@@ -790,6 +773,30 @@ class ChildCyclingKeyPressFilter(QObject):
         return QObject.eventFilter(self, obj, event)  # Pass event further
 
 
+def select_gams_executable(parent, line_edit):
+    """Opens file browser where user can select a Gams executable (i.e. gams.exe on Windows).
+
+    Args:
+        parent (QWidget, optional): Parent widget for the file dialog and message boxes
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+    """
+    start_dir = find_gams_directory()
+    if not start_dir:
+        start_dir = home_dir()
+    # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+    answer = QFileDialog.getOpenFileName(parent, "Select GAMS Program (e.g. gams.exe on Windows)", start_dir)
+    if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
+        return
+    # Check that selected file at least starts with string 'gams'
+    _, selected_file = os.path.split(answer[0])
+    if not selected_file.lower().startswith("gams"):
+        msg = "Selected file <b>{0}</b> may not be a valid GAMS program".format(selected_file)
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid GAMS Program", msg)
+        return
+    line_edit.setText(answer[0])
+
+
 def select_julia_executable(parent, line_edit):
     """Opens file browser where user can select a Julia executable (i.e. julia.exe on Windows).
     Used in SettingsWidget and KernelEditor.
@@ -799,22 +806,8 @@ def select_julia_executable(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select Julia Executable (e.g. julia.exe on Windows)", os.path.abspath('C:\\')
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select Julia Executable (e.g. julia.exe on Windows)", home_dir())
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
-        return
-    # Check that it's not a directory
-    if os.path.isdir(answer[0]):
-        msg = "Please select a valid Julia Executable (file) and not a directory"
-        # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.warning(parent, "Invalid Julia Executable", msg)
-        return
-    # Check that it's a file that actually exists
-    if not os.path.exists(answer[0]):
-        msg = "File {0} does not exist".format(answer[0])
-        # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.warning(parent, "Invalid Julia Executable", msg)
         return
     # Check that selected file at least starts with string 'julia'
     _, selected_file = os.path.split(answer[0])
@@ -834,7 +827,7 @@ def select_julia_project(parent, line_edit):
         parent (QWidget, optional): Parent of QFileDialog
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
-    answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", os.path.abspath("C:\\"))
+    answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", home_dir())
     if not answer:  # Canceled (american-english), cancelled (british-english)
         return
     line_edit.setText(answer)
@@ -849,16 +842,8 @@ def select_python_interpreter(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-    answer = QFileDialog.getOpenFileName(
-        parent, "Select Python Interpreter (e.g. python.exe on Windows)", os.path.abspath("C:\\")
-    )
+    answer = QFileDialog.getOpenFileName(parent, "Select Python Interpreter (e.g. python.exe on Windows)", home_dir())
     if answer[0] == "":  # Canceled
-        return
-    # Check that it's not a directory
-    if os.path.isdir(answer[0]):
-        msg = "Please select a valid Python interpreter (file) and not a directory"
-        # noinspection PyCallByClass, PyArgumentList
-        QMessageBox.warning(parent, "Invalid Python Interpreter", msg)
         return
     # Check that selected file at least starts with string 'python'
     _, selected_file = os.path.split(answer[0])
@@ -869,6 +854,27 @@ def select_python_interpreter(parent, line_edit):
         return
     line_edit.setText(answer[0])
     return
+
+
+def select_conda_executable(parent, line_edit):
+    """Opens file browser where user can select a conda executable.
+
+    Args:
+        parent (QWidget): Parent widget for the file dialog and message boxes
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+    """
+    # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+    answer = QFileDialog.getOpenFileName(parent, "Select Conda Executable (e.g. conda.exe on Windows)", home_dir())
+    if answer[0] == "":  # Canceled
+        return
+    # Check that selected file at least starts with string 'conda'
+    _, selected_file = os.path.split(answer[0])
+    if not selected_file.lower().startswith("conda"):
+        msg = "Selected file <b>{0}</b> is not a valid Conda executable".format(selected_file)
+        # noinspection PyCallByClass, PyArgumentList
+        QMessageBox.warning(parent, "Invalid Conda selected", msg)
+        return
+    line_edit.setText(answer[0])
 
 
 def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
@@ -1017,18 +1023,257 @@ def unique_name(prefix, existing):
     return f"{prefix} {free}"
 
 
-class SignalWaiter:
+def get_upgrade_db_promt_text(url, current, expected):
+    text = (
+        f"The database at <b>{url}</b> is at revision <b>{current}</b> and needs to be "
+        f"upgraded to revision <b>{expected}</b> in order to be used with the current "
+        f"version of Spine Toolbox."
+    )
+    info_text = (
+        "Do you want to upgrade the database now?"
+        "<p><b>WARNING</b>: After the upgrade, "
+        "the database may no longer be used "
+        "with previous versions of Spine."
+    )
+    return text, info_text
+
+
+def parse_specification_file(spec_path, logger):
+    """Parses specification file.
+
+    Args:
+        spec_path (str): path to specification file
+        logger (LoggerInterface): a logger
+
+    Returns:
+        dict: specification dict or None if the operation failed
+    """
+    try:
+        with open(spec_path, "r") as fp:
+            try:
+                return json.load(fp)
+            except ValueError:
+                logger.msg_error.emit("Item specification file not valid")
+                return None
+    except FileNotFoundError:
+        logger.msg_error.emit(f"Specification file <b>{spec_path}</b> does not exist")
+        return None
+
+
+def load_specification_from_file(spec_path, spec_factories, app_settings, logger):
+    """Returns an Item specification from a definition file.
+
+    Args:
+        spec_path (str): Path of the specification definition file
+        spec_factories (dict): Dictionary mapping specification type to ProjectItemSpecificationFactory
+        app_settings (QSettings): Toolbox settings
+        logger (LoggerInterface): a logger
+
+    Returns:
+        ProjectItemSpecification: item specification or None if reading the file failed
+    """
+    spec_dict = parse_specification_file(spec_path, logger)
+    if spec_dict is None:
+        return None
+    spec_dict["definition_file_path"] = spec_path
+    spec = specification_from_dict(spec_dict, spec_factories, app_settings, logger)
+    if spec is not None:
+        spec.definition_file_path = spec_path
+    return spec
+
+
+def specification_from_dict(spec_dict, spec_factories, app_settings, logger):
+    """Returns item specification from a dictionary.
+
+    Args:
+        spec_dict (dict): Dictionary with the specification
+        spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
+        app_settings (QSettings): Toolbox settings
+        logger (LoggerInterface): a logger
+
+    Returns:
+        ProjectItemSpecification or NoneType: specification or None if factory isn't found.
+    """
+    # NOTE: If the spec doesn't have the "item_type" key, we can assume it's a tool spec
+    item_type = spec_dict.get("item_type", "Tool")
+    spec_factory = spec_factories.get(item_type)
+    if spec_factory is None:
+        return None
+    return spec_factory.make_specification(spec_dict, app_settings, logger)
+
+
+def plugins_dirs(app_settings):
+    """Loads plugins.
+
+    Args:
+        app_settings (QSettings): Toolbox settings
+
+    Returns:
+        list of str: plugin directories
+    """
+    search_paths = {PLUGINS_PATH}
+    search_paths |= set(app_settings.value("appSettings/pluginSearchPaths", defaultValue="").split(";"))
+    # Plugin dirs are top-level dirs in all search paths
+    plugin_dirs = []
+    for path in search_paths:
+        try:
+            top_level_items = [os.path.join(path, item) for item in os.listdir(path)]
+        except FileNotFoundError:
+            continue
+        plugin_dirs += [item for item in top_level_items if os.path.isdir(item)]
+    return plugin_dirs
+
+
+def load_plugin_dict(plugin_dir, logger):
+    """Loads plugin dict from plugin directory.
+
+    Args:
+        plugin_dir (str): path of plugin dir with "plugin.json" in it
+        logger (LoggerInterface): a logger
+
+    Returns:
+        dict: plugin dict or None if the operation failed
+    """
+    plugin_file = os.path.join(plugin_dir, "plugin.json")
+    if not os.path.isfile(plugin_file):
+        return None
+    with open(plugin_file, "r") as fh:
+        try:
+            plugin_dict = json.load(fh)
+        except json.decoder.JSONDecodeError:
+            logger.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Invalid JSON.")
+            return None
+    try:
+        plugin_dict["plugin_dir"] = plugin_dir
+    except KeyError as key:
+        logger.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Key '{key}' not found.")
+        return None
+    return plugin_dict
+
+
+def load_plugin_specifications(plugin_dict, spec_factories, app_settings, logger):
+    """Loads plugin's specifications.
+
+    Args:
+        plugin_dict (dict): plugin dict
+        spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
+        app_settings (QSettings): Toolbox settings
+        logger (LoggerInterface): a logger
+
+    Returns:
+        dict: mapping from plugin name to list of specifications or None if the operation failed
+    """
+    plugin_dir = plugin_dict["plugin_dir"]
+    try:
+        name = plugin_dict["name"]
+        specifications = plugin_dict["specifications"]
+    except KeyError as key:
+        logger.msg_error.emit(f"Error in plugin file <b>{plugin_dir}</b>. Key '{key}' not found.")
+        return None
+    deserialized_paths = [deserialize_path(path, plugin_dir) for paths in specifications.values() for path in paths]
+    plugin_specs = []
+    for path in deserialized_paths:
+        spec = load_specification_from_file(path, spec_factories, app_settings, logger)
+        if not spec:
+            continue
+        spec.plugin = name
+        plugin_specs.append(spec)
+    return {name: plugin_specs}
+
+
+class SignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
     def __init__(self):
+        super().__init__()
         self._triggered = False
+        self.args = ()
 
-    @Slot()
-    def trigger(self):
+    def trigger(self, *args):
         """Signal receiving slot."""
         self._triggered = True
+        self.args = args
 
     def wait(self):
         """Wait for signal to be received."""
         while not self._triggered:
             QApplication.processEvents()
+
+
+@contextmanager
+def signal_waiter(signal):
+    waiter = SignalWaiter()
+    signal.connect(waiter.trigger)
+    try:
+        yield waiter
+    finally:
+        signal.disconnect(waiter.trigger)
+
+
+class CustomSyntaxHighlighter(QSyntaxHighlighter):
+    def __init__(self, *arg, **kwargs):
+        super().__init__(*arg, **kwargs)
+        self.lexer = None
+        self._formats = {}
+
+    def set_style(self, style):
+        self._formats.clear()
+        for ttype, tstyle in style:
+            text_format = self._formats[ttype] = QTextCharFormat()
+            if tstyle['color']:
+                brush = QBrush(QColor("#" + tstyle['color']))
+                text_format.setForeground(brush)
+            if tstyle['bgcolor']:
+                brush = QBrush(QColor("#" + tstyle['bgcolor']))
+                text_format.setBackground(brush)
+            if tstyle['bold']:
+                text_format.setFontWeight(QFont.Bold)
+            if tstyle['italic']:
+                text_format.setFontItalic(True)
+            if tstyle['underline']:
+                text_format.setFontUnderline(True)
+
+    def yield_formats(self, text):
+        if self.lexer is None:
+            return ()
+        for start, ttype, subtext in self.lexer.get_tokens_unprocessed(text):
+            while ttype not in self._formats:
+                ttype = ttype.parent
+            text_format = self._formats.get(ttype, QTextCharFormat())
+            yield start, len(subtext), text_format
+
+    def highlightBlock(self, text):
+        for start, count, text_format in self.yield_formats(text):
+            self.setFormat(start, count, text_format)
+
+
+def inquire_index_name(model, column, title, parent_widget):
+    """Asks for indexed parameter's index name and updates model accordingly.
+
+    Args:
+        model (IndexedValueTableModel or ArrayModel): a model with header that contains index names
+        column (int): column index
+        title (str): input dialog's title
+        parent_widget (QWidget): dialog's parent widget
+    """
+    index_name = model.headerData(column, Qt.Horizontal)
+    dialog_flags = Qt.Dialog | Qt.CustomizeWindowHint | Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+    new_name, ok = QInputDialog.getText(parent_widget, title, "Index name:", text=index_name, flags=dialog_flags)
+    if not ok:
+        return
+    model.setHeaderData(column, Qt.Horizontal, new_name)
+
+
+class CacheItem(dict):
+    """A dictionary that behaves kinda like a row from a query result.
+
+    It is used to store items in a cache, so we can access them as if they were rows from a query result.
+    This is mainly because we want to use the cache as a replacement for db queries in some methods.
+    """
+
+    def __getattr__(self, name):
+        """Overridden method to return the dictionary key named after the attribute, or None if it doesn't exist."""
+        return self.get(name)
+
+    def _asdict(self):
+        return dict(**self)

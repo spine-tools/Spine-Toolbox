@@ -17,7 +17,7 @@ Classes for custom QTreeView.
 """
 
 from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import Signal, Slot, Qt, QEvent
+from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
@@ -50,6 +50,10 @@ class EntityTreeView(CopyTreeView):
         self._cube_pen_icon = QIcon(":/icons/menu_icons/cube_pen.svg")
         self._cubes_plus_icon = QIcon(":/icons/menu_icons/cubes_plus.svg")
         self._cubes_pen_icon = QIcon(":/icons/menu_icons/cubes_pen.svg")
+        self._fetch_more_timer = QTimer(self)
+        self._fetch_more_timer.setSingleShot(True)
+        self._fetch_more_timer.setInterval(100)
+        self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -90,7 +94,7 @@ class EntityTreeView(CopyTreeView):
             QIcon(CharIconEngine("\uf100")), "Fully collapse", self.fully_collapse
         )
 
-    @Slot("QModelIndex", "EditTrigger", "QEvent")
+    @Slot(QModelIndex, int, QEvent)
     def edit(self, index, trigger, event):
         """Edit all selected items."""
         if trigger == self.EditKeyPressed:
@@ -113,11 +117,33 @@ class EntityTreeView(CopyTreeView):
         super().rowsRemoved(parent, start, end)
         self._refresh_selected_indexes()
 
-    @Slot("QModelIndex")
+    def setModel(self, model):
+        old_model = self.model()
+        if old_model:
+            old_model.layoutChanged.disconnect(self._fetch_more_timer.start)
+        super().setModel(model)
+        model.layoutChanged.connect(self._fetch_more_timer.start)
+
+    @Slot()
+    def _fetch_more_visible(self):
+        model = self.model()
+        for item in model.visit_all():
+            index = model.index_from_item(item)
+            if not self.isExpanded(index):
+                continue
+            last = model.index(model.rowCount(index) - 1, 0, index)
+            if self.visualRect(last).intersects(self.viewport().rect()) and model.canFetchMore(index):
+                model.fetchMore(index)
+
+    def verticalScrollbarValueChanged(self, value):
+        super().verticalScrollbarValueChanged(value)
+        self._fetch_more_timer.start()
+
+    @Slot(QModelIndex)
     def _resize_first_column_to_contents(self, _index=None):
         self.resizeColumnToContents(0)
 
-    @Slot("QItemSelection", "QItemSelection")
+    @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
         self._refresh_selected_indexes()
@@ -174,9 +200,7 @@ class EntityTreeView(CopyTreeView):
         self._spine_db_editor.show_remove_entity_tree_items_form(self._selected_indexes)
 
     def manage_relationships(self):
-        item = self._context_item
-        relationship_class_key = item.display_id
-        self._spine_db_editor.show_manage_relationships_form(relationship_class_key=relationship_class_key)
+        self._spine_db_editor.show_manage_relationships_form(self._context_item)
 
     def show_entity_metadata(self):
         """Shows entity's metadata."""
@@ -272,6 +296,7 @@ class ObjectTreeView(EntityTreeView):
         self._manage_members_action = None
         self._duplicate_object_action = None
         self._find_next_action = None
+        self._relationship_index = None
 
     def update_actions_availability(self):
         super().update_actions_availability()
@@ -286,7 +311,7 @@ class ObjectTreeView(EntityTreeView):
 
     def _add_middle_actions(self):
         self._add_object_classes_action = self._menu.addAction(
-            self._cube_plus_icon, "Add objects classes", self.add_object_classes
+            self._cube_plus_icon, "Add object classes", self.add_object_classes
         )
         self._add_objects_action = self._menu.addAction(self._cube_plus_icon, "Add objects", self.add_objects)
         self._add_relationship_actions()
@@ -306,38 +331,34 @@ class ObjectTreeView(EntityTreeView):
         super().connect_signals()
         self.doubleClicked.connect(self.find_next_relationship)
 
+    def rowsInserted(self, parent, start, end):
+        super().rowsInserted(parent, start, end)
+        self._do_find_next_relationship()
+
     def add_object_classes(self):
         self._spine_db_editor.show_add_object_classes_form()
 
     def add_objects(self):
-        item = self._context_item
-        class_name = item.display_data if item.item_type != "root" else None
-        self._spine_db_editor.show_add_objects_form(class_name=class_name)
+        self._spine_db_editor.show_add_objects_form(self._context_item)
 
     def add_relationship_classes(self):
-        item = self._context_item
-        object_class_one_name = item.display_data if item.item_type != "root" else None
-        self._spine_db_editor.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
+        self._spine_db_editor.show_add_relationship_classes_form(self._context_item)
 
     def add_relationships(self):
-        item = self._context_item
-        relationship_class_key = item.display_id
-        if item.item_type != "root":
-            object_name = item.parent_item.display_data
-            object_class_name = item.parent_item.parent_item.display_data
-            object_names_by_class_name = {object_class_name: object_name}
-        else:
-            object_names_by_class_name = None
-        self._spine_db_editor.show_add_relationships_form(
-            relationship_class_key=relationship_class_key, object_names_by_class_name=object_names_by_class_name
-        )
+        self._spine_db_editor.show_add_relationships_form(self._context_item)
 
     def find_next_relationship(self):
         """Finds the next occurrence of the relationship at the current index and expands it."""
-        index = self.currentIndex()
-        next_index = self.model().find_next_relationship_index(index)
+        self._relationship_index = self.currentIndex()
+        self._do_find_next_relationship()
+
+    def _do_find_next_relationship(self):
+        if self._relationship_index is None:
+            return
+        next_index = self.model().find_next_relationship_index(self._relationship_index)
         if not next_index:
             return
+        self._relationship_index = None
         self.setCurrentIndex(next_index)
         self.scrollTo(next_index)
         self.expand(next_index)
@@ -370,11 +391,10 @@ class RelationshipTreeView(EntityTreeView):
         self._add_relationship_classes_action.setEnabled(item.item_type == "root")
 
     def add_relationship_classes(self):
-        self._spine_db_editor.show_add_relationship_classes_form()
+        self._spine_db_editor.show_add_relationship_classes_form(self._context_item)
 
     def add_relationships(self):
-        relationship_class_key = self._context_item.display_id
-        self._spine_db_editor.show_add_relationships_form(relationship_class_key=relationship_class_key)
+        self._spine_db_editor.show_add_relationships_form(self._context_item)
 
 
 class ItemTreeView(CopyTreeView):
@@ -392,7 +412,7 @@ class ItemTreeView(CopyTreeView):
         self.collapsed.connect(self._resize_first_column_to_contents)
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
 
-    @Slot("QModelIndex")
+    @Slot(QModelIndex)
     def _resize_first_column_to_contents(self, _index=None):
         self.resizeColumnToContents(0)
 
@@ -529,7 +549,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
                 db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
         return db_map_ids
 
-    @Slot("QItemSelection", "QItemSelection")
+    @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Emits alternative_selection_changed with the current selection."""
         selected_db_map_alt_ids = self._db_map_alt_ids_from_selection(selected)
@@ -613,7 +633,7 @@ class ParameterValueListTreeView(ItemTreeView):
         """Creates a context menu for this view."""
         super().populate_context_menu()
         self._menu.addSeparator()
-        self._open_in_editor_action = self._menu.addAction("Open in editor...", self.open_in_editor)
+        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
 
     def update_actions_availability(self, item):
         """See base class."""
@@ -622,7 +642,7 @@ class ParameterValueListTreeView(ItemTreeView):
     def open_in_editor(self):
         """Opens the parameter_value editor for the first selected cell."""
         index = self.currentIndex()
-        self._spine_db_editor.show_parameter_value_editor(index)
+        self._spine_db_editor.show_parameter_value_editor(index, plain=True)
 
     def remove_selected(self):
         """See base class."""
@@ -649,71 +669,16 @@ class ParameterValueListTreeView(ItemTreeView):
                         db_map_typed_data_to_rm[db_item.db_map]["parameter_value_list"].add(list_item.id)
                         continue
                     if new_value_list != curr_value_list:
-                        item = {"id": list_item.id, "value_list": new_value_list}
+                        item = {"id": list_item.id, "value_list": [bytes(val, "UTF-8") for val in new_value_list]}
                         db_map_data_to_upd[db_item.db_map].append(item)
                 else:
                     # WIP lists, just remove everything selected
                     if list_item in items:
-                        db_item.remove_children(list_item.child_number(), list_item.child_number())
+                        db_item.remove_children(list_item.child_number(), 1)
                         continue
                     for value_item in reversed(list_item.children[:-1]):
                         if value_item in items:
-                            list_item.remove_children(value_item.child_number(), value_item.child_number())
+                            list_item.remove_children(value_item.child_number(), 1)
         self.model().db_mngr.update_parameter_value_lists(db_map_data_to_upd)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
         self.selectionModel().clearSelection()
-
-
-class ParameterTagTreeView(ItemTreeView):
-    """Custom QTreeView class for the parameter_tag tree in SpineDBEditor."""
-
-    tag_selection_changed = Signal(dict)
-
-    def __init__(self, parent):
-        """Initialize the view."""
-        super().__init__(parent=parent)
-        self._selected_tag_ids = dict()
-
-    def connect_signals(self):
-        """Connects signals."""
-        super().connect_signals()
-        self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
-
-    def remove_selected(self):
-        """See base class."""
-        if not self.selectionModel().hasSelection():
-            return
-        db_map_typed_data_to_rm = {}
-        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
-        for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {"parameter_tag": set()}
-            for tag_item in reversed(db_item.children[:-1]):
-                if tag_item.id and tag_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["parameter_tag"].add(tag_item.id)
-        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
-        self.selectionModel().clearSelection()
-
-    def update_actions_availability(self, item):
-        """See base class."""
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_selection_changed(self, selected, deselected):
-        """Emits tag_selection_changed with the current selection."""
-        selected_db_map_ids = self._db_map_tag_ids_from_selection(selected)
-        deselected_db_map_ids = self._db_map_tag_ids_from_selection(deselected)
-        for db_map, ids in selected_db_map_ids.items():
-            self._selected_tag_ids.setdefault(db_map, set()).update(ids)
-        for db_map, ids in deselected_db_map_ids.items():
-            self._selected_tag_ids[db_map].difference_update(ids)
-        self._selected_tag_ids = {db_map: ids for db_map, ids in self._selected_tag_ids.items() if ids}
-        self.tag_selection_changed.emit(self._selected_tag_ids)
-
-    def _db_map_tag_ids_from_selection(self, selection):
-        db_map_ids = {}
-        for index in selection.indexes():
-            if index.column() != 0:
-                continue
-            item = self.model().item_from_index(index)
-            if item.item_type == "parameter_tag" and item.id:
-                db_map_ids.setdefault(item.db_map, set()).add(item.id)
-        return db_map_ids

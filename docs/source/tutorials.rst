@@ -2,6 +2,8 @@
     Created: 18.6.2018
 
 
+.. _Tutorials:
+
 *********
 Tutorials
 *********
@@ -13,3 +15,4 @@ The following tutorials are available:
    :titlesonly:
 
    case_study_a5.rst
+   simple_system.rst

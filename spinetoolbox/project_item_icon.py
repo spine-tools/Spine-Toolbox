@@ -30,8 +30,9 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QTextCursor, QPalette, QTextBlockFormat, QFont
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from spinetoolbox.project_commands import MoveIconCommand
 from spine_engine.spine_engine import ItemExecutionFinishState
+from .project_commands import MoveIconCommand
+from .helpers import LinkType
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -174,8 +175,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         return self.connectors.get(position, self.connectors["left"])
 
-    def outgoing_links(self):
-        """Collects outgoing links.
+    def outgoing_connection_links(self):
+        """Collects outgoing connection links.
 
         Returns:
             list of LinkBase: outgoing links
@@ -183,7 +184,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         return [l for conn in self.connectors.values() for l in conn.outgoing_links()]
 
     def incoming_links(self):
-        """Collects incoming links.
+        """Collects incoming connection links.
 
         Returns:
             list of LinkBase: outgoing links
@@ -197,9 +198,10 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             excluded (bool): True if project item was not actually executed.
         """
-        animation_group = QParallelAnimationGroup(self._toolbox)
-        for link in self.outgoing_links():
+        animation_group = QParallelAnimationGroup()
+        for link in self.outgoing_connection_links():
             animation_group.addAnimation(link.make_execution_animation(excluded))
+        animation_group.finished.connect(animation_group.deleteLater)
         animation_group.start()
 
     def hoverEnterEvent(self, event):
@@ -254,6 +256,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         # pylint: disable=undefined-variable
         if (self.current_pos - self.previous_pos).manhattanLength() > qApp.startDragDistance():
             self._toolbox.undo_stack.push(MoveIconCommand(self, self._toolbox.project()))
+            event.ignore()
         super().mouseReleaseEvent(event)
 
     def notify_item_move(self):
@@ -366,30 +369,30 @@ class ConnectorButton(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        if not event.button() == Qt.LeftButton:
+        if event.button() != Qt.LeftButton:
             event.accept()
             return
         self._parent.select_item()
-        link_drawer = self.scene().link_drawer
+        scene = self.scene()
+        if scene.link_drawer is None:
+            scene.select_link_drawer(LinkType.JUMP if event.modifiers() & Qt.AltModifier else LinkType.CONNECTION)
+        link_drawer = scene.link_drawer
         if not link_drawer.isVisible():
             link_drawer.wake_up(self)
-        elif event.button() == Qt.LeftButton:
+        else:
             link_drawer.add_link()
 
     def set_friend_connectors_enabled(self, enabled):
-        """Enables or disables all connectors in the parent. This is called by LinkDrawer to disable invalid connectors
-        while drawing and reenabling them back when done."""
+        """Enables or disables all connectors in the parent.
+
+        This is called by LinkDrawer to disable invalid connectors while drawing and reenabling them back when done.
+
+        Args:
+            enabled (bool): True to enable connectors, False to disable
+        """
         for conn in self._parent.connectors.values():
             conn.setEnabled(enabled)
             conn.setBrush(conn.brush)  # Remove hover brush from src connector that was clicked
-
-    def mouseDoubleClickEvent(self, event):
-        """Connector button mouse double click event. Makes sure the LinkDrawer is hidden.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        event.accept()
 
     def hoverEnterEvent(self, event):
         """Sets a darker shade to connector button when mouse enters its boundaries.
@@ -399,7 +402,7 @@ class ConnectorButton(QGraphicsRectItem):
         """
         self.setBrush(self.hover_brush)
         link_drawer = self.scene().link_drawer
-        if link_drawer.isVisible():
+        if link_drawer is not None:
             link_drawer.dst_connector = self
             link_drawer.update_geometry()
 
@@ -411,7 +414,7 @@ class ConnectorButton(QGraphicsRectItem):
         """
         self.setBrush(self.brush)
         link_drawer = self.scene().link_drawer
-        if link_drawer.isVisible():
+        if link_drawer is not None:
             link_drawer.dst_connector = None
             link_drawer.update_geometry()
 
@@ -420,7 +423,7 @@ class ConnectorButton(QGraphicsRectItem):
         put the latter to sleep."""
         if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             link_drawer = self.scene().link_drawer
-            if link_drawer.src_connector is self:
+            if link_drawer is not None and link_drawer.src_connector is self:
                 link_drawer.sleep()
         return super().itemChange(change, value)
 

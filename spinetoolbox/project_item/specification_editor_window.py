@@ -20,9 +20,7 @@ from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import (
     QMainWindow,
-    QMessageBox,
     QUndoStack,
-    QLabel,
     QWidget,
     QToolBar,
     QLabel,
@@ -66,15 +64,16 @@ class ChangeSpecPropertyCommand(QUndoCommand):
 
 
 class SpecificationEditorWindowBase(QMainWindow):
-    def __init__(self, toolbox, specification=None, item=None):
-        """Base class for spec editors.
+    """Base class for spec editors."""
 
+    def __init__(self, toolbox, specification=None, item=None):
+        """
         Args:
             toolbox (ToolboxUI): QMainWindow instance
             specification (ProjectItemSpecification, optional): If given, the form is pre-filled with this specification
             item (ProjectItem, optional): Sets the spec for this item if accepted
         """
-        super().__init__(parent=toolbox)  # Inherit stylesheet from ToolboxUI
+        super().__init__()
         # Class attributes
         self._toolbox = toolbox
         self._original_spec_name = None if specification is None else specification.name
@@ -86,7 +85,6 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._ui.setupUi(self)
         self._ui_error = QErrorMessage(self)
         self._ui_error.setWindowTitle("Error")
-        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.setWindowTitle(specification.name if specification else "")
         # Restore ui
         self._restore_dock_widgets()
@@ -100,6 +98,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self._populate_main_menu()
         self._spec_toolbar.save_action.triggered.connect(self._save)
+        self._spec_toolbar.duplicate_action.triggered.connect(self._duplicate)
         self._spec_toolbar.close_action.triggered.connect(self.close)
         self._undo_stack.cleanChanged.connect(self._update_window_modified)
 
@@ -161,23 +160,55 @@ class SpecificationEditorWindowBase(QMainWindow):
         self.windowTitleChanged.emit(self.windowTitle())
 
     def _save(self):
-        """Saves spec."""
+        """Saves spec.
+
+        Returns:
+            bool: True if operation was successful, False otherwise
+        """
+        if not self._toolbox.project():
+            self._show_error("Please open or create a project first")
+            return False
         name = self._spec_toolbar.name()
         if not name:
             self._show_error("Please enter a name for the specification.")
             return False
-        new_spec = self._make_new_specification(name)
-        if new_spec is None:
+        spec = self._make_new_specification(name)
+        if spec is None:
             return False
-        update_existing = new_spec.name == self._original_spec_name
-        if not self._toolbox.add_specification(new_spec, update_existing, self):
-            return False
+        if not self._original_spec_name:
+            if self._toolbox.project().is_specification_name_reserved(name):
+                self._show_error("Specification name already in use. Please enter a new name.")
+                return False
+            self._toolbox.add_specification(spec)
+            if not self._toolbox.project().is_specification_name_reserved(name):
+                return False
+            if self.item is not None:
+                self.item.set_specification(spec)
+        else:
+            if name != self._original_spec_name and self._toolbox.project().is_specification_name_reserved(name):
+                self._show_error("Specification name already in use. Please enter a new name.")
+                return False
+            spec.definition_file_path = self.specification.definition_file_path
+            self._toolbox.replace_specification(self._original_spec_name, spec)
+            if not self._toolbox.project().is_specification_name_reserved(name):
+                return False
+        self._original_spec_name = name
         self._undo_stack.setClean()
-        if self.item:
-            self.item.set_specification(new_spec)
-        self.specification = new_spec
+        self.specification = spec
+        self._spec_toolbar.duplicate_action.setEnabled(True)
         self.setWindowTitle(self.specification.name)
         return True
+
+    @property
+    def _duplicate_kwargs(self):
+        return {}
+
+    def _duplicate(self):
+        if not self._toolbox.project():
+            self._show_error("Please open or create a project first")
+            return
+        new_spec = self._make_new_specification("")
+        self._toolbox.show_specification_form(new_spec.item_type, new_spec, **self._duplicate_kwargs)
 
     def tear_down(self):
         if self.focusWidget():
@@ -230,9 +261,12 @@ class _SpecNameDescriptionToolbar(QToolBar):
         self.addWidget(widget)
         self.menu = self._make_main_menu()
         self.save_action = self.menu.addAction("Save")
-        self.save_action.setEnabled(False)
+        self.duplicate_action = self.menu.addAction("Duplicate")
         self.close_action = self.menu.addAction("Close")
+        self.save_action.setEnabled(False)
+        self.duplicate_action.setEnabled(self._parent.specification is not None)
         self.save_action.setShortcut(QKeySequence.Save)
+        self.duplicate_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_D))
         self.close_action.setShortcut(QKeySequence.Close)
         self.setObjectName("_SpecNameDescriptionToolbar")
         if spec:

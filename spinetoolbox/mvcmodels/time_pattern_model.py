@@ -25,13 +25,6 @@ from .indexed_value_table_model import IndexedValueTableModel
 class TimePatternModel(IndexedValueTableModel):
     """A model for time pattern type parameter values."""
 
-    def __init__(self, value):
-        """
-        Args:
-            value (TimePattern): a time pattern value
-        """
-        super().__init__(value, "Time period", "Value")
-
     def flags(self, index):
         """Returns flags at index."""
         if not index.isValid():

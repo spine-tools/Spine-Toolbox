@@ -26,13 +26,22 @@ from ...widgets.multi_tab_window import MultiTabWindow
 from ...helpers import CharIconEngine, open_url
 from ...config import ONLINE_DOCUMENTATION_URL
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
+from ...config import MAINWINDOW_SS
 
 
 class MultiSpineDBEditor(MultiTabWindow):
+    """Database editor's tabbed main window."""
+
     def __init__(self, db_mngr, db_url_codenames=None):
+        """
+        Args:
+            db_mngr (SpineDBManager): database manager
+            db_url_codenames (dict, optional): mapping from database URL to its codename
+        """
         super().__init__(db_mngr.qsettings, "spineDBEditor")
         self.db_mngr = db_mngr
         self.settings_form = SpineDBEditorSettingsWidget(self)
+        self.setStyleSheet(MAINWINDOW_SS)
         self.setWindowTitle("Spine DB Editor")
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self._file_open_toolbar = _FileOpenToolBar(self)

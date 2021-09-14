@@ -23,16 +23,15 @@ from .indexed_value_table_model import IndexedValueTableModel
 
 
 class TimeSeriesModelFixedResolution(IndexedValueTableModel):
-    """
-    A model for fixed resolution time series type parameter values.
+    """A model for fixed resolution time series type parameter values."""
 
-    Attributes:
-        series (TimeSeriesFixedResolution): a time series
-    """
-
-    def __init__(self, series):
-        super().__init__(series, "Time stamp", "Values")
-        # No need to cache indexes here anymore, as spinedb_api.TimeSeriesFixedResolution already does it
+    def __init__(self, series, parent):
+        """
+        Args:
+            series (TimeSeriesFixedResolution): a time series
+            parent (QObject): parent object
+        """
+        super().__init__(series, parent)
         self.locale = QLocale()
 
     def flags(self, index):

@@ -40,6 +40,10 @@ class AlternativeRootItem(EmptyChildRootItem):
     def empty_child(self):
         return AlternativeLeafItem()
 
+    def fetch_more(self):
+        super().fetch_more()
+        self.db_mngr.fetch_more(self.db_map, "alternative")
+
 
 class ScenarioRootItem(EmptyChildRootItem):
     """A scenario root item."""
@@ -58,6 +62,10 @@ class ScenarioRootItem(EmptyChildRootItem):
 
     def empty_child(self):
         return ScenarioLeafItem()
+
+    def fetch_more(self):
+        super().fetch_more()
+        self.db_mngr.fetch_more(self.db_map, "scenario")
 
 
 class AlternativeLeafItem(LastGrayMixin, EditableMixin, LeafItem):
@@ -101,7 +109,7 @@ class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def fetch_more(self):
         if not self.id:
             return
-        self.append_children(ScenarioActiveItem(), ScenarioAlternativeRootItem())
+        self.append_children([ScenarioActiveItem(), ScenarioAlternativeRootItem()])
         self._fetched = True
 
     def handle_updated_in_db(self):
@@ -164,9 +172,7 @@ class ScenarioAlternativeRootItem(RootItem):
         return super().flags(column) | Qt.ItemIsDropEnabled
 
     def fetch_more(self):
-        children = [ScenarioAlternativeLeafItem() for _ in self.alternative_id_list]
-        self.append_children(*children)
-        self._fetched = True
+        self.db_mngr.fetch_more(self.db_map, "scenario_alternative")
 
     def update_alternative_id_list(self):
         alt_count = len(self.alternative_id_list)
@@ -174,7 +180,7 @@ class ScenarioAlternativeRootItem(RootItem):
         if alt_count > curr_alt_count:
             added_count = alt_count - curr_alt_count
             children = [ScenarioAlternativeLeafItem() for _ in range(added_count)]
-            self.insert_children(curr_alt_count, *children)
+            self.insert_children(curr_alt_count, children)
         elif curr_alt_count > alt_count:
             removed_count = curr_alt_count - alt_count
             self.remove_children(alt_count, removed_count)
