@@ -400,6 +400,9 @@ class ObjectItem(EntityItem):
 
     def block_move_by(self, dx, dy):
         super().block_move_by(dx, dy)
+        if self.isSelected():
+            # The item will move with the selection, so no need to follow the objects
+            return
         rel_items_follow = self._spine_db_editor.qsettings.value(
             "appSettings/relationshipItemsFollow", defaultValue="true"
         )
