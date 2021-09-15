@@ -1,5 +1,5 @@
-git+https://github.com/Spine-project/Spine-Database-API.git#egg=spinedb_api
-git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
+-e git+https://github.com/Spine-project/Spine-Database-API.git@master#egg=spinedb_api
+-e git+https://github.com/Spine-project/spine-engine.git@master#egg=spine_engine
 # cchardet used to be a dependency of datapackage and version 2.1.6 requires users to install Visual C++
 # NOTE: Commented on purpose. datapackage 1.15.0 does not require cchardet anymore. If we ever decide to
 # use cchardet in addition to chardet, we should remember this constraint.
@@ -96,4 +96,4 @@ wget >= 3.2
 xlrd >= 2.0.1
 -e .
 # Spine Items requires Spine Toolbox, so install that last
-git+https://github.com/Spine-project/spine-items.git@master#egg=spine_items
+-e git+https://github.com/Spine-project/spine-items.git@master#egg=spine_items

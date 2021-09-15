@@ -18,41 +18,58 @@ Please note that Python 3.9 is not supported yet.
 
 ## License
 
-Spine Toolbox is released under the GNU Lesser General Public License (LGPL) license. All accompanying
-documentation, original graphics and other material are released under the 
+Spine Toolbox is released under the GNU Lesser General Public License (LGPL) license. 
+All accompanying documentation, original graphics and other material are released under the 
 [Creative Commons BY-SA 4.0 license](https://creativecommons.org/licenses/by-sa/4.0/).
 Licenses of all packages used by Spine Toolbox are listed in the Spine Toolbox User 
 Guide.
 
 ## Installation
 
-We provide three options for installing Spine Toolbox: [PyPi](#installation-with-python-and-pipx), [Windows installation file](#windows-64-bit-installer-package), and [git](#installation-from-sources-using-git).
+We provide three options for installing Spine Toolbox: 
+[Python/pipx](#installation-with-python-and-pipx), 
+[Windows installation file](#windows-64-bit-installer-package) 
+and [from source files](#installation-from-sources-using-git).
 
-### 1. Installation from PyPI (Python Package Index)
+### Installation with Python and pipx
 
-This works best for users that want to just use Spine Toolbox but also keep it updated with new releases.
+This works best for users that want to just use Spine Toolbox but also keep it 
+updated with new releases.
 
-1. If you don't yet have Python 3.7 or 3.8, then install Python 3.8.
-   - Get [the latest 3.8 release from Python.org](https://www.python.org/downloads/release/python-3810/) or from the Windows Store.
+1. If you don't yet have Python 3.7 or 3.8, install the latest Python 3.8 release
+   from [Python.org](https://www.python.org/downloads/).
 
 2. Open a terminal (e.g., Command Prompt on Windows).
 
-3. Install the latest Spine Toolbox release from PyPi by running
+3. Get the latest version of `pip` (pip is a package manager for Python)
 
-        pip install spinetoolbox
+        python -m pip install --upgrade pip
+
+4. Install [pipx](https://pypa.github.io/pipx/) (pipx allows to create an isolated 
+   environment for Spine Toolbox to avoid package conflicts with other Python tools)
+
+        python -m pip install pipx
+        python -m pipx ensurepath
+        
+5. Install the latest Spine Toolbox release by running
+
+        python -m pipx install spinetoolbox
 
 That’s it!
 
 To launch Spine Toolbox, open a terminal and run
 
-    python -m spinetoolbox
+    spinetoolbox
 
-To upgrade Spine Toolbox to the latest available release, open a terminal and run
+If for some reason the command is not found, the executable can be found under 
+`~/.local/bin` (`%USERPROFILE%\.local\bin` on Windows).
 
-    pip install --upgrade spinetoolbox
+To update Spine Toolbox to the latest available release, open a terminal and run
+
+    python -m pipx upgrade spinetoolbox
 
 
-### 2. Windows 64-bit Installer Package
+### Windows 64-bit Installer Package
 
 Windows installer packages are published periodically
 but not as frequently as the standard Python installation above.
@@ -61,7 +78,7 @@ Download the latest installer package from [here](https://github.com/Spine-proje
 run it, and follow the instructions to install Spine Toolbox.
 
 
-### 3. Installation from sources using GIT
+### Installation from sources using Git
 
 This option is for the developers and other contributors who want to debug or 
 edit the Spine Toolbox source code.
@@ -96,31 +113,12 @@ is active.
 
     pip install --upgrade -r requirements.txt
 
-**NOTE:** Even though `spinedb_api`, `spine_engine`, and `spine_items` are listed in spinetoolbox's `requirements.txt`, 
-the command above may not always upgrade these packages. This is because we do not bump the version number on every 
-commit. Before writing a bug report, **please make sure you are using the latest commit of these three packages 
-by doing the following:**
-
-To upgrade `spinedb_api`, run
-
-    pip uninstall -y spinedb-api && pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
-
-To upgrade `spine_engine`, run
-
-    pip uninstall -y spine-engine && pip install --upgrade git+https://github.com/Spine-project/spine-engine.git#egg=spine_engine
-
-To upgrade `spine_items`, run
-
-    pip uninstall -y spine-items && pip install --upgrade git+https://github.com/Spine-project/spine-items.git#egg=spine_items
-
-**Or you can use the provided scripts `/bin/upgrade_spine_reqs.bat` on Windows or `/bin/upgrade_spine_reqs.py` 
-on Other OS's to upgrade all three at once.**
 
 ### About requirements
 
 Python 3.7 or Python 3.8 is required.
 
-See file `setup.py` and `requirements.txt` for packages required to run Spine Toolbox.
+See file `setup.cfg` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
 
 The requirements include three packages ([`spinedb_api`](https://github.com/Spine-project/Spine-Database-API),
@@ -146,13 +144,6 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 Please make sure you are using Python 3.7 or Python 3.8 to install the requirements.
 
-#### Installation from PyPI fails due to package requirement conflictions
-Spine Toolbox release versions from PyPI require some very specific versions of the dependant 
-packages. This may cause problems when installing the app (`pip install spinetoolbox`) to 
-an existing environment. In this case, please use [pipx](https://pypa.github.io/pipx/) for 
-installing Spine Toolbox in an isolated environment or use Mini/Anaconda as an environment 
-manager.
-
 #### Installation fails on Linux
 If Python runs into errors while installing on Linux systems, running the 
 following commands in a terminal may help:
@@ -177,17 +168,18 @@ environment just for `PySide2` applications and installing the requirements agai
 recommended.**
 
 The required `qtconsole` package from the ***conda-forge*** channel also
-installs `qt` and `PyQt` packages. Since this is a `PySide2` application, those are 
-not needed and there is a chance of conflicts between the packages.
+installs `qt` and `PyQt` packages. Since this is a `PySide2` application, those 
+are not needed and there is a chance of conflicts between the packages.
 
-**Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support PySide2 
-version 5.15 (yet).
+**Note**: Supported PySide2 version is **5.14**. Spine Toolbox does not support 
+PySide2 version 5.15 (yet).
 
 ## Contribution Guide
 
 All are welcome to contribute!
 
-See detailed instructions for contribution in [Spine Toolbox User Guide](https://spine-toolbox.readthedocs.io/en/latest/contribution_guide.html).
+See detailed instructions for contribution in 
+[Spine Toolbox User Guide](https://spine-toolbox.readthedocs.io/en/latest/contribution_guide.html).
 
 Below are the bare minimum things you need to know.
 
@@ -207,9 +199,11 @@ Below are the bare minimum things you need to know.
 
 ### Linting
 
-It is advisable to run [`pylint`](https://pylint.readthedocs.io/en/latest/) regularly on files that have been changed.
+It is advisable to run [`pylint`](https://pylint.readthedocs.io/en/latest/) 
+regularly on files that have been changed.
 The project root includes a configuration file for `pylint`.
-`pylint`'s user guide includes instructions on how to [integrate the tool in IDEs](https://pylint.readthedocs.io/en/latest/user_guide/ide-integration.html#pylint-in-pycharm).
+`pylint`'s user guide includes instructions on how to 
+[integrate the tool in IDEs](https://pylint.readthedocs.io/en/latest/user_guide/ide-integration.html#pylint-in-pycharm).
 
 ### Unit tests
 
