@@ -68,7 +68,8 @@ class PivotModel:
         self._data.update(data)
 
     def add_to_model(self, data):
-        self._data.update(data)
+        data.update(self._data)
+        self._data = data
         if not any(self.frozen_value):
             key = next(iter(data), [None, None])
             frozen_value = key[-2:]

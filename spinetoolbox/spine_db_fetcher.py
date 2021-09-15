@@ -105,7 +105,7 @@ class SpineDBFetcher(QObject):
             return True
         return not self._fetched[item_type]
 
-    def _fetch_from_cache(self, item_type, parent=None, iter_chunk_size=1000):
+    def _fetch_more_from_cache(self, item_type, parent=None, iter_chunk_size=1000):
         fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, {})
         args = [iter(items)] * iter_chunk_size
@@ -127,7 +127,7 @@ class SpineDBFetcher(QObject):
         Args:
             item_type (str): the type of items to fetch, e.g. "object_class"
         """
-        if self._fetch_from_cache(item_type, parent=parent, iter_chunk_size=iter_chunk_size):
+        if self._fetch_more_from_cache(item_type, parent=parent, iter_chunk_size=iter_chunk_size):
             return
         # Nothing found in cache.
         # Add parent to the list of parents to refetch in case something is added to the cache
@@ -169,7 +169,7 @@ class SpineDBFetcher(QObject):
         """
         for parent in self._parents.pop(item_type, []):
             if self._can_fetch_more_from_cache(item_type, parent=parent):
-                self._fetch_from_cache(item_type, parent=parent)
+                self._fetch_more_from_cache(item_type, parent=parent)
 
     def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
         if item_types is None:

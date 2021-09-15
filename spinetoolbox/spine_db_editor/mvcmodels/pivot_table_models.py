@@ -29,6 +29,40 @@ from ..widgets.custom_delegates import (
 )
 
 
+class _FetchParent:
+    def fetch_successful(self, db_map, item):
+        raise NotImplementedError()
+
+
+class _SimpleFetchParent(_FetchParent):
+    def fetch_successful(self, db_map, item):
+        return True
+
+
+class _ParameterFetchParent(_FetchParent):
+    def __init__(self, parent):
+        self._parent = parent
+
+    def fetch_successful(self, db_map, item):
+        return item["entity_class_id"] == self._parent.current_class_id[db_map]
+
+
+class _EntityFetchParent(_FetchParent):
+    def __init__(self, parent):
+        self._parent = parent
+
+    def fetch_successful(self, db_map, item):
+        return item["class_id"] == self._parent.current_class_id[db_map]
+
+
+class _MemberObjectFetchParent(_FetchParent):
+    def __init__(self, parent):
+        self._parent = parent
+
+    def fetch_successful(self, db_map, item):
+        return item["class_id"] in {x[db_map] for x in self._parent.current_object_class_id_list}
+
+
 class PivotTableModelBase(QAbstractTableModel):
 
     _V_HEADER_WIDTH = 5
@@ -53,15 +87,41 @@ class PivotTableModelBase(QAbstractTableModel):
         self.modelAboutToBeReset.connect(self.reset_data_count)
         self.modelReset.connect(lambda *args: QTimer.singleShot(self._FETCH_DELAY, self.start_fetching))
 
+    def _fetch_item_types(self):
+        """Yields item types to fetch for this model.
+
+        Yields:
+            str
+        """
+        raise NotImplementedError()
+
+    def _fetch_parent(self, item_type):
+        """Returns a parent to fetch items of given type.
+
+        Args:
+            item_type (str):
+
+        Returns:
+            _FetchParent
+        """
+        raise NotImplementedError()
+
+    def _can_fetch_more_item_type(self, item_type):
+        return any(
+            self.db_mngr.can_fetch_more(db_map, item_type, parent=self._fetch_parent(item_type))
+            for db_map in self._parent.db_maps
+        )
+
     def canFetchMore(self, parent=QModelIndex()):
-        return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self._parent.db_maps)
+        return any(self._can_fetch_more_item_type(item_type) for item_type in self._fetch_item_types())
+
+    def _fetch_more_item_type(self, item_type):
+        for db_map in self._parent.db_maps:
+            self.db_mngr.fetch_more(db_map, item_type, parent=self._fetch_parent(item_type))
 
     def fetchMore(self, parent=QModelIndex()):
-        for db_map in self._parent.db_maps:
-            self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
-
-    def fetch_successful(self, db_map, item):
-        return True
+        for item_type in self._fetch_item_types():
+            self._fetch_more_item_type(item_type)
 
     @property
     def item_type(self):
@@ -153,6 +213,7 @@ class PivotTableModelBase(QAbstractTableModel):
         top_left = self.index(self.headerRowCount(), self.headerColumnCount())
         bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right)
+        self.layoutChanged.emit()
 
     def remove_from_model(self, data):
         if not data:
@@ -708,15 +769,31 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             parent (SpineDBEditor)
         """
         super().__init__(parent)
-        self._object_class_count = None
+        self._entity_fetch_parent = _EntityFetchParent(self._parent)
+        self._parameter_fetch_parent = _ParameterFetchParent(self._parent)
+        self._alternative_fetch_parent = _SimpleFetchParent()
 
     @property
     def item_type(self):
         return "parameter_value"
 
-    def fetch_successful(self, db_map, item):
-        entity_class_id = self._parent.current_class_id[db_map]
-        return item["entity_class_id"] == entity_class_id
+    def _fetch_item_types(self):
+        yield "parameter_value"
+        yield "alternative"
+        yield "parameter_definition"
+        if self._parent.current_class_type == "object_class":
+            yield "object"
+        elif self._parent.current_class_type == "relationship_class":
+            yield "relationship"
+
+    def _fetch_parent(self, item_type):
+        return {
+            "parameter_value": self._parameter_fetch_parent,
+            "parameter_definition": self._parameter_fetch_parent,
+            "alternative": self._alternative_fetch_parent,
+            "object": self._entity_fetch_parent,
+            "relationship": self._entity_fetch_parent,
+        }[item_type]
 
     def db_map_object_ids(self, index):
         """
@@ -801,7 +878,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def call_reset_model(self, pivot=None):
         """See base class."""
         object_class_ids = self._parent.current_object_class_ids
-        self._object_class_count = len(object_class_ids)
         data = self._parent.load_parameter_value_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         top_left_headers += [TopLeftParameterHeaderItem(self)]
@@ -957,8 +1033,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         }
         if not any(db_map_entities.values()):
             return False
-        db_map_data = self._load_empty_parameter_value_data(db_map_entities=db_map_entities)
-        self.receive_data_added_or_removed(db_map_data, action)
+        data = self._load_empty_parameter_value_data(db_map_entities=db_map_entities)
+        self.receive_data_added_or_removed(data, action)
         return True
 
     def receive_relationships_added_or_removed(self, db_map_data, action):
@@ -1033,7 +1109,6 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
     def call_reset_model(self, pivot=None):
         """See base class."""
         object_class_ids = self._parent.current_object_class_ids
-        self._object_class_count = len(object_class_ids)
         data = self._parent.load_expanded_parameter_value_data()
         top_left_headers = [TopLeftObjectHeaderItem(self, name, id_) for name, id_ in object_class_ids.items()]
         self._index_top_left_header = TopLeftParameterIndexHeaderItem(self)
@@ -1105,13 +1180,25 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
 class RelationshipPivotTableModel(PivotTableModelBase):
     """A model for the pivot table in relationship input type."""
 
+    def __init__(self, parent):
+        """
+        Args:
+            parent (SpineDBEditor)
+        """
+        super().__init__(parent)
+        self._relationship_fetch_parent = _EntityFetchParent(self._parent)
+        self._object_fetch_parent = _MemberObjectFetchParent(self._parent)
+
     @property
     def item_type(self):
         return "relationship"
 
-    def fetch_successful(self, db_map, item):
-        entity_class_id = self._parent.current_class_id[db_map]
-        return item["class_id"] == entity_class_id
+    def _fetch_item_types(self):
+        yield "object"
+        yield "relationship"
+
+    def _fetch_parent(self, item_type):
+        return {"relationship": self._relationship_fetch_parent, "object": self._object_fetch_parent}[item_type]
 
     def call_reset_model(self, pivot=None):
         """See base class."""
@@ -1205,9 +1292,25 @@ class RelationshipPivotTableModel(PivotTableModelBase):
 class ScenarioAlternativePivotTableModel(PivotTableModelBase):
     """A model for the pivot table in scenario alternative input type."""
 
+    def __init__(self, parent):
+        """
+        Args:
+            parent (SpineDBEditor)
+        """
+        super().__init__(parent)
+        self._simple_fetch_parent = _SimpleFetchParent()
+
     @property
     def item_type(self):
         return "scenario_alternative"
+
+    def _fetch_item_types(self):
+        yield "scenario"
+        yield "alternative"
+        yield "scenario_alternative"
+
+    def _fetch_parent(self, item_type):
+        return self._simple_fetch_parent
 
     def call_reset_model(self, pivot=None):
         """See base class."""
