@@ -225,9 +225,18 @@ class MinimalTreeModel(QAbstractItemModel):
         self._parent = parent
         self._invisible_root_item = TreeItem(self)
 
-    def visit_all(self, index=QModelIndex()):
+    def visit_all(self, index=QModelIndex(), view=None):
         """Iterates all items in the model including and below the given index.
         Iterative implementation so we don't need to worry about Python recursion limits.
+
+        Args:
+            index (QModelIndex): an index to start. If not given, we start at the root
+            view (QTreeView): a view. If given, we only yield items that are visible
+                from that view. So for example, if a tree item is not expanded then we don't yield
+                its children.
+
+        Yields:
+            TreeItem
         """
         if index.isValid():
             ancient_one = self.item_from_index(index)
@@ -242,10 +251,11 @@ class MinimalTreeModel(QAbstractItemModel):
         while True:
             if visit_children:
                 yield current
-                child = current.last_child()
-                if child:
-                    current = child
-                    continue
+                if view is None or view.isExpanded(self.index_from_item(current)):
+                    child = current.last_child()
+                    if child:
+                        current = child
+                        continue
             sibling = current.previous_sibling()
             if sibling:
                 visit_children = True

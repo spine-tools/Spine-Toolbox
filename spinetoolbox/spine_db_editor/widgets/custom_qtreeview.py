@@ -127,10 +127,8 @@ class EntityTreeView(CopyTreeView):
     @Slot()
     def _fetch_more_visible(self):
         model = self.model()
-        for item in model.visit_all():
+        for item in model.visit_all(view=self):
             index = model.index_from_item(item)
-            if not self.isExpanded(index):
-                continue
             last = model.index(model.rowCount(index) - 1, 0, index)
             if self.visualRect(last).intersects(self.viewport().rect()) and model.canFetchMore(index):
                 model.fetchMore(index)
