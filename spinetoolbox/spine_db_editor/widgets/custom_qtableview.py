@@ -16,7 +16,7 @@ Custom QTableView classes that support copy-paste and the like.
 :date:   18.5.2018
 """
 
-from PySide2.QtCore import Qt, Signal, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QTimer, QModelIndex
 from PySide2.QtWidgets import QAction, QTableView, QMenu
 from PySide2.QtGui import QKeySequence
 from ...widgets.report_plotting_failure import report_plotting_failure
@@ -325,6 +325,10 @@ class PivotTableView(CopyPasteTableView):
         self._remove_parameters_action = None
         self._remove_alternatives_action = None
         self._remove_scenarios_action = None
+        self._fetch_more_timer = QTimer(self)
+        self._fetch_more_timer.setSingleShot(True)
+        self._fetch_more_timer.setInterval(100)
+        self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
 
     @property
     def source_model(self):
@@ -528,6 +532,20 @@ class PivotTableView(CopyPasteTableView):
             plot_window.raise_()
         except PlottingError as error:
             report_plotting_failure(error, self)
+
+    def setModel(self, model):
+        old_model = self.model()
+        if old_model:
+            old_model.model_data_changed.disconnect(self._fetch_more_timer.start)
+        super().setModel(model)
+        model.model_data_changed.connect(self._fetch_more_timer.start)
+
+    def _fetch_more_visible(self):
+        model = self.model()
+        scrollbar = self.verticalScrollBar()
+        scrollbar_at_max = scrollbar.value() == scrollbar.maximum()
+        if scrollbar_at_max and model.canFetchMore(QModelIndex()):
+            model.fetchMore(QModelIndex())
 
 
 class FrozenTableView(QTableView):

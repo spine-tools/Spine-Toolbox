@@ -61,10 +61,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_timer.setInterval(100)
         self._filter_timer.timeout.connect(self.refresh)
 
-    def canFetchMore(self, parent=QModelIndex()):
+    def canFetchMore(self, _parent):
         return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self.db_maps)
 
-    def fetchMore(self, parent=QModelIndex()):
+    def fetchMore(self, _parent):
         for db_map in self.db_maps:
             self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
 
@@ -153,7 +153,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def init_model(self):
         """Initializes the model."""
         super().init_model()
-        self.empty_model.fetchMore()
+        self.empty_model.fetchMore(QModelIndex())
         self._make_auto_filter_menus()
 
     def _make_auto_filter_menus(self):

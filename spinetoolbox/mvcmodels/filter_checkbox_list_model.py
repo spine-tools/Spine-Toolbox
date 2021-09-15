@@ -303,18 +303,18 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         super().__init__(parent, show_empty=show_empty)
         self.source_model = source_model
 
-    def canFetchMore(self, parent=QModelIndex()):
+    def canFetchMore(self, parent):
         if self.source_model is None:
             return False
-        return self.source_model.canFetchMore()
+        return self.source_model.canFetchMore(self.mapToSource(parent))
 
-    def fetchMore(self, parent=QModelIndex()):
+    def fetchMore(self, parent):
         if self.source_model is None:
             return
-        row_count_before = self.rowCount()
-        self.source_model.fetchMore()
+        row_count_before = self.rowCount(parent)
+        self.source_model.fetchMore(self.mapToSource(parent))
         # If fetching the source model doesn't bring any new data, emit layoutChanged to fetch more again.
-        if self.rowCount() == row_count_before:
+        if self.rowCount(parent) == row_count_before:
             self.layoutChanged.emit()
 
     def _do_add_items(self, data):

@@ -134,14 +134,14 @@ class CompoundTableModel(MinimalTableModel):
         """
         return [(model, i) for i in range(model.rowCount())]
 
-    def canFetchMore(self, parent=QModelIndex()):
+    def canFetchMore(self, parent):
         """Returns True if any of the submodels that haven't been fetched yet can fetch more."""
         for self._next_sub_model in self.sub_models:
             if self._next_sub_model.canFetchMore(self.map_to_sub(parent)):
                 return True
         return False
 
-    def fetchMore(self, parent=QModelIndex()):
+    def fetchMore(self, parent):
         """Fetches the next sub model and increments the fetched counter."""
         self._next_sub_model.fetchMore(self.map_to_sub(parent))
         if not self._next_sub_model.rowCount():

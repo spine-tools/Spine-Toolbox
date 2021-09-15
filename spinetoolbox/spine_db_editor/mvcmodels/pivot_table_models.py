@@ -16,7 +16,7 @@ Provides pivot table models for the Tabular View.
 :date:   1.11.2018
 """
 
-from PySide2.QtCore import Qt, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
+from PySide2.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from .pivot_model import PivotModel
@@ -69,6 +69,8 @@ class PivotTableModelBase(QAbstractTableModel):
     _MAX_FETCH_COUNT = 1000
     _FETCH_DELAY = 0
 
+    model_data_changed = Signal()
+
     def __init__(self, parent):
         """
         Args:
@@ -112,14 +114,14 @@ class PivotTableModelBase(QAbstractTableModel):
             for db_map in self._parent.db_maps
         )
 
-    def canFetchMore(self, parent=QModelIndex()):
+    def canFetchMore(self, _parent):
         return any(self._can_fetch_more_item_type(item_type) for item_type in self._fetch_item_types())
 
     def _fetch_more_item_type(self, item_type):
         for db_map in self._parent.db_maps:
             self.db_mngr.fetch_more(db_map, item_type, parent=self._fetch_parent(item_type))
 
-    def fetchMore(self, parent=QModelIndex()):
+    def fetchMore(self, _parent):
         for item_type in self._fetch_item_types():
             self._fetch_more_item_type(item_type)
 
@@ -213,7 +215,7 @@ class PivotTableModelBase(QAbstractTableModel):
         top_left = self.index(self.headerRowCount(), self.headerColumnCount())
         bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right)
-        self.layoutChanged.emit()
+        self.model_data_changed.emit()
 
     def remove_from_model(self, data):
         if not data:
@@ -1397,11 +1399,20 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
 
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):
+    model_data_changed = Signal()
+
     def __init__(self, parent=None):
         """Initialize class."""
         super().__init__(parent)
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.index_filters = {}
+
+    def setSourceModel(self, model):
+        old_model = self.sourceModel()
+        if old_model:
+            old_model.model_data_changed.disconnect(self.model_data_changed)
+        super().setSourceModel(model)
+        model.model_data_changed.connect(self.model_data_changed)
 
     def set_filter(self, identifier, filter_value):
         """Sets filter for a given index (object_class) name.

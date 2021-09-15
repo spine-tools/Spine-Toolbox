@@ -45,11 +45,11 @@ class MinimalTableModel(QAbstractTableModel):
             return Qt.NoItemFlags
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-    def canFetchMore(self, parent=None):
+    def canFetchMore(self, parent):
         """Return True if the model hasn't been fetched."""
         return not self._fetched
 
-    def fetchMore(self, parent=None):
+    def fetchMore(self, parent):
         """Fetch data and use it to reset the model."""
         self._fetched = True
 
