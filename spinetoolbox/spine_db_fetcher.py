@@ -25,8 +25,8 @@ from spinetoolbox.helpers import busy_effect, signal_waiter, CacheItem
 class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
-    _fetch_more_requested = Signal(str, object, int)
-    _fetch_all_requested = Signal(set, int)
+    _fetch_more_requested = Signal(str, object)
+    _fetch_all_requested = Signal(set)
     _fetch_all_finished = Signal()
 
     def __init__(self, db_mngr, db_map):
@@ -63,6 +63,7 @@ class SpineDBFetcher(QObject):
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._fetch_all_requested.connect(self._fetch_all)
+        self._parents = {}
 
     def cache_items(self, item_type, items):
         # NOTE: OrderedDict is so we can call `reversed()` in Python 3.7
@@ -83,22 +84,23 @@ class SpineDBFetcher(QObject):
             return True
         fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, OrderedDict())
+        key = (next(reversed(items), None), len(items))
         try:
-            key = (next(reversed(items), None), len(items))
-            try:
-                fetch_id = parent.fetch_id()
-            except AttributeError:
-                fetch_id = parent
-            cache_key, cache_result = self._can_fetch_more_cache.get((item_type, fetch_id), (None, None))
-            if key == cache_key:
-                return cache_result
+            fetch_id = parent.fetch_id()
+        except AttributeError:
+            fetch_id = parent
+        cache_key, cache_result = self._can_fetch_more_cache.get((item_type, fetch_id), (None, None))
+        if key == cache_key:
+            return cache_result
+        try:
             result = any(fetch_successful(x) for x in items.values())
-            self._can_fetch_more_cache[item_type, fetch_id] = (key, result)
-            return result
         except RuntimeError:
             # OrderedDict mutated during iteration
-            # This means the fetcher thread did something, and we need to start over
+            # The DB thread added some stuff to the cache while we were looking at it,
+            # which means we need to start over
             return self.can_fetch_more(item_type, parent=parent)
+        self._can_fetch_more_cache[item_type, fetch_id] = (key, result)
+        return result
 
     @busy_effect
     def fetch_more(self, item_type, parent=None, iter_chunk_size=1000):
@@ -107,17 +109,6 @@ class SpineDBFetcher(QObject):
         Args:
             item_type (str): the type of items to fetch, e.g. "object_class"
         """
-        self._fetch_more_requested.emit(item_type, parent, iter_chunk_size)
-
-    @Slot(str, object, int)
-    def _fetch_more(self, item_type, parent, iter_chunk_size):
-        self._do_fetch_more(item_type, parent, iter_chunk_size)
-
-    @busy_effect
-    def _do_fetch_more(self, item_type, parent, iter_chunk_size):
-        iterator = self._iterators.get(item_type)
-        if iterator is None:
-            return
         fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, {})
         args = [iter(items)] * iter_chunk_size
@@ -130,6 +121,21 @@ class SpineDBFetcher(QObject):
                 signal = self._db_mngr.added_signals[item_type]
                 signal.emit({self._db_map: chunk})
                 return
+        # Nothing found in cache.
+        # Add parent to the list of parents to refetch in case something is added to the cache
+        self._parents.setdefault(item_type, []).append(parent)
+        self._fetch_more_requested.emit(item_type, parent)
+
+    @Slot(str, object)
+    def _fetch_more(self, item_type, parent):
+        self._do_fetch_more(item_type, parent)
+
+    @busy_effect
+    def _do_fetch_more(self, item_type, parent):
+        iterator = self._iterators.get(item_type)
+        if iterator is None:
+            return
+        fetch_successful = self._make_fetch_successful(parent)
         while True:
             chunk = next(iterator, [])
             if not chunk:
@@ -140,12 +146,24 @@ class SpineDBFetcher(QObject):
                 signal.emit({self._db_map: chunk})
                 return
             self.cache_items(item_type, chunk)
+            self._refetch_parents(item_type)
         try:
             parent.fully_fetched.emit()
         except AttributeError:
             pass
 
-    def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False, iter_chunk_size=1000):
+    def _refetch_parents(self, item_type):
+        """Refetches parents that might have missed some content from the cache.
+        Called after adding items to the cache from the DB thread.
+
+        Args:
+            item_type (str)
+        """
+        for parent in self._parents.pop(item_type, []):
+            if self.can_fetch_more(item_type, parent=parent):
+                self.fetch_more(item_type, parent=parent)
+
+    def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
         if item_types is None:
             item_types = set(self._getters)
         if only_descendants:
@@ -162,20 +180,20 @@ class SpineDBFetcher(QObject):
         if not item_types:
             return
         with signal_waiter(self._fetch_all_finished) as waiter:
-            self._fetch_all_requested.emit(item_types, iter_chunk_size)
+            self._fetch_all_requested.emit(item_types)
             waiter.wait()
 
-    @Slot(set, int)
-    def _fetch_all(self, item_types, iter_chunk_size):
-        self._do_fetch_all(item_types, iter_chunk_size)
+    @Slot(set)
+    def _fetch_all(self, item_types):
+        self._do_fetch_all(item_types)
 
     @busy_effect
-    def _do_fetch_all(self, item_types, iter_chunk_size):
+    def _do_fetch_all(self, item_types):
         class _Parent:
             def fetch_successful(self, *args):
                 return False
 
         parent = _Parent()
         for item_type in item_types:
-            self._do_fetch_more(item_type, parent, iter_chunk_size)
+            self._do_fetch_more(item_type, parent)
         self._fetch_all_finished.emit()

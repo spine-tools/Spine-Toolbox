@@ -259,7 +259,7 @@ class SpineDBManager(QObject):
             return False
         return self._get_fetcher(db_map).can_fetch_more(item_type, parent=parent)
 
-    def fetch_more(self, db_map, item_type, parent=None, iter_chunk_size=1000):
+    def fetch_more(self, db_map, item_type, parent=None):
         """Fetches more items of given type from given db.
 
         Args:
@@ -270,12 +270,10 @@ class SpineDBManager(QObject):
                 and returns a Boolean indicating whether or not to stop fetching.
                 If not implemented, then fetching is stopped immediately after one step.
                 Can also provide ``fully_fetched``, a ``Signal`` that gets emitted whenever fetching is complete.
-
-            iter_chunk_size (int, optional): fetches items by chunks of the given size
         """
         if db_map.connection.closed:
             return
-        self._get_fetcher(db_map).fetch_more(item_type, parent=parent, iter_chunk_size=iter_chunk_size)
+        self._get_fetcher(db_map).fetch_more(item_type, parent=parent)
 
     def cache_items_for_fetching(self, db_map, item_type, items):
         self._get_fetcher(db_map).cache_items(item_type, items)
@@ -922,7 +920,7 @@ class SpineDBManager(QObject):
         return [int(id_) for id_ in alternative_id_list.split(",")]
 
     @staticmethod
-    def get_db_items(query, query_chunk_size=1000, iter_chunk_size=100):
+    def get_db_items(query, query_chunk_size=1000, iter_chunk_size=1000):
         """Runs the given query and yields results by chunks of given size.
 
         Yields:
