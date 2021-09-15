@@ -79,9 +79,7 @@ class SpineDBFetcher(QObject):
             return lambda _: True
         return lambda item: fetch_successful(self._db_map, item)
 
-    def can_fetch_more(self, item_type, parent=None):
-        if not self._fetched[item_type]:
-            return True
+    def _can_fetch_more_from_cache(self, item_type, parent=None):
         fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, OrderedDict())
         key = (next(reversed(items), None), len(items))
@@ -102,13 +100,12 @@ class SpineDBFetcher(QObject):
         self._can_fetch_more_cache[item_type, fetch_id] = (key, result)
         return result
 
-    @busy_effect
-    def fetch_more(self, item_type, parent=None, iter_chunk_size=1000):
-        """Fetches items from the database.
+    def can_fetch_more(self, item_type, parent=None):
+        if self._can_fetch_more_from_cache(item_type, parent=parent):
+            return True
+        return not self._fetched[item_type]
 
-        Args:
-            item_type (str): the type of items to fetch, e.g. "object_class"
-        """
+    def _fetch_from_cache(self, item_type, parent=None, iter_chunk_size=1000):
         fetch_successful = self._make_fetch_successful(parent)
         items = self.cache.get(item_type, {})
         args = [iter(items)] * iter_chunk_size
@@ -120,7 +117,18 @@ class SpineDBFetcher(QObject):
                     del items[k]
                 signal = self._db_mngr.added_signals[item_type]
                 signal.emit({self._db_map: chunk})
-                return
+                return True
+        return False
+
+    @busy_effect
+    def fetch_more(self, item_type, parent=None, iter_chunk_size=1000):
+        """Fetches items from the database.
+
+        Args:
+            item_type (str): the type of items to fetch, e.g. "object_class"
+        """
+        if self._fetch_from_cache(item_type, parent=parent, iter_chunk_size=iter_chunk_size):
+            return
         # Nothing found in cache.
         # Add parent to the list of parents to refetch in case something is added to the cache
         self._parents.setdefault(item_type, []).append(parent)
@@ -160,8 +168,8 @@ class SpineDBFetcher(QObject):
             item_type (str)
         """
         for parent in self._parents.pop(item_type, []):
-            if self.can_fetch_more(item_type, parent=parent):
-                self.fetch_more(item_type, parent=parent)
+            if self._can_fetch_more_from_cache(item_type, parent=parent):
+                self._fetch_from_cache(item_type, parent=parent)
 
     def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
         if item_types is None:
