@@ -91,6 +91,25 @@ class ObjectTreeModel(MultiDBTreeModel):
                         result.setdefault(parent_item, {}).setdefault(db_map, []).extend(list(ids.keys()))
         return result
 
+    def _parent_relationship_data_for_update(self, db_map_data):
+        """Takes given relationship data and returns the same data keyed by parent tree-item.
+
+        Args:
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
+
+        Returns:
+            dict: maps parent tree-items to DiffDatabaseMapping instances to list of item ids
+        """
+        result = dict()
+        for db_map, items in db_map_data.items():
+            d = dict()
+            for item in items:
+                d.setdefault(item["class_id"], dict())[item["id"]] = None
+            for class_id, ids in d.items():
+                for parent_item in self.find_items(db_map, (None, None, class_id)):
+                    result.setdefault(parent_item, {})[db_map] = list(ids.keys())
+        return result
+
     def _parent_entity_group_data(self, db_map_data):
         """Takes given entity group data and returns the same data keyed by parent tree-item.
 
@@ -184,7 +203,7 @@ class ObjectTreeModel(MultiDBTreeModel):
             parent_item.update_children_by_id(db_map_ids)
 
     def update_relationships(self, db_map_data):
-        for parent_item, db_map_ids in self._parent_relationship_data(db_map_data).items():
+        for parent_item, db_map_ids in self._parent_relationship_data_for_update(db_map_data).items():
             parent_item.update_children_by_id(db_map_ids)
 
     def find_next_relationship_index(self, index):
