@@ -71,9 +71,12 @@ class PivotModel:
         data.update(self._data)
         self._data = data
         if not any(self.frozen_value):
-            key = next(iter(data), [None, None])
-            frozen_value = key[-2:]
-            self.frozen_value = frozen_value
+            first = next(iter(self._data), None)
+            if first is None:
+                self.frozen_value = [None] * range(len(self.pivot_frozen))
+            else:
+                frozen_getter = self._index_key_getter(self.pivot_frozen)
+                self.frozen_value = frozen_getter(first)
         self.index_values = dict(zip(self.index_ids, zip(*self._data.keys())))
         old_row_count = len(self._row_data_header)
         old_column_count = len(self._column_data_header)
