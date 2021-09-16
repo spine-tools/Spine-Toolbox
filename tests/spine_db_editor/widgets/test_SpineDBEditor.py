@@ -21,7 +21,7 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import QItemSelectionModel
+from PySide2.QtCore import QModelIndex, QItemSelectionModel
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
@@ -393,7 +393,7 @@ class TestSpineDBEditor(
         self.spine_db_editor.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
         # Check default in object parameter_definition
         model = self.spine_db_editor.object_parameter_definition_model
-        model.empty_model.fetchMore()
+        model.empty_model.fetchMore(QModelIndex())
         h = model.header.index
         row_data = []
         for row in range(model.rowCount()):

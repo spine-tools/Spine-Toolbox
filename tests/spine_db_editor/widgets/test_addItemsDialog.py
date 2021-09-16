@@ -20,6 +20,7 @@ import unittest
 from unittest import mock
 import logging
 import sys
+from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.helpers import signal_waiter
@@ -75,7 +76,7 @@ class TestAddItemsDialog(unittest.TestCase):
         dialog = AddObjectClassesDialog(self._db_editor, self._db_mngr, self._db_map)
         model = dialog.model
         header = model.header
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertEqual(header, ['object_class name', 'description', 'display icon', 'databases'])
         indexes = [model.index(0, header.index(field)) for field in ('object_class name', 'databases')]
         values = ['fish', 'mock_db']
@@ -93,7 +94,7 @@ class TestAddItemsDialog(unittest.TestCase):
         self._db_editor.msg_error.attach_mock(mock.MagicMock(), "emit")
         model = dialog.model
         header = model.header
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertEqual(header, ['object_class name', 'description', 'display icon', 'databases'])
         indexes = [model.index(0, header.index(field)) for field in ('object_class name', 'databases')]
         values = ['fish', 'gibberish']
