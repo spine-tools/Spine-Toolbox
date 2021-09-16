@@ -19,7 +19,7 @@ The SpineDBManager class
 import itertools
 import json
 from PySide2.QtCore import Qt, QObject, Signal, QThread
-from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
+from PySide2.QtWidgets import QMessageBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (
     is_empty,
@@ -47,7 +47,6 @@ from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
-from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .helpers import get_upgrade_db_promt_text, signal_waiter, CacheItem
@@ -2076,6 +2075,7 @@ class SpineDBManager(QObject):
             item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
         elif item_type == "parameter_value_list":
             item["value_list"] = ";".join(str(val, "UTF8") for val in item["value_list"])
+            item["value_index_list"] = ";".join(str(k) for k in range(len(item["value_list"])))
         elif item_type == "entity_group":
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
