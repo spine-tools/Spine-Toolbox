@@ -1,49 +1,23 @@
-# GitHub Action to run unittests
+# GitHub Action to run tests
+name: Test suite
 
-name: Unit tests
-
-# Run workflow on every push
+# Run workflow on every push that includes Python source files
 on:
-  push
-
+  push:
+    paths:
+      - '**.py'
+      - '.github/workflows/*.yml'
+      - 'requirements.txt'
+  
 jobs:
-
-  unit-tests-windows:
-    name: Unit tests on Windows
-    runs-on: windows-latest
+  unit-tests:
+    name: Unit tests
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: true
       matrix:
         python-version: [3.7, 3.8]
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Display Python version
-      run:
-         python -c "import sys; print(sys.version)"
-    - name: Install dependencies
-      env:
-        PYTHONUTF8: 1
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install coverage
-        pip install codecov
-    - name: Run tests
-      run:
-        coverage run -m unittest discover --verbose
-    - name: Run codecov
-      run:
-        codecov
-
-  unit-tests-linux:
-    name: Unit tests on Ubuntu
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        python-version: [3.7, 3.8]
+        os: [windows-latest, ubuntu-20.04]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -54,17 +28,59 @@ jobs:
       run:
          python -c "import sys; print(sys.version)"
     - name: Install unixodbc
+      if: runner.os == 'Linux'
       run:
         sudo apt-get install -y unixodbc-dev  # Install to get sql.h headers
     - name: Install dependencies
+      env:
+        PYTHONUTF8: 1
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install coverage
         pip install codecov
+    - name: List packages
+      run: 
+        pip list
     - name: Run tests
-      run:
-        QT_QPA_PLATFORM=offscreen coverage run -m unittest discover --verbose
+      run: |
+        if [ "$RUNNER_OS" != "Windows" ]; then
+          export QT_QPA_PLATFORM=offscreen
+        fi
+        coverage run -m unittest discover --verbose
+      shell: bash
     - name: Run codecov
       run:
         codecov
+
+  execution-tests:
+    name: Execution tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7, 3.8]
+        os: [windows-latest, ubuntu-20.04]
+    needs: unit-tests
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install unixodbc
+      if: runner.os == 'Linux'
+      run:
+        sudo apt-get install -y unixodbc-dev  # Install to get sql.h headers
+    - name: Install dependencies
+      env:
+        PYTHONUTF8: 1
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: List packages
+      run: 
+        pip list
+    - name: Run tests
+      run:
+        python -m unittest discover --pattern execution_test.py --verbose
