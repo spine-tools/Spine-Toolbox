@@ -306,13 +306,13 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
     def canFetchMore(self, parent):
         if self.source_model is None:
             return False
-        return self.source_model.canFetchMore(self.mapToSource(parent))
+        return self.source_model.canFetchMore(QModelIndex())
 
     def fetchMore(self, parent):
         if self.source_model is None:
             return
         row_count_before = self.rowCount(parent)
-        self.source_model.fetchMore(self.mapToSource(parent))
+        self.source_model.fetchMore(QModelIndex())
         # If fetching the source model doesn't bring any new data, emit layoutChanged to fetch more again.
         if self.rowCount(parent) == row_count_before:
             self.layoutChanged.emit()
