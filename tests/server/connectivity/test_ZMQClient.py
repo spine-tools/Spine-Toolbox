@@ -23,7 +23,7 @@ import json
 sys.path.append('./../../../spinetoolbox/server/connectivity')
 sys.path.append('./../../../spinetoolbox/server/util')
 from ZMQClient import ZMQClient
-
+from ZMQClient import ZMQSecurityModelState
 
 
 class test_ZMQClient:
@@ -60,8 +60,10 @@ class test_ZMQClient:
 
     @staticmethod
     def test_connection_closing_loop():
-        client=ZMQClient("tcp","193.166.160.216",5555)
-
+        client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.STONEHOUSE,"./secfolder")
+        #client=ZMQClient("tcp","193.166.160.216",9000,ZMQSecurityModelState.STONEHOUSE,'/home/ubuntu/sw/zmq_sec_example_client/')
+        #client=ZMQClient("tcp","193.166.160.216",9000,ZMQSecurityModelState.STONEHOUSE,'/home/ubuntu/sw/zmq_sec_example_client/secfolder/')
+        #client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.NONE,"")
         #read JSON file content, and parse it
         #f=open('msg_data1.txt')
         #msgData = f.read()
@@ -100,7 +102,7 @@ class test_ZMQClient:
             eventsData=client.send(jsonTxt,"./","test_zipfile.zip")
             print("test_connection_closing_loop(): event data item count received: %d"%len(eventsData))
             print(eventsData)
-            if len(eventsData)!=30:
+            if len(eventsData)!=31:
                 return -1
             print("test msg %d sent/received, data size received: %d"%(i,len(eventsData)))
             i+=1
@@ -110,7 +112,7 @@ class test_ZMQClient:
 
     @staticmethod
     def test_invalid_file():
-        client=ZMQClient("tcp","193.166.160.216",5555)
+        client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.NONE,"")
         try:
             eventsData=client.send("dsds","./dd","test_zi.zip")
             return -1
@@ -121,7 +123,7 @@ class test_ZMQClient:
 
     @staticmethod
     def test_invalid_filename():
-        client=ZMQClient("tcp","193.166.160.216",5555)
+        client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.NONE,"")
         try:
             eventsData=client.send("dsds","./dd","")
             return -1
@@ -132,7 +134,7 @@ class test_ZMQClient:
 
     @staticmethod
     def test_invalid_text():
-        client=ZMQClient("tcp","193.166.160.216",5555)
+        client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.NONE,"")
         try:
             eventsData=client.send(None,"./","test_zipfile.zip")
             return -1

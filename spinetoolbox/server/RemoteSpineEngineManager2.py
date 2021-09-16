@@ -27,8 +27,10 @@ from enum import Enum
 
 #from spinetoolbox.server.util.ServerMessage import ServerMessage
 from spinetoolbox.server.connectivity.ZMQClient import ZMQClient
-
+from spinetoolbox.server.connectivity.ZMQClient import ZMQSecurityModelState
 from spine_engine.spine_engine import ItemExecutionFinishState
+
+
 
 #to avoid circular dependency
 try:
@@ -73,7 +75,9 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase,threading.Thread):
 
         threading.Thread.__init__(self)
         #print("RemoteSpineEngineManager()")
-        self.zmqClient=ZMQClient(protocol,remoteHost,remotePort)
+        self.zmqClient=ZMQClient(protocol,remoteHost,remotePort,ZMQSecurityModelState.STONEHOUSE,\
+            "/home/ubuntu/sw/Spine-Toolbox/tests/server/connectivity/secfolder/") #reconfigure security folder in a real scenario
+        #self.zmqClient=ZMQClient(protocol,remoteHost,remotePort,ZMQSecurityModelState.NONE,"")
         self._state=RemoteSpineEngineManagerState2.IDLE
         self._requestPending=False
         self._inputData=None
