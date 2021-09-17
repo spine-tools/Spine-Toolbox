@@ -27,6 +27,16 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;a href=&quot;https://spine-toolbox.readthedocs.io/en/latest/parameter_value_editor.html#time-patterns&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;Link&lt;/span&gt;&lt;/a&gt; to time period syntax.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="openExternalLinks">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="IndexedValueTableView" name="pattern_edit_table">
      <attribute name="horizontalHeaderStretchLastSection">
       <bool>true</bool>

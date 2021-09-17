@@ -35,6 +35,12 @@ class Ui_TimePatternEditor(object):
         TimePatternEditor.resize(586, 443)
         self.verticalLayout = QVBoxLayout(TimePatternEditor)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.label = QLabel(TimePatternEditor)
+        self.label.setObjectName(u"label")
+        self.label.setOpenExternalLinks(True)
+
+        self.verticalLayout.addWidget(self.label)
+
         self.pattern_edit_table = IndexedValueTableView(TimePatternEditor)
         self.pattern_edit_table.setObjectName(u"pattern_edit_table")
         self.pattern_edit_table.horizontalHeader().setStretchLastSection(True)
@@ -49,5 +55,6 @@ class Ui_TimePatternEditor(object):
 
     def retranslateUi(self, TimePatternEditor):
         TimePatternEditor.setWindowTitle(QCoreApplication.translate("TimePatternEditor", u"Form", None))
+        self.label.setText(QCoreApplication.translate("TimePatternEditor", u"<html><head/><body><p><a href=\"https://spine-toolbox.readthedocs.io/en/latest/parameter_value_editor.html#time-patterns\"><span style=\" text-decoration: underline; color:#0000ff;\">Link</span></a> to time period syntax.</p></body></html>", None))
     # retranslateUi
 
