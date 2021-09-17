@@ -59,11 +59,8 @@ class test_ZMQClient:
 
 
     @staticmethod
-    def test_connection_closing_loop():
-        client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.STONEHOUSE,"./secfolder")
-        #client=ZMQClient("tcp","193.166.160.216",9000,ZMQSecurityModelState.STONEHOUSE,'/home/ubuntu/sw/zmq_sec_example_client/')
-        #client=ZMQClient("tcp","193.166.160.216",9000,ZMQSecurityModelState.STONEHOUSE,'/home/ubuntu/sw/zmq_sec_example_client/secfolder/')
-        #client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.NONE,"")
+    def test_connection_closing_loop(remoteIP,port):
+        client=ZMQClient("tcp",remoteIP,int(port),ZMQSecurityModelState.STONEHOUSE,"./secfolder")
         #read JSON file content, and parse it
         #f=open('msg_data1.txt')
         #msgData = f.read()
@@ -111,8 +108,8 @@ class test_ZMQClient:
 
 
     @staticmethod
-    def test_invalid_file():
-        client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.NONE,"")
+    def test_invalid_file(remoteIP,port):
+        client=ZMQClient("tcp",remoteIP,int(port),ZMQSecurityModelState.NONE,"")
         try:
             eventsData=client.send("dsds","./dd","test_zi.zip")
             return -1
@@ -122,8 +119,8 @@ class test_ZMQClient:
 
 
     @staticmethod
-    def test_invalid_filename():
-        client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.NONE,"")
+    def test_invalid_filename(remoteIP,port):
+        client=ZMQClient("tcp",remoteIP,int(port),ZMQSecurityModelState.NONE,"")
         try:
             eventsData=client.send("dsds","./dd","")
             return -1
@@ -133,8 +130,8 @@ class test_ZMQClient:
 
 
     @staticmethod
-    def test_invalid_text():
-        client=ZMQClient("tcp","193.166.160.216",5555,ZMQSecurityModelState.NONE,"")
+    def test_invalid_text(remoteIP,port):
+        client=ZMQClient("tcp",remoteIP,int(port),ZMQSecurityModelState.NONE,"")
         try:
             eventsData=client.send(None,"./","test_zipfile.zip")
             return -1
@@ -151,26 +148,32 @@ class test_ZMQClient:
         #f.close()
         #msgDataJson=json.dumps(msgData)
 
-        #client=ZMQClient("tcp","193.166.160.217",5557)
         #try:
         #    eventsData=client.send(msgDataJson,"./","test_zipfile.zip")
         #except Exception as e:
         #    print("print(Sending failed as expected due to: %s"%e)
 
 
+if __name__ == '__main__':
+    
+    args = sys.argv[1:]
+    print("test client: arguments:%s"%args)
 
+    if len(args)<2:
+        print("provide remote spine_server IP address and port")        
 
-#run tests
-ret1=test_ZMQClient.test_invalid_file()
-ret2=test_ZMQClient.test_invalid_text()
-ret3=test_ZMQClient.test_invalid_filename()
-#test_ZMQClient.test_invalid_remoteserverlocation()
-ret4=test_ZMQClient.test_connection_closing_loop()
+    else:
+        #run tests
+        ret1=test_ZMQClient.test_invalid_file(args[0],args[1])
+        ret2=test_ZMQClient.test_invalid_text(args[0],args[1])
+        ret3=test_ZMQClient.test_invalid_filename(args[0],args[1])
+        #test_ZMQClient.test_invalid_remoteserverlocation()
+        ret4=test_ZMQClient.test_connection_closing_loop(args[0],args[1])
 
-if ret1==-1 or ret2==-1 or ret3==-1 or ret4==-1:
-    print("tests failed")
-else:
-    print("tests OK")
+        if ret1==-1 or ret2==-1 or ret3==-1 or ret4==-1:
+            print("tests failed")
+        else:
+            print("tests OK")
 
 
 
