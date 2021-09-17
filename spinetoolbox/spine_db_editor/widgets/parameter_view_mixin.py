@@ -68,8 +68,6 @@ class ParameterViewMixin:
         self.ui.treeView_alternative_scenario.alternative_selection_changed.connect(
             self._handle_alternative_selection_changed
         )
-        self.ui.treeView_object.selectionModel().currentChanged.connect(self.set_default_parameter_data)
-        self.ui.treeView_relationship.selectionModel().currentChanged.connect(self.set_default_parameter_data)
         self.ui.treeView_object.tree_selection_changed.connect(self._handle_object_tree_selection_changed)
         self.ui.treeView_relationship.tree_selection_changed.connect(self._handle_relationship_tree_selection_changed)
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
@@ -85,16 +83,11 @@ class ParameterViewMixin:
         self.object_parameter_definition_model.init_model()
         self.relationship_parameter_value_model.init_model()
         self.relationship_parameter_definition_model.init_model()
-        self.set_default_parameter_data()
+        self._set_default_parameter_data()
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
-
-    @Slot("QModelIndex", "QVariant")
-    def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
-        """Updates (object or relationship) parameter_definition or value with newly edited data."""
-        index.model().setData(index, new_value)
 
     @Slot("QModelIndex", int, "QVariant")
     def show_object_name_list_editor(self, index, rel_cls_id, db_map):
@@ -127,7 +120,7 @@ class ParameterViewMixin:
         editor = ObjectNameListEditor(self, index, object_class_names, object_names_lists, current_object_names)
         editor.show()
 
-    def set_default_parameter_data(self, index=None):
+    def _set_default_parameter_data(self, index=None):
         """Sets default rows for parameter models according to given index.
 
         Args:
@@ -137,15 +130,12 @@ class ParameterViewMixin:
             default_data = dict(database=next(iter(self.db_maps)).codename)
         else:
             default_data = index.model().item_from_index(index).default_parameter_data()
+        self.set_default_parameter_data(default_data)
 
-        def set_and_apply_default_rows(model, default_data):
+    def set_default_parameter_data(self, default_data):
+        for model in self._parameter_models:
             model.empty_model.set_default_row(**default_data)
             model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
-
-        set_and_apply_default_rows(self.object_parameter_definition_model, default_data)
-        set_and_apply_default_rows(self.object_parameter_value_model, default_data)
-        set_and_apply_default_rows(self.relationship_parameter_definition_model, default_data)
-        set_and_apply_default_rows(self.relationship_parameter_value_model, default_data)
 
     def reset_filters(self):
         """Resets filters."""
@@ -201,6 +191,7 @@ class ParameterViewMixin:
         for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rel_inds).items():
             self.filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
         self.reset_filters()
+        self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
 
     @Slot(dict)
     def _handle_relationship_tree_selection_changed(self, selected_indexes):
@@ -211,6 +202,7 @@ class ParameterViewMixin:
         self.filter_class_ids = self._db_map_ids(active_rel_cls_inds)
         self.filter_entity_ids = self._db_map_class_ids(active_rel_inds)
         self.reset_filters()
+        self._set_default_parameter_data(self.ui.treeView_relationship.selectionModel().currentIndex())
 
     @Slot(dict)
     def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):

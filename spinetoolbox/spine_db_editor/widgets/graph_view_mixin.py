@@ -81,6 +81,7 @@ class GraphViewMixin:
         super().init_models()
         self.scene = CustomGraphicsScene(self)
         self.ui.graphicsView.setScene(self.scene)
+        self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
 
     def connect_signals(self):
         """Connects signals."""

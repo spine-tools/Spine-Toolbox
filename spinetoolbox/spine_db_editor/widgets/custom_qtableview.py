@@ -40,6 +40,12 @@ from .custom_delegates import (
 )
 
 
+@Slot("QModelIndex", "QVariant")
+def _set_parameter_data(index, new_value):
+    """Updates (object or relationship) parameter_definition or value with newly edited data."""
+    index.model().setData(index, new_value)
+
+
 class ParameterTableView(AutoFilterCopyPasteTableView):
     def __init__(self, parent):
         """Initialize the view."""
@@ -79,7 +85,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
         column = self.model().header.index(column_name)
         delegate = delegate_class(self._spine_db_editor, self._spine_db_editor.db_mngr)
         self.setItemDelegateForColumn(column, delegate)
-        delegate.data_committed.connect(self._spine_db_editor.set_parameter_data)
+        delegate.data_committed.connect(_set_parameter_data)
         return delegate
 
     def create_delegates(self):

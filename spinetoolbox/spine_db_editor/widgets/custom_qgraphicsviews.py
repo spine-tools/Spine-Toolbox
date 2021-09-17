@@ -89,12 +89,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def entity_items(self):
         return [x for x in self.scene().items() if isinstance(x, EntityItem) and x not in self.removed_items]
 
-    def setScene(self, scene):
-        super().setScene(scene)
-        scene.selectionChanged.connect(self._handle_scene_selection_changed)
-
     @Slot()
-    def _handle_scene_selection_changed(self):
+    def handle_scene_selection_changed(self):
         """Filters parameters by selected objects in the graph."""
         if self.scene() is None:
             return
@@ -103,6 +99,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         selected_rels = [x for x in selected_items if isinstance(x, RelationshipItem)]
         self.selected_items = selected_objs + selected_rels
         self.graph_selection_changed.emit({"object": selected_objs, "relationship": selected_rels})
+        if len(selected_items) == 1:
+            default_data = selected_items[0].default_parameter_data()
+            self._spine_db_editor.set_default_parameter_data(default_data)
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
