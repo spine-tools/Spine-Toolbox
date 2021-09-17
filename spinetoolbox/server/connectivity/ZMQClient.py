@@ -35,7 +35,7 @@ from spinetoolbox.server.util.EventDataConverter import EventDataConverter
 
 @unique
 class ZMQSecurityModelState(Enum):
-    NONE = 0
+    NONE = 0  #no security is used
     STONEHOUSE = 1 #stonehouse-security model of Zero-MQ
 
 
@@ -58,11 +58,12 @@ class ZMQClient:
             ret=self._socket.connect(protocol+"://"+remoteHost+":"+str(remotePort))
             #print("ZMQClient(): socket.connect() return value: %d"%ret)
             print("ZMQClient(): Connection established to %s:%d"%(remoteHost,remotePort))
-        elif secModel==ZMQSecurityModelState.STONEHOUSE:
+        elif secModel==ZMQSecurityModelState.STONEHOUSE: 
             self._context = zmq.Context()
             self._socket = self._context.socket(zmq.REQ)
 
             #security configs
+            #implementation belows based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
             #prepare folders
             base_dir = secFolder
             #base_dir = os.path.dirname("/home/ubuntu/sw/spine/dev/zmq_server_certs/")
