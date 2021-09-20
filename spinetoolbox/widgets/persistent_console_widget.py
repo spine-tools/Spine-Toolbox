@@ -81,6 +81,7 @@ class PersistentConsoleLineEdit(QPlainTextEdit):
             self.parent().autocomplete(text, partial_text)
             return
         super().keyPressEvent(ev)
+        self.parent().keyPressEvent(ev)
 
 
 class PersistentConsoleWidget(QPlainTextEdit):
@@ -281,11 +282,13 @@ class PersistentConsoleWidget(QPlainTextEdit):
         return cursor
 
     def _insert_text_before_prompt(self, text, with_prompt=False, text_format=QTextCharFormat()):
-        """Inserts given html before the prompt. Used when adding input and output from external execution.
+        """Inserts given text before the prompt. Used when adding input and output from external execution.
 
         Args:
             text (str)
         """
+        vertical_scroll_bar = self.verticalScrollBar()
+        at_bottom = vertical_scroll_bar.value() == vertical_scroll_bar.maximum()
         cursor = self._cursor_at_start_of_prompt()
         if with_prompt:
             cursor.insertText(self._prompt, self._prompt_format)
@@ -293,7 +296,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         else:
             cursor.insertText(text, text_format)
         cursor.insertBlock()
-        self._scroll_to_bottom()
+        if at_bottom:
+            self._scroll_to_bottom()
 
     def add_stdin(self, data):
         """Adds new prompt with data. Used when adding stdin from external execution.
@@ -368,7 +372,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._line_edit.setFixedWidth(ev.size().width())
 
     def _extend_menu(self, menu):
-        """Add two more actions: Restart, and Interrupt."""
+        """Adds two more actions: Restart, and Interrupt."""
         menu.addSeparator()
         menu.addAction("Restart", self._restart_persistent)
         menu.addAction("Interrupt", self._interrupt_persistent)
@@ -389,7 +393,7 @@ class PersistentRunnableBase(QRunnable):
     def __init__(self, engine_server_address, persistent_key):
         """
         Args:
-            engine_server_address (str): address of the remote engine, currently should always an empty string
+            engine_server_address (str): address of the remote engine, currently should always be an empty string
             persistent_key (tuple): persistent process identifier
         """
         super().__init__()
