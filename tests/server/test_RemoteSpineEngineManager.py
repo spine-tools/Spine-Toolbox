@@ -236,9 +236,19 @@ class test_RemoteSpineEngineManager:
             print("exception raised as expected due to invalid input data")
 
 
-test_RemoteSpineEngineManager.invalid_config()
-test_RemoteSpineEngineManager.invalid_config2()
-test_RemoteSpineEngineManager.run_DAG_noreading("tcp","193.166.160.216",5555)
-#test_RemoteSpineEngineManager.run_DAG_empty_response("tcp","193.166.160.216",5555)
-test_RemoteSpineEngineManager.run_DAG("tcp","193.166.160.216",5555)
-#test_RemoteSpineEngineManager.run_DAG_loop("tcp","193.166.160.216",5555)
+if __name__ == '__main__':
+
+    args = sys.argv[1:]
+    print("test_RemoteSpineEngineManager(): arguments:%s"%args)
+
+    if len(args)<2:
+        print("provide remote spine_server IP address and port")
+
+    else:
+        #run tests
+        test_RemoteSpineEngineManager.invalid_config()
+        test_RemoteSpineEngineManager.invalid_config2()
+        test_RemoteSpineEngineManager.run_DAG_noreading("tcp",args[0],int(args[1]))
+        #test_RemoteSpineEngineManager.run_DAG_empty_response("tcp","193.166.160.216",5555)
+        test_RemoteSpineEngineManager.run_DAG("tcp",args[0],int(args[1]))
+        #test_RemoteSpineEngineManager.run_DAG_loop("tcp","193.166.160.216",5555)
