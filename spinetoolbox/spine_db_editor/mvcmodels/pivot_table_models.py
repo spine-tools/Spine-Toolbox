@@ -257,11 +257,11 @@ class PivotTableModelBase(QAbstractTableModel):
 
     def headerRowCount(self):
         """Returns number of rows occupied by header."""
-        return len(self.model.pivot_columns) + bool(self.model.pivot_rows)
+        return len(self.model.pivot_columns) + int(bool(self.model.pivot_rows))
 
     def headerColumnCount(self):
         """Returns number of columns occupied by header."""
-        return max(bool(self.model.pivot_columns), len(self.model.pivot_rows))
+        return max(int(bool(self.model.pivot_columns)), len(self.model.pivot_rows))
 
     def dataRowCount(self):
         """Returns number of rows that contain actual data."""
@@ -368,12 +368,11 @@ class PivotTableModelBase(QAbstractTableModel):
         return False
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
-            if section == self._plot_x_column:
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Horizontal and section == self._plot_x_column:
                 return "(X)"
-            return None
-        if role == Qt.DisplayRole and orientation == Qt.Vertical:
-            return self._V_HEADER_WIDTH * " "
+            if orientation == Qt.Vertical:
+                return self._V_HEADER_WIDTH * " "
         return None
 
     def map_to_pivot(self, index):

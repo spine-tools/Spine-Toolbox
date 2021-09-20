@@ -531,7 +531,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def populate_context_menu(self):
         """See base class."""
-        self._menu.addAction("Generate scenarios...", self._open_scenario_editor)
+        self._menu.addAction("Generate scenarios...", self._open_scenario_generator)
         self._menu.addSeparator()
         super().populate_context_menu()
 
@@ -617,8 +617,8 @@ class AlternativeScenarioTreeView(ItemTreeView):
         if event.source() is self:
             event.accept()
 
-    def _open_scenario_editor(self):
-        """Opens the scenario editor dialog."""
+    def _open_scenario_generator(self):
+        """Opens the scenario generator dialog."""
         selection_model = self.selectionModel()
         item_from_index = self.model().item_from_index
         all_items = [item_from_index(index) for index in selection_model.selectedIndexes()]
@@ -627,7 +627,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
         ]
         if not alternative_items:
             QMessageBox.warning(
-                self, "No alternatives selected", "Select alternatives you want to include in the scenarios first."
+                self, "No alternatives selected", "Select the alternatives you want to include in the scenarios first."
             )
             return
         included_ids = set()
@@ -641,8 +641,8 @@ class AlternativeScenarioTreeView(ItemTreeView):
                     continue
                 alternatives.append(item.item_data)
                 included_ids.add(item.id)
-        editor = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
-        editor.show()
+        generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
+        generator.show()
 
 
 class ParameterValueListTreeView(ItemTreeView):

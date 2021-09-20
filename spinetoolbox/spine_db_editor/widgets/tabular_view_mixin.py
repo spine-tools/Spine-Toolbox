@@ -85,13 +85,18 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
-        self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
+        self.ui.pivot_table.header_changed.connect(self._connect_pivot_table_header_signals)
         self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
         self.ui.frozen_table.selectionModel().currentChanged.connect(self.change_frozen_value)
         self.pivot_action_group.triggered.connect(self._handle_pivot_action_triggered)
         self.ui.dockWidget_pivot_table.visibilityChanged.connect(self._handle_pivot_table_visibility_changed)
         self.ui.dockWidget_frozen_table.visibilityChanged.connect(self._handle_frozen_table_visibility_changed)
+
+    @Slot()
+    def _connect_pivot_table_header_signals(self):
+        """Connects signals of pivot table's header views."""
+        self.ui.pivot_table.horizontalHeader().header_dropped.connect(self.handle_header_dropped)
+        self.ui.pivot_table.verticalHeader().header_dropped.connect(self.handle_header_dropped)
 
     def init_models(self):
         """Initializes models."""

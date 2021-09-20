@@ -37,7 +37,6 @@ class Ui_MapEditor(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.map_table_view = MapTableView(MapEditor)
         self.map_table_view.setObjectName(u"map_table_view")
-        self.map_table_view.horizontalHeader().setVisible(True)
 
         self.verticalLayout.addWidget(self.map_table_view)
 

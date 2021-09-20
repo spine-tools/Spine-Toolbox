@@ -16,8 +16,8 @@ Contains custom QHeaderView for the pivot table.
 :date:   2.12.2019
 """
 
-from PySide2.QtCore import Signal, Slot
-from PySide2.QtWidgets import QHeaderView, QMenu
+from PySide2.QtCore import Signal, Slot, Qt, QPoint
+from PySide2.QtWidgets import QHeaderView, QMenu, QAction
 from .tabular_view_header_widget import TabularViewHeaderWidget
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
@@ -26,22 +26,23 @@ from ...config import PIVOT_TABLE_HEADER_COLOR
 
 
 class PivotTableHeaderView(QHeaderView):
+    """Header view for the pivot table."""
 
     header_dropped = Signal(object, object)
 
     def __init__(self, orientation, area, pivot_table_view):
+        """
+        Args:
+            orientation (int): Qt.Horizontal or Qt.Vertical
+            area (str): which pivot area the header represents: "columns", "rows" or "frozen"
+            pivot_table_view (PivotTableView): parent view
+        """
         super().__init__(orientation, parent=pivot_table_view)
         self._area = area
-        self._proxy_model = pivot_table_view.model()
-        self._model_index = None
-        self._menu = QMenu(self)
-        self._plot_action = self._menu.addAction("Plot single column", self._plot_column)
-        self._add_to_plot_menu = self._menu.addMenu("Plot in window")
-        self._add_to_plot_menu.triggered.connect(self._add_column_to_plot)
-        self._set_as_x_action = self._menu.addAction("Use as X", self._set_x_flag)
-        self._set_as_x_action.setCheckable(True)
         self.setAcceptDrops(True)
         self.setStyleSheet("QHeaderView::section {background-color: " + PIVOT_TABLE_HEADER_COLOR + ";}")
+        self.setSectionsClickable(True)
+        self.setVisible(True)
 
     @property
     def area(self):
@@ -58,31 +59,29 @@ class PivotTableHeaderView(QHeaderView):
     def dropEvent(self, event):
         self.header_dropped.emit(event.source(), self)
 
-    def contextMenuEvent(self, event):
-        """Shows context menu.
 
-        Args:
-            event (QContextMenuEvent)
+class ParameterValuePivotHeaderView(PivotTableHeaderView):
+    """Header view for the pivot table in parameter value and index expansion mode."""
+
+    def __init__(self, orientation, area, pivot_table_view):
         """
-        self._menu.move(event.globalPos())
-        self._model_index = self.parent().indexAt(event.pos())
-        source_index = self._proxy_model.mapToSource(self._model_index)
-        if self._proxy_model.sourceModel().column_is_index_column(self._model_index.column()):
-            self._plot_action.setEnabled(False)
-            self._set_as_x_action.setEnabled(True)
-            self._set_as_x_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
-        elif self._model_index.column() < self._proxy_model.sourceModel().headerColumnCount():
-            self._plot_action.setEnabled(False)
-            self._set_as_x_action.setEnabled(False)
-            self._set_as_x_action.setChecked(False)
-        else:
-            self._plot_action.setEnabled(True)
-            self._set_as_x_action.setEnabled(True)
-            self._set_as_x_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
-        _prepare_plot_in_window_menu(self._add_to_plot_menu)
-        self._menu.show()
+        Args:
+            orientation (int): Qt.Horizontal or Qt.Vertical
+            area (str): which pivot area the header represents: "columns", "rows" or "frozen"
+            pivot_table_view (PivotTableView): parent view
+        """
+        super().__init__(orientation, area, pivot_table_view)
+        self._proxy_model = pivot_table_view.model()
+        self._model_index = None
+        self.setContextMenuPolicy(Qt.DefaultContextMenu if orientation == Qt.Horizontal else Qt.NoContextMenu)
+        self._menu = QMenu(self)
+        self._plot_action = self._menu.addAction("Plot single column", self._plot_column)
+        self._add_to_plot_menu = self._menu.addMenu("Plot in window")
+        self._add_to_plot_menu.triggered.connect(self._add_column_to_plot)
+        self._set_as_x_action = self._menu.addAction("Use as X", self._set_x_flag)
+        self._set_as_x_action.setCheckable(True)
 
-    @Slot("QAction")
+    @Slot(QAction)
     def _add_column_to_plot(self, action):
         """Adds a single column to existing plot window."""
         window_id = action.text()
@@ -115,3 +114,37 @@ class PivotTableHeaderView(QHeaderView):
         """Sets the X flag for a column."""
         index = self._proxy_model.mapToSource(self._model_index)
         self._proxy_model.sourceModel().set_plot_x_column(index.column(), self._set_as_x_action.isChecked())
+
+    def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
+        self._menu.move(event.globalPos())
+        self._model_index = self.parent().indexAt(event.pos())
+        source_index = self._proxy_model.mapToSource(self._model_index)
+        if self._proxy_model.sourceModel().column_is_index_column(self._model_index.column()):
+            self._plot_action.setEnabled(False)
+            self._set_as_x_action.setEnabled(True)
+            self._set_as_x_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
+        elif self._model_index.column() < self._proxy_model.sourceModel().headerColumnCount():
+            self._plot_action.setEnabled(False)
+            self._set_as_x_action.setEnabled(False)
+            self._set_as_x_action.setChecked(False)
+        else:
+            self._plot_action.setEnabled(True)
+            self._set_as_x_action.setEnabled(True)
+            self._set_as_x_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
+        _prepare_plot_in_window_menu(self._add_to_plot_menu)
+        self._menu.show()
+
+
+class ScenarioAlternativePivotHeaderView(PivotTableHeaderView):
+    """Header view for the pivot table in parameter value and index expansion mode."""
+
+    context_menu_requested = Signal(QPoint)
+    """Requests a header context menu be shown at given global position."""
+
+    def contextMenuEvent(self, event):
+        self.context_menu_requested.emit(event.globalPos())
