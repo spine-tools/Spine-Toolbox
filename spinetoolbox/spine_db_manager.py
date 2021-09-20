@@ -2039,9 +2039,11 @@ class SpineDBManager(QObject):
             object_class = self.get_item(db_map, "object_class", item["entity_class_id"])
             relationship_class = self.get_item(db_map, "relationship_class", item["entity_class_id"])
             if object_class:
+                item["entity_class_name"] = object_class["name"]
                 item["object_class_id"] = object_class["id"]
                 item["object_class_name"] = object_class["name"]
             if relationship_class:
+                item["entity_class_name"] = relationship_class["name"]
                 item["relationship_class_id"] = relationship_class["id"]
                 item["relationship_class_name"] = relationship_class["name"]
                 item["object_class_id_list"] = relationship_class["object_class_id_list"]
