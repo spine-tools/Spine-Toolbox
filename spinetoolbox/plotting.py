@@ -42,6 +42,9 @@ from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
 
 
+_LEGEND_SETTINGS = {"bbox_to_anchor": (1.02, 1.0), "fontsize": "small", "loc": "upper left"}
+
+
 class PlottingError(Exception):
     """An exception signalling failure in plotting."""
 
@@ -85,7 +88,7 @@ def plot_pivot_column(proxy_model, column, hints, plot_widget=None):
             _raise_if_value_types_clash(values, plot_widget)
     _add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
-        plot_widget.canvas.axes.legend(loc="best", fontsize="small")
+        plot_widget.canvas.axes.legend(**_LEGEND_SETTINGS)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(proxy_model))
     plot_lines = plot_widget.canvas.axes.get_lines()
     if plot_lines:
@@ -125,7 +128,7 @@ def plot_selection(model, indexes, hints, plot_widget=None):
         _add_plot_to_widget(values, labels, plot_widget)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
     if len(all_labels) > 1:
-        plot_widget.canvas.axes.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0), fontsize="small")
+        plot_widget.canvas.axes.legend(**_LEGEND_SETTINGS)
     elif len(all_labels) == 1:
         plot_widget.canvas.axes.set_title(all_labels[0])
     if needs_redraw:
