@@ -43,6 +43,7 @@ from .widgets.plot_widget import PlotWidget
 
 
 _LEGEND_SETTINGS = {"bbox_to_anchor": (1.02, 1.0), "fontsize": "small", "loc": "upper left"}
+_PLOT_SETTINGS = {"alpha": 0.7}
 
 
 class PlottingError(Exception):
@@ -145,7 +146,7 @@ def add_array_plot(plot_widget, value, label=None):
         value (Array): the array to plot
         label (str): a label for the array
     """
-    plot_widget.canvas.axes.plot(value.indexes, value.values, label=label)
+    plot_widget.canvas.axes.plot(value.indexes, value.values, label=label, **_PLOT_SETTINGS)
 
 
 def add_map_plot(plot_widget, map_value, label=None):
@@ -167,7 +168,9 @@ def add_map_plot(plot_widget, map_value, label=None):
         indexes_as_strings = list(map(str, map_value.indexes))
     else:
         indexes_as_strings = map_value.indexes
-    plot_widget.canvas.axes.plot(indexes_as_strings, map_value.values, label=label, linestyle="", marker="o")
+    plot_widget.canvas.axes.plot(
+        indexes_as_strings, map_value.values, label=label, linestyle="", marker="o", **_PLOT_SETTINGS
+    )
     plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
 
 
@@ -180,7 +183,7 @@ def add_time_series_plot(plot_widget, value, label=None):
         value (TimeSeries): the time series to plot
         label (str): a label for the time series
     """
-    plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post')
+    plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post', **_PLOT_SETTINGS)
     # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
     left, _ = plot_widget.canvas.axes.get_xlim()
     if left < 1.0:
@@ -342,7 +345,7 @@ def _add_plot_to_widget(values, labels, plot_widget):
         for value, label in zip(values, labels):
             add_array_plot(plot_widget, value, label)
     elif isinstance(values[1][0], Number):
-        plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
+        plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0], **_PLOT_SETTINGS)
         if isinstance(values[0][0], str):
             # matplotlib tries to plot every single x tick label if they are strings.
             # This can become very slow if the labels are numerous.
