@@ -221,10 +221,12 @@ class SpineToolboxProject(MetaObject):
         project_dict = self._load_project_dict()
         if project_dict is None:
             return False
-        project_info = ProjectUpgrader(self).upgrade(project_dict, self.project_dir)
+        project_info = ProjectUpgrader(self._toolbox).upgrade(project_dict, self.project_dir)
         if not project_info:
             return False
-        if not ProjectUpgrader(self).is_valid(LATEST_PROJECT_VERSION, project_info):  # Check project info validity
+        if not ProjectUpgrader(self._toolbox).is_valid(
+            LATEST_PROJECT_VERSION, project_info
+        ):  # Check project info validity
             self._logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
             return False
         # Parse project info
