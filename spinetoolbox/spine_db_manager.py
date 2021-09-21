@@ -2108,6 +2108,15 @@ class SpineDBManager(QObject):
                 db_map, "parameter_value_list", item["parameter_value_list_id"]
             ).get("name")
         elif item_type == "tool_feature":
+            feature = self.get_item(db_map, "feature", item["feature_id"])
+            tool = self.get_item(db_map, "tool", item["tool_id"])
+            par_val_lst = self.get_item(db_map, "parameter_value_list", item["parameter_value_list_id"])
+            item["entity_class_id"] = feature["entity_class_id"]
+            item["entity_class_name"] = feature["entity_class_name"]
+            item["parameter_definition_id"] = feature["parameter_definition_id"]
+            item["parameter_definition_name"] = feature["parameter_definition_name"]
+            item["tool_name"] = tool["name"]
+            item["parameter_value_list_name"] = par_val_lst["name"]
             item["required"] = item.get("required", False)
         return item
 
