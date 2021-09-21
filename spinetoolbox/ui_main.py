@@ -208,6 +208,7 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
 
     def eventFilter(self, obj, ev):
+        # Save/restore splitter states when hiding/showing execution lists
         if obj == self.ui.listView_log_executions:
             if ev.type() == QEvent.Hide:
                 self._qsettings.setValue("mainWindow/itemLogSplitterState", self.ui.splitter_item_log.saveState())
