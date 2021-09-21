@@ -23,7 +23,19 @@ import logging
 import json
 import pathlib
 import numpy as np
-from PySide2.QtCore import QByteArray, QItemSelection, QMimeData, QModelIndex, QPoint, Qt, Signal, Slot, QSettings, QUrl
+from PySide2.QtCore import (
+    QByteArray,
+    QItemSelection,
+    QMimeData,
+    QModelIndex,
+    QPoint,
+    Qt,
+    Signal,
+    Slot,
+    QSettings,
+    QUrl,
+    QEvent,
+)
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QIcon, QCursor, QWindow
 from PySide2.QtWidgets import (
     QMainWindow,
@@ -182,6 +194,8 @@ class ToolboxUI(QMainWindow):
         self.restore_ui()
         self.ui.listView_log_executions.hide()
         self.ui.listView_console_executions.hide()
+        self.ui.listView_log_executions.installEventFilter(self)
+        self.ui.listView_console_executions.installEventFilter(self)
         self.parse_project_item_modules()
         self.init_project_item_model()
         self.init_specification_model()
@@ -192,6 +206,23 @@ class ToolboxUI(QMainWindow):
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
+
+    def eventFilter(self, obj, ev):
+        if obj == self.ui.listView_log_executions:
+            if ev.type() == QEvent.Hide:
+                self._qsettings.setValue("mainWindow/itemLogSplitterState", self.ui.splitter_item_log.saveState())
+            elif ev.type() == QEvent.Show:
+                splitter_state = self._qsettings.value("mainWindow/itemLogSplitterState", defaultValue="false")
+                if splitter_state != "false":
+                    self.ui.splitter_item_log.restoreState(splitter_state)
+        if obj == self.ui.listView_console_executions:
+            if ev.type() == QEvent.Hide:
+                self._qsettings.setValue("mainWindow/consoleSplitterState", self.ui.splitter_console.saveState())
+            elif ev.type() == QEvent.Show:
+                splitter_state = self._qsettings.value("mainWindow/consoleSplitterState", defaultValue="false")
+                if splitter_state != "false":
+                    self.ui.splitter_console.restoreState(splitter_state)
+        return super().eventFilter(obj, ev)
 
     def connect_signals(self):
         """Connect signals."""
