@@ -29,8 +29,8 @@ class PlotCanvas(FigureCanvasQTAgg):
         Args:
             parent (QWidget): a parent widget
         """
-        width = 5  # inches
-        height = 4  # inches
+        width = 7.0  # inches
+        height = 4.0  # inches
         fig = Figure(figsize=(width, height), tight_layout=True)
         self._axes = fig.add_subplot(111)
         super().__init__(fig)

@@ -20,7 +20,7 @@ The main entrance points to plotting are:
 - add_time_series_plot() which adds a time series plot to an existing PlotWidget
 - add_map_plot() which adds a map plot to an existing PlotWidget
 
-:author: A. Soininen(VTT)
+:author: A. Soininen (VTT)
 :date:   9.7.2019
 """
 
@@ -125,7 +125,7 @@ def plot_selection(model, indexes, hints, plot_widget=None):
         _add_plot_to_widget(values, labels, plot_widget)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
     if len(all_labels) > 1:
-        plot_widget.canvas.axes.legend(loc="best", fontsize="small")
+        plot_widget.canvas.axes.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0), fontsize="small")
     elif len(all_labels) == 1:
         plot_widget.canvas.axes.set_title(all_labels[0])
     if needs_redraw:
@@ -373,9 +373,7 @@ def _organize_selection_to_columns(indexes):
     selections = dict()
     for index in indexes:
         selections.setdefault(index.column(), set()).add(index.row())
-    for column, rows in selections.items():
-        selections[column] = list(sorted(rows))
-    return selections
+    return {column: sorted(rows) for column, rows in selections.items()}
 
 
 def _collect_single_column_values(model, column, rows, hints):
