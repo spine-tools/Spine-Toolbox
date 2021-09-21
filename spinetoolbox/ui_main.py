@@ -125,7 +125,8 @@ class ToolboxUI(QMainWindow):
         self.key_press_filter = ChildCyclingKeyPressFilter(self)
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._share_item_edit_actions()
-        self.ui.listView_executions.setModel(FilterExecutionModel(self))
+        self.ui.listView_log_executions.setModel(FilterExecutionModel(self))
+        self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
         # Set style sheets
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
@@ -179,7 +180,8 @@ class ToolboxUI(QMainWindow):
         self._proposed_item_name_counts = dict()
         self.restore_dock_widgets()
         self.restore_ui()
-        self.ui.listView_executions.hide()
+        self.ui.listView_log_executions.hide()
+        self.ui.listView_console_executions.hide()
         self.parse_project_item_modules()
         self.init_project_item_model()
         self.init_specification_model()
@@ -251,8 +253,10 @@ class ToolboxUI(QMainWindow):
         # Undo stack
         self.undo_stack.cleanChanged.connect(self.update_window_modified)
         # Views
-        self.ui.listView_executions.selectionModel().currentChanged.connect(self._select_execution)
-        self.ui.listView_executions.model().layoutChanged.connect(self._refresh_execution_list)
+        self.ui.listView_log_executions.selectionModel().currentChanged.connect(self._select_log_execution)
+        self.ui.listView_console_executions.selectionModel().currentChanged.connect(self._select_console_execution)
+        self.ui.listView_log_executions.model().layoutChanged.connect(self._refresh_log_execution_list)
+        self.ui.listView_console_executions.model().layoutChanged.connect(self._refresh_console_execution_list)
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         # Models
         self.project_item_model.rowsInserted.connect(self._update_execute_enabled)
@@ -1308,7 +1312,6 @@ class ToolboxUI(QMainWindow):
     def restore_original_logs_and_consoles(self):
         self.restore_original_item_log_document()
         self.restore_original_console()
-        self.ui.listView_executions.hide()
 
     def override_logs_and_consoles(self):
         self.override_item_log()
@@ -1342,22 +1345,26 @@ class ToolboxUI(QMainWindow):
         if console is None:
             self.restore_original_console()
             return
-        widget = self.ui.dockWidgetContents_console
-        self._set_override_console(widget, console)
+        self._set_override_console(console)
 
     def override_execution_list(self):
         """Displays executions of the active project item in Executions and updates title."""
         if self.active_project_item is None:
             return
-        visible = bool(self.active_project_item.filter_log_documents or self.active_project_item.filter_consoles)
-        self.ui.dockWidget_item.widget().layout().addWidget(self.ui.listView_executions)
-        self.ui.listView_executions.setVisible(visible)
-        self.ui.listView_executions.model().reset_model(self.active_project_item)
-        current = self.ui.listView_executions.currentIndex()
-        self._select_execution(current, None)
+        # log
+        self.ui.listView_log_executions.setVisible(bool(self.active_project_item.filter_log_documents))
+        self.ui.listView_log_executions.model().reset_model(self.active_project_item)
+        current = self.ui.listView_log_executions.currentIndex()
+        self._select_log_execution(current, None)
+        # console
+        self.ui.listView_console_executions.setVisible(bool(self.active_project_item.filter_consoles))
+        self.ui.listView_console_executions.model().reset_model(self.active_project_item)
+        current = self.ui.listView_console_executions.currentIndex()
+        self._select_console_execution(current, None)
 
     def restore_original_item_log_document(self):
         """Sets the Item Execution Log document back to the original."""
+        self.ui.listView_log_executions.hide()
         self.ui.textBrowser_itemlog.restore_original_document()
         self.ui.textBrowser_itemlog.hide()
         self.ui.label_no_itemlog.show()
@@ -1365,8 +1372,8 @@ class ToolboxUI(QMainWindow):
 
     def restore_original_console(self):
         """Sets the Console back to the original."""
-        widget = self.ui.dockWidgetContents_console
-        self._set_override_console(widget, self.ui.label_no_console)
+        self.ui.listView_console_executions.hide()
+        self._set_override_console(self.ui.label_no_console)
 
     def _update_item_log_title(self):
         """Updates Event Log title."""
@@ -1375,32 +1382,55 @@ class ToolboxUI(QMainWindow):
         new_title = f"{owner_name} Execution Log"
         self.ui.dockWidget_itemlog.setWindowTitle(new_title)
 
-    @staticmethod
-    def _set_override_console(widget, console):
-        layout = widget.layout()
-        for i in range(layout.count()):
-            layout.itemAt(i).widget().hide()
-        layout.addWidget(console)
+    def _set_override_console(self, console):
+        splitter = self.ui.splitter_console
+        if console == splitter.widget(1):
+            return
+        splitter.replaceWidget(1, console)
         console.show()
         try:
             new_title = console.name()
         except AttributeError:
             new_title = "Console"
-        widget.parent().setWindowTitle(new_title)
+        splitter.parent().setWindowTitle(new_title)
 
     @Slot()
-    def _refresh_execution_list(self):
-        """Refreshes Executions as the active project item starts new executions."""
-        self.ui.listView_executions.show()
-        if not self.ui.listView_executions.currentIndex().isValid():
-            index = self.ui.listView_executions.model().index(0, 0)
-            self.ui.listView_executions.setCurrentIndex(index)
+    def _refresh_log_execution_list(self):
+        """Refreshes log executions as the active project item starts new executions."""
+        self._refresh_execution_list(self.ui.listView_log_executions, self._select_log_execution)
+
+    @Slot()
+    def _refresh_console_execution_list(self):
+        """Refreshes console executions as the active project item starts new executions."""
+        self._refresh_execution_list(self.ui.listView_console_executions, self._select_console_execution)
+
+    @staticmethod
+    def _refresh_execution_list(view, select):
+        view.show()
+        if not view.currentIndex().isValid():
+            index = view.model().index(0, 0)
+            view.setCurrentIndex(index)
         else:
-            current = self.ui.listView_executions.currentIndex()
-            self._select_execution(current, None)
+            current = view.currentIndex()
+            select(current, None)
 
     @Slot(QModelIndex, QModelIndex)
-    def _select_execution(self, current, _previous):
+    def _select_log_execution(self, current, _previous):
+        """Sets the log documents of the selected execution in Event and Process Log."""
+        if not current.data():
+            return
+        item_log_doc = current.model().get_log_document(current.data())
+        self._do_override_item_log(item_log_doc)
+
+    @Slot(QModelIndex, QModelIndex)
+    def _select_console_execution(self, current, _previous):
+        """Sets the console of the selected execution in Console."""
+        if not current.data():
+            return
+        console = current.model().get_console(current.data())
+        self._do_override_console(console)
+
+    def _select_execution(self, view, current):
         """Sets the log documents of the selected execution in Event and Process Log,
         and any consoles in Python and Julia Console."""
         if not current.data():
