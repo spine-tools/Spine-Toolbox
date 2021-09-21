@@ -239,7 +239,7 @@
        <property name="orientation">
         <enum>Qt::Vertical</enum>
        </property>
-       <widget class="QListView" name="listView_log_executions"/>
+       <widget class="QTreeView" name="listView_log_executions"/>
        <widget class="QWidget" name="layoutWidget">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <property name="spacing">

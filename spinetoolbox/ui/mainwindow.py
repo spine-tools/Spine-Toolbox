@@ -260,7 +260,7 @@ class Ui_MainWindow(object):
         self.splitter_item_log = QSplitter(self.dockWidgetContents_2)
         self.splitter_item_log.setObjectName(u"splitter_item_log")
         self.splitter_item_log.setOrientation(Qt.Vertical)
-        self.listView_log_executions = QListView(self.splitter_item_log)
+        self.listView_log_executions = QTreeView(self.splitter_item_log)
         self.listView_log_executions.setObjectName(u"listView_log_executions")
         self.splitter_item_log.addWidget(self.listView_log_executions)
         self.layoutWidget = QWidget(self.splitter_item_log)
