@@ -923,7 +923,7 @@
      <normaloff>:/icons/menu_icons/table.svg</normaloff>:/icons/menu_icons/table.svg</iconset>
    </property>
    <property name="text">
-    <string>S&amp;tacked</string>
+    <string>T&amp;able</string>
    </property>
    <property name="toolTip">
     <string>Stacked style</string>
@@ -1053,6 +1053,15 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionAdd_db_file">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Add...</string>
    </property>
   </action>
  </widget>
