@@ -417,9 +417,6 @@ class ObjectItem(EntityItem):
 
     def block_move_by(self, dx, dy):
         super().block_move_by(dx, dy)
-        if self.isSelected():
-            # The item will move with the selection, so no need to follow the objects
-            return
         rel_items_follow = self._spine_db_editor.qsettings.value(
             "appSettings/relationshipItemsFollow", defaultValue="true"
         )
@@ -427,6 +424,9 @@ class ObjectItem(EntityItem):
             return
         rel_items = {arc_item.rel_item for arc_item in self.arc_items}
         for rel_item in rel_items:
+            if rel_item.isSelected():
+                # The item will move with the selection, so no need to follow the objects
+                continue
             rel_item.follow_object_by(dx, dy)
 
     def mouseDoubleClickEvent(self, e):
