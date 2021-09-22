@@ -926,7 +926,7 @@
     <string>T&amp;able</string>
    </property>
    <property name="toolTip">
-    <string>Stacked style</string>
+    <string>Table</string>
    </property>
   </action>
   <action name="actionGraph_style">
@@ -939,6 +939,9 @@
    </property>
    <property name="text">
     <string>&amp;Graph</string>
+   </property>
+   <property name="toolTip">
+    <string>Graph</string>
    </property>
   </action>
   <action name="actionView_history">
