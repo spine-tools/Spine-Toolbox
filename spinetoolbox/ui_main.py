@@ -70,11 +70,12 @@ from .widgets.open_project_widget import OpenProjectDialog
 from .widgets.jump_properties_widget import JumpPropertiesWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.console_window import ConsoleWindow
+from .widgets.statusbars import MainStatusBar
 from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_engine_manager import make_engine_manager
-from .config import STATUSBAR_SS, MAINWINDOW_SS, _program_root, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
+from .config import MAINWINDOW_SS, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
 from .helpers import (
     create_dir,
     ensure_window_is_on_screen,
@@ -140,8 +141,6 @@ class ToolboxUI(QMainWindow):
         self.ui.listView_log_executions.setModel(FilterExecutionModel(self))
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
         # Set style sheets
-        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
-        self.ui.statusbar.setFixedHeight(20)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
@@ -171,6 +170,7 @@ class ToolboxUI(QMainWindow):
             self.ui.actionExecute_project, self.ui.actionExecute_selection, self.ui.actionStop_execution, self
         )
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
+        self.setStatusBar(MainStatusBar(self))
         self._base_python_console = None  # 'base' Python console, independent of project items
         self._base_julia_console = None  # 'base' Julia console, independent of project items
         # Additional consoles for item execution
