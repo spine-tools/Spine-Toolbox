@@ -201,6 +201,20 @@ class SpineDBEditorBase(QMainWindow):
         self.load_db_urls({url: None})
 
     @Slot(bool)
+    def add_db_file(self, _=False):
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_open_file_name_in_last_dir(
+            self.qsettings, "addSQLiteUrl", self, "Add SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
+        )
+        self.qsettings.endGroup()
+        if not file_path:
+            return
+        url = "sqlite:///" + file_path
+        db_url_codenames = self.db_url_codenames
+        db_url_codenames[url] = None
+        self.load_db_urls(db_url_codenames)
+
+    @Slot(bool)
     def create_db_file(self, _=False):
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_save_file_name_in_last_dir(
@@ -247,7 +261,9 @@ class SpineDBEditorBase(QMainWindow):
         """Adds a menu with main actions to toolbar."""
         menu = MainMenu(self)
         file_action = ToolBarWidgetAction("File", menu)
-        file_action.tool_bar.addActions([self.ui.actionNew_db_file, self.ui.actionOpen_db_file])
+        file_action.tool_bar.addActions(
+            [self.ui.actionNew_db_file, self.ui.actionOpen_db_file, self.ui.actionAdd_db_file]
+        )
         file_action.tool_bar.addSeparator()
         file_action.tool_bar.addActions([self.ui.actionImport, self.ui.actionExport, self.ui.actionExport_session])
         edit_action = ToolBarWidgetAction("Edit", menu)
@@ -258,14 +274,15 @@ class SpineDBEditorBase(QMainWindow):
         edit_action.tool_bar.addAction(self.ui.actionMass_remove_items)
         view_action = ToolBarWidgetAction("View", menu)
         view_action.tool_bar.addActions([self.ui.actionStacked_style, self.ui.actionGraph_style])
+        pivot_actions = self.pivot_action_group.actions()
+        view_action.tool_bar.addActions(pivot_actions)
+        view_action.tool_bar.add_frame(pivot_actions[0], pivot_actions[-1], "Pivot table")
         view_action.tool_bar.addSeparator()
         docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "Doc&ks...")
         docks_menu = self._make_docks_menu()
         docks_menu_action.setMenu(docks_menu)
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
         docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
-        pivot_action = ToolBarWidgetAction("Pivot", menu)
-        pivot_action.tool_bar.addActions(self.pivot_action_group.actions())
         session_action = ToolBarWidgetAction("Session", menu)
         session_action.tool_bar.addActions([self.ui.actionCommit, self.ui.actionRollback])
         session_action.tool_bar.addSeparator()
@@ -276,8 +293,6 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(view_action)
         menu.addSeparator()
-        menu.addAction(pivot_action)
-        menu.addSeparator()
         menu.addAction(session_action)
         menu.addSeparator()
         menu.addAction(self.ui.actionUser_guide)
@@ -287,6 +302,7 @@ class SpineDBEditorBase(QMainWindow):
         actions = [
             self.ui.actionNew_db_file,
             self.ui.actionOpen_db_file,
+            self.ui.actionAdd_db_file,
             self.ui.actionImport,
             self.ui.actionExport,
             self.ui.actionExport_session,
@@ -320,6 +336,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
         self.ui.actionOpen_db_file.triggered.connect(self.open_db_file)
+        self.ui.actionAdd_db_file.triggered.connect(self.add_db_file)
         self.ui.actionImport.triggered.connect(self.import_file)
         self.ui.actionExport.triggered.connect(self.show_mass_export_items_dialog)
         self.ui.actionExport_session.triggered.connect(self.export_session)
