@@ -61,20 +61,9 @@ class MainStatusBar(QStatusBar):
                 visible=self._item_log_is_visible,
                 color_name=color.name(),
             )
-            button.clicked.connect(lambda checked=False, icon=doc.owner.get_icon(): _select_icon(icon))
         button = self._item_buttons.get(doc)
         if button is not None:
             self.addWidget(button)
-
-
-def _select_icon(icon):
-    """Selects only the given icon in the scene.
-
-    Args:
-        icon (ProjectItemIcon): the icon to be selected
-    """
-    icon.scene().clearSelection()
-    icon.setSelected(True)
 
 
 class _LogButton(QToolButton):
@@ -145,6 +134,14 @@ class _ItemLogButton(_LogButton):
         self._doc = self._log.document()
         self._char_count = self._doc.characterCount()
         self.setToolTip(f"<html>New <b>{self._doc.owner.name}</b> execution log messages</html>")
+
+    @Slot(bool)
+    def _handle_clicked(self, checked):
+        """Reimplemented to select the item before showing the widget."""
+        icon = self._doc.owner.get_icon()
+        icon.scene().clearSelection()
+        icon.setSelected(True)
+        super()._handle_clicked(checked)
 
     @Slot(bool)
     def _handle_widget_visibility_changed(self, visible):
