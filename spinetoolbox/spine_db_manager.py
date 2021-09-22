@@ -1982,11 +1982,9 @@ class SpineDBManager(QObject):
         else:
             multi_db_editor, db_editor = existing
             multi_db_editor.set_current_tab(db_editor)
-        if multi_db_editor.windowState() & Qt.WindowMinimized:
-            multi_db_editor.setWindowState(multi_db_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-            multi_db_editor.activateWindow()
-        else:
-            multi_db_editor.raise_()
+        if multi_db_editor.isMinimized():
+            multi_db_editor.showNormal()
+        multi_db_editor.activateWindow()
 
     @staticmethod
     def cache_to_db(item_type, item):

@@ -90,6 +90,11 @@ class SpineDBEditorBase(QMainWindow):
         self.takeCentralWidget()
         self.url_toolbar = UrlToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
+        toolbox = self.db_mngr.parent()
+        if toolbox is not None:
+            self.url_toolbar.show_toolbox_action.triggered.connect(toolbox.restore_and_activate)
+        else:
+            self.url_toolbar.show_toolbox_action.deleteLater()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings

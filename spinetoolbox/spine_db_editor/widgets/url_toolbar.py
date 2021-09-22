@@ -43,6 +43,8 @@ class UrlToolBar(QToolBar):
         self._line_edit.setPlaceholderText("Type the URL of a Spine DB")
         self._line_edit.returnPressed.connect(self._handle_line_edit_return_pressed)
         self.addWidget(self._line_edit)
+        toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
+        self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox")
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 

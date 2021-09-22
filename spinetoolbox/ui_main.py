@@ -1528,11 +1528,9 @@ class ToolboxUI(QMainWindow):
         else:
             multi_tab_editor, editor = existing
             multi_tab_editor.set_current_tab(editor)
-        if multi_tab_editor.windowState() & Qt.WindowMinimized:
-            multi_tab_editor.setWindowState(multi_tab_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-            multi_tab_editor.activateWindow()
-        else:
-            multi_tab_editor.raise_()
+        if multi_tab_editor.isMinimized():
+            multi_tab_editor.showNormal()
+        multi_tab_editor.activateWindow()
 
     @staticmethod
     def get_all_multi_tab_spec_editors(item_type):
@@ -2316,3 +2314,8 @@ class ToolboxUI(QMainWindow):
             connection_file, console = self._extra_jupyter_consoles.popitem()
             engine_mngr.shutdown_kernel(connection_file)
             console.deleteLater()
+
+    def restore_and_activate(self):
+        if self.isMinimized():
+            self.showNormal()
+        self.activateWindow()
