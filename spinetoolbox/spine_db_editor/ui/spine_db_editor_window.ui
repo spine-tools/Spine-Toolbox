@@ -1066,6 +1066,9 @@
    <property name="text">
     <string>Add...</string>
    </property>
+   <property name="toolTip">
+    <string>Add database file to the current view</string>
+   </property>
   </action>
  </widget>
  <customwidgets>
