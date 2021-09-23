@@ -1230,6 +1230,7 @@ class ToolboxUI(QMainWindow):
         """Dock all floating and or hidden QDockWidgets back to the main window."""
         for dock in self.findChildren(QDockWidget):
             dock.installEventFilter(self)
+            dock.setMinimumSize(0, 0)
             if not dock.isVisible():
                 dock.setVisible(True)
             if dock.isFloating():

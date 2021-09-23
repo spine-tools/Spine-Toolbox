@@ -19,7 +19,7 @@ The SpineDBManager class
 import itertools
 import json
 from PySide2.QtCore import Qt, QObject, Signal, QThread
-from PySide2.QtWidgets import QMessageBox, QWidget
+from PySide2.QtWidgets import QMessageBox, QWidget, QWindow
 from PySide2.QtGui import QFontMetrics, QFont
 from spinedb_api import (
     is_empty,
@@ -1940,9 +1940,10 @@ class SpineDBManager(QObject):
             MultiSpineDBEditor
         """
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
-            widget = QWidget.find(window.winId())
-            if isinstance(widget, MultiSpineDBEditor):
-                yield widget
+            if isinstance(window, QWindow):
+                widget = QWidget.find(window.winId())
+                if isinstance(widget, MultiSpineDBEditor):
+                    yield widget
 
     def get_all_spine_db_editors(self):
         """Yields all instances of SpineDBEditor currently open.
