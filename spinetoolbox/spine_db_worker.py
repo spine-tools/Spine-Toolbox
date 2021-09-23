@@ -320,6 +320,8 @@ class SpineDBWorker(QObject):
             caller.msg_error.emit(error_msg)
         else:
             caller.sqlite_file_exported.emit(file_path)
+        finally:
+            db_map.connection.close()
 
     def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
         """Exports given data into JSON file."""
