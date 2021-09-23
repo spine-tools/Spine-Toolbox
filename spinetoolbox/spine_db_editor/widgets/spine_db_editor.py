@@ -550,6 +550,12 @@ class SpineDBEditorBase(QMainWindow):
         db_map_scen_alt_ids = {
             db_map: _ids("scenario_alternative", types) for db_map, types in db_map_item_types.items()
         }
+        db_map_feat_ids = {db_map: _ids("feature", types) for db_map, types in db_map_item_types.items()}
+        db_map_tool_ids = {db_map: _ids("tool", types) for db_map, types in db_map_item_types.items()}
+        db_map_tool_feat_ids = {db_map: _ids("tool_feature", types) for db_map, types in db_map_item_types.items()}
+        db_map_tool_feat_meth_ids = {
+            db_map: _ids("tool_feature_method", types) for db_map, types in db_map_item_types.items()
+        }
         parcel = SpineDBParcel(self.db_mngr)
         parcel.push_object_class_ids(db_map_obj_cls_ids)
         parcel.push_object_ids(db_map_obj_ids)
@@ -564,6 +570,10 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_alternative_ids(db_map_alt_ids)
         parcel.push_scenario_ids(db_map_scen_ids)
         parcel.push_scenario_alternative_ids(db_map_scen_alt_ids)
+        parcel.push_feature_ids(db_map_feat_ids)
+        parcel.push_tool_ids(db_map_tool_ids)
+        parcel.push_tool_feature_ids(db_map_tool_feat_ids)
+        parcel.push_tool_feature_method_ids(db_map_tool_feat_meth_ids)
         self.export_data(parcel.data)
 
     @Slot(object)

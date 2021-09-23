@@ -186,6 +186,34 @@ class SpineDBParcel:
             }
         )
 
+    def push_feature_ids(self, db_map_ids):
+        """Pushes feature ids."""
+        self._update_ids(db_map_ids, "feature_ids")
+
+    def push_tool_ids(self, db_map_ids):
+        """Pushes tool ids."""
+        self._update_ids(db_map_ids, "tool_ids")
+
+    def push_tool_feature_ids(self, db_map_ids):
+        """Pushes tool_feature ids."""
+        self._update_ids(db_map_ids, "tool_feature_ids")
+        self.push_feature_ids(
+            {db_map: self._get_fields(db_map, "tool_feature", "feature_id", ids) for db_map, ids in db_map_ids.items()}
+        )
+        self.push_tool_ids(
+            {db_map: self._get_fields(db_map, "tool_feature", "tool_id", ids) for db_map, ids in db_map_ids.items()}
+        )
+
+    def push_tool_feature_method_ids(self, db_map_ids):
+        """Pushes tool_feature_method ids."""
+        self._update_ids(db_map_ids, "tool_feature_method_ids")
+        self.push_tool_feature_ids(
+            {
+                db_map: self._get_fields(db_map, "tool_feature_method", "tool_feature_id", ids)
+                for db_map, ids in db_map_ids.items()
+            }
+        )
+
     def full_push_object_class_ids(self, db_map_ids):
         """Pushes parameter definitions associated with given object classes.
         This essentially full_pushes the object classes and their parameter definitions.
@@ -256,18 +284,18 @@ class SpineDBParcel:
         for db_map, ids in db_map_ids.items():
             self._setdefault(db_map)[entity_type + "_parameter_value_ids"].update(ids)
 
-    def _update_ids(self, db_map_ids, which):
+    def _update_ids(self, db_map_ids, key):
         """Updates ids for given database item.
 
         Args:
             db_map_ids (dict): mapping from :class:`DatabaseMappingBase` to ids or ``Asterisk``
-            which (str): item name
+            key (str): the key
         """
         for db_map, ids in db_map_ids.items():
             if ids is Asterisk:
-                self._setdefault(db_map)[which] = ids
+                self._setdefault(db_map)[key] = ids
             else:
-                current = self._setdefault(db_map)[which]
+                current = self._setdefault(db_map)[key]
                 if current is not Asterisk:
                     current.update(ids)
 
@@ -295,5 +323,9 @@ class SpineDBParcel:
             "alternative_ids": set(),
             "scenario_ids": set(),
             "scenario_alternative_ids": set(),
+            "feature_ids": set(),
+            "tool_ids": set(),
+            "tool_feature_ids": set(),
+            "tool_feature_method_ids": set(),
         }
         return self._data.setdefault(db_map, d)
