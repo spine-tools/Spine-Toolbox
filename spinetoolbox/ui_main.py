@@ -192,6 +192,7 @@ class ToolboxUI(QMainWindow):
         self._proposed_item_name_counts = dict()
         self.restore_dock_widgets()
         self.restore_ui()
+        self.ui.textBrowser_itemlog.hide()
         self.ui.listView_log_executions.hide()
         self.ui.listView_console_executions.hide()
         self.ui.listView_log_executions.installEventFilter(self)
@@ -208,6 +209,9 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
 
     def eventFilter(self, obj, ev):
+        # Make dockwidgets as shrinkable at possible
+        if isinstance(obj, QDockWidget):
+            obj.setMinimumSize(0, 0)
         # Save/restore splitter states when hiding/showing execution lists
         if obj == self.ui.listView_log_executions:
             if ev.type() == QEvent.Hide:
@@ -1225,6 +1229,7 @@ class ToolboxUI(QMainWindow):
     def restore_dock_widgets(self):
         """Dock all floating and or hidden QDockWidgets back to the main window."""
         for dock in self.findChildren(QDockWidget):
+            dock.installEventFilter(self)
             if not dock.isVisible():
                 dock.setVisible(True)
             if dock.isFloating():

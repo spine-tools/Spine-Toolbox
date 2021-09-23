@@ -272,6 +272,7 @@ class Ui_MainWindow(object):
         self.label_no_itemlog = QLabel(self.layoutWidget)
         self.label_no_itemlog.setObjectName(u"label_no_itemlog")
         self.label_no_itemlog.setAlignment(Qt.AlignCenter)
+        self.label_no_itemlog.setWordWrap(True)
 
         self.verticalLayout_3.addWidget(self.label_no_itemlog)
 
@@ -313,6 +314,7 @@ class Ui_MainWindow(object):
         self.label_no_selection = QLabel(self.tab_no_selection)
         self.label_no_selection.setObjectName(u"label_no_selection")
         self.label_no_selection.setAlignment(Qt.AlignCenter)
+        self.label_no_selection.setWordWrap(True)
 
         self.verticalLayout_14.addWidget(self.label_no_selection)
 
@@ -373,6 +375,7 @@ class Ui_MainWindow(object):
         self.label_no_console.setObjectName(u"label_no_console")
         self.label_no_console.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.label_no_console.setAlignment(Qt.AlignCenter)
+        self.label_no_console.setWordWrap(True)
         self.splitter_console.addWidget(self.label_no_console)
 
         self.verticalLayout_6.addWidget(self.splitter_console)
