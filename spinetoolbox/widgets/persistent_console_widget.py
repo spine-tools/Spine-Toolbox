@@ -274,11 +274,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
             cursor.movePosition(cursor.End)
             return cursor
         cursor = self.cursorForPosition(self._line_edit.pos())
-        if self._prompt.startswith("\n"):
-            cursor.movePosition(cursor.PreviousBlock)
-            cursor.movePosition(cursor.EndOfBlock)
-        else:
-            cursor.movePosition(cursor.StartOfBlock)
+        cursor.movePosition(cursor.End)
+        cursor.movePosition(cursor.StartOfBlock)
         return cursor
 
     def _insert_text_before_prompt(self, text, with_prompt=False, text_format=QTextCharFormat()):
