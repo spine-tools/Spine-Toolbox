@@ -1228,7 +1228,6 @@ class ToolboxUI(QMainWindow):
         for dock in self.findChildren(QDockWidget):
             dock.setMinimumSize(0, 0)
             dock.setVisible(True)
-            dock.setFloating(True)
         self.ui.dockWidget_project.setFloating(False)
         self.ui.dockWidget_eventlog.setFloating(False)
         self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Vertical)
@@ -1236,7 +1235,6 @@ class ToolboxUI(QMainWindow):
         self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Horizontal)
         self.ui.dockWidget_itemlog.setFloating(False)
         self.tabifyDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_itemlog)
-        self.ui.dockWidget_eventlog.raise_()
         self.ui.dockWidget_design_view.setFloating(False)
         self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Horizontal)
         self.ui.dockWidget_item.setFloating(False)
