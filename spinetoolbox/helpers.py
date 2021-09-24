@@ -1069,6 +1069,9 @@ def parse_specification_file(spec_path, logger):
     except FileNotFoundError:
         logger.msg_error.emit(f"Specification file <b>{spec_path}</b> does not exist")
         return None
+    except OSError:
+        logger.msg_error.emit(f"Specification file <b>{spec_path}</b> not found")
+        return None
 
 
 def load_specification_from_file(spec_path, spec_factories, app_settings, logger):
