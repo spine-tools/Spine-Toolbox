@@ -114,6 +114,11 @@ class MainToolBar(ToolBar):
         self._drop_target_action = None
         self.setAcceptDrops(True)
 
+    def set_project_actions_enabled(self, enabled):
+        super().set_project_actions_enabled(enabled)
+        for arr in self._spec_arrays:
+            arr.update()
+
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
         self.layout().setSpacing(1)

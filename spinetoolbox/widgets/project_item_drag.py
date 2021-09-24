@@ -248,15 +248,16 @@ class ProjectItemSpecArray(QToolBar):
 
     def set_colored_icons(self, colored):
         self._icon.set_colored(colored)
+        self.update()
+
+    def update(self):
         self._chopped_icon.update()
         self._update_button_visible_icon_color()
 
     def _update_button_visible_icon_color(self):
-        color = self._icon.color()
-        if color is not None:
-            self._button_visible.setStyleSheet(f"QToolButton{{ color: {color.name()};}}")
-        else:
-            self._button_visible.setStyleSheet("")
+        mode = QIcon.Active if self._button_base_item.isEnabled() else QIcon.Disabled
+        color = self._icon.color(mode=mode)
+        self._button_visible.setStyleSheet(f"QToolButton{{ color: {color.name()};}}")
 
     def set_color(self, color):
         bg = make_icon_background(color)

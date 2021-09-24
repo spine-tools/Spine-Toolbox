@@ -548,8 +548,8 @@ class ColoredIcon(QIcon):
     def set_colored(self, colored):
         self._engine.set_colored(colored)
 
-    def color(self):
-        return self._engine.color()
+    def color(self, mode=QIcon.Normal):
+        return self._engine.color(mode=mode)
 
 
 class ColoredIconEngine(QIconEngine):
@@ -558,26 +558,37 @@ class ColoredIconEngine(QIconEngine):
         self._icon = QIcon(icon_file_name)
         self._icon_color = icon_color
         self._base_pixmap = self._icon.pixmap(icon_size)
-        self._pixmap = None
         self._colored = None
+        self._pixmaps = {}
         self.set_colored(colored)
 
-    def color(self):
-        if not self._colored:
-            return None
-        return self._icon_color
+    def color(self, mode=QIcon.Normal):
+        color = self._icon_color if self._colored else QColor("black")
+        if mode == QIcon.Disabled:
+            r, g, b, a = color.getRgbF()
+            tint = 0.37255
+            color = QColor.fromRgbF(r + (1.0 - r) * tint, g + (1.0 - g) * tint, b + (1.0 - b) * tint, a)
+        return color
 
     def set_colored(self, colored):
         if self._colored == colored:
             return
         self._colored = colored
-        if colored:
-            self._pixmap = color_pixmap(self._base_pixmap, self._icon_color)
-        else:
-            self._pixmap = self._base_pixmap
+        self._pixmaps.clear()
+
+    def _do_make_pixmap(self, mode, state):
+        color = self.color(mode)
+        return color_pixmap(self._base_pixmap, color)
+
+    def _make_pixmap(self, mode, state):
+        if (mode, state) not in self._pixmaps:
+            self._pixmaps[mode, state] = self._do_make_pixmap(mode, state)
+        return self._pixmaps[mode, state]
 
     def pixmap(self, size, mode, state):
-        return self._pixmap.scaled(self._icon.actualSize(size), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        return self._make_pixmap(mode, state).scaled(
+            self._icon.actualSize(size), Qt.KeepAspectRatio, Qt.SmoothTransformation
+        )
 
 
 def color_pixmap(pixmap, color):
