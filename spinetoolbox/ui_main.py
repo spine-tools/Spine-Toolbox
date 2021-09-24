@@ -1235,6 +1235,7 @@ class ToolboxUI(QMainWindow):
         self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Horizontal)
         self.ui.dockWidget_itemlog.setFloating(False)
         self.tabifyDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_itemlog)
+        self.ui.dockWidget_eventlog.raise_()
         self.ui.dockWidget_design_view.setFloating(False)
         self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Horizontal)
         self.ui.dockWidget_item.setFloating(False)
