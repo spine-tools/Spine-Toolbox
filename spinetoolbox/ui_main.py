@@ -209,9 +209,6 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
 
     def eventFilter(self, obj, ev):
-        # Make dockwidgets as shrinkable at possible
-        if isinstance(obj, QDockWidget):
-            obj.setMinimumSize(0, 0)
         # Save/restore splitter states when hiding/showing execution lists
         if obj == self.ui.listView_log_executions:
             if ev.type() == QEvent.Hide:
@@ -1229,17 +1226,27 @@ class ToolboxUI(QMainWindow):
     def restore_dock_widgets(self):
         """Dock all floating and or hidden QDockWidgets back to the main window."""
         for dock in self.findChildren(QDockWidget):
-            dock.installEventFilter(self)
             dock.setMinimumSize(0, 0)
-            if not dock.isVisible():
-                dock.setVisible(True)
-            if dock.isFloating():
-                dock.setFloating(False)
+            dock.setVisible(True)
+            dock.setFloating(True)
+        self.ui.dockWidget_project.setFloating(False)
+        self.ui.dockWidget_eventlog.setFloating(False)
+        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_eventlog, Qt.Vertical)
+        self.ui.dockWidget_console.setFloating(False)
+        self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Horizontal)
+        self.ui.dockWidget_itemlog.setFloating(False)
+        self.tabifyDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_itemlog)
+        self.ui.dockWidget_eventlog.raise_()
+        self.ui.dockWidget_design_view.setFloating(False)
+        self.splitDockWidget(self.ui.dockWidget_project, self.ui.dockWidget_design_view, Qt.Horizontal)
+        self.ui.dockWidget_item.setFloating(False)
+        self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Horizontal)
         docks = (self.ui.dockWidget_project, self.ui.dockWidget_design_view, self.ui.dockWidget_item)
-        self.splitDockWidget(*docks[:-1], Qt.Horizontal)
-        self.splitDockWidget(*docks[1:], Qt.Horizontal)
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.3 * width], Qt.Horizontal)
+        docks = (self.ui.dockWidget_project, self.ui.dockWidget_eventlog)
+        width = sum(d.size().width() for d in docks)
+        self.resizeDocks(docks, [0.6 * width, 0.4 * width], Qt.Vertical)
 
     def _add_actions(self):
         """Sets adds actions to the main window."""
