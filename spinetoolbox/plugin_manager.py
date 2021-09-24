@@ -19,6 +19,7 @@ import itertools
 import os
 import json
 import urllib.request
+import urllib.error
 from urllib.parse import urljoin
 import shutil
 from PySide2.QtCore import Qt, Signal, Slot, QObject, QThread
@@ -31,7 +32,10 @@ from .widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDi
 
 def _download_file(remote, local):
     os.makedirs(os.path.dirname(local), exist_ok=True)
-    urllib.request.urlretrieve(remote, local)
+    try:
+        urllib.request.urlretrieve(remote, local)
+    except urllib.error.HTTPError as e:
+        raise PluginWorkFailed(f"Failed to download {remote}: {str(e)}")
 
 
 def _download_plugin(plugin, plugin_local_dir):
@@ -144,7 +148,8 @@ class PluginManager:
     def show_install_plugin_dialog(self, _=False):
         self._toolbox.ui.menuPlugins.setEnabled(False)
         worker = self._create_worker()
-        worker.finished.connect(self._do_show_install_plugin_dialog)
+        worker.succeeded.connect(self._do_show_install_plugin_dialog)
+        worker.failed.connect(self._toolbox.msg_error)
         worker.start(self._load_registry)
 
     @Slot()
@@ -166,7 +171,10 @@ class PluginManager:
         plugin = self._registry_plugins[plugin_name]
         plugin_local_dir = os.path.join(PLUGINS_PATH, plugin_name)
         worker = self._create_worker()
-        worker.finished.connect(lambda plugin_local_dir=plugin_local_dir: self._load_installed_plugin(plugin_local_dir))
+        worker.succeeded.connect(
+            lambda plugin_local_dir=plugin_local_dir: self._load_installed_plugin(plugin_local_dir)
+        )
+        worker.failed.connect(self._toolbox.msg_error)
         worker.start(_download_plugin, plugin, plugin_local_dir)
 
     def _load_installed_plugin(self, plugin_local_dir):
@@ -177,7 +185,8 @@ class PluginManager:
     def show_manage_plugins_dialog(self, _=False):
         self._toolbox.ui.menuPlugins.setEnabled(False)
         worker = self._create_worker()
-        worker.finished.connect(self._do_show_manage_plugins_dialog)
+        worker.succeeded.connect(self._do_show_manage_plugins_dialog)
+        worker.failed.connect(self._toolbox.msg_error)
         worker.start(self._load_registry)
 
     @Slot()
@@ -218,9 +227,15 @@ class PluginManager:
         self._install_plugin(plugin_name)
 
 
+class PluginWorkFailed(Exception):
+    """Exception to signal plugin worker that something failed."""
+
+
 class _PluginWorker(QObject):
 
+    failed = Signal(str)
     finished = Signal()
+    succeeded = Signal()
 
     def __init__(self):
         super().__init__()
@@ -239,7 +254,12 @@ class _PluginWorker(QObject):
 
     @Slot()
     def _do_work(self):
-        self._function(*self._args, **self._kwargs)
+        try:
+            self._function(*self._args, **self._kwargs)
+        except PluginWorkFailed as e:
+            self.failed.emit(str(e))
+        else:
+            self.succeeded.emit()
         self.finished.emit()
 
     def clean_up(self):
