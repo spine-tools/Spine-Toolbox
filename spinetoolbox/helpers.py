@@ -518,7 +518,7 @@ class CharIconEngine(TransparentIconEngine):
         """
         super().__init__()
         self.char = char
-        self.color = color
+        self.color = QColor(color)
         self.font = QFont('Font Awesome 5 Free Solid')
 
     def paint(self, painter, rect, mode=None, state=None):
