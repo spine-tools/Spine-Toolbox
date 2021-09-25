@@ -49,6 +49,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         super().__init__()
         self._toolbox = toolbox
+        self._scene = None
         self.icon_file = icon_file
         self._moved_on_scene = False
         self.previous_pos = QPointF()
@@ -61,7 +62,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.text_font_size = 10  # point size
         # Make item name graphics item.
         self._name = ""
-        self.name_item = QGraphicsSimpleTextItem(self._name, self)
+        self.name_item = QGraphicsSimpleTextItem(self._name)
+        self.name_item.setZValue(100)
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
@@ -91,8 +93,8 @@ class ProjectItemIcon(QGraphicsRectItem):
             x (int): horizontal offset
             y (int): vertical offset
         """
-        self.update_name_item(name)
         self.moveBy(x, y)
+        self.update_name_item(name)
 
     def _setup(self, brush, svg, svg_color):
         """Setup item's attributes.
@@ -157,12 +159,13 @@ class ProjectItemIcon(QGraphicsRectItem):
         font.setPointSize(self.text_font_size)
         font.setBold(True)
         self.name_item.setFont(font)
-        # Set name item position (centered on top of the master icon)
-        name_width = self.name_item.boundingRect().width()
-        name_height = self.name_item.boundingRect().height()
-        self.name_item.setPos(
-            self.rect().x() + self.rect().width() / 2 - name_width / 2, self.rect().y() - name_height - 4
-        )
+        self._reposition_name_item()
+
+    def _reposition_name_item(self):
+        """Set name item position (centered on top of the master icon)."""
+        main_rect = self.sceneBoundingRect()
+        name_rect = self.name_item.sceneBoundingRect()
+        self.name_item.setPos(main_rect.center().x() - name_rect.width() / 2, main_rect.y() - name_rect.height() - 4)
 
     def conn_button(self, position="left"):
         """Returns item's connector button.
@@ -230,20 +233,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         for icon in self.icon_group:
             icon.previous_pos = icon.scenePos()
 
-    def mouseMoveEvent(self, event):
-        """Moves icon(s) while the mouse button is pressed.
-        Update links that are connected to selected icons.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        super().mouseMoveEvent(event)
-        self.update_links_geometry()
-
-    def moveBy(self, dx, dy):
-        super().moveBy(dx, dy)
-        self.update_links_geometry()
-
     def update_links_geometry(self):
         """Updates geometry of connected links to reflect this item's most recent position."""
         links = set(link for icon in self.icon_group for conn in icon.connectors.values() for link in conn.links)
@@ -296,6 +285,16 @@ class ProjectItemIcon(QGraphicsRectItem):
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
+            scene = value
+            if scene is None:
+                self._scene.removeItem(self.name_item)
+            else:
+                self._scene = scene
+                self._scene.addItem(self.name_item)
+        elif change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
+            self.update_links_geometry()
+            self._reposition_name_item()
         return super().itemChange(change, value)
 
     def select_item(self):

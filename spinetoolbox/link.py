@@ -113,8 +113,14 @@ class LinkBase(QGraphicsPathItem):
         ellipse_path.addEllipse(rect)
         return ellipse_path
 
+    @staticmethod
+    def _get_offset(button):
+        return {"top": QPointF(0, -1), "left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[
+            button.position
+        ]
+
     def _get_src_offset(self):
-        return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.src_connector.position]
+        return self._get_offset(self.src_connector)
 
     def _get_dst_offset(self, c1):
         if not self.dst_connector:
@@ -122,7 +128,7 @@ class LinkBase(QGraphicsPathItem):
             guide_path.quadTo(c1, self.dst_center)
             line = self._get_joint_line(guide_path).unitVector()
             return QPointF(-line.dx(), -line.dy())
-        return {"left": QPointF(-1, 0), "bottom": QPointF(0, 1), "right": QPointF(1, 0)}[self.dst_connector.position]
+        return self._get_offset(self.dst_connector)
 
     def _make_guide_path(self, curved_links):
         """Returns a 'narrow' path connecting this item's source and destination.
