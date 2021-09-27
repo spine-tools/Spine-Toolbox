@@ -16,7 +16,8 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:    4.4.2018
 """
 
-from PySide2.QtCore import Qt, QPointF, QRectF, QParallelAnimationGroup
+import math
+from PySide2.QtCore import Qt, QPointF, QRectF, QParallelAnimationGroup, QLineF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -50,6 +51,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         super().__init__()
         self._toolbox = toolbox
         self._scene = None
+        self._orig_pos = None
+        self.dragging = False
         self.icon_file = icon_file
         self._moved_on_scene = False
         self.previous_pos = QPointF()
@@ -232,6 +235,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.icon_group = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)) | {self}
         for icon in self.icon_group:
             icon.previous_pos = icon.scenePos()
+            icon.dragging = True
 
     def update_links_geometry(self):
         """Updates geometry of connected links to reflect this item's most recent position."""
@@ -242,6 +246,7 @@ class ProjectItemIcon(QGraphicsRectItem):
     def mouseReleaseEvent(self, event):
         for icon in self.icon_group:
             icon.current_pos = icon.scenePos()
+            icon.dragging = False
         # pylint: disable=undefined-variable
         if (self.current_pos - self.previous_pos).manhattanLength() > qApp.startDragDistance():
             self._toolbox.undo_stack.push(MoveIconCommand(self, self._toolbox.project()))
@@ -295,7 +300,35 @@ class ProjectItemIcon(QGraphicsRectItem):
         elif change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             self.update_links_geometry()
             self._reposition_name_item()
+            self._accommodate_other_items()
         return super().itemChange(change, value)
+
+    def _accommodate_other_items(self):
+        if not self.scene():
+            return
+        for other in self.scene().items():
+            if isinstance(other, ProjectItemIcon) and other != self:
+                other.make_room_for_item(self)
+
+    def make_room_for_item(self, other):
+        if self.dragging:
+            return
+        if self.collidesWithItem(other):
+            if self._orig_pos is None:
+                self._orig_pos = self.pos()
+            line = QLineF(other.sceneBoundingRect().center(), self.sceneBoundingRect().center())
+            intersection = other.sceneBoundingRect() & self.sceneBoundingRect()
+            delta = math.atan(line.angle()) * min(intersection.width(), intersection.height())
+            unit_vector = line.unitVector()
+            self.moveBy(delta * unit_vector.dx(), delta * unit_vector.dy())
+            return
+        if self._orig_pos is not None:
+            current_pos = self.pos()
+            self.setPos(self._orig_pos)
+            if self.collidesWithItem(other):
+                self.setPos(current_pos)
+            else:
+                self._orig_pos = None
 
     def select_item(self):
         """Update GUI to show the details of the selected item."""
