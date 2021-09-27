@@ -20,7 +20,7 @@ The main entrance points to plotting are:
 - add_time_series_plot() which adds a time series plot to an existing PlotWidget
 - add_map_plot() which adds a map plot to an existing PlotWidget
 
-:author: A. Soininen(VTT)
+:author: A. Soininen (VTT)
 :date:   9.7.2019
 """
 
@@ -40,6 +40,10 @@ from spinedb_api import (
 from .helpers import first_non_null
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
+
+
+_LEGEND_SETTINGS = {"bbox_to_anchor": (1.02, 1.0), "fontsize": "small", "loc": "upper left"}
+_PLOT_SETTINGS = {"alpha": 0.7}
 
 
 class PlottingError(Exception):
@@ -85,7 +89,7 @@ def plot_pivot_column(proxy_model, column, hints, plot_widget=None):
             _raise_if_value_types_clash(values, plot_widget)
     _add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
-        plot_widget.canvas.axes.legend(loc="best", fontsize="small")
+        plot_widget.canvas.axes.legend(**_LEGEND_SETTINGS)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(proxy_model))
     plot_lines = plot_widget.canvas.axes.get_lines()
     if plot_lines:
@@ -125,7 +129,7 @@ def plot_selection(model, indexes, hints, plot_widget=None):
         _add_plot_to_widget(values, labels, plot_widget)
     plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
     if len(all_labels) > 1:
-        plot_widget.canvas.axes.legend(loc="best", fontsize="small")
+        plot_widget.canvas.axes.legend(**_LEGEND_SETTINGS)
     elif len(all_labels) == 1:
         plot_widget.canvas.axes.set_title(all_labels[0])
     if needs_redraw:
@@ -142,7 +146,7 @@ def add_array_plot(plot_widget, value, label=None):
         value (Array): the array to plot
         label (str): a label for the array
     """
-    plot_widget.canvas.axes.plot(value.indexes, value.values, label=label)
+    plot_widget.canvas.axes.plot(value.indexes, value.values, label=label, **_PLOT_SETTINGS)
 
 
 def add_map_plot(plot_widget, map_value, label=None):
@@ -164,7 +168,9 @@ def add_map_plot(plot_widget, map_value, label=None):
         indexes_as_strings = list(map(str, map_value.indexes))
     else:
         indexes_as_strings = map_value.indexes
-    plot_widget.canvas.axes.plot(indexes_as_strings, map_value.values, label=label, linestyle="", marker="o")
+    plot_widget.canvas.axes.plot(
+        indexes_as_strings, map_value.values, label=label, linestyle="", marker="o", **_PLOT_SETTINGS
+    )
     plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
 
 
@@ -177,7 +183,7 @@ def add_time_series_plot(plot_widget, value, label=None):
         value (TimeSeries): the time series to plot
         label (str): a label for the time series
     """
-    plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post')
+    plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post', **_PLOT_SETTINGS)
     # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
     left, _ = plot_widget.canvas.axes.get_xlim()
     if left < 1.0:
@@ -339,7 +345,7 @@ def _add_plot_to_widget(values, labels, plot_widget):
         for value, label in zip(values, labels):
             add_array_plot(plot_widget, value, label)
     elif isinstance(values[1][0], Number):
-        plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
+        plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0], **_PLOT_SETTINGS)
         if isinstance(values[0][0], str):
             # matplotlib tries to plot every single x tick label if they are strings.
             # This can become very slow if the labels are numerous.
@@ -373,9 +379,7 @@ def _organize_selection_to_columns(indexes):
     selections = dict()
     for index in indexes:
         selections.setdefault(index.column(), set()).add(index.row())
-    for column, rows in selections.items():
-        selections[column] = list(sorted(rows))
-    return selections
+    return {column: sorted(rows) for column, rows in selections.items()}
 
 
 def _collect_single_column_values(model, column, rows, hints):

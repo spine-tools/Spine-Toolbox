@@ -22,14 +22,7 @@ from .alternative_scenario_item import AlternativeRootItem, ScenarioRootItem, Al
 
 
 class AlternativeScenarioModel(TreeModelBase):
-
     """A model to display alternatives and scenarios in a tree view.
-
-
-    Args:
-        parent (SpineDBEditor)
-        db_mngr (SpineDBManager)
-        db_maps (iter): DiffDatabaseMapping instances
     """
 
     @staticmethod

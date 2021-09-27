@@ -27,6 +27,8 @@ from ...mvcmodels.shared import PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ...helpers import object_icon
 
+# FIXME: only_visible=False ???
+
 
 class RelationshipPivotTableDelegate(CheckBoxDelegate):
 
@@ -342,9 +344,6 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         }
         if len(value_list_ids) == 1:
             return next(iter(value_list_ids))
-
-
-# FIXME: Make SearchBarEditor lazy
 
 
 class ValueListDelegate(ParameterDelegate):

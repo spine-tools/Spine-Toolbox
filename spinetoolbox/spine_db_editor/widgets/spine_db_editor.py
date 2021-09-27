@@ -19,8 +19,19 @@ Contains the SpineDBEditor class.
 import os
 import json
 from sqlalchemy.engine.url import URL
-from PySide2.QtWidgets import QMainWindow, QErrorMessage, QDockWidget, QMessageBox, QMenu, QAbstractScrollArea, QTabBar
-from PySide2.QtCore import Qt, Signal, Slot, QTimer
+from PySide2.QtWidgets import (
+    QAction,
+    QMainWindow,
+    QErrorMessage,
+    QDockWidget,
+    QMessageBox,
+    QMenu,
+    QAbstractScrollArea,
+    QTabBar,
+    QCheckBox,
+    QDialog,
+)
+from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -36,6 +47,7 @@ from ...widgets.notification import ChangeNotifier
 from ...widgets.notification import NotificationStack
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.custom_qwidgets import ToolBarWidgetAction
+from ...widgets.commit_dialog import CommitDialog
 from ...helpers import (
     get_save_file_name_in_last_dir,
     get_open_file_name_in_last_dir,
@@ -78,6 +90,11 @@ class SpineDBEditorBase(QMainWindow):
         self.takeCentralWidget()
         self.url_toolbar = UrlToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
+        toolbox = self.db_mngr.parent()
+        if toolbox is not None:
+            self.url_toolbar.show_toolbox_action.triggered.connect(toolbox.restore_and_activate)
+        else:
+            self.url_toolbar.show_toolbox_action.deleteLater()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings
@@ -184,6 +201,20 @@ class SpineDBEditorBase(QMainWindow):
         self.load_db_urls({url: None})
 
     @Slot(bool)
+    def add_db_file(self, _=False):
+        self.qsettings.beginGroup(self.settings_group)
+        file_path, _ = get_open_file_name_in_last_dir(
+            self.qsettings, "addSQLiteUrl", self, "Add SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
+        )
+        self.qsettings.endGroup()
+        if not file_path:
+            return
+        url = "sqlite:///" + file_path
+        db_url_codenames = self.db_url_codenames
+        db_url_codenames[url] = None
+        self.load_db_urls(db_url_codenames)
+
+    @Slot(bool)
     def create_db_file(self, _=False):
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_save_file_name_in_last_dir(
@@ -206,6 +237,7 @@ class SpineDBEditorBase(QMainWindow):
             QMenu
         """
         menu = QMenu(self)
+        menu.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
@@ -229,7 +261,9 @@ class SpineDBEditorBase(QMainWindow):
         """Adds a menu with main actions to toolbar."""
         menu = MainMenu(self)
         file_action = ToolBarWidgetAction("File", menu)
-        file_action.tool_bar.addActions([self.ui.actionNew_db_file, self.ui.actionOpen_db_file])
+        file_action.tool_bar.addActions(
+            [self.ui.actionNew_db_file, self.ui.actionOpen_db_file, self.ui.actionAdd_db_file]
+        )
         file_action.tool_bar.addSeparator()
         file_action.tool_bar.addActions([self.ui.actionImport, self.ui.actionExport, self.ui.actionExport_session])
         edit_action = ToolBarWidgetAction("Edit", menu)
@@ -240,14 +274,15 @@ class SpineDBEditorBase(QMainWindow):
         edit_action.tool_bar.addAction(self.ui.actionMass_remove_items)
         view_action = ToolBarWidgetAction("View", menu)
         view_action.tool_bar.addActions([self.ui.actionStacked_style, self.ui.actionGraph_style])
+        pivot_actions = self.pivot_action_group.actions()
+        view_action.tool_bar.addActions(pivot_actions)
+        view_action.tool_bar.add_frame(pivot_actions[0], pivot_actions[-1], "Pivot table")
         view_action.tool_bar.addSeparator()
         docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "Doc&ks...")
         docks_menu = self._make_docks_menu()
         docks_menu_action.setMenu(docks_menu)
         docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
         docks_menu_button.setPopupMode(docks_menu_button.InstantPopup)
-        pivot_action = ToolBarWidgetAction("Pivot", menu)
-        pivot_action.tool_bar.addActions(self.pivot_action_group.actions())
         session_action = ToolBarWidgetAction("Session", menu)
         session_action.tool_bar.addActions([self.ui.actionCommit, self.ui.actionRollback])
         session_action.tool_bar.addSeparator()
@@ -258,8 +293,6 @@ class SpineDBEditorBase(QMainWindow):
         menu.addSeparator()
         menu.addAction(view_action)
         menu.addSeparator()
-        menu.addAction(pivot_action)
-        menu.addSeparator()
         menu.addAction(session_action)
         menu.addSeparator()
         menu.addAction(self.ui.actionUser_guide)
@@ -269,6 +302,7 @@ class SpineDBEditorBase(QMainWindow):
         actions = [
             self.ui.actionNew_db_file,
             self.ui.actionOpen_db_file,
+            self.ui.actionAdd_db_file,
             self.ui.actionImport,
             self.ui.actionExport,
             self.ui.actionExport_session,
@@ -302,6 +336,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
         self.ui.actionOpen_db_file.triggered.connect(self.open_db_file)
+        self.ui.actionAdd_db_file.triggered.connect(self.add_db_file)
         self.ui.actionImport.triggered.connect(self.import_file)
         self.ui.actionExport.triggered.connect(self.show_mass_export_items_dialog)
         self.ui.actionExport_session.triggered.connect(self.export_session)
@@ -440,7 +475,7 @@ class SpineDBEditorBase(QMainWindow):
         try:
             db_map = DatabaseMapping(url)
         except (SpineDBAPIError, SpineDBVersionError) as err:
-            self.msg.emit(f"Could'n import file {filename}: {str(err)}")
+            self.msg.emit(f"Couldn't import file {filename}: {str(err)}")
             return
         data = export_data(db_map)
         self.import_data(data)
@@ -451,7 +486,7 @@ class SpineDBEditorBase(QMainWindow):
         try:
             mapped_data, errors = get_mapped_data_from_xlsx(file_path)
         except Exception as err:  # pylint: disable=broad-except
-            self.msg.emit(f"Could'n import file {filename}: {str(err)}")
+            self.msg.emit(f"Couldn't import file {filename}: {str(err)}")
             raise err  # NOTE: This is so the programmer gets to see the traceback
         if errors:
             msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
@@ -515,6 +550,12 @@ class SpineDBEditorBase(QMainWindow):
         db_map_scen_alt_ids = {
             db_map: _ids("scenario_alternative", types) for db_map, types in db_map_item_types.items()
         }
+        db_map_feat_ids = {db_map: _ids("feature", types) for db_map, types in db_map_item_types.items()}
+        db_map_tool_ids = {db_map: _ids("tool", types) for db_map, types in db_map_item_types.items()}
+        db_map_tool_feat_ids = {db_map: _ids("tool_feature", types) for db_map, types in db_map_item_types.items()}
+        db_map_tool_feat_meth_ids = {
+            db_map: _ids("tool_feature_method", types) for db_map, types in db_map_item_types.items()
+        }
         parcel = SpineDBParcel(self.db_mngr)
         parcel.push_object_class_ids(db_map_obj_cls_ids)
         parcel.push_object_ids(db_map_obj_ids)
@@ -529,6 +570,10 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_alternative_ids(db_map_alt_ids)
         parcel.push_scenario_ids(db_map_scen_ids)
         parcel.push_scenario_alternative_ids(db_map_scen_alt_ids)
+        parcel.push_feature_ids(db_map_feat_ids)
+        parcel.push_tool_ids(db_map_tool_ids)
+        parcel.push_tool_feature_ids(db_map_tool_feat_ids)
+        parcel.push_tool_feature_method_ids(db_map_tool_feat_meth_ids)
         self.export_data(parcel.data)
 
     @Slot(object)
@@ -587,12 +632,26 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def commit_session(self, checked=False):
-        """Commits session."""
-        self.db_mngr.commit_session(*self.db_maps, cookie=self)
+        """Commits dirty database maps."""
+        dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
+        if not dirty_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        commit_msg = self._get_commit_msg(db_names)
+        if not commit_msg:
+            return
+        self.db_mngr.commit_session(commit_msg, *dirty_db_maps, cookie=self)
 
     @Slot(bool)
     def rollback_session(self, checked=False):
-        self.db_mngr.rollback_session(*self.db_maps)
+        """Rolls back dirty datbase maps."""
+        dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
+        if not dirty_db_maps:
+            return
+        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        if not self._get_rollback_confirmation(db_names):
+            return
+        self.db_mngr.rollback_session(*dirty_db_maps)
 
     def receive_session_committed(self, db_maps, cookie):
         db_maps = set(self.db_maps) & set(db_maps)
@@ -629,7 +688,7 @@ class SpineDBEditorBase(QMainWindow):
         dialog.show()
 
     @busy_effect
-    @Slot("QModelIndex")
+    @Slot(QModelIndex)
     def show_parameter_value_editor(self, index, plain=False):
         """Shows the parameter_value editor for the given index of given table view.
         """
@@ -793,11 +852,94 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
 
     def tear_down(self):
-        if not self.db_mngr.unregister_listener(self, *self.db_maps):
-            return False
-        # Save UI form state
+        """Performs clean up duties.
+
+        Returns:
+            bool: True if editor is ready to close, False otherwise
+        """
+        dirty_or_orphan = self.db_mngr.dirty_or_orphan(self, *self.db_maps)
+        commit_dirty = False
+        commit_msg = ""
+        if dirty_or_orphan:
+            answer = self._prompt_to_commit_changes()
+            if answer == QMessageBox.Cancel:
+                return False
+            db_names = ", ".join([db_map.codename for db_map in dirty_or_orphan])
+            if answer == QMessageBox.Save:
+                commit_dirty = True
+                commit_msg = self._get_commit_msg(db_names)
+                if not commit_msg:
+                    return False
+        self.db_mngr.unregister_listener(self, commit_dirty, commit_msg, *self.db_maps)
         self.save_window_state()
         return True
+
+    def _prompt_to_commit_changes(self):
+        """Prompts the user to commit or rollback changes to 'dirty' db maps.
+
+        Returns:
+            int: QMessageBox status code
+        """
+        commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
+        if commit_at_exit == 0:
+            # Don't commit session and don't show message box
+            return QMessageBox.Discard
+        if commit_at_exit == 1:  # Default
+            # Show message box
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle(self.windowTitle())
+            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
+            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msg.button(QMessageBox.Save).setText("Commit and close ")
+            msg.button(QMessageBox.Discard).setText("Discard changes and close")
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
+                # Save preference
+                preference = "2" if answer == QMessageBox.Save else "0"
+                self.qsettings.setValue("appSettings/commitAtExit", preference)
+            return answer
+        if commit_at_exit == 2:
+            # Commit session and don't show message box
+            return QMessageBox.Save
+
+    def _get_commit_msg(self, db_names):
+        """Prompts user for commit message.
+
+        Args:
+            db_names (Iterable of str): database names
+
+        Returns:
+            str: commit message
+        """
+        dialog = CommitDialog(self, db_names)
+        answer = dialog.exec_()
+        if answer == QDialog.Accepted:
+            return dialog.commit_msg
+
+    def _get_rollback_confirmation(self, db_names):
+        """Prompts user for confirmation before rolling back the session.
+
+        Args:
+            db_names (Iterable of str): database names
+
+        Returns:
+            bool: True if user confirmed, False otherwise
+        """
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            f"Rollback changes in {db_names}",
+            "Are you sure? "
+            "All your changes since the last commit will be reverted and removed from the undo/redo stack.",
+            QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self,
+        )
+        message_box.button(QMessageBox.Ok).setText("Rollback")
+        answer = message_box.exec_()
+        return answer == QMessageBox.Ok
 
     def closeEvent(self, event):
         """Handle close window.
@@ -809,6 +951,30 @@ class SpineDBEditorBase(QMainWindow):
             event.ignore()
             return
         super().closeEvent(event)
+
+    def scenario_items(self, db_map):
+        """Gathers scenario items from alternative scenario tree for given database.
+
+        Args:
+            db_map (DiffDatabaseMapping): database map
+
+        Returns:
+            list of CachedItem: scenario items
+        """
+        model = self.ui.treeView_alternative_scenario.model()
+        db_index = None
+        for row in range(model.rowCount()):
+            db_index = model.index(row, 0)
+            item = model.item_from_index(db_index)
+            if item.db_map is db_map:
+                break
+        if db_index is None:
+            raise RuntimeError("Database item not found in alternative/scenario model.")
+        scenario_root_index = model.index(1, 0, db_index)
+        return [
+            model.item_from_index(model.index(row, 0, scenario_root_index))
+            for row in range(model.rowCount(scenario_root_index))
+        ]
 
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
@@ -944,7 +1110,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.resizeDocks(docks, [0.3 * height, 0.3 * height, 0.4 * height], Qt.Vertical)
         self.end_style_change()
 
-    @Slot("QAction")
+    @Slot(QAction)
     def apply_pivot_style(self, _action):
         """Applies the pivot style, inspired in the former tabular view."""
         self.begin_style_change()

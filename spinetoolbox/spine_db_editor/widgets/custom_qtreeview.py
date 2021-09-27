@@ -16,12 +16,14 @@ Classes for custom QTreeView.
 :date:   25.4.2018
 """
 
-from PySide2.QtWidgets import QMenu
+from PySide2.QtWidgets import QMenu, QMessageBox
 from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from .custom_delegates import ToolFeatureDelegate, AlternativeScenarioDelegate, ParameterValueListDelegate
+from .scenario_generator import ScenarioGenerator
+from ..mvcmodels.alternative_scenario_item import AlternativeLeafItem
 
 
 class EntityTreeView(CopyTreeView):
@@ -127,10 +129,8 @@ class EntityTreeView(CopyTreeView):
     @Slot()
     def _fetch_more_visible(self):
         model = self.model()
-        for item in model.visit_all():
+        for item in model.visit_all(view=self):
             index = model.index_from_item(item)
-            if not self.isExpanded(index):
-                continue
             last = model.index(model.rowCount(index) - 1, 0, index)
             if self.visualRect(last).intersects(self.viewport().rect()) and model.canFetchMore(index):
                 model.fetchMore(index)
@@ -529,6 +529,12 @@ class AlternativeScenarioTreeView(ItemTreeView):
         delegate.data_committed.connect(self.model().setData)
         self.setItemDelegateForColumn(0, delegate)
 
+    def populate_context_menu(self):
+        """See base class."""
+        self._menu.addAction("Generate scenarios...", self._open_scenario_generator)
+        self._menu.addSeparator()
+        super().populate_context_menu()
+
     def _db_map_alt_ids_from_selection(self, selection):
         db_map_ids = {}
         for index in selection.indexes():
@@ -610,6 +616,33 @@ class AlternativeScenarioTreeView(ItemTreeView):
         super().dragEnterEvent(event)
         if event.source() is self:
             event.accept()
+
+    def _open_scenario_generator(self):
+        """Opens the scenario generator dialog."""
+        selection_model = self.selectionModel()
+        item_from_index = self.model().item_from_index
+        all_items = [item_from_index(index) for index in selection_model.selectedIndexes()]
+        alternative_items = [
+            item for item in all_items if isinstance(item, AlternativeLeafItem) and item.id is not None
+        ]
+        if not alternative_items:
+            QMessageBox.warning(
+                self, "No alternatives selected", "Select the alternatives you want to include in the scenarios first."
+            )
+            return
+        included_ids = set()
+        alternatives = list()
+        db_map = None
+        for item in alternative_items:
+            if item.id not in included_ids:
+                if db_map is None:
+                    db_map = item.db_map
+                elif item.db_map is not db_map:
+                    continue
+                alternatives.append(item.item_data)
+                included_ids.add(item.id)
+        generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
+        generator.show()
 
 
 class ParameterValueListTreeView(ItemTreeView):

@@ -261,6 +261,9 @@ class AddItemsCommand(SpineDBCommand):
         self._readd = True
 
     def receive_items_changed(self, db_map_data):
+        if not db_map_data.get(self.db_map):
+            self.setObsolete(True)
+            return
         self.redo_db_map_data = {
             db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
             for db_map, data in db_map_data.items()
@@ -320,6 +323,9 @@ class UpdateItemsCommand(SpineDBCommand):
         )
 
     def receive_items_changed(self, db_map_data):
+        if not db_map_data.get(self.db_map):
+            self.setObsolete(True)
+            return
         self.redo_db_map_data = {
             db_map: [self.db_mngr.cache_to_db(self.item_type, item) for item in data]
             for db_map, data in db_map_data.items()
@@ -365,6 +371,9 @@ class RemoveItemsCommand(SpineDBCommand):
                 waiter.wait()
 
     def receive_items_changed(self, typed_db_map_data):
+        if not any(db_map_data.get(self.db_map) for db_map_data in typed_db_map_data.values()):
+            self.setObsolete(True)
+            return
         self.undo_typed_db_map_data = {
             item_type: {
                 self.db_map: [self.db_mngr.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]

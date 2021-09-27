@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>1322</width>
-    <height>700</height>
+    <height>737</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,32 +28,14 @@
   <property name="dockNestingEnabled">
    <bool>true</bool>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_10">
-    <property name="spacing">
-     <number>0</number>
-    </property>
-    <property name="leftMargin">
-     <number>0</number>
-    </property>
-    <property name="topMargin">
-     <number>0</number>
-    </property>
-    <property name="rightMargin">
-     <number>0</number>
-    </property>
-    <property name="bottomMargin">
-     <number>0</number>
-    </property>
-   </layout>
-  </widget>
+  <widget class="QWidget" name="centralwidget"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
      <width>1322</width>
-     <height>21</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -219,8 +201,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>382</width>
-     <height>178</height>
+     <width>402</width>
+     <height>229</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -236,9 +218,9 @@
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <layout class="QVBoxLayout" name="verticalLayout_3">
+    <layout class="QVBoxLayout" name="verticalLayout_7">
      <property name="spacing">
-      <number>0</number>
+      <number>1</number>
      </property>
      <property name="leftMargin">
       <number>0</number>
@@ -253,34 +235,52 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QLabel" name="label_no_itemlog">
-       <property name="text">
-        <string>Select and execute a project item to view its execution log</string>
+      <widget class="QSplitter" name="splitter_item_log">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
        </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="CustomQTextBrowser" name="textBrowser_itemlog">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="font">
-        <font>
-         <family>Segoe UI</family>
-        </font>
-       </property>
-       <property name="contextMenuPolicy">
-        <enum>Qt::DefaultContextMenu</enum>
-       </property>
-       <property name="openLinks">
-        <bool>false</bool>
-       </property>
+       <widget class="QTreeView" name="listView_log_executions"/>
+       <widget class="QWidget" name="layoutWidget">
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_no_itemlog">
+           <property name="text">
+            <string>Select and execute a project item to view its execution log</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="CustomQTextBrowser" name="textBrowser_itemlog">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <family>Segoe UI</family>
+            </font>
+           </property>
+           <property name="contextMenuPolicy">
+            <enum>Qt::DefaultContextMenu</enum>
+           </property>
+           <property name="openLinks">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
      </item>
     </layout>
@@ -349,20 +349,8 @@
            <property name="alignment">
             <set>Qt::AlignCenter</set>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTreeView" name="listView_executions">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>11</pointsize>
-            </font>
+           <property name="wordWrap">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -457,9 +445,9 @@
     <number>8</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_console">
-    <layout class="QVBoxLayout" name="verticalLayout_20">
+    <layout class="QVBoxLayout" name="verticalLayout_6">
      <property name="spacing">
-      <number>0</number>
+      <number>1</number>
      </property>
      <property name="leftMargin">
       <number>0</number>
@@ -474,16 +462,37 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QLabel" name="label_no_console">
-       <property name="contextMenuPolicy">
-        <enum>Qt::DefaultContextMenu</enum>
+      <widget class="QSplitter" name="splitter_console">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
        </property>
-       <property name="text">
-        <string>Select and execute a Tool to see its console</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
+       <widget class="QTreeView" name="listView_console_executions">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_no_console">
+        <property name="contextMenuPolicy">
+         <enum>Qt::DefaultContextMenu</enum>
+        </property>
+        <property name="text">
+         <string>Select and execute a Tool to see its console</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
       </widget>
      </item>
     </layout>
@@ -1013,6 +1022,14 @@
    </property>
    <property name="shortcut">
     <string>F7</string>
+   </property>
+  </action>
+  <action name="actionTake_link">
+   <property name="text">
+    <string>Take link</string>
+   </property>
+   <property name="toolTip">
+    <string>Change link's destination.</string>
    </property>
   </action>
  </widget>

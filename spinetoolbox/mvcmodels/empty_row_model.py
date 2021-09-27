@@ -32,10 +32,10 @@ class EmptyRowModel(MinimalTableModel):
         self.dataChanged.connect(self._handle_data_changed)
         self.rowsInserted.connect(self._handle_rows_inserted)
 
-    def canFetchMore(self, parent=QModelIndex()):
+    def canFetchMore(self, _parent):
         return not self._fetched
 
-    def fetchMore(self, parent=QModelIndex()):
+    def fetchMore(self, parent):
         self.insertRows(self.rowCount(), 1, parent)
         self._fetched = True
 

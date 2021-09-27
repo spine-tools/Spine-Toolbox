@@ -478,7 +478,7 @@ class ProjectItem(MetaObject):
         if filter_id not in self._filter_log_documents:
             self._filter_log_documents[filter_id] = SignedTextDocument(self)
             if self._active:
-                self._project._toolbox.ui.listView_executions.model().layoutChanged.emit()
+                self._project._toolbox.ui.listView_log_executions.model().layoutChanged.emit()
         return self._filter_log_documents[filter_id]
 
     def _create_log_document(self):

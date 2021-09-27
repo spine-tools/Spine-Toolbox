@@ -25,8 +25,9 @@ from PySide2.QtWidgets import (
     QDialogButtonBox,
     QGroupBox,
     QCheckBox,
+    QPushButton,
 )
-from PySide2.QtCore import Slot, Qt, QTimer, Signal
+from PySide2.QtCore import Slot, Qt, Signal
 
 
 class MassSelectItemsDialog(QDialog):
@@ -50,7 +51,7 @@ class MassSelectItemsDialog(QDialog):
         "tool_feature",
         "tool_feature_method",
     )
-    _COLUMN_COUNT = 2
+    _COLUMN_COUNT = 3
 
     def __init__(self, parent, db_mngr, *db_maps):
         """Initialize class.
@@ -64,24 +65,9 @@ class MassSelectItemsDialog(QDialog):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         top_widget = QWidget()
-        top_layout = QHBoxLayout(top_widget)
+        top_layout = QVBoxLayout(top_widget)
         db_maps_group_box = QGroupBox("Databases", top_widget)
-        db_maps_layout = QVBoxLayout(db_maps_group_box)
-        db_maps_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
-        self.db_map_check_boxes = {db_map: QCheckBox(db_map.codename, db_maps_group_box) for db_map in self.db_maps}
-        for check_box in self.db_map_check_boxes.values():
-            check_box.stateChanged.connect(lambda _: QTimer.singleShot(0, self._set_item_check_box_enabled))
-            check_box.setChecked(True)
-            db_maps_layout.addWidget(check_box)
         items_group_box = QGroupBox("Items", top_widget)
-        items_layout = QGridLayout(items_group_box)
-        items_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
-        self.item_check_boxes = {item_type: QCheckBox(item_type, items_group_box) for item_type in self._ITEM_TYPES}
-        for k, check_box in enumerate(self.item_check_boxes.values()):
-            row = k // self._COLUMN_COUNT
-            column = k % self._COLUMN_COUNT
-            check_box.setChecked(True)
-            items_layout.addWidget(check_box, row, column)
         top_layout.addWidget(db_maps_group_box)
         top_layout.addWidget(items_group_box)
         button_box = QDialogButtonBox(self)
@@ -92,14 +78,50 @@ class MassSelectItemsDialog(QDialog):
         layout.addWidget(top_widget)
         layout.addWidget(button_box)
         layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
+        self._ok_button = button_box.button(QDialogButtonBox.Ok)
+        self.db_map_check_boxes = {db_map: QCheckBox(db_map.codename, db_maps_group_box) for db_map in self.db_maps}
+        self.item_check_boxes = {item_type: QCheckBox(item_type, items_group_box) for item_type in self._ITEM_TYPES}
+        self._add_check_boxes(db_maps_group_box, self.db_map_check_boxes)
+        self._add_check_boxes(items_group_box, self.item_check_boxes)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
-    @Slot()
-    def _set_item_check_box_enabled(self):
-        """Set the enabled property on item check boxes depending on the state of db_map check boxes."""
-        enabled = any(x.isChecked() for x in self.db_map_check_boxes.values())
-        for check_box in self.item_check_boxes.values():
-            check_box.setEnabled(enabled)
+    def _add_check_boxes(self, group_box, check_boxes):
+        check_boxes = list(check_boxes.values())
+        layout = QVBoxLayout(group_box)
+        buttons = QWidget()
+        grid = QWidget()
+        layout.addWidget(grid)
+        layout.addWidget(buttons)
+        layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
+        buttons_layout = QHBoxLayout(buttons)
+        select_all = QPushButton("Select all")
+        deselect_all = QPushButton("Deselect all")
+        select_all.clicked.connect(lambda _=False, boxes=check_boxes: _batch_set_check_state(boxes, True))
+        deselect_all.clicked.connect(lambda _=False, boxes=check_boxes: _batch_set_check_state(boxes, False))
+        buttons_layout.addWidget(select_all)
+        buttons_layout.addWidget(deselect_all)
+        buttons_layout.addStretch()
+        buttons_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
+        grid_layout = QGridLayout(grid)
+        grid_layout.setContentsMargins(self._MARGIN, self._MARGIN, self._MARGIN, self._MARGIN)
+        for k, check_box in enumerate(check_boxes):
+            check_box.stateChanged.connect(self._handle_check_box_state_changed)
+            row = k // self._COLUMN_COUNT
+            column = k % self._COLUMN_COUNT
+            check_box.setChecked(True)
+            grid_layout.addWidget(check_box, row, column)
+
+    @Slot(int)
+    def _handle_check_box_state_changed(self, _checked):
+        self._ok_button.setEnabled(
+            any(x.isChecked() for x in self.db_map_check_boxes.values())
+            and any(x.isChecked() for x in self.item_check_boxes.values())
+        )
+
+
+def _batch_set_check_state(check_boxes, checked):
+    for check_box in check_boxes:
+        check_box.setChecked(checked)
 
 
 class MassRemoveItemsDialog(MassSelectItemsDialog):
@@ -118,10 +140,9 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
 
     def accept(self):
         super().accept()
-        # FIXME: What happens if items not fetched? We need a function to purge in spinedb_api
         db_map_typed_data = {
             db_map: {
-                item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type)}
+                item_type: {x["id"] for x in self.db_mngr.get_items(db_map, item_type, only_visible=False)}
                 for item_type, check_box in self.item_check_boxes.items()
                 if check_box.isChecked()
             }

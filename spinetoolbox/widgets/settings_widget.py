@@ -253,8 +253,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.connect_signals()
         self.read_settings()
         self.read_project_settings()
-        self._update_python_widgets_enabled(True if self.ui.radioButton_use_python_jupyter_console.isChecked() else False)
-        self._update_julia_widgets_enabled(True if self.ui.radioButton_use_julia_jupyter_console.isChecked() else False)
+        self._update_python_widgets_enabled(self.ui.radioButton_use_python_jupyter_console.isChecked())
+        self._update_julia_widgets_enabled(self.ui.radioButton_use_julia_jupyter_console.isChecked())
 
     def connect_signals(self):
         """Connect signals."""

@@ -94,6 +94,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._change_notifier = ChangeNotifier(self, self._undo_stack, self._app_settings, "appSettings/specShowUndo")
         # Setup toolbar
         self._spec_toolbar = _SpecNameDescriptionToolbar(self, specification, self._undo_stack)
+        self._spec_toolbar.show_toolbox_action.triggered.connect(self._toolbox.restore_and_activate)
         self.addToolBar(Qt.TopToolBarArea, self._spec_toolbar)
         self._ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self._populate_main_menu()
@@ -259,6 +260,8 @@ class _SpecNameDescriptionToolbar(QToolBar):
         layout.setStretchFactor(self._line_edit_name, 1)
         layout.setStretchFactor(self._line_edit_description, 3)
         self.addWidget(widget)
+        toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
+        self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox")
         self.menu = self._make_main_menu()
         self.save_action = self.menu.addAction("Save")
         self.duplicate_action = self.menu.addAction("Duplicate")

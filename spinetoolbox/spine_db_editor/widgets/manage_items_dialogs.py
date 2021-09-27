@@ -117,15 +117,13 @@ class ManageItemsDialog(ManageItemsDialogBase):
         self.resize_window_to_columns()
 
 
-# FIXME: We need to fully fetch the corresponding table before calling db_mngr.get_items
-
-
 class GetObjectClassesMixin:
     """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog."""
 
     def make_db_map_obj_cls_lookup(self):
         return {
-            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "object_class")} for db_map in self.db_maps
+            db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "object_class", only_visible=False)}
+            for db_map in self.db_maps
         }
 
     def object_class_name_list(self, row):
@@ -151,7 +149,9 @@ class GetObjectsMixin:
 
     def make_db_map_obj_lookup(self):
         return {
-            db_map: {(x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "object")}
+            db_map: {
+                (x["class_id"], x["name"]): x for x in self.db_mngr.get_items(db_map, "object", only_visible=False)
+            }
             for db_map in self.db_maps
         }
 
@@ -186,7 +186,7 @@ class GetRelationshipClassesMixin:
         return {
             db_map: {
                 (x["name"], x["object_class_name_list"]): x
-                for x in self.db_mngr.get_items(db_map, "relationship_class")
+                for x in self.db_mngr.get_items(db_map, "relationship_class", only_visible=False)
             }
             for db_map in self.db_maps
         }

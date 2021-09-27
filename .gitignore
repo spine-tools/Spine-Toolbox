@@ -15,3 +15,5 @@ tool_specifications/Swedish_hydro/
 tool_specifications/executables/
 projects/
 work/
+.coverage
+htmlcov/

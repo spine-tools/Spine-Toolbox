@@ -342,7 +342,7 @@ class MultiDBTreeItem(TreeItem):
         for db_map, ids in db_map_ids_to_add.items():
             new_children += self._create_new_children(db_map, ids)
         # Check display ids
-        display_ids = [child.display_id for child in self.children if child.display_id]
+        display_ids = [child.display_id for child in self.children if child.display_id is not None]
         for row in sorted(rows_to_update, reverse=True):
             child = self.child(row)
             if not child:

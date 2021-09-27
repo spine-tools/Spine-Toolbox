@@ -27,11 +27,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="MapTableView" name="map_table_view">
-     <attribute name="horizontalHeaderVisible">
-      <bool>true</bool>
-     </attribute>
-    </widget>
+    <widget class="MapTableView" name="map_table_view"/>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">

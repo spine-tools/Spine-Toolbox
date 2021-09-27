@@ -270,6 +270,7 @@ class TestSpineDBFetcher(unittest.TestCase):
                     {
                         'id': 1,
                         'entity_class_id': 1,
+                        'entity_class_name': 'oc',
                         'object_class_id': 1,
                         'object_class_name': 'oc',
                         'parameter_name': 'param',
@@ -289,6 +290,7 @@ class TestSpineDBFetcher(unittest.TestCase):
                 'default_type': None,
                 'description': None,
                 'entity_class_id': 1,
+                'entity_class_name': 'oc',
                 'id': 1,
                 'object_class_id': 1,
                 'object_class_name': 'oc',

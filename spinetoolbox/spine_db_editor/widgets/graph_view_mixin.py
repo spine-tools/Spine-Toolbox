@@ -81,6 +81,7 @@ class GraphViewMixin:
         super().init_models()
         self.scene = CustomGraphicsScene(self)
         self.ui.graphicsView.setScene(self.scene)
+        self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
 
     def connect_signals(self):
         """Connects signals."""
@@ -254,7 +255,7 @@ class GraphViewMixin:
         self._progress_bar.set_layout_generator(layout_gen)
         self._progress_bar.show()
         layout_gen.layout_available.connect(self._complete_graph)
-        layout_gen.finished.connect(self.layout_gens.pop)
+        layout_gen.finished.connect(lambda id_: self.layout_gens.pop(id_))  # Lambda to avoid issues in Python 3.7
         self._thread_pool.start(layout_gen)
 
     def _stop_layout_generators(self):
@@ -336,18 +337,18 @@ class GraphViewMixin:
         """Updates data for graph according to selection in trees."""
         object_ids, relationship_ids = self._get_selected_entity_ids()
         relationship_ids.update(self.added_relationship_ids)
-        prunned_entity_ids = {id_ for ids in self.ui.graphicsView.prunned_entity_ids.values() for id_ in ids}
-        object_ids -= prunned_entity_ids
-        relationship_ids -= prunned_entity_ids
+        pruned_entity_ids = {id_ for ids in self.ui.graphicsView.pruned_entity_ids.values() for id_ in ids}
+        object_ids -= pruned_entity_ids
+        relationship_ids -= pruned_entity_ids
         relationships = self._get_all_relationships_for_graph(object_ids, relationship_ids)
         object_id_lists = dict()
         for db_map, relationship in relationships:
-            if (db_map, relationship["id"]) in prunned_entity_ids:
+            if (db_map, relationship["id"]) in pruned_entity_ids:
                 continue
             object_id_list = [
                 (db_map, id_)
                 for id_ in (int(x) for x in relationship["object_id_list"].split(","))
-                if (db_map, id_) not in prunned_entity_ids
+                if (db_map, id_) not in pruned_entity_ids
             ]
             if len(object_id_list) < 2:
                 continue
@@ -370,11 +371,12 @@ class GraphViewMixin:
                 self.dst_inds.append(object_ind)
 
     def _get_parameter_positions(self, parameter_name):
-        # FIXME: We might need to fetch all parameter values here!!!
         if not parameter_name:
             yield from []
         for db_map in self.db_maps:
-            for p in self.db_mngr.get_items_by_field(db_map, "parameter_value", "parameter_name", parameter_name):
+            for p in self.db_mngr.get_items_by_field(
+                db_map, "parameter_value", "parameter_name", parameter_name, only_visible=False
+            ):
                 pos = from_database(p["value"], p["type"])
                 if isinstance(pos, float):
                     yield (db_map, p["entity_id"]), pos
@@ -483,7 +485,8 @@ class GraphViewMixin:
 
     def add_objects_at_position(self, pos):
         self._pos_for_added_objects = pos
-        dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps)
+        parent_item = self.object_tree_model.root_item
+        dialog = AddObjectsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def get_pdf_file_path(self):
@@ -501,4 +504,5 @@ class GraphViewMixin:
             event (QCloseEvent): Closing event
         """
         super().closeEvent(event)
+        self.scene.deleteLater()
         self.scene = None

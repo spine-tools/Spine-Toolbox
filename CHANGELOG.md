@@ -14,6 +14,31 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Removed
 
 ### Fixed
+
+### Security
+
+## [0.6.5] - 2021-09-08
+
+### Added
+- Support for loops has been added. Loops can be created using a special *loop link* which is initiated by
+  holding down the **Alt** key while drawing a new link in Design view.
+- Performance boost for Spine Db Editor when working with large databases.
+
+### Changed
+- Installation does not require cx-Oracle and psycopg2 packages anymore.
+- install_requires and requirements.txt files have been revised.
+
+### Fixed
+- Spine Db Editor Graph View works on Python 3.7 again.
+- Spine Db Editor Graph View 'Add objects' and 'Save position' actions.
+- Export to SQLite in Spine Db Editor
+
+## [0.6.3] - 2021-09-03
+
+### Added
+- Plenty of stability improvements and bug fixes
+
+### Fixed
 - Fixed 'ImportError: DLL load failed while importing win32api' on (Conda) Python 3.8 when trying to execute Tools
   in Jupyter Console
 
@@ -41,10 +66,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Deprecated
 - GdxExporter has been deprecated. Use the general purpose Exporter item instead.
   GdxExporter will be removed in a future release. Please replace existing items by Exporter.
-
-### Removed
-
-### Fixed
 
 ## [0.6.0-final.2] - 2021-06-03
 

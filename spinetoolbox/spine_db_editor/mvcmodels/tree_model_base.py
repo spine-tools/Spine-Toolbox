@@ -107,7 +107,7 @@ class TreeModelBase(MinimalTreeModel):
     @staticmethod
     def _remove_leaf_items(root_item, ids):
         removed_rows = []
-        for row, leaf_item in enumerate(root_item.children[:-1]):
+        for row, leaf_item in enumerate(root_item.children):
             if leaf_item.id and leaf_item.id in ids:
                 removed_rows.append(row)
         for row in sorted(removed_rows, reverse=True):

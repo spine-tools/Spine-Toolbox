@@ -1,8 +1,6 @@
 {
     "name": "MAGIC Investments",
-    "description": "M A G I C   Power Scheduling Problem   A number of power stations are committed to meet demand for a particular day. three types of generators having different operating characteristics are available. Generating units can be shut down or operate between minimum and maximum output levels. Units can be started up or closed down in every demand block.",
     "tooltype": "gams",
-    "execute_in_work": true,
     "includes": [
         "magic.gms",
         "inc/*.gms",
@@ -10,17 +8,22 @@
         "output/",
         "input/sub-folder1/*.gms"
     ],
+    "description": "M A G I C   Power Scheduling Problem   A number of power stations are committed to meet demand for a particular day. three types of generators having different operating characteristics are available. Generating units can be shut down or operate between minimum and maximum output levels. Units can be started up or closed down in every demand block.",
     "inputfiles": [
-        "input/required_file.txt",
-        "input/data.gdx"
+        "input/data.gdx",
+        "input/required_file.txt"
     ],
     "inputfiles_opt": [
         "input/magic_*.dat",
         "input/changes.inc"
     ],
     "outputfiles": [
-        "output/*.*",
-        "magic.lst"
+        "magic.lst",
+        "output/*.*"
     ],
-    "cmdline_args": "--INVEST=yes"
+    "cmdline_args": [
+        "--INVEST=yes"
+    ],
+    "execute_in_work": true,
+    "includes_main_path": "."
 }

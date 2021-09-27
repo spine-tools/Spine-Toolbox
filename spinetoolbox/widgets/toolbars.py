@@ -19,7 +19,7 @@ Functions to make and handle QToolBars.
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QToolBar, QLabel, QToolButton, QAbstractButton
 from PySide2.QtGui import QIcon, QPainter
-from ..helpers import make_icon_toolbar_ss, ColoredIcon
+from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
 from .project_item_drag import ProjectItemButton, ProjectItemSpecButton, ProjectItemSpecArray
 
 
@@ -114,6 +114,11 @@ class MainToolBar(ToolBar):
         self._drop_target_action = None
         self.setAcceptDrops(True)
 
+    def set_project_actions_enabled(self, enabled):
+        super().set_project_actions_enabled(enabled)
+        for arr in self._spec_arrays:
+            arr.update()
+
     def set_color(self, color):
         self.setStyleSheet(make_icon_toolbar_ss(color))
         self.layout().setSpacing(1)
@@ -139,7 +144,9 @@ class MainToolBar(ToolBar):
                 continue
             self._add_project_item_button(item_type, factory, colored)
         self._make_tool_button(
-            QIcon(":/icons/wrench_plus.svg"), "Add specification from file...", self._toolbox.import_specification
+            QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)),
+            "Add specification from file...",
+            self._toolbox.import_specification,
         )
 
     def _add_project_item_button(self, item_type, factory, colored):

@@ -102,33 +102,6 @@ class TreeViewMixin:
                 view.expand(index)
             view.resizeColumnToContents(0)
 
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_object_tree_selection_changed(self, selected, deselected):
-        """Updates object filter and sets default rows."""
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        self.object_tree_model.select_indexes(indexes)
-        self._clear_tree_selections_silently(self.ui.treeView_relationship)
-        self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
-        self._update_object_filter()
-
-    @Slot("QItemSelection", "QItemSelection")
-    def _handle_relationship_tree_selection_changed(self, selected, deselected):
-        """Updates relationship filter and sets default rows."""
-        indexes = self.ui.treeView_relationship.selectionModel().selectedIndexes()
-        self.relationship_tree_model.select_indexes(indexes)
-        self._clear_tree_selections_silently(self.ui.treeView_object)
-        self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
-        self._update_relationship_filter()
-
-    @staticmethod
-    def _clear_tree_selections_silently(tree_view):
-        """Clears the selections on a given abstract item view without emitting any signals."""
-        selection_model = tree_view.selectionModel()
-        if selection_model.hasSelection():
-            selection_model.blockSignals(True)
-            selection_model.clearSelection()
-            selection_model.blockSignals(False)
-
     @staticmethod
     def _db_map_items(indexes):
         """Groups items from given tree indexes by db map.
@@ -438,3 +411,50 @@ class TreeViewMixin:
     def receive_tool_feature_methods_removed(self, db_map_data):
         super().receive_tool_feature_methods_removed(db_map_data)
         self.tool_feature_model.remove_tool_feature_methods(db_map_data)
+
+    def restore_ui(self):
+        """Restores UI state from previous session."""
+        super().restore_ui()
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        header_states = (
+            self.qsettings.value("altScenTreeHeaderState"),
+            self.qsettings.value("toolFeatTreeHeaderState"),
+            self.qsettings.value("parValLstTreeHeaderState"),
+            self.qsettings.value("objTreeHeaderState"),
+            self.qsettings.value("relTreeHeaderState"),
+        )
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()
+        views = (
+            self.ui.treeView_alternative_scenario.header(),
+            self.ui.treeView_tool_feature.header(),
+            self.ui.treeView_parameter_value_list.header(),
+            self.ui.treeView_object.header(),
+            self.ui.treeView_relationship.header(),
+        )
+        for view, state in zip(views, header_states):
+            if state:
+                curr_state = view.saveState()
+                view.restoreState(state)
+                if view.count() != view.model().columnCount():
+                    # This can happen when switching to a version where the model has a different header
+                    view.restoreState(curr_state)
+
+    def save_window_state(self):
+        """Saves window state parameters (size, position, state) via QSettings."""
+        super().save_window_state()
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        h = self.ui.treeView_alternative_scenario.header()
+        self.qsettings.setValue("altScenTreeHeaderState", h.saveState())
+        h = self.ui.treeView_tool_feature.header()
+        self.qsettings.setValue("toolFeatTreeHeaderState", h.saveState())
+        h = self.ui.treeView_parameter_value_list.header()
+        self.qsettings.setValue("parValLstTreeHeaderState", h.saveState())
+        h = self.ui.treeView_object.header()
+        self.qsettings.setValue("objTreeHeaderState", h.saveState())
+        h = self.ui.treeView_relationship.header()
+        self.qsettings.setValue("relTreeHeaderState", h.saveState())
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()

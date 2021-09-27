@@ -101,6 +101,9 @@ class EntityItem(QGraphicsRectItem):
     def _make_tool_tip(self):
         raise NotImplementedError()
 
+    def default_parameter_data(self):
+        raise NotImplementedError()
+
     @property
     def entity_type(self):
         raise NotImplementedError()
@@ -310,6 +313,14 @@ class RelationshipItem(EntityItem):
         """
         super().__init__(spine_db_editor, x, y, extent, db_map_entity_id=db_map_entity_id)
 
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict(
+            relationship_class_name=self.entity_class_name,
+            object_name_list=self.object_name_list,
+            database=self.first_db_map.codename,
+        )
+
     @property
     def entity_type(self):
         return "relationship"
@@ -378,6 +389,12 @@ class ObjectItem(EntityItem):
         self.setZValue(0.5)
         self.update_name(self.entity_name)
 
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return dict(
+            object_class_name=self.entity_class_name, object_name=self.entity_name, database=self.first_db_map.codename
+        )
+
     @property
     def entity_type(self):
         return "object"
@@ -407,6 +424,9 @@ class ObjectItem(EntityItem):
             return
         rel_items = {arc_item.rel_item for arc_item in self.arc_items}
         for rel_item in rel_items:
+            if rel_item.isSelected():
+                # The item will move with the selection, so no need to follow the objects
+                continue
             rel_item.follow_object_by(dx, dy)
 
     def mouseDoubleClickEvent(self, e):

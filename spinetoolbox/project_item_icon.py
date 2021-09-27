@@ -32,6 +32,7 @@ from PySide2.QtGui import QColor, QPen, QBrush, QTextCursor, QPalette, QTextBloc
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from spine_engine.spine_engine import ItemExecutionFinishState
 from .project_commands import MoveIconCommand
+from .helpers import LinkType
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -48,6 +49,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         super().__init__()
         self._toolbox = toolbox
+        self._scene = None
         self.icon_file = icon_file
         self._moved_on_scene = False
         self.previous_pos = QPointF()
@@ -60,7 +62,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.text_font_size = 10  # point size
         # Make item name graphics item.
         self._name = ""
-        self.name_item = QGraphicsSimpleTextItem(self._name, self)
+        self.name_item = QGraphicsSimpleTextItem(self._name)
+        self.name_item.setZValue(100)
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
@@ -90,8 +93,8 @@ class ProjectItemIcon(QGraphicsRectItem):
             x (int): horizontal offset
             y (int): vertical offset
         """
-        self.update_name_item(name)
         self.moveBy(x, y)
+        self.update_name_item(name)
 
     def _setup(self, brush, svg, svg_color):
         """Setup item's attributes.
@@ -156,12 +159,13 @@ class ProjectItemIcon(QGraphicsRectItem):
         font.setPointSize(self.text_font_size)
         font.setBold(True)
         self.name_item.setFont(font)
-        # Set name item position (centered on top of the master icon)
-        name_width = self.name_item.boundingRect().width()
-        name_height = self.name_item.boundingRect().height()
-        self.name_item.setPos(
-            self.rect().x() + self.rect().width() / 2 - name_width / 2, self.rect().y() - name_height - 4
-        )
+        self._reposition_name_item()
+
+    def _reposition_name_item(self):
+        """Set name item position (centered on top of the master icon)."""
+        main_rect = self.sceneBoundingRect()
+        name_rect = self.name_item.sceneBoundingRect()
+        self.name_item.setPos(main_rect.center().x() - name_rect.width() / 2, main_rect.y() - name_rect.height() - 4)
 
     def conn_button(self, position="left"):
         """Returns item's connector button.
@@ -174,8 +178,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         return self.connectors.get(position, self.connectors["left"])
 
-    def outgoing_links(self):
-        """Collects outgoing links.
+    def outgoing_connection_links(self):
+        """Collects outgoing connection links.
 
         Returns:
             list of LinkBase: outgoing links
@@ -183,7 +187,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         return [l for conn in self.connectors.values() for l in conn.outgoing_links()]
 
     def incoming_links(self):
-        """Collects incoming links.
+        """Collects incoming connection links.
 
         Returns:
             list of LinkBase: outgoing links
@@ -198,7 +202,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             excluded (bool): True if project item was not actually executed.
         """
         animation_group = QParallelAnimationGroup()
-        for link in self.outgoing_links():
+        for link in self.outgoing_connection_links():
             animation_group.addAnimation(link.make_execution_animation(excluded))
         animation_group.finished.connect(animation_group.deleteLater)
         animation_group.start()
@@ -228,20 +232,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.icon_group = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)) | {self}
         for icon in self.icon_group:
             icon.previous_pos = icon.scenePos()
-
-    def mouseMoveEvent(self, event):
-        """Moves icon(s) while the mouse button is pressed.
-        Update links that are connected to selected icons.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        super().mouseMoveEvent(event)
-        self.update_links_geometry()
-
-    def moveBy(self, dx, dy):
-        super().moveBy(dx, dy)
-        self.update_links_geometry()
 
     def update_links_geometry(self):
         """Updates geometry of connected links to reflect this item's most recent position."""
@@ -295,6 +285,16 @@ class ProjectItemIcon(QGraphicsRectItem):
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
+            scene = value
+            if scene is None:
+                self._scene.removeItem(self.name_item)
+            else:
+                self._scene = scene
+                self._scene.addItem(self.name_item)
+        elif change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
+            self.update_links_geometry()
+            self._reposition_name_item()
         return super().itemChange(change, value)
 
     def select_item(self):
@@ -368,30 +368,30 @@ class ConnectorButton(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        if not event.button() == Qt.LeftButton:
+        if event.button() != Qt.LeftButton:
             event.accept()
             return
         self._parent.select_item()
-        link_drawer = self.scene().link_drawer
+        scene = self.scene()
+        if scene.link_drawer is None:
+            scene.select_link_drawer(LinkType.JUMP if event.modifiers() & Qt.AltModifier else LinkType.CONNECTION)
+        link_drawer = scene.link_drawer
         if not link_drawer.isVisible():
             link_drawer.wake_up(self)
-        elif event.button() == Qt.LeftButton:
+        else:
             link_drawer.add_link()
 
     def set_friend_connectors_enabled(self, enabled):
-        """Enables or disables all connectors in the parent. This is called by LinkDrawer to disable invalid connectors
-        while drawing and reenabling them back when done."""
+        """Enables or disables all connectors in the parent.
+
+        This is called by LinkDrawer to disable invalid connectors while drawing and reenabling them back when done.
+
+        Args:
+            enabled (bool): True to enable connectors, False to disable
+        """
         for conn in self._parent.connectors.values():
             conn.setEnabled(enabled)
             conn.setBrush(conn.brush)  # Remove hover brush from src connector that was clicked
-
-    def mouseDoubleClickEvent(self, event):
-        """Connector button mouse double click event. Makes sure the LinkDrawer is hidden.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        event.accept()
 
     def hoverEnterEvent(self, event):
         """Sets a darker shade to connector button when mouse enters its boundaries.
@@ -401,7 +401,7 @@ class ConnectorButton(QGraphicsRectItem):
         """
         self.setBrush(self.hover_brush)
         link_drawer = self.scene().link_drawer
-        if link_drawer.isVisible():
+        if link_drawer is not None:
             link_drawer.dst_connector = self
             link_drawer.update_geometry()
 
@@ -413,7 +413,7 @@ class ConnectorButton(QGraphicsRectItem):
         """
         self.setBrush(self.brush)
         link_drawer = self.scene().link_drawer
-        if link_drawer.isVisible():
+        if link_drawer is not None:
             link_drawer.dst_connector = None
             link_drawer.update_geometry()
 
@@ -422,7 +422,7 @@ class ConnectorButton(QGraphicsRectItem):
         put the latter to sleep."""
         if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             link_drawer = self.scene().link_drawer
-            if link_drawer.src_connector is self:
+            if link_drawer is not None and link_drawer.src_connector is self:
                 link_drawer.sleep()
         return super().itemChange(change, value)
 

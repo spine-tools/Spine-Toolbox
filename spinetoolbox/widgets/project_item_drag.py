@@ -221,10 +221,9 @@ class ProjectItemSpecArray(QToolBar):
         font.setPointSize(8)
         self._button_visible.setFont(font)
         self._button_visible.setToolTip(f"<p>Show/hide {self.item_type} specifications</p>")
-        self._update_button_visible_icon_color()
         self.addWidget(self._button_visible)
         self._button_new = ShadeButton()
-        self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)))
+        self._button_new.setIcon(QIcon(CharIconEngine("\uf067", color=self._icon.color())))
         self._button_new.setText("New...")
         self._button_new.setToolTip(f"<p>Create new <b>{item_type}</b> specification...</p>")
         font = QFont()
@@ -248,15 +247,16 @@ class ProjectItemSpecArray(QToolBar):
 
     def set_colored_icons(self, colored):
         self._icon.set_colored(colored)
+        self.update()
+
+    def update(self):
         self._chopped_icon.update()
         self._update_button_visible_icon_color()
 
     def _update_button_visible_icon_color(self):
-        color = self._icon.color()
-        if color is not None:
-            self._button_visible.setStyleSheet(f"QToolButton{{ color: {color.name()};}}")
-        else:
-            self._button_visible.setStyleSheet("")
+        mode = QIcon.Active if self._button_base_item.isEnabled() else QIcon.Disabled
+        color = self._icon.color(mode=mode)
+        self._button_visible.setStyleSheet(f"QToolButton{{ color: {color.name()};}}")
 
     def set_color(self, color):
         bg = make_icon_background(color)
@@ -385,9 +385,9 @@ class ProjectItemSpecArray(QToolBar):
             w.set_orientation(orientation)
         style = self.style()
         extent = style.pixelMetric(style.PM_ToolBarExtensionExtent)
-        up, down, right, left = "\uf102", "\uf103", "\uf101", "\uf100"
+        down, right = "\uf0d7", "\uf0da"
         if orientation == Qt.Horizontal:
-            icon = right if not self._visible else left
+            icon = down if not self._visible else right
             width = extent
             min_width = self._button_visible.frameGeometry().right() + self._margin + spacing
             min_visible_width = min_width + self._button_new.sizeHint().width() - spacing
@@ -402,7 +402,7 @@ class ProjectItemSpecArray(QToolBar):
                 w.setMaximumWidth(w.sizeHint().width())
                 w.setMaximumHeight(height)
         else:
-            icon = down if not self._visible else up
+            icon = right if not self._visible else down
             height = extent
             min_width = self._button_new.sizeHint().height()
             min_height = self._button_visible.frameGeometry().bottom() + self._margin + spacing

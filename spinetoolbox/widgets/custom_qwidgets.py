@@ -35,7 +35,7 @@ from PySide2.QtWidgets import (
     QToolButton,
     QPushButton,
 )
-from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent
+from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
 from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont
 from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
@@ -282,9 +282,35 @@ class _MenuToolBar(QToolBar):
     """A custom tool bar for ``MenuItemToolBarWidget``."""
 
     enabled_changed = Signal(bool)
-    _enabled = True
-    _focus_widget = None
-    _buttons = []
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self._enabled = True
+        self._focus_widget = None
+        self._buttons = []
+        self._frames = []
+
+    def _align_buttons(self):
+        """Align all buttons to bottom so frames look good."""
+        layout = self.layout()
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            if item.widget() in self._buttons:
+                layout.itemAt(i).setAlignment(Qt.AlignBottom)
+
+    def add_frame(self, left, right, title):
+        """Add frame around given actions, with given title.
+
+        Args:
+            left (QAction)
+            right (QAction)
+            title (str)
+        """
+        left = self.widgetForAction(left)
+        right = self.widgetForAction(right)
+        if None in (left, right):
+            return
+        self._frames.append((left, right, title))
 
     def is_enabled(self):
         return self._enabled
@@ -294,13 +320,45 @@ class _MenuToolBar(QToolBar):
         super().addActions(actions)
         for action in actions:
             self._setup_action_button(action)
+        self._align_buttons()
 
     def addAction(self, *args, **kwargs):
         """Overriden method to customize the tool button."""
         result = super().addAction(*args, **kwargs)
         action = result if result is not None else args[0]
         self._setup_action_button(action)
+        self._align_buttons()
         return result
+
+    def sizeHint(self):
+        """Make room for frames if needed."""
+        size = super().sizeHint()
+        if self._frames:
+            size = QSize(size.width(), size.height() + self.fontMetrics().height())
+        return size
+
+    def paintEvent(self, ev):
+        """Paint the frames."""
+        super().paintEvent(ev)
+        if not self._frames:
+            return
+        painter = QPainter(self)
+        fm = self.fontMetrics()
+        for left, right, title in self._frames:
+            top_left = left.geometry().topLeft()
+            bottom_right = right.geometry().bottomRight()
+            rect = QRect(top_left, bottom_right).adjusted(-1, -fm.height() / 2, 1, 1)
+            painter.setPen(Qt.gray)
+            painter.drawRoundedRect(rect, 1, 1)
+            title_rect = fm.boundingRect(title).adjusted(-4, 0, 4, 0)
+            title_rect.moveCenter(rect.center())
+            title_rect.moveTop(rect.top() - fm.height() / 2)
+            painter.setBrush(Qt.white)
+            painter.setPen(Qt.NoPen)
+            painter.drawRect(title_rect)
+            painter.setPen(Qt.black)
+            painter.drawText(title_rect, Qt.AlignHCenter | Qt.AlignTop, title)
+        painter.end()
 
     def _setup_action_button(self, action):
         """Customizes the QToolButton associated with given action:

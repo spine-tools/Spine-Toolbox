@@ -19,7 +19,7 @@ Unit tests for the plotting module.
 import unittest
 from unittest.mock import Mock, MagicMock, PropertyMock, patch
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide2.QtWidgets import QApplication, QAction
+from PySide2.QtWidgets import QApplication, QAction, QMessageBox
 from spinedb_api import DateTime, from_database, Map, TimeSeries, TimeSeriesVariableResolution, to_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
 from spinetoolbox.plotting import (
@@ -46,7 +46,10 @@ def _make_pivot_proxy_model():
     mock_db_map.codename = "codename"
     db_mngr.undo_action.__getitem__.side_effect = lambda key: QAction()
     db_mngr.redo_action.__getitem__.side_effect = lambda key: QAction()
-    with patch.object(SpineDBEditor, "restore_ui"), patch.object(SpineDBEditor, "show"):
+    with patch(
+        "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
+    ) as confirm_close_dialog, patch.object(SpineDBEditor, "restore_ui"), patch.object(SpineDBEditor, "show"):
+        confirm_close_dialog.exec_.return_value = QMessageBox.Cancel
         spine_db_editor = SpineDBEditor(db_mngr, mock_db_map)
     spine_db_editor.create_header_widget = lambda *args, **kwargs: None
     simple_map = Map(["a", "b"], [-1.1, -2.2])

@@ -17,6 +17,7 @@ Unit tests for the EmptyParameterModel subclasses.
 """
 import unittest
 from unittest import mock
+from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
 from spinedb_api import (
     import_object_classes,
@@ -86,7 +87,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that object parameter values are added to the db when editing the table."""
         header = self.object_table_header
         model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertTrue(
             model.batch_set_data(
                 _empty_indexes(model),
@@ -104,7 +105,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that object parameter values aren't added to the db if data is incomplete."""
         header = self.object_table_header
         model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["fish", "nemo", "water", "salty", "mock_db"]))
         values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
         self.assertEqual(values, [])
@@ -113,7 +114,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that object classes are inferred from the object and parameter if possible."""
         header = self.object_table_header
         model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         indexes = _empty_indexes(model)
         self.assertTrue(
             model.batch_set_data(
@@ -132,7 +133,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that relationship parameter values are added to the db when editing the table."""
         header = self.relationship_table_header
         model = EmptyRelationshipParameterValueModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertTrue(
             model.batch_set_data(
                 _empty_indexes(model),
@@ -150,7 +151,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that relationship parameter values aren't added to the db if data is incomplete."""
         header = self.relationship_table_header
         model = EmptyRelationshipParameterValueModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "combined_mojo", 100, "mock_db"])
         )
@@ -161,7 +162,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that object parameter definitions are added to the db when editing the table."""
         header = ["object_class_name", "parameter_name", "value_list_name", "database"]
         model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", None, "mock_db"]))
         definitions = next(self._db_mngr.get_object_parameter_definitions(self._db_map), [])
         self.assertEqual(len(definitions), 2)
@@ -172,7 +173,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that object parameter definitions aren't added to the db if data is incomplete."""
         header = self.object_table_header
         model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["cat", "color", None, "mock_db"]))
         definitions = next(self._db_mngr.get_object_parameter_definitions(self._db_map), [])
         self.assertEqual(len(definitions), 1)
@@ -182,7 +183,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that relationship parameter definitions are added to the db when editing the table."""
         header = ["relationship_class_name", "parameter_name", "value_list_name", "database"]
         model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", None, "mock_db"]))
         definitions = next(self._db_mngr.get_relationship_parameter_definitions(self._db_map), [])
         self.assertEqual(len(definitions), 2)
@@ -193,7 +194,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that relationship parameter definitions aren't added to the db if data is incomplete."""
         header = self.relationship_table_header
         model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
-        model.fetchMore()
+        model.fetchMore(QModelIndex())
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["fish__dog", "each_others_opinion", None, "mock_db"])
         )

@@ -36,7 +36,7 @@ class TimePatternEditor(QWidget):
         from ..ui.time_pattern_editor import Ui_TimePatternEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
-        self._model = TimePatternModel(TimePattern(["1-7d"], [0.0]), self)
+        self._model = TimePatternModel(TimePattern(["D1-7"], [0.0]), self)
         self._ui = Ui_TimePatternEditor()
         self._ui.setupUi(self)
         self._ui.pattern_edit_table.setModel(self._model)

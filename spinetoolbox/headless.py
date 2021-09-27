@@ -22,6 +22,7 @@ import pathlib
 import sys
 from PySide2.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 from spine_engine import SpineEngineState
+from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.utils.serialization import deserialize_path
 from .dag_handler import DirectedGraphHandler
@@ -184,7 +185,11 @@ class ExecuteProject(QObject):
             }
             engine_server_address = app_settings.value("appSettings/engineServerAddress", defaultValue="")
             engine_manager = make_engine_manager(engine_server_address)
-            engine_manager.run_engine(engine_data)
+            try:
+                engine_manager.run_engine(engine_data)
+            except EngineInitFailed as error:
+                self._logger.msg_error.emit(f"Engine failed to start: {error}")
+                return _Status.ERROR
             while True:
                 event_type, data = engine_manager.get_engine_event()
                 self._process_engine_event(event_type, data)

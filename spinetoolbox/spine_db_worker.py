@@ -37,6 +37,7 @@ from spinetoolbox.helpers import busy_effect
 class SpineDBWorker(QObject):
     """Does all the DB communication for SpineDBManager, in the non-GUI thread."""
 
+    session_rolled_back = Signal(set)
     _get_db_map_called = Signal()
     _get_metadata_per_entity_called = Signal(object, list, dict)
     _get_metadata_per_parameter_value_called = Signal(object, list, dict)
@@ -44,8 +45,8 @@ class SpineDBWorker(QObject):
     _add_or_update_items_called = Signal(object, str, str, bool, str)
     _readd_items_called = Signal(object, str, str, str)
     _remove_items_called = Signal(object)
-    _commit_session_called = Signal(object, str, object)
-    _rollback_session_called = Signal(object)
+    _commit_session_called = Signal(object, str, dict, object)
+    _rollback_session_called = Signal(object, dict)
     _export_data_called = Signal(object, object, str, str)
     _duplicate_object_called = Signal(list, dict, str, str)
 
@@ -152,8 +153,6 @@ class SpineDBWorker(QObject):
             items, errors = getattr(db_map, method_name)(*items, check=check, return_items=True, cache=cache)
             if errors:
                 db_map_error_log[db_map] = errors
-            if not items:
-                continue
             items = [self._db_mngr.db_to_cache(db_map, item_type, item) for item in items]
             signal.emit({db_map: items})
         if any(db_map_error_log.values()):
@@ -205,17 +204,35 @@ class SpineDBWorker(QObject):
         self._db_mngr.uncache_items(db_map_typed_ids)
 
     def commit_session(self, dirty_db_maps, commit_msg, cookie=None):
-        self._commit_session_called.emit(dirty_db_maps, commit_msg, cookie)
+        """Initiates commit session action for given database maps in the worker thread.
 
-    @Slot(object, str, object)
-    def _commit_session(self, dirty_db_maps, commit_msg, cookie=None):
+        Args:
+            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to commit
+            commit_msg (str): commit message
+            cookie (Any): a cookie to include in session_committed signal
+        """
+        # Make sure that the worker thread has a reference to undo stacks even if they get deleted
+        # in the GUI thread.
+        undo_stacks = {db_map: self._db_mngr.undo_stack[db_map] for db_map in dirty_db_maps}
+        self._commit_session_called.emit(dirty_db_maps, commit_msg, undo_stacks, cookie)
+
+    @Slot(object, str, dict, object)
+    def _commit_session(self, dirty_db_maps, commit_msg, undo_stacks, cookie=None):
+        """Commits session for given database maps.
+
+        Args:
+            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to commit
+            commit_msg (str): commit message
+            undo_stacks (dict of AgedUndoStack): undo stacks that outlive the DB manager
+            cookie (Any): a cookie to include in session_committed signal
+        """
         db_map_error_log = {}
         committed_db_maps = set()
         for db_map in dirty_db_maps:
             try:
                 db_map.commit_session(commit_msg)
                 committed_db_maps.add(db_map)
-                self._db_mngr.undo_stack[db_map].setClean()
+                undo_stacks[db_map].setClean()
             except SpineDBAPIError as e:
                 db_map_error_log[db_map] = e.msg
         if any(db_map_error_log.values()):
@@ -224,24 +241,37 @@ class SpineDBWorker(QObject):
             self._db_mngr.session_committed.emit(committed_db_maps, cookie)
 
     def rollback_session(self, dirty_db_maps):
-        self._rollback_session_called.emit(dirty_db_maps)
+        """Initiates rollback session action for given database maps in the worker thread.
 
-    @Slot(object)
-    def _rollback_session(self, dirty_db_maps):
+        Args:
+            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to roll back
+        """
+        # Make sure that the worker thread has a reference to undo stacks even if they get deleted
+        # in the GUI thread.
+        undo_stacks = {db_map: self._db_mngr.undo_stack[db_map] for db_map in dirty_db_maps}
+        self._rollback_session_called.emit(dirty_db_maps, undo_stacks)
+
+    @Slot(object, dict)
+    def _rollback_session(self, dirty_db_maps, undo_stacks):
+        """Rolls back session for given database maps.
+
+        Args:
+            dirty_db_maps (Iterable of DiffDatabaseMapping): database mapping to roll back
+            undo_stacks (dict of AgedUndoStack): undo stacks that outlive the DB manager
+        """
         db_map_error_log = {}
         rolled_db_maps = set()
         for db_map in dirty_db_maps:
             try:
                 db_map.rollback_session()
                 rolled_db_maps.add(db_map)
-                self._db_mngr.undo_stack[db_map].clear()
-                del self._db_mngr._cache[db_map]
+                undo_stacks[db_map].clear()
             except SpineDBAPIError as e:
                 db_map_error_log[db_map] = e.msg
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
         if rolled_db_maps:
-            self._db_mngr.session_rolled_back.emit(rolled_db_maps)
+            self.session_rolled_back.emit(rolled_db_maps)
 
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
         self._export_data_called.emit(caller, db_map_item_ids, file_path, file_filter)
@@ -269,7 +299,7 @@ class SpineDBWorker(QObject):
 
     def _is_url_available(self, url, logger):
         # FIXME: needed?
-        if str(url) in self._db_maps:
+        if str(url) in self._db_mngr.db_urls:
             message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
             logger.msg_error.emit(message)
             return False
@@ -290,6 +320,8 @@ class SpineDBWorker(QObject):
             caller.msg_error.emit(error_msg)
         else:
             caller.sqlite_file_exported.emit(file_path)
+        finally:
+            db_map.connection.close()
 
     def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
         """Exports given data into JSON file."""

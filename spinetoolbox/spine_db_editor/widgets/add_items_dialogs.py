@@ -36,7 +36,7 @@ from PySide2.QtWidgets import (
     QSplitter,
     QDialogButtonBox,
 )
-from PySide2.QtCore import Slot, Qt, QSize
+from PySide2.QtCore import Slot, Qt, QSize, QModelIndex
 from PySide2.QtGui import QIcon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
@@ -372,7 +372,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         self.model.header.pop(column)
         self.model.removeColumns(column, 1)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector")
+    @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
             return
@@ -543,7 +543,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.model.set_default_row(**defaults)
         self.model.clear()
 
-    @Slot("QModelIndex", "QModelIndex", "QVector")
+    @Slot(QModelIndex, QModelIndex, list)
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
             return
@@ -616,7 +616,6 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
         super().accept()
 
 
-# FIXME: Make models lazy
 class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     """A dialog to query user's preferences for managing relationships.
     """
@@ -727,10 +726,12 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
             rel_cls = relationship_classes.get((self.class_name, self.object_class_name_list), None)
             if rel_cls is None:
                 continue
-            for relationship in self.db_mngr.get_items_by_field(db_map, "relationship", "class_id", rel_cls["id"]):
+            for relationship in self.db_mngr.get_items_by_field(
+                db_map, "relationship", "class_id", rel_cls["id"], only_visible=False
+            ):
                 key = tuple(relationship["object_name_list"].split(","))
                 self.relationship_ids[key] = relationship["id"]
-        existing_items = list(self.relationship_ids)
+        existing_items = sorted(self.relationship_ids)
         self.existing_items_model.reset_model(existing_items)
         self.model.refresh()
         self.model.modelReset.emit()
@@ -744,7 +745,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
             header_item = QTreeWidgetItem([name])
             header_item.setTextAlignment(0, Qt.AlignHCenter)
             tree_widget.setHeaderItem(header_item)
-            objects = self.db_mngr.get_items_by_field(self.db_map, "object", "class_name", name)
+            objects = self.db_mngr.get_items_by_field(self.db_map, "object", "class_name", name, only_visible=False)
             items = [QTreeWidgetItem([obj["name"]]) for obj in objects]
             tree_widget.addTopLevelItems(items)
             tree_widget.resizeColumnToContents(0)
@@ -781,7 +782,6 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         super().accept()
 
 
-# FIXME: make models here lazy
 class ObjectGroupDialogBase(QDialog):
     def __init__(self, parent, object_class_item, db_mngr, *db_maps):
         """
@@ -848,7 +848,7 @@ class ObjectGroupDialogBase(QDialog):
             db_map: {
                 x["name"]: x["id"]
                 for x in self.db_mngr.get_items_by_field(
-                    self.db_map, "object", "class_id", self.object_class_item.db_map_id(db_map)
+                    self.db_map, "object", "class_id", self.object_class_item.db_map_id(db_map), only_visible=False
                 )
             }
             for db_map in db_maps
@@ -867,7 +867,8 @@ class ObjectGroupDialogBase(QDialog):
         object_ids = self.db_map_object_ids[self.db_map]
         members = []
         non_members = []
-        for obj_name, obj_id in object_ids.items():
+        for obj_name in sorted(object_ids):
+            obj_id = object_ids[obj_name]
             if obj_id in self.initial_member_ids():
                 members.append(obj_name)
             elif obj_id != self.initial_entity_id():
@@ -978,8 +979,13 @@ class ManageMembersDialog(ObjectGroupDialogBase):
         self.reset_list_widgets(db_maps[0].codename)
         self.connect_signals()
 
+    def _entity_groups(self):
+        return self.db_mngr.get_items_by_field(
+            self.db_map, "entity_group", "group_id", self.initial_entity_id(), only_visible=False
+        )
+
     def initial_member_ids(self):
-        return set(self.object_item.db_map_member_ids(self.db_map))
+        return {x["member_id"] for x in self._entity_groups()}
 
     def initial_entity_id(self):
         return self.object_item.db_map_id(self.db_map)
@@ -998,9 +1004,7 @@ class ManageMembersDialog(ObjectGroupDialogBase):
         items_to_add = [
             {"entity_id": obj["id"], "entity_class_id": obj["class_id"], "member_id": member_id} for member_id in added
         ]
-        ids_to_remove = [
-            x["id"] for x in self.object_item.db_map_entity_groups(self.db_map) if x["member_id"] in removed
-        ]
+        ids_to_remove = [x["id"] for x in self._entity_groups() if x["member_id"] in removed]
         if not items_to_add and not ids_to_remove:
             super().accept()
             return

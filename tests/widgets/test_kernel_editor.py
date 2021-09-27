@@ -83,28 +83,32 @@ class TestKernelEditorBase(unittest.TestCase):
             self.assertEqual(completion.returncode, 0)
 
     def test_make_julia_kernel(self):
+        """Makes a new Julia kernel if Julia is in PATH and the base project (@.) has
+        IJulia installed. Test Julia kernel is removed in the end if available."""
         julia_exec = resolve_julia_executable("")
         if not julia_exec:
             self.skipTest("Julia not found in PATH.")
         kernel_name = "spinetoolbox_test_make_julia_kernel"
-        with TemporaryDirectory() as julia_project_dir:
-            with patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box, patch.object(
-                KernelEditorBase, "_julia_kernel_name", return_value=kernel_name
-            ), patch.object(KernelEditorBase, "_julia_executable", return_value=julia_exec), patch.object(
-                KernelEditorBase, "_julia_project", return_value=julia_project_dir
+        # with TemporaryDirectory() as julia_project_dir:
+        with patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box, patch.object(
+            KernelEditorBase, "_julia_kernel_name", return_value=kernel_name
+        ), patch.object(KernelEditorBase, "_julia_executable", return_value=julia_exec), patch.object(
+                KernelEditorBase, "_julia_project", return_value="@."
             ):
-                mock_message_box.exec_.return_value = QMessageBox.Ok
-                editor = KernelEditorBase(self._settings_widget, "python")
-                if editor.is_ijulia_installed(julia_exec, julia_project_dir) == 0:
-                    self.skipTest("Failed to check IJulia status.")
-                self.assertTrue(editor.make_julia_kernel())
-                while not editor._ready_to_install_kernel:
-                    QApplication.processEvents()
-                while editor._install_julia_kernel_process is not None:
-                    QApplication.processEvents()
-                self.assertTrue(pathlib.Path(julia_project_dir, "Manifest.toml").exists())
-                self.assertTrue(pathlib.Path(julia_project_dir, "Project.toml").exists())
-                editor.close()
+            mock_message_box.exec_.return_value = QMessageBox.Ok
+            editor = KernelEditorBase(self._settings_widget, "julia")
+            julia_project_dir = editor._julia_project()
+            ijulia_installation_status = editor.is_ijulia_installed(julia_exec, julia_project_dir)
+            if ijulia_installation_status == 0:
+                self.skipTest("Failed to check IJulia status.")
+            elif ijulia_installation_status == 2:
+                self.skipTest(f"[{julia_exec}] IJulia not installed for project {editor._julia_project()}")
+            self.assertTrue(editor.make_julia_kernel())
+            while not editor._ready_to_install_kernel:
+                QApplication.processEvents()
+            while editor._install_julia_kernel_process is not None:
+                QApplication.processEvents()
+            editor.close()
         completion = subprocess.run(
             [sys.executable, "-m", "jupyter", "kernelspec", "list", "--json", kernel_name], capture_output=True
         )

@@ -104,12 +104,25 @@ i.e. it starts from the beginning once the time steps run out.
 Time patterns
 -------------
 
-The time pattern editor holds a single table which shows the time period on the right column
+The time pattern editor holds a single table which shows the *time period* on the right column
 and the corresponding values on the left.
 Inserting/removing rows and copy-pasting works as in the time series editor.
 
 .. image:: img/value_editor_time_pattern.png
    :align: center
+
+Time periods consist of the following elements:
+
+- An *interval* of time in a given *time-unit*.
+  The format is ``Ua-b``, where ``U`` is either ``Y`` (for year), ``M`` (for month), ``D`` (for day), ``WD`` (for weekday),
+  ``h`` (for hour), ``m`` (for minute), or ``s`` (for second);
+  and ``a`` and ``b`` are two integers corresponding to the lower and upper bound, respectively.
+- An *intersection* of intervals.
+  The format is ``s1;s2;...``,
+  where ``s1``, ``s2``, ..., are intervals as described above.
+- A *union of ranges*.
+  The format is ``r1,r2,...``,
+  where ``r1``, ``r2``, ..., are either intervals or intersections of intervals as described above.
 
 Arrays
 ------

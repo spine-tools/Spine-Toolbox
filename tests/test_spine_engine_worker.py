@@ -17,6 +17,7 @@ Unit tests for ``spine_engine_worker`` module.
 """
 import time
 import unittest
+from unittest.mock import MagicMock
 from PySide2.QtCore import QObject, Slot
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.dag_handler import DirectedGraphHandler
@@ -31,7 +32,8 @@ class TestSpineEngineWorker(unittest.TestCase):
 
     def test_empty_project_executes(self):
         dag = DirectedGraphHandler()
-        worker = SpineEngineWorker("", {"items_module_name": "spine_items"}, dag, "test dag", {})
+        logger = MagicMock()
+        worker = SpineEngineWorker("", {"items_module_name": "spine_items"}, dag, "test dag", {}, logger)
         receiver = _Receiver(worker)
         try:
             worker.start()

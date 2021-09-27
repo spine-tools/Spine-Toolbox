@@ -19,8 +19,8 @@ The SpineDBManager class
 import itertools
 import json
 from PySide2.QtCore import Qt, QObject, Signal, QThread
-from PySide2.QtWidgets import QMessageBox, QDialog, QCheckBox, QWidget
-from PySide2.QtGui import QFontMetrics, QFont
+from PySide2.QtWidgets import QMessageBox, QWidget
+from PySide2.QtGui import QFontMetrics, QFont, QWindow
 from spinedb_api import (
     is_empty,
     create_new_spine_database,
@@ -47,7 +47,6 @@ from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
-from .widgets.commit_dialog import CommitDialog
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .helpers import get_upgrade_db_promt_text, signal_waiter, CacheItem
@@ -132,7 +131,6 @@ class SpineDBManager(QObject):
         self.qsettings = settings
         self._db_maps = {}
         self._worker_thread = QThread()
-        # self._worker_thread = qApp.thread()
         self._worker = SpineDBWorker(self)
         self._fetchers = {}
         self.undo_stack = {}
@@ -226,6 +224,7 @@ class SpineDBManager(QObject):
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
+        self._worker.session_rolled_back.connect(self._finish_rolling_back)
         self._worker.connect_signals()
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
 
@@ -259,7 +258,7 @@ class SpineDBManager(QObject):
             return False
         return self._get_fetcher(db_map).can_fetch_more(item_type, parent=parent)
 
-    def fetch_more(self, db_map, item_type, parent=None, iter_chunk_size=1000):
+    def fetch_more(self, db_map, item_type, parent=None):
         """Fetches more items of given type from given db.
 
         Args:
@@ -270,12 +269,10 @@ class SpineDBManager(QObject):
                 and returns a Boolean indicating whether or not to stop fetching.
                 If not implemented, then fetching is stopped immediately after one step.
                 Can also provide ``fully_fetched``, a ``Signal`` that gets emitted whenever fetching is complete.
-
-            iter_chunk_size (int, optional): fetches items by chunks of the given size
         """
         if db_map.connection.closed:
             return
-        self._get_fetcher(db_map).fetch_more(item_type, parent=parent, iter_chunk_size=iter_chunk_size)
+        self._get_fetcher(db_map).fetch_more(item_type, parent=parent)
 
     def cache_items_for_fetching(self, db_map, item_type, items):
         self._get_fetcher(db_map).cache_items(item_type, items)
@@ -315,11 +312,9 @@ class SpineDBManager(QObject):
                     item = self._get_fetcher(db_map).cache.get(item_type, {}).pop(id_, {})
                     if item:
                         db_map_data.setdefault(db_map, []).append(item)
-            if any(db_map_data.values()):
-                typed_db_map_data[item_type] = db_map_data
-                signal.emit(db_map_data)
-        if typed_db_map_data:
-            self.items_removed_from_cache.emit(typed_db_map_data)
+            typed_db_map_data[item_type] = db_map_data
+            signal.emit(db_map_data)
+        self.items_removed_from_cache.emit(typed_db_map_data)
 
     @busy_effect
     def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):
@@ -357,6 +352,10 @@ class SpineDBManager(QObject):
     @property
     def db_maps(self):
         return set(self._db_maps.values())
+
+    @property
+    def db_urls(self):
+        return set(self._db_maps)
 
     def db_map(self, url):
         """
@@ -502,29 +501,17 @@ class SpineDBManager(QObject):
             except AttributeError:
                 pass
 
-    def unregister_listener(self, listener, *db_maps):
+    def unregister_listener(self, listener, commit_dirty, commit_msg, *db_maps):
         """Unregisters given listener from given db_map signals.
         If any of the db_maps becomes an orphan and is dirty, prompts user to commit or rollback.
 
         Args:
             listener (object)
-            db_maps (DiffDatabaseMapping)
-
-        Returns:
-            bool: True if operation was successful, False otherwise
+            commit_dirty (bool): True to commit dirty database mapping, False to roll back
+            commit_msg (str): commit message
+            *db_maps (DiffDatabaseMapping)
         """
-        is_dirty = lambda db_map: not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        is_orphan = lambda db_map: not set(self.signaller.db_map_listeners(db_map)) - {listener}
-        dirty_orphan_db_maps = [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
-        if dirty_orphan_db_maps:
-            answer = self._prompt_to_commit_changes()
-            if answer == QMessageBox.Cancel:
-                return False
-            db_names = ", ".join([db_map.codename for db_map in dirty_orphan_db_maps])
-            if answer == QMessageBox.Save:
-                commit_msg = self._get_commit_msg(db_names)
-                if not commit_msg:
-                    return False
+        dirty_orphan_db_maps = self.dirty_or_orphan(listener, *db_maps)
         for db_map in db_maps:
             self.signaller.remove_db_map_listener(db_map, listener)
             try:
@@ -533,47 +520,43 @@ class SpineDBManager(QObject):
             except AttributeError:
                 pass
         if dirty_orphan_db_maps:
-            if answer == QMessageBox.Save:
+            if commit_dirty:
                 self._worker.commit_session(dirty_orphan_db_maps, commit_msg)
             else:
                 self._worker.rollback_session(dirty_orphan_db_maps)
         for db_map in db_maps:
             if not self.signaller.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
-        return True
 
-    def _prompt_to_commit_changes(self):
-        """Prompts the user to commit or rollback changes to 'dirty' db maps.
+    def dirty(self, *db_maps):
+        """Checks which of the given database mappings are dirty.
 
-        Returns:
-            bool: True to commit, False to rollback, None to do nothing
+        Args:
+            *db_maps: mappings to check
+
+        Return:
+            list of DiffDatabaseMapping: dirty  mappings
         """
-        commit_at_exit = int(self.qsettings.value("appSettings/commitAtExit", defaultValue="1"))
-        if commit_at_exit == 0:
-            # Don't commit session and don't show message box
-            return QMessageBox.Discard
-        if commit_at_exit == 1:  # Default
-            # Show message box
-            parent = qApp.activeWindow()  # pylint: disable=undefined-variable
-            msg = QMessageBox(parent)
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle(parent.windowTitle())
-            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
-            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-            msg.button(QMessageBox.Save).setText("Commit and close ")
-            msg.button(QMessageBox.Discard).setText("Discard changes and close")
-            chkbox = QCheckBox()
-            chkbox.setText("Do not ask me again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()
-            if answer != QMessageBox.Cancel and chkbox.checkState() == 2:
-                # Save preference
-                preference = "2" if answer == QMessageBox.Save else "0"
-                self.qsettings.setValue("appSettings/commitAtExit", preference)
-            return answer
-        if commit_at_exit == 2:
-            # Commit session and don't show message box
-            return QMessageBox.Save
+        return [db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()]
+
+    def dirty_or_orphan(self, listener, *db_maps):
+        """Checks which of the given database mappings are dirty or orphaned.
+
+        Args:
+            listener (Any): a listener object
+            *db_maps: mappings to check
+
+        Return:
+            list of DiffDatabaseMapping: dirty or orphaned mappings
+        """
+
+        def is_dirty(db_map):
+            return not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
+
+        def is_orphan(db_map):
+            return not set(self.signaller.db_map_listeners(db_map)) - {listener}
+
+        return [db_map for db_map in db_maps if is_orphan(db_map) and is_dirty(db_map)]
 
     def clean_up(self):
         while self._fetchers:
@@ -586,13 +569,22 @@ class SpineDBManager(QObject):
 
     def refresh_session(self, *db_maps):
         refreshed_db_maps = set(db_map for db_map in db_maps if db_map in self._cache)
-        if refreshed_db_maps:
-            self.session_refreshed.emit(refreshed_db_maps)
+        if not refreshed_db_maps:
+            return
         for db_map in refreshed_db_maps:
-            cache = self._cache.pop(db_map)
-            for item_type, items in cache.items():
-                signal = self.added_signals[item_type]
-                signal.emit({db_map: list(items.values())})
+            self._cache.pop(db_map, None)
+        self._clear_fetchers(refreshed_db_maps)
+        self.session_refreshed.emit(refreshed_db_maps)
+
+    def _finish_rolling_back(self, rolled_back_db_maps):
+        """Clears caches and emits ``session_rolled_back`` signal.
+
+        Args:
+            rolled_back_db_maps (set of DiffDatabaseMap): database maps that have been rolled back
+        """
+        for db_map in rolled_back_db_maps:
+            del self._cache[db_map]
+        self.session_rolled_back.emit(rolled_back_db_maps)
 
     def _clear_fetchers(self, db_maps):
         for db_map in db_maps:
@@ -600,55 +592,25 @@ class SpineDBManager(QObject):
             if fetcher is not None:
                 fetcher.deleteLater()
 
-    def commit_session(self, *db_maps, cookie=None):
+    def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
         """
         Commits the current session.
 
         Args:
-            *db_maps: database maps to commit
+            commit_msg (str): commit message for all database maps
+            *dirty_db_maps: dirty database maps to commit
             cookie (object, optional): a free form identifier which will be forwarded to ``session_committed`` signal
         """
-        dirty_db_maps = [
-            db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        ]
-        if not dirty_db_maps:
-            return
-        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
-        commit_msg = self._get_commit_msg(db_names)
-        if not commit_msg:
-            return
         self._worker.commit_session(dirty_db_maps, commit_msg, cookie)
 
-    @staticmethod
-    def _get_commit_msg(db_names):
-        dialog = CommitDialog(qApp.activeWindow(), db_names)  # pylint: disable=undefined-variable
-        answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            return dialog.commit_msg
+    def rollback_session(self, *dirty_db_maps):
+        """
+        Rolls back the current session.
 
-    def rollback_session(self, *db_maps):
-        dirty_db_maps = [
-            db_map for db_map in db_maps if not self.undo_stack[db_map].isClean() or db_map.has_pending_changes()
-        ]
-        if not dirty_db_maps:
-            return
-        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
-        if not self._get_rollback_confirmation(db_names):
-            return
+        Args:
+            *dirty_db_maps: dirty database maps to commit
+        """
         self._worker.rollback_session(dirty_db_maps)
-
-    @staticmethod
-    def _get_rollback_confirmation(db_names):
-        message_box = QMessageBox(
-            QMessageBox.Question,
-            f"Rollback changes in {db_names}",
-            "Are you sure? All your changes since the last commit will be reverted and removed from the undo/redo stack.",
-            QMessageBox.Ok | QMessageBox.Cancel,
-            parent=qApp.activeWindow(),  # pylint: disable=undefined-variable
-        )
-        message_box.button(QMessageBox.Ok).setText("Rollback")
-        answer = message_box.exec_()
-        return answer == QMessageBox.Ok
 
     def entity_class_renderer(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an icon renderer for a given entity class.
@@ -957,11 +919,11 @@ class SpineDBManager(QObject):
         return [int(id_) for id_ in alternative_id_list.split(",")]
 
     @staticmethod
-    def get_db_items(query, query_chunk_size=1000, iter_chunk_size=100):
+    def get_db_items(query, query_chunk_size=1000, iter_chunk_size=1000):
         """Runs the given query and yields results by chunks of given size.
 
         Yields:
-            generator(list)
+            list: chunk of items
         """
         it = (x._asdict() for x in query.yield_per(query_chunk_size).enable_eagerloads(False))
         while True:
@@ -1978,9 +1940,10 @@ class SpineDBManager(QObject):
             MultiSpineDBEditor
         """
         for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
-            widget = QWidget.find(window.winId())
-            if isinstance(widget, MultiSpineDBEditor):
-                yield widget
+            if isinstance(window, QWindow):
+                widget = QWidget.find(window.winId())
+                if isinstance(widget, MultiSpineDBEditor):
+                    yield widget
 
     def get_all_spine_db_editors(self):
         """Yields all instances of SpineDBEditor currently open.
@@ -2020,11 +1983,9 @@ class SpineDBManager(QObject):
         else:
             multi_db_editor, db_editor = existing
             multi_db_editor.set_current_tab(db_editor)
-        if multi_db_editor.windowState() & Qt.WindowMinimized:
-            multi_db_editor.setWindowState(multi_db_editor.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-            multi_db_editor.activateWindow()
-        else:
-            multi_db_editor.raise_()
+        if multi_db_editor.isMinimized():
+            multi_db_editor.showNormal()
+        multi_db_editor.activateWindow()
 
     @staticmethod
     def cache_to_db(item_type, item):
@@ -2077,9 +2038,11 @@ class SpineDBManager(QObject):
             object_class = self.get_item(db_map, "object_class", item["entity_class_id"])
             relationship_class = self.get_item(db_map, "relationship_class", item["entity_class_id"])
             if object_class:
+                item["entity_class_name"] = object_class["name"]
                 item["object_class_id"] = object_class["id"]
                 item["object_class_name"] = object_class["name"]
             if relationship_class:
+                item["entity_class_name"] = relationship_class["name"]
                 item["relationship_class_id"] = relationship_class["id"]
                 item["relationship_class_name"] = relationship_class["name"]
                 item["object_class_id_list"] = relationship_class["object_class_id_list"]
@@ -2113,6 +2076,7 @@ class SpineDBManager(QObject):
             item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
         elif item_type == "parameter_value_list":
             item["value_list"] = ";".join(str(val, "UTF8") for val in item["value_list"])
+            item["value_index_list"] = ";".join(str(k) for k in range(len(item["value_list"])))
         elif item_type == "entity_group":
             item["class_id"] = item["entity_class_id"]
             item["group_id"] = item["entity_id"]
@@ -2143,6 +2107,15 @@ class SpineDBManager(QObject):
                 db_map, "parameter_value_list", item["parameter_value_list_id"]
             ).get("name")
         elif item_type == "tool_feature":
+            feature = self.get_item(db_map, "feature", item["feature_id"])
+            tool = self.get_item(db_map, "tool", item["tool_id"])
+            par_val_lst = self.get_item(db_map, "parameter_value_list", item["parameter_value_list_id"])
+            item["entity_class_id"] = feature["entity_class_id"]
+            item["entity_class_name"] = feature["entity_class_name"]
+            item["parameter_definition_id"] = feature["parameter_definition_id"]
+            item["parameter_definition_name"] = feature["parameter_definition_name"]
+            item["tool_name"] = tool["name"]
+            item["parameter_value_list_name"] = par_val_lst["name"]
             item["required"] = item.get("required", False)
         return item
 
@@ -2151,6 +2124,9 @@ class CombinedCache:
     def __init__(self, d1, d2):
         self._d1 = d1
         self._d2 = d2
+
+    def __getitem__(self, key):
+        return self.get(key, {})
 
     def get(self, key, default):
         return {**self._d1.get(key, default), **self._d2.get(key, default)}

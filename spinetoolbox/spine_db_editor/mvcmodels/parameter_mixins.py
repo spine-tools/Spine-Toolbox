@@ -81,7 +81,7 @@ class FillInAlternativeIdMixin(ConvertToDBMixin):
         self._db_map_alt_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "alternative", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "alternative", "name", name, only_visible=False)
                 if item:
                     self._db_map_alt_lookup.setdefault(db_map, {})[name] = item
 
@@ -151,7 +151,7 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         self._db_map_value_list_lookup.clear()
         for db_map, names in db_map_value_list_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "parameter_value_list", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "parameter_value_list", "name", name, only_visible=False)
                 if item:
                     self._db_map_value_list_lookup.setdefault(db_map, {})[name] = item
 
@@ -218,7 +218,7 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
         self._db_map_ent_cls_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, self.entity_class_type, "name", name, only_visible=False)
                 if item:
                     self._db_map_ent_cls_lookup.setdefault(db_map, {})[name] = item
 
@@ -279,11 +279,12 @@ class FillInEntityIdsMixin(ConvertToDBMixin):
                 name = item.get(self.entity_name_key)
                 db_map_names.setdefault(db_map, set()).add(name)
         # Build lookup dict
-        # FIXME: We might need to fetch here
         self._db_map_ent_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
-                items = self.db_mngr.get_items_by_field(db_map, self.entity_type, self.entity_name_key_in_cache, name)
+                items = self.db_mngr.get_items_by_field(
+                    db_map, self.entity_type, self.entity_name_key_in_cache, name, only_visible=False
+                )
                 if items:
                     self._db_map_ent_lookup.setdefault(db_map, {})[name] = items
 
@@ -343,13 +344,14 @@ class FillInParameterDefinitionIdsMixin(ConvertToDBMixin):
                 name = item.get("parameter_name")
                 db_map_names.setdefault(db_map, set()).add(name)
         # Build lookup dict
-        # FIXME: We might need to fetch here
         self._db_map_param_lookup.clear()
         for db_map, names in db_map_names.items():
             for name in names:
                 items = [
                     x
-                    for x in self.db_mngr.get_items_by_field(db_map, "parameter_definition", "parameter_name", name)
+                    for x in self.db_mngr.get_items_by_field(
+                        db_map, "parameter_definition", "parameter_name", name, only_visible=False
+                    )
                     if self.entity_class_id_key in x
                 ]
                 if items:
@@ -434,7 +436,9 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
                 return ["Unable to infer entity_class."]
             entity_class_id = entity_class_ids.pop()
             item[self.entity_class_id_key] = entity_class_id
-            entity_class_name = self.db_mngr.get_item(db_map, self.entity_class_type, entity_class_id)["name"]
+            entity_class_name = self.db_mngr.get_item(
+                db_map, self.entity_class_type, entity_class_id, only_visible=False
+            )["name"]
             # TODO: Try to find a better place for this, and emit dataChanged
             self._main_data[row][self.header.index(self.entity_class_name_key)] = entity_class_name
         # At this point we're sure the entity_class_id is there
@@ -523,18 +527,20 @@ class MakeRelationshipOnTheFlyMixin:
         self._db_map_obj_lookup.clear()
         for db_map, names in db_map_object_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "object", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "object", "name", name, only_visible=False)
                 if item:
                     self._db_map_obj_lookup.setdefault(db_map, {})[name] = item
         self._db_map_rel_cls_lookup.clear()
         for db_map, names in db_map_rel_cls_names.items():
             for name in names:
-                item = self.db_mngr.get_item_by_field(db_map, "relationship_class", "name", name)
+                item = self.db_mngr.get_item_by_field(db_map, "relationship_class", "name", name, only_visible=False)
                 if item:
                     self._db_map_rel_cls_lookup.setdefault(db_map, {})[name] = item
-        # FIXME: We need to fetch all relationships before doing this
         self._db_map_existing_rels = {
-            db_map: {self._make_unique_relationship_id(x) for x in self.db_mngr.get_items(db_map, "relationship")}
+            db_map: {
+                self._make_unique_relationship_id(x)
+                for x in self.db_mngr.get_items(db_map, "relationship", only_visible=False)
+            }
             for db_map in self._db_map_obj_lookup.keys() | self._db_map_rel_cls_lookup.keys()
         }
 
