@@ -319,7 +319,8 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def _bump_other_items(self):
         """Bumps other items."""
-        if not self.scene() or not self._bumping:
+        prevent_overlapping = self._toolbox.qsettings().value("appSettings/preventOverlapping", defaultValue="false")
+        if not self.scene() or not self._bumping or prevent_overlapping != "true":
             return
         for other in self.scene().items():
             if isinstance(other, ProjectItemIcon) and other != self:

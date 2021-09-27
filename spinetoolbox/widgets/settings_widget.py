@@ -486,6 +486,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
+        prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
@@ -523,6 +524,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
+        self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
+        if prevent_overlapping == "true":
+            self.ui.checkBox_prevent_overlapping.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
@@ -619,6 +623,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/colorToolbarIcons", color_toolbar_icons)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
+        prevent_overlapping = "true" if int(self.ui.checkBox_prevent_overlapping.checkState()) else "false"
+        self._qsettings.setValue("appSettings/preventOverlapping", prevent_overlapping)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
         self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
         if self.ui.radioButton_bg_grid.isChecked():
