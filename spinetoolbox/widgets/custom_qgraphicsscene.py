@@ -78,6 +78,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self._jump_drawer = JumpLinkDrawer(toolbox)
         self._jump_drawer.hide()
         self.link_drawer = None
+        self.icon_group = set()  # Group of project item icons that are moving together
         self.connect_signals()
 
     def mouseMoveEvent(self, event):
