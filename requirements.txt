@@ -1,8 +1,8 @@
-<<<<<<< HEAD
+#<<<<<<< HEAD
 -e git+https://github.com/Spine-project/Spine-Database-API.git@master#egg=spinedb_api
 -e git+https://github.com/Spine-project/spine-engine.git@master#egg=spine_engine
 -e git+https://github.com/Spine-project/spine-items.git@master#egg=spine_items
-=======
+#=======
 #git+https://github.com/Spine-project/Spine-Database-API.git#egg=spinedb_api
 #git+https://github.com/Spine-project/spine-engine.git@server#egg=spine_engine
 # cchardet used to be a dependency of datapackage and version 2.1.6 requires users to install Visual C++
@@ -101,6 +101,6 @@
 #wcwidth >= 0.2.5
 #wget >= 3.2
 #xlrd >= 2.0.1
->>>>>>> 6a414252b1a7221af39beb993cc538c3c7ebc743
+#>>>>>>> 6a414252b1a7221af39beb993cc538c3c7ebc743
 -e .
 

@@ -202,11 +202,6 @@ class SpineEngineWorker(QObject):
     @Slot()
     def do_work(self):
         """Does the work and emits finished when done."""
-<<<<<<< HEAD
-        #self._engine_mngr.run_engine(self._engine_data)
-        #time.sleep(1)
-        #print("spine_engine_worker.do_work() getting events after 1s sleep")
-=======
         try:
             self._engine_mngr.run_engine(self._engine_data)
         except EngineInitFailed as error:
@@ -215,7 +210,6 @@ class SpineEngineWorker(QObject):
             self._all_items_failed.emit(list(self._project_items.values()))
             self.finished.emit()
             return
->>>>>>> master
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
             self._process_event(event_type, data)
