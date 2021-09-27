@@ -279,6 +279,6 @@ from spinetoolbox.server.RemoteSpineEngineManager2 import RemoteSpineEngineManag
 
 def make_engine_manager(engine_server_address):
     if not engine_server_address:
-        return RemoteSpineEngineManager2("tcp","193.166.160.216",5555)
-        #return LocalSpineEngineManager()
+        #return RemoteSpineEngineManager2("tcp","193.166.160.216",5555)
+        return LocalSpineEngineManager()
     return RemoteSpineEngineManager(engine_server_address)
