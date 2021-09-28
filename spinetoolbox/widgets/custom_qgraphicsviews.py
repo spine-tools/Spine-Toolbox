@@ -413,7 +413,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             source_name = link.src_connector.parent_name()
             destination_name = link.dst_connector.parent_name()
             if source_name == connection.source and destination_name == connection.destination:
-                link.wipe_out()
+                link.scene().removeItem(link)
                 break
 
     def remove_selected_links(self):
@@ -485,7 +485,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             source_name = link.src_connector.parent_name()
             destination_name = link.dst_connector.parent_name()
             if source_name == jump.source and destination_name == jump.destination:
-                link.wipe_out()
+                link.scene().removeItem(link)
                 break
 
     def contextMenuEvent(self, event):

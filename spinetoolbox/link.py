@@ -248,6 +248,15 @@ class LinkBase(QGraphicsPathItem):
         line = self._get_joint_line(guide_path)
         return atan2(-line.dy(), line.dx())
 
+    def itemChange(self, change, value):
+        """Wipes out the link when removed from scene."""
+        if change == QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged and value is None:
+            self.wipe_out()
+        return super().itemChange(change, value)
+
+    def wipe_out(self):
+        """Removes any trace of this item from the system."""
+
 
 class _LinkIcon(QGraphicsEllipseItem):
     """An icon to show over a Link."""
@@ -475,7 +484,6 @@ class Link(LinkBase):
                 if not isinstance(item, Link):
                     continue
                 item.stackBefore(self)
-            return value
         return super().itemChange(change, value)
 
     def wipe_out(self):
@@ -483,9 +491,6 @@ class Link(LinkBase):
         self._link_icon.wipe_out()
         self.src_connector.links.remove(self)
         self.dst_connector.links.remove(self)
-        scene = self.scene()
-        if scene:
-            scene.removeItem(self)
 
 
 class JumpLink(LinkBase):
@@ -532,9 +537,6 @@ class JumpLink(LinkBase):
         """Removes any trace of this item from the system."""
         self.src_connector.links.remove(self)
         self.dst_connector.links.remove(self)
-        scene = self.scene()
-        if scene:
-            scene.removeItem(self)
 
     def do_update_geometry(self, guide_path):
         """See base class."""

@@ -81,6 +81,11 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self.icon_group = set()  # Group of project item icons that are moving together
         self.connect_signals()
 
+    def clear_icons_and_links(self):
+        for item in self.items():
+            if isinstance(item, (Link, ProjectItemIcon)):
+                self.removeItem(item)
+
     def mouseMoveEvent(self, event):
         """Moves link drawer."""
         if self.link_drawer is not None:

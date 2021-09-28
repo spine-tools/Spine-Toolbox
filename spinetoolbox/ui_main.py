@@ -776,7 +776,7 @@ class ToolboxUI(QMainWindow):
         """Clean UI to make room for a new or opened project."""
         self.activate_no_selection_tab()  # Clear properties widget
         self.restore_original_logs_and_consoles()
-        self.ui.graphicsView.scene().clear()  # Clear all items from scene
+        self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self._shutdown_engine_kernels()
 
     def undo_critical_commands(self):
