@@ -161,7 +161,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         font.setPointSize(self.text_font_size)
         font.setBold(True)
         self.name_item.setFont(font)
-        self._reposition_name_item()
 
     def _reposition_name_item(self):
         """Set name item position (centered on top of the master icon)."""
@@ -241,9 +240,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         """Updates geometry of connected links to reflect this item's most recent position."""
         if not self.scene():
             return
-        links = set(
-            link for icon in self.scene().icon_group for conn in icon.connectors.values() for link in conn.links
-        )
+        icon_group = self.scene().icon_group | {self}
+        links = set(link for icon in icon_group for conn in icon.connectors.values() for link in conn.links)
         for link in links:
             link.update_geometry()
 
@@ -291,6 +289,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         if change == QGraphicsItem.ItemScenePositionHasChanged:
             self._moved_on_scene = True
+            self._reposition_name_item()
+            self.update_links_geometry()
+            self._bump_other_items()
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
@@ -301,10 +302,6 @@ class ProjectItemIcon(QGraphicsRectItem):
             else:
                 self._scene = scene
                 self._scene.addItem(self.name_item)
-        elif change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
-            self.update_links_geometry()
-            self._reposition_name_item()
-            self._bump_other_items()
         return super().itemChange(change, value)
 
     def set_pos_without_bumping(self, pos):
@@ -344,7 +341,6 @@ class ProjectItemIcon(QGraphicsRectItem):
             delta = math.atan(line.angle()) * min(intersection.width(), intersection.height())
             unit_vector = line.unitVector()
             self.moveBy(delta * unit_vector.dx(), delta * unit_vector.dy())
-            return
         if other in self.pre_bump_rects and not other.sceneBoundingRect().intersects(self.pre_bump_rects[other]):
             self.setPos(self.pre_bump_rects[other].center())
             self.pre_bump_rects.pop(other, None)
