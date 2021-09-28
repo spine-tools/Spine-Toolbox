@@ -118,8 +118,6 @@ class SpineDBManager(QObject):
     # Fetched
     db_map_fetched = Signal(object)
 
-    GROUP_SEP = " \u01C0 "
-
     def __init__(self, settings, parent):
         """Initializes the instance.
 

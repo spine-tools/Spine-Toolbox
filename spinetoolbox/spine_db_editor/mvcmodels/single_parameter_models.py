@@ -18,6 +18,8 @@ Single models for parameter definitions and values (as 'for a single entity').
 
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
+
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
     FillInParameterNameMixin,
@@ -202,7 +204,7 @@ class SingleParameterModel(MinimalTableModel):
                     return description
             data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
-                data = data.replace(",", self.db_mngr.GROUP_SEP)
+                data = data.replace(",", DB_ITEM_SEPARATOR)
             return data
         # Decoration role
 

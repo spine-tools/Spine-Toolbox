@@ -1195,6 +1195,24 @@ def load_plugin_specifications(plugin_dict, spec_factories, app_settings, logger
     return {name: plugin_specs}
 
 
+DB_ITEM_SEPARATOR = " \u01C0 "
+"""Display string to separate items such as entity names."""
+
+
+def parameter_identifier(database, parameter, alternative, entities):
+    """Concatenates given information into parameter value identifier string.
+
+    Args:
+        database (str, optional): database's code name
+        parameter (str): parameter's name
+        alternative (str): name of the value's alternative
+        entities (list of str): name of the entity that holds the value
+    """
+    parts = [database] if database is not None else []
+    parts += [parameter, alternative, DB_ITEM_SEPARATOR.join(entities)]
+    return " - ".join(parts)
+
+
 class SignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
@@ -1222,6 +1240,7 @@ def signal_waiter(signal):
         yield waiter
     finally:
         signal.disconnect(waiter.trigger)
+        waiter.deleteLater()
 
 
 class CustomSyntaxHighlighter(QSyntaxHighlighter):

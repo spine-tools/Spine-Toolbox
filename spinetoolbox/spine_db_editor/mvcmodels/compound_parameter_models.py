@@ -19,7 +19,7 @@ These models concatenate several 'single' models and one 'empty' model.
 from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import rows_to_row_count_tuples, parameter_identifier
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -459,9 +459,18 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return sub_model.db_map, sub_model.item_id(sub_index.row())
 
     def index_name(self, index):
+        """Generates a name for data at given index.
+
+        Args:
+            index (QModelIndex): index to model
+
+        Returns:
+            str: label identifying the data
+        """
         item = self.db_item(index)
         if item is None:
             return ""
+        database = self.index(index.row(), self.columnCount() - 1).data() if len(self.db_maps) > 1 else None
         entity_name_key = {
             "parameter_definition": {
                 "object_class": "object_class_name",
@@ -469,8 +478,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             },
             "parameter_value": {"object_class": "object_name", "relationship_class": "object_name_list"},
         }[self.item_type][self.entity_class_type]
-        entity_name = item[entity_name_key].replace(",", self.db_mngr.GROUP_SEP)
-        return entity_name + " - " + item["parameter_name"]
+        entity_names = item[entity_name_key].split(",")
+        return parameter_identifier(database, item["parameter_name"], item["alternative_name"], entity_names)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,

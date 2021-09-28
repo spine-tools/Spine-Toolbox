@@ -18,6 +18,8 @@ Classes to represent entities in a tree.
 
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QFont, QBrush, QIcon
+
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from .multi_db_tree_item import MultiDBTreeItem
 
 
@@ -329,7 +331,7 @@ class RelationshipItem(EntityItem):
     @property
     def display_data(self):
         """"Returns the name for display."""
-        return self.db_mngr.GROUP_SEP.join(
+        return DB_ITEM_SEPARATOR.join(
             [x for x in self.object_name_list.split(",") if x != self.parent_item.parent_item.display_data]
         )
 

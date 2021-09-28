@@ -31,6 +31,8 @@ from PySide2.QtWidgets import (
 from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
+
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
@@ -353,7 +355,7 @@ class RelationshipItem(EntityItem):
     def _make_tool_tip(self):
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{self.object_name_list.replace(",", self.db_mngr.GROUP_SEP)}<br>"""
+            f"""{self.object_name_list.replace(",", DB_ITEM_SEPARATOR)}<br>"""
             f"""@{self.db_map.codename}</p></html>"""
         )
 
