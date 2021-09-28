@@ -17,13 +17,14 @@ Unit tests for ArrayTableView class.
 """
 
 import csv
+import locale
 from io import StringIO
 import unittest
 from PySide2.QtCore import QItemSelectionModel, QObject
 from PySide2.QtWidgets import QApplication
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel
-from spinetoolbox.widgets.custom_qtableview import ArrayTableView
+from spinetoolbox.widgets.custom_qtableview import ArrayTableView, system_lc_numeric
 
 
 class TestArrayTableView(unittest.TestCase):
@@ -69,8 +70,9 @@ class TestArrayTableView(unittest.TestCase):
         table_view.selectionModel().select(index, QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
-        array = [row for row in csv.reader(clip)]
-        self.assertEqual(array, [["5.5"]])
+        array = [row for row in csv.reader(clip, delimiter='\t')]
+        with system_lc_numeric():
+            self.assertEqual(array, [[locale.str(5.5)]])
         table_view.deleteLater()
 
     def test_paste_non_numeric_to_empty_table(self):

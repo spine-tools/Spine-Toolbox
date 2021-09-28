@@ -17,13 +17,14 @@ Unit tests for MapTableView class.
 """
 
 import csv
+import locale
 from io import StringIO
 import unittest
 from PySide2.QtCore import QItemSelectionModel
 from PySide2.QtWidgets import QApplication
 from spinedb_api import Map
 from spinetoolbox.mvcmodels.map_model import MapModel
-from spinetoolbox.widgets.custom_qtableview import MapTableView
+from spinetoolbox.widgets.custom_qtableview import MapTableView, system_lc_numeric
 
 
 class TestMapTableView(unittest.TestCase):
@@ -54,7 +55,8 @@ class TestMapTableView(unittest.TestCase):
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
         table = [row for row in csv.reader(clip, delimiter="\t")]
-        self.assertEqual(table, [["A", "2.3"]])
+        with system_lc_numeric():
+            self.assertEqual(table, [["A", locale.str(2.3)]])
         table_view.deleteLater()
 
     def test_paste_without_selection_returns_false(self):
