@@ -32,7 +32,7 @@ from .helpers import create_dir, erase_dir, load_specification_from_file, make_s
 from .project_upgrader import ProjectUpgrader
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME, INVALID_CHARS
 from .dag_handler import DirectedGraphHandler
-from .project_commands import SetProjectNameCommand, SetProjectDescriptionCommand
+from .project_commands import SetProjectNameAndDescriptionCommand
 from .spine_engine_worker import SpineEngineWorker
 
 
@@ -144,11 +144,8 @@ class SpineToolboxProject(MetaObject):
                 return False
         return True
 
-    def call_set_name(self, name):
-        self._toolbox.undo_stack.push(SetProjectNameCommand(self, name))
-
-    def call_set_description(self, description):
-        self._toolbox.undo_stack.push(SetProjectDescriptionCommand(self, description))
+    def call_set_name_and_description(self, name, description):
+        self._toolbox.undo_stack.push(SetProjectNameAndDescriptionCommand(self, name, description))
 
     def set_name(self, name):
         """Changes project name.
@@ -156,11 +153,15 @@ class SpineToolboxProject(MetaObject):
         Args:
             name (str): New project name
         """
+        if name == self.name:
+            return
         super().set_name(name)
         self._logger.msg.emit(f"Project name changed to <b>{self.name}</b>")
         self.renamed.emit(name)
 
     def set_description(self, description):
+        if description == self.description:
+            return
         super().set_description(description)
         msg = "Project description "
         if description:
@@ -480,7 +481,7 @@ class SpineToolboxProject(MetaObject):
         return self._project_items[name]
 
     def get_items(self):
-        """ Returns all project items.
+        """Returns all project items.
 
         Returns:
             list of ProjectItem: all project items
@@ -490,14 +491,14 @@ class SpineToolboxProject(MetaObject):
     def rename_item(self, previous_name, new_name, rename_data_dir_message):
         """Renames a project item
 
-         Args:
-             previous_name (str): item's current name
-             new_name (str): item's new name
-             rename_data_dir_message (str): message to show when renaming item's data directory
+        Args:
+            previous_name (str): item's current name
+            new_name (str): item's new name
+            rename_data_dir_message (str): message to show when renaming item's data directory
 
-         Returns:
-             bool: True if item was renamed successfully, False otherwise
-         """
+        Returns:
+            bool: True if item was renamed successfully, False otherwise
+        """
         if not new_name.strip() or new_name == previous_name:
             return False
         name_status = self.validate_project_item_name(new_name)
@@ -738,7 +739,7 @@ class SpineToolboxProject(MetaObject):
             except KeyError as error:
                 self._logger.msg_error.emit(
                     f"Creating <b>{item_type}</b> project item <b>{item_name}</b> failed. "
-                    f"This is most likely caused by an outdated or corrupted project file "
+                    "This is most likely caused by an outdated or corrupted project file "
                     f"(missing JSON key: {str(error)})."
                 )
                 continue
@@ -796,8 +797,9 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg.emit("Items in graph: {0}".format(", ".join(dag.nodes())))
             edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(dag)]
             self._logger.msg.emit(
-                "Please edit connections in Design View to execute it. "
-                "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
+                "Please edit connections in Design View to execute it. Possible fix: remove connection(s) {0}.".format(
+                    ", ".join(edges)
+                )
             )
             return None
         return node_successors

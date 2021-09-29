@@ -67,21 +67,17 @@ class Ui_SettingsForm(object):
         __qlistwidgetitem.setIcon(icon);
         __qlistwidgetitem.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
         icon1 = QIcon()
-        icon1.addFile(u":/icons/project-diagram.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/icons/project_item_icons/hammer.svg", QSize(), QIcon.Normal, QIcon.Off)
         __qlistwidgetitem1 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem1.setIcon(icon1);
         icon2 = QIcon()
-        icon2.addFile(u":/icons/project_item_icons/hammer.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/icons/database.svg", QSize(), QIcon.Normal, QIcon.Off)
         __qlistwidgetitem2 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem2.setIcon(icon2);
         icon3 = QIcon()
-        icon3.addFile(u":/icons/database.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/icons/wrench.svg", QSize(), QIcon.Normal, QIcon.Off)
         __qlistwidgetitem3 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem3.setIcon(icon3);
-        icon4 = QIcon()
-        icon4.addFile(u":/icons/wrench.svg", QSize(), QIcon.Normal, QIcon.Off)
-        __qlistwidgetitem4 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem4.setIcon(icon4);
         self.listWidget.setObjectName(u"listWidget")
         sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy2.setHorizontalStretch(1)
@@ -195,9 +191,9 @@ class Ui_SettingsForm(object):
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
         self.toolButton_browse_work.setSizePolicy(sizePolicy5)
-        icon5 = QIcon()
-        icon5.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toolButton_browse_work.setIcon(icon5)
+        icon4 = QIcon()
+        icon4.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_browse_work.setIcon(icon4)
 
         self.horizontalLayout_6.addWidget(self.toolButton_browse_work)
 
@@ -317,60 +313,6 @@ class Ui_SettingsForm(object):
         self.verticalLayout_6.addItem(self.verticalSpacer)
 
         self.stackedWidget.addWidget(self.General)
-        self.Project = QWidget()
-        self.Project.setObjectName(u"Project")
-        self.verticalLayout_10 = QVBoxLayout(self.Project)
-        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
-        self.groupBox_project = QGroupBox(self.Project)
-        self.groupBox_project.setObjectName(u"groupBox_project")
-        sizePolicy4.setHeightForWidth(self.groupBox_project.sizePolicy().hasHeightForWidth())
-        self.groupBox_project.setSizePolicy(sizePolicy4)
-        self.groupBox_project.setMinimumSize(QSize(250, 150))
-        self.verticalLayout_2 = QVBoxLayout(self.groupBox_project)
-        self.verticalLayout_2.setSpacing(6)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.label_2 = QLabel(self.groupBox_project)
-        self.label_2.setObjectName(u"label_2")
-        self.label_2.setFont(font)
-
-        self.verticalLayout_2.addWidget(self.label_2)
-
-        self.lineEdit_project_name = QLineEdit(self.groupBox_project)
-        self.lineEdit_project_name.setObjectName(u"lineEdit_project_name")
-        self.lineEdit_project_name.setMinimumSize(QSize(0, 20))
-        self.lineEdit_project_name.setMaximumSize(QSize(16777215, 20))
-        self.lineEdit_project_name.setCursor(QCursor(Qt.IBeamCursor))
-        self.lineEdit_project_name.setFocusPolicy(Qt.StrongFocus)
-        self.lineEdit_project_name.setReadOnly(False)
-        self.lineEdit_project_name.setClearButtonEnabled(False)
-
-        self.verticalLayout_2.addWidget(self.lineEdit_project_name)
-
-        self.label_3 = QLabel(self.groupBox_project)
-        self.label_3.setObjectName(u"label_3")
-        self.label_3.setFont(font)
-
-        self.verticalLayout_2.addWidget(self.label_3)
-
-        self.textEdit_project_description = QTextEdit(self.groupBox_project)
-        self.textEdit_project_description.setObjectName(u"textEdit_project_description")
-        self.textEdit_project_description.viewport().setProperty("cursor", QCursor(Qt.IBeamCursor))
-        self.textEdit_project_description.setFocusPolicy(Qt.StrongFocus)
-        self.textEdit_project_description.setStyleSheet(u":focus {border: 1px solid black;}")
-        self.textEdit_project_description.setTabChangesFocus(True)
-        self.textEdit_project_description.setReadOnly(False)
-        self.textEdit_project_description.setAcceptRichText(False)
-
-        self.verticalLayout_2.addWidget(self.textEdit_project_description)
-
-
-        self.verticalLayout_10.addWidget(self.groupBox_project)
-
-        self.verticalSpacer_10 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.verticalLayout_10.addItem(self.verticalSpacer_10)
-
-        self.stackedWidget.addWidget(self.Project)
         self.ExternalTools = QWidget()
         self.ExternalTools.setObjectName(u"ExternalTools")
         self.verticalLayout_13 = QVBoxLayout(self.ExternalTools)
@@ -395,7 +337,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_gams = QToolButton(self.groupBox_gams)
         self.toolButton_browse_gams.setObjectName(u"toolButton_browse_gams")
-        self.toolButton_browse_gams.setIcon(icon5)
+        self.toolButton_browse_gams.setIcon(icon4)
 
         self.gridLayout_4.addWidget(self.toolButton_browse_gams, 2, 1, 1, 1)
 
@@ -443,7 +385,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
         self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
-        self.toolButton_browse_julia.setIcon(icon5)
+        self.toolButton_browse_julia.setIcon(icon4)
 
         self.horizontalLayout_8.addWidget(self.toolButton_browse_julia)
 
@@ -461,7 +403,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_julia_project = QToolButton(self.groupBox_julia)
         self.toolButton_browse_julia_project.setObjectName(u"toolButton_browse_julia_project")
-        self.toolButton_browse_julia_project.setIcon(icon5)
+        self.toolButton_browse_julia_project.setIcon(icon4)
 
         self.horizontalLayout_7.addWidget(self.toolButton_browse_julia_project)
 
@@ -568,7 +510,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_python = QToolButton(self.groupBox_python)
         self.toolButton_browse_python.setObjectName(u"toolButton_browse_python")
-        self.toolButton_browse_python.setIcon(icon5)
+        self.toolButton_browse_python.setIcon(icon4)
 
         self.horizontalLayout_10.addWidget(self.toolButton_browse_python)
 
@@ -616,7 +558,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_conda = QToolButton(self.groupBox_2)
         self.toolButton_browse_conda.setObjectName(u"toolButton_browse_conda")
-        self.toolButton_browse_conda.setIcon(icon5)
+        self.toolButton_browse_conda.setIcon(icon4)
 
         self.horizontalLayout_2.addWidget(self.toolButton_browse_conda)
 
@@ -749,9 +691,7 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.radioButton_bg_tree, self.radioButton_bg_solid)
         QWidget.setTabOrder(self.radioButton_bg_solid, self.toolButton_bg_color)
         QWidget.setTabOrder(self.toolButton_bg_color, self.horizontalSlider_data_flow_animation_duration)
-        QWidget.setTabOrder(self.horizontalSlider_data_flow_animation_duration, self.lineEdit_project_name)
-        QWidget.setTabOrder(self.lineEdit_project_name, self.textEdit_project_description)
-        QWidget.setTabOrder(self.textEdit_project_description, self.lineEdit_gams_path)
+        QWidget.setTabOrder(self.horizontalSlider_data_flow_animation_duration, self.lineEdit_gams_path)
         QWidget.setTabOrder(self.lineEdit_gams_path, self.toolButton_browse_gams)
         QWidget.setTabOrder(self.toolButton_browse_gams, self.radioButton_use_julia_basic_console)
         QWidget.setTabOrder(self.radioButton_use_julia_basic_console, self.radioButton_use_julia_jupyter_console)
@@ -784,7 +724,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -798,13 +738,11 @@ class Ui_SettingsForm(object):
         ___qlistwidgetitem = self.listWidget.item(0)
         ___qlistwidgetitem.setText(QCoreApplication.translate("SettingsForm", u"General", None));
         ___qlistwidgetitem1 = self.listWidget.item(1)
-        ___qlistwidgetitem1.setText(QCoreApplication.translate("SettingsForm", u"Project", None));
+        ___qlistwidgetitem1.setText(QCoreApplication.translate("SettingsForm", u"Tools", None));
         ___qlistwidgetitem2 = self.listWidget.item(2)
-        ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Tools", None));
+        ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None));
         ___qlistwidgetitem3 = self.listWidget.item(3)
-        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None));
-        ___qlistwidgetitem4 = self.listWidget.item(4)
-        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsForm", u"Spec. editors", None));
+        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Spec. editors", None));
         self.listWidget.setSortingEnabled(__sortingEnabled)
 
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"General", None))
@@ -861,22 +799,6 @@ class Ui_SettingsForm(object):
         self.checkBox_open_previous_project.setText(QCoreApplication.translate("SettingsForm", u"Open previous project at startup", None))
         self.checkBox_color_toolbar_icons.setText(QCoreApplication.translate("SettingsForm", u"Color toolbar icons", None))
         self.checkBox_prevent_overlapping.setText(QCoreApplication.translate("SettingsForm", u"Prevent items from overlapping", None))
-        self.groupBox_project.setTitle(QCoreApplication.translate("SettingsForm", u"Project", None))
-        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"Name", None))
-#if QT_CONFIG(tooltip)
-        self.lineEdit_project_name.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Change project name by typing a new name here</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.lineEdit_project_name.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"No project open", None))
-        self.label_3.setText(QCoreApplication.translate("SettingsForm", u"Description", None))
-#if QT_CONFIG(tooltip)
-        self.textEdit_project_description.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Project description</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.textEdit_project_description.setHtml(QCoreApplication.translate("SettingsForm", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
-        self.textEdit_project_description.setPlaceholderText("")
         self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
         self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
 #if QT_CONFIG(tooltip)

@@ -96,46 +96,30 @@ class MoveIconCommand(SpineToolboxCommand):
         self._representative.notify_item_move()
 
 
-class SetProjectNameCommand(SpineToolboxCommand):
-    def __init__(self, project, name):
+class SetProjectNameAndDescriptionCommand(SpineToolboxCommand):
+    def __init__(self, project, name, description):
         """Command to set the project name.
 
         Args:
             project (SpineToolboxProject): the project
             name (str): The new name
-        """
-        super().__init__()
-        self.project = project
-        self.redo_name = name
-        self.undo_name = self.project.name
-        self.setText("rename project")
-
-    def redo(self):
-        self.project.set_name(self.redo_name)
-
-    def undo(self):
-        self.project.set_name(self.undo_name)
-
-
-class SetProjectDescriptionCommand(SpineToolboxCommand):
-    def __init__(self, project, description):
-        """Command to set the project description.
-
-        Args:
-            project (SpineToolboxProject): the project
             description (str): The new description
         """
         super().__init__()
         self.project = project
-        self.redo_description = description
-        self.undo_description = self.project.description
-        self.setText("change project description")
+        self.redo_name = name
+        self.redo_desc = description
+        self.undo_name = self.project.name
+        self.undo_desc = self.project.description
+        self.setText("set project name and description")
 
     def redo(self):
-        self.project.set_description(self.redo_description)
+        self.project.set_name(self.redo_name)
+        self.project.set_description(self.redo_desc)
 
     def undo(self):
-        self.project.set_description(self.undo_description)
+        self.project.set_name(self.undo_name)
+        self.project.set_description(self.undo_desc)
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
