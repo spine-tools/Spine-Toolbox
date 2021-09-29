@@ -52,7 +52,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox = toolbox
         self._scene = None
         self._bumping = True
-        self.pre_bump_rects = {}  # Item rect before it was bumped
+        self.bumped_rects = {}  # Item rect before it was bumped
         self.icon_file = icon_file
         self._moved_on_scene = False
         self.previous_pos = QPointF()
@@ -248,7 +248,7 @@ class ProjectItemIcon(QGraphicsRectItem):
     def mouseReleaseEvent(self, event):
         """Clears pre-bump rects, and pushes a move icon command if necessary."""
         for icon in self.scene().icon_group:
-            icon.pre_bump_rects.clear()
+            icon.bumped_rects.clear()
         # pylint: disable=undefined-variable
         if (self.scenePos() - self.previous_pos).manhattanLength() > qApp.startDragDistance():
             self._toolbox.undo_stack.push(MoveIconCommand(self, self._toolbox.project()))
@@ -291,7 +291,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             self._moved_on_scene = True
             self._reposition_name_item()
             self.update_links_geometry()
-            self._bump_other_items()
+            self._handle_collisions()
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
@@ -314,36 +314,42 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setPos(pos)
         self._bumping = True
 
-    def _bump_other_items(self):
-        """Bumps other items."""
+    def _handle_collisions(self):
+        """Handles collisions with other items."""
         prevent_overlapping = self._toolbox.qsettings().value("appSettings/preventOverlapping", defaultValue="false")
         if not self.scene() or not self._bumping or prevent_overlapping != "true":
             return
-        for other in self.scene().items():
-            if isinstance(other, ProjectItemIcon) and other != self:
+        for other in self.collidingItems():
+            if isinstance(other, ProjectItemIcon):
                 other.make_room_for_item(self)
+        self._restablish_bumped_items()
 
     def make_room_for_item(self, other):
-        """Makes room for another item. If this item is colliding with the other, moves away,
-        otherwise regains its original position before it was bumped by it.
+        """Makes room for another item.
 
         Args:
             item (ProjectItemIcon)
         """
-        if self.collidesWithItem(other):
-            if other not in self.pre_bump_rects:
-                self.pre_bump_rects[other] = self.sceneBoundingRect()
-                if self not in self.scene().icon_group:
-                    self.scene().icon_group.add(self)
-                    self.previous_pos = self.scenePos()
-            line = QLineF(other.sceneBoundingRect().center(), self.sceneBoundingRect().center())
-            intersection = other.sceneBoundingRect() & self.sceneBoundingRect()
-            delta = math.atan(line.angle()) * min(intersection.width(), intersection.height())
-            unit_vector = line.unitVector()
-            self.moveBy(delta * unit_vector.dx(), delta * unit_vector.dy())
-        if other in self.pre_bump_rects and not other.sceneBoundingRect().intersects(self.pre_bump_rects[other]):
-            self.setPos(self.pre_bump_rects[other].center())
-            self.pre_bump_rects.pop(other, None)
+        if self not in other.bumped_rects:
+            other.bumped_rects[self] = self.sceneBoundingRect()
+            if self not in self.scene().icon_group:
+                self.scene().icon_group.add(self)
+                self.previous_pos = self.scenePos()
+        line = QLineF(other.sceneBoundingRect().center(), self.sceneBoundingRect().center())
+        intersection = other.sceneBoundingRect() & self.sceneBoundingRect()
+        delta = math.atan(line.angle()) * min(intersection.width(), intersection.height())
+        unit_vector = line.unitVector()
+        self.moveBy(delta * unit_vector.dx(), delta * unit_vector.dy())
+
+    def _restablish_bumped_items(self):
+        """Moves bumped items back to their original position if no collision would happen anymore."""
+        try:
+            for other, rect in self.bumped_rects.items():
+                if not self.sceneBoundingRect().intersects(rect):
+                    other.setPos(rect.center())
+                    self.bumped_rects.pop(other, None)
+        except RuntimeError:
+            pass
 
     def select_item(self):
         """Update GUI to show the details of the selected item."""
