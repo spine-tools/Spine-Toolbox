@@ -163,6 +163,19 @@ class GraphViewMixin:
         super().receive_objects_removed(db_map_data)
         self.hide_removed_entities(db_map_data)
 
+    def receive_relationships_updated(self, db_map_data):
+        """Runs when relationships are updated in the db.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_relationships_updated(db_map_data)
+        updated_ids = {(db_map, x["id"]) for db_map, rels in db_map_data.items() for x in rels}
+        for item in self.ui.graphicsView.items():
+            if isinstance(item, RelationshipItem) and item.db_map_entity_id in updated_ids:
+                self.build_graph(persistent=True)
+                return
+
     def receive_relationships_removed(self, db_map_data):
         """Runs when relationships are removed from the db. Rebuilds graph if needed.
 
