@@ -50,8 +50,9 @@ class ToolBar(QToolBar):
         Args:
             enabled (bool): True to enable actions, False to disable
         """
-        for button in self.findChildren(QAbstractButton):
-            button.setEnabled(enabled)
+        for child_type in (ProjectItemButton, ProjectItemSpecButton):
+            for button in self.findChildren(child_type):
+                button.setEnabled(enabled)
 
 
 class PluginToolBar(ToolBar):
