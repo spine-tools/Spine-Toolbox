@@ -128,10 +128,23 @@ class CopyPasteTableView(QTableView):
         Returns:
             list: a list of rows
         """
+
+        def _process_value(value):
+            """Delocalizes value, expect when it's one of our 'complex' value types.
+            We need this exception because our complex values are json strings, so they have commas,
+            and ``locale.delocalize`` might remove those commas.
+
+            We identify our complex values by checking if the word "type" is in them.
+            See ``spinedb_api.helpers.join_value_and_type`` for the reason why this works.
+            """
+            if '"type"' in value:
+                return value
+            return locale.delocalize(value)
+
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter="\t", quotechar="'")
             with system_lc_numeric():
-                return [[locale.delocalize(element) for element in row] for row in reader]
+                return [[_process_value(element) for element in row] for row in reader]
 
     def paste_on_selection(self):
         """Pastes clipboard data on selection, but not beyond.
