@@ -292,6 +292,7 @@ class _LinkIcon(QGraphicsEllipseItem):
             self.setVisible(True)
             self._text_item.setVisible(True)
             self._text_item.setPlainText("\uf0b0")
+            self._text_item.setPos(0, 0)
             self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
             self._svg_item.setVisible(False)
             return
@@ -372,7 +373,7 @@ class Link(LinkBase):
         self._link_icon_extent = 4 * self.magic_number
         self._link_icon = _LinkIcon(0, 0, self._link_icon_extent, self._link_icon_extent, self)
         self._link_icon.setPen(self.normal_pen)
-        self._link_icon.update_icon()
+        self.update_icon()
         self.setBrush(QBrush(self._COLOR))
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
@@ -380,18 +381,21 @@ class Link(LinkBase):
         self.setZValue(0.5)  # This makes links appear on top of items because item zValue == 0.0
         self.update_geometry()
         self._exec_color = None
-        self.resource_filter_model = ResourceFilterModel(self._connection, toolbox.undo_stack, toolbox)
+        self.resource_filter_model = ResourceFilterModel(self, toolbox.undo_stack, toolbox)
 
     def refresh_resource_filter_model(self):
         """Makes resource filter mode fetch filter data from database."""
         self.resource_filter_model.build_tree()
+
+    def update_icon(self):
+        self._link_icon.update_icon()
 
     @busy_effect
     def set_connection_options(self, options):
         if options == self.connection.options:
             return
         self.connection.options = options
-        self._link_icon.update_icon()
+        self.update_icon()
         item = self._toolbox.project_item_model.get_item(self.connection.source).project_item
         self._toolbox.project().notify_resource_changes_to_successors(item)
         if self is self._toolbox.active_link:

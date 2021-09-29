@@ -30,28 +30,28 @@ class ResourceFilterModel(QStandardItemModel):
     _FILTER_TYPE_TO_TEXT = dict(zip(_FILTER_TYPES.values(), _FILTER_TYPES.keys()))
     _ID_ROLE = Qt.UserRole + 1
 
-    def __init__(self, connection, undo_stack, logger):
+    def __init__(self, link, undo_stack, logger):
         """
         Args:
-            connection (Connection): link whose resources to model
+            link (Link): link whose resources to model
             undo_stack (QUndoStack): an undo stack
             logger (LoggerInterface): a logger
         """
         super().__init__()
-        self._connection = connection
+        self._link = link
         self._undo_stack = undo_stack
         self._logger = logger
 
     @property
     def connection(self):
-        return self._connection
+        return self._link.connection
 
     def build_tree(self):
         """Rebuilds model's contents."""
 
         def append_filter_items(parent_item, filters, filter_type):
             for id_, is_on in filters[filter_type].items():
-                filter_item = QStandardItem(self._connection.id_to_name(id_, filter_type))
+                filter_item = QStandardItem(self.connection.id_to_name(id_, filter_type))
                 filter_item.setData(id_, self._ID_ROLE)
                 filter_item.setData(Qt.Checked if is_on else Qt.Unchecked, Qt.CheckStateRole)
                 filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
@@ -59,8 +59,8 @@ class ResourceFilterModel(QStandardItemModel):
 
         self.clear()
         self.setHorizontalHeaderItem(0, QStandardItem("DB resource filters"))
-        self._connection.fetch_database_items()
-        for resource_label, filters_by_type in self._connection.resource_filters.items():
+        self.connection.fetch_database_items()
+        for resource_label, filters_by_type in self.connection.resource_filters.items():
             root_item = QStandardItem(resource_label)
             root_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.appendRow(root_item)
@@ -102,7 +102,7 @@ class ResourceFilterModel(QStandardItemModel):
         root_item = resource_type_item.parent()
         resource_label = root_item.text()
         if item.text() == self._SELECT_ALL:
-            ids = self._connection.resource_filters.get(resource_label, {}).get(filter_type, {}).keys()
+            ids = self.connection.resource_filters.get(resource_label, {}).get(filter_type, {}).keys()
             activated = {id_: is_on for id_ in ids}
             cmd = SetFiltersOnlineCommand(self, resource_label, filter_type, activated)
         else:
@@ -117,7 +117,8 @@ class ResourceFilterModel(QStandardItemModel):
             filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
             online (dict): mapping from scenario/tool id to online flag
         """
-        self._connection.set_online(resource, filter_type, online)
+        self.connection.set_online(resource, filter_type, online)
+        self._link.update_icon()
         filter_type_item = self._find_filter_type_item(resource, filter_type)
         for row in range(filter_type_item.rowCount()):
             filter_item = filter_type_item.child(row)
@@ -157,7 +158,7 @@ class ResourceFilterModel(QStandardItemModel):
              emit_data_changed (bool): if True, emit dataChanged signal if the state was updated
          """
         all_online = all(
-            self._connection.resource_filters[resource][self._FILTER_TYPES[filter_type_item.text()]].values()
+            self.connection.resource_filters[resource][self._FILTER_TYPES[filter_type_item.text()]].values()
         )
         all_selected_item = filter_type_item.child(0)
         all_selected = all_selected_item.data(Qt.CheckStateRole) == Qt.Checked
