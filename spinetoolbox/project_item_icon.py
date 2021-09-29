@@ -302,6 +302,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             else:
                 self._scene = scene
                 self._scene.addItem(self.name_item)
+                self._reposition_name_item()
         return super().itemChange(change, value)
 
     def set_pos_without_bumping(self, pos):
