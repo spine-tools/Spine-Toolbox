@@ -363,6 +363,9 @@ class MultiDBTreeItem(TreeItem):
                 display_ids.pop(row)
         self._deep_refresh_children()
         self._merge_children(new_children)
+        top_left = self.model.index(0, 0, self.index())
+        bottom_right = self.model.index(self.child_count() - 1, 0, self.index())
+        self.model.dataChanged.emit(top_left, bottom_right, [Qt.DisplayRole])
 
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
