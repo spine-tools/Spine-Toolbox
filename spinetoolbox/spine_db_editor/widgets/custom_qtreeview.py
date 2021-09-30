@@ -365,8 +365,8 @@ class ObjectTreeView(EntityTreeView):
 
     def duplicate_object(self):
         """Duplicates the object at the current index using the connected Spine db editor."""
-        index = self.currentIndex()
-        self._spine_db_editor.duplicate_object(index)
+        object_item = self.currentIndex().internalPointer()
+        self._spine_db_editor.duplicate_object(object_item)
 
     def add_object_group(self):
         index = self.currentIndex()
@@ -646,8 +646,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
 
 class ParameterValueListTreeView(ItemTreeView):
-    """Custom QTreeView class for parameter_value_list in SpineDBEditor.
-    """
+    """Custom QTreeView class for parameter_value_list in SpineDBEditor."""
 
     def __init__(self, parent):
         """Initialize the view."""

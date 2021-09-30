@@ -457,7 +457,11 @@ class ObjectItem(EntityItem):
         first = menu.insertMenu(first, add_relationships_menu)
         first = menu.insertMenu(first, collapse_menu)
         menu.insertMenu(first, expand_menu)
+        menu.addAction("Duplicate", self._duplicate)
         return menu
+
+    def _duplicate(self):
+        self._spine_db_editor.duplicate_object(self)
 
     def _refresh_relationship_classes(self):
         self._relationship_classes.clear()

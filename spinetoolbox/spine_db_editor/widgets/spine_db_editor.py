@@ -30,6 +30,7 @@ from PySide2.QtWidgets import (
     QTabBar,
     QCheckBox,
     QDialog,
+    QInputDialog,
 )
 from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
@@ -503,8 +504,7 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def export_session(self, checked=False):
-        """Exports changes made in the current session as reported by DiffDatabaseMapping.
-        """
+        """Exports changes made in the current session as reported by DiffDatabaseMapping."""
         db_map_diff_ids = {db_map: db_map.diff_ids() for db_map in self.db_maps}
         db_map_obj_cls_ids = {db_map: diff_ids["object_class"] for db_map, diff_ids in db_map_diff_ids.items()}
         db_map_rel_cls_ids = {db_map: diff_ids["relationship_class"] for db_map, diff_ids in db_map_diff_ids.items()}
@@ -575,6 +575,24 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_tool_feature_ids(db_map_tool_feat_ids)
         parcel.push_tool_feature_method_ids(db_map_tool_feat_meth_ids)
         self.export_data(parcel.data)
+
+    def duplicate_object(self, object_item):
+        """
+        Duplicates the object at the given object tree model index.
+
+        Args:
+            index (QModelIndex)
+        """
+        orig_name = object_item.display_data
+        dup_name, ok = QInputDialog.getText(
+            self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
+        )
+        if not ok:
+            return
+        parcel = SpineDBParcel(self.db_mngr)
+        db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
+        parcel.inner_push_object_ids(db_map_obj_ids)
+        self.db_mngr.duplicate_object(object_item.db_maps, parcel.data, orig_name, dup_name)
 
     @Slot(object)
     def export_data(self, db_map_ids_for_export):
@@ -690,8 +708,7 @@ class SpineDBEditorBase(QMainWindow):
     @busy_effect
     @Slot(QModelIndex)
     def show_parameter_value_editor(self, index, plain=False):
-        """Shows the parameter_value editor for the given index of given table view.
-        """
+        """Shows the parameter_value editor for the given index of given table view."""
         editor = ParameterValueEditor(index, parent=self, plain=plain)
         editor.show()
 
