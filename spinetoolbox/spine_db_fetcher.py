@@ -39,26 +39,28 @@ class SpineDBFetcher(QObject):
         super().__init__()
         self._db_mngr = db_mngr
         self._db_map = db_map
-        self._getters = {
-            "object_class": self._db_mngr.get_object_classes,
-            "relationship_class": self._db_mngr.get_relationship_classes,
-            "parameter_definition": self._db_mngr.get_parameter_definitions,
-            "object": self._db_mngr.get_objects,
-            "relationship": self._db_mngr.get_relationships,
-            "entity_group": self._db_mngr.get_entity_groups,
-            "parameter_value": self._db_mngr.get_parameter_values,
-            "parameter_value_list": self._db_mngr.get_parameter_value_lists,
-            "alternative": self._db_mngr.get_alternatives,
-            "scenario": self._db_mngr.get_scenarios,
-            "scenario_alternative": self._db_mngr.get_scenario_alternatives,
-            "feature": self._db_mngr.get_features,
-            "tool": self._db_mngr.get_tools,
-            "tool_feature": self._db_mngr.get_tool_features,
-            "tool_feature_method": self._db_mngr.get_tool_feature_methods,
+        self._iterators = {
+            item_type: self._get_db_items(item_type)
+            for item_type in (
+                "object_class",
+                "relationship_class",
+                "parameter_definition",
+                "object",
+                "relationship",
+                "entity_group",
+                "parameter_value",
+                "parameter_value_list",
+                "alternative",
+                "scenario",
+                "scenario_alternative",
+                "feature",
+                "tool",
+                "tool_feature",
+                "tool_feature_method",
+            )
         }
-        self._iterators = {item_type: getter(self._db_map) for item_type, getter in self._getters.items()}
         self.cache = {}
-        self._fetched = {item_type: False for item_type in self._getters}
+        self._fetched = {item_type: False for item_type in self._iterators}
         self._can_fetch_more_cache = {}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
@@ -173,7 +175,7 @@ class SpineDBFetcher(QObject):
 
     def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
         if item_types is None:
-            item_types = set(self._getters)
+            item_types = set(self._iterators)
         if only_descendants:
             item_types = {
                 descendant
@@ -205,3 +207,34 @@ class SpineDBFetcher(QObject):
         for item_type in item_types:
             self._do_fetch_more(item_type, parent)
         self._fetch_all_finished.emit()
+
+    def _get_db_items(self, item_type, order_by=("id",), query_chunk_size=1000, iter_chunk_size=1000):
+        """Runs the given query and yields results by chunks of given size.
+
+        Args:
+            item_type (str): item type
+
+        Yields:
+            list: chunk of items
+        """
+        query = self._make_query(item_type, order_by=order_by)
+        it = (x._asdict() for x in query.yield_per(query_chunk_size).enable_eagerloads(False))
+        while True:
+            chunk = list(itertools.islice(it, iter_chunk_size))
+            yield chunk
+            if not chunk:
+                break
+
+    def _make_query(self, item_type, order_by=("id",)):
+        """Makes a database query for given item type.
+
+        Args:
+            item_type (str): item type
+            order_by (Iterable): key for order by
+
+        Returns:
+            Query: database query
+        """
+        sq_name = self._db_map.cache_sqs[item_type]
+        sq = getattr(self._db_map, sq_name)
+        return self._db_map.query(sq).order_by(*[getattr(sq.c, k) for k in order_by])
