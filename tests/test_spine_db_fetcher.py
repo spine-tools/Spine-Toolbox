@@ -123,7 +123,17 @@ class TestSpineDBFetcher(unittest.TestCase):
         self._fetch()
         self.assertEqual(
             self._db_mngr.get_item(self._db_map, "scenario_alternative", 1),
-            {'alternative_id': 2, 'commit_id': 2, 'id': 1, 'rank': 1, 'scenario_id': 1},
+            {
+                'id': 1,
+                'scenario_id': 1,
+                'scenario_name': 'scenario',
+                'alternative_id': 2,
+                'alternative_name': 'alt',
+                'rank': 1,
+                'before_alternative_id': None,
+                'before_rank': None,
+                'before_alternative_name': None,
+            },
         )
 
     def test_fetch_object_classes(self):
@@ -465,17 +475,23 @@ class TestSpineDBFetcher(unittest.TestCase):
             tool_feature_methods=(("tool", "oc", "param", "m"),),
         )
         self._fetch()
-        self._listener.receive_tool_feature_methods_added.assert_any_call(
-            {
-                self._db_map: [
-                    {'id': 1, 'tool_feature_id': 1, 'parameter_value_list_id': 1, 'method_index': 0, 'commit_id': 2}
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "tool_feature_method", 1),
-            {'commit_id': 2, 'id': 1, 'method_index': 0, 'parameter_value_list_id': 1, 'tool_feature_id': 1},
-        )
+        item = {
+            'id': 1,
+            'tool_feature_id': 1,
+            'tool_id': 1,
+            'tool_name': 'tool',
+            'feature_id': 1,
+            'entity_class_id': 1,
+            'entity_class_name': 'oc',
+            'parameter_definition_id': 1,
+            'parameter_definition_name': 'param',
+            'parameter_value_list_id': 1,
+            'parameter_value_list_name': 'value_list',
+            'method_index': 0,
+            'method': b'"m"',
+        }
+        self._listener.receive_tool_feature_methods_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature_method", 1), item)
 
 
 if __name__ == "__main__":
