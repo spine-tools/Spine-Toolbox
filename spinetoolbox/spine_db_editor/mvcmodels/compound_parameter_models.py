@@ -69,7 +69,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
 
     def fetch_successful(self, db_map, item):
-        model = self._create_single_model(db_map, item["entity_class_id"])
+        entity_class_id = item.get(self.entity_class_id_key)
+        if entity_class_id is None:
+            return False
+        model = self._create_single_model(db_map, entity_class_id)
         return self.filter_accepts_model(model) and model.filter_accepts_item(item)
 
     def fetch_id(self):

@@ -443,11 +443,10 @@ class SpineDBManager(QObject):
             QMessageBox.information(
                 qApp.activeWindow(),  # pylint: disable=undefined-variable
                 "Unsupported database version",
-                f"Database at <b>{url}</b> is newer than this version of Spine Toolbox "
-                f"can handle.<br><br>"
+                f"Database at <b>{url}</b> is newer than this version of Spine Toolbox can handle.<br><br>"
                 f"The db is at revision <b>{v_err.current}</b> while this version "
-                f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>. "
-                f"<br><br>Please upgrade Spine Toolbox to open this database.",
+                f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>.<br><br>"
+                "Please upgrade Spine Toolbox to open this database.",
             )
             return None
         except SpineDBAPIError as err:
