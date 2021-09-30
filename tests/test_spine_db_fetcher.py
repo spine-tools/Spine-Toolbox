@@ -274,41 +274,25 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_parameter_definitions(self):
         self._import_data(object_classes=("oc",), object_parameters=(("oc", "param"),))
         self._fetch()
-        self._listener.receive_parameter_definitions_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 1,
-                        'entity_class_id': 1,
-                        'entity_class_name': 'oc',
-                        'object_class_id': 1,
-                        'object_class_name': 'oc',
-                        'parameter_name': 'param',
-                        'value_list_id': None,
-                        'value_list_name': None,
-                        'default_value': None,
-                        'default_type': None,
-                        'description': None,
-                    }
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "parameter_definition", 1),
-            {
-                'default_value': None,
-                'default_type': None,
-                'description': None,
-                'entity_class_id': 1,
-                'entity_class_name': 'oc',
-                'id': 1,
-                'object_class_id': 1,
-                'object_class_name': 'oc',
-                'parameter_name': 'param',
-                'value_list_id': None,
-                'value_list_name': None,
-            },
-        )
+        item = {
+            'id': 1,
+            'entity_class_id': 1,
+            'object_class_id': 1,
+            'relationship_class_id': None,
+            'entity_class_name': 'oc',
+            'object_class_name': 'oc',
+            'relationship_class_name': None,
+            'object_class_id_list': None,
+            'object_class_name_list': None,
+            'parameter_name': 'param',
+            'value_list_id': None,
+            'value_list_name': None,
+            'default_value': None,
+            'default_type': None,
+            'description': None,
+        }
+        self._listener.receive_parameter_definitions_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_definition", 1), item)
 
     def test_fetch_parameter_values(self):
         self._import_data(
@@ -318,45 +302,32 @@ class TestSpineDBFetcher(unittest.TestCase):
             object_parameter_values=(("oc", "obj", "param", 2.3),),
         )
         self._fetch()
-        self._listener.receive_parameter_values_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 1,
-                        'entity_class_id': 1,
-                        'object_class_id': 1,
-                        'object_class_name': 'oc',
-                        'entity_id': 1,
-                        'object_id': 1,
-                        'object_name': 'obj',
-                        'parameter_id': 1,
-                        'parameter_name': 'param',
-                        'alternative_id': 1,
-                        'alternative_name': 'Base',
-                        'value': b'2.3',
-                        'type': None,
-                    }
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "parameter_value", 1),
-            {
-                'alternative_id': 1,
-                'alternative_name': 'Base',
-                'entity_class_id': 1,
-                'entity_id': 1,
-                'id': 1,
-                'object_class_id': 1,
-                'object_class_name': 'oc',
-                'object_id': 1,
-                'object_name': 'obj',
-                'parameter_id': 1,
-                'parameter_name': 'param',
-                'value': b'2.3',
-                'type': None,
-            },
-        )
+        item = {
+            'id': 1,
+            'entity_class_id': 1,
+            'object_class_id': 1,
+            'relationship_class_id': None,
+            'entity_class_name': 'oc',
+            'object_class_name': 'oc',
+            'relationship_class_name': None,
+            'object_class_id_list': None,
+            'object_class_name_list': None,
+            'entity_id': 1,
+            'entity_name': 'obj',
+            'object_id': 1,
+            'relationship_id': None,
+            'object_name': 'obj',
+            'object_id_list': None,
+            'object_name_list': None,
+            'parameter_id': 1,
+            'parameter_name': 'param',
+            'alternative_id': 1,
+            'alternative_name': 'Base',
+            'value': b'2.3',
+            'type': None,
+        }
+        self._listener.receive_parameter_values_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value", 1), item)
 
     def test_fetch_parameter_value_lists(self):
         self._import_data(parameter_value_lists=(("value_list", (2.3,)),))

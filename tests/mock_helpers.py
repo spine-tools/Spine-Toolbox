@@ -310,7 +310,7 @@ class TestSpineDBManager(SpineDBManager):
 
     def fetch_all(self, db_map):
         fetcher = self._get_fetcher(db_map)
-        for item_type in fetcher._getters:
+        for item_type in self.added_signals:
             fetcher.fetch_more(item_type)
 
 
