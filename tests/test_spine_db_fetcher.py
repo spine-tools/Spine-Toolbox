@@ -243,33 +243,19 @@ class TestSpineDBFetcher(unittest.TestCase):
             object_classes=("oc",), objects=(("oc", "obj"), ("oc", "group")), object_groups=(("oc", "group", "obj"),)
         )
         self._fetch()
-        self._listener.receive_entity_groups_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 1,
-                        'class_id': 1,
-                        'group_id': 2,
-                        'member_id': 1,
-                        'class_name': 'oc',
-                        'group_name': 'group',
-                        'member_name': 'obj',
-                    }
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "entity_group", 1),
-            {
-                'id': 1,
-                'class_id': 1,
-                'group_id': 2,
-                'member_id': 1,
-                'class_name': 'oc',
-                'group_name': 'group',
-                'member_name': 'obj',
-            },
-        )
+        item = {
+            'id': 1,
+            'class_id': 1,
+            'group_id': 2,
+            'member_id': 1,
+            'class_name': 'oc',
+            'group_name': 'group',
+            'member_name': 'obj',
+            'object_class_id': 1,
+            'relationship_class_id': None,
+        }
+        self._listener.receive_entity_groups_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_group", 1), item)
 
     def test_fetch_parameter_definitions(self):
         self._import_data(object_classes=("oc",), object_parameters=(("oc", "param"),))

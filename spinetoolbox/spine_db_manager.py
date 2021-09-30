@@ -16,11 +16,12 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
-import itertools
 import json
+import os
 from PySide2.QtCore import Qt, QObject, Signal, QThread
 from PySide2.QtWidgets import QMessageBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont, QWindow
+from sqlalchemy.engine.url import URL
 from spinedb_api import (
     is_empty,
     create_new_spine_database,
@@ -31,6 +32,7 @@ from spinedb_api import (
     to_database,
     relativedelta_to_duration,
     ParameterValueFormatError,
+    ParameterValueEncoder,
     IndexedValue,
     Array,
     TimeSeries,
@@ -39,8 +41,12 @@ from spinedb_api import (
     TimePattern,
     Map,
     get_data_for_import,
+    import_data,
+    export_data,
+    create_new_spine_database,
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
+from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
 from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
@@ -1651,11 +1657,119 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_tool_features_by_feature(self.db_map_ids(db_map_data))
         self.tool_features_updated.emit(db_map_cascading_data)
 
-    def export_data(self, caller, db_map_item_ids, file_path, file_filter):
-        self._worker.export_data(caller, db_map_item_ids, file_path, file_filter)
-
     def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
-        self._worker.duplicate_object(db_maps, object_data, orig_name, dup_name)
+        _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
+        data = self._get_data_for_export(object_data)
+        data = {
+            "objects": [
+                (cls_name, dup_name, description) for (cls_name, obj_name, description) in data.get("objects", [])
+            ],
+            "relationships": [
+                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data.get("relationships", [])
+            ],
+            "object_parameter_values": [
+                (cls_name, dup_name, param_name, val, alt)
+                for (cls_name, obj_name, param_name, val, alt) in data.get("object_parameter_values", [])
+            ],
+            "relationship_parameter_values": [
+                (cls_name, _replace_name(obj_name_lst), param_name, val, alt)
+                for (cls_name, obj_name_lst, param_name, val, alt) in data.get("relationship_parameter_values", [])
+            ],
+        }
+        self.import_data({db_map: data for db_map in db_maps}, command_text="Duplicate object")
+
+    def _get_data_for_export(self, db_map_item_ids):
+        data = {}
+        for db_map, item_ids in db_map_item_ids.items():
+            make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
+                db_map, item_types=tablenames, **kwargs
+            )
+            for key, items in export_data(db_map, make_cache=make_cache, **item_ids).items():
+                data.setdefault(key, []).extend(items)
+        return data
+
+    def export_data(self, caller, db_map_item_ids, file_path, file_filter):
+        data = self._get_data_for_export(db_map_item_ids)
+        if file_filter.startswith("JSON"):
+            self.export_to_json(file_path, data, caller)
+        elif file_filter.startswith("SQLite"):
+            self.export_to_sqlite(file_path, data, caller)
+        elif file_filter.startswith("Excel"):
+            self.export_to_excel(file_path, data, caller)
+        else:
+            raise ValueError()
+
+    def _is_url_available(self, url, logger):
+        if str(url) in self.db_urls:
+            message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
+            logger.msg_error.emit(message)
+            return False
+        return True
+
+    def export_to_sqlite(self, file_path, data_for_export, caller):
+        """Exports given data into SQLite file."""
+        url = URL("sqlite", database=file_path)
+        if not self._is_url_available(url, caller):
+            return
+        create_new_spine_database(url)
+        db_map = DatabaseMapping(url)
+        import_data(db_map, **data_for_export)
+        try:
+            db_map.commit_session("Export data from Spine Toolbox.")
+        except SpineDBAPIError as err:
+            error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
+            caller.msg_error.emit(error_msg)
+        else:
+            caller.sqlite_file_exported.emit(file_path)
+        finally:
+            db_map.connection.close()
+
+    def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+        """Exports given data into JSON file."""
+        indent = 4 * " "
+        json_data = "{{{0}{1}{0}}}".format(
+            "\n" if data_for_export else "",
+            ",\n".join(
+                [
+                    indent
+                    + json.dumps(key)
+                    + ": [{0}{1}{0}]".format(
+                        "\n" + indent if values else "",
+                        (",\n" + indent).join(
+                            [indent + json.dumps(value, cls=ParameterValueEncoder) for value in values]
+                        ),
+                    )
+                    for key, values in data_for_export.items()
+                ]
+            ),
+        )
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+        caller.file_exported.emit(file_path)
+
+    def export_to_excel(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+        """Exports given data into Excel file."""
+        # NOTE: We import data into an in-memory Spine db and then export that to excel.
+        url = URL("sqlite", database="")
+        db_map = DatabaseMapping(url, create=True)
+        import_data(db_map, **data_for_export)
+        file_name = os.path.split(file_path)[1]
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        try:
+            export_spine_database_to_xlsx(db_map, file_path)
+        except PermissionError:
+            error_msg = {
+                None: [f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."]
+            }
+            caller.msg_error.emit(error_msg)
+        except OSError:
+            error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
+            caller.msg_error.emit(error_msg)
+        else:
+            caller.file_exported.emit(file_path)
+        finally:
+            db_map.connection.close()
 
     def get_metadata_per_entity(self, db_map, entity_ids):
         return self._worker.get_metadata_per_entity(db_map, entity_ids)
