@@ -51,6 +51,9 @@ class SingleParameterModel(MinimalTableModel):
         self.entity_class_id = entity_class_id
         self._auto_filter = dict()  # Maps field to accepted ids for that field
 
+    def __lt__(self, other):
+        return self.entity_class_name < other.entity_class_name
+
     @property
     def item_type(self):
         """The item type, either 'parameter_value' or 'parameter_definition', required by the data method."""

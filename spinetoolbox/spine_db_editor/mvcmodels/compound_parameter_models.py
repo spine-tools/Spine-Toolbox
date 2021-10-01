@@ -16,6 +16,7 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
+import bisect
 from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
@@ -386,7 +387,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids = [item["id"] for item in class_items]
-                self._create_and_append_single_model(db_map, entity_class_id, ids)
+                self._add_single_model(db_map, entity_class_id, ids)
                 self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.receive_parameter_data_added(db_map_data)
 
@@ -396,12 +397,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self._set_single_auto_filter(model, field)
         return model
 
-    def _create_and_append_single_model(self, db_map, entity_class_id, ids):
+    def _add_single_model(self, db_map, entity_class_id, ids):
         model = self._create_single_model(db_map, entity_class_id)
         model.reset_model(ids)
         single_row_map = self._row_map_for_model(model)
-        self._insert_single_row_map(single_row_map)
-        self.sub_models.insert(len(self.single_models), model)
+        pos = bisect.bisect_left(self.single_models, model)
+        before_model = self.single_models[pos] if pos < len(self.single_models) else None
+        self._insert_single_row_map(single_row_map, before_model=before_model)
+        self.sub_models.insert(pos, model)
 
     def receive_parameter_data_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated in the dbs.

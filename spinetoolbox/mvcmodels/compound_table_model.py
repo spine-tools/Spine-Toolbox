@@ -310,18 +310,20 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         single_row_map = self._row_map_for_model(single_model)
         self._insert_single_row_map(single_row_map)
 
-    def _insert_single_row_map(self, single_row_map):
+    def _insert_single_row_map(self, single_row_map, before_model=None):
         """Inserts given row map just before the empty model's."""
+        if before_model is None:
+            before_model = self.empty_model
         if not single_row_map:
             return
         try:
-            row = self._inv_row_map[self.empty_model, 0]
-            self._row_map, empty_row_map = self._row_map[:row], self._row_map[row:]
+            row = self._inv_row_map[before_model, 0]
+            self._row_map, before_row_map = self._row_map[:row], self._row_map[row:]
         except KeyError:
             row = self.rowCount()
-            empty_row_map = []
+            before_row_map = []
         self._append_row_map(single_row_map)
-        self._append_row_map(empty_row_map)
+        self._append_row_map(before_row_map)
         first = row
         last = row + len(single_row_map) - 1
         self.rowsInserted.emit(QModelIndex(), first, last)
