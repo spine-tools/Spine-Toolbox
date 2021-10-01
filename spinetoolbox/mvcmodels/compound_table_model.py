@@ -16,6 +16,7 @@ Models that vertically concatenate two or more table models.
 :date:   9.10.2019
 """
 
+import bisect
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 
@@ -243,10 +244,6 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
     def empty_model(self):
         return self.sub_models[-1]
 
-    def _create_single_models(self):
-        """Returns a list of single models."""
-        raise NotImplementedError()
-
     def _create_empty_model(self):
         """Returns an empty model."""
         raise NotImplementedError()
@@ -256,22 +253,19 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         with the result of _create_single_models and _create_empty_model.
         """
         self.clear_model()
-        self.sub_models = self._create_single_models()
         self.sub_models.append(self._create_empty_model())
-        self.connect_model_signals()
-
-    def connect_model_signals(self):
-        """Connects signals so changes in the submodels are acknowledge by the compound."""
         self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
         self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
-        for model in self.single_models:
-            model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
-        for model in self.sub_models:
-            model.dataChanged.connect(
-                lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
-                    self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
-                )
+
+    def _connect_single_model(self, model):
+        """Connects signals so changes in the submodels are acknowledge by the compound."""
+        model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
+        model.modelAboutToBeReset.connect(lambda model=model: self._handle_single_model_about_to_be_reset(model))
+        model.dataChanged.connect(
+            lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
+                self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
             )
+        )
 
     def _recompute_empty_row_map(self):
         """Recomputes the part of the row map corresponding to the empty model."""
@@ -303,27 +297,41 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         last = self._inv_row_map[self.empty_model, empty_last]
         self.rowsInserted.emit(QModelIndex(), first, last)
 
-    def _handle_single_model_reset(self, single_model):
-        """Runs when one of the single models is reset.
-        Updates row_map, then emits rowsInserted so the new rows become visible.
-        """
-        single_row_map = self._row_map_for_model(single_model)
-        self._insert_single_row_map(single_row_map)
+    def _handle_single_model_about_to_be_reset(self, model):
+        """Runs when given model is about to reset."""
+        if model not in self.single_models:
+            return
+        first = self._inv_row_map[model, 0]
+        last = first + len(self._row_map_for_model(model)) - 1
+        self._row_map[first : last + 1] = []
+        self.rowsRemoved.emit(QModelIndex(), first, last)
 
-    def _insert_single_row_map(self, single_row_map, before_model=None):
-        """Inserts given row map just before the empty model's."""
-        if before_model is None:
-            before_model = self.empty_model
+    def _handle_single_model_reset(self, model):
+        """Runs when given model is reset."""
+        if model in self.single_models:
+            self._refresh_single_model(model)
+        else:
+            self._insert_single_model(model)
+
+    def _refresh_single_model(self, model):
+        row_map = self._row_map_for_model(model)
+        row = self._inv_row_map[model, 0]
+        self._row_map, before_row_map = self._row_map[:row], self._row_map[row:]
+        self._append_row_map(row_map)
+        self._append_row_map(before_row_map)
+        self.rowsInserted.emit(QModelIndex(), row, row + len(row_map) - 1)
+
+    def _insert_single_model(self, model):
+        single_row_map = self._row_map_for_model(model)
         if not single_row_map:
             return
-        try:
-            row = self._inv_row_map[before_model, 0]
-            self._row_map, before_row_map = self._row_map[:row], self._row_map[row:]
-        except KeyError:
-            row = self.rowCount()
-            before_row_map = []
+        pos = bisect.bisect_left(self.single_models, model)
+        before_model = self.sub_models[pos]
+        row = self._inv_row_map.get((before_model, 0), self.rowCount())
+        self._row_map, before_row_map = self._row_map[:row], self._row_map[row:]
         self._append_row_map(single_row_map)
         self._append_row_map(before_row_map)
+        self.sub_models.insert(pos, model)
         first = row
         last = row + len(single_row_map) - 1
         self.rowsInserted.emit(QModelIndex(), first, last)

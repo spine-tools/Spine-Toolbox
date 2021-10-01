@@ -16,9 +16,8 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, QModelIndex
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QGuiApplication
-
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
@@ -108,10 +107,6 @@ class SingleParameterModel(MinimalTableModel):
     @property
     def can_be_filtered(self):
         return True
-
-    def insertRows(self, row, count, parent=QModelIndex()):
-        """This model doesn't support row insertion."""
-        return False
 
     def item_id(self, row):
         return self._main_data[row]
@@ -303,6 +298,10 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
     def item_type(self):
         return "parameter_definition"
 
+    def _sort_key(self, element):
+        item = self.db_item_from_id(element)
+        return item["parameter_name"]
+
     def update_items_in_db(self, items):
         """Update items in db.
 
@@ -353,6 +352,10 @@ class SingleParameterValueMixin(
     @property
     def entity_name_key_in_cache(self):
         return {"object": "name", "relationship": "object_name_list"}[self.entity_type]
+
+    def _sort_key(self, element):
+        item = self.db_item_from_id(element)
+        return item[self.entity_name_key], item["parameter_name"], item["alternative_name"]
 
     def set_filter_entity_ids(self, db_map_class_entity_ids):
         if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:

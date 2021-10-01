@@ -16,7 +16,6 @@ These models concatenate several 'single' models and one 'empty' model.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-import bisect
 from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
@@ -211,14 +210,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return italic_font
         return super().headerData(section, orientation, role)
 
-    def _create_single_models(self):
-        """Returns a list of single models for this compound model, one for each entity_class in each database.
-
-        Returns:
-            list
-        """
-        return []
-
     def _create_empty_model(self):
         """Returns the empty model for this compound model.
 
@@ -387,24 +378,24 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids = [item["id"] for item in class_items]
-                self._add_single_model(db_map, entity_class_id, ids)
+                self._add_parameter_data(db_map, entity_class_id, ids)
                 self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.receive_parameter_data_added(db_map_data)
 
     def _create_single_model(self, db_map, entity_class_id):
         model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
+        self._connect_single_model(model)
         for field in self._auto_filter:
             self._set_single_auto_filter(model, field)
         return model
 
-    def _add_single_model(self, db_map, entity_class_id, ids):
+    def _add_parameter_data(self, db_map, entity_class_id, ids):
+        existing = next((m for m in self.single_models if m.entity_class_id == entity_class_id), None)
+        if existing is not None:
+            existing.add_rows(ids)
+            return
         model = self._create_single_model(db_map, entity_class_id)
         model.reset_model(ids)
-        single_row_map = self._row_map_for_model(model)
-        pos = bisect.bisect_left(self.single_models, model)
-        before_model = self.single_models[pos] if pos < len(self.single_models) else None
-        self._insert_single_row_map(single_row_map, before_model=before_model)
-        self.sub_models.insert(pos, model)
 
     def receive_parameter_data_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated in the dbs.
