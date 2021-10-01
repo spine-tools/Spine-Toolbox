@@ -312,11 +312,11 @@ class TestPlotting(unittest.TestCase):
         ts1 = TimeSeriesFixedResolution("2019-07-11T09:00", "3 days", [0.5, 2.3], False, False)
         self._fill_parameter_value_table({"time_series": [ts1], "floats": [2.3, 5.5]})
         model = self._db_editor.object_parameter_value_model
-        selected_indexes = [model.index(0, 4)]
+        selected_indexes = [model.index(1, 4)]
         support = ParameterTablePlottingHints()
         plot_widget = plot_selection(model, selected_indexes, support)
         self.assertEqual(plot_widget.plot_type, TimeSeries)
-        selected_indexes = [model.index(1, 4), model.index(2, 4)]
+        selected_indexes = [model.index(0, 4), model.index(2, 4)]
         with self.assertRaises(PlottingError):
             plot_selection(model, selected_indexes, support, plot_widget)
 

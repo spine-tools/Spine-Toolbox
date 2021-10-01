@@ -277,4 +277,4 @@ class MinimalTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def _sort_key(self, element):
-        raise NotImplementedError()
+        return element
