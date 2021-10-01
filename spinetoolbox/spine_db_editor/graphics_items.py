@@ -85,6 +85,7 @@ class EntityItem(QGraphicsRectItem):
         self.setPen(Qt.NoPen)
         self._svg_item = QGraphicsSvgItem(self)
         self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
+        self._renderer = None
         self.refresh_icon()
         self.setPos(x, y)
         self._moved_on_scene = False
@@ -176,6 +177,7 @@ class EntityItem(QGraphicsRectItem):
         self._set_renderer(renderer)
 
     def _set_renderer(self, renderer):
+        self._renderer = renderer
         self._svg_item.setSharedRenderer(renderer)
         size = renderer.defaultSize()
         scale = self._extent / max(size.width(), size.height())
