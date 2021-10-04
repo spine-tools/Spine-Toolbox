@@ -267,8 +267,8 @@ class MenuItemToolBarWidget(ToolBarWidgetBase):
         if compact:
             self.tool_bar.setFixedHeight(self.option.rect.height())
         text_width = self.option.fontMetrics.horizontalAdvance(self._text)
-        icon_widht = qApp.style().pixelMetric(QStyle.PM_ToolBarIconSize)  # pylint: disable=undefined-variable
-        spacing = text_width + 3 * icon_widht
+        icon_width = qApp.style().pixelMetric(QStyle.PM_ToolBarIconSize)  # pylint: disable=undefined-variable
+        spacing = text_width + 3 * icon_width
         self.layout().insertSpacing(0, spacing)
 
     def paintEvent(self, event):

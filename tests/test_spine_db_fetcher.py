@@ -182,23 +182,16 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_relationship_classes(self):
         self._import_data(object_classes=("oc",), relationship_classes=(("rc", ("oc",)),))
         self._fetch()
-        self._listener.receive_relationship_classes_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 2,
-                        'name': 'rc',
-                        'description': None,
-                        'object_class_id_list': '1',
-                        'object_class_name_list': 'oc',
-                    }
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "relationship_class", 2),
-            {'description': None, 'id': 2, 'name': 'rc', 'object_class_id_list': '1', 'object_class_name_list': 'oc'},
-        )
+        item = {
+            'id': 2,
+            'name': 'rc',
+            'description': None,
+            'object_class_id_list': '1',
+            'object_class_name_list': 'oc',
+            'display_icon': None,
+        }
+        self._listener.receive_relationship_classes_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "relationship_class", 2), item)
 
     def test_fetch_relationships(self):
         self._import_data(
@@ -208,35 +201,18 @@ class TestSpineDBFetcher(unittest.TestCase):
             relationships=(("rc", ("obj",)),),
         )
         self._fetch()
-        self._listener.receive_relationships_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 2,
-                        'name': 'rc_obj',
-                        'class_id': 2,
-                        'class_name': 'rc',
-                        'object_id_list': '1',
-                        'object_name_list': 'obj',
-                        'object_class_id_list': '1',
-                        'object_class_name_list': 'oc',
-                    }
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "relationship", 2),
-            {
-                'class_id': 2,
-                'class_name': 'rc',
-                'id': 2,
-                'name': 'rc_obj',
-                'object_class_id_list': '1',
-                'object_class_name_list': 'oc',
-                'object_id_list': '1',
-                'object_name_list': 'obj',
-            },
-        )
+        item = {
+            'id': 2,
+            'name': 'rc_obj',
+            'class_id': 2,
+            'class_name': 'rc',
+            'object_id_list': '1',
+            'object_name_list': 'obj',
+            'object_class_id_list': '1',
+            'object_class_name_list': 'oc',
+        }
+        self._listener.receive_relationships_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "relationship", 2), item)
 
     def test_fetch_object_groups(self):
         self._import_data(

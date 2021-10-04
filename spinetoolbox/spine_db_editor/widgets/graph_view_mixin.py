@@ -463,7 +463,12 @@ class GraphViewMixin:
             self, obj_item.pos().x(), obj_item.pos().y(), 0.8 * self.VERTEX_EXTENT, db_map_entity_id=(db_map, None)
         )
         ch_rel_item = CrossHairsRelationshipItem(
-            self, obj_item.pos().x(), obj_item.pos().y(), 0.5 * self.VERTEX_EXTENT, db_map_entity_id=(db_map, None)
+            self,
+            obj_item.pos().x(),
+            obj_item.pos().y(),
+            0.5 * self.VERTEX_EXTENT,
+            class_name=relationship_class["name"],
+            db_map_entity_id=(db_map, None),
         )
         ch_arc_item1 = CrossHairsArcItem(ch_rel_item, obj_item, self._ARC_WIDTH)
         ch_arc_item2 = CrossHairsArcItem(ch_rel_item, ch_item, self._ARC_WIDTH)

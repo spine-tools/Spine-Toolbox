@@ -623,8 +623,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
 
 
 class ManageItemsDelegate(QStyledItemDelegate):
-    """A custom delegate for the model in {Add/Edit}ItemDialogs.
-    """
+    """A custom delegate for the model in {Add/Edit}ItemDialogs."""
 
     data_committed = Signal(QModelIndex, object)
 
@@ -646,8 +645,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
             editor.update_geometry()
 
     def connect_editor_signals(self, editor, index):
-        """Connect editor signals if necessary.
-        """
+        """Connect editor signals if necessary."""
         if isinstance(editor, SearchBarEditor):
             model = index.model()
             editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
@@ -671,9 +669,19 @@ class ManageItemsDelegate(QStyledItemDelegate):
         return editor
 
 
-class ManageObjectClassesDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in {Add/Edit}ObjectClassesDialog.
-    """
+class ManageEntityClassesDelegate(ManageItemsDelegate):
+    def paint(self, painter, option, index):
+        """Get a pixmap from the index data and paint it in the middle of the cell."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'display icon':
+            icon = object_icon(index.data())
+            icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
+        else:
+            super().paint(painter, option, index)
+
+
+class ManageObjectClassesDelegate(ManageEntityClassesDelegate):
+    """A delegate for the model and view in {Add/Edit}ObjectClassesDialog."""
 
     icon_color_editor_requested = Signal(QModelIndex)
 
@@ -691,19 +699,9 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         self.connect_editor_signals(editor, index)
         return editor
 
-    def paint(self, painter, option, index):
-        """Get a pixmap from the index data and paint it in the middle of the cell."""
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'display icon':
-            icon = object_icon(index.data())
-            icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
-        else:
-            super().paint(painter, option, index)
-
 
 class ManageObjectsDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in {Add/Edit}ObjectsDialog.
-    """
+    """A delegate for the model and view in {Add/Edit}ObjectsDialog."""
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -721,14 +719,18 @@ class ManageObjectsDelegate(ManageItemsDelegate):
         return editor
 
 
-class ManageRelationshipClassesDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in {Add/Edit}RelationshipClassesDialog.
-    """
+class ManageRelationshipClassesDelegate(ManageEntityClassesDelegate):
+    """A delegate for the model and view in {Add/Edit}RelationshipClassesDialog."""
+
+    icon_color_editor_requested = Signal(QModelIndex)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] in ('relationship_class name', 'description'):
+        if header[index.column()] == 'display icon':
+            self.icon_color_editor_requested.emit(index)
+            editor = None
+        elif header[index.column()] in ('relationship_class name', 'description'):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'databases':
@@ -742,8 +744,7 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
 
 
 class ManageRelationshipsDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in {Add/Edit}RelationshipsDialog.
-    """
+    """A delegate for the model and view in {Add/Edit}RelationshipsDialog."""
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -763,8 +764,7 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
 
 
 class RemoveEntitiesDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in RemoveEntitiesDialog.
-    """
+    """A delegate for the model and view in RemoveEntitiesDialog."""
 
     def createEditor(self, parent, option, index):
         """Return editor."""

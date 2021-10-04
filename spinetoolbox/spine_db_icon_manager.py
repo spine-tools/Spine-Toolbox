@@ -73,24 +73,24 @@ class SpineDBIconManager:
 
     def __init__(self):
         self.display_icons = {}  # A mapping from object_class name to display icon code
-        self.rel_cls_renderers = {}  # A mapping from object_class name list to associated renderer
-        self.obj_group_renderers = {}  # A mapping from class name to associated group renderer
-        self.obj_cls_renderers = {}  # A mapping from class name to associated renderer
+        self._rel_cls_renderers = {}  # A mapping from object_class name list to associated renderer
+        self._group_renderers = {}  # A mapping from class name to associated group renderer
+        self._class_renderers = {}  # A mapping from class name to associated renderer
         self.icon_renderers = {}
 
-    def update_icon_caches(self, object_classes):
-        """Called after adding or updating object classes.
+    def update_icon_caches(self, classes):
+        """Called after adding or updating entity classes.
         Stores display_icons and clears obsolete entries
         from the relationship class and entity group renderer caches."""
-        for object_class in object_classes:
-            self.display_icons[object_class["name"]] = object_class["display_icon"]
-        object_class_names = [x["name"] for x in object_classes]
-        dirty_keys = [k for k in self.rel_cls_renderers if any(x in object_class_names for x in k)]
+        for class_ in classes:
+            self.display_icons[class_["name"]] = class_["display_icon"]
+        class_names = [x["name"] for x in classes]
+        dirty_keys = [k for k in self._rel_cls_renderers if any(x in class_names for x in k)]
         for k in dirty_keys:
-            del self.rel_cls_renderers[k]
-        for name in object_class_names:
-            self.obj_group_renderers.pop(name, None)
-            self.obj_cls_renderers.pop(name, None)
+            del self._rel_cls_renderers[k]
+        for name in class_names:
+            self._group_renderers.pop(name, None)
+            self._class_renderers.pop(name, None)
 
     def _create_icon_renderer(self, icon_code, color_code):
         scene = QGraphicsScene()
@@ -105,19 +105,19 @@ class SpineDBIconManager:
             self._create_icon_renderer(icon_code, color_code)
         return self.icon_renderers[icon_code, color_code]
 
-    def _create_obj_cls_renderer(self, object_class_name):
-        display_icon = self.display_icons.get(object_class_name, -1)
+    def _create_class_renderer(self, class_name):
+        display_icon = self.display_icons.get(class_name, -1)
         icon_code, color_code = interpret_icon_id(display_icon)
-        self.obj_cls_renderers[object_class_name] = self.icon_renderer(chr(icon_code), color_code)
+        self._class_renderers[class_name] = self.icon_renderer(chr(icon_code), color_code)
 
-    def object_renderer(self, object_class_name):
-        if object_class_name not in self.obj_cls_renderers:
-            self._create_obj_cls_renderer(object_class_name)
-        return self.obj_cls_renderers[object_class_name]
+    def class_renderer(self, class_name):
+        if class_name not in self._class_renderers:
+            self._create_class_renderer(class_name)
+        return self._class_renderers[class_name]
 
     def _create_rel_cls_renderer(self, object_class_names):
         if not any(object_class_names):
-            self.rel_cls_renderers[object_class_names] = self.icon_renderer("\uf1b3", 0)
+            self._rel_cls_renderers[object_class_names] = self.icon_renderer("\uf1b3", 0)
             return
         font = QFont('Font Awesome 5 Free Solid')
         scene = QGraphicsScene()
@@ -136,16 +136,19 @@ class SpineDBIconManager:
             text_item.setPos(x, y)
             x += 0.875 * 0.5 * text_item.boundingRect().width()
         _center_scene(scene)
-        self.rel_cls_renderers[object_class_names] = _SceneSvgRenderer.from_scene(scene)
+        self._rel_cls_renderers[object_class_names] = _SceneSvgRenderer.from_scene(scene)
 
-    def relationship_renderer(self, str_object_class_name_list):
+    def relationship_class_renderer(self, rel_cls_name, str_object_class_name_list):
+        display_icon = self.display_icons.get(rel_cls_name)
+        if display_icon is not None:
+            return self.class_renderer(rel_cls_name)
         object_class_names = tuple(str_object_class_name_list.split(","))
-        if object_class_names not in self.rel_cls_renderers:
+        if object_class_names not in self._rel_cls_renderers:
             self._create_rel_cls_renderer(object_class_names)
-        return self.rel_cls_renderers[object_class_names]
+        return self._rel_cls_renderers[object_class_names]
 
-    def _create_obj_group_renderer(self, object_class_name):
-        display_icon = self.display_icons.get(object_class_name, -1)
+    def _create_group_renderer(self, class_name):
+        display_icon = self.display_icons.get(class_name, -1)
         icon_code, color_code = interpret_icon_id(display_icon)
         font = QFont('Font Awesome 5 Free Solid')
         scene = QGraphicsScene()
@@ -159,12 +162,12 @@ class SpineDBIconManager:
                 y += 0.875 * text_item.boundingRect().height()
             x += 0.875 * text_item.boundingRect().width()
         scene.addRect(scene.itemsBoundingRect())
-        self.obj_group_renderers[object_class_name] = _SceneSvgRenderer.from_scene(scene)
+        self._group_renderers[class_name] = _SceneSvgRenderer.from_scene(scene)
 
-    def object_group_renderer(self, object_class_name):
-        if object_class_name not in self.obj_group_renderers:
-            self._create_obj_group_renderer(object_class_name)
-        return self.obj_group_renderers[object_class_name]
+    def group_renderer(self, class_name):
+        if class_name not in self._group_renderers:
+            self._create_group_renderer(class_name)
+        return self._group_renderers[class_name]
 
     @staticmethod
     def icon_from_renderer(renderer):

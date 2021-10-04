@@ -57,7 +57,7 @@ class TestSpineDBEditorUpdateMixin:
         self.put_mock_relationship_classes_in_db_mngr()
         self.fetch_object_tree_model()
         self.fish_dog_class = self._relationship_class(
-            3, "octopus__dog", str(self.fish_class["id"]) + "," + str(self.dog_class["id"]), "octopus,dog"
+            3, "octopus__dog", str(self.fish_class["id"]) + "," + str(self.dog_class["id"]), "octopus,dog", None
         )
         self.db_mngr.relationship_classes_updated.emit({self.mock_db_map: [self.fish_dog_class]})
         root_item = self.spine_db_editor.object_tree_model.root_item

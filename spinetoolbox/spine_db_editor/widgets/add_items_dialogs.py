@@ -192,7 +192,7 @@ class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object_class name', 'description', 'display icon', 'databases'])
         databases = ",".join(list(self.keyed_db_maps.keys()))
-        self.default_display_icon = default_icon_id()
+        self.default_display_icon = None
         self.model.set_default_row(**{'databases': databases, 'display icon': self.default_display_icon})
         self.model.clear()
 
@@ -302,7 +302,7 @@ class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
         super().accept()
 
 
-class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
+class AddRelationshipClassesDialog(ShowIconColorEditorMixin, GetObjectClassesMixin, AddItemsDialog):
     """A dialog to query user's preferences for new relationship classes."""
 
     def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
@@ -335,18 +335,29 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         self.number_of_dimensions = 1
         self.connect_signals()
         self.model.set_horizontal_header_labels(
-            ['object_class name (1)', 'relationship_class name', 'description', 'databases']
+            ['object_class name (1)', 'relationship_class name', 'description', 'display icon', 'databases']
         )
         self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
         object_class_one_name = parent_item.display_data if parent_item.item_type != "root" else None
         db_names = ",".join(x.codename for x in parent_item.db_maps)
-        self.model.set_default_row(**{'object_class name (1)': object_class_one_name, 'databases': db_names})
+        self.default_display_icon = None
+        self.model.set_default_row(
+            **{
+                'object_class name (1)': object_class_one_name,
+                'display_icon': self.default_display_icon,
+                'databases': db_names,
+            }
+        )
         self.model.clear()
 
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
         self.spin_box.valueChanged.connect(self._handle_spin_box_value_changed)
+        # pylint: disable=unnecessary-lambda
+        self.table_view.itemDelegate().icon_color_editor_requested.connect(
+            lambda index: self.show_icon_color_editor(index)
+        )
 
     @Slot(int)
     def _handle_spin_box_value_changed(self, i):
@@ -399,6 +410,7 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
         db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("relationship_class name")
         description_column = self.model.horizontal_header_labels().index("description")
+        display_icon_column = self.model.horizontal_header_labels().index("display icon")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
@@ -407,7 +419,10 @@ class AddRelationshipClassesDialog(GetObjectClassesMixin, AddItemsDialog):
                 self.parent().msg_error.emit("Relationship class missing at row {}".format(i + 1))
                 return
             description = row_data[description_column]
-            pre_item = {'name': relationship_class_name, 'description': description}
+            display_icon = row_data[display_icon_column]
+            if not display_icon:
+                display_icon = self.default_display_icon
+            pre_item = {'name': relationship_class_name, 'description': description, 'display_icon': display_icon}
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
@@ -526,8 +541,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
 
     @Slot(int)
     def reset_model(self, index):
-        """Setup model according to current relationship_class selected in combobox.
-        """
+        """Setup model according to current relationship_class selected in combobox."""
         self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
         object_class_name_list = self.object_class_name_list.split(",")
         header = object_class_name_list + ['relationship name', 'databases']
@@ -617,8 +631,7 @@ class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
 
 
 class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
-    """A dialog to query user's preferences for managing relationships.
-    """
+    """A dialog to query user's preferences for managing relationships."""
 
     def __init__(self, parent, parent_item, db_mngr, *db_maps):
         """
@@ -713,8 +726,7 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
 
     @Slot(int)
     def reset_model(self, index):
-        """Setup model according to current relationship_class selected in combobox.
-        """
+        """Setup model according to current relationship_class selected in combobox."""
         self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
         object_class_name_list = self.object_class_name_list.split(",")
         self.model.set_horizontal_header_labels(object_class_name_list)

@@ -49,7 +49,7 @@ class TestSpineDBEditor(
 
     @staticmethod
     def _relationship_class(*args):
-        return dict(zip(["id", "name", "object_class_id_list", "object_class_name_list"], args))
+        return dict(zip(["id", "name", "object_class_id_list", "object_class_name_list", "display_icon"], args))
 
     @staticmethod
     def _relationship(*args):
@@ -153,12 +153,14 @@ class TestSpineDBEditor(
             "fish__dog",
             str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
             cls.fish_class["name"] + "," + cls.dog_class["name"],
+            None,
         )
         cls.dog_fish_class = cls._relationship_class(
             4,
             "dog__fish",
             str(cls.dog_class["id"]) + "," + str(cls.fish_class["id"]),
             cls.dog_class["name"] + "," + cls.fish_class["name"],
+            None,
         )
         cls.nemo_object = cls._object(1, cls.fish_class["id"], 'nemo', 'The lost one.')
         cls.pluto_object = cls._object(2, cls.dog_class["id"], 'pluto', "Mickey's.")

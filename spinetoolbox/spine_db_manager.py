@@ -202,6 +202,11 @@ class SpineDBManager(QObject):
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
         for item_type, signal in self.updated_signals.items():
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        # Icons
+        self.object_classes_added.connect(self.update_icons)
+        self.object_classes_updated.connect(self.update_icons)
+        self.relationship_classes_added.connect(self.update_icons)
+        self.relationship_classes_updated.connect(self.update_icons)
         self.session_rolled_back.connect(self._clear_fetchers)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
@@ -225,9 +230,6 @@ class SpineDBManager(QObject):
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
-        # Icons
-        self.object_classes_added.connect(self.update_icons)
-        self.object_classes_updated.connect(self.update_icons)
         self._worker.session_rolled_back.connect(self._finish_rolling_back)
         self._worker.connect_signals()
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
@@ -345,8 +347,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
-        for db_map, object_classes in db_map_data.items():
-            self.get_icon_mngr(db_map).update_icon_caches(object_classes)
+        for db_map, classes in db_map_data.items():
+            self.get_icon_mngr(db_map).update_icon_caches(classes)
 
     @property
     def worker_thread(self):
@@ -632,10 +634,12 @@ class SpineDBManager(QObject):
             return None
         if entity_type == "object_class":
             if for_group:
-                return self.get_icon_mngr(db_map).object_group_renderer(entity_class["name"])
-            return self.get_icon_mngr(db_map).object_renderer(entity_class["name"])
+                return self.get_icon_mngr(db_map).group_renderer(entity_class["name"])
+            return self.get_icon_mngr(db_map).class_renderer(entity_class["name"])
         if entity_type == "relationship_class":
-            return self.get_icon_mngr(db_map).relationship_renderer(entity_class["object_class_name_list"])
+            return self.get_icon_mngr(db_map).relationship_class_renderer(
+                entity_class["name"], entity_class["object_class_name_list"]
+            )
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an appropriate icon for a given entity class.
@@ -1868,6 +1872,7 @@ class SpineDBManager(QObject):
                 self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
             )
             item["object_class_id_list"] = ",".join(str(id_) for id_ in item["object_class_id_list"])
+            item["display_icon"] = item.get("display_icon")
         elif item_type == "relationship":
             item["class_name"] = self.get_item(db_map, "relationship_class", item["class_id"])["name"]
             item["object_name_list"] = ",".join(
