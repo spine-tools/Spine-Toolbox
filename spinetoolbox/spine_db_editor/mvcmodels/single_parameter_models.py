@@ -51,6 +51,8 @@ class SingleParameterModel(MinimalTableModel):
         self._auto_filter = dict()  # Maps field to accepted ids for that field
 
     def __lt__(self, other):
+        if self.entity_class_name == other.entity_class_name:
+            return self.db_map.codename < other.db_map.codename
         return self.entity_class_name < other.entity_class_name
 
     @property

@@ -391,7 +391,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return model
 
     def _add_parameter_data(self, db_map, entity_class_id, ids):
-        existing = next((m for m in self.single_models if m.entity_class_id == entity_class_id), None)
+        existing = next(
+            (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+        )
         if existing is not None:
             existing.add_rows(ids)
             return
