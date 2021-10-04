@@ -78,7 +78,7 @@ class EmptyParameterModel(EmptyRowModel):
         return {"parameter_definition": "default_value", "parameter_value": "value"}[self.item_type]
 
     def accepted_rows(self):
-        return list(range(self.rowCount()))
+        return range(self.rowCount())
 
     def db_item(self, _index):  # pylint: disable=no-self-use
         return None

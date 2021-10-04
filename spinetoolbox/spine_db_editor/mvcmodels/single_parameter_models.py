@@ -252,8 +252,10 @@ class SingleParameterModel(MinimalTableModel):
         return True
 
     def accepted_rows(self):
-        """Returns a list of accepted rows, for convenience."""
-        return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
+        """Yields accepted rows, for convenience."""
+        for row in range(self.rowCount()):
+            if self._filter_accepts_row(row):
+                yield row
 
     def _get_field_item(self, field, id_):
         """Returns a item from the db_mngr.get_item depending on the field.

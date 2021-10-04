@@ -123,6 +123,19 @@ class CompoundTableModel(MinimalTableModel):
             self._inv_row_map[model_row_tup] = self.rowCount()
             self._row_map.append(model_row_tup)
 
+    def _row_map_iterator_for_model(self, model):
+        """Yields row map for given model.
+        The base class implementation just yields all model rows.
+
+        Args:
+            model (MinimalTableModel)
+
+        Yields:
+            tuple: (model, row number)
+        """
+        for i in range(model.rowCount()):
+            yield (model, i)
+
     def _row_map_for_model(self, model):
         """Returns row map for given model.
         The base class implementation just returns all model rows.
@@ -133,7 +146,7 @@ class CompoundTableModel(MinimalTableModel):
         Returns:
             list: tuples (model, row number)
         """
-        return [(model, i) for i in range(model.rowCount())]
+        return list(self._row_map_iterator_for_model(model))
 
     def canFetchMore(self, parent):
         """Returns True if any of the submodels that haven't been fetched yet can fetch more."""
@@ -301,8 +314,11 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         """Runs when given model is about to reset."""
         if model not in self.single_models:
             return
-        first = self._inv_row_map[model, 0]
-        last = first + len(self._row_map_for_model(model)) - 1
+        row_map = self._row_map_for_model(model)
+        if not row_map:
+            return
+        first = self._inv_row_map[row_map[0]]
+        last = first + len(row_map) - 1
         self._row_map[first : last + 1] = []
         self.rowsRemoved.emit(QModelIndex(), first, last)
 
@@ -315,7 +331,9 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     def _refresh_single_model(self, model):
         row_map = self._row_map_for_model(model)
-        row = self._inv_row_map[model, 0]
+        if not row_map:
+            return
+        row = self._inv_row_map[row_map[0]]
         self._row_map, before_row_map = self._row_map[:row], self._row_map[row:]
         self._append_row_map(row_map)
         self._append_row_map(before_row_map)
@@ -327,10 +345,11 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             return
         pos = bisect.bisect_left(self.single_models, model)
         before_model = self.sub_models[pos]
-        row = self._inv_row_map.get((before_model, 0), self.rowCount())
-        self._row_map, before_row_map = self._row_map[:row], self._row_map[row:]
+        first_before_row_map_item = next(self._row_map_iterator_for_model(before_model), None)
+        row = self._inv_row_map[first_before_row_map_item] if first_before_row_map_item else self.rowCount()
+        self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
         self._append_row_map(single_row_map)
-        self._append_row_map(before_row_map)
+        self._append_row_map(tail_row_map)
         self.sub_models.insert(pos, model)
         first = row
         last = row + len(single_row_map) - 1

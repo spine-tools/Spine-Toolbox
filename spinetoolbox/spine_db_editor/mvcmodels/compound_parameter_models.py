@@ -308,8 +308,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if model.set_auto_filter(field, values):
             self._invalidate_filter()
 
-    def _row_map_for_model(self, model):
-        """Returns the row map for the given model.
+    def _row_map_iterator_for_model(self, model):
+        """Yields row map for the given model.
         Reimplemented to take filter status into account.
 
         Args:
@@ -319,8 +319,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             list: tuples (model, row number) for each accepted row
         """
         if not self.filter_accepts_model(model):
-            return []
-        return [(model, i) for i in model.accepted_rows()]
+            return ()
+        for i in model.accepted_rows():
+            yield (model, i)
 
     def _models_with_db_map(self, db_map):
         """Returns a collection of single models with given db_map.
