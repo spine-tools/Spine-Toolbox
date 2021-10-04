@@ -290,7 +290,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             pass
         self._append_row_map(empty_row_map)
 
-    @Slot("QModelIndex", "int", "int")
+    @Slot(QModelIndex, int, int)
     def _handle_empty_rows_removed(self, parent, empty_first, empty_last):
         """Runs when rows are removed from the empty model.
         Updates row_map, then emits rowsRemoved so the removed rows are no longer visible.
@@ -300,7 +300,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         self._recompute_empty_row_map()
         self.rowsRemoved.emit(QModelIndex(), first, last)
 
-    @Slot("QModelIndex", "int", "int")
+    @Slot(QModelIndex, int, int)
     def _handle_empty_rows_inserted(self, parent, empty_first, empty_last):
         """Runs when rows are inserted to the empty model.
         Updates row_map, then emits rowsInserted so the new rows become visible.
@@ -319,7 +319,11 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             return
         first = self._inv_row_map[row_map[0]]
         last = first + len(row_map) - 1
-        self._row_map[first : last + 1] = []
+        tail_row_map = self._row_map[last + 1 :]
+        for key in self._row_map[first:]:
+            self._inv_row_map.pop(key)
+        self._row_map[first:] = []
+        self._append_row_map(tail_row_map)
         self.rowsRemoved.emit(QModelIndex(), first, last)
 
     def _handle_single_model_reset(self, model):
@@ -330,14 +334,17 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             self._insert_single_model(model)
 
     def _refresh_single_model(self, model):
-        row_map = self._row_map_for_model(model)
-        if not row_map:
+        single_row_map = self._row_map_for_model(model)
+        if not single_row_map:
             return
-        row = self._inv_row_map[row_map[0]]
-        self._row_map, before_row_map = self._row_map[:row], self._row_map[row:]
-        self._append_row_map(row_map)
-        self._append_row_map(before_row_map)
-        self.rowsInserted.emit(QModelIndex(), row, row + len(row_map) - 1)
+        pos = self.single_models.index(model) + 1
+        before_model = self.sub_models[pos]
+        first_before_row_map_item = next(self._row_map_iterator_for_model(before_model), None)
+        row = self._inv_row_map[first_before_row_map_item] if first_before_row_map_item else self.rowCount()
+        self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
+        self._append_row_map(single_row_map)
+        self._append_row_map(tail_row_map)
+        self.rowsInserted.emit(QModelIndex(), row, row + len(single_row_map) - 1)
 
     def _insert_single_model(self, model):
         single_row_map = self._row_map_for_model(model)
