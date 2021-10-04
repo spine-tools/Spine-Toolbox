@@ -463,8 +463,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     @Slot("QAction")
     def add_heat_map(self, action):
-        """Adds heat map for the parameter in the action text.
-        """
+        """Adds heat map for the parameter in the action text."""
         self._clean_up_heat_map_items()
         point_value_tuples = self._point_value_tuples_per_parameter_name[action.text()]
         x, y, values = zip(*point_value_tuples)
