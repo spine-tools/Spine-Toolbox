@@ -338,26 +338,28 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         if not single_row_map:
             return
         pos = self.single_models.index(model) + 1
-        before_model = self.sub_models[pos]
-        first_before_row_map_item = next(self._row_map_iterator_for_model(before_model), None)
-        row = self._inv_row_map[first_before_row_map_item] if first_before_row_map_item else self.rowCount()
-        self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
-        self._append_row_map(single_row_map)
-        self._append_row_map(tail_row_map)
-        self.rowsInserted.emit(QModelIndex(), row, row + len(single_row_map) - 1)
+        self._insert_row_map(pos, single_row_map)
 
     def _insert_single_model(self, model):
         single_row_map = self._row_map_for_model(model)
         if not single_row_map:
             return
         pos = bisect.bisect_left(self.single_models, model)
-        before_model = self.sub_models[pos]
-        first_before_row_map_item = next(self._row_map_iterator_for_model(before_model), None)
-        row = self._inv_row_map[first_before_row_map_item] if first_before_row_map_item else self.rowCount()
+        self._insert_row_map(pos, single_row_map)
+        self.sub_models.insert(pos, model)
+
+    def _get_row_for_insertion(self, pos):
+        for model in self.sub_models[pos:]:
+            first_row_map_item = next(self._row_map_iterator_for_model(model), None)
+            if first_row_map_item is not None:
+                return self._inv_row_map[first_row_map_item]
+        return self.rowCount()
+
+    def _insert_row_map(self, pos, single_row_map):
+        row = self._get_row_for_insertion(pos)
         self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
         self._append_row_map(single_row_map)
         self._append_row_map(tail_row_map)
-        self.sub_models.insert(pos, model)
         first = row
         last = row + len(single_row_map) - 1
         self.rowsInserted.emit(QModelIndex(), first, last)
