@@ -689,8 +689,7 @@ class CrossHairsItem(RelationshipItem):
 class CrossHairsRelationshipItem(RelationshipItem):
     """Represents the relationship that's being created using the CrossHairsItem."""
 
-    def __init__(self, *args, class_name=None, **kwargs):
-        self._class_name = class_name
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
 
@@ -704,9 +703,7 @@ class CrossHairsRelationshipItem(RelationshipItem):
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         ]
         object_class_name_list = ",".join(object_class_name_list)
-        renderer = self.db_mngr.get_icon_mngr(self.db_map).relationship_class_renderer(
-            self._class_name, object_class_name_list
-        )
+        renderer = self.db_mngr.get_icon_mngr(self.db_map).relationship_class_renderer(None, object_class_name_list)
         self._set_renderer(renderer)
 
     def contextMenuEvent(self, e):
