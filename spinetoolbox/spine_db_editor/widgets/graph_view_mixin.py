@@ -101,7 +101,9 @@ class GraphViewMixin:
         added_ids = {(db_map, x["id"]) for db_map, objects in db_map_data.items() for x in objects}
         restored_ids = self.restore_removed_entities(added_ids)
         added_ids -= restored_ids
-        if added_ids and self._pos_for_added_objects is not None:
+        if not added_ids:
+            return
+        if self._pos_for_added_objects is not None:
             spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
             gen = GraphLayoutGenerator(None, len(added_ids), spread=spread)
             gen.run()
@@ -126,7 +128,9 @@ class GraphViewMixin:
         added_ids = {(db_map, x["id"]) for db_map, relationships in db_map_data.items() for x in relationships}
         restored_ids = self.restore_removed_entities(added_ids)
         added_ids -= restored_ids
-        if added_ids and self._adding_relationships:
+        if not added_ids:
+            return
+        if self._adding_relationships:
             self.added_relationship_ids.update(added_ids)
             self.build_graph(persistent=True)
             self._end_add_relationships()
