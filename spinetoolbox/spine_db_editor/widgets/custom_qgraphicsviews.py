@@ -265,7 +265,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.hidden_items[key] = self.selected_items
         self._show_hidden_menu.addAction(key)
         for item in self.selected_items:
-            item.set_all_visible(False)
+            item.setVisible(False)
 
     @Slot("QAction")
     def _hide_class(self, action):
@@ -275,7 +275,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.hidden_items[key] = items
         self._show_hidden_menu.addAction(key)
         for item in items:
-            item.set_all_visible(False)
+            item.setVisible(False)
 
     @Slot(bool)
     def show_all_hidden_items(self, checked=False):
@@ -285,7 +285,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         while self.hidden_items:
             _, items = self.hidden_items.popitem()
             for item in items:
-                item.set_all_visible(True)
+                item.setVisible(True)
 
     @Slot("QAction")
     def show_hidden_items(self, action):
@@ -296,7 +296,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             action = next(iter(a for a in self._show_hidden_menu.actions() if a.text() == key))
             self._show_hidden_menu.removeAction(action)
             for item in items:
-                item.set_all_visible(True)
+                item.setVisible(True)
 
     @Slot(bool)
     def prune_selected_items(self, checked=False):

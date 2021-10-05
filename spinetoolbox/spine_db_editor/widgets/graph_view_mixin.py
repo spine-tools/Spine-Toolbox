@@ -202,7 +202,7 @@ class GraphViewMixin:
         restored_items = [item for item in self.ui.graphicsView.removed_items if item.db_map_entity_id in added_ids]
         for item in restored_items:
             self.ui.graphicsView.removed_items.remove(item)
-            item.set_all_visible(True)
+            item.setVisible(True)
         return {item.db_map_entity_id for item in restored_items}
 
     def hide_removed_entities(self, db_map_data):
@@ -221,7 +221,7 @@ class GraphViewMixin:
         scene = self.scene
         self.scene = None
         for item in removed_items:
-            item.set_all_visible(False)
+            item.setVisible(False)
         self.scene = scene
 
     def refresh_icons(self, db_map_data):

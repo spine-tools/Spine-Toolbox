@@ -278,15 +278,15 @@ class EntityItem(QGraphicsRectItem):
             self._moved_on_scene = True
         return value
 
-    def set_all_visible(self, on):
+    def setVisible(self, on):
         """Sets visibility status for this item and all arc items.
 
         Args:
             on (bool)
         """
-        for item in self.arc_items:
-            item.setVisible(on)
-        self.setVisible(on)
+        super().setVisible(on)
+        for arc_item in self.arc_items:
+            arc_item.setVisible(arc_item.obj_item.isVisible() and arc_item.rel_item.isVisible())
 
     def _make_menu(self):
         return self._spine_db_editor.ui.graphicsView.make_items_menu()
