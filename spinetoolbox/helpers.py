@@ -116,7 +116,7 @@ def add_message_to_document(document, message):
 
 
 def busy_effect(func):
-    """ Decorator to change the mouse cursor to 'busy' while a function is processed.
+    """Decorator to change the mouse cursor to 'busy' while a function is processed.
 
     Args:
         func (Callable): Decorated function.
@@ -1038,7 +1038,7 @@ def get_upgrade_db_promt_text(url, current, expected):
     text = (
         f"The database at <b>{url}</b> is at revision <b>{current}</b> and needs to be "
         f"upgraded to revision <b>{expected}</b> in order to be used with the current "
-        f"version of Spine Toolbox."
+        "version of Spine Toolbox."
     )
     info_text = (
         "Do you want to upgrade the database now?"
@@ -1310,3 +1310,7 @@ class CacheItem(dict):
 
     def _asdict(self):
         return dict(**self)
+
+
+def preferred_row_height(widget, factor=1.5):
+    return factor * widget.fontMetrics().lineSpacing()

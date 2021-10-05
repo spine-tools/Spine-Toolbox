@@ -25,13 +25,14 @@ from PySide2.QtWidgets import (
     QStyledItemDelegate,
 )
 from ...widgets.custom_editors import SearchBarEditor
+from ...helpers import preferred_row_height
 
 
 class SelectPositionParametersDialog(QDialog):
 
     selection_made = Signal(str, str)
 
-    def __init__(self, parent):
+    def __init__(self, parent, pos_x_parameter, pos_y_parameter):
         super().__init__(parent)
         self.setWindowTitle("Select position parameters")
         button_box = QDialogButtonBox(self)
@@ -39,11 +40,11 @@ class SelectPositionParametersDialog(QDialog):
         layout = QVBoxLayout(self)
         self._table_widget = QTableWidget(1, 2, self)
         self._table_widget.setHorizontalHeaderLabels(["Position x", "Position y"])
-        self._table_widget.setItem(0, 0, QTableWidgetItem(parent._pos_x_parameter))
-        self._table_widget.setItem(0, 1, QTableWidgetItem(parent._pos_y_parameter))
+        self._table_widget.setItem(0, 0, QTableWidgetItem(pos_x_parameter))
+        self._table_widget.setItem(0, 1, QTableWidgetItem(pos_y_parameter))
         self._table_widget.horizontalHeader().setStretchLastSection(True)
         self._table_widget.verticalHeader().hide()
-        self._table_widget.verticalHeader().setDefaultSectionSize(parent.default_row_height)
+        self._table_widget.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
         self._delegate = ParameterNameDelegate(self, parent.db_mngr, *parent.db_maps)
         self._table_widget.setItemDelegate(self._delegate)
         layout.addWidget(self._table_widget)

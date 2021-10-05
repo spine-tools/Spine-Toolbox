@@ -57,6 +57,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.auto_expand_objects = None
         self._auto_expand_objects_action = None
         self._add_objects_action = None
+        self._select_pos_param_action = None
         self._save_pos_action = None
         self._clear_pos_action = None
         self._hide_selected_action = None
@@ -117,6 +118,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.addSeparator()
         self._add_objects_action = self._menu.addAction("Add objects", self.add_objects_at_position)
         self._menu.addSeparator()
+        self._select_pos_param_action = self._menu.addAction(
+            "Select position parameters...", self.select_position_parameters
+        )
         self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
         self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
         self._menu.addSeparator()
@@ -338,7 +342,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     @Slot(bool)
     def select_position_parameters(self, checked=False):
-        dialog = SelectPositionParametersDialog(self._spine_db_editor)
+        dialog = SelectPositionParametersDialog(self._spine_db_editor, self.pos_x_parameter, self.pos_y_parameter)
         dialog.show()
         dialog.selection_made.connect(self._set_position_parameters)
 
@@ -365,24 +369,29 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for db_map, class_obj_items in db_map_class_obj_items.items():
             data = db_map_data.setdefault(db_map, {})
             for class_name, obj_items in class_obj_items.items():
-                data["object_parameters"] = [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
-                data["object_parameter_values"] = [
-                    (class_name, item.entity_name, self.pos_x_parameter, item.pos().x()) for item in obj_items
-                ] + [(class_name, item.entity_name, self.pos_y_parameter, item.pos().y()) for item in obj_items]
+                data.setdefault("object_parameters", []).extend(
+                    [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
+                )
+                data.setdefault("object_parameter_values", []).extend(
+                    [(class_name, item.entity_name, self.pos_x_parameter, item.pos().x()) for item in obj_items]
+                    + [(class_name, item.entity_name, self.pos_y_parameter, item.pos().y()) for item in obj_items]
+                )
         for db_map, class_rel_items in db_map_class_rel_items.items():
             data = db_map_data.setdefault(db_map, {})
             for class_name, rel_items in class_rel_items.items():
-                data["relationship_parameters"] = [
-                    (class_name, self.pos_x_parameter),
-                    (class_name, self.pos_y_parameter),
-                ]
-                data["relationship_parameter_values"] = [
-                    (class_name, item.object_name_list.split(","), self.pos_x_parameter, item.pos().x())
-                    for item in rel_items
-                ] + [
-                    (class_name, item.object_name_list.split(","), self.pos_y_parameter, item.pos().y())
-                    for item in rel_items
-                ]
+                data.setdefault("relationship_parameters", []).extend(
+                    [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
+                )
+                data.setdefault("relationship_parameter_values", []).extend(
+                    [
+                        (class_name, item.object_name_list.split(","), self.pos_x_parameter, item.pos().x())
+                        for item in rel_items
+                    ]
+                    + [
+                        (class_name, item.object_name_list.split(","), self.pos_y_parameter, item.pos().y())
+                        for item in rel_items
+                    ]
+                )
         self.db_mngr.import_data(db_map_data)
 
     @Slot(bool)

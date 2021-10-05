@@ -33,6 +33,7 @@ from ..mvcmodels.pivot_table_models import (
     ScenarioAlternativePivotTableModel,
 )
 from ..mvcmodels.frozen_table_model import FrozenTableModel
+from ...helpers import busy_effect, preferred_row_height
 
 # FIXME: only_visible=False???
 
@@ -67,7 +68,7 @@ class TabularViewMixin:
         self.ui.pivot_table.setModel(self.pivot_table_proxy)
         self.ui.pivot_table.connect_spine_db_editor(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
-        self.ui.frozen_table.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.frozen_table.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
 
     def populate_pivot_action_group(self):
         self.pivot_actions = {
@@ -676,8 +677,7 @@ class TabularViewMixin:
 
     @Slot("QModelIndex", "QModelIndex")
     def change_frozen_value(self, current, previous):
-        """Sets the frozen value from selection in frozen table.
-        """
+        """Sets the frozen value from selection in frozen table."""
         frozen_value = self.get_frozen_value(current)
         self.pivot_table_model.set_frozen_value(frozen_value)
         # store pivot preferences

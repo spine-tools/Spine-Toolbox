@@ -56,6 +56,7 @@ from ...helpers import (
     call_on_focused_widget,
     busy_effect,
     CharIconEngine,
+    preferred_row_height,
 )
 from ...spine_db_parcel import SpineDBParcel
 from ...config import APPLICATION_PATH
@@ -105,9 +106,9 @@ class SpineDBEditorBase(QMainWindow):
         self.notification_stack = NotificationStack(self)
         self.silenced = False
         fm = QFontMetrics(QFont("", 0))
-        self.default_row_height = 1.2 * fm.lineSpacing()
+        self.default_row_height = 1.5 * self.fontMetrics().lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
-        self.visible_rows = int(max_screen_height / self.default_row_height)
+        self.visible_rows = int(max_screen_height / preferred_row_height(self))
         self.settings_group = "spineDBEditor"
         self.undo_action = None
         self.redo_action = None

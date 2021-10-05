@@ -32,6 +32,7 @@ from ...widgets.plot_widget import PlotWidget, _prepare_plot_in_window_menu
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
 from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...plotting import plot_selection, PlottingError, ParameterTablePlottingHints, PivotTablePlottingHints
+from ...helpers import preferred_row_height
 from .pivot_table_header_view import (
     PivotTableHeaderView,
     ParameterValuePivotHeaderView,
@@ -70,8 +71,7 @@ class ParameterTableView(AutoFilterCopyPasteTableView):
 
     @property
     def value_column_header(self):
-        """Either "default value" or "value". Used to identifiy the value column for advanced editting and plotting.
-        """
+        """Either "default value" or "value". Used to identifiy the value column for advanced editting and plotting."""
         raise NotImplementedError()
 
     def connect_spine_db_editor(self, spine_db_editor):
@@ -361,7 +361,7 @@ class PivotTableView(CopyPasteTableView):
             self._menu = QMenu(self._view)
             self.populate_context_menu()
             horizontal_header.setResizeContentsPrecision(self._db_editor.visible_rows)
-            vertical_header.setDefaultSectionSize(self._db_editor.default_row_height)
+            vertical_header.setDefaultSectionSize(preferred_row_height(self._view))
             self._view.setHorizontalHeader(horizontal_header)
             self._view.setVerticalHeader(vertical_header)
             self._view.header_changed.emit()
@@ -650,7 +650,7 @@ class PivotTableView(CopyPasteTableView):
             self._remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
 
     class _ScenarioAlternativeContext(_ContextBase):
-        """Context for presenting scenarios and alternatives """
+        """Context for presenting scenarios and alternatives"""
 
         def __init__(self, view, db_editor):
             """
