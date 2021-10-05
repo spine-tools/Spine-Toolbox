@@ -388,6 +388,7 @@ class RelationshipItem(EntityItem):
 
     def _rotate_svg_item(self):
         if len(self.arc_items) != 2:
+            self._svg_item.setRotation(0)
             return
         arc1, arc2 = self.arc_items  # pylint: disable=unbalanced-tuple-unpacking
         obj1, obj2 = arc1.obj_item, arc2.obj_item
