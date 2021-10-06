@@ -19,7 +19,6 @@ Contains SpineEngineManagerBase.
 import socket
 import json
 
-#from spinetoolbox.server.RemoteSpineEngineManager2 import RemoteSpineEngineManager2
 
 class SpineEngineManagerBase:
     def run_engine(self, engine_data):
@@ -274,6 +273,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         from spine_engine.execution_managers.persistent_execution_manager import get_persistent_history_item
 
         return get_persistent_history_item(persistent_key, index)
+
 
 from spinetoolbox.server.RemoteSpineEngineManager2 import RemoteSpineEngineManager2
 

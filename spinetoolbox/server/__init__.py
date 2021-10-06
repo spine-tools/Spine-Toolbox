@@ -10,7 +10,6 @@
 ######################################################################################################################
 
 """
-This package contains utility classes of remote server part of the Toolkit
 :authors: P. Pääkkönen (VTT)
 :date:    02.09.2021
 """
