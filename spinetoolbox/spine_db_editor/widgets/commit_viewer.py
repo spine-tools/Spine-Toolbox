@@ -121,6 +121,7 @@ class _CommitContents(QTreeWidget):
         scroll_bar = self.horizontalScrollBar()
         if scroll_bar.isVisible():
             height += scroll_bar.height()
+        height = min(size.height(), height)
         size.setHeight(height)
         return size
 

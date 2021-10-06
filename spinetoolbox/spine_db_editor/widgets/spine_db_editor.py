@@ -43,7 +43,6 @@ from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
-from .db_session_history_dialog import DBSessionHistoryDialog
 from .url_toolbar import UrlToolBar
 from ...widgets.notification import ChangeNotifier
 from ...widgets.notification import NotificationStack
@@ -385,11 +384,6 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRollback.setEnabled(dirty)
         self.setWindowModified(dirty)
         self.windowTitleChanged.emit(self.windowTitle())
-
-    @Slot(bool)
-    def show_history_dialog(self, checked=False):
-        dialog = DBSessionHistoryDialog(self, self.db_mngr, *self.db_maps)
-        dialog.show()
 
     def init_models(self):
         """Initializes models."""
