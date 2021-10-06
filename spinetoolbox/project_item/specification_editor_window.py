@@ -16,7 +16,7 @@ Contains SpecificationEditorWindowBase and ChangeSpecPropertyCommand
 :date:   12.4.2018
 """
 
-from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
+from PySide2.QtGui import QKeySequence, QIcon
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import (
     QMainWindow,
@@ -35,7 +35,7 @@ from PySide2.QtWidgets import (
 )
 from spinetoolbox.config import STATUSBAR_SS
 from spinetoolbox.widgets.notification import ChangeNotifier
-from spinetoolbox.helpers import ensure_window_is_on_screen, CharIconEngine
+from spinetoolbox.helpers import CharIconEngine, restore_ui, save_ui
 
 
 class ChangeSpecPropertyCommand(QUndoCommand):
@@ -364,51 +364,3 @@ def prompt_to_save_changes(parent, settings, save_callback):
     if answer == QMessageBox.Yes:
         return save_callback()
     return True
-
-
-def restore_ui(window, app_settings, settings_group):
-    """Restores UI state from previous session.
-
-    Args:
-        window (QMainWindow)
-        app_settings (QSettings)
-        settings_group (str)
-    """
-    app_settings.beginGroup(settings_group)
-    window_size = app_settings.value("windowSize")
-    window_pos = app_settings.value("windowPosition")
-    window_state = app_settings.value("windowState")
-    window_maximized = app_settings.value("windowMaximized", defaultValue='false')
-    n_screens = app_settings.value("n_screens", defaultValue=1)
-    app_settings.endGroup()
-    original_size = window.size()
-    if window_size:
-        window.resize(window_size)
-    if window_pos:
-        window.move(window_pos)
-    if window_state:
-        window.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
-    # noinspection PyArgumentList
-    if len(QGuiApplication.screens()) < int(n_screens):
-        # There are less screens available now than on previous application startup
-        window.move(0, 0)  # Move this widget to primary screen position (0,0)
-    ensure_window_is_on_screen(window, original_size)
-    if window_maximized == 'true':
-        window.setWindowState(Qt.WindowMaximized)
-
-
-def save_ui(window, app_settings, settings_group):
-    """Saves UI state for next session.
-
-    Args:
-        window (QMainWindow)
-        app_settings (QSettings)
-        settings_group (str)
-    """
-    app_settings.beginGroup(settings_group)
-    app_settings.setValue("windowSize", window.size())
-    app_settings.setValue("windowPosition", window.pos())
-    app_settings.setValue("windowState", window.saveState(version=1))
-    app_settings.setValue("windowMaximized", window.windowState() == Qt.WindowMaximized)
-    app_settings.setValue("n_screens", len(QGuiApplication.screens()))
-    app_settings.endGroup()

@@ -1777,6 +1777,11 @@ class SpineDBManager(QObject):
     def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
         return self._worker.get_metadata_per_parameter_value(db_map, parameter_value_ids)
 
+    def get_items_for_commit(self, db_map, commit_id):
+        fetcher = self._get_fetcher(db_map)
+        fetcher.fetch_all()
+        return fetcher.commit_cache.get(commit_id, {})
+
     @staticmethod
     def get_all_multi_spine_db_editors():
         """Yields all instances of MultiSpineDBEditor currently open.

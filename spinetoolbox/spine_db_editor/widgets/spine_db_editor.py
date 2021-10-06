@@ -33,10 +33,11 @@ from PySide2.QtWidgets import (
     QInputDialog,
 )
 from PySide2.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QKeySequence, QIcon
+from PySide2.QtGui import QGuiApplication, QKeySequence, QIcon
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from .custom_menus import MainMenu
+from .commit_viewer import CommitViewer
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .parameter_view_mixin import ParameterViewMixin
 from .tree_view_mixin import TreeViewMixin
@@ -105,8 +106,6 @@ class SpineDBEditorBase(QMainWindow):
         self.err_msg.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self.notification_stack = NotificationStack(self)
         self.silenced = False
-        fm = QFontMetrics(QFont("", 0))
-        self.default_row_height = 1.5 * self.fontMetrics().lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / preferred_row_height(self))
         self.settings_group = "spineDBEditor"
@@ -325,6 +324,10 @@ class SpineDBEditorBase(QMainWindow):
         # Add actions to activate shortcuts
         self.addActions([menu_action, *actions])
 
+    def _browse_commits(self):
+        browser = CommitViewer(self, self.db_mngr, *self.db_maps)
+        browser.show()
+
     def connect_signals(self):
         """Connects signals to slots."""
         # Message signals
@@ -334,7 +337,7 @@ class SpineDBEditorBase(QMainWindow):
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
-        self.ui.actionView_history.triggered.connect(self.show_history_dialog)
+        self.ui.actionView_history.triggered.connect(self._browse_commits)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
         self.ui.actionOpen_db_file.triggered.connect(self.open_db_file)
@@ -380,7 +383,6 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionExport_session.setEnabled(dirty)
         self.ui.actionCommit.setEnabled(dirty)
         self.ui.actionRollback.setEnabled(dirty)
-        self.ui.actionView_history.setEnabled(dirty)
         self.setWindowModified(dirty)
         self.windowTitleChanged.emit(self.windowTitle())
 

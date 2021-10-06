@@ -92,92 +92,57 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_scenarios(self):
         self._import_data(scenarios=("scenario",))
         self._fetch()
-        self._listener.receive_scenarios_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 1,
-                        'name': 'scenario',
-                        'description': None,
-                        'active': False,
-                        'alternative_id_list': None,
-                        'alternative_name_list': None,
-                    }
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "scenario", 1),
-            {
-                'active': False,
-                'alternative_id_list': None,
-                'alternative_name_list': None,
-                'description': None,
-                'id': 1,
-                'name': 'scenario',
-            },
-        )
+        item = {
+            'id': 1,
+            'name': 'scenario',
+            'description': None,
+            'active': False,
+            'alternative_id_list': None,
+            'alternative_name_list': None,
+            'commit_id': 2,
+        }
+        self._listener.receive_scenarios_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario", 1), item)
 
     def test_fetch_scenario_alternatives(self):
         self._import_data(alternatives=("alt",), scenarios=("scenario",), scenario_alternatives=(("scenario", "alt"),))
         self._fetch()
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "scenario_alternative", 1),
-            {
-                'id': 1,
-                'scenario_id': 1,
-                'scenario_name': 'scenario',
-                'alternative_id': 2,
-                'alternative_name': 'alt',
-                'rank': 1,
-                'before_alternative_id': None,
-                'before_rank': None,
-                'before_alternative_name': None,
-            },
-        )
+        item = {
+            'id': 1,
+            'scenario_id': 1,
+            'scenario_name': 'scenario',
+            'alternative_id': 2,
+            'alternative_name': 'alt',
+            'rank': 1,
+            'before_alternative_id': None,
+            'before_rank': None,
+            'before_alternative_name': None,
+            'commit_id': 2,
+        }
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario_alternative", 1), item)
 
     def test_fetch_object_classes(self):
         self._import_data(object_classes=("oc",))
         self._fetch()
-        self._listener.receive_object_classes_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 1,
-                        'name': 'oc',
-                        'description': None,
-                        'display_order': 99,
-                        'display_icon': None,
-                        'hidden': 0,
-                        'commit_id': 2,
-                    }
-                ]
-            }
-        )
+        item = {
+            'id': 1,
+            'name': 'oc',
+            'description': None,
+            'display_order': 99,
+            'display_icon': None,
+            'hidden': 0,
+            'commit_id': 2,
+        }
+        self._listener.receive_object_classes_added.assert_any_call({self._db_map: [item]})
         self.assertIsInstance(self._db_mngr.entity_class_icon(self._db_map, "object_class", 1), QIcon)
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "object_class", 1),
-            {
-                'commit_id': 2,
-                'description': None,
-                'display_icon': None,
-                'display_order': 99,
-                'hidden': 0,
-                'id': 1,
-                'name': 'oc',
-            },
-        )
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "object_class", 1), item)
 
     def test_fetch_objects(self):
         self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
         self._fetch()
-        self._listener.receive_objects_added.assert_any_call(
-            {self._db_map: [{'id': 1, 'class_id': 1, 'class_name': 'oc', 'name': 'obj', 'description': None}]}
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "object", 1),
-            {'class_id': 1, 'class_name': 'oc', 'description': None, 'id': 1, 'name': 'obj'},
-        )
+        item = {'id': 1, 'class_id': 1, 'class_name': 'oc', 'name': 'obj', 'description': None, 'commit_id': 2}
+        self._listener.receive_objects_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "object", 1), item)
 
     def test_fetch_relationship_classes(self):
         self._import_data(object_classes=("oc",), relationship_classes=(("rc", ("oc",)),))
@@ -189,6 +154,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'object_class_id_list': '1',
             'object_class_name_list': 'oc',
             'display_icon': None,
+            'commit_id': 2,
         }
         self._listener.receive_relationship_classes_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "relationship_class", 2), item)
@@ -210,6 +176,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'object_name_list': 'obj',
             'object_class_id_list': '1',
             'object_class_name_list': 'oc',
+            'commit_id': 2,
         }
         self._listener.receive_relationships_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "relationship", 2), item)
@@ -252,6 +219,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'default_value': None,
             'default_type': None,
             'description': None,
+            'commit_id': 2,
         }
         self._listener.receive_parameter_definitions_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_definition", 1), item)
@@ -287,6 +255,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'alternative_name': 'Base',
             'value': b'2.3',
             'type': None,
+            'commit_id': 2,
         }
         self._listener.receive_parameter_values_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value", 1), item)
@@ -294,13 +263,9 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_parameter_value_lists(self):
         self._import_data(parameter_value_lists=(("value_list", (2.3,)),))
         self._fetch()
-        self._listener.receive_parameter_value_lists_added.assert_any_call(
-            {self._db_map: [{'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_list': '[2.3]'}]}
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "parameter_value_list", 1),
-            {'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_list': '[2.3]'},
-        )
+        item = {'id': 1, 'name': 'value_list', 'value_index_list': '0', 'value_list': '[2.3]', 'commit_id': 2}
+        self._listener.receive_parameter_value_lists_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value_list", 1), item)
 
     def test_fetch_features(self):
         self._import_data(
@@ -310,46 +275,26 @@ class TestSpineDBFetcher(unittest.TestCase):
             features=(("oc", "param"),),
         )
         self._fetch()
-        self._listener.receive_features_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 1,
-                        'entity_class_id': 1,
-                        'entity_class_name': 'oc',
-                        'parameter_definition_id': 1,
-                        'parameter_definition_name': 'param',
-                        'parameter_value_list_id': 1,
-                        'parameter_value_list_name': 'value_list',
-                        'description': None,
-                    }
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "feature", 1),
-            {
-                'description': None,
-                'entity_class_id': 1,
-                'entity_class_name': 'oc',
-                'id': 1,
-                'parameter_definition_id': 1,
-                'parameter_definition_name': 'param',
-                'parameter_value_list_id': 1,
-                'parameter_value_list_name': 'value_list',
-            },
-        )
+        item = {
+            'id': 1,
+            'entity_class_id': 1,
+            'entity_class_name': 'oc',
+            'parameter_definition_id': 1,
+            'parameter_definition_name': 'param',
+            'parameter_value_list_id': 1,
+            'parameter_value_list_name': 'value_list',
+            'description': None,
+            'commit_id': 2,
+        }
+        self._listener.receive_features_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "feature", 1), item)
 
     def test_fetch_tools(self):
         self._import_data(tools=("tool",))
         self._fetch()
-        self._listener.receive_tools_added.assert_any_call(
-            {self._db_map: [{'id': 1, 'name': 'tool', 'description': None, 'commit_id': 2}]}
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "tool", 1),
-            {'commit_id': 2, 'description': None, 'id': 1, 'name': 'tool'},
-        )
+        item = {'id': 1, 'name': 'tool', 'description': None, 'commit_id': 2}
+        self._listener.receive_tools_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "tool", 1), item)
 
     def test_fetch_tool_features(self):
         self._import_data(
@@ -361,41 +306,22 @@ class TestSpineDBFetcher(unittest.TestCase):
             tool_features=(("tool", "oc", "param"),),
         )
         self._fetch()
-        self._listener.receive_tool_features_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        'id': 1,
-                        'tool_id': 1,
-                        'tool_name': 'tool',
-                        'feature_id': 1,
-                        'entity_class_id': 1,
-                        'entity_class_name': 'oc',
-                        'parameter_definition_id': 1,
-                        'parameter_definition_name': 'param',
-                        'parameter_value_list_id': 1,
-                        'parameter_value_list_name': 'value_list',
-                        'required': False,
-                    }
-                ]
-            }
-        )
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "tool_feature", 1),
-            {
-                'id': 1,
-                'tool_id': 1,
-                'tool_name': 'tool',
-                'feature_id': 1,
-                'entity_class_id': 1,
-                'entity_class_name': 'oc',
-                'parameter_definition_id': 1,
-                'parameter_definition_name': 'param',
-                'parameter_value_list_id': 1,
-                'parameter_value_list_name': 'value_list',
-                'required': False,
-            },
-        )
+        item = {
+            'id': 1,
+            'tool_id': 1,
+            'tool_name': 'tool',
+            'feature_id': 1,
+            'entity_class_id': 1,
+            'entity_class_name': 'oc',
+            'parameter_definition_id': 1,
+            'parameter_definition_name': 'param',
+            'parameter_value_list_id': 1,
+            'parameter_value_list_name': 'value_list',
+            'required': False,
+            'commit_id': 2,
+        }
+        self._listener.receive_tool_features_added.assert_any_call({self._db_map: [item]})
+        self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature", 1), item)
 
     def test_fetch_tool_feature_methods(self):
         self._import_data(
@@ -422,6 +348,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             'parameter_value_list_name': 'value_list',
             'method_index': 0,
             'method': b'"m"',
+            'commit_id': 2,
         }
         self._listener.receive_tool_feature_methods_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "tool_feature_method", 1), item)

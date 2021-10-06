@@ -17,7 +17,6 @@ QUndoCommand subclasses for modifying the db.
 """
 
 import time
-from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QUndoCommand, QUndoStack
 from spinetoolbox.helpers import signal_waiter
 
@@ -204,8 +203,7 @@ class SpineDBCommand(AgedUndoCommand):
 
     @staticmethod
     def undomethod(func):
-        """Returns a new undo method that silences the affected Spine db editors.
-        """
+        """Returns a new undo method that silences the affected Spine db editors."""
 
         def undo(self):
             super().undo()
