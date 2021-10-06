@@ -21,15 +21,6 @@ from PySide2.QtWidgets import QUndoCommand, QUndoStack
 from spinetoolbox.helpers import signal_waiter
 
 
-def _format_item(item_type, item):
-    return {
-        "parameter_value": lambda x: "<"
-        + ", ".join([x.get("object_name") or x.get("object_name_list"), x["parameter_name"]])
-        + ">",
-        "parameter_definition": lambda x: x.get("parameter_name") or x.get("name"),
-    }.get(item_type, lambda x: x["name"])(item)
-
-
 class AgedUndoStack(QUndoStack):
     @property
     def redo_age(self):
@@ -214,10 +205,6 @@ class SpineDBCommand(AgedUndoCommand):
     def receive_items_changed(self, _):
         raise NotImplementedError()
 
-    def data(self):
-        """Returns data to present this command in a DBHistoryDialog."""
-        raise NotImplementedError()
-
 
 class AddItemsCommand(SpineDBCommand):
     def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
@@ -274,9 +261,6 @@ class AddItemsCommand(SpineDBCommand):
             for db_map, data in db_map_data.items()
         }
 
-    def data(self):
-        return {_format_item(self.item_type, item): [] for item in self.redo_db_map_data[self.db_map]}
-
 
 class UpdateItemsCommand(SpineDBCommand):
     def __init__(self, db_mngr, db_map, data, item_type, parent=None, check=True):
@@ -330,9 +314,6 @@ class UpdateItemsCommand(SpineDBCommand):
         }
         self._check = False
 
-    def data(self):
-        return {_format_item(self.item_type, item): [] for item in self.undo_db_map_data[self.db_map]}
-
 
 class RemoveItemsCommand(SpineDBCommand):
     def __init__(self, db_mngr, db_map, typed_data, parent=None):
@@ -377,10 +358,4 @@ class RemoveItemsCommand(SpineDBCommand):
                 self.db_map: [self.db_mngr.cache_to_db(item_type, item) for item in db_map_data.get(self.db_map, [])]
             }
             for item_type, db_map_data in typed_db_map_data.items()
-        }
-
-    def data(self):
-        return {
-            item_type: [_format_item(item_type, item) for item in self.undo_typed_db_map_data[item_type][self.db_map]]
-            for item_type in reversed(list(self.undo_typed_db_map_data.keys()))
         }
