@@ -22,7 +22,7 @@ from PySide2.QtCore import QItemSelectionModel
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
-from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
+from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView, system_lc_numeric
 
 
 class TestIndexedValueTableView(unittest.TestCase):
@@ -54,7 +54,8 @@ class TestIndexedValueTableView(unittest.TestCase):
         selection_model.select(model.index(2, 0), QItemSelectionModel.Select)
         self._table_view.copy()
         copied = QApplication.clipboard().text()
-        self.assertEqual(copied, "2019-08-08T12:00:00\t\r\n\t{:n}\r\n2019-08-08T14:00:00\t\r\n".format(2.2))
+        with system_lc_numeric():
+            self.assertEqual(copied, f"2019-08-08T12:00:00\t\r\n\t{locale.str(2.2)}\r\n2019-08-08T14:00:00\t\r\n")
 
     def test_paste_single_value(self):
         selection_model = self._table_view.selectionModel()

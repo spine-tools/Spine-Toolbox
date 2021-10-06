@@ -16,7 +16,8 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:    4.4.2018
 """
 
-from PySide2.QtCore import Qt, QPointF, QRectF, QParallelAnimationGroup
+import math
+from PySide2.QtCore import Qt, QPointF, QRectF, QParallelAnimationGroup, QLineF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -50,10 +51,11 @@ class ProjectItemIcon(QGraphicsRectItem):
         super().__init__()
         self._toolbox = toolbox
         self._scene = None
+        self._bumping = True
+        self.bumped_rects = {}  # Item rect before it was bumped
         self.icon_file = icon_file
         self._moved_on_scene = False
         self.previous_pos = QPointF()
-        self.current_pos = QPointF()
         self.icon_group = {self}
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem(self)
@@ -159,7 +161,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         font.setPointSize(self.text_font_size)
         font.setBold(True)
         self.name_item.setFont(font)
-        self._reposition_name_item()
 
     def _reposition_name_item(self):
         """Set name item position (centered on top of the master icon)."""
@@ -228,22 +229,28 @@ class ProjectItemIcon(QGraphicsRectItem):
         event.accept()
 
     def mousePressEvent(self, event):
+        """Updates scene's icon group."""
         super().mousePressEvent(event)
-        self.icon_group = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)) | {self}
-        for icon in self.icon_group:
+        icon_group = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)) | {self}
+        for icon in icon_group:
             icon.previous_pos = icon.scenePos()
+        self.scene().icon_group = icon_group
 
     def update_links_geometry(self):
         """Updates geometry of connected links to reflect this item's most recent position."""
-        links = set(link for icon in self.icon_group for conn in icon.connectors.values() for link in conn.links)
+        if not self.scene():
+            return
+        icon_group = self.scene().icon_group | {self}
+        links = set(link for icon in icon_group for conn in icon.connectors.values() for link in conn.links)
         for link in links:
             link.update_geometry()
 
     def mouseReleaseEvent(self, event):
-        for icon in self.icon_group:
-            icon.current_pos = icon.scenePos()
+        """Clears pre-bump rects, and pushes a move icon command if necessary."""
+        for icon in self.scene().icon_group:
+            icon.bumped_rects.clear()
         # pylint: disable=undefined-variable
-        if (self.current_pos - self.previous_pos).manhattanLength() > qApp.startDragDistance():
+        if (self.scenePos() - self.previous_pos).manhattanLength() > qApp.startDragDistance():
             self._toolbox.undo_stack.push(MoveIconCommand(self, self._toolbox.project()))
             event.ignore()
         super().mouseReleaseEvent(event)
@@ -282,6 +289,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         if change == QGraphicsItem.ItemScenePositionHasChanged:
             self._moved_on_scene = True
+            self._reposition_name_item()
+            self.update_links_geometry()
+            self._handle_collisions()
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
@@ -292,10 +302,55 @@ class ProjectItemIcon(QGraphicsRectItem):
             else:
                 self._scene = scene
                 self._scene.addItem(self.name_item)
-        elif change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
-            self.update_links_geometry()
-            self._reposition_name_item()
+                self._reposition_name_item()
         return super().itemChange(change, value)
+
+    def set_pos_without_bumping(self, pos):
+        """Sets position without bumping other items. Needed for undoing move operations.
+
+        Args:
+            pos (QPointF)
+        """
+        self._bumping = False
+        self.setPos(pos)
+        self._bumping = True
+
+    def _handle_collisions(self):
+        """Handles collisions with other items."""
+        prevent_overlapping = self._toolbox.qsettings().value("appSettings/preventOverlapping", defaultValue="false")
+        if not self.scene() or not self._bumping or prevent_overlapping != "true":
+            return
+        for other in self.collidingItems():
+            if isinstance(other, ProjectItemIcon):
+                other.make_room_for_item(self)
+        self._restablish_bumped_items()
+
+    def make_room_for_item(self, other):
+        """Makes room for another item.
+
+        Args:
+            item (ProjectItemIcon)
+        """
+        if self not in other.bumped_rects:
+            other.bumped_rects[self] = self.sceneBoundingRect()
+            if self not in self.scene().icon_group:
+                self.scene().icon_group.add(self)
+                self.previous_pos = self.scenePos()
+        line = QLineF(other.sceneBoundingRect().center(), self.sceneBoundingRect().center())
+        intersection = other.sceneBoundingRect() & self.sceneBoundingRect()
+        delta = math.atan(line.angle()) * min(intersection.width(), intersection.height())
+        unit_vector = line.unitVector()
+        self.moveBy(delta * unit_vector.dx(), delta * unit_vector.dy())
+
+    def _restablish_bumped_items(self):
+        """Moves bumped items back to their original position if no collision would happen anymore."""
+        try:
+            for other, rect in self.bumped_rects.items():
+                if not self.sceneBoundingRect().intersects(rect):
+                    other.setPos(rect.center())
+                    self.bumped_rects.pop(other, None)
+        except RuntimeError:
+            pass
 
     def select_item(self):
         """Update GUI to show the details of the selected item."""

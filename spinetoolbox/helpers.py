@@ -116,7 +116,7 @@ def add_message_to_document(document, message):
 
 
 def busy_effect(func):
-    """ Decorator to change the mouse cursor to 'busy' while a function is processed.
+    """Decorator to change the mouse cursor to 'busy' while a function is processed.
 
     Args:
         func (Callable): Decorated function.
@@ -1038,7 +1038,7 @@ def get_upgrade_db_promt_text(url, current, expected):
     text = (
         f"The database at <b>{url}</b> is at revision <b>{current}</b> and needs to be "
         f"upgraded to revision <b>{expected}</b> in order to be used with the current "
-        f"version of Spine Toolbox."
+        "version of Spine Toolbox."
     )
     info_text = (
         "Do you want to upgrade the database now?"
@@ -1195,6 +1195,24 @@ def load_plugin_specifications(plugin_dict, spec_factories, app_settings, logger
     return {name: plugin_specs}
 
 
+DB_ITEM_SEPARATOR = " \u01C0 "
+"""Display string to separate items such as entity names."""
+
+
+def parameter_identifier(database, parameter, alternative, entities):
+    """Concatenates given information into parameter value identifier string.
+
+    Args:
+        database (str, optional): database's code name
+        parameter (str): parameter's name
+        alternative (str): name of the value's alternative
+        entities (list of str): name of the entity that holds the value
+    """
+    parts = [database] if database is not None else []
+    parts += [parameter, alternative, DB_ITEM_SEPARATOR.join(entities)]
+    return " - ".join(parts)
+
+
 class SignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
@@ -1222,6 +1240,7 @@ def signal_waiter(signal):
         yield waiter
     finally:
         signal.disconnect(waiter.trigger)
+        waiter.deleteLater()
 
 
 class CustomSyntaxHighlighter(QSyntaxHighlighter):
@@ -1291,3 +1310,7 @@ class CacheItem(dict):
 
     def _asdict(self):
         return dict(**self)
+
+
+def preferred_row_height(widget, factor=1.5):
+    return factor * widget.fontMetrics().lineSpacing()

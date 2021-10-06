@@ -93,8 +93,8 @@ class TestKernelEditorBase(unittest.TestCase):
         with patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box, patch.object(
             KernelEditorBase, "_julia_kernel_name", return_value=kernel_name
         ), patch.object(KernelEditorBase, "_julia_executable", return_value=julia_exec), patch.object(
-                KernelEditorBase, "_julia_project", return_value="@."
-            ):
+            KernelEditorBase, "_julia_project", return_value="@."
+        ):
             mock_message_box.exec_.return_value = QMessageBox.Ok
             editor = KernelEditorBase(self._settings_widget, "julia")
             julia_project_dir = editor._julia_project()

@@ -21,7 +21,7 @@ from PySide2.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayou
 from PySide2.QtCore import Slot, Qt, QModelIndex
 from ...widgets.custom_editors import IconColorEditor
 from ...widgets.custom_qtableview import CopyPasteTableView
-from ...helpers import busy_effect
+from ...helpers import busy_effect, preferred_row_height
 
 
 class ManageItemsDialogBase(QDialog):
@@ -38,7 +38,7 @@ class ManageItemsDialogBase(QDialog):
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.horizontalHeader().setMinimumSectionSize(120)
-        self.table_view.verticalHeader().setDefaultSectionSize(parent.default_row_height)
+        self.table_view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
         self._accept_action = QAction("OK", parent=self)
         self._accept_action.setShortcut("Ctrl+Return")
         self.addAction(self._accept_action)

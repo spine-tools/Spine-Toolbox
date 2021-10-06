@@ -101,7 +101,9 @@ class GraphViewMixin:
         added_ids = {(db_map, x["id"]) for db_map, objects in db_map_data.items() for x in objects}
         restored_ids = self.restore_removed_entities(added_ids)
         added_ids -= restored_ids
-        if added_ids and self._pos_for_added_objects is not None:
+        if not added_ids:
+            return
+        if self._pos_for_added_objects is not None:
             spread = self.VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
             gen = GraphLayoutGenerator(None, len(added_ids), spread=spread)
             gen.run()
@@ -126,7 +128,9 @@ class GraphViewMixin:
         added_ids = {(db_map, x["id"]) for db_map, relationships in db_map_data.items() for x in relationships}
         restored_ids = self.restore_removed_entities(added_ids)
         added_ids -= restored_ids
-        if added_ids and self._adding_relationships:
+        if not added_ids:
+            return
+        if self._adding_relationships:
             self.added_relationship_ids.update(added_ids)
             self.build_graph(persistent=True)
             self._end_add_relationships()
@@ -163,6 +167,19 @@ class GraphViewMixin:
         super().receive_objects_removed(db_map_data)
         self.hide_removed_entities(db_map_data)
 
+    def receive_relationships_updated(self, db_map_data):
+        """Runs when relationships are updated in the db.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
+        super().receive_relationships_updated(db_map_data)
+        updated_ids = {(db_map, x["id"]) for db_map, rels in db_map_data.items() for x in rels}
+        for item in self.ui.graphicsView.items():
+            if isinstance(item, RelationshipItem) and item.db_map_entity_id in updated_ids:
+                self.build_graph(persistent=True)
+                return
+
     def receive_relationships_removed(self, db_map_data):
         """Runs when relationships are removed from the db. Rebuilds graph if needed.
 
@@ -185,7 +202,7 @@ class GraphViewMixin:
         restored_items = [item for item in self.ui.graphicsView.removed_items if item.db_map_entity_id in added_ids]
         for item in restored_items:
             self.ui.graphicsView.removed_items.remove(item)
-            item.set_all_visible(True)
+            item.setVisible(True)
         return {item.db_map_entity_id for item in restored_items}
 
     def hide_removed_entities(self, db_map_data):
@@ -204,7 +221,7 @@ class GraphViewMixin:
         scene = self.scene
         self.scene = None
         for item in removed_items:
-            item.set_all_visible(False)
+            item.setVisible(False)
         self.scene = scene
 
     def refresh_icons(self, db_map_data):

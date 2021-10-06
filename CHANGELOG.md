@@ -6,10 +6,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- Executable Tool Specifications can be used to run any (shell) command. This enhancement
+  duplicates the functionality of Gimlet project items and makes them obsolete.
 
 ### Changed
 
 ### Deprecated
+- Gimlet project items are deprecated and will be removed in the future.
 
 ### Removed
 

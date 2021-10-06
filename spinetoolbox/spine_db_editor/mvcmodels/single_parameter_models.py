@@ -16,8 +16,9 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, QModelIndex
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QGuiApplication
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import (
     FillInParameterNameMixin,
@@ -31,7 +32,26 @@ from ..mvcmodels.parameter_mixins import (
 from ...mvcmodels.shared import PARSED_ROLE
 
 
-class SingleParameterModel(MinimalTableModel):
+class HalfSortedTableModel(MinimalTableModel):
+    def reset_model(self, main_data=None):
+        """Reset model."""
+        if main_data is None:
+            main_data = list()
+        self.beginResetModel()
+        self._main_data = sorted(main_data, key=self._sort_key)
+        self.endResetModel()
+
+    def add_rows(self, data):
+        self.beginResetModel()
+        self._main_data += data
+        self._main_data.sort(key=self._sort_key)
+        self.endResetModel()
+
+    def _sort_key(self, element):
+        return element
+
+
+class SingleParameterModel(HalfSortedTableModel):
     """A parameter model for a single entity_class to go in a CompoundParameterModel.
     Provides methods to associate the model to an entity_class as well as
     to filter entities within the class.
@@ -48,6 +68,11 @@ class SingleParameterModel(MinimalTableModel):
         self.db_map = db_map
         self.entity_class_id = entity_class_id
         self._auto_filter = dict()  # Maps field to accepted ids for that field
+
+    def __lt__(self, other):
+        if self.entity_class_name == other.entity_class_name:
+            return self.db_map.codename < other.db_map.codename
+        return self.entity_class_name < other.entity_class_name
 
     @property
     def item_type(self):
@@ -103,10 +128,6 @@ class SingleParameterModel(MinimalTableModel):
     @property
     def can_be_filtered(self):
         return True
-
-    def insertRows(self, row, count, parent=QModelIndex()):
-        """This model doesn't support row insertion."""
-        return False
 
     def item_id(self, row):
         return self._main_data[row]
@@ -202,7 +223,7 @@ class SingleParameterModel(MinimalTableModel):
                     return description
             data = item.get(field)
             if role == Qt.DisplayRole and data and field in self.group_fields:
-                data = data.replace(",", self.db_mngr.GROUP_SEP)
+                data = data.replace(",", DB_ITEM_SEPARATOR)
             return data
         # Decoration role
 
@@ -252,8 +273,10 @@ class SingleParameterModel(MinimalTableModel):
         return True
 
     def accepted_rows(self):
-        """Returns a list of accepted rows, for convenience."""
-        return [row for row in range(self.rowCount()) if self._filter_accepts_row(row)]
+        """Yields accepted rows, for convenience."""
+        for row in range(self.rowCount()):
+            if self._filter_accepts_row(row):
+                yield row
 
     def _get_field_item(self, field, id_):
         """Returns a item from the db_mngr.get_item depending on the field.
@@ -297,6 +320,10 @@ class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListId
     @property
     def item_type(self):
         return "parameter_definition"
+
+    def _sort_key(self, element):
+        item = self.db_item_from_id(element)
+        return item["parameter_name"]
 
     def update_items_in_db(self, items):
         """Update items in db.
@@ -348,6 +375,10 @@ class SingleParameterValueMixin(
     @property
     def entity_name_key_in_cache(self):
         return {"object": "name", "relationship": "object_name_list"}[self.entity_type]
+
+    def _sort_key(self, element):
+        item = self.db_item_from_id(element)
+        return item[self.entity_name_key], item["parameter_name"], item["alternative_name"]
 
     def set_filter_entity_ids(self, db_map_class_entity_ids):
         if self._filter_db_map_class_entity_ids == db_map_class_entity_ids:

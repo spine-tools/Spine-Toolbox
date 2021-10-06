@@ -58,6 +58,7 @@ from .load_project_items import load_project_items
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
+from .widgets.rename_project_dialog import RenameProjectDialog
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import RecentProjectsPopupMenu
@@ -681,20 +682,8 @@ class ToolboxUI(QMainWindow):
         """Opens a dialog where the user can enter a new name for the project."""
         if not self._project:
             return
-        answer = QInputDialog.getText(
-            self,
-            "Rename Project",
-            "New name:",
-            text=self._project.name,
-            flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint,
-        )
-        if not answer[1]:
-            return
-        new_name = answer[0].strip()
-        # Check that new name is valid project name and not empty
-        if not new_name or new_name == self._project.name:
-            return
-        self._project.call_set_name(new_name)
+        dialog = RenameProjectDialog(self, self._project)
+        dialog.show()
 
     @Slot(str)
     def _update_project_name(self, new_name):
@@ -776,7 +765,7 @@ class ToolboxUI(QMainWindow):
         """Clean UI to make room for a new or opened project."""
         self.activate_no_selection_tab()  # Clear properties widget
         self.restore_original_logs_and_consoles()
-        self.ui.graphicsView.scene().clear()  # Clear all items from scene
+        self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self._shutdown_engine_kernels()
 
     def undo_critical_commands(self):
@@ -856,8 +845,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(QItemSelection, QItemSelection)
     def item_selection_changed(self, selected, deselected):
-        """Synchronizes selection with scene. The scene handles item/link de/activation.
-        """
+        """Synchronizes selection with scene. The scene handles item/link de/activation."""
         inds = self.ui.treeView_project.selectedIndexes()
         self._update_execute_selected_enabled()
         if not self.sync_item_selection_with_scene:

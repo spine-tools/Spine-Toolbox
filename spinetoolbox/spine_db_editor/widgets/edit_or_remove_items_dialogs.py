@@ -128,8 +128,7 @@ class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
 
 
 class EditObjectsDialog(EditOrRemoveItemsDialog):
-    """A dialog to query user's preferences for updating objects.
-    """
+    """A dialog to query user's preferences for updating objects."""
 
     def __init__(self, parent, db_mngr, selected):
         """Init class.
@@ -191,9 +190,8 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
         super().accept()
 
 
-class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
-    """A dialog to query user's preferences for updating relationship classes.
-    """
+class EditRelationshipClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog):
+    """A dialog to query user's preferences for updating relationship classes."""
 
     def __init__(self, parent, db_mngr, selected):
         """Init class.
@@ -209,24 +207,31 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageRelationshipClassesDelegate(self))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['relationship_class name', 'description', 'databases'])
+        self.model.set_horizontal_header_labels(['relationship_class name', 'description', 'display icon', 'databases'])
         self.orig_data = list()
         model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
-            row_data = [item.display_data, data['description']]
+            row_data = [item.display_data, data['description'], data['display_icon']]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
             model_data.append(row_data)
             self.items.append(item)
         self.model.reset_model(model_data)
 
+    def connect_signals(self):
+        super().connect_signals()
+        # pylint: disable=unnecessary-lambda
+        self.table_view.itemDelegate().icon_color_editor_requested.connect(
+            lambda index: self.show_icon_color_editor(index)
+        )
+
     @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
         db_map_data = dict()
         for i in range(self.model.rowCount()):
-            name, description, db_names = self.model.row_data(i)
+            name, description, display_icon, db_names = self.model.row_data(i)
             if db_names is None:
                 db_names = ""
             item = self.items[i]
@@ -243,7 +248,9 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             orig_row = self.orig_data[i]
             if [name, description] == orig_row:
                 continue
-            pre_db_item = {'name': name, 'description': description}
+            if not display_icon:
+                display_icon = None
+            pre_db_item = {'name': name, 'description': description, 'display_icon': display_icon}
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
                 db_item['id'] = item.db_map_id(db_map)
@@ -256,8 +263,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
 
 
 class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, EditOrRemoveItemsDialog):
-    """A dialog to query user's preferences for updating relationships.
-    """
+    """A dialog to query user's preferences for updating relationships."""
 
     def __init__(self, parent, db_mngr, selected, class_key):
         """Init class.
@@ -360,8 +366,7 @@ class EditRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, Edit
 
 
 class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
-    """A dialog to query user's preferences for removing tree items.
-    """
+    """A dialog to query user's preferences for removing tree items."""
 
     def __init__(self, parent, db_mngr, selected):
         """Init class.

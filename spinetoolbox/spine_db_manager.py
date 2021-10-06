@@ -16,11 +16,12 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
-import itertools
 import json
+import os
 from PySide2.QtCore import Qt, QObject, Signal, QThread
 from PySide2.QtWidgets import QMessageBox, QWidget
 from PySide2.QtGui import QFontMetrics, QFont, QWindow
+from sqlalchemy.engine.url import URL
 from spinedb_api import (
     is_empty,
     create_new_spine_database,
@@ -31,6 +32,7 @@ from spinedb_api import (
     to_database,
     relativedelta_to_duration,
     ParameterValueFormatError,
+    ParameterValueEncoder,
     IndexedValue,
     Array,
     TimeSeries,
@@ -39,8 +41,12 @@ from spinedb_api import (
     TimePattern,
     Map,
     get_data_for_import,
+    import_data,
+    export_data,
+    create_new_spine_database,
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
+from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
 from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
@@ -49,7 +55,7 @@ from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, signal_waiter, CacheItem
+from .helpers import get_upgrade_db_promt_text, CacheItem
 
 
 @busy_effect
@@ -117,8 +123,6 @@ class SpineDBManager(QObject):
     scenario_alternatives_removed = Signal(object)
     # Fetched
     db_map_fetched = Signal(object)
-
-    GROUP_SEP = " \u01C0 "
 
     def __init__(self, settings, parent):
         """Initializes the instance.
@@ -198,6 +202,11 @@ class SpineDBManager(QObject):
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
         for item_type, signal in self.updated_signals.items():
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        # Icons
+        self.object_classes_added.connect(self.update_icons)
+        self.object_classes_updated.connect(self.update_icons)
+        self.relationship_classes_added.connect(self.update_icons)
+        self.relationship_classes_updated.connect(self.update_icons)
         self.session_rolled_back.connect(self._clear_fetchers)
         # Signaller (after caching, so items are there when listeners receive signals)
         self.signaller.connect_signals()
@@ -221,9 +230,6 @@ class SpineDBManager(QObject):
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
-        # Icons
-        self.object_classes_added.connect(self.update_icons)
-        self.object_classes_updated.connect(self.update_icons)
         self._worker.session_rolled_back.connect(self._finish_rolling_back)
         self._worker.connect_signals()
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
@@ -341,8 +347,8 @@ class SpineDBManager(QObject):
         Args:
             db_map_data (dict): lists of dictionary items keyed by DiffDatabaseMapping
         """
-        for db_map, object_classes in db_map_data.items():
-            self.get_icon_mngr(db_map).update_icon_caches(object_classes)
+        for db_map, classes in db_map_data.items():
+            self.get_icon_mngr(db_map).update_icon_caches(classes)
 
     @property
     def worker_thread(self):
@@ -445,11 +451,10 @@ class SpineDBManager(QObject):
             QMessageBox.information(
                 qApp.activeWindow(),  # pylint: disable=undefined-variable
                 "Unsupported database version",
-                f"Database at <b>{url}</b> is newer than this version of Spine Toolbox "
-                f"can handle.<br><br>"
+                f"Database at <b>{url}</b> is newer than this version of Spine Toolbox can handle.<br><br>"
                 f"The db is at revision <b>{v_err.current}</b> while this version "
-                f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>. "
-                f"<br><br>Please upgrade Spine Toolbox to open this database.",
+                f"of Spine Toolbox supports revisions up to <b>{v_err.expected}</b>.<br><br>"
+                "Please upgrade Spine Toolbox to open this database.",
             )
             return None
         except SpineDBAPIError as err:
@@ -629,10 +634,12 @@ class SpineDBManager(QObject):
             return None
         if entity_type == "object_class":
             if for_group:
-                return self.get_icon_mngr(db_map).object_group_renderer(entity_class["name"])
-            return self.get_icon_mngr(db_map).object_renderer(entity_class["name"])
+                return self.get_icon_mngr(db_map).group_renderer(entity_class["name"])
+            return self.get_icon_mngr(db_map).class_renderer(entity_class["name"])
         if entity_type == "relationship_class":
-            return self.get_icon_mngr(db_map).relationship_renderer(entity_class["object_class_name_list"])
+            return self.get_icon_mngr(db_map).relationship_class_renderer(
+                entity_class["name"], entity_class["object_class_name_list"]
+            )
 
     def entity_class_icon(self, db_map, entity_type, entity_class_id, for_group=False):
         """Returns an appropriate icon for a given entity class.
@@ -918,272 +925,6 @@ class SpineDBManager(QObject):
             return []
         return [int(id_) for id_ in alternative_id_list.split(",")]
 
-    @staticmethod
-    def get_db_items(query, query_chunk_size=1000, iter_chunk_size=1000):
-        """Runs the given query and yields results by chunks of given size.
-
-        Yields:
-            list: chunk of items
-        """
-        it = (x._asdict() for x in query.yield_per(query_chunk_size).enable_eagerloads(False))
-        while True:
-            chunk = list(itertools.islice(it, iter_chunk_size))
-            yield chunk
-            if not chunk:
-                break
-
-    @staticmethod
-    def _make_query(db_map, item_type, order_by=("id",)):
-        """Makes a database query
-
-        Args:
-            db_map (DatabaseMappingBase): database map
-            item_type (str): item type
-            order_by (Iterable): key for order by
-
-        Returns:
-            Alias: database subquery
-        """
-        sq_name = db_map.cache_sqs[item_type]
-        sq = getattr(db_map, sq_name)
-        return db_map.query(sq).order_by(*[getattr(sq.c, k) for k in order_by])
-
-    def get_alternatives(self, db_map):
-        """Returns alternatives from database.
-
-        Args:
-            db_map (DatabaseMappingBase): database map
-            ids (Iterable of int): ids by which the alternatives should be filtered
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "alternative", order_by=["name"]))
-
-    def get_scenarios(self, db_map):
-        """Returns scenarios from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "scenario", order_by=["name"]))
-
-    def get_scenario_alternatives(self, db_map):
-        """Returns scenario alternatives from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "scenario_alternative"))
-
-    def get_object_classes(self, db_map):
-        """Returns object classes from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "object_class", order_by=["name"]))
-
-    def get_objects(self, db_map):
-        """Returns objects from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "object", order_by=["name"]))
-
-    def get_relationship_classes(self, db_map):
-        """Returns relationship classes from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "relationship_class", order_by=["name"]))
-
-    def get_relationships(self, db_map):
-        """Returns relationships from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "relationship", order_by=["object_name_list"]))
-
-    def get_entity_groups(self, db_map):
-        """Returns entity groups from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "entity_group", order_by=["member_name"]))
-
-    def get_object_parameter_definitions(self, db_map):
-        """Returns object parameter definitions from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(
-            self._make_query(db_map, "object_parameter_definition", order_by=["object_class_name", "parameter_name"])
-        )
-
-    def get_relationship_parameter_definitions(self, db_map):
-        """Returns relationship parameter definitions from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(
-            self._make_query(
-                db_map, "relationship_parameter_definition", order_by=["relationship_class_name", "parameter_name"]
-            )
-        )
-
-    def get_parameter_definitions(self, db_map):
-        """Returns both object and relationship parameter definitions.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        for obj_chunk, rel_chunk in itertools.zip_longest(
-            self.get_object_parameter_definitions(db_map),
-            self.get_relationship_parameter_definitions(db_map),
-            fillvalue=[],
-        ):
-            yield obj_chunk + rel_chunk
-
-    def get_object_parameter_values(self, db_map):
-        """Returns object parameter values from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(
-            self._make_query(
-                db_map, "object_parameter_value", order_by=["object_class_name", "object_name", "parameter_name"]
-            )
-        )
-
-    def get_relationship_parameter_values(self, db_map):
-        """Returns relationship parameter values from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(
-            self._make_query(
-                db_map,
-                "relationship_parameter_value",
-                order_by=["relationship_class_name", "object_name_list", "parameter_name"],
-            )
-        )
-
-    def get_parameter_values(self, db_map):
-        """Returns both object and relationship parameter values.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        for obj_chunk, rel_chunk in itertools.zip_longest(
-            self.get_object_parameter_values(db_map), self.get_relationship_parameter_values(db_map), fillvalue=[]
-        ):
-            yield obj_chunk + rel_chunk
-
-    def get_parameter_value_lists(self, db_map):
-        """Returns parameter_value lists from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "parameter_value_list", order_by=["name"]))
-
-    def get_features(self, db_map):
-        """Returns features from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(
-            self._make_query(db_map, "feature", order_by=["entity_class_name", "parameter_definition_name"])
-        )
-
-    def get_tools(self, db_map):
-        """Get tools from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "tool", order_by=["name"]))
-
-    def get_tool_features(self, db_map):
-        """Returns tool features from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "tool_feature"))
-
-    def get_tool_feature_methods(self, db_map):
-        """Returns tool feature methods from database.
-
-        Args:
-            db_map (DiffDatabaseMapping)
-
-        Yields:
-            list: dictionary items
-        """
-        yield from self.get_db_items(self._make_query(db_map, "tool_feature_method"))
-
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
         Condenses all in a single command for undo/redo.
@@ -1214,15 +955,11 @@ class SpineDBManager(QObject):
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_add:
                     add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=macro, check=False)
-                    with signal_waiter(add_cmd.completed_signal) as waiter:
-                        add_cmd.redo()
-                        waiter.wait()
+                    add_cmd.redo()
                     child_cmds.append(add_cmd)
                 if to_update:
                     upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=macro, check=False)
-                    with signal_waiter(upd_cmd.completed_signal) as waiter:
-                        upd_cmd.redo()
-                        waiter.wait()
+                    upd_cmd.redo()
                     child_cmds.append(upd_cmd)
             if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
                 # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
@@ -1920,11 +1657,119 @@ class SpineDBManager(QObject):
         db_map_cascading_data = self.find_cascading_tool_features_by_feature(self.db_map_ids(db_map_data))
         self.tool_features_updated.emit(db_map_cascading_data)
 
-    def export_data(self, caller, db_map_item_ids, file_path, file_filter):
-        self._worker.export_data(caller, db_map_item_ids, file_path, file_filter)
-
     def duplicate_object(self, db_maps, object_data, orig_name, dup_name):
-        self._worker.duplicate_object(db_maps, object_data, orig_name, dup_name)
+        _replace_name = lambda name_list: [name if name != orig_name else dup_name for name in name_list]
+        data = self._get_data_for_export(object_data)
+        data = {
+            "objects": [
+                (cls_name, dup_name, description) for (cls_name, obj_name, description) in data.get("objects", [])
+            ],
+            "relationships": [
+                (cls_name, _replace_name(obj_name_lst)) for (cls_name, obj_name_lst) in data.get("relationships", [])
+            ],
+            "object_parameter_values": [
+                (cls_name, dup_name, param_name, val, alt)
+                for (cls_name, obj_name, param_name, val, alt) in data.get("object_parameter_values", [])
+            ],
+            "relationship_parameter_values": [
+                (cls_name, _replace_name(obj_name_lst), param_name, val, alt)
+                for (cls_name, obj_name_lst, param_name, val, alt) in data.get("relationship_parameter_values", [])
+            ],
+        }
+        self.import_data({db_map: data for db_map in db_maps}, command_text="Duplicate object")
+
+    def _get_data_for_export(self, db_map_item_ids):
+        data = {}
+        for db_map, item_ids in db_map_item_ids.items():
+            make_cache = lambda tablenames, db_map=db_map, **kwargs: self.get_db_map_cache(
+                db_map, item_types=tablenames, **kwargs
+            )
+            for key, items in export_data(db_map, make_cache=make_cache, **item_ids).items():
+                data.setdefault(key, []).extend(items)
+        return data
+
+    def export_data(self, caller, db_map_item_ids, file_path, file_filter):
+        data = self._get_data_for_export(db_map_item_ids)
+        if file_filter.startswith("JSON"):
+            self.export_to_json(file_path, data, caller)
+        elif file_filter.startswith("SQLite"):
+            self.export_to_sqlite(file_path, data, caller)
+        elif file_filter.startswith("Excel"):
+            self.export_to_excel(file_path, data, caller)
+        else:
+            raise ValueError()
+
+    def _is_url_available(self, url, logger):
+        if str(url) in self.db_urls:
+            message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
+            logger.msg_error.emit(message)
+            return False
+        return True
+
+    def export_to_sqlite(self, file_path, data_for_export, caller):
+        """Exports given data into SQLite file."""
+        url = URL("sqlite", database=file_path)
+        if not self._is_url_available(url, caller):
+            return
+        create_new_spine_database(url)
+        db_map = DatabaseMapping(url)
+        import_data(db_map, **data_for_export)
+        try:
+            db_map.commit_session("Export data from Spine Toolbox.")
+        except SpineDBAPIError as err:
+            error_msg = {None: [f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"]}
+            caller.msg_error.emit(error_msg)
+        else:
+            caller.sqlite_file_exported.emit(file_path)
+        finally:
+            db_map.connection.close()
+
+    def export_to_json(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+        """Exports given data into JSON file."""
+        indent = 4 * " "
+        json_data = "{{{0}{1}{0}}}".format(
+            "\n" if data_for_export else "",
+            ",\n".join(
+                [
+                    indent
+                    + json.dumps(key)
+                    + ": [{0}{1}{0}]".format(
+                        "\n" + indent if values else "",
+                        (",\n" + indent).join(
+                            [indent + json.dumps(value, cls=ParameterValueEncoder) for value in values]
+                        ),
+                    )
+                    for key, values in data_for_export.items()
+                ]
+            ),
+        )
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(json_data)
+        caller.file_exported.emit(file_path)
+
+    def export_to_excel(self, file_path, data_for_export, caller):  # pylint: disable=no-self-use
+        """Exports given data into Excel file."""
+        # NOTE: We import data into an in-memory Spine db and then export that to excel.
+        url = URL("sqlite", database="")
+        db_map = DatabaseMapping(url, create=True)
+        import_data(db_map, **data_for_export)
+        file_name = os.path.split(file_path)[1]
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        try:
+            export_spine_database_to_xlsx(db_map, file_path)
+        except PermissionError:
+            error_msg = {
+                None: [f"Unable to export file <b>{file_name}</b>.<br/>Close the file in Excel and try again."]
+            }
+            caller.msg_error.emit(error_msg)
+        except OSError:
+            error_msg = {None: [f"[OSError] Unable to export file <b>{file_name}</b>."]}
+            caller.msg_error.emit(error_msg)
+        else:
+            caller.file_exported.emit(file_path)
+        finally:
+            db_map.connection.close()
 
     def get_metadata_per_entity(self, db_map, entity_ids):
         return self._worker.get_metadata_per_entity(db_map, entity_ids)
@@ -2023,6 +1868,7 @@ class SpineDBManager(QObject):
                 self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
             )
             item["object_class_id_list"] = ",".join(str(id_) for id_ in item["object_class_id_list"])
+            item["display_icon"] = item.get("display_icon")
         elif item_type == "relationship":
             item["class_name"] = self.get_item(db_map, "relationship_class", item["class_id"])["name"]
             item["object_name_list"] = ",".join(
@@ -2037,16 +1883,13 @@ class SpineDBManager(QObject):
             item["parameter_name"] = item.pop("name", item.get("parameter_name"))
             object_class = self.get_item(db_map, "object_class", item["entity_class_id"])
             relationship_class = self.get_item(db_map, "relationship_class", item["entity_class_id"])
-            if object_class:
-                item["entity_class_name"] = object_class["name"]
-                item["object_class_id"] = object_class["id"]
-                item["object_class_name"] = object_class["name"]
-            if relationship_class:
-                item["entity_class_name"] = relationship_class["name"]
-                item["relationship_class_id"] = relationship_class["id"]
-                item["relationship_class_name"] = relationship_class["name"]
-                item["object_class_id_list"] = relationship_class["object_class_id_list"]
-                item["object_class_name_list"] = relationship_class["object_class_name_list"]
+            item["entity_class_name"] = object_class.get("name") or relationship_class.get("name")
+            item["object_class_id"] = object_class.get("id")
+            item["object_class_name"] = object_class.get("name")
+            item["relationship_class_id"] = relationship_class.get("id")
+            item["relationship_class_name"] = relationship_class.get("name")
+            item["object_class_id_list"] = relationship_class.get("object_class_id_list")
+            item["object_class_name_list"] = relationship_class.get("object_class_name_list")
             item["value_list_id"] = value_list_id = item.pop("parameter_value_list_id", item.get("value_list_id"))
             item["value_list_name"] = self.get_item(db_map, "parameter_value_list", value_list_id).get("name")
             item["default_value"] = item.get("default_value")
@@ -2057,22 +1900,19 @@ class SpineDBManager(QObject):
             param_def = self.get_item(db_map, "parameter_definition", parameter_id)
             item["parameter_name"] = param_def["parameter_name"]
             item["entity_class_id"] = param_def["entity_class_id"]
-            object_class_id = param_def.get("object_class_id")
-            relationship_class_id = param_def.get("relationship_class_id")
-            if object_class_id:
-                item["object_class_id"] = object_class_id
-                item["object_class_name"] = param_def["object_class_name"]
-                item["object_id"] = object_id = item["entity_id"]
-                item["object_name"] = self.get_item(db_map, "object", object_id)["name"]
-            if relationship_class_id:
-                item["relationship_class_id"] = relationship_class_id
-                item["relationship_class_name"] = param_def["relationship_class_name"]
-                item["object_class_id_list"] = param_def["object_class_id_list"]
-                item["object_class_name_list"] = param_def["object_class_name_list"]
-                item["relationship_id"] = relationship_id = item["entity_id"]
-                relationship = self.get_item(db_map, "relationship", relationship_id)
-                item["object_id_list"] = relationship["object_id_list"]
-                item["object_name_list"] = relationship["object_name_list"]
+            item["object_class_id"] = object_class_id = param_def["object_class_id"]
+            item["relationship_class_id"] = relationship_class_id = param_def["relationship_class_id"]
+            item["object_class_name"] = param_def["object_class_name"]
+            item["relationship_class_name"] = param_def["relationship_class_name"]
+            item["object_class_id_list"] = param_def["object_class_id_list"]
+            item["object_class_name_list"] = param_def["object_class_name_list"]
+            item["object_id"] = object_id = item["entity_id"] if object_class_id else None
+            object_ = self.get_item(db_map, "object", object_id)
+            item["object_name"] = object_.get("name")
+            item["relationship_id"] = relationship_id = item["entity_id"] if relationship_class_id else None
+            relationship = self.get_item(db_map, "relationship", relationship_id)
+            item["object_id_list"] = relationship.get("object_id_list")
+            item["object_name_list"] = relationship.get("object_name_list")
             item["alternative_name"] = self.get_item(db_map, "alternative", item["alternative_id"])["name"]
         elif item_type == "parameter_value_list":
             item["value_list"] = ";".join(str(val, "UTF8") for val in item["value_list"])

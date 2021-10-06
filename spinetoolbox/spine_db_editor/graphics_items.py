@@ -31,6 +31,8 @@ from PySide2.QtWidgets import (
 from PySide2.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvas  # pylint: disable=no-name-in-module
+
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 
 
@@ -82,13 +84,15 @@ class EntityItem(QGraphicsRectItem):
         self.setRect(-0.5 * self._extent, -0.5 * self._extent, self._extent, self._extent)
         self.setPen(Qt.NoPen)
         self._svg_item = QGraphicsSvgItem(self)
+        self._svg_item.setZValue(100)
         self._svg_item.setCacheMode(QGraphicsItem.CacheMode.NoCache)  # Needed for the exported pdf to be vector
+        self._renderer = None
         self.refresh_icon()
         self.setPos(x, y)
         self._moved_on_scene = False
         self._bg = None
-        self._init_bg()
         self._bg_brush = Qt.NoBrush
+        self._init_bg()
         self.setZValue(0)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
@@ -174,11 +178,14 @@ class EntityItem(QGraphicsRectItem):
         self._set_renderer(renderer)
 
     def _set_renderer(self, renderer):
+        self._renderer = renderer
         self._svg_item.setSharedRenderer(renderer)
         size = renderer.defaultSize()
         scale = self._extent / max(size.width(), size.height())
         self._svg_item.setScale(scale)
-        self._svg_item.setPos(self.rect().center() - 0.5 * scale * QPointF(size.width(), size.height()))
+        rect = self._svg_item.boundingRect()
+        self._svg_item.setTransformOriginPoint(rect.center())
+        self._svg_item.setPos(-rect.center())
 
     def shape(self):
         """Returns a shape containing the entire bounding rect, to work better with icon transparency."""
@@ -271,15 +278,15 @@ class EntityItem(QGraphicsRectItem):
             self._moved_on_scene = True
         return value
 
-    def set_all_visible(self, on):
+    def setVisible(self, on):
         """Sets visibility status for this item and all arc items.
 
         Args:
             on (bool)
         """
-        for item in self.arc_items:
-            item.setVisible(on)
-        self.setVisible(on)
+        super().setVisible(on)
+        for arc_item in self.arc_items:
+            arc_item.setVisible(arc_item.obj_item.isVisible() and arc_item.rel_item.isVisible())
 
     def _make_menu(self):
         return self._spine_db_editor.ui.graphicsView.make_items_menu()
@@ -353,7 +360,7 @@ class RelationshipItem(EntityItem):
     def _make_tool_tip(self):
         return (
             f"""<html><p style="text-align:center;">{self.entity_class_name}<br>"""
-            f"""{self.object_name_list.replace(",", self.db_mngr.GROUP_SEP)}<br>"""
+            f"""{self.object_name_list.replace(",", DB_ITEM_SEPARATOR)}<br>"""
             f"""@{self.db_map.codename}</p></html>"""
         )
 
@@ -361,13 +368,32 @@ class RelationshipItem(EntityItem):
         extent = self._extent
         self._bg = QGraphicsEllipseItem(-0.5 * extent, -0.5 * extent, extent, extent, self)
         self._bg.setPen(Qt.NoPen)
-        bg_color = QGuiApplication.palette().color(QPalette.Normal, QPalette.Window)
-        bg_color.setAlphaF(0.8)
-        self._bg_brush = QBrush(bg_color)
+        self._bg_brush = QGuiApplication.palette().button()
 
     def follow_object_by(self, dx, dy):
         factor = 1.0 / len(set(arc.obj_item for arc in self.arc_items))
         self.moveBy(factor * dx, factor * dy)
+
+    def add_arc_item(self, arc_item):
+        super().add_arc_item(arc_item)
+        self._rotate_svg_item()
+
+    def itemChange(self, change, value):
+        """Rotates svg item if the relationship is 2D.
+        This makes it possible to define e.g. an arow icon for relationships that express direction.
+        """
+        if change == QGraphicsItem.ItemScenePositionHasChanged:
+            self._rotate_svg_item()
+        return super().itemChange(change, value)
+
+    def _rotate_svg_item(self):
+        if len(self.arc_items) != 2:
+            self._svg_item.setRotation(0)
+            return
+        arc1, arc2 = self.arc_items  # pylint: disable=unbalanced-tuple-unpacking
+        obj1, obj2 = arc1.obj_item, arc2.obj_item
+        line = QLineF(obj1.pos(), obj2.pos())
+        self._svg_item.setRotation(-line.angle())
 
 
 class ObjectItem(EntityItem):
@@ -455,7 +481,11 @@ class ObjectItem(EntityItem):
         first = menu.insertMenu(first, add_relationships_menu)
         first = menu.insertMenu(first, collapse_menu)
         menu.insertMenu(first, expand_menu)
+        menu.addAction("Duplicate", self._duplicate)
         return menu
+
+    def _duplicate(self):
+        self._spine_db_editor.duplicate_object(self)
 
     def _refresh_relationship_classes(self):
         self._relationship_classes.clear()
@@ -674,7 +704,7 @@ class CrossHairsRelationshipItem(RelationshipItem):
             obj_item.entity_class_name for obj_item in obj_items if not isinstance(obj_item, CrossHairsItem)
         ]
         object_class_name_list = ",".join(object_class_name_list)
-        renderer = self.db_mngr.get_icon_mngr(self.db_map).relationship_renderer(object_class_name_list)
+        renderer = self.db_mngr.get_icon_mngr(self.db_map).relationship_class_renderer(None, object_class_name_list)
         self._set_renderer(renderer)
 
     def contextMenuEvent(self, e):

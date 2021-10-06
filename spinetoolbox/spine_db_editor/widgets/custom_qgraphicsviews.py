@@ -57,6 +57,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.auto_expand_objects = None
         self._auto_expand_objects_action = None
         self._add_objects_action = None
+        self._select_pos_param_action = None
         self._save_pos_action = None
         self._clear_pos_action = None
         self._hide_selected_action = None
@@ -99,9 +100,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
         selected_rels = [x for x in selected_items if isinstance(x, RelationshipItem)]
         self.selected_items = selected_objs + selected_rels
         self.graph_selection_changed.emit({"object": selected_objs, "relationship": selected_rels})
-        if len(selected_items) == 1:
-            default_data = selected_items[0].default_parameter_data()
-            self._spine_db_editor.set_default_parameter_data(default_data)
+        default_data = selected_items[0].default_parameter_data() if len(selected_items) == 1 else {}
+        self._spine_db_editor.set_default_parameter_data(default_data)
 
     def connect_spine_db_editor(self, spine_db_editor):
         self._spine_db_editor = spine_db_editor
@@ -118,6 +118,9 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._menu.addSeparator()
         self._add_objects_action = self._menu.addAction("Add objects", self.add_objects_at_position)
         self._menu.addSeparator()
+        self._select_pos_param_action = self._menu.addAction(
+            "Select position parameters...", self.select_position_parameters
+        )
         self._save_pos_action = self._menu.addAction("Save positions", self.save_positions)
         self._clear_pos_action = self._menu.addAction("Clear saved positions", self.clear_saved_positions)
         self._menu.addSeparator()
@@ -265,7 +268,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.hidden_items[key] = self.selected_items
         self._show_hidden_menu.addAction(key)
         for item in self.selected_items:
-            item.set_all_visible(False)
+            item.setVisible(False)
 
     @Slot("QAction")
     def _hide_class(self, action):
@@ -275,7 +278,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self.hidden_items[key] = items
         self._show_hidden_menu.addAction(key)
         for item in items:
-            item.set_all_visible(False)
+            item.setVisible(False)
 
     @Slot(bool)
     def show_all_hidden_items(self, checked=False):
@@ -285,7 +288,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         while self.hidden_items:
             _, items = self.hidden_items.popitem()
             for item in items:
-                item.set_all_visible(True)
+                item.setVisible(True)
 
     @Slot("QAction")
     def show_hidden_items(self, action):
@@ -296,7 +299,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             action = next(iter(a for a in self._show_hidden_menu.actions() if a.text() == key))
             self._show_hidden_menu.removeAction(action)
             for item in items:
-                item.set_all_visible(True)
+                item.setVisible(True)
 
     @Slot(bool)
     def prune_selected_items(self, checked=False):
@@ -339,7 +342,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     @Slot(bool)
     def select_position_parameters(self, checked=False):
-        dialog = SelectPositionParametersDialog(self._spine_db_editor)
+        dialog = SelectPositionParametersDialog(self._spine_db_editor, self.pos_x_parameter, self.pos_y_parameter)
         dialog.show()
         dialog.selection_made.connect(self._set_position_parameters)
 
@@ -366,24 +369,29 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for db_map, class_obj_items in db_map_class_obj_items.items():
             data = db_map_data.setdefault(db_map, {})
             for class_name, obj_items in class_obj_items.items():
-                data["object_parameters"] = [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
-                data["object_parameter_values"] = [
-                    (class_name, item.entity_name, self.pos_x_parameter, item.pos().x()) for item in obj_items
-                ] + [(class_name, item.entity_name, self.pos_y_parameter, item.pos().y()) for item in obj_items]
+                data.setdefault("object_parameters", []).extend(
+                    [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
+                )
+                data.setdefault("object_parameter_values", []).extend(
+                    [(class_name, item.entity_name, self.pos_x_parameter, item.pos().x()) for item in obj_items]
+                    + [(class_name, item.entity_name, self.pos_y_parameter, item.pos().y()) for item in obj_items]
+                )
         for db_map, class_rel_items in db_map_class_rel_items.items():
             data = db_map_data.setdefault(db_map, {})
             for class_name, rel_items in class_rel_items.items():
-                data["relationship_parameters"] = [
-                    (class_name, self.pos_x_parameter),
-                    (class_name, self.pos_y_parameter),
-                ]
-                data["relationship_parameter_values"] = [
-                    (class_name, item.object_name_list.split(","), self.pos_x_parameter, item.pos().x())
-                    for item in rel_items
-                ] + [
-                    (class_name, item.object_name_list.split(","), self.pos_y_parameter, item.pos().y())
-                    for item in rel_items
-                ]
+                data.setdefault("relationship_parameters", []).extend(
+                    [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
+                )
+                data.setdefault("relationship_parameter_values", []).extend(
+                    [
+                        (class_name, item.object_name_list.split(","), self.pos_x_parameter, item.pos().x())
+                        for item in rel_items
+                    ]
+                    + [
+                        (class_name, item.object_name_list.split(","), self.pos_y_parameter, item.pos().y())
+                        for item in rel_items
+                    ]
+                )
         self.db_mngr.import_data(db_map_data)
 
     @Slot(bool)
@@ -463,8 +471,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     @Slot("QAction")
     def add_heat_map(self, action):
-        """Adds heat map for the parameter in the action text.
-        """
+        """Adds heat map for the parameter in the action text."""
         self._clean_up_heat_map_items()
         point_value_tuples = self._point_value_tuples_per_parameter_name[action.text()]
         x, y, values = zip(*point_value_tuples)

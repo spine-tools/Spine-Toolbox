@@ -15,13 +15,14 @@ Unit tests for the TreeViewFormAddMixin class.
 :author: M. Marin (KTH)
 :date:   6.12.2018
 """
+from unittest import mock
 from PySide2.QtCore import Qt
+from spinetoolbox.spine_db_editor.mvcmodels.single_parameter_models import SingleParameterModel
 
 
 class TestSpineDBEditorAddMixin:
     def test_add_object_classes_to_object_tree_model(self):
-        """Test that object classes are added to the object tree model.
-        """
+        """Test that object classes are added to the object tree model."""
         root_item = self.spine_db_editor.object_tree_model.root_item
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
@@ -113,7 +114,9 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_object_parameter_definitions_to_model(self):
         """Test that object parameter definitions are added to the model."""
-        self.put_mock_object_parameter_definitions_in_db_mngr()
+        with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
+            lt_mocked.return_value = False
+            self.put_mock_object_parameter_definitions_in_db_mngr()
         model = self.spine_db_editor.object_parameter_definition_model
         h = model.header.index
         parameters = []
@@ -126,7 +129,9 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_relationship_parameter_definitions_to_model(self):
         """Test that relationship parameter definitions are added to the model."""
-        self.put_mock_relationship_parameter_definitions_in_db_mngr()
+        with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
+            lt_mocked.return_value = False
+            self.put_mock_relationship_parameter_definitions_in_db_mngr()
         model = self.spine_db_editor.relationship_parameter_definition_model
         h = model.header.index
         parameters = []
@@ -139,7 +144,9 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_object_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
-        self.put_mock_object_parameter_values_in_db_mngr()
+        with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
+            lt_mocked.return_value = False
+            self.put_mock_object_parameter_values_in_db_mngr()
         model = self.spine_db_editor.object_parameter_value_model
         h = model.header.index
         parameters = []
@@ -157,7 +164,9 @@ class TestSpineDBEditorAddMixin:
 
     def test_add_relationship_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
-        self.put_mock_relationship_parameter_values_in_db_mngr()
+        with mock.patch.object(SingleParameterModel, "__lt__") as lt_mocked:
+            lt_mocked.return_value = False
+            self.put_mock_relationship_parameter_values_in_db_mngr()
         model = self.spine_db_editor.relationship_parameter_value_model
         h = model.header.index
         parameters = []

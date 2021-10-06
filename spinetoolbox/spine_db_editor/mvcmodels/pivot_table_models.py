@@ -18,7 +18,9 @@ Provides pivot table models for the Tabular View.
 
 from PySide2.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
+
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier
 from .pivot_model import PivotModel
 from ...mvcmodels.shared import PARSED_ROLE
 from ...config import PIVOT_TABLE_HEADER_COLOR
@@ -849,15 +851,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         if not self.index_in_data(index):
             return ""
         object_names, parameter_name, alternative_name, db_name = self._all_header_names(index)
-        return (
-            self.db_mngr.GROUP_SEP.join(object_names)
-            + " - "
-            + parameter_name
-            + " - "
-            + alternative_name
-            + " - "
-            + db_name
-        )
+        db_name = db_name if len(self._parent.db_maps) > 1 else None
+        return parameter_identifier(db_name, parameter_name, alternative_name, object_names)
 
     def column_name(self, column):
         """Returns a string that concatenates the object and parameter names corresponding to the given column.
@@ -874,7 +869,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         for row, top_left_id in enumerate(self.model.pivot_columns):
             header_id = self.model._column_data_header[column][row]
             header_names.append(self._header_name(top_left_id, header_id))
-        return self.db_mngr.GROUP_SEP.join(header_names)
+        return DB_ITEM_SEPARATOR.join(header_names)
 
     def call_reset_model(self, pivot=None):
         """See base class."""

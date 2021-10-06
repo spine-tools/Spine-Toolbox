@@ -207,8 +207,7 @@ class SpineDBEditorSettingsMixin:
 
 
 class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
-    """A widget to change user's preferred settings, but only for the Spine db editor.
-    """
+    """A widget to change user's preferred settings, but only for the Spine db editor."""
 
     def __init__(self, multi_db_editor):
         """Initialize class."""
@@ -252,7 +251,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.connect_signals()
         self.read_settings()
-        self.read_project_settings()
         self._update_python_widgets_enabled(self.ui.radioButton_use_python_jupyter_console.isChecked())
         self._update_julia_widgets_enabled(self.ui.radioButton_use_julia_jupyter_console.isChecked())
 
@@ -486,6 +484,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
+        prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
@@ -523,6 +522,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_color_toolbar_icons.setCheckState(Qt.Checked)
         if curved_links == "true":
             self.ui.checkBox_use_curved_links.setCheckState(Qt.Checked)
+        self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
+        if prevent_overlapping == "true":
+            self.ui.checkBox_prevent_overlapping.setCheckState(Qt.Checked)
         self.ui.horizontalSlider_data_flow_animation_duration.setValue(data_flow_anim_dur)
         if bg_choice == "grid":
             self.ui.radioButton_bg_grid.setChecked(True)
@@ -580,16 +582,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if spec_show_undo == 2:
             self.ui.checkBox_spec_show_undo.setChecked(True)
 
-    def read_project_settings(self):
-        """Get project name and description and update widgets accordingly."""
-        if self._project:
-            self.ui.lineEdit_project_name.setText(self._project.name)
-            self.ui.textEdit_project_description.setText(self._project.description)
-        else:
-            # Disable project name and description line edits if no project open
-            self.ui.lineEdit_project_name.setDisabled(True)
-            self.ui.textEdit_project_description.setDisabled(True)
-
     @Slot()
     def save_settings(self):
         """Get selections and save them to persistent memory.
@@ -619,6 +611,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/colorToolbarIcons", color_toolbar_icons)
         curved_links = "true" if int(self.ui.checkBox_use_curved_links.checkState()) else "false"
         self._qsettings.setValue("appSettings/curvedLinks", curved_links)
+        prevent_overlapping = "true" if int(self.ui.checkBox_prevent_overlapping.checkState()) else "false"
+        self._qsettings.setValue("appSettings/preventOverlapping", prevent_overlapping)
         data_flow_anim_dur = str(self.ui.horizontalSlider_data_flow_animation_duration.value())
         self._qsettings.setValue("appSettings/dataFlowAnimationDuration", data_flow_anim_dur)
         if self.ui.radioButton_bg_grid.isChecked():
@@ -682,8 +676,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.set_work_directory(work_dir)
         # Check if something in the app needs to be updated
         self._toolbox.show_datetime = self._toolbox.update_datetime()
-        # Project
-        self.update_project_settings()
         return True
 
     def _get_julia_settings(self):
@@ -695,19 +687,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             julia_kernel = self.ui.comboBox_julia_kernel.currentText()
         return use_julia_jupyter_console, julia_exe, julia_project, julia_kernel
-
-    def update_project_settings(self):
-        """Update project name and description if these have been changed."""
-        if not self._project:
-            return
-        new_name = self.ui.lineEdit_project_name.text().strip()
-        if self._project.name != new_name:
-            # Change project name
-            if new_name != "":
-                self._project.call_set_name(new_name)
-        if not self._project.description == self.ui.textEdit_project_description.toPlainText():
-            # Set new project description
-            self._project.call_set_description(self.ui.textEdit_project_description.toPlainText())
 
     def set_work_directory(self, new_work_dir):
         """Sets new work directory.

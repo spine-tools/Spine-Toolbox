@@ -71,10 +71,14 @@ class MoveIconCommand(SpineToolboxCommand):
         """
         super().__init__()
         self._project = project
-        self._previous_pos = {x.name(): x.previous_pos for x in icon.icon_group}
-        self._current_pos = {x.name(): x.current_pos for x in icon.icon_group}
-        if len(icon.icon_group) == 1:
-            self.setText(f"move {next(iter(icon.icon_group)).name()}")
+        icon_group = icon.scene().icon_group
+        self._representative = next(iter(icon_group), None)
+        if self._representative is None:
+            self.setObsolete(True)
+        self._previous_pos = {x.name(): x.previous_pos for x in icon_group}
+        self._current_pos = {x.name(): x.scenePos() for x in icon_group}
+        if len(icon_group) == 1:
+            self.setText(f"move {self._representative.name()}")
         else:
             self.setText("move multiple items")
 
@@ -85,58 +89,37 @@ class MoveIconCommand(SpineToolboxCommand):
         self._move_to(self._previous_pos)
 
     def _move_to(self, positions):
-        icon_group = set()
         for item_name, position in positions.items():
             icon = self._project.get_item(item_name).get_icon()
-            icon.setPos(position)
-            icon_group.add(icon)
-        for icon in icon_group:
-            icon.icon_group = icon_group
-        representative = next(iter(icon_group))
-        representative.update_links_geometry()
-        representative.notify_item_move()
+            icon.set_pos_without_bumping(position)
+        self._representative.update_links_geometry()
+        self._representative.notify_item_move()
 
 
-class SetProjectNameCommand(SpineToolboxCommand):
-    def __init__(self, project, name):
+class SetProjectNameAndDescriptionCommand(SpineToolboxCommand):
+    def __init__(self, project, name, description):
         """Command to set the project name.
 
         Args:
             project (SpineToolboxProject): the project
             name (str): The new name
-        """
-        super().__init__()
-        self.project = project
-        self.redo_name = name
-        self.undo_name = self.project.name
-        self.setText("rename project")
-
-    def redo(self):
-        self.project.set_name(self.redo_name)
-
-    def undo(self):
-        self.project.set_name(self.undo_name)
-
-
-class SetProjectDescriptionCommand(SpineToolboxCommand):
-    def __init__(self, project, description):
-        """Command to set the project description.
-
-        Args:
-            project (SpineToolboxProject): the project
             description (str): The new description
         """
         super().__init__()
         self.project = project
-        self.redo_description = description
-        self.undo_description = self.project.description
-        self.setText("change project description")
+        self.redo_name = name
+        self.redo_desc = description
+        self.undo_name = self.project.name
+        self.undo_desc = self.project.description
+        self.setText("set project name and description")
 
     def redo(self):
-        self.project.set_description(self.redo_description)
+        self.project.set_name(self.redo_name)
+        self.project.set_description(self.redo_desc)
 
     def undo(self):
-        self.project.set_description(self.undo_description)
+        self.project.set_name(self.undo_name)
+        self.project.set_description(self.undo_desc)
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):

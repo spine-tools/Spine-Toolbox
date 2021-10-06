@@ -24,8 +24,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import Com
 
 class TestSpineDBEditorUpdateMixin:
     def test_update_object_classes_in_object_tree_model(self):
-        """Test that object classes are updated in the object tree model.
-        """
+        """Test that object classes are updated in the object tree model."""
         self.spine_db_editor.init_models()
         self.put_mock_object_classes_in_db_mngr()
         self.fetch_object_tree_model()
@@ -58,7 +57,7 @@ class TestSpineDBEditorUpdateMixin:
         self.put_mock_relationship_classes_in_db_mngr()
         self.fetch_object_tree_model()
         self.fish_dog_class = self._relationship_class(
-            3, "octopus__dog", str(self.fish_class["id"]) + "," + str(self.dog_class["id"]), "octopus,dog"
+            3, "octopus__dog", str(self.fish_class["id"]) + "," + str(self.dog_class["id"]), "octopus,dog", None
         )
         self.db_mngr.relationship_classes_updated.emit({self.mock_db_map: [self.fish_dog_class]})
         root_item = self.spine_db_editor.object_tree_model.root_item
@@ -126,6 +125,7 @@ class TestSpineDBEditorUpdateMixin:
             "nemo",
             self.water_parameter["id"],
             "water",
+            "Base",
             b'"pepper"',
             None,
         )
@@ -161,6 +161,7 @@ class TestSpineDBEditorUpdateMixin:
             "nemo,pluto",
             self.relative_speed_parameter["id"],
             "relative_speed",
+            "Base",
             b"100",
             None,
         )

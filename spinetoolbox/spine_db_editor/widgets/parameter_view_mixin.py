@@ -25,6 +25,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
+from ...helpers import preferred_row_height
 
 
 class ParameterViewMixin:
@@ -57,7 +58,7 @@ class ParameterViewMixin:
         for view, model in zip(views, self._parameter_models):
             view.setModel(model)
             view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-            view.verticalHeader().setDefaultSectionSize(self.default_row_height)
+            view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
             view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
             view.connect_spine_db_editor(self)

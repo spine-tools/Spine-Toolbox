@@ -49,7 +49,7 @@ class TestSpineDBEditor(
 
     @staticmethod
     def _relationship_class(*args):
-        return dict(zip(["id", "name", "object_class_id_list", "object_class_name_list"], args))
+        return dict(zip(["id", "name", "object_class_id_list", "object_class_name_list", "display_icon"], args))
 
     @staticmethod
     def _relationship(*args):
@@ -94,6 +94,7 @@ class TestSpineDBEditor(
                     "object_name",
                     "parameter_id",
                     "parameter_name",
+                    "alternative_name",
                     "value",
                     "type",
                 ],
@@ -118,6 +119,7 @@ class TestSpineDBEditor(
                     "object_name_list",
                     "parameter_id",
                     "parameter_name",
+                    "alternative_name",
                     "value",
                     "type",
                 ],
@@ -151,12 +153,14 @@ class TestSpineDBEditor(
             "fish__dog",
             str(cls.fish_class["id"]) + "," + str(cls.dog_class["id"]),
             cls.fish_class["name"] + "," + cls.dog_class["name"],
+            None,
         )
         cls.dog_fish_class = cls._relationship_class(
             4,
             "dog__fish",
             str(cls.dog_class["id"]) + "," + str(cls.fish_class["id"]),
             cls.dog_class["name"] + "," + cls.fish_class["name"],
+            None,
         )
         cls.nemo_object = cls._object(1, cls.fish_class["id"], 'nemo', 'The lost one.')
         cls.pluto_object = cls._object(2, cls.dog_class["id"], 'pluto', "Mickey's.")
@@ -214,6 +218,7 @@ class TestSpineDBEditor(
             cls.nemo_object["name"],
             cls.water_parameter["id"],
             cls.water_parameter["parameter_name"],
+            "Base",
             b'"salt"',
             None,
         )
@@ -225,6 +230,7 @@ class TestSpineDBEditor(
             cls.pluto_object["name"],
             cls.breed_parameter["id"],
             cls.breed_parameter["parameter_name"],
+            "Base",
             b'"bloodhound"',
             None,
         )
@@ -236,6 +242,7 @@ class TestSpineDBEditor(
             cls.scooby_object["name"],
             cls.breed_parameter["id"],
             cls.breed_parameter["parameter_name"],
+            "Base",
             b'"great dane"',
             None,
         )
@@ -250,6 +257,7 @@ class TestSpineDBEditor(
             cls.nemo_pluto_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
             cls.relative_speed_parameter["parameter_name"],
+            "Base",
             b"-1",
             None,
         )
@@ -264,6 +272,7 @@ class TestSpineDBEditor(
             cls.nemo_scooby_rel["object_name_list"],
             cls.relative_speed_parameter["id"],
             cls.relative_speed_parameter["parameter_name"],
+            "Base",
             b"5",
             None,
         )
@@ -278,6 +287,7 @@ class TestSpineDBEditor(
             cls.pluto_nemo_rel["object_name_list"],
             cls.combined_mojo_parameter["id"],
             cls.combined_mojo_parameter["parameter_name"],
+            "Base",
             b"100",
             None,
         )

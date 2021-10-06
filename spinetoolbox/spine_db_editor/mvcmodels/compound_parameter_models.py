@@ -19,7 +19,7 @@ These models concatenate several 'single' models and one 'empty' model.
 from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import rows_to_row_count_tuples, parameter_identifier
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -69,7 +69,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
 
     def fetch_successful(self, db_map, item):
-        model = self._create_single_model(db_map, item["entity_class_id"])
+        entity_class_id = item.get(self.entity_class_id_key)
+        if entity_class_id is None:
+            return False
+        model = self._create_single_model(db_map, entity_class_id)
         return self.filter_accepts_model(model) and model.filter_accepts_item(item)
 
     def fetch_id(self):
@@ -207,14 +210,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return italic_font
         return super().headerData(section, orientation, role)
 
-    def _create_single_models(self):
-        """Returns a list of single models for this compound model, one for each entity_class in each database.
-
-        Returns:
-            list
-        """
-        return []
-
     def _create_empty_model(self):
         """Returns the empty model for this compound model.
 
@@ -313,8 +308,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if model.set_auto_filter(field, values):
             self._invalidate_filter()
 
-    def _row_map_for_model(self, model):
-        """Returns the row map for the given model.
+    def _row_map_iterator_for_model(self, model):
+        """Yields row map for the given model.
         Reimplemented to take filter status into account.
 
         Args:
@@ -324,8 +319,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             list: tuples (model, row number) for each accepted row
         """
         if not self.filter_accepts_model(model):
-            return []
-        return [(model, i) for i in model.accepted_rows()]
+            return ()
+        for i in model.accepted_rows():
+            yield (model, i)
 
     def _models_with_db_map(self, db_map):
         """Returns a collection of single models with given db_map.
@@ -383,22 +379,26 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
                 ids = [item["id"] for item in class_items]
-                self._create_and_append_single_model(db_map, entity_class_id, ids)
+                self._add_parameter_data(db_map, entity_class_id, ids)
                 self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.receive_parameter_data_added(db_map_data)
 
     def _create_single_model(self, db_map, entity_class_id):
         model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
+        self._connect_single_model(model)
         for field in self._auto_filter:
             self._set_single_auto_filter(model, field)
         return model
 
-    def _create_and_append_single_model(self, db_map, entity_class_id, ids):
+    def _add_parameter_data(self, db_map, entity_class_id, ids):
+        existing = next(
+            (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+        )
+        if existing is not None:
+            existing.add_rows(ids)
+            return
         model = self._create_single_model(db_map, entity_class_id)
         model.reset_model(ids)
-        single_row_map = self._row_map_for_model(model)
-        self._insert_single_row_map(single_row_map)
-        self.sub_models.insert(len(self.single_models), model)
 
     def receive_parameter_data_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated in the dbs.
@@ -459,9 +459,18 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return sub_model.db_map, sub_model.item_id(sub_index.row())
 
     def index_name(self, index):
+        """Generates a name for data at given index.
+
+        Args:
+            index (QModelIndex): index to model
+
+        Returns:
+            str: label identifying the data
+        """
         item = self.db_item(index)
         if item is None:
             return ""
+        database = self.index(index.row(), self.columnCount() - 1).data() if len(self.db_maps) > 1 else None
         entity_name_key = {
             "parameter_definition": {
                 "object_class": "object_class_name",
@@ -469,8 +478,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             },
             "parameter_value": {"object_class": "object_name", "relationship_class": "object_name_list"},
         }[self.item_type][self.entity_class_type]
-        entity_name = item[entity_name_key].replace(",", self.db_mngr.GROUP_SEP)
-        return entity_name + " - " + item["parameter_name"]
+        entity_names = item[entity_name_key].split(",")
+        return parameter_identifier(database, item["parameter_name"], item["alternative_name"], entity_names)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,

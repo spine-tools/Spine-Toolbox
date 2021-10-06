@@ -94,7 +94,7 @@ class TestEmptyParameterModel(unittest.TestCase):
                 ["dog", "pluto", "breed", 1, join_value_and_type(b'"bloodhound"', None), "mock_db"],
             )
         )
-        values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["object_class_id"]]
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["object_class_name"], "dog")
         self.assertEqual(values[0]["object_name"], "pluto")
@@ -107,7 +107,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyObjectParameterValueModel(None, header, self._db_mngr)
         model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["fish", "nemo", "water", "salty", "mock_db"]))
-        values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["object_class_id"]]
         self.assertEqual(values, [])
 
     def test_infer_class_from_object_and_parameter(self):
@@ -122,7 +122,7 @@ class TestEmptyParameterModel(unittest.TestCase):
             )
         )
         self.assertEqual(indexes[0].data(), "dog")
-        values = next(self._db_mngr.get_object_parameter_values(self._db_map), [])
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["object_class_id"]]
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["object_class_name"], "dog")
         self.assertEqual(values[0]["object_name"], "pluto")
@@ -140,7 +140,7 @@ class TestEmptyParameterModel(unittest.TestCase):
                 ["dog__fish", "pluto,nemo", "relative_speed", 1, join_value_and_type(b"-1", None), "mock_db"],
             )
         )
-        values = next(self._db_mngr.get_relationship_parameter_values(self._db_map), [])
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["relationship_class_id"]]
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["relationship_class_name"], "dog__fish")
         self.assertEqual(values[0]["object_name_list"], "pluto,nemo")
@@ -155,7 +155,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "combined_mojo", 100, "mock_db"])
         )
-        values = next(self._db_mngr.get_relationship_parameter_values(self._db_map), [])
+        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["relationship_class_id"]]
         self.assertEqual(values, [])
 
     def test_add_object_parameter_definitions_to_db(self):
@@ -164,7 +164,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", None, "mock_db"]))
-        definitions = next(self._db_mngr.get_object_parameter_definitions(self._db_map), [])
+        definitions = [x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["object_class_id"]]
         self.assertEqual(len(definitions), 2)
         names = {d["parameter_name"] for d in definitions}
         self.assertEqual(names, {"breed", "color"})
@@ -175,7 +175,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyObjectParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["cat", "color", None, "mock_db"]))
-        definitions = next(self._db_mngr.get_object_parameter_definitions(self._db_map), [])
+        definitions = [x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["object_class_id"]]
         self.assertEqual(len(definitions), 1)
         self.assertEqual(definitions[0]["parameter_name"], "breed")
 
@@ -185,7 +185,9 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = EmptyRelationshipParameterDefinitionModel(None, header, self._db_mngr)
         model.fetchMore(QModelIndex())
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", None, "mock_db"]))
-        definitions = next(self._db_mngr.get_relationship_parameter_definitions(self._db_map), [])
+        definitions = [
+            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["relationship_class_id"]
+        ]
         self.assertEqual(len(definitions), 2)
         names = {d["parameter_name"] for d in definitions}
         self.assertEqual(names, {"relative_speed", "combined_mojo"})
@@ -198,6 +200,8 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["fish__dog", "each_others_opinion", None, "mock_db"])
         )
-        definitions = next(self._db_mngr.get_relationship_parameter_definitions(self._db_map), [])
+        definitions = [
+            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["relationship_class_id"]
+        ]
         self.assertEqual(len(definitions), 1)
         self.assertEqual(definitions[0]["parameter_name"], "relative_speed")

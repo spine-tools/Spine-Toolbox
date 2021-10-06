@@ -16,7 +16,6 @@ Contains the TreeViewMixin class.
 :date:   26.11.2018
 """
 from PySide2.QtCore import Signal, Slot
-from PySide2.QtWidgets import QInputDialog
 from .add_items_dialogs import (
     AddObjectClassesDialog,
     AddObjectsDialog,
@@ -41,8 +40,7 @@ from ...spine_db_parcel import SpineDBParcel
 
 
 class TreeViewMixin:
-    """Provides object and relationship trees for the Spine db editor.
-    """
+    """Provides object and relationship trees for the Spine db editor."""
 
     _object_classes_added = Signal()
     _relationship_classes_added = Signal()
@@ -138,25 +136,6 @@ class TreeViewMixin:
         parcel.full_push_relationship_class_ids(db_map_rel_cls_ids)
         parcel.full_push_relationship_ids(db_map_rel_ids)
         self.export_data(parcel.data)
-
-    def duplicate_object(self, index):
-        """
-        Duplicates the object at the given object tree model index.
-
-        Args:
-            index (QModelIndex)
-        """
-        object_item = index.internalPointer()
-        orig_name = object_item.display_data
-        dup_name, ok = QInputDialog.getText(
-            self, "Duplicate object", "Enter a name for the duplicate object:", text=orig_name + "_copy"
-        )
-        if not ok:
-            return
-        parcel = SpineDBParcel(self.db_mngr)
-        db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
-        parcel.inner_push_object_ids(db_map_obj_ids)
-        self.db_mngr.duplicate_object(object_item.db_maps, parcel.data, orig_name, dup_name)
 
     def show_add_object_classes_form(self):
         """Shows dialog to add new object classes."""

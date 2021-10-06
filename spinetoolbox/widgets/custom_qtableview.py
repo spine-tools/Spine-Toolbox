@@ -20,6 +20,7 @@ import csv
 import ctypes
 import io
 import locale
+from contextlib import contextmanager
 from numbers import Number
 import re
 from PySide2.QtWidgets import QTableView, QApplication
@@ -78,24 +79,25 @@ class CopyPasteTableView(QTableView):
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
         row_dict = {}
-        for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
-            for i in range(rng.top(), rng.bottom() + 1):
-                if v_header.isSectionHidden(i):
-                    continue
-                row = row_dict.setdefault(i, [])
-                for j in range(rng.left(), rng.right() + 1):
-                    if h_header.isSectionHidden(j):
+        with system_lc_numeric():
+            for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
+                for i in range(rng.top(), rng.bottom() + 1):
+                    if v_header.isSectionHidden(i):
                         continue
-                    data = self.model().index(i, j).data(Qt.EditRole)
-                    if data is not None:
-                        try:
-                            number = float(data)
-                            str_data = locale.str(number)
-                        except ValueError:
-                            str_data = str(data)
-                    else:
-                        str_data = ""
-                    row.append(str_data)
+                    row = row_dict.setdefault(i, [])
+                    for j in range(rng.left(), rng.right() + 1):
+                        if h_header.isSectionHidden(j):
+                            continue
+                        data = self.model().index(i, j).data(Qt.EditRole)
+                        if data is not None:
+                            try:
+                                number = float(data)
+                                str_data = locale.str(number)
+                            except ValueError:
+                                str_data = str(data)
+                        else:
+                            str_data = ""
+                        row.append(str_data)
         with io.StringIO() as output:
             writer = csv.writer(output, delimiter="\t", quotechar="'")
             for key in sorted(row_dict):
@@ -126,12 +128,23 @@ class CopyPasteTableView(QTableView):
         Returns:
             list: a list of rows
         """
+
+        def _process_value(value):
+            """Delocalizes value, expect when it's one of our 'complex' value types.
+            We need this exception because our complex values are json strings, so they have commas,
+            and ``locale.delocalize`` might remove those commas.
+
+            We identify our complex values by checking if the word "type" is in them.
+            See ``spinedb_api.helpers.join_value_and_type`` for the reason why this works.
+            """
+            if '"type"' in value:
+                return value
+            return locale.delocalize(value)
+
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter="\t", quotechar="'")
-            rows = list()
-            for row in reader:
-                rows.append([locale.delocalize(element) for element in row])
-            return rows
+            with system_lc_numeric():
+                return [[_process_value(element) for element in row] for row in reader]
 
     def paste_on_selection(self):
         """Pastes clipboard data on selection, but not beyond.
@@ -304,17 +317,18 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
                 data_values[row - row_first] = data
         with io.StringIO() as output:
             writer = csv.writer(output, delimiter='\t')
-            if all(stamp is None for stamp in data_indexes):
-                for value in data_values:
-                    writer.writerow([locale.str(value) if value is not None else ""])
-            elif all(value is None for value in data_values):
-                for index in data_indexes:
-                    writer.writerow([index if index is not None else ""])
-            else:
-                for index, value in zip(data_indexes, data_values):
-                    index = index if index is not None else ""
-                    value = locale.str(value) if value is not None else ""
-                    writer.writerow([index, value])
+            with system_lc_numeric():
+                if all(stamp is None for stamp in data_indexes):
+                    for value in data_values:
+                        writer.writerow([locale.str(value) if value is not None else ""])
+                elif all(value is None for value in data_values):
+                    for index in data_indexes:
+                        writer.writerow([index if index is not None else ""])
+                else:
+                    for index, value in zip(data_indexes, data_values):
+                        index = index if index is not None else ""
+                        value = locale.str(value) if value is not None else ""
+                        writer.writerow([index, value])
             QApplication.clipboard().setText(output.getvalue())
         return True
 
@@ -326,13 +340,6 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
     def paste(self):
         """Pastes data from clipboard to selection."""
         raise NotImplementedError()
-
-    def _select_pasted(self, indexes):
-        """Selects the given model indexes."""
-        selection_model = self.selectionModel()
-        selection_model.clear()
-        for index in indexes:
-            selection_model.select(index, QItemSelectionModel.Select)
 
 
 class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
@@ -349,7 +356,7 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         if 'text/plain' not in data_formats:
             return False
         try:
-            pasted_table = self._read_pasted_text(QApplication.clipboard().text())
+            pasted_table = self._read_pasted_text(clipboard.text())
         except ValueError:
             return False
         if isinstance(pasted_table, tuple):
@@ -370,7 +377,8 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
             pasted_table = pasted_table[0:selection_length]
         indexes_to_set, values_to_set = self._paste_to_values_column(pasted_table, first_row, paste_length)
         model.batch_set_data(indexes_to_set, values_to_set)
-        self._select_pasted(indexes_to_set)
+        pasted_selection = QItemSelection(model.index(first_row, 1), model.index(first_row + paste_length - 1, 1))
+        self.selectionModel().select(pasted_selection, QItemSelectionModel.ClearAndSelect)
         return True
 
     @staticmethod
@@ -386,11 +394,8 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         """
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter='\t')
-            single_column = list()
-            for row in reader:
-                number = locale.atof(row[0])
-                single_column.append(number)
-        return single_column
+            with system_lc_numeric():
+                return [locale.atof(row[0]) for row in reader if row]
 
     def _paste_to_values_column(self, values, first_row, paste_length):
         """Pastes data to the Values column.
@@ -427,7 +432,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         if 'text/plain' not in data_formats:
             return False
         try:
-            pasted_table = self._read_pasted_text(QApplication.clipboard().text())
+            pasted_table = self._read_pasted_text(clipboard.text())
         except ValueError:
             return False
         paste_single_column = isinstance(pasted_table, list)
@@ -451,12 +456,19 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             indexes_to_set, values_to_set = self._paste_single_column(
                 pasted_table, first_row, first_column, paste_length
             )
+            paste_selection = QItemSelection(
+                model.index(first_row, first_column), model.index(first_row + paste_length - 1, first_column)
+            )
         else:
             indexes_to_set, values_to_set = self._paste_two_columns(
                 pasted_table[0], pasted_table[1], first_row, paste_length
             )
-        model.batch_set_data(indexes_to_set, values_to_set)
-        self._select_pasted(indexes_to_set)
+            paste_selection = QItemSelection(model.index(first_row, 0), model.index(first_row + paste_length - 1, 1))
+        try:
+            model.batch_set_data(indexes_to_set, values_to_set)
+        except ValueError:
+            return False
+        self.selectionModel().select(paste_selection, QItemSelectionModel.ClearAndSelect)
         return True
 
     def _paste_two_columns(self, data_indexes, data_values, first_row, paste_length):
@@ -518,17 +530,18 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             single_column = list()
             data_indexes = list()
             data_values = list()
-            for row in reader:
-                column_count = len(row)
-                if column_count == 1:
-                    try:
-                        number = locale.atof(row[0])
-                        single_column.append(number)
-                    except ValueError:
-                        single_column.append(row[0])
-                elif column_count > 1:
-                    data_indexes.append(row[0])
-                    data_values.append(locale.atof(row[1]))
+            with system_lc_numeric():
+                for row in reader:
+                    column_count = len(row)
+                    if column_count == 1:
+                        try:
+                            number = locale.atof(row[0])
+                            single_column.append(number)
+                        except ValueError:
+                            single_column.append(row[0])
+                    elif column_count > 1:
+                        data_indexes.append(row[0])
+                        data_values.append(locale.atof(row[1]))
         if single_column:
             if data_indexes:
                 # Don't know how to handle a mixture of single and multiple columns.
@@ -549,12 +562,13 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         selected_indexes = [i for i in selection_model.selectedIndexes() if not model.is_expanse_row(i.row())]
         selected_indexes.sort(key=lambda index: index.row())
         values = [index.data() for index in selected_indexes]
-        with io.StringIO() as output:
-            writer = csv.writer(output, delimiter='\t')
-            for value in values:
-                value = locale.str(value) if isinstance(value, Number) else value
-                writer.writerow([value])
-            QApplication.clipboard().setText(output.getvalue())
+        with system_lc_numeric():
+            with io.StringIO() as output:
+                writer = csv.writer(output, delimiter='\t')
+                for value in values:
+                    value = locale.str(value) if isinstance(value, Number) else value
+                    writer.writerow([value])
+                QApplication.clipboard().setText(output.getvalue())
         return True
 
     def paste(self):
@@ -568,7 +582,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         if 'text/plain' not in data_formats:
             return False
         try:
-            pasted_table = self._read_pasted_text(QApplication.clipboard().text())
+            pasted_table = self._read_pasted_text(clipboard.text())
         except ValueError:
             return False
         if isinstance(pasted_table, tuple):
@@ -593,8 +607,10 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         for row in range(first_row, first_row + paste_length):
             values_to_set.append(pasted_table[row - first_row])
             indexes_to_set.append(create_model_index(row, 0))
-        model.batch_set_data(indexes_to_set, values_to_set)
-        self._select_pasted(indexes_to_set)
+        with system_lc_numeric():
+            model.batch_set_data(indexes_to_set, values_to_set)
+        paste_selection = QItemSelection(model.index(first_row, 0), model.index(first_row + paste_length - 1, 0))
+        self.selectionModel().select(paste_selection, QItemSelectionModel.ClearAndSelect)
         return True
 
     @staticmethod
@@ -624,25 +640,26 @@ class MapTableView(CopyPasteTableView):
         top, bottom, left, right = _range(selection)
         model = self.model()
         out_table = list()
-        for y in range(top, bottom + 1):
-            row = (right - left + 1) * [None]
-            for x in range(left, right + 1):
-                index = model.index(y, x)
-                if not selection.contains(index):
-                    continue
-                data = index.data(Qt.EditRole)
-                try:
-                    number = float(data)
-                    str_data = locale.str(number)
-                except ValueError:
-                    str_data = str(data)
-                except TypeError:
-                    if isinstance(data, IndexedValue):
-                        str_data = join_value_and_type(*to_database(data))
-                    else:
+        with system_lc_numeric():
+            for y in range(top, bottom + 1):
+                row = (right - left + 1) * [None]
+                for x in range(left, right + 1):
+                    index = model.index(y, x)
+                    if not selection.contains(index):
+                        continue
+                    data = index.data(Qt.EditRole)
+                    try:
+                        number = float(data)
+                        str_data = locale.str(number)
+                    except ValueError:
                         str_data = str(data)
-                row[x - left] = str_data
-            out_table.append(row)
+                    except TypeError:
+                        if isinstance(data, IndexedValue):
+                            str_data = join_value_and_type(*to_database(data))
+                        else:
+                            str_data = str(data)
+                    row[x - left] = str_data
+                out_table.append(row)
         with io.StringIO() as output:
             writer = csv.writer(output, delimiter="\t", quotechar="'")
             writer.writerows(out_table)
@@ -670,7 +687,7 @@ class MapTableView(CopyPasteTableView):
         data_formats = mime_data.formats()
         if 'text/plain' not in data_formats:
             return False
-        pasted_table = self._read_pasted_text(QApplication.clipboard().text())
+        pasted_table = self._read_pasted_text(clipboard.text())
         paste_length = len(pasted_table)
         paste_width = len(pasted_table[0]) if pasted_table else 0
         first_row, last_row, first_column, last_column = _range(selection_model.selection())
@@ -714,37 +731,38 @@ class MapTableView(CopyPasteTableView):
         data = list()
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter='\t')
-            for row in reader:
-                data_row = list()
-                for cell in row:
-                    try:
-                        number = locale.atof(cell)
-                        data_row.append(number)
-                        continue
-                    except ValueError:
-                        pass
-                    try:
-                        # Try parsing Duration before DateTime because DateTime will happily accept strings like '1h'
-                        value = Duration(cell)
-                        data_row.append(value)
-                        continue
-                    except SpineDBAPIError:
-                        pass
-                    if _could_be_time_stamp(cell):
+            with system_lc_numeric():
+                for row in reader:
+                    data_row = list()
+                    for cell in row:
                         try:
-                            value = DateTime(cell)
+                            number = locale.atof(cell)
+                            data_row.append(number)
+                            continue
+                        except ValueError:
+                            pass
+                        try:
+                            # Try parsing Duration before DateTime because DateTime will happily accept strings like '1h'
+                            value = Duration(cell)
                             data_row.append(value)
                             continue
                         except SpineDBAPIError:
                             pass
-                    try:
-                        value = from_database(*split_value_and_type(cell))
-                        data_row.append(value)
-                        continue
-                    except ParameterValueFormatError:
-                        pass
-                    data_row.append(cell)
-                data.append(data_row)
+                        if _could_be_time_stamp(cell):
+                            try:
+                                value = DateTime(cell)
+                                data_row.append(value)
+                                continue
+                            except SpineDBAPIError:
+                                pass
+                        try:
+                            value = from_database(*split_value_and_type(cell))
+                            data_row.append(value)
+                            continue
+                        except ParameterValueFormatError:
+                            pass
+                        data_row.append(cell)
+                    data.append(data_row)
         return data
 
 
@@ -786,3 +804,13 @@ def _could_be_time_stamp(s):
         bool: True if s could be a time stamp, False otherwise
     """
     return _NOT_TIME_STAMP.match(s) is None
+
+
+@contextmanager
+def system_lc_numeric():
+    toolbox_lc_numeric = locale.getlocale(locale.LC_NUMERIC)
+    locale.setlocale(locale.LC_NUMERIC, "")
+    try:
+        yield None
+    finally:
+        locale.setlocale(locale.LC_NUMERIC, toolbox_lc_numeric)
