@@ -149,12 +149,12 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
         print("RemoteSpineEngineManager2.run()")
         while self._state != RemoteSpineEngineManagerState2.CLOSED:
             # run request
-            if self._requestPending == True and self._state == RemoteSpineEngineManagerState2.IDLE:
+            if self._requestPending and self._state == RemoteSpineEngineManagerState2.IDLE:
                 # debugging
                 runStartTimeMs = round(time.time()*1000.0)
                 # change state
                 print("RemoteSpineEngineManager2.run() Started running..")
-                self._state == RemoteSpineEngineManagerState2.RUNNING
+                self._state = RemoteSpineEngineManagerState2.RUNNING
 
                 # transform dict to JSON string
                 jsonTxt = json.dumps(self._inputData)
