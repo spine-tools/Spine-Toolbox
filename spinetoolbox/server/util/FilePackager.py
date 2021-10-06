@@ -14,53 +14,39 @@ Contains a helper class for packaging project folders into ZIP-files.
 :authors: P. Pääkkönen (VTT)
 :date:   03.09.2021
 """
-
 import shutil
 import os
 
 
 class FilePackager:
+    """Converts a folder into a ZIP-file
 
-
-    """
-    Converts a folder into a ZIP-file
     Args:
         sourceFolder(string): the folder to be included to the ZIP-file
         destinationFolder(string):destination folder of the ZIP-file to be created
         zipFileName(string): name of the ZIP-file to be created
     """
     @staticmethod
-    def package(sourceFolder,destinationFolder,zipFileName):
-
-        if destinationFolder==None or zipFileName==None or sourceFolder==None:
+    def package(sourceFolder, destinationFolder, zipFileName):
+        if not destinationFolder or not zipFileName or not sourceFolder:
             raise ValueError("source folder,destination folder or file name were invalid")
-
-        if len(destinationFolder)==0 or len(zipFileName)==0 or len(sourceFolder)==0:
-            raise ValueError("source folder,destination folder or file name were invalid")
-
-        #check if the source folder exists
-        if os.path.isdir(sourceFolder)==False:
+        # check if the source folder exists
+        if not os.path.isdir(sourceFolder):
             raise ValueError("provided sourceFolder doesn't exist.")
-
-        print('FilePackager.package() source folder: %s, dest-folder+file name: %s'%(sourceFolder,destinationFolder+zipFileName,))
-        shutil.make_archive(destinationFolder+zipFileName, 'zip', sourceFolder)        
-
+        print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, destinationFolder + zipFileName,))
+        shutil.make_archive(destinationFolder + zipFileName, 'zip', sourceFolder)
 
     @staticmethod
     def deleteFile(file):
-        """
-        Deletes the file at the provided location (includes the folder).
+        """Deletes the file at the provided location (includes the folder).
+
         Args:
             file: File to be deleted. 
         """
-         #check input
-        if file==None:
+        # check input
+        if not file:
             raise ValueError('invalid input to FileExtractor.deleteFile()')
-        if len(file)==0:
-            raise ValueError('invalid input to FileExtractor.deleteFile()')
-
-        if os.path.exists(file)==False:
-            raise ValueError('provided file %s doesn''t exist'%file)  
-
+        if not os.path.exists(file):
+            raise ValueError("provided file %s doesn't exist" % file)
         os.remove(file) 
-        print("FileExtractor.deleteFile(): Removed file: %s"%file)   
+        print("FileExtractor.deleteFile(): Removed file: %s" % file)
