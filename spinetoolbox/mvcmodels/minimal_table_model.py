@@ -267,14 +267,5 @@ class MinimalTableModel(QAbstractTableModel):
         if main_data is None:
             main_data = list()
         self.beginResetModel()
-        self._main_data = sorted(main_data, key=self._sort_key)
+        self._main_data = main_data
         self.endResetModel()
-
-    def add_rows(self, data):
-        self.beginResetModel()
-        self._main_data += data
-        self._main_data.sort(key=self._sort_key)
-        self.endResetModel()
-
-    def _sort_key(self, element):
-        return element

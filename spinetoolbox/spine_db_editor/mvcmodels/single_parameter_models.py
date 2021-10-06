@@ -32,7 +32,26 @@ from ..mvcmodels.parameter_mixins import (
 from ...mvcmodels.shared import PARSED_ROLE
 
 
-class SingleParameterModel(MinimalTableModel):
+class HalfSortedTableModel(MinimalTableModel):
+    def reset_model(self, main_data=None):
+        """Reset model."""
+        if main_data is None:
+            main_data = list()
+        self.beginResetModel()
+        self._main_data = sorted(main_data, key=self._sort_key)
+        self.endResetModel()
+
+    def add_rows(self, data):
+        self.beginResetModel()
+        self._main_data += data
+        self._main_data.sort(key=self._sort_key)
+        self.endResetModel()
+
+    def _sort_key(self, element):
+        return element
+
+
+class SingleParameterModel(HalfSortedTableModel):
     """A parameter model for a single entity_class to go in a CompoundParameterModel.
     Provides methods to associate the model to an entity_class as well as
     to filter entities within the class.
