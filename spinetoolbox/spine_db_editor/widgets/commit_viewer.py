@@ -104,6 +104,7 @@ class _CommitContents(QTreeWidget):
         first = next(iter(items), None)
         if first is None:
             return
+        self._margin = 6
         keys = [key for key in first if not any(word in key for word in {"id", "parsed"})]
         self.setHeaderLabels(keys)
         tree_items = [QTreeWidgetItem([item[key] for key in keys]) for item in items]
@@ -114,10 +115,15 @@ class _CommitContents(QTreeWidget):
         for k, _ in enumerate(keys):
             self.resizeColumnToContents(k)
 
+    def moveEvent(self, ev):
+        if ev.pos().x() > 0:
+            self.move(self._margin, ev.pos().y())
+            return
+        super().moveEvent(ev)
+
     def sizeHint(self):
         size = super().sizeHint()
-        slack = 8
-        height = self._height + self.frameWidth() * 2 + self.header().height() + slack
+        height = self._height + self.frameWidth() * 2 + self.header().height() + self._margin
         scroll_bar = self.horizontalScrollBar()
         if scroll_bar.isVisible():
             height += scroll_bar.height()
