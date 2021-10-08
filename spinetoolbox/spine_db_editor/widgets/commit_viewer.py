@@ -105,9 +105,19 @@ class _CommitContents(QTreeWidget):
         if first is None:
             return
         self._margin = 6
-        keys = [key for key in first if not any(word in key for word in {"id", "parsed"})]
+        keys = [key for key in first if not any(word in key for word in {"id", "parsed", "entity"})]
         self.setHeaderLabels(keys)
-        tree_items = [QTreeWidgetItem([item[key] for key in keys]) for item in items]
+        tree_items = [
+            QTreeWidgetItem(
+                [
+                    item[key].decode('utf-8')
+                    if key in ("value", "default_value") and isinstance(item[key], bytes)
+                    else item[key]
+                    for key in keys
+                ]
+            )
+            for item in items
+        ]
         self.addTopLevelItems(tree_items)
         last = tree_items[-1]
         rect = self.visualItemRect(last)
@@ -133,23 +143,29 @@ class _CommitContents(QTreeWidget):
 
 
 class CommitViewer(QMainWindow):
-    def __init__(self, db_editor, db_mngr, *db_maps):
-        super().__init__(parent=db_editor)
+    def __init__(self, qsettings, db_mngr, *db_maps, parent=None):
+        """
+        Args:
+            qsettings (QSettings)
+            db_mngr (SpineDBManager)
+            db_maps (DiffDatabaseMapping)
+        """
+        super().__init__(parent=parent)
         self.setWindowTitle("Commit viewer")
         tab_widget = QTabWidget(self)
         self.setCentralWidget(tab_widget)
-        self._db_editor = db_editor
+        self._qsettings = qsettings
         self._db_mngr = db_mngr
         self._db_maps = db_maps
         self._current_index = 0
         for db_map in self._db_maps:
             widget = _DBCommitViewer(self._db_mngr, db_map)
             tab_widget.addTab(widget, db_map.codename)
-        restore_ui(self, self._db_editor.qsettings, "commitViewer")
-        self._db_editor.qsettings.beginGroup("commitViewer")
+        restore_ui(self, self._qsettings, "commitViewer")
+        self._qsettings.beginGroup("commitViewer")
         current = self.centralWidget().widget(self._current_index)
-        current.splitter.restoreState(self._db_editor.qsettings.value("splitterState"))
-        self._db_editor.qsettings.endGroup()
+        current.splitter.restoreState(self._qsettings.value("splitterState"))
+        self._qsettings.endGroup()
         tab_widget.currentChanged.connect(self._carry_splitter_state)
 
     @Slot(int)
@@ -162,8 +178,8 @@ class CommitViewer(QMainWindow):
 
     def closeEvent(self, ev):
         super().closeEvent(ev)
-        save_ui(self, self._db_editor.qsettings, "commitViewer")
+        save_ui(self, self.qsettings, "commitViewer")
         current = self.centralWidget().widget(self._current_index)
-        self._db_editor.qsettings.beginGroup("commitViewer")
-        self._db_editor.qsettings.setValue("splitterState", current.splitter.saveState())
-        self._db_editor.qsettings.endGroup()
+        self._qsettings.beginGroup("commitViewer")
+        self._qsettings.setValue("splitterState", current.splitter.saveState())
+        self._qsettings.endGroup()

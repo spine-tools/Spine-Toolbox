@@ -324,7 +324,7 @@ class SpineDBEditorBase(QMainWindow):
         self.addActions([menu_action, *actions])
 
     def _browse_commits(self):
-        browser = CommitViewer(self, self.db_mngr, *self.db_maps)
+        browser = CommitViewer(self.qsettings, self.db_mngr, *self.db_maps, parent=self)
         browser.show()
 
     def connect_signals(self):
