@@ -326,10 +326,10 @@ The gdx backend turns the output tables to GAMS sets, parameters and scalars fol
 
 **Parameters:**
 
-* A table that contains numerical values as the last (rightmost) column is considered a GAMS parameter.
+* A table that contains no header in the last (rightmost) column is considered a GAMS parameter.
 * The last column should contain the parameter's values while the other columns contain the values' dimension.
 * Dimensions' domains are taken from the header row, see **Sets** above.
-  Note, that the value column does not need a header.
+  Note, that the value column must not have a header.
 
 **Scalars:**
 
