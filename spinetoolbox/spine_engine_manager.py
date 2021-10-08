@@ -12,7 +12,7 @@
 """
 Contains SpineEngineManagerBase.
 
-:authors: M. Marin (KTH)
+:authors: M. Marin (KTH), P. Pääkkönen (VTT), P. Savolainen (VTT)
 :date:   14.10.2020
 """
 
