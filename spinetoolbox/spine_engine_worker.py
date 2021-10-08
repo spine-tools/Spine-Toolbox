@@ -110,10 +110,9 @@ class SpineEngineWorker(QObject):
     _prompt_arrived = Signal(dict, object)
     _all_items_failed = Signal(list)
 
-    def __init__(self, engine_server_address, engine_data, dag, dag_identifier, project_items, logger):
+    def __init__(self, engine_data, dag, dag_identifier, project_items, logger):
         """
         Args:
-            engine_server_address (str): Address of engine server if any
             engine_data (dict): engine data
             dag (DirectedGraphHandler)
             dag_identifier (str)
@@ -122,7 +121,7 @@ class SpineEngineWorker(QObject):
         """
         super().__init__()
         self._engine_data = engine_data
-        self._engine_mngr = make_engine_manager(engine_server_address)
+        self._engine_mngr = make_engine_manager(engine_data["settings"])
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"

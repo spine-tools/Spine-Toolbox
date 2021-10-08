@@ -188,6 +188,15 @@
          <normaloff>:/icons/wrench.svg</normaloff>:/icons/wrench.svg</iconset>
        </property>
       </item>
+      <item>
+       <property name="text">
+        <string>Remote execution</string>
+       </property>
+       <property name="icon">
+        <iconset resource="resources/resources_icons.qrc">
+         <normaloff>:/icons/menu_icons/server.svg</normaloff>:/icons/menu_icons/server.svg</iconset>
+       </property>
+      </item>
      </widget>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="sizePolicy">
@@ -197,7 +206,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="General">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1157,6 +1166,176 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="RemoteExecution">
+       <layout class="QVBoxLayout" name="verticalLayout_10">
+        <item>
+         <widget class="QGroupBox" name="groupBox_remote_execution">
+          <property name="title">
+           <string>Remote execution</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QCheckBox" name="checkBox_enable_remote_exec">
+             <property name="text">
+              <string>Enabled</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QGridLayout" name="gridLayout_2">
+             <item row="3" column="0">
+              <widget class="QLabel" name="label_6">
+               <property name="text">
+                <string>Security</string>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="2">
+              <layout class="QHBoxLayout" name="horizontalLayout_13">
+               <item>
+                <widget class="QLineEdit" name="lineEdit_secfolder">
+                 <property name="cursor">
+                  <cursorShape>ArrowCursor</cursorShape>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Required for Stonehouse security. Given path should contain '/certificates', '/public_keys', and '/private_keys' directories. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="readOnly">
+                  <bool>false</bool>
+                 </property>
+                 <property name="placeholderText">
+                  <string>Select certificate directory...</string>
+                 </property>
+                 <property name="clearButtonEnabled">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QToolButton" name="toolButton_pick_secfolder">
+                 <property name="minimumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="4" column="0">
+              <widget class="QLabel" name="label_10">
+               <property name="text">
+                <string>Certs</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <layout class="QHBoxLayout" name="horizontalLayout_15">
+               <item>
+                <widget class="QLineEdit" name="lineEdit_host">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Host name&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="placeholderText">
+                  <string>Enter host name...</string>
+                 </property>
+                 <property name="clearButtonEnabled">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_2">
+                 <property name="text">
+                  <string>Port</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="spinBox_port">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Limited to dynamic/private ports (49152-&amp;gt;65535)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="frame">
+                  <bool>true</bool>
+                 </property>
+                 <property name="buttonSymbols">
+                  <enum>QAbstractSpinBox::UpDownArrows</enum>
+                 </property>
+                 <property name="accelerated">
+                  <bool>true</bool>
+                 </property>
+                 <property name="showGroupSeparator" stdset="0">
+                  <bool>false</bool>
+                 </property>
+                 <property name="minimum">
+                  <number>49152</number>
+                 </property>
+                 <property name="maximum">
+                  <number>65535</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>Host</string>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="2">
+              <widget class="QComboBox" name="comboBox_security">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;ZMQ security model&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <item>
+                <property name="text">
+                 <string>None</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Stonehouse</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <spacer name="verticalSpacer_4">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>271</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </widget>
    </item>
@@ -1202,14 +1381,16 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>listWidget</tabstop>
   <tabstop>checkBox_open_previous_project</tabstop>
   <tabstop>checkBox_exit_prompt</tabstop>
   <tabstop>checkBox_save_project_before_closing</tabstop>
+  <tabstop>checkBox_delete_data</tabstop>
+  <tabstop>checkBox_custom_open_project_dialog</tabstop>
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_color_toolbar_icons</tabstop>
   <tabstop>checkBox_use_smooth_zoom</tabstop>
   <tabstop>checkBox_use_curved_links</tabstop>
+  <tabstop>checkBox_prevent_overlapping</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
   <tabstop>radioButton_bg_grid</tabstop>
@@ -1238,6 +1419,7 @@
   <tabstop>lineEdit_conda_path</tabstop>
   <tabstop>toolButton_browse_conda</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
+  <tabstop>checkBox_db_editor_show_undo</tabstop>
   <tabstop>checkBox_object_tree_sticky_selection</tabstop>
   <tabstop>checkBox_relationship_items_follow</tabstop>
   <tabstop>checkBox_smooth_entity_graph_zoom</tabstop>
@@ -1245,6 +1427,13 @@
   <tabstop>checkBox_auto_expand_objects</tabstop>
   <tabstop>checkBox_save_spec_before_closing</tabstop>
   <tabstop>checkBox_spec_show_undo</tabstop>
+  <tabstop>checkBox_enable_remote_exec</tabstop>
+  <tabstop>lineEdit_host</tabstop>
+  <tabstop>spinBox_port</tabstop>
+  <tabstop>comboBox_security</tabstop>
+  <tabstop>lineEdit_secfolder</tabstop>
+  <tabstop>toolButton_pick_secfolder</tabstop>
+  <tabstop>listWidget</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

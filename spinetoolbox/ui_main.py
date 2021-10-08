@@ -89,6 +89,7 @@ from .helpers import (
     format_log_message,
     color_from_index,
     load_specification_from_file,
+    make_settings_dict_for_engine,
 )
 from .project_tree_item import CategoryProjectTreeItem, RootProjectTreeItem
 from .project_commands import (
@@ -2303,8 +2304,10 @@ class ToolboxUI(QMainWindow):
 
     def _shutdown_engine_kernels(self):
         """Shuts down all kernels managed by Spine Engine."""
-        engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        # engine_server_address = self.qsettings().value("appSettings/engineServerAddress", defaultValue="")
+        print("FIXME: _shutdown_engine_kernels()")
+        app_settings = make_settings_dict_for_engine(self.qsettings())
+        engine_mngr = make_engine_manager(app_settings)  # TODO: Does this work?
         while self._extra_jupyter_consoles:
             connection_file, console = self._extra_jupyter_consoles.popitem()
             engine_mngr.shutdown_kernel(connection_file)
