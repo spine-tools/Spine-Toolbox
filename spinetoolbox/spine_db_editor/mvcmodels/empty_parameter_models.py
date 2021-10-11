@@ -154,6 +154,7 @@ class EmptyParameterModel(EmptyRowModel):
             db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
             if not db_map:
                 continue
+            item = {k: v for k, v in item.items() if v is not None}
             db_map_data.setdefault(db_map, []).append(item)
         return db_map_data
 
@@ -276,6 +277,7 @@ class EmptyParameterValueModel(
             and self.entity_id_key in item
             and "parameter_definition_id" in item
             and "alternative_id" in item
+            and "value" in item
         )
 
 
