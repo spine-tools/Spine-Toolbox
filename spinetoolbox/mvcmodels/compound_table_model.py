@@ -340,11 +340,14 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         pos = self.single_models.index(model) + 1
         self._insert_row_map(pos, single_row_map)
 
+    def _get_insert_position(self, model):
+        return bisect.bisect_left(self.single_models, model)
+
     def _insert_single_model(self, model):
         single_row_map = self._row_map_for_model(model)
         if not single_row_map:
             return
-        pos = bisect.bisect_left(self.single_models, model)
+        pos = self._get_insert_position(model)
         self._insert_row_map(pos, single_row_map)
         self.sub_models.insert(pos, model)
 

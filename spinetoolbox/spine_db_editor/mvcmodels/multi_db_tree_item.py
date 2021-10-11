@@ -56,7 +56,7 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def display_id(self):
-        """"Returns an id for display based on the display key. This id must be the same across all db_maps.
+        """Returns an id for display based on the display key. This id must be the same across all db_maps.
         If it's not, this property becomes None and measures need to be taken (see update_children_by_id).
         """
         ids = {tuple(self.db_map_data_field(db_map, field) for field in self.visual_key) for db_map in self.db_maps}
@@ -66,12 +66,12 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def display_data(self):
-        """"Returns the name for display."""
+        """Returns the name for display."""
         return self.db_map_data_field(self.first_db_map, "name")
 
     @property
     def display_database(self):
-        """"Returns the database for display."""
+        """Returns the database for display."""
         return ",".join([db_map.codename for db_map in self.db_maps])
 
     @property
@@ -188,8 +188,7 @@ class MultiDBTreeItem(TreeItem):
         return [self.child_item_class(self.model, {db_map: id_}) for id_ in children_ids]
 
     def _merge_children(self, new_children):
-        """Merges new children into this item. Ensures that each children has a valid display id afterwards.
-        """
+        """Merges new children into this item. Ensures that each children has a valid display id afterwards."""
         if not new_children:
             return
         existing_children = {child.display_id: child for child in self.children}
@@ -239,6 +238,8 @@ class MultiDBTreeItem(TreeItem):
         return True
 
     def _handle_fully_fetched(self):
+        """Notifies the view that the model's layout has changed.
+        This triggers a repaint so this item may be painted gray if no children."""
         self.model.layoutChanged.emit()
 
     @property
@@ -309,8 +310,7 @@ class MultiDBTreeItem(TreeItem):
         self._deep_refresh_children()
 
     def is_valid(self):  # pylint: disable=no-self-use
-        """Checks if the item is still valid after an update operation.
-        """
+        """Checks if the item is still valid after an update operation."""
         return True
 
     def update_children_by_id(self, db_map_ids):

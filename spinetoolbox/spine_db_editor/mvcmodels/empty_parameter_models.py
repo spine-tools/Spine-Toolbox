@@ -250,7 +250,7 @@ class EmptyParameterValueModel(
 
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
-        return (*super()._make_unique_id(item), item.get(self.entity_name_key))
+        return (*super()._make_unique_id(item), item.get(self.entity_name_key), item.get("alternative_name"))
 
     def add_items_to_db(self, db_map_data):
         """See base class."""

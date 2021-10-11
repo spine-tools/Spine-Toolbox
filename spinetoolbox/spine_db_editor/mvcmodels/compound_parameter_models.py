@@ -60,9 +60,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_timer.setSingleShot(True)
         self._filter_timer.setInterval(100)
         self._filter_timer.timeout.connect(self.refresh)
+        self._can_fetch_more = True
 
     def canFetchMore(self, _parent):
-        return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self.db_maps)
+        self._can_fetch_more = any(
+            self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self.db_maps
+        )
+        return self._can_fetch_more
 
     def fetchMore(self, _parent):
         for db_map in self.db_maps:
@@ -383,6 +387,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.receive_parameter_data_added(db_map_data)
 
+    def _get_insert_position(self, model):
+        if self._can_fetch_more:
+            return super()._get_insert_position(model)
+        return len(self.single_models)
+
     def _create_single_model(self, db_map, entity_class_id):
         model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
         self._connect_single_model(model)
@@ -391,12 +400,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return model
 
     def _add_parameter_data(self, db_map, entity_class_id, ids):
-        existing = next(
-            (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
-        )
-        if existing is not None:
-            existing.add_rows(ids)
-            return
+        if self._can_fetch_more:
+            existing = next(
+                (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+            )
+            if existing is not None:
+                existing.add_rows(ids)
+                return
         model = self._create_single_model(db_map, entity_class_id)
         model.reset_model(ids)
 
