@@ -358,13 +358,15 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                     dataDict = ast.literal_eval(eventData[1])
                 # dataDict=json.loads(eventData[1])
                 # print(type(dataDict))
-                # print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
+                #print("get_engine_event() returning: event: %s, data: %s"%(eventData[0],dataDict))
                 return (eventData[0], dataDict)
-            except:  # this exception is needed due to status code return (not a dict string), see: SpineEngine._process_event()
+            except Exception as e:  # this exception is needed due to status code return (not a dict string), see: SpineEngine._process_event()
                 if eventData[1].find('{') == -1:
                     print("get_engine_event() Handled exception in parsing, returning a status code.")
                     return (eventData[0], eventData[1])
-                else:
+                else:  
+                    #print(e) 
+                    #print("event data: %s;%s"%(eventData[0], eventData[1]))
                     print("get_engine_event() Failure in parsing,returning empty..")
                     return (None, None)
         else:
@@ -425,6 +427,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
 
     def _transformExecutionState(self, data):
         # first add quotes around execution state
+        #print("RemoteSpineEngineManager2._transformExecutionState() with data %s"%data)
         quotedStr = self._add_quotes_to_dict_string(data)
         # print("RemoteSpineEngineManager2._transformExecutionState() Quoted str: %s"%quotedStr)
         tempDict = ast.literal_eval(quotedStr)
@@ -454,7 +457,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
             return tempDict
 
     @staticmethod
-    def _add_quotes_to_dict_string(self, s):
+    def _add_quotes_to_dict_string(s):
         new_str = s.replace('\': <', '\': \'<')
         ret_str = new_str.replace('}', '\'}')
         return ret_str
