@@ -18,7 +18,8 @@ A model for time patterns, used by the parameter_value editors.
 
 import numpy as np
 from PySide2.QtCore import QModelIndex, Qt
-from spinedb_api import TimePattern
+from PySide2.QtWidgets import QMessageBox
+from spinedb_api import TimePattern, ParameterValueFormatError
 from .indexed_value_table_model import IndexedValueTableModel
 
 
@@ -48,8 +49,8 @@ class TimePatternModel(IndexedValueTableModel):
         old_indexes = self._value.indexes
         old_values = self._value.values
         new_indexes = list(old_indexes)
-        for i in range(count):
-            new_indexes.insert(row, str(row + (count - i)))
+        for _ in range(count):
+            new_indexes.insert(row, "")
         if row == len(old_values):
             new_values = np.append(old_values, np.zeros(count))
         else:
@@ -105,7 +106,11 @@ class TimePatternModel(IndexedValueTableModel):
         if row == len(self._value):
             self.insertRow(row)
         if index.column() == 0:
-            self._value.indexes[row] = value
+            try:
+                self._value.indexes[row] = value
+            except ParameterValueFormatError as error:
+                QMessageBox.warning(self.parent(), "Error", str(error))
+                return False
         else:
             self._value.values[row] = value
         self.dataChanged.emit(index, index, [Qt.EditRole])
