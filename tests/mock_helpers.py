@@ -62,9 +62,12 @@ def create_toolboxui_with_project(project_dir):
 
 def clean_up_toolbox(toolbox):
     """Cleans up toolbox and project."""
-    if toolbox.project():
-        toolbox.close_project(ask_confirmation=False)
-        QApplication.processEvents()  # Makes sure Design view animations finish properly.
+    with mock.patch("spinetoolbox.ui_main.make_settings_dict_for_engine") as mock_app_settings_at_cleanup:
+        mock_app_settings_at_cleanup.return_value = dict()
+        if toolbox.project():
+            toolbox.close_project(ask_confirmation=False)
+            QApplication.processEvents()  # Makes sure Design view animations finish properly.
+            mock_app_settings_at_cleanup.assert_called_once()
     toolbox.db_mngr.close_all_sessions()
     toolbox.db_mngr.clean_up()
     toolbox.db_mngr = None

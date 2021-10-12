@@ -238,14 +238,20 @@ class TestSpineToolboxProject(unittest.TestCase):
     def _execute_project(self):
         waiter = SignalWaiter()
         self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-        self.toolbox.project().execute_project()
+        with mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_app_settings_for_engine:
+            mock_app_settings_for_engine.return_value = dict()
+            self.toolbox.project().execute_project()
+            mock_app_settings_for_engine.assert_called_once()
         waiter.wait()
         self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
 
     def _execute_selected(self, names):
         waiter = SignalWaiter()
         self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-        self.toolbox.project().execute_selected(names)
+        with mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_app_settings_for_engine:
+            mock_app_settings_for_engine.return_value = dict()
+            self.toolbox.project().execute_selected(names)
+            mock_app_settings_for_engine.assert_called_once()
         waiter.wait()
         self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
 

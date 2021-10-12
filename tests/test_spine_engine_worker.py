@@ -33,7 +33,11 @@ class TestSpineEngineWorker(unittest.TestCase):
     def test_empty_project_executes(self):
         dag = DirectedGraphHandler()
         logger = MagicMock()
-        worker = SpineEngineWorker("", {"items_module_name": "spine_items"}, dag, "test dag", {}, logger)
+        engine_data = {
+            "items_module_name": "spine_items",
+            "settings": dict()
+        }
+        worker = SpineEngineWorker(engine_data, dag, "test dag", {}, logger)
         receiver = _Receiver(worker)
         try:
             worker.start()
