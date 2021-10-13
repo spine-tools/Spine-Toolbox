@@ -28,7 +28,7 @@ Guide.
 
 We provide three options for installing Spine Toolbox: 
 [Python/pipx](#installation-with-python-and-pipx), 
-[Windows installation file](#windows-64-bit-installer-package) 
+[Windows installation package](#windows-64-bit-installer-package) 
 and [from source files](#installation-from-sources-using-git).
 
 ### Installation with Python and pipx
@@ -48,7 +48,7 @@ updated with new releases.
 4. Install [pipx](https://pypa.github.io/pipx/) (pipx allows to create an isolated 
    environment for Spine Toolbox to avoid package conflicts with other Python tools)
 
-        python -m pip install pipx
+        python -m pip install --user pipx
         python -m pipx ensurepath
         
 5. Install the latest Spine Toolbox release by running
@@ -69,12 +69,14 @@ To update Spine Toolbox to the latest available release, open a terminal and run
     python -m pipx upgrade spinetoolbox
 
 
-### Windows 64-bit Installer Package
+### Windows 64-bit installer package
 
 Windows installer packages are published periodically
 but not as frequently as the standard Python installation above.
-This option is suitable for users who cannot install Python or don’t need to get the most recent updates. This should be the most stable option.
-Download the latest installer package from [here](https://github.com/Spine-project/Spine-Toolbox/releases),
+This option is suitable for users who cannot install Python or don’t need to get 
+the most recent updates. This should be the most stable option.
+Download the latest installer package from 
+[here](https://github.com/Spine-project/Spine-Toolbox/releases),
 run it, and follow the instructions to install Spine Toolbox.
 
 
@@ -91,14 +93,15 @@ version of pip.
 
         python -m venv .venv
 
-   (Advanced users can also manage the environment using 
-   [conda](https://docs.conda.io/projects/conda/), but this is not covered here.)
+    or a new [conda](https://docs.conda.io/projects/conda/) environment using 
+
+        conda create -n spinetoolbox python=3.8
     
 3. Activate the environment using `.venv\Scripts\activate.bat` (Windows cmd.exe) 
-   or `source .venv/bin/activate` (bash, zsh). 
+   or `source .venv/bin/activate` (bash, zsh) or `conda activate spinetoolbox`. 
 
-4. Make sure that the terminal prompt indicates the active environment, 
-   and install Spine Toolbox by running
+4. Make sure that the terminal prompt indicates the active environment 
+   and install Spine Toolbox along with its dependencies with
 
         pip install -r requirements.txt
     
@@ -106,12 +109,12 @@ version of pip.
 
         pip install -r dev-requirements.txt
 
-You can now launch Spine Toolbox by running `spinetoolbox` when the environment 
+You can now launch Spine Toolbox by calling `spinetoolbox` when the environment 
 is active. 
 
 **To upgrade**, pull or copy the latest changes from the repository and run
 
-    pip install --upgrade -r requirements.txt
+    pip install -U -r requirements.txt
 
 
 ### About requirements
