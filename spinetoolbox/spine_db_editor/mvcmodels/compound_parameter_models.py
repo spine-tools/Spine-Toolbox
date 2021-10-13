@@ -381,7 +381,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 ids_committed = list()
                 ids_uncommitted = list()
                 for item in class_items:
-                    if item["commit_id"] is not None:
+                    if item.get("commit_id") is not None:
                         ids_committed.append(item["id"])
                     else:
                         ids_uncommitted.append(item["id"])
