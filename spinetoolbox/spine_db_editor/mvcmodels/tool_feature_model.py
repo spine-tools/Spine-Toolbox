@@ -17,7 +17,7 @@ Models to represent tools and features in a tree.
 import json
 from PySide2.QtCore import QMimeData, Qt
 from .tree_model_base import TreeModelBase
-from .tree_item_utility import NonLazyDBItem
+from .tree_item_utility import StandardDBItem
 from .tool_feature_item import (
     FeatureRootItem,
     ToolRootItem,
@@ -46,7 +46,7 @@ class ToolFeatureModel(TreeModelBase):
 
     @staticmethod
     def _make_db_item(db_map):
-        return NonLazyDBItem(db_map)
+        return StandardDBItem(db_map)
 
     @staticmethod
     def _top_children():
@@ -227,7 +227,7 @@ class ToolFeatureModel(TreeModelBase):
         master_key = next(iter(data))
         db_row, parent_type = master_key.split(";;")
         db_row = int(db_row)
-        if parent_type != "feature root":
+        if parent_type != "feature":
             return False
         # Check that target is in the same db as source
         tool_item = self.item_from_index(parent)

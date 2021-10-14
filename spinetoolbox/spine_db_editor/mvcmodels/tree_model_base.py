@@ -16,7 +16,7 @@ Models to represent things in a tree.
 """
 from PySide2.QtCore import Qt, QModelIndex
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
-from .tree_item_utility import NonLazyTreeItem
+from .tree_item_utility import StandardTreeItem
 
 
 class TreeModelBase(MinimalTreeModel):
@@ -49,7 +49,7 @@ class TreeModelBase(MinimalTreeModel):
     def build_tree(self):
         """Builds tree."""
         self.beginResetModel()
-        self._invisible_root_item = NonLazyTreeItem(self)
+        self._invisible_root_item = StandardTreeItem(self)
         self.endResetModel()
         for db_map in self.db_maps:
             db_item = self._make_db_item(db_map)

@@ -16,7 +16,7 @@ Classes to represent alternative and scenario items in a tree.
 :date:    17.6.2020
 """
 from PySide2.QtCore import Qt
-from .tree_item_utility import LastGrayMixin, EditableMixin, RootItem, EmptyChildRootItem, LeafItem, NonLazyTreeItem
+from .tree_item_utility import GrayIfLastMixin, EditableMixin, RootItem, EmptyChildRootItem, LeafItem, StandardTreeItem
 
 _ALTERNATIVE_ICON = "\uf277"  # map-signs
 _SCENARIO_ICON = "\uf008"  # film
@@ -27,7 +27,7 @@ class AlternativeRootItem(EmptyChildRootItem):
 
     @property
     def item_type(self):
-        return "alternative root"
+        return "alternative"
 
     @property
     def display_data(self):
@@ -40,17 +40,13 @@ class AlternativeRootItem(EmptyChildRootItem):
     def empty_child(self):
         return AlternativeLeafItem()
 
-    def fetch_more(self):
-        super().fetch_more()
-        self.db_mngr.fetch_more(self.db_map, "alternative")
-
 
 class ScenarioRootItem(EmptyChildRootItem):
     """A scenario root item."""
 
     @property
     def item_type(self):
-        return "scenario root"
+        return "scenario"
 
     @property
     def display_data(self):
@@ -63,12 +59,8 @@ class ScenarioRootItem(EmptyChildRootItem):
     def empty_child(self):
         return ScenarioLeafItem()
 
-    def fetch_more(self):
-        super().fetch_more()
-        self.db_mngr.fetch_more(self.db_map, "scenario")
 
-
-class AlternativeLeafItem(LastGrayMixin, EditableMixin, LeafItem):
+class AlternativeLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     """An alternative leaf item."""
 
     @property
@@ -92,7 +84,7 @@ class AlternativeLeafItem(LastGrayMixin, EditableMixin, LeafItem):
         return super().flags(column) | Qt.ItemIsDragEnabled
 
 
-class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
+class ScenarioLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     """A scenario leaf item."""
 
     @property
@@ -109,6 +101,9 @@ class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def scenario_alternative_root_item(self):
         return self.child(1)
 
+    def can_fetch_more(self):
+        return not self._fetched
+
     def fetch_more(self):
         if not self.id:
             return
@@ -120,7 +115,7 @@ class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
         self.scenario_alternative_root_item.update_alternative_id_list()
 
 
-class ScenarioActiveItem(NonLazyTreeItem):
+class ScenarioActiveItem(StandardTreeItem):
     @property
     def item_type(self):
         return "scenario active"
@@ -133,10 +128,7 @@ class ScenarioActiveItem(NonLazyTreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
-            try:
-                active = "yes" if self.parent_item.item_data["active"] else "no"
-            except KeyError as e:
-                print(e)
+            active = "yes" if self.parent_item.item_data["active"] else "no"
             return "active: " + active
         return super().data(column, role)
 
@@ -156,7 +148,7 @@ class ScenarioAlternativeRootItem(RootItem):
 
     @property
     def item_type(self):
-        return "scenario_alternative root"
+        return "scenario_alternative"
 
     @property
     def display_data(self):
@@ -176,9 +168,6 @@ class ScenarioAlternativeRootItem(RootItem):
 
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDropEnabled
-
-    def fetch_more(self):
-        self.db_mngr.fetch_more(self.db_map, "scenario_alternative")
 
     def update_alternative_id_list(self):
         alt_count = len(self.alternative_id_list)

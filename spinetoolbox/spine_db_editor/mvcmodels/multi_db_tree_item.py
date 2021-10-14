@@ -39,7 +39,6 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
-        self._fetched_once = False
 
     def set_data(self, column, value, role):
         raise NotImplementedError()
@@ -211,15 +210,6 @@ class MultiDBTreeItem(TreeItem):
         new_children = sorted(new_children, key=lambda x: x.display_id)
         for chunk, pos in bisect_chunks(self.children, new_children, key=lambda c: c.display_id):
             self.insert_children(pos, chunk)
-
-    def has_children(self):
-        """Returns whether or not this item has or could have children."""
-        if self.can_fetch_more():
-            if not self._fetched_once:
-                self.fetch_more()
-                self._fetched_once = True
-            return True
-        return self.child_count()
 
     def fetch_successful(self, db_map, item):  # pylint: disable=no-self-use
         return True

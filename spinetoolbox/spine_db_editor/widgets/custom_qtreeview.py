@@ -669,7 +669,7 @@ class ParameterValueListTreeView(ItemTreeView):
 
     def update_actions_availability(self, item):
         """See base class."""
-        self._open_in_editor_action.setEnabled(item.item_type == "value")
+        self._open_in_editor_action.setEnabled(item.item_type == "list_value")
 
     def open_in_editor(self):
         """Opens the parameter_value editor for the first selected cell."""
