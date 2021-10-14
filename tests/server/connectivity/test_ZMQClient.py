@@ -32,7 +32,9 @@ class test_ZMQClient:
     def _dict_data(
         items, connections, node_successors,
           execution_permits,specifications,settings,
-          project_dir
+          project_dir,
+            jumps,
+            items_module_name
     ):
         """Returns a dict to be passed to the class.
         Args:
@@ -43,24 +45,29 @@ class test_ZMQClient:
             specifications (dict(str,list(dict))): SpineEngine.__init()
             settings (dict): SpineEngine.__init()
             project_dir (str): SpineEngine.__init()
+            jumps (List of jump dicts): SpineEngine.__init()
+            items_module_name (str): SpineEngine.__init()
         Returns:
             dict
         """
         item = dict()
         item['items']=items
         item['connections']=connections
+        item['jumps']=jumps
         item['node_successors']=node_successors
         item['execution_permits']=execution_permits
+        item['items_module_name']=items_module_name
         item['specifications']=specifications
         item['settings']=settings
         item['project_dir']=project_dir
+
         return item
 
 
 
     @staticmethod
     def test_connection_closing_loop(remoteIP,port):
-        client=ZMQClient("tcp",remoteIP,int(port),ZMQSecurityModelState.STONEHOUSE,"./secfolder")
+        client=ZMQClient("tcp",remoteIP,int(port),ZMQSecurityModelState.NONE,"")
         #read JSON file content, and parse it
         #f=open('msg_data1.txt')
         #msgData = f.read()
@@ -70,36 +77,38 @@ class test_ZMQClient:
         #print("test_ZMQClient(): converted JSON (type: %s): %s"%(type(msgDataJson),msgDataJson))
 
         dict_data = test_ZMQClient._dict_data(items={'helloworld': {'type': 'Tool', 'description': '', 'x': -91.6640625,
-            'y': -5.609375, 'specification': 'helloworld2', 'execute_in_work': True, 'cmd_line_args': []},
+            'y': -5.609375, 'specification': 'helloworld2', 'execute_in_work': False, 'cmd_line_args': []},
             'Data Connection 1': {'type': 'Data Connection', 'description': '', 'x': 62.7109375, 'y': 8.609375,
              'references': [{'type': 'path', 'relative': True, 'path': 'input2.txt'}]}},
             connections=[{'from': ['Data Connection 1', 'left'], 'to': ['helloworld', 'right']}],
             node_successors={'Data Connection 1': ['helloworld'], 'helloworld': []},
             execution_permits={'Data Connection 1': True, 'helloworld': True},
-            project_dir = '/home/ubuntu/sw/spine/helloworld',
+            project_dir = './helloworld',
             specifications = {'Tool': [{'name': 'helloworld2', 'tooltype': 'python',
             'includes': ['helloworld.py'], 'description': '', 'inputfiles': ['input2.txt'],
             'inputfiles_opt': [], 'outputfiles': [], 'cmdline_args': [], 'execute_in_work': True,
             'includes_main_path': '../../..',
             'definition_file_path':
-            '/home/ubuntu/sw/spine/helloworld/.spinetoolbox/specifications/Tool/helloworld2.json'}]},
-            settings = {'appSettings/previousProject': '/home/ubuntu/sw/spine/helloworld',
-            'appSettings/recentProjectStorages': '/home/ubuntu/sw/spine',
-            'appSettings/recentProjects': 'helloworld<>/home/ubuntu/sw/spine/helloworld',
+            './helloworld/.spinetoolbox/specifications/Tool/helloworld2.json'}]},
+            settings = {'appSettings/previousProject': './helloworld',
+            'appSettings/recentProjectStorages': './',
+            'appSettings/recentProjects': 'helloworld<>./helloworld',
             'appSettings/showExitPrompt': '2',
             'appSettings/toolbarIconOrdering':
             'Importer;;View;;Tool;;Data Connection;;Data Transformer;;Gimlet;;Exporter;;Data Store',
-            'appSettings/workDir': '/home/ubuntu/sw/spine/Spine-Toolbox/work'})
-        print("test_connection_closing_loop(): sending request with data:")
-        print(dict_data)
+            'appSettings/workDir': './Spine-Toolbox/work'},
+            jumps=[],
+            items_module_name='spine_items')
+        #print("test_connection_closing_loop(): sending request with data:")
+        #print(dict_data)
         jsonTxt=json.dumps(dict_data)
         jsonTxt=json.dumps(jsonTxt)
         i=0
         while i <10:
             eventsData=client.send(jsonTxt,"./","test_zipfile.zip")
             print("test_connection_closing_loop(): event data item count received: %d"%len(eventsData))
-            print(eventsData)
-            if len(eventsData)!=31:
+            #print(eventsData)
+            if eventsData[len(eventsData)-1][1]!="COMPLETED":
                 return -1
             print("test msg %d sent/received, data size received: %d"%(i,len(eventsData)))
             i+=1

@@ -32,7 +32,7 @@ class FilePackager:
             raise ValueError("source folder,destination folder or file name were invalid")
         # check if the source folder exists
         if not os.path.isdir(sourceFolder):
-            raise ValueError("provided sourceFolder doesn't exist.")
+            raise ValueError("provided sourceFolder %s doesn't exist."%sourceFolder)
         print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, destinationFolder + zipFileName,))
         shutil.make_archive(destinationFolder + zipFileName, 'zip', sourceFolder)
 
