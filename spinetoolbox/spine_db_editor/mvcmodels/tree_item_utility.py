@@ -19,7 +19,7 @@ A tree model for parameter_value lists.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine
+from spinetoolbox.helpers import CharIconEngine, bisect_chunks
 
 
 class NonLazyTreeItem(TreeItem):
@@ -78,6 +78,10 @@ class NonLazyTreeItem(TreeItem):
             child.fetch_more()
         return True
 
+    @property
+    def non_empty_children(self):
+        return self.children
+
 
 class EditableMixin:
     def flags(self, column):
@@ -111,6 +115,10 @@ class AllBoldMixin:
 class EmptyChildMixin:
     """Guarantess there's always an empty child."""
 
+    @property
+    def non_empty_children(self):
+        return self.children[:-1]
+
     def empty_child(self):
         raise NotImplementedError()
 
@@ -126,7 +134,17 @@ class EmptyChildMixin:
             self.append_children([empty_child])
 
 
-class NonLazyDBItem(NonLazyTreeItem):
+class SortsChildrenMixin:
+    def insert_children_sorted(self, children):
+        for child in children:
+            child.parent_item = self
+        for chunk, pos in bisect_chunks(self.non_empty_children, children, key=lambda x: x.data(0)):
+            if not super().insert_children(pos, chunk):
+                return False
+        return True
+
+
+class NonLazyDBItem(SortsChildrenMixin, NonLazyTreeItem):
     """An item representing a db."""
 
     def __init__(self, db_map):
@@ -153,7 +171,7 @@ class NonLazyDBItem(NonLazyTreeItem):
             return self.db_map.codename
 
 
-class RootItem(AllBoldMixin, NonLazyTreeItem):
+class RootItem(SortsChildrenMixin, AllBoldMixin, NonLazyTreeItem):
     """A root item."""
 
     @property

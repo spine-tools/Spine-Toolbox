@@ -17,8 +17,8 @@ Provides FilterCheckboxListModel for FilterWidget.
 """
 
 import re
-import bisect
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
+from spinetoolbox.helpers import bisect_chunks
 
 
 class SimpleFilterCheckboxListModel(QAbstractListModel):
@@ -290,8 +290,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
 
 
 class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
-    """Extends SimpleFilterCheckboxListModel to allow for lazy loading in synch with another model.
-    """
+    """Extends SimpleFilterCheckboxListModel to allow for lazy loading in synch with another model."""
 
     def __init__(self, parent, source_model, show_empty=True):
         """Init class.
@@ -318,33 +317,15 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
             self.layoutChanged.emit()
 
     def _do_add_items(self, data):
-        """Adds items so the list is always sorted, while assuming that both existing and new items are sorted.
-        """
-        data_iter = iter(data)
-        item = next(data_iter)
-        consecutive_items = [item]
-        lo = bisect.bisect_left(self._data, item)
-        for item in data_iter:
-            row = bisect.bisect_left(self._data, item, lo=lo)
-            if row == lo:
-                consecutive_items.append(item)
-                continue
-            count = self._do_insert_rows(consecutive_items, lo)
-            consecutive_items = [item]
-            lo = row + count
-        self._do_insert_rows(consecutive_items, lo)
-
-    def _do_insert_rows(self, rows, pos):
-        count = len(rows)
-        self.beginInsertRows(self.index(0, 0), pos, pos + count - 1)
-        self._data[pos:pos] = rows
-        self.endInsertRows()
-        return count
+        """Adds items so the list is always sorted, while assuming that both existing and new items are sorted."""
+        for chunk, pos in bisect_chunks(self._data, data):
+            self.beginInsertRows(self.index(0, 0), pos, pos + len(chunk) - 1)
+            self._data[pos:pos] = chunk
+            self.endInsertRows()
 
 
 class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
-    """Extends SimpleFilterCheckboxListModel to allow for translating internal data to a value for display role.
-    """
+    """Extends SimpleFilterCheckboxListModel to allow for translating internal data to a value for display role."""
 
     def __init__(self, parent, data_to_value, show_empty=True):
         """Init class.

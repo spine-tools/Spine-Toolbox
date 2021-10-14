@@ -206,7 +206,7 @@ class ParameterValueListModel(TreeModelBase):
                     continue
                 list_item.handle_added_to_db(identifier=id_)
             children = [ListItem(id_) for id_ in ids.values()]
-            db_item.insert_children(db_item.child_count() - 1, children)
+            db_item.insert_children_sorted(children)
 
     def update_parameter_value_lists(self, db_map_data):
         for root_item, items in self._items_per_db_item(db_map_data).items():
@@ -225,8 +225,7 @@ class ParameterValueListModel(TreeModelBase):
         return []
 
     def columnCount(self, parent=QModelIndex()):
-        """Returns the number of columns under the given parent. Always 1.
-        """
+        """Returns the number of columns under the given parent. Always 1."""
         return 1
 
     def index_name(self, index):

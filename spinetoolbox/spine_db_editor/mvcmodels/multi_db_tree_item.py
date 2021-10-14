@@ -15,9 +15,8 @@ Base classes to represent items from multiple databases in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:    17.6.2020
 """
-import bisect
 from PySide2.QtCore import Qt
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import rows_to_row_count_tuples, bisect_chunks
 from ...mvcmodels.minimal_tree_model import TreeItem
 
 
@@ -210,20 +209,8 @@ class MultiDBTreeItem(TreeItem):
         if not new_children:
             return
         new_children = sorted(new_children, key=lambda x: x.display_id)
-        new_children_iter = iter(new_children)
-        child = next(new_children_iter)
-        display_ids = [child.display_id for child in self.children]
-        lo = bisect.bisect_left(display_ids, child.display_id)
-        chunk = [child]
-        for child in new_children_iter:
-            row = bisect.bisect_left(display_ids, child.display_id, lo=lo)
-            if row == lo:
-                chunk.append(child)
-                continue
-            self.insert_children(lo, chunk)
-            lo = row + len(chunk)
-            chunk = [child]
-        self.insert_children(lo, chunk)
+        for chunk, pos in bisect_chunks(self.children, new_children, key=lambda c: c.display_id):
+            self.insert_children(pos, chunk)
 
     def has_children(self):
         """Returns whether or not this item has or could have children."""
