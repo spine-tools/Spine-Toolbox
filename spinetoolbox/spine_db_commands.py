@@ -119,7 +119,7 @@ class SpineDBCommand(AgedUndoCommand):
         "parameter_value_list": "update_wide_parameter_value_lists",
         "alternative": "update_alternatives",
         "scenario": "update_scenarios",
-        "scenario_alternative": "_update_scenario_alternatives",
+        "scenario_alternative": "update_scenario_alternatives",
         "feature": "update_features",
         "tool": "update_tools",
         "tool_feature": "update_tool_features",

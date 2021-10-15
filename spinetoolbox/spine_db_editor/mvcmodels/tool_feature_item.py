@@ -151,7 +151,7 @@ class ToolLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
         self.append_children([ToolFeatureRootItem()])
 
 
-class ToolFeatureRootItem(RootItem):
+class ToolFeatureRootItem(EmptyChildRootItem):
     """A tool_feature root item."""
 
     @property
@@ -177,8 +177,11 @@ class ToolFeatureRootItem(RootItem):
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDropEnabled
 
+    def empty_child(self):
+        return ToolFeatureLeafItem()
 
-class ToolFeatureLeafItem(LeafItem):
+
+class ToolFeatureLeafItem(GrayIfLastMixin, LeafItem):
     """A tool feature leaf item."""
 
     @property
@@ -187,6 +190,8 @@ class ToolFeatureLeafItem(LeafItem):
 
     @property
     def item_data(self):
+        if not self.id:
+            return dict(name="Type tool feature name here...")
         item_data = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
         if not item_data:
             return {}
@@ -197,14 +202,30 @@ class ToolFeatureLeafItem(LeafItem):
         return dict(name=name, **item_data)
 
     def _do_finalize(self):
+        if not self.id:
+            return
         super()._do_finalize()
         self.append_children([ToolFeatureRequiredItem(), ToolFeatureMethodRootItem()])
 
+    def _make_item_to_add(self, value):
+        feature_id, parameter_value_list_id = value
+        return {
+            "tool_id": self.parent_item.parent_item.id,
+            "feature_id": feature_id,
+            "parameter_value_list_id": parameter_value_list_id,
+        }
+
     def add_item_to_db(self, db_item):
-        raise NotImplementedError()
+        self.db_mngr.add_tool_features({self.db_map: [db_item]})
 
     def update_item_in_db(self, db_item):
         self.db_mngr.update_tool_features({self.db_map: [db_item]})
+
+    def flags(self, column):
+        flags = super().flags(column)
+        if not self.id:
+            flags |= Qt.ItemIsEditable
+        return flags
 
 
 class ToolFeatureRequiredItem(StandardTreeItem):

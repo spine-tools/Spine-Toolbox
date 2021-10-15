@@ -129,7 +129,7 @@ class AlternativeScenarioModel(TreeModelBase):
             alternative_ids = [alt_root_item.child(row).id for row in alternative_rows]
             alternative_ids = [id_ for id_ in alternative_ids if id_ not in set(alternative_id_list) | {None}]
         elif parent_type == "scenario_alternative":
-            alternative_ids = [scen_alt_root_item.child(row).id for row in alternative_rows]
+            alternative_ids = [scen_alt_root_item.child(row).alternative_id for row in alternative_rows]
             alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alternative_ids]
         alternative_id_list[row:row] = alternative_ids
         db_item = {

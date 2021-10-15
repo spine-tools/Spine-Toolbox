@@ -16,7 +16,7 @@ Classes to represent alternative and scenario items in a tree.
 :date:    17.6.2020
 """
 from PySide2.QtCore import Qt
-from .tree_item_utility import GrayIfLastMixin, EditableMixin, RootItem, EmptyChildRootItem, LeafItem, StandardTreeItem
+from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem
 
 _ALTERNATIVE_ICON = "\uf277"  # map-signs
 _SCENARIO_ICON = "\uf008"  # film
@@ -140,8 +140,11 @@ class ScenarioActiveItem(StandardTreeItem):
         return False
 
 
-class ScenarioAlternativeRootItem(RootItem):
+class ScenarioAlternativeRootItem(EmptyChildRootItem):
     """A scenario alternative root item."""
+
+    def empty_child(self):
+        return ScenarioAlternativeLeafItem()
 
     @property
     def item_type(self):
@@ -168,7 +171,7 @@ class ScenarioAlternativeRootItem(RootItem):
 
     def update_alternative_id_list(self):
         alt_count = len(self.alternative_id_list)
-        curr_alt_count = self.child_count()
+        curr_alt_count = len(self.non_empty_children)
         if alt_count > curr_alt_count:
             added_count = alt_count - curr_alt_count
             children = [ScenarioAlternativeLeafItem() for _ in range(added_count)]
@@ -178,19 +181,28 @@ class ScenarioAlternativeRootItem(RootItem):
             self.remove_children(alt_count, removed_count)
 
 
-class ScenarioAlternativeLeafItem(LeafItem):
+class ScenarioAlternativeLeafItem(GrayIfLastMixin, LeafItem):
     """A scenario alternative leaf item."""
 
     @property
     def item_type(self):
-        return "alternative"
+        return "scenario_alternative"
 
     @property
     def tool_tip(self):
         return "<p>Drag and drop this item to reorder scenario alternatives</p>"
 
+    def _make_item_data(self):
+        return {"name": f"Type scenario alternative name here...", "description": ""}
+
     @property
-    def id(self):
+    def item_data(self):
+        if not self.alternative_id:
+            return self._make_item_data()
+        return self.db_mngr.get_item(self.db_map, "alternative", self.alternative_id)
+
+    @property
+    def alternative_id(self):
         try:
             return self.parent_item.alternative_id_list[self.child_number()]
         except IndexError:
@@ -203,4 +215,24 @@ class ScenarioAlternativeLeafItem(LeafItem):
         raise NotImplementedError()
 
     def flags(self, column):
-        return super().flags(column) | Qt.ItemIsDragEnabled
+        flags = super().flags(column)
+        if self.alternative_id:
+            flags |= Qt.ItemIsDragEnabled
+        else:
+            flags |= Qt.ItemIsEditable
+        return flags
+
+    def set_data(self, column, value, role=Qt.EditRole):
+        if role != Qt.EditRole or value == self.data(column, role):
+            return False
+        if self.alternative_id:
+            return False
+        if column == 0:
+            alternative_id_list = self.parent_item.alternative_id_list
+            alternative_id_list.append(value)
+            db_item = {
+                "id": self.parent_item.parent_item.id,
+                "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
+            }
+            self.db_mngr.set_scenario_alternatives({self.db_map: [db_item]})
+        return True

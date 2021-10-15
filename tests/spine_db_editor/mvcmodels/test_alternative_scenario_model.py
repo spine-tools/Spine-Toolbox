@@ -93,21 +93,29 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         expected = [
             [
                 {
-                    "test_db": [
-                        [{"alternative": [["alternative_1", ""], ["Type new alternative name here...", ""]]}, None],
+                    'test_db': [
+                        [{'alternative': [['alternative_1', ''], ['Type new alternative name here...', '']]}, None],
                         [
                             {
-                                "scenario": [
+                                'scenario': [
                                     [
                                         {
-                                            "scenario_1": [
-                                                ["active: no", None],
-                                                [{"scenario_alternative": [["alternative_1", ""]]}, None],
+                                            'scenario_1': [
+                                                ['active: no', None],
+                                                [
+                                                    {
+                                                        'scenario_alternative': [
+                                                            ['alternative_1', ''],
+                                                            ['Type scenario alternative name here...', ''],
+                                                        ]
+                                                    },
+                                                    None,
+                                                ],
                                             ]
                                         },
-                                        "",
+                                        '',
                                     ],
-                                    ["Type new scenario name here...", ""],
+                                    ['Type new scenario name here...', ''],
                                 ]
                             },
                             None,
@@ -159,21 +167,29 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         expected = [
             [
                 {
-                    "test_db": [
-                        [{"alternative": [["renamed", ""], ["Type new alternative name here...", ""]]}, None],
+                    'test_db': [
+                        [{'alternative': [['renamed', ''], ['Type new alternative name here...', '']]}, None],
                         [
                             {
-                                "scenario": [
+                                'scenario': [
                                     [
                                         {
-                                            "scenario_1": [
-                                                ["active: no", None],
-                                                [{"scenario_alternative": [["renamed", ""]]}, None],
+                                            'scenario_1': [
+                                                ['active: no', None],
+                                                [
+                                                    {
+                                                        'scenario_alternative': [
+                                                            ['renamed', ''],
+                                                            ['Type scenario alternative name here...', ''],
+                                                        ]
+                                                    },
+                                                    None,
+                                                ],
                                             ]
                                         },
-                                        "",
+                                        '',
                                     ],
-                                    ["Type new scenario name here...", ""],
+                                    ['Type new scenario name here...', ''],
                                 ]
                             },
                             None,

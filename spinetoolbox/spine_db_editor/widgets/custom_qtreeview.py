@@ -526,6 +526,8 @@ class AlternativeScenarioTreeView(ItemTreeView):
             item = self.model().item_from_index(index)
             if item.item_type == "alternative" and hasattr(item, "id") and item.id:
                 db_map_ids.setdefault(item.db_map, set()).add(item.id)
+            if item.item_type == "scenario_alternative" and hasattr(item, "alternative_id") and item.alternative_id:
+                db_map_ids.setdefault(item.db_map, set()).add(item.alternative_id)
         return db_map_ids
 
     def _db_map_scen_alt_ids_from_selection(self, selection):
@@ -534,7 +536,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
             if index.column() != 0:
                 continue
             item = self.model().item_from_index(index)
-            if item.item_type == "scenario_alternative":
+            if item.item_type == "scenario_alternative" and hasattr(item, "alternative_id_list"):
                 db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
         return db_map_ids
 
