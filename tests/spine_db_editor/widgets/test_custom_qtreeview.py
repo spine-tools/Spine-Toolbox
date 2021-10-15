@@ -820,7 +820,9 @@ class TestParameterValueListTreeViewWithExistingData(_ParameterValueListTreeView
         list_name_index = model.index(0, 0, root_index)
         value_index = model.index(0, 0, list_name_index)
         view.selectionModel().setCurrentIndex(value_index, QItemSelectionModel.ClearAndSelect)
-        view.remove_selected()
+        with signal_waiter(self._db_mngr.parameter_value_lists_updated) as waiter:
+            view.remove_selected()
+            waiter.wait()
         root_index = model.index(0, 0)
         self.assertEqual(model.rowCount(root_index), 2)
         list_name_index = model.index(0, 0, root_index)
