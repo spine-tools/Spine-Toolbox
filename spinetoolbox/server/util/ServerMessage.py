@@ -62,7 +62,11 @@ class ServerMessage:
         retStr+="{\n"
         retStr+="   \"command\": \""+self._command+"\",\n"
         retStr+="   \"id\":\""+self._id+"\",\n"
-        retStr+="   \"data\":"+self._data+",\n"
+
+        if len(self._data)==0:
+            retStr+="   \"data\":\"\",\n"
+        else:
+            retStr+="   \"data\":"+self._data+",\n"
         retStr+="   \"files\": "+jsonFileNames
         retStr+="}"
         return retStr

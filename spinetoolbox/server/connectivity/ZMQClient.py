@@ -20,6 +20,7 @@ import os
 import zmq
 import zmq.auth
 import json
+import time
 import random
 from enum import unique, Enum
 from spinetoolbox.server.util.ServerMessage import ServerMessage
@@ -34,6 +35,13 @@ class ZMQSecurityModelState(Enum):
     STONEHOUSE = 1  # stonehouse-security model of Zero-MQ
 
 
+#used, when connectivity is tested during initialisation
+@unique
+class ZMQClientConnectionState(Enum):
+    CONNECTED = 0
+    DISCONNECTED = 1
+
+
 class ZMQClient:
     def __init__(self, protocol, remoteHost, remotePort, secModel, secFolder):
         """
@@ -44,21 +52,25 @@ class ZMQClient:
             secModel: see: ZMQSecurityModelState
             secFolder: folder, where security files have been stored.
         """
+        self.connectivity_testing=True
+
         if secModel == ZMQSecurityModelState.NONE:
             self._context = zmq.Context()
             self._socket = self._context.socket(zmq.REQ)
+            self._socket.setsockopt(zmq.LINGER, 1)
             ret = self._socket.connect(protocol+"://"+remoteHost+":"+str(remotePort))
             # print(f"ZMQClient(): socket.connect() return value: {ret}")
-            print("ZMQClient(): Connection established to %s:%d" % (remoteHost, remotePort))
+            #print("ZMQClient(): Connection established to %s:%d" % (remoteHost, remotePort))
         elif secModel == ZMQSecurityModelState.STONEHOUSE:
             self._context = zmq.Context()
             self._socket = self._context.socket(zmq.REQ)
+            self._socket.setsockopt(zmq.LINGER, 1)
             # security configs
             # implementation belows based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
             # prepare folders
             base_dir = secFolder
             # base_dir = os.path.dirname("/home/ubuntu/sw/spine/dev/zmq_server_certs/")
-            print("ZMQClient(): security folder %s"%base_dir)
+            #print("ZMQClient(): security folder %s"%base_dir)
             secret_keys_dir = os.path.join(base_dir, 'private_keys')
             keys_dir = os.path.join(base_dir, 'certificates')
             public_keys_dir = os.path.join(base_dir, 'public_keys')
@@ -79,7 +91,31 @@ class ZMQClient:
 
             ret = self._socket.connect(protocol+"://"+remoteHost+":"+str(remotePort))
             # print("ZMQClient(): socket.connect() return value: %d"%ret)
-            print("ZMQClient(): Connection established with security to %s:%d"%(remoteHost,remotePort))
+            #print("ZMQClient(): Connection established with security to %s:%d"%(remoteHost,remotePort))
+
+        #test connectivity
+        if self.connectivity_testing==True:
+            connectivity=self._check_connectivity(1000)
+            #print("ZMQClient._init() connectivity: %s"%connectivity)
+            if connectivity==True:
+                self._connection_state=ZMQClientConnectionState.CONNECTED
+            else:
+                self._connection_state=ZMQClientConnectionState.DISCONNECTED
+
+        else:
+            self._connection_state=ZMQClientConnectionState.CONNECTED
+
+        self._closed=False  #for tracking multiple closing calls
+
+
+    def getConnectionState(self):
+        """
+        Returns connection state
+        Returns:
+            ZMQClientConnectionState
+        """
+        return self._connection_state
+
 
     def send(self, text, fileLocation, fileName):
         """
@@ -92,7 +128,7 @@ class ZMQClient:
             a list of tuples containing events+data
         """
         # check if folder and file exist
-        print("ZMQClient.send(): path %s exists: %s file %s exists: %s." % (fileLocation, os.path.isdir(fileLocation), fileName, os.path.exists(fileLocation+fileName)))
+        #print("ZMQClient.send(): path %s exists: %s file %s exists: %s." % (fileLocation, os.path.isdir(fileLocation), fileName, os.path.exists(fileLocation+fileName)))
         if not os.path.isdir(fileLocation) or not os.path.exists(fileLocation+fileName):
             # print("ZMQClient.send(): invalid path or file.")
             raise ValueError("invalid path or file.")
@@ -113,7 +149,7 @@ class ZMQClient:
         msg_parts.append(fileData)
         # transfer
         self._socket.send_multipart(msg_parts)
-        print("ZMQClient(): listening to a reply.")
+        #print("ZMQClient(): listening to a reply.")
         message = self._socket.recv()
         # decode
         msgStr=message.decode('utf-8')
@@ -127,5 +163,33 @@ class ZMQClient:
         return dataEvents
 
     def close(self):
-        self._socket.close()
-        print("ZMQClient(): Connection closed")
+
+        if self._closed==False:
+            self._socket.close()
+            self._context.term()
+            print("ZMQClient(): Connection closed.")
+            self._closed=True
+        else:
+            print("ZMQClient(): Connection was closed before.")
+
+
+    def _check_connectivity(self,delayMs):
+        startTimeMs=round(time.time()*1000.0) #debugging
+        msg_parts=[]
+        randomId = random.randrange(10000000)
+        pingMsg=ServerMessage("ping",str(randomId),"",None)
+        pingAsJson=pingMsg.toJSON()
+        pingInBytes= bytes(pingAsJson, 'utf-8')
+        msg_parts.append(pingInBytes)
+        sendRet=self._socket.send_multipart(msg_parts,flags=zmq.NOBLOCK)
+        event=self._socket.poll(timeout=delayMs)
+        if event == 0:
+            #print("ZMQClient._check_connectivity(): timeout occurred, no reply will be listened to")
+            return False
+        else:
+            msg=self._socket.recv()
+            msgStr=msg.decode("utf-8")
+            stopTimeMs=round(time.time()*1000.0) #debugging
+            print("ZMQClient._check_connectivity(): ping message was received, RTT: %d ms"%(stopTimeMs-startTimeMs))
+            return True
+

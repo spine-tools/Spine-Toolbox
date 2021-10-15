@@ -23,8 +23,9 @@ import json
 import ast
 from enum import Enum
 from spinetoolbox.server.util.FilePackager import FilePackager
-from spinetoolbox.server.connectivity.ZMQClient import ZMQClient, ZMQSecurityModelState
+from spinetoolbox.server.connectivity.ZMQClient import ZMQClient, ZMQSecurityModelState, ZMQClientConnectionState
 from spine_engine.spine_engine import ItemExecutionFinishState
+from spine_engine.exception import EngineInitFailed
 
 
 class RemoteSpineEngineManagerState2(Enum):
@@ -314,12 +315,20 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
             raise ValueError("Engine server host name missing in RemoteSpineEngineManager2.")
         threading.Thread.__init__(self)
         self.zmq_client = ZMQClient(protocol, host, port, security, sec_folder)
-        self._state = RemoteSpineEngineManagerState2.IDLE
-        self._requestPending = False
-        self._inputData = None
-        self._outputData = None
-        self._outputDataIteratorIndex = 0
-        self.start()
+
+        if self.zmq_client.getConnectionState()==ZMQClientConnectionState.CONNECTED:
+            self._state = RemoteSpineEngineManagerState2.IDLE
+            self._requestPending = False
+            self._inputData = None
+            self._outputData = None
+            self._outputDataIteratorIndex = 0
+            self.start()
+
+        else:
+            self._state = RemoteSpineEngineManagerState2.CLOSED
+            print("RemoteSpineEngineManager2.__init__(): Client is disconnected from the server, check Remote"\
+                " execution configuration (File->Settings->Remote execution)!")
+
 
     def run_engine(self, engine_data):
         """Runs an engine with given data.
@@ -330,11 +339,11 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
         if self._state == RemoteSpineEngineManagerState2.IDLE and not self._requestPending:
             self._inputData = engine_data
             self._requestPending = True
-            print("RemoteSpineEngineManager2.run_engine(): Pending request execution..")
-            return 0
+            #print("RemoteSpineEngineManager2.run_engine(): Pending request execution..")
         else:
-            print("RemoteSpineEngineManager2.run_engine(): Cannot execute due to pending request or state: %s"%str(self._state))
-            return -1
+            #print("RemoteSpineEngineManager2.run_engine(): Cannot execute due to pending request or state: %s"%str(self._state))
+            raise EngineInitFailed()
+
 
     def get_engine_event(self):
         """Gets next event from engine currently running.
@@ -346,7 +355,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
             eventData = self._outputData[self._outputDataIteratorIndex]
             self._outputDataIteratorIndex += 1
             if self._outputDataIteratorIndex == len(self._outputData):
-                print("get_engine_event() all events+data has been received, returning to CLOSED")
+                #print("get_engine_event() all events+data has been received, returning to CLOSED")
                 self._state = RemoteSpineEngineManagerState2.CLOSED
             try:
                 dataDict = dict()
@@ -362,7 +371,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                 return (eventData[0], dataDict)
             except Exception as e:  # this exception is needed due to status code return (not a dict string), see: SpineEngine._process_event()
                 if eventData[1].find('{') == -1:
-                    print("get_engine_event() Handled exception in parsing, returning a status code.")
+                    #print("get_engine_event() Handled exception in parsing, returning a status code.")
                     return (eventData[0], eventData[1])
                 else:  
                     #print(e) 
@@ -376,17 +385,18 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
     def stop_engine(self):
         """Stops engine currently running."""
         self._state=RemoteSpineEngineManagerState2.CLOSED
+        self.zmq_client.close()
         print("RemoteSpineEngineManager2.stop_engine()")
 
     def run(self):
-        print("RemoteSpineEngineManager2.run()")
+        #print("RemoteSpineEngineManager2.run()")
         while self._state != RemoteSpineEngineManagerState2.CLOSED:
             # run request
             if self._requestPending and self._state == RemoteSpineEngineManagerState2.IDLE:
                 # debugging
                 runStartTimeMs = round(time.time()*1000.0)
                 # change state
-                print("RemoteSpineEngineManager2.run() Started running..")
+                #print("RemoteSpineEngineManager2.run() Started running..")
                 self._state = RemoteSpineEngineManagerState2.RUNNING
 
                 # transform dict to JSON string
@@ -400,7 +410,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                 print("RemoteSpineEngineManager2.run() run time after JSON encoding %d ms"%(runStopTimeMs-runStartTimeMs))
                 runStartTimeMs = round(time.time()*1000.0)
                  # get folder from input data, and package it
-                print("RemoteSpineEngineManager2.run() Packaging folder %s.."%self._inputData['project_dir'])
+                #print("RemoteSpineEngineManager2.run() Packaging folder %s.."%self._inputData['project_dir'])
                 FilePackager.package(self._inputData['project_dir'],self._inputData['project_dir']+"/",RemoteSpineEngineManager2.ZipFileName)
                 # Debugging
                 runStopTimeMs = round(time.time()*1000.0)
@@ -410,7 +420,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                 dataEvents = self.zmq_client.send(jsonTxt,self._inputData['project_dir']+"/",RemoteSpineEngineManager2.ZipFileName+".zip")
                 # print("RemoteSpineEngineManager2.run() received a response:")
                 # print(dataEvents)
-                print("RemoteSpineEngineManager2.run() %d of event+data items received."%len(dataEvents))
+                #print("RemoteSpineEngineManager2.run() %d of event+data items received."%len(dataEvents))
                 self._outputData = dataEvents
                 self._outputDataIteratorIndex = 0
                 # remove the transferred ZIP-file
@@ -423,7 +433,8 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                 self._requestPending = False
             else:
                 time.sleep(0.01)
-        print("RemoteSpineEngineManager2.run()..out")
+        self.zmq_client.close()
+        #print("RemoteSpineEngineManager2.run()..out")
 
     def _transformExecutionState(self, data):
         # first add quotes around execution state

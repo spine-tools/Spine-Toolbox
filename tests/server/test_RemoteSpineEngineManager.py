@@ -201,10 +201,11 @@ class test_RemoteSpineEngineManager:
         #print("run_DAG(): sending request with data:")
         #print(dict_data)
         ret1=manager.run_engine(dict_data)
-        ret2=manager.run_engine(dict_data)
-         
-        if ret1==0 and ret2==-1:
-            print("run_DAG_noreading() return code as expected due to multiple requests, when already running a DAG")         
+        try:
+            ret2=manager.run_engine(dict_data)
+        except: 
+#        if ret1==0 and ret2==-1:
+            print("run_DAG_noreading() exception as expected due to multiple requests, when already running a DAG")         
             testSuccess=0
         manager.stop_engine()
         return testSuccess
@@ -260,6 +261,7 @@ class test_RemoteSpineEngineManager:
                         break
                 else:
                     time.sleep(0.1)
+            time.sleep(0.1)
             manager.stop_engine()
         return testSuccess
 
@@ -316,7 +318,7 @@ if __name__ == '__main__':
         test2=test_RemoteSpineEngineManager.invalid_config2()
         #test3=test_RemoteSpineEngineManager.run_DAG_noreading("tcp",args[0],int(args[1]))
         #test_RemoteSpineEngineManager.run_DAG_empty_response("tcp","193.166.160.216",5555)
-        #time.sleep(1)
+        time.sleep(1)
         test4=test_RemoteSpineEngineManager.run_DAG("tcp",args[0],int(args[1]))
         
         test5=test_RemoteSpineEngineManager.run_DAG_loop("tcp",args[0],int(args[1]))
