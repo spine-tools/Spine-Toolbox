@@ -497,6 +497,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
         """Initialize the view."""
         super().__init__(parent=parent)
         self._selected_alternative_ids = dict()
+        self._generate_scenarios_action = None
         self.setMouseTracking(True)
 
     def connect_signals(self):
@@ -513,7 +514,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def populate_context_menu(self):
         """See base class."""
-        self._menu.addAction("Generate scenarios...", self._open_scenario_generator)
+        self._generate_scenarios_action = self._menu.addAction("Generate scenarios...", self._open_scenario_generator)
         self._menu.addSeparator()
         super().populate_context_menu()
 
@@ -523,7 +524,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
             if index.column() != 0:
                 continue
             item = self.model().item_from_index(index)
-            if item.item_type == "alternative" and item.id:
+            if item.item_type == "alternative" and hasattr(item, "id") and item.id:
                 db_map_ids.setdefault(item.db_map, set()).add(item.id)
         return db_map_ids
 
@@ -533,7 +534,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
             if index.column() != 0:
                 continue
             item = self.model().item_from_index(index)
-            if item.item_type == "scenario_alternative root":
+            if item.item_type == "scenario_alternative":
                 db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
         return db_map_ids
 
@@ -586,6 +587,9 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def update_actions_availability(self, item):
         """See base class."""
+        self._generate_scenarios_action.setEnabled(
+            isinstance(item, AlternativeLeafItem) and bool(self._selected_alternative_ids.get(item.db_map))
+        )
 
     def dragMoveEvent(self, event):
         super().dragMoveEvent(event)
@@ -601,28 +605,16 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def _open_scenario_generator(self):
         """Opens the scenario generator dialog."""
-        selection_model = self.selectionModel()
-        item_from_index = self.model().item_from_index
-        all_items = [item_from_index(index) for index in selection_model.selectedIndexes()]
-        alternative_items = [
-            item for item in all_items if isinstance(item, AlternativeLeafItem) and item.id is not None
-        ]
-        if not alternative_items:
-            QMessageBox.warning(
-                self, "No alternatives selected", "Select the alternatives you want to include in the scenarios first."
-            )
+        item = self.model().item_from_index(self.currentIndex())
+        if not isinstance(item, AlternativeLeafItem):
             return
         included_ids = set()
         alternatives = list()
-        db_map = None
-        for item in alternative_items:
-            if item.id not in included_ids:
-                if db_map is None:
-                    db_map = item.db_map
-                elif item.db_map is not db_map:
-                    continue
-                alternatives.append(item.item_data)
-                included_ids.add(item.id)
+        db_map = item.db_map
+        for id_ in self._selected_alternative_ids.get(db_map, ()):
+            if id_ not in included_ids:
+                alternatives.append(self._spine_db_editor.db_mngr.get_item(db_map, "alternative", id_))
+                included_ids.add(id_)
         generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
         generator.show()
 
