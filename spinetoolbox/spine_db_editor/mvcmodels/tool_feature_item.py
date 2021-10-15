@@ -145,9 +145,9 @@ class ToolLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
         self.db_mngr.update_tools({self.db_map: [db_item]})
 
     def _do_finalize(self):
-        super()._do_finalize()
         if not self.id:
             return
+        super()._do_finalize()
         self.append_children([ToolFeatureRootItem()])
 
 

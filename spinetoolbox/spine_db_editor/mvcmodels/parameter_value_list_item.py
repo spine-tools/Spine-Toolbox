@@ -76,6 +76,8 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, L
         return self.db_mngr.get_parameter_value_list(self.db_map, self.id, role=Qt.EditRole)
 
     def _do_finalize(self):
+        if not self.id and not self._name:
+            return
         super()._do_finalize()
         children = [ValueItem(self.id) for _ in self.value_list]
         self.append_children(children)

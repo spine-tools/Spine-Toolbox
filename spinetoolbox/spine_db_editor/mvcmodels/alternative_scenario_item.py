@@ -101,14 +101,11 @@ class ScenarioLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def scenario_alternative_root_item(self):
         return self.child(1)
 
-    def can_fetch_more(self):
-        return not self._fetched
-
-    def fetch_more(self):
+    def _do_finalize(self):
         if not self.id:
             return
+        super()._do_finalize()
         self.append_children([ScenarioActiveItem(), ScenarioAlternativeRootItem()])
-        self._fetched = True
 
     def handle_updated_in_db(self):
         super().handle_updated_in_db()

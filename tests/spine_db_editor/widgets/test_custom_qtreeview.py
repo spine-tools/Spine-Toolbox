@@ -709,10 +709,11 @@ class _ParameterValueListTreeViewTestBase(_Base):
         view = self._db_editor.ui.treeView_parameter_value_list
         model = view.model()
         root_index = model.index(0, 0)
-        last_row = model.rowCount(root_index)
-        list_name_index = model.index(last_row - 1, 0, root_index)
-        self._write_to_index(view, list_name_index, list_name)
-        return list_name_index
+        empty_name_row = model.rowCount(root_index) - 1
+        empty_name_index = model.index(empty_name_row, 0, root_index)
+        self._write_to_index(view, empty_name_index, list_name)
+        new_name_row = model.rowCount(root_index) - 2
+        return model.index(new_name_row, 0, root_index)
 
 
 class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_ParameterValueListTreeViewTestBase):
@@ -761,11 +762,17 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(_ParameterValueLi
         view = self._db_editor.ui.treeView_parameter_value_list
         model = view.model()
         value_index1 = model.index(0, 0, list_name_index)
-        self._write_to_index(view, value_index1, "value_1")
+        with signal_waiter(self._db_mngr.parameter_value_lists_added) as waiter:
+            self._write_to_index(view, value_index1, "value_1")
+            waiter.wait()
+        root_index = model.index(0, 0)
+        list_name_index = model.index(model.rowCount(root_index) - 2, 0, root_index)
         self.assertEqual(model.index(0, 0, list_name_index).data(), "value_1")
         self.assertEqual(model.rowCount(list_name_index), 2)
         value_index2 = model.index(1, 0, list_name_index)
-        self._write_to_index(view, value_index2, "value_2")
+        with signal_waiter(self._db_mngr.parameter_value_lists_updated) as waiter:
+            self._write_to_index(view, value_index2, "value_2")
+            waiter.wait()
         while model.rowCount(list_name_index) != 3:
             QApplication.processEvents()
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
