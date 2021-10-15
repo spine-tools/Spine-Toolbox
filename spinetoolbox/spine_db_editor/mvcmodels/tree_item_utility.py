@@ -19,10 +19,10 @@ A tree model for parameter_value lists.
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine
+from spinetoolbox.helpers import CharIconEngine, bisect_chunks
 
 
-class NonLazyTreeItem(TreeItem):
+class StandardTreeItem(TreeItem):
     """A tree item that fetches their children as they are inserted."""
 
     @property
@@ -66,17 +66,9 @@ class NonLazyTreeItem(TreeItem):
     def set_data(self, column, value, role=Qt.DisplayRole):
         return False
 
-    def can_fetch_more(self):
-        """Disables lazy loading by returning False."""
-        return False
-
-    def insert_children(self, position, children):
-        """Fetches the children as they become parented."""
-        if not super().insert_children(position, children):
-            return False
-        for child in children:
-            child.fetch_more()
-        return True
+    @property
+    def non_empty_children(self):
+        return self.children
 
 
 class EditableMixin:
@@ -85,8 +77,8 @@ class EditableMixin:
         return Qt.ItemIsEditable | super().flags(column)
 
 
-class LastGrayMixin:
-    """Paints the last item gray."""
+class GrayIfLastMixin:
+    """Paints the item gray if it's the last."""
 
     def data(self, column, role=Qt.DisplayRole):
         if role == Qt.ForegroundRole and self.child_number() == self.parent_item.child_count() - 1:
@@ -97,7 +89,7 @@ class LastGrayMixin:
         return super().data(column, role)
 
 
-class AllBoldMixin:
+class BoldTextMixin:
     """Bolds text."""
 
     def data(self, column, role=Qt.DisplayRole):
@@ -111,22 +103,44 @@ class AllBoldMixin:
 class EmptyChildMixin:
     """Guarantess there's always an empty child."""
 
+    @property
+    def non_empty_children(self):
+        return self.children[:-1]
+
     def empty_child(self):
         raise NotImplementedError()
 
-    def fetch_more(self):
+    def _do_finalize(self):
+        super()._do_finalize()
         empty_child = self.empty_child()
         self.append_children([empty_child])
-        self._fetched = True
-
-    def append_empty_child(self, row):
-        """Appends empty child if the row is the last one."""
-        if row == self.child_count() - 1:
-            empty_child = self.empty_child()
-            self.append_children([empty_child])
 
 
-class NonLazyDBItem(NonLazyTreeItem):
+class SortsChildrenMixin:
+    def insert_children_sorted(self, children):
+        for child in children:
+            child.parent_item = self
+        for chunk, pos in bisect_chunks(self.non_empty_children, children, key=lambda x: x.data(0)):
+            if not super().insert_children(pos, chunk):
+                return False
+        return True
+
+
+class FetchMoreMixin:
+    # FIXME: Use parent for calls to fetch_more can_fetch_more
+    # and also insert items from db map cache in case they were already fetched
+    @property
+    def fetch_item_type(self):
+        return self.item_type
+
+    def can_fetch_more(self):
+        return self.db_mngr.can_fetch_more(self.db_map, self.fetch_item_type)
+
+    def fetch_more(self):
+        self.db_mngr.fetch_more(self.db_map, self.fetch_item_type)
+
+
+class StandardDBItem(SortsChildrenMixin, StandardTreeItem):
     """An item representing a db."""
 
     def __init__(self, db_map):
@@ -153,7 +167,7 @@ class NonLazyDBItem(NonLazyTreeItem):
             return self.db_map.codename
 
 
-class RootItem(AllBoldMixin, NonLazyTreeItem):
+class RootItem(SortsChildrenMixin, BoldTextMixin, FetchMoreMixin, StandardTreeItem):
     """A root item."""
 
     @property
@@ -170,11 +184,10 @@ class EmptyChildRootItem(EmptyChildMixin, RootItem):
         raise NotImplementedError
 
 
-class LeafItem(NonLazyTreeItem):
+class LeafItem(StandardTreeItem):
     def __init__(self, identifier=None):
         super().__init__()
         self._id = identifier
-        self._item_data = self._make_item_data()
 
     def _make_item_data(self):
         return {"name": f"Type new {self.item_type} name here...", "description": ""}
@@ -194,7 +207,7 @@ class LeafItem(NonLazyTreeItem):
     @property
     def item_data(self):
         if not self.id:
-            return self._item_data
+            return self._make_item_data()
         return self.db_mngr.get_item(self.db_map, self.item_type, self.id)
 
     @property
@@ -231,7 +244,7 @@ class LeafItem(NonLazyTreeItem):
         return True
 
     def _make_item_to_add(self, value):
-        return dict(name=value, description=self._item_data["description"])
+        return dict(name=value, description=self.item_data["description"])
 
     def _make_item_to_update(self, column, value):
         field = self.header_data(column)
@@ -241,3 +254,6 @@ class LeafItem(NonLazyTreeItem):
         index = self.index()
         sibling = self.index().sibling(self.index().row(), 1)
         self.model.dataChanged.emit(index, sibling)
+
+    def can_fetch_more(self):
+        return False

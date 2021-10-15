@@ -26,6 +26,7 @@ import datetime
 import shutil
 import re
 import pathlib
+import bisect
 from contextlib import contextmanager
 import matplotlib
 from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
@@ -1363,3 +1364,26 @@ def save_ui(window, app_settings, settings_group):
     app_settings.setValue("windowMaximized", window.windowState() == Qt.WindowMaximized)
     app_settings.setValue("n_screens", len(QGuiApplication.screens()))
     app_settings.endGroup()
+
+
+def bisect_chunks(current_data, new_data, key=None):
+    if key is not None:
+        current_data = [key(x) for x in current_data]
+    else:
+        key = lambda x: x
+    new_data = sorted(new_data, key=key)
+    if not new_data:
+        return ()
+    item = new_data[0]
+    chunk = [item]
+    lo = bisect.bisect_left(current_data, key(item))
+    for item in new_data[1:]:
+        row = bisect.bisect_left(current_data, key(item), lo=lo)
+        if row == lo:
+            chunk.append(item)
+            continue
+        yield chunk, lo
+        count = len(chunk)
+        chunk = [item]
+        lo = row + count
+    yield chunk, lo

@@ -15,9 +15,8 @@ Base classes to represent items from multiple databases in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:    17.6.2020
 """
-import bisect
 from PySide2.QtCore import Qt
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import rows_to_row_count_tuples, bisect_chunks
 from ...mvcmodels.minimal_tree_model import TreeItem
 
 
@@ -40,7 +39,6 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
-        self._fetched_once = False
 
     def set_data(self, column, value, role):
         raise NotImplementedError()
@@ -210,29 +208,8 @@ class MultiDBTreeItem(TreeItem):
         if not new_children:
             return
         new_children = sorted(new_children, key=lambda x: x.display_id)
-        new_children_iter = iter(new_children)
-        child = next(new_children_iter)
-        display_ids = [child.display_id for child in self.children]
-        lo = bisect.bisect_left(display_ids, child.display_id)
-        chunk = [child]
-        for child in new_children_iter:
-            row = bisect.bisect_left(display_ids, child.display_id, lo=lo)
-            if row == lo:
-                chunk.append(child)
-                continue
-            self.insert_children(lo, chunk)
-            lo = row + len(chunk)
-            chunk = [child]
-        self.insert_children(lo, chunk)
-
-    def has_children(self):
-        """Returns whether or not this item has or could have children."""
-        if self.can_fetch_more():
-            if not self._fetched_once:
-                self.fetch_more()
-                self._fetched_once = True
-            return True
-        return self.child_count()
+        for chunk, pos in bisect_chunks(self.children, new_children, key=lambda c: c.display_id):
+            self.insert_children(pos, chunk)
 
     def fetch_successful(self, db_map, item):  # pylint: disable=no-self-use
         return True
@@ -406,7 +383,7 @@ class MultiDBTreeItem(TreeItem):
         """Generates children with the given ids in the given db_map.
         If the first id is None, then generates *all* children with the given db_map."""
         for row in self.find_rows_by_id(db_map, *ids, reverse=reverse):
-            yield self._children[row]
+            yield self.children[row]
 
     def find_rows_by_id(self, db_map, *ids, reverse=True):
         yield from sorted(self._find_unsorted_rows_by_id(db_map, *ids), reverse=reverse)

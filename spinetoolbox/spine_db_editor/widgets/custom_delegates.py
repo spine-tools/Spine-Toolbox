@@ -605,7 +605,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
         """Returns editor."""
         model = index.model()
         item = model.item_from_index(index)
-        if item.item_type != "value":
+        if item.item_type != "list_value":
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
             return editor

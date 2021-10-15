@@ -877,13 +877,6 @@ class SpineDBManager(QObject):
             return parsed_value
         return None
 
-    @staticmethod
-    def _split_and_parse_value_list(item):
-        if "split_value_list" not in item:
-            item["split_value_list"] = item["value_list"].split(";")
-        if "split_parsed_value_list" not in item:
-            item["split_parsed_value_list"] = [json.loads(value) for value in item["split_value_list"]]
-
     def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole):
         """Returns one value item of a parameter_value_list.
 
@@ -896,7 +889,7 @@ class SpineDBManager(QObject):
         item = self.get_item(db_map, "parameter_value_list", id_)
         if not item:
             return None
-        self._split_and_parse_value_list(item)
+        _split_and_parse_value_list(item)
         if index < 0 or index >= len(item["split_value_list"]):
             return None
         if role == Qt.EditRole:
@@ -914,7 +907,7 @@ class SpineDBManager(QObject):
         item = self.get_item(db_map, "parameter_value_list", id_)
         if not item:
             return []
-        self._split_and_parse_value_list(item)
+        _split_and_parse_value_list(item)
         if role == Qt.EditRole:
             return item["split_value_list"]
         return [self._format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
@@ -1975,3 +1968,10 @@ class CombinedCache:
 
     def get(self, key, default):
         return {**self._d1.get(key, default), **self._d2.get(key, default)}
+
+
+def _split_and_parse_value_list(item):
+    if "split_value_list" not in item:
+        item["split_value_list"] = item["value_list"].split(";")
+    if "split_parsed_value_list" not in item:
+        item["split_parsed_value_list"] = [json.loads(value) for value in item["split_value_list"]]
