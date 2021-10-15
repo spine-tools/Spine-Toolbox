@@ -15,19 +15,10 @@ Unit tests for the plotting module.
 :author: A. Soininen(VTT)
 :date:   10.7.2019
 """
-import os.path
-from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide2.QtWidgets import QApplication
-from spinedb_api import (
-    DatabaseMapping,
-    import_object_classes,
-    import_object_parameters,
-    import_objects,
-    import_object_parameter_values,
-    Map,
-)
+from spinedb_api import Map
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from ...mock_helpers import TestSpineDBManager
 

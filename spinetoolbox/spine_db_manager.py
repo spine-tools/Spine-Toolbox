@@ -55,7 +55,7 @@ from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, CacheItem
+from .helpers import get_upgrade_db_promt_text, CacheItem, signal_waiter
 
 
 @busy_effect
@@ -670,7 +670,7 @@ class SpineDBManager(QObject):
             dict
         """
         item = self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
-        if only_visible:
+        if only_visible and item:
             return item
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types={item_type})
@@ -948,11 +948,15 @@ class SpineDBManager(QObject):
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_add:
                     add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=macro, check=False)
-                    add_cmd.redo()
+                    with signal_waiter(add_cmd.completed_signal) as waiter:
+                        add_cmd.redo()
+                        waiter.wait()
                     child_cmds.append(add_cmd)
                 if to_update:
                     upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=macro, check=False)
-                    upd_cmd.redo()
+                    with signal_waiter(upd_cmd.completed_signal) as waiter:
+                        upd_cmd.redo()
+                        waiter.wait()
                     child_cmds.append(upd_cmd)
             if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
                 # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it

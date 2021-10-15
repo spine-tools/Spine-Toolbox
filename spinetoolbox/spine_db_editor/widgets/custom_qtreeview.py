@@ -106,8 +106,6 @@ class EntityTreeView(CopyTreeView):
 
     def connect_signals(self):
         """Connects signals."""
-        self.expanded.connect(self._resize_first_column_to_contents)
-        self.collapsed.connect(self._resize_first_column_to_contents)
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
 
@@ -139,10 +137,6 @@ class EntityTreeView(CopyTreeView):
         super().verticalScrollbarValueChanged(value)
         self._fetch_more_timer.start()
 
-    @Slot(QModelIndex)
-    def _resize_first_column_to_contents(self, _index=None):
-        self.resizeColumnToContents(0)
-
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
@@ -170,26 +164,20 @@ class EntityTreeView(CopyTreeView):
     @busy_effect
     def fully_expand(self):
         """Expands selected indexes and all their children."""
-        self.expanded.disconnect(self._resize_first_column_to_contents)
         model = self.model()
         indexes = [index for index in self.selectionModel().selectedIndexes() if index.column() == 0]
         for index in indexes:
             for item in model.visit_all(index):
                 self.expand(model.index_from_item(item))
-        self.expanded.connect(self._resize_first_column_to_contents)
-        self._resize_first_column_to_contents()
 
     @busy_effect
     def fully_collapse(self):
         """Collapses selected indexes and all their children."""
-        self.collapsed.disconnect(self._resize_first_column_to_contents)
         model = self.model()
         indexes = [index for index in self.selectionModel().selectedIndexes() if index.column() == 0]
         for index in indexes:
             for item in model.visit_all(index):
                 self.collapse(model.index_from_item(item))
-        self.collapsed.connect(self._resize_first_column_to_contents)
-        self._resize_first_column_to_contents()
 
     def export_selected(self):
         """Exports data from selected indexes using the connected Spine db editor."""
@@ -408,13 +396,7 @@ class ItemTreeView(CopyTreeView):
 
     def connect_signals(self):
         """Connects signals."""
-        self.expanded.connect(self._resize_first_column_to_contents)
-        self.collapsed.connect(self._resize_first_column_to_contents)
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
-
-    @Slot(QModelIndex)
-    def _resize_first_column_to_contents(self, _index=None):
-        self.resizeColumnToContents(0)
 
     def remove_selected(self):
         """Removes items selected in the view."""

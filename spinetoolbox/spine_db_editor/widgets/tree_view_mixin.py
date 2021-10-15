@@ -73,32 +73,22 @@ class TreeViewMixin:
         super().connect_signals()
         self.ui.treeView_object.tree_selection_changed.connect(self.ui.treeView_relationship.clear_any_selections)
         self.ui.treeView_relationship.tree_selection_changed.connect(self.ui.treeView_object.clear_any_selections)
-        self._object_classes_added.connect(lambda: self.ui.treeView_object.resizeColumnToContents(0))
-        self._relationship_classes_added.connect(lambda: self.ui.treeView_relationship.resizeColumnToContents(0))
 
     def init_models(self):
         """Initializes models."""
         super().init_models()
-        self.object_tree_model.db_maps = self.db_maps
-        self.relationship_tree_model.db_maps = self.db_maps
-        self.tool_feature_model.db_maps = self.db_maps
-        self.alternative_scenario_model.db_maps = self.db_maps
-        self.parameter_value_list_model.build_tree()
-        self.parameter_value_list_model.db_maps = self.db_maps
-        self.object_tree_model.build_tree()
-        self.relationship_tree_model.build_tree()
-        self.ui.treeView_object.expand(self.object_tree_model.root_index)
-        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
         for view in (
+            self.ui.treeView_object,
+            self.ui.treeView_relationship,
             self.ui.treeView_tool_feature,
             self.ui.treeView_alternative_scenario,
             self.ui.treeView_parameter_value_list,
         ):
+            view.model().db_maps = self.db_maps
             view.model().build_tree()
             for item in view.model().visit_all():
                 index = view.model().index_from_item(item)
                 view.expand(index)
-            view.resizeColumnToContents(0)
 
     @staticmethod
     def _db_map_items(indexes):
@@ -413,12 +403,13 @@ class TreeViewMixin:
             self.ui.treeView_relationship.header(),
         )
         for view, state in zip(views, header_states):
-            if state:
-                curr_state = view.saveState()
-                view.restoreState(state)
-                if view.count() != view.model().columnCount():
-                    # This can happen when switching to a version where the model has a different header
-                    view.restoreState(curr_state)
+            if not state:
+                view.resizeColumnToContents(0)
+            curr_state = view.saveState()
+            view.restoreState(state)
+            if view.count() != view.model().columnCount():
+                # This can happen when switching to a version where the model has a different header
+                view.restoreState(curr_state)
 
     def save_window_state(self):
         """Saves window state parameters (size, position, state) via QSettings."""

@@ -68,6 +68,7 @@ class _Base(unittest.TestCase):
             logger = mock.MagicMock()
             self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=create)
             self._db_editor = SpineDBEditor(self._db_mngr, {url: "database"})
+        qApp.processEvents()
 
     def _common_tear_down(self):
         with mock.patch(

@@ -21,7 +21,6 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtCore import QEventLoop
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from ...mock_helpers import TestSpineDBManager
@@ -87,10 +86,7 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         data["relationships"] = [("fish__dog", ("nemo", "pluto"))]
         data["object_parameters"] = [("fish", "color")]
         data["object_parameter_values"] = [("fish", "nemo", "color", "orange")]
-        with mock.patch("spinetoolbox.spine_db_manager.SpineDBManager.entity_class_icon") as mock_icon:
-            mock_icon.return_value = None
-            self.db_mngr.import_data({self.db_map: data})
-            mock_icon.assert_called()
+        self.db_mngr.import_data({self.db_map: data})
         self.fetch_object_tree_model()
         root_item = self.spine_db_editor.object_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))

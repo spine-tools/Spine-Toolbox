@@ -85,10 +85,6 @@ class ParameterViewMixin:
         self.relationship_parameter_value_model.init_model()
         self.relationship_parameter_definition_model.init_model()
         self._set_default_parameter_data()
-        self.ui.tableView_object_parameter_value.resizeColumnsToContents()
-        self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
-        self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
-        self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
     @Slot("QModelIndex", int, "QVariant")
     def show_object_name_list_editor(self, index, rel_cls_id, db_map):
@@ -231,12 +227,13 @@ class ParameterViewMixin:
             self.ui.tableView_relationship_parameter_value.horizontalHeader(),
         )
         for view, state in zip(views, header_states):
-            if state:
-                curr_state = view.saveState()
-                view.restoreState(state)
-                if view.count() != view.model().columnCount():
-                    # This can happen when switching to a version where the model has a different header
-                    view.restoreState(curr_state)
+            if not state:
+                view.resizeColumnsToContents()
+            curr_state = view.saveState()
+            view.restoreState(state)
+            if view.count() != view.model().columnCount():
+                # This can happen when switching to a version where the model has a different header
+                view.restoreState(curr_state)
 
     def save_window_state(self):
         """Saves window state parameters (size, position, state) via QSettings."""
