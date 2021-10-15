@@ -73,14 +73,14 @@ class TreeModelBase(MinimalTreeModel):
             d[db_item] = items
         return d
 
-    def _ids_per_root_item(self, db_map_data, root_number=0):
+    def _items_per_root(self, db_map_data, root_number=0):
         d = {}
         for db_item in self._invisible_root_item.children:
             items = db_map_data.get(db_item.db_map)
             if not items:
                 continue
             root_item = db_item.child(root_number)
-            d[root_item] = [x["id"] for x in items]
+            d[root_item] = items
         return d
 
     @staticmethod
@@ -112,6 +112,26 @@ class TreeModelBase(MinimalTreeModel):
                 removed_rows.append(row)
         for row in sorted(removed_rows, reverse=True):
             root_item.remove_children(row, 1)
+
+    @staticmethod
+    def _insert_items(parent_item, db_items, make_child):
+        """Inserts items at right positions. Items with commit_id are kept sorted.
+        Items without a commit_id are put at the end.
+
+        Args:
+            parent_item (TreeItem)
+            db_items (list of dict): database items
+            make_child (function): A function that receives an integer id and returns a TreeItem
+        """
+        ids_committed = []
+        ids_uncommitted = []
+        for item in db_items:
+            ids = ids_committed if item.get("commit_id") is not None else ids_uncommitted
+            ids.append(item["id"])
+        children_committed = [make_child(id_) for id_ in ids_committed]
+        children_uncommitted = [make_child(id_) for id_ in ids_uncommitted]
+        parent_item.insert_children_sorted(children_committed)
+        parent_item.insert_children(len(parent_item.non_empty_children), children_uncommitted)
 
     @staticmethod
     def db_item(item):
