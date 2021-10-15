@@ -383,7 +383,7 @@ class MultiDBTreeItem(TreeItem):
         """Generates children with the given ids in the given db_map.
         If the first id is None, then generates *all* children with the given db_map."""
         for row in self.find_rows_by_id(db_map, *ids, reverse=reverse):
-            yield self._children[row]
+            yield self.children[row]
 
     def find_rows_by_id(self, db_map, *ids, reverse=True):
         yield from sorted(self._find_unsorted_rows_by_id(db_map, *ids), reverse=reverse)

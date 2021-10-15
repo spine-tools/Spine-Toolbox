@@ -103,10 +103,6 @@ class BoldTextMixin:
 class EmptyChildMixin:
     """Guarantess there's always an empty child."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._has_empty_child = False
-
     @property
     def non_empty_children(self):
         return self.children[:-1]
@@ -114,12 +110,10 @@ class EmptyChildMixin:
     def empty_child(self):
         raise NotImplementedError()
 
-    def fetch_more(self):
-        super().fetch_more()
-        if not self._has_empty_child:
-            self._has_empty_child = True
-            empty_child = self.empty_child()
-            self.append_children([empty_child])
+    def _do_finalize(self):
+        super()._do_finalize()
+        empty_child = self.empty_child()
+        self.append_children([empty_child])
 
 
 class SortsChildrenMixin:

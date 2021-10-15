@@ -30,12 +30,12 @@ class TreeItem(QObject):
             model (MinimalTreeModel, NoneType): The model where the item belongs.
         """
         super().__init__()
+        self._children = []
         self._model = model
-        self._children = None
         self._parent_item = None
         self._fetched = False
-        self.children = []
         self._fetched_once = False
+        self._finalized = False
         self.fully_fetched.connect(self._handle_fully_fetched)
 
     def has_children(self):
@@ -86,7 +86,7 @@ class TreeItem(QObject):
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
         try:
-            return self._children[row]
+            return self.children[row]
         except IndexError:
             return None
 
@@ -96,7 +96,7 @@ class TreeItem(QObject):
 
     def child_count(self):
         """Returns the number of children."""
-        return len(self._children)
+        return len(self.children)
 
     def child_number(self):
         """Returns the rank of this item within its parent or -1 if it's an orphan."""
@@ -127,6 +127,14 @@ class TreeItem(QObject):
     def index(self):
         return self.model.index_from_item(self)
 
+    def finalize(self):
+        if not self._finalized:
+            self._do_finalize()
+            self._finalized = True
+
+    def _do_finalize(self):
+        """Do some final initialization after setting the parent."""
+
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
@@ -142,8 +150,10 @@ class TreeItem(QObject):
         for child in children:
             child.parent_item = self
         self.model.beginInsertRows(self.index(), position, position + len(children) - 1)
-        self._children[position:position] = children
+        self.children[position:position] = children
         self.model.endInsertRows()
+        for child in children:
+            child.finalize()
         return True
 
     def append_children(self, children):
@@ -167,9 +177,9 @@ class TreeItem(QObject):
         if last >= self.child_count():
             last = self.child_count() - 1
         self.model.beginRemoveRows(self.index(), first, last)
-        for child in self._children[first : last + 1]:
+        for child in self.children[first : last + 1]:
             child.parent_item = None
-        del self._children[first : last + 1]
+        del self.children[first : last + 1]
         self.model.endRemoveRows()
         return True
 

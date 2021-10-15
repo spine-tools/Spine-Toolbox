@@ -144,14 +144,11 @@ class ToolLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def update_item_in_db(self, db_item):
         self.db_mngr.update_tools({self.db_map: [db_item]})
 
-    def can_fetch_more(self):
-        return not self._fetched
-
-    def fetch_more(self):
+    def _do_finalize(self):
+        super()._do_finalize()
         if not self.id:
             return
         self.append_children([ToolFeatureRootItem()])
-        self._fetched = True
 
 
 class ToolFeatureRootItem(RootItem):
@@ -199,12 +196,9 @@ class ToolFeatureLeafItem(LeafItem):
         )
         return dict(name=name, **item_data)
 
-    def fetch_more(self):
+    def _do_finalize(self):
+        super()._do_finalize()
         self.append_children([ToolFeatureRequiredItem(), ToolFeatureMethodRootItem()])
-        self._fetched = True
-
-    def can_fetch_more(self):
-        return not self._fetched
 
     def add_item_to_db(self, db_item):
         raise NotImplementedError()
@@ -244,7 +238,7 @@ class ToolFeatureRequiredItem(StandardTreeItem):
             return True
         return False
 
-    def can_fetch_more(self):
+    def has_children(self):
         return False
 
 

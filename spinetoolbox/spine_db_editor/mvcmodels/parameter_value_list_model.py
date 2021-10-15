@@ -76,16 +76,10 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, L
             return []
         return self.db_mngr.get_parameter_value_list(self.db_map, self.id, role=Qt.EditRole)
 
-    def can_fetch_more(self):
-        return not self._fetched
-
-    def fetch_more(self):
-        self._fetched = True
+    def _do_finalize(self):
+        super()._do_finalize()
         children = [ValueItem(self.id) for _ in self.value_list]
         self.append_children(children)
-        if self.id or self._name:
-            empty_child = self.empty_child()
-            self.append_children([empty_child])
 
     # pylint: disable=no-self-use
     def empty_child(self):
