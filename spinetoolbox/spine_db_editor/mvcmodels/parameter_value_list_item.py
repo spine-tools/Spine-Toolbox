@@ -104,6 +104,9 @@ class ListItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, BoldTextMixin, L
         self.parent_item.insert_children(self.child_number(), [ListItem(name=value)])
         return True
 
+    def add_item_to_db(self, db_item):
+        raise NotImplementedError()
+
     def update_item_in_db(self, db_item):
         self.db_mngr.update_parameter_value_lists({self.db_map: [db_item]})
 
