@@ -156,6 +156,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def init_model(self):
         """Initializes the model."""
         super().init_model()
+        self._filter_class_ids = {}
         self.empty_model.fetchMore(QModelIndex())
         self._make_auto_filter_menus()
 
