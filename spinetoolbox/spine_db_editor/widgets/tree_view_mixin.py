@@ -396,20 +396,22 @@ class TreeViewMixin:
         self.qsettings.endGroup()
         self.qsettings.endGroup()
         views = (
-            self.ui.treeView_alternative_scenario.header(),
-            self.ui.treeView_tool_feature.header(),
-            self.ui.treeView_parameter_value_list.header(),
-            self.ui.treeView_object.header(),
-            self.ui.treeView_relationship.header(),
+            self.ui.treeView_alternative_scenario,
+            self.ui.treeView_tool_feature,
+            self.ui.treeView_parameter_value_list,
+            self.ui.treeView_object,
+            self.ui.treeView_relationship,
         )
         for view, state in zip(views, header_states):
             if not state:
                 view.resizeColumnToContents(0)
-            curr_state = view.saveState()
-            view.restoreState(state)
-            if view.count() != view.model().columnCount():
+                continue
+            header = view.header()
+            curr_state = header.saveState()
+            header.restoreState(state)
+            if header.count() != header.model().columnCount():
                 # This can happen when switching to a version where the model has a different header
-                view.restoreState(curr_state)
+                header.restoreState(curr_state)
 
     def save_window_state(self):
         """Saves window state parameters (size, position, state) via QSettings."""
