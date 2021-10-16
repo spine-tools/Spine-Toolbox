@@ -191,6 +191,7 @@ class SpineDBFetcher(QObject):
             }
         item_types = {item_type for item_type in item_types if self.can_fetch_more(item_type)}
         if not item_types:
+            qApp.processEvents()
             return
         with signal_waiter(self._fetch_all_finished) as waiter:
             self._fetch_all_requested.emit(item_types)

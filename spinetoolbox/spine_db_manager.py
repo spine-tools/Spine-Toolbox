@@ -695,7 +695,9 @@ class SpineDBManager(QObject):
             return items
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types={item_type})
-        return items + list(fetcher.cache.get(item_type, {}).values())
+        return list(self._cache.get(db_map, {}).get(item_type, {}).values()) + list(
+            fetcher.cache.get(item_type, {}).values()
+        )
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
         """Returns a list of items of the given type in the given db map that have the given value
