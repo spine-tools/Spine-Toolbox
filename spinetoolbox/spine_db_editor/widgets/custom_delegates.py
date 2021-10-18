@@ -347,7 +347,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
 
 
 class ValueListDelegate(ParameterDelegate):
-    """A delegate for the parameter_value-list."""
+    """A delegate for the parameter value list."""
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
@@ -644,6 +644,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
 
     def setModelData(self, editor, model, index):
         """Send signal."""
+        self.closeEditor.emit(editor)
         if editor.data() == index.data(Qt.EditRole):
             return
         self.data_committed.emit(index, editor.data())

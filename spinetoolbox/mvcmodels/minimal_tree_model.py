@@ -81,7 +81,8 @@ class TreeItem(QObject):
         if not isinstance(parent_item, TreeItem) and parent_item is not None:
             raise ValueError("Parent must be instance of TreeItem or None")
         self._parent_item = parent_item
-        self._model = parent_item.model if parent_item is not None else None
+        if parent_item is not None:
+            self._model = parent_item.model
 
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""

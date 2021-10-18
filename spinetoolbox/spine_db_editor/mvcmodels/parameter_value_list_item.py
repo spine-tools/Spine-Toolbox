@@ -17,7 +17,7 @@ Tree items for parameter_value lists.
 """
 
 import json
-from PySide2.QtCore import Qt, QTimer
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QIcon
 from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
@@ -155,9 +155,6 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
         return self._make_item_to_add(value)
 
     def add_item_to_db(self, db_item):
-        QTimer.singleShot(0, lambda: self._do_add_item_to_db(db_item))
-
-    def _do_add_item_to_db(self, db_item):
         self.db_mngr.import_data({self.db_map: {"parameter_value_lists": db_item}})
 
     def update_item_in_db(self, db_item):
