@@ -129,13 +129,13 @@ class ZMQClient:
         """
         # check if folder and file exist
         #print("ZMQClient.send(): path %s exists: %s file %s exists: %s." % (fileLocation, os.path.isdir(fileLocation), fileName, os.path.exists(fileLocation+fileName)))
-        if not os.path.isdir(fileLocation) or not os.path.exists(fileLocation+fileName):
+        if not os.path.isdir(fileLocation) or not os.path.exists(os.path.join(fileLocation,fileName)):
             # print("ZMQClient.send(): invalid path or file.")
             raise ValueError("invalid path or file.")
         if not text:
             raise ValueError("invalid input text")
         # Read file content
-        f = open(fileLocation + fileName, 'rb')
+        f = open(os.path.join(fileLocation,fileName), 'rb')
         fileData = f.read()
         f.close()
         # create message content

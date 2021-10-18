@@ -19,6 +19,8 @@ A tester for ZMQClient
 import sys
 import zmq
 import json
+from pathlib import Path
+import os
 
 sys.path.append('./../../../spinetoolbox/server/connectivity')
 sys.path.append('./../../../spinetoolbox/server/util')
@@ -105,7 +107,9 @@ class test_ZMQClient:
         jsonTxt=json.dumps(jsonTxt)
         i=0
         while i <10:
-            eventsData=client.send(jsonTxt,"./","test_zipfile.zip")
+            pathStr=str(os.path.realpath(Path(__file__).parent))
+            print("test_connection_closing_loop(): sending file at path: %s"%pathStr)
+            eventsData=client.send(jsonTxt, pathStr,"test_zipfile.zip")
             print("test_connection_closing_loop(): event data item count received: %d"%len(eventsData))
             #print(eventsData)
             if eventsData[len(eventsData)-1][1]!="COMPLETED":
@@ -142,7 +146,8 @@ class test_ZMQClient:
     def test_invalid_text(remoteIP,port):
         client=ZMQClient("tcp",remoteIP,int(port),ZMQSecurityModelState.NONE,"")
         try:
-            eventsData=client.send(None,"./","test_zipfile.zip")
+            pathStr=str(os.path.realpath(Path(__file__).parent))
+            eventsData=client.send(None,pathStr,"test_zipfile.zip")
             return -1
         except Exception as e:
             print("print(Sending failed as expected due to invalid_text: %s"%e)

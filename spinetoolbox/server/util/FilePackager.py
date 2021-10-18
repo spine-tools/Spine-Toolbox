@@ -33,8 +33,11 @@ class FilePackager:
         # check if the source folder exists
         if not os.path.isdir(sourceFolder):
             raise ValueError("provided sourceFolder %s doesn't exist."%sourceFolder)
-        print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, destinationFolder + zipFileName,))
-        shutil.make_archive(destinationFolder + zipFileName, 'zip', sourceFolder)
+        zipPath=os.path.join(destinationFolder,zipFileName)
+        #print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, destinationFolder + zipFileName,))
+        print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, zipPath))
+        #shutil.make_archive(destinationFolder + zipFileName, 'zip', sourceFolder)
+        shutil.make_archive(zipPath, 'zip', sourceFolder)
 
     @staticmethod
     def deleteFile(file):

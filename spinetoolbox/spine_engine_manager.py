@@ -21,6 +21,7 @@ import threading
 import time
 import json
 import ast
+import os
 from enum import Enum
 from spinetoolbox.server.util.FilePackager import FilePackager
 from spinetoolbox.server.connectivity.ZMQClient import ZMQClient, ZMQSecurityModelState, ZMQClientConnectionState
@@ -410,21 +411,21 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                 print("RemoteSpineEngineManager2.run() run time after JSON encoding %d ms"%(runStopTimeMs-runStartTimeMs))
                 runStartTimeMs = round(time.time()*1000.0)
                  # get folder from input data, and package it
-                #print("RemoteSpineEngineManager2.run() Packaging folder %s.."%self._inputData['project_dir'])
-                FilePackager.package(self._inputData['project_dir'],self._inputData['project_dir']+"/",RemoteSpineEngineManager2.ZipFileName)
+                print("RemoteSpineEngineManager2.run() Packaging folder %s.."%self._inputData['project_dir'])
+                FilePackager.package(self._inputData['project_dir'],self._inputData['project_dir'],RemoteSpineEngineManager2.ZipFileName)
                 # Debugging
                 runStopTimeMs = round(time.time()*1000.0)
                 print("RemoteSpineEngineManager2.run() run time after packaging %d ms"%(runStopTimeMs-runStartTimeMs))
                 runStartTimeMs = round(time.time()*1000.0)
                 # send request to the remote client, and listen for a response
-                dataEvents = self.zmq_client.send(jsonTxt,self._inputData['project_dir']+"/",RemoteSpineEngineManager2.ZipFileName+".zip")
+                dataEvents = self.zmq_client.send(jsonTxt,self._inputData['project_dir'],RemoteSpineEngineManager2.ZipFileName+".zip")
                 # print("RemoteSpineEngineManager2.run() received a response:")
                 # print(dataEvents)
                 #print("RemoteSpineEngineManager2.run() %d of event+data items received."%len(dataEvents))
                 self._outputData = dataEvents
                 self._outputDataIteratorIndex = 0
                 # remove the transferred ZIP-file
-                FilePackager.deleteFile(self._inputData['project_dir']+"/"+RemoteSpineEngineManager2.ZipFileName+".zip")
+                FilePackager.deleteFile(os.path.join(self._inputData['project_dir'],RemoteSpineEngineManager2.ZipFileName+".zip"))
                 # debugging
                 runStopTimeMs = round(time.time()*1000.0)
                 print("RemoteSpineEngineManager2.run() duration of transfer %d ms"%(runStopTimeMs-runStartTimeMs))
