@@ -122,6 +122,7 @@ class test_RemoteSpineEngineManager:
                     break
             else:
                 time.sleep(0.1)
+        time.sleep(1)
         manager.stop_engine()
         return testSuccess
 
@@ -261,7 +262,7 @@ class test_RemoteSpineEngineManager:
                         break
                 else:
                     time.sleep(0.1)
-            time.sleep(0.1)
+            time.sleep(1)
             manager.stop_engine()
         return testSuccess
 
@@ -316,7 +317,7 @@ if __name__ == '__main__':
         #run tests
         test1=test_RemoteSpineEngineManager.invalid_config()
         test2=test_RemoteSpineEngineManager.invalid_config2()
-        #test3=test_RemoteSpineEngineManager.run_DAG_noreading("tcp",args[0],int(args[1]))
+        test3=test_RemoteSpineEngineManager.run_DAG_noreading("tcp",args[0],int(args[1]))
         #test_RemoteSpineEngineManager.run_DAG_empty_response("tcp","193.166.160.216",5555)
         time.sleep(1)
         test4=test_RemoteSpineEngineManager.run_DAG("tcp",args[0],int(args[1]))
@@ -324,7 +325,7 @@ if __name__ == '__main__':
         test5=test_RemoteSpineEngineManager.run_DAG_loop("tcp",args[0],int(args[1]))
         test_RemoteSpineEngineManager.delete_test_folder("helloworld")
 
-        if test1==0 and test2==0 and test4==0 and test5==0:
+        if test1==0 and test2==0 and test3==0 and test4==0 and test5==0:
             print("tests OK")
   
         else:
