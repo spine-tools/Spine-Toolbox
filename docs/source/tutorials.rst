@@ -14,5 +14,9 @@ The following tutorials are available:
 .. toctree::
    :titlesonly:
 
-   case_study_a5.rst
+
    simple_system.rst
+   SpineTutorialTwoHydro.rst
+   case_study_a5.rst
+   SpineTutorialA5CaseStudy.rst
+
