@@ -178,7 +178,7 @@ class CommitViewer(QMainWindow):
 
     def closeEvent(self, ev):
         super().closeEvent(ev)
-        save_ui(self, self.qsettings, "commitViewer")
+        save_ui(self, self._qsettings, "commitViewer")
         current = self.centralWidget().widget(self._current_index)
         self._qsettings.beginGroup("commitViewer")
         self._qsettings.setValue("splitterState", current.splitter.saveState())
