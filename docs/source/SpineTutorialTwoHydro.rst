@@ -90,7 +90,7 @@ settings, etc.
 
 To create a new project, select **File -> New project…** from Spine Toolbox main
 menu. Browse to a location where you want to create the project and create a new
-folder for it, e.g. ‘Exercise 6.16’, and then click **Select Folder**.
+folder for it, e.g. ‘Two_hydro’, and then click **Select Folder**.
 
 Configuring SpineOpt
 ____________________
