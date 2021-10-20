@@ -76,6 +76,9 @@ def _make_argument_parser():
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("--execute-only", help="execute given project only, do not open the GUI", action="store_true")
     parser.add_argument("project", help="project to open at startup", nargs="?", default="")
+    parser.add_argument(
+        "-s", "--select", action="append", help="select project item ITEM for execution", nargs="*", metavar="ITEM"
+    )
     return parser
 
 

@@ -167,12 +167,17 @@ class ExecuteProject(QObject):
                 specification_dicts.setdefault(item_type, []).append(spec_dict)
         dags = dag_handler.dags()
         settings = make_settings_dict_for_engine(app_settings)
+        selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         for dag in dags:
             node_successors = dag_handler.node_successors(dag)
             if not node_successors:
                 self._logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
                 return _Status.ERROR
-            execution_permits = {item_name: True for item_name in dag.nodes}
+            if selected:
+                execution_permits = {item_name: item_name in selected for item_name in dag.nodes}
+                selected = selected - set(dag.nodes)
+            else:
+                execution_permits = {item_name: True for item_name in dag.nodes}
             engine_data = {
                 "items": item_dicts,
                 "specifications": specification_dicts,
@@ -197,6 +202,10 @@ class ExecuteProject(QObject):
                     if data == SpineEngineState.FAILED:
                         return _Status.ERROR
                     break
+        if selected:
+            self._logger.msg_warning.emit(
+                f"The following selected items didn't exist in the project: {', '.join(selected)}"
+            )
         return _Status.OK
 
     def _process_engine_event(self, event_type, data):
