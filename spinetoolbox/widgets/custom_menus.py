@@ -17,10 +17,9 @@ Classes for custom context menus and pop-up menus.
 """
 
 import os
-from PySide2.QtWidgets import QAction, QMenu, QWidgetAction
+from PySide2.QtWidgets import QAction, QMenu
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Signal, Slot, QPersistentModelIndex
-from .custom_qwidgets import SimpleFilterWidget
+from PySide2.QtCore import Slot, QPersistentModelIndex
 
 
 class CustomContextMenu(QMenu):
@@ -220,23 +219,3 @@ class FilterMenuBase(QMenu):
     def wipe_out(self):
         self._filter._filter_model.set_list(set())
         self.deleteLater()
-
-
-class SimpleFilterMenu(FilterMenuBase):
-
-    filterChanged = Signal(set)
-
-    def __init__(self, parent, show_empty=True):
-        """
-        Args:
-            parent (SpineDBEditor)
-        """
-        super().__init__(parent)
-        self._filter = SimpleFilterWidget(self, show_empty=show_empty)
-        self._filter_action = QWidgetAction(parent)
-        self._filter_action.setDefaultWidget(self._filter)
-        self.addAction(self._filter_action)
-        self.connect_signals()
-
-    def emit_filter_changed(self, valid_values):
-        self.filterChanged.emit(valid_values)

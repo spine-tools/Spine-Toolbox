@@ -42,7 +42,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._base_filter_index = []
         self._is_filtered = False
         self._filter_index = []
-        self._filter_expression = ""
+        self._filter_expression = re.compile("")
         self._all_selected = True
         self._empty_selected = True
         self._add_to_selection = False
@@ -178,7 +178,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
     def set_filter(self, filter_expression):
         if filter_expression and (isinstance(filter_expression, str) and not filter_expression.isspace()):
             self._action_rows[0] = self._SELECT_ALL_STR
-            self._filter_expression = filter_expression
+            self._filter_expression = re.compile(filter_expression)
             self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
             self._selected_filtered = set(self._data[i] for i in self._filter_index)
             self._add_to_selection = False
@@ -192,7 +192,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self.remove_filter()
 
     def search_filter_expression(self, item):
-        return re.search(self._filter_expression, item)
+        return self._filter_expression.search(item)
 
     def set_base_filter(self, condition):
         """Sets the base filter. The other filter, the one that works by typing in the search bar, should be applied
@@ -240,7 +240,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             return
         self.beginResetModel()
         self._action_rows[0] = self._SELECT_ALL_STR
-        self._filter_expression = ""
+        self._filter_expression = re.compile("")
         if self._show_add_to_selection:
             self._action_rows.remove(self._ADD_TO_SELECTION_STR)
         self._filter_index = self._base_filter_index
@@ -344,4 +344,4 @@ class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
         return data
 
     def search_filter_expression(self, item):
-        return re.search(self._filter_expression, self.data_to_value(item))
+        return self._filter_expression.search(self.data_to_value(item))
