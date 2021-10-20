@@ -449,15 +449,15 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
         # transform string state into enum
         if stateStr == '<ItemExecutionFinishState.SUCCESS: 1>':
             state = ItemExecutionFinishState.SUCCESS
-        elif stateStr == '<ItemExecutionFinishState.FAILURE = 2>':
+        elif stateStr == '<ItemExecutionFinishState.FAILURE: 2>':
             state = ItemExecutionFinishState.FAILURE
-        elif stateStr == '<ItemExecutionFinishState.SKIPPED = 3>':
+        elif stateStr == '<ItemExecutionFinishState.SKIPPED: 3>':
             state = ItemExecutionFinishState.SKIPPED
-        elif stateStr == '<ItemExecutionFinishState.EXCLUDED = 4>':
+        elif stateStr == '<ItemExecutionFinishState.EXCLUDED: 4>':
             state = ItemExecutionFinishState.EXCLUDED
-        elif stateStr == '<ItemExecutionFinishState.STOPPED = 5>':
+        elif stateStr == '<ItemExecutionFinishState.STOPPED: 5>':
             state = ItemExecutionFinishState.STOPPED
-        elif stateStr == '<ItemExecutionFinishState.NEVER_FINISHED = 6>':
+        elif stateStr == '<ItemExecutionFinishState.NEVER_FINISHED: 6>':
             state = ItemExecutionFinishState.NEVER_FINISHED
         if state is not None:
             tempDict['item_state'] = state
