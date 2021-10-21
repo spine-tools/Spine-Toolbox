@@ -169,17 +169,19 @@ class ExecuteProject(QObject):
         settings = make_settings_dict_for_engine(app_settings)
         selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         for dag in dags:
+            item_names_in_dag = set(dag.nodes)
             node_successors = dag_handler.node_successors(dag)
             if not node_successors:
                 self._logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
                 return _Status.ERROR
+            item_dicts_in_dag = {name: item_dict for name, item_dict in item_dicts.items() if name in item_names_in_dag}
             if selected:
                 execution_permits = {item_name: item_name in selected for item_name in dag.nodes}
-                selected = selected - set(dag.nodes)
+                selected = selected - item_names_in_dag
             else:
-                execution_permits = {item_name: True for item_name in dag.nodes}
+                execution_permits = {item_name: True for item_name in item_names_in_dag}
             engine_data = {
-                "items": item_dicts,
+                "items": item_dicts_in_dag,
                 "specifications": specification_dicts,
                 "connections": connection_dicts,
                 "node_successors": node_successors,
