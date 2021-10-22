@@ -16,10 +16,10 @@ Contains FilterExecutionModel.
 :date:   26.11.2020
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
-class FilterExecutionModel(QAbstractItemModel):
+class FilterExecutionModel(QAbstractListModel):
 
     _item = None
 
@@ -29,9 +29,6 @@ class FilterExecutionModel(QAbstractItemModel):
         self.beginResetModel()
         self._item = item
         self.endResetModel()
-
-    def columnCount(self, parent=QModelIndex()):
-        return 1
 
     def rowCount(self, parent=QModelIndex()):
         if self._item is None:
