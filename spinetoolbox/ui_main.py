@@ -1434,7 +1434,10 @@ class ToolboxUI(QMainWindow):
     @staticmethod
     def _refresh_execution_list(view, select):
         view.show()
-        if not view.currentIndex().isValid():
+        model = view.model()
+        if model.rowCount() == 0:
+            view.setCurrentIndex(QModelIndex())
+        elif not view.currentIndex().isValid():
             index = view.model().index(0, 0)
             view.setCurrentIndex(index)
         else:
