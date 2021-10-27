@@ -322,10 +322,7 @@ class TestSpineDBEditor(
     def put_mock_object_classes_in_db_mngr(self):
         """Put fish and dog object classes in the db mngr."""
         object_classes = [self.fish_class, self.dog_class]
-        with mock.patch("spinetoolbox.spine_db_manager.SpineDBManager.entity_class_icon") as mock_icon:
-            mock_icon.return_value = None
-            self.db_mngr.object_classes_added.emit({self.mock_db_map: object_classes})
-            mock_icon.assert_called()
+        self.db_mngr.object_classes_added.emit({self.mock_db_map: object_classes})
 
     def put_mock_objects_in_db_mngr(self):
         """Put nemo, pluto and scooby objects in the db mngr."""
@@ -335,10 +332,7 @@ class TestSpineDBEditor(
     def put_mock_relationship_classes_in_db_mngr(self):
         """Put dog__fish and fish__dog relationship classes in the db mngr."""
         relationship_classes = [self.fish_dog_class, self.dog_fish_class]
-        with mock.patch("spinetoolbox.spine_db_manager.SpineDBManager.entity_class_icon") as mock_icon:
-            mock_icon.return_value = None
-            self.db_mngr.relationship_classes_added.emit({self.mock_db_map: relationship_classes})
-            mock_icon.assert_called()
+        self.db_mngr.relationship_classes_added.emit({self.mock_db_map: relationship_classes})
 
     def put_mock_relationships_in_db_mngr(self):
         """Put pluto_nemo, nemo_pluto and nemo_scooby relationships in the db mngr."""

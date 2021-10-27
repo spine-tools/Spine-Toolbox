@@ -30,12 +30,22 @@ class TreeItem(QObject):
             model (MinimalTreeModel, NoneType): The model where the item belongs.
         """
         super().__init__()
+        self._children = []
         self._model = model
-        self._children = None
         self._parent_item = None
         self._fetched = False
-        self.children = []
+        self._fetched_once = False
+        self._finalized = False
         self.fully_fetched.connect(self._handle_fully_fetched)
+
+    def has_children(self):
+        """Returns whether or not this item has or could have children."""
+        if self.can_fetch_more():
+            if not self._fetched_once:
+                self.fetch_more()
+                self._fetched_once = True
+            return True
+        return bool(self.child_count())
 
     def _handle_fully_fetched(self):
         """Handles fully_fetched."""
@@ -71,12 +81,13 @@ class TreeItem(QObject):
         if not isinstance(parent_item, TreeItem) and parent_item is not None:
             raise ValueError("Parent must be instance of TreeItem or None")
         self._parent_item = parent_item
-        self._model = parent_item.model
+        if parent_item is not None:
+            self._model = parent_item.model
 
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
         try:
-            return self._children[row]
+            return self.children[row]
         except IndexError:
             return None
 
@@ -86,7 +97,7 @@ class TreeItem(QObject):
 
     def child_count(self):
         """Returns the number of children."""
-        return len(self._children)
+        return len(self.children)
 
     def child_number(self):
         """Returns the rank of this item within its parent or -1 if it's an orphan."""
@@ -117,6 +128,14 @@ class TreeItem(QObject):
     def index(self):
         return self.model.index_from_item(self)
 
+    def finalize(self):
+        if not self._finalized:
+            self._do_finalize()
+            self._finalized = True
+
+    def _do_finalize(self):
+        """Do some final initialization after setting the parent."""
+
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
@@ -132,8 +151,10 @@ class TreeItem(QObject):
         for child in children:
             child.parent_item = self
         self.model.beginInsertRows(self.index(), position, position + len(children) - 1)
-        self._children[position:position] = children
+        self.children[position:position] = children
         self.model.endInsertRows()
+        for child in children:
+            child.finalize()
         return True
 
     def append_children(self, children):
@@ -157,7 +178,9 @@ class TreeItem(QObject):
         if last >= self.child_count():
             last = self.child_count() - 1
         self.model.beginRemoveRows(self.index(), first, last)
-        del self._children[first : last + 1]
+        for child in self.children[first : last + 1]:
+            child.parent_item = None
+        del self.children[first : last + 1]
         self.model.endRemoveRows()
         return True
 
@@ -174,12 +197,6 @@ class TreeItem(QObject):
     def data(self, column, role=Qt.DisplayRole):
         """Returns data for given column and role."""
         return None
-
-    def has_children(self):
-        """Returns whether or not this item has or could have children."""
-        if self.child_count() or self.can_fetch_more():
-            return True
-        return False
 
     def can_fetch_more(self):
         """Returns whether or not this item can fetch more."""
@@ -324,8 +341,7 @@ class MinimalTreeModel(QAbstractItemModel):
         return True
 
     def flags(self, index):
-        """Returns the item flags for the given index.
-        """
+        """Returns the item flags for the given index."""
         item = self.item_from_index(index)
         return item.flags(index.column())
 

@@ -57,9 +57,11 @@ class SpineDBFetcher(QObject):
                 "tool",
                 "tool_feature",
                 "tool_feature_method",
+                "commit",
             )
         }
         self.cache = {}
+        self.commit_cache = {}
         self._fetched = {item_type: False for item_type in self._iterators}
         self._can_fetch_more_cache = {}
         self.moveToThread(db_mngr.worker_thread)
@@ -148,6 +150,7 @@ class SpineDBFetcher(QObject):
         fetch_successful = self._make_fetch_successful(parent)
         while True:
             chunk = next(iterator, [])
+            self._populate_commit_cache(item_type, chunk)
             if not chunk:
                 self._fetched[item_type] = True
                 break
@@ -188,6 +191,7 @@ class SpineDBFetcher(QObject):
             }
         item_types = {item_type for item_type in item_types if self.can_fetch_more(item_type)}
         if not item_types:
+            qApp.processEvents()
             return
         with signal_waiter(self._fetch_all_finished) as waiter:
             self._fetch_all_requested.emit(item_types)
@@ -238,3 +242,11 @@ class SpineDBFetcher(QObject):
         sq_name = self._db_map.cache_sqs[item_type]
         sq = getattr(self._db_map, sq_name)
         return self._db_map.query(sq).order_by(*[getattr(sq.c, k) for k in order_by])
+
+    def _populate_commit_cache(self, item_type, items):
+        if item_type == "commit":
+            return
+        if item_type == "entity_group":  # FIXME
+            return
+        for item in items:
+            self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])

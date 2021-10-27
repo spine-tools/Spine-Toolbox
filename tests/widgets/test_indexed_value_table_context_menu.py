@@ -108,7 +108,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
 
     def test_insert_row_after_with_time_pattern_editor(self):
         editor = TimePatternEditor()
-        editor.set_value(TimePattern(["1d"], [-1.1]))
+        editor.set_value(TimePattern(["D1-2"], [-1.1]))
         table_view = editor._ui.pattern_edit_table
         table_view.selectRow(0)
         model = table_view.model()
@@ -118,9 +118,9 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(insert_action)
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
-        self.assertEqual(model.index(0, 0).data(), "1d")
+        self.assertEqual(model.index(0, 0).data(), "D1-2")
         self.assertEqual(model.index(0, 1).data(), -1.1)
-        self.assertEqual(model.index(1, 0).data(), "2")
+        self.assertEqual(model.index(1, 0).data(), "")
         self.assertEqual(model.index(1, 1).data(), 0.0)
         editor.deleteLater()
 
@@ -162,7 +162,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
 
     def test_insert_row_before_with_time_pattern_editor(self):
         editor = TimePatternEditor()
-        editor.set_value(TimePattern(["1d"], [-1.1]))
+        editor.set_value(TimePattern(["D1-2"], [-1.1]))
         table_view = editor._ui.pattern_edit_table
         table_view.selectRow(0)
         model = table_view.model()
@@ -172,9 +172,9 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(insert_action)
         insert_action.trigger()
         self.assertEqual(model.rowCount(), 2 + 1)
-        self.assertEqual(model.index(0, 0).data(), "1")
+        self.assertEqual(model.index(0, 0).data(), "")
         self.assertEqual(model.index(0, 1).data(), 0.0)
-        self.assertEqual(model.index(1, 0).data(), "1d")
+        self.assertEqual(model.index(1, 0).data(), "D1-2")
         self.assertEqual(model.index(1, 1).data(), -1.1)
         editor.deleteLater()
 
@@ -216,7 +216,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
 
     def test_remove_rows_with_time_pattern_editor(self):
         editor = TimePatternEditor()
-        editor.set_value(TimePattern(["1d", "2d"], [-1.1, -2.2]))
+        editor.set_value(TimePattern(["D1-2", "D3-4"], [-1.1, -2.2]))
         table_view = editor._ui.pattern_edit_table
         table_view.selectRow(0)
         model = table_view.model()
@@ -226,7 +226,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         self.assertIsNotNone(remove_action)
         remove_action.trigger()
         self.assertEqual(model.rowCount(), 1 + 1)
-        self.assertEqual(model.index(0, 0).data(), "2d")
+        self.assertEqual(model.index(0, 0).data(), "D3-4")
         self.assertEqual(model.index(0, 1).data(), -2.2)
         editor.deleteLater()
 

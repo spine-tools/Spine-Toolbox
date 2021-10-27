@@ -15,9 +15,8 @@ Base classes to represent items from multiple databases in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:    17.6.2020
 """
-import bisect
 from PySide2.QtCore import Qt
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import rows_to_row_count_tuples, bisect_chunks
 from ...mvcmodels.minimal_tree_model import TreeItem
 
 
@@ -40,7 +39,6 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
-        self._fetched_once = False
 
     def set_data(self, column, value, role):
         raise NotImplementedError()
@@ -56,7 +54,7 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def display_id(self):
-        """"Returns an id for display based on the display key. This id must be the same across all db_maps.
+        """Returns an id for display based on the display key. This id must be the same across all db_maps.
         If it's not, this property becomes None and measures need to be taken (see update_children_by_id).
         """
         ids = {tuple(self.db_map_data_field(db_map, field) for field in self.visual_key) for db_map in self.db_maps}
@@ -66,12 +64,12 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def display_data(self):
-        """"Returns the name for display."""
+        """Returns the name for display."""
         return self.db_map_data_field(self.first_db_map, "name")
 
     @property
     def display_database(self):
-        """"Returns the database for display."""
+        """Returns the database for display."""
         return ",".join([db_map.codename for db_map in self.db_maps])
 
     @property
@@ -188,8 +186,7 @@ class MultiDBTreeItem(TreeItem):
         return [self.child_item_class(self.model, {db_map: id_}) for id_ in children_ids]
 
     def _merge_children(self, new_children):
-        """Merges new children into this item. Ensures that each children has a valid display id afterwards.
-        """
+        """Merges new children into this item. Ensures that each children has a valid display id afterwards."""
         if not new_children:
             return
         existing_children = {child.display_id: child for child in self.children}
@@ -211,34 +208,15 @@ class MultiDBTreeItem(TreeItem):
         if not new_children:
             return
         new_children = sorted(new_children, key=lambda x: x.display_id)
-        new_children_iter = iter(new_children)
-        child = next(new_children_iter)
-        display_ids = [child.display_id for child in self.children]
-        lo = bisect.bisect_left(display_ids, child.display_id)
-        chunk = [child]
-        for child in new_children_iter:
-            row = bisect.bisect_left(display_ids, child.display_id, lo=lo)
-            if row == lo:
-                chunk.append(child)
-                continue
-            self.insert_children(lo, chunk)
-            lo = row + len(chunk)
-            chunk = [child]
-        self.insert_children(lo, chunk)
-
-    def has_children(self):
-        """Returns whether or not this item has or could have children."""
-        if self.can_fetch_more():
-            if not self._fetched_once:
-                self.fetch_more()
-                self._fetched_once = True
-            return True
-        return self.child_count()
+        for chunk, pos in bisect_chunks(self.children, new_children, key=lambda c: c.display_id):
+            self.insert_children(pos, chunk)
 
     def fetch_successful(self, db_map, item):  # pylint: disable=no-self-use
         return True
 
     def _handle_fully_fetched(self):
+        """Notifies the view that the model's layout has changed.
+        This triggers a repaint so this item may be painted gray if no children."""
         self.model.layoutChanged.emit()
 
     @property
@@ -309,8 +287,7 @@ class MultiDBTreeItem(TreeItem):
         self._deep_refresh_children()
 
     def is_valid(self):  # pylint: disable=no-self-use
-        """Checks if the item is still valid after an update operation.
-        """
+        """Checks if the item is still valid after an update operation."""
         return True
 
     def update_children_by_id(self, db_map_ids):
@@ -406,7 +383,7 @@ class MultiDBTreeItem(TreeItem):
         """Generates children with the given ids in the given db_map.
         If the first id is None, then generates *all* children with the given db_map."""
         for row in self.find_rows_by_id(db_map, *ids, reverse=reverse):
-            yield self._children[row]
+            yield self.children[row]
 
     def find_rows_by_id(self, db_map, *ids, reverse=True):
         yield from sorted(self._find_unsorted_rows_by_id(db_map, *ids), reverse=reverse)

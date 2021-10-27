@@ -154,6 +154,7 @@ class EmptyParameterModel(EmptyRowModel):
             db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
             if not db_map:
                 continue
+            item = {k: v for k, v in item.items() if v is not None}
             db_map_data.setdefault(db_map, []).append(item)
         return db_map_data
 
@@ -250,7 +251,7 @@ class EmptyParameterValueModel(
 
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
-        return (*super()._make_unique_id(item), item.get(self.entity_name_key))
+        return (*super()._make_unique_id(item), item.get(self.entity_name_key), item.get("alternative_name"))
 
     def add_items_to_db(self, db_map_data):
         """See base class."""
@@ -276,6 +277,7 @@ class EmptyParameterValueModel(
             and self.entity_id_key in item
             and "parameter_definition_id" in item
             and "alternative_id" in item
+            and "value" in item
         )
 
 

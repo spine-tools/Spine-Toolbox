@@ -103,7 +103,7 @@ class Ui_MainWindow(object):
         self.actionGraph_style.setIcon(icon8)
         self.actionView_history = QAction(MainWindow)
         self.actionView_history.setObjectName(u"actionView_history")
-        self.actionView_history.setEnabled(False)
+        self.actionView_history.setEnabled(True)
         icon9 = QIcon()
         icon9.addFile(u":/icons/menu_icons/history.svg", QSize(), QIcon.Normal, QIcon.Off)
         self.actionView_history.setIcon(icon9)

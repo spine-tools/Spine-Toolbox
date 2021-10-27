@@ -16,7 +16,7 @@ Classes for custom QTreeView.
 :date:   25.4.2018
 """
 
-from PySide2.QtWidgets import QMenu, QMessageBox
+from PySide2.QtWidgets import QMenu
 from PySide2.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection
 from PySide2.QtGui import QMouseEvent, QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyTreeView
@@ -106,8 +106,6 @@ class EntityTreeView(CopyTreeView):
 
     def connect_signals(self):
         """Connects signals."""
-        self.expanded.connect(self._resize_first_column_to_contents)
-        self.collapsed.connect(self._resize_first_column_to_contents)
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
 
@@ -139,10 +137,6 @@ class EntityTreeView(CopyTreeView):
         super().verticalScrollbarValueChanged(value)
         self._fetch_more_timer.start()
 
-    @Slot(QModelIndex)
-    def _resize_first_column_to_contents(self, _index=None):
-        self.resizeColumnToContents(0)
-
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
@@ -170,26 +164,20 @@ class EntityTreeView(CopyTreeView):
     @busy_effect
     def fully_expand(self):
         """Expands selected indexes and all their children."""
-        self.expanded.disconnect(self._resize_first_column_to_contents)
         model = self.model()
         indexes = [index for index in self.selectionModel().selectedIndexes() if index.column() == 0]
         for index in indexes:
             for item in model.visit_all(index):
                 self.expand(model.index_from_item(item))
-        self.expanded.connect(self._resize_first_column_to_contents)
-        self._resize_first_column_to_contents()
 
     @busy_effect
     def fully_collapse(self):
         """Collapses selected indexes and all their children."""
-        self.collapsed.disconnect(self._resize_first_column_to_contents)
         model = self.model()
         indexes = [index for index in self.selectionModel().selectedIndexes() if index.column() == 0]
         for index in indexes:
             for item in model.visit_all(index):
                 self.collapse(model.index_from_item(item))
-        self.collapsed.connect(self._resize_first_column_to_contents)
-        self._resize_first_column_to_contents()
 
     def export_selected(self):
         """Exports data from selected indexes using the connected Spine db editor."""
@@ -408,13 +396,7 @@ class ItemTreeView(CopyTreeView):
 
     def connect_signals(self):
         """Connects signals."""
-        self.expanded.connect(self._resize_first_column_to_contents)
-        self.collapsed.connect(self._resize_first_column_to_contents)
         self._menu.aboutToShow.connect(self._spine_db_editor.refresh_copy_paste_actions)
-
-    @Slot(QModelIndex)
-    def _resize_first_column_to_contents(self, _index=None):
-        self.resizeColumnToContents(0)
 
     def remove_selected(self):
         """Removes items selected in the view."""
@@ -515,6 +497,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
         """Initialize the view."""
         super().__init__(parent=parent)
         self._selected_alternative_ids = dict()
+        self._generate_scenarios_action = None
         self.setMouseTracking(True)
 
     def connect_signals(self):
@@ -531,7 +514,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def populate_context_menu(self):
         """See base class."""
-        self._menu.addAction("Generate scenarios...", self._open_scenario_generator)
+        self._generate_scenarios_action = self._menu.addAction("Generate scenarios...", self._open_scenario_generator)
         self._menu.addSeparator()
         super().populate_context_menu()
 
@@ -541,8 +524,10 @@ class AlternativeScenarioTreeView(ItemTreeView):
             if index.column() != 0:
                 continue
             item = self.model().item_from_index(index)
-            if item.item_type == "alternative" and item.id:
+            if item.item_type == "alternative" and hasattr(item, "id") and item.id:
                 db_map_ids.setdefault(item.db_map, set()).add(item.id)
+            if item.item_type == "scenario_alternative" and hasattr(item, "alternative_id") and item.alternative_id:
+                db_map_ids.setdefault(item.db_map, set()).add(item.alternative_id)
         return db_map_ids
 
     def _db_map_scen_alt_ids_from_selection(self, selection):
@@ -551,7 +536,7 @@ class AlternativeScenarioTreeView(ItemTreeView):
             if index.column() != 0:
                 continue
             item = self.model().item_from_index(index)
-            if item.item_type == "scenario_alternative root":
+            if item.item_type == "scenario_alternative" and hasattr(item, "alternative_id_list"):
                 db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
         return db_map_ids
 
@@ -604,6 +589,9 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def update_actions_availability(self, item):
         """See base class."""
+        self._generate_scenarios_action.setEnabled(
+            isinstance(item, AlternativeLeafItem) and bool(self._selected_alternative_ids.get(item.db_map))
+        )
 
     def dragMoveEvent(self, event):
         super().dragMoveEvent(event)
@@ -619,28 +607,16 @@ class AlternativeScenarioTreeView(ItemTreeView):
 
     def _open_scenario_generator(self):
         """Opens the scenario generator dialog."""
-        selection_model = self.selectionModel()
-        item_from_index = self.model().item_from_index
-        all_items = [item_from_index(index) for index in selection_model.selectedIndexes()]
-        alternative_items = [
-            item for item in all_items if isinstance(item, AlternativeLeafItem) and item.id is not None
-        ]
-        if not alternative_items:
-            QMessageBox.warning(
-                self, "No alternatives selected", "Select the alternatives you want to include in the scenarios first."
-            )
+        item = self.model().item_from_index(self.currentIndex())
+        if not isinstance(item, AlternativeLeafItem):
             return
         included_ids = set()
         alternatives = list()
-        db_map = None
-        for item in alternative_items:
-            if item.id not in included_ids:
-                if db_map is None:
-                    db_map = item.db_map
-                elif item.db_map is not db_map:
-                    continue
-                alternatives.append(item.item_data)
-                included_ids.add(item.id)
+        db_map = item.db_map
+        for id_ in self._selected_alternative_ids.get(db_map, ()):
+            if id_ not in included_ids:
+                alternatives.append(self._spine_db_editor.db_mngr.get_item(db_map, "alternative", id_))
+                included_ids.add(id_)
         generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
         generator.show()
 
@@ -669,7 +645,7 @@ class ParameterValueListTreeView(ItemTreeView):
 
     def update_actions_availability(self, item):
         """See base class."""
-        self._open_in_editor_action.setEnabled(item.item_type == "value")
+        self._open_in_editor_action.setEnabled(item.item_type == "list_value")
 
     def open_in_editor(self):
         """Opens the parameter_value editor for the first selected cell."""

@@ -347,7 +347,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
 
 
 class ValueListDelegate(ParameterDelegate):
-    """A delegate for the parameter_value-list."""
+    """A delegate for the parameter value list."""
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
@@ -471,14 +471,27 @@ class ToolFeatureDelegate(QStyledItemDelegate):
 
     data_committed = Signal(QModelIndex, object)
 
-    @staticmethod
-    def _get_names(item, model):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._feature_ids = {}
+
+    def _get_names(self, item, model):
         if item.item_type == "feature":
             names = model.get_all_feature_names(item.db_map)
             if not names:
                 model._parent.msg_error.emit("There aren't any listed parameter definitions to create features from. ")
                 return None
             return names
+        if item.item_type == "tool_feature":
+            self._feature_ids = {
+                model.make_feature_name(x["entity_class_name"], x["parameter_definition_name"]): (
+                    x["id"],
+                    x["parameter_value_list_id"],
+                )
+                for x in item.db_mngr.get_items(item.db_map, "feature")
+                if x["id"] not in item.parent_item.feature_id_list
+            }
+            return list(self._feature_ids)
         if item.item_type == "tool_feature required":
             return ["yes", "no"]
         if item.item_type == "tool_feature_method":
@@ -498,9 +511,14 @@ class ToolFeatureDelegate(QStyledItemDelegate):
         """Send signal."""
         item = index.model().item_from_index(index)
         index_data = self._get_index_data(item, index)
-        if editor.data() == index_data:
+        editor_data = editor.data()
+        if editor_data == index_data:
             return
-        self.data_committed.emit(index, editor.data())
+        if item.item_type == "tool_feature":
+            editor_data = self._feature_ids.get(editor_data)
+            if editor_data is None:
+                return
+        self.data_committed.emit(index, editor_data)
 
     def setEditorData(self, editor, index):
         """Do nothing. We're setting editor data right away in createEditor."""
@@ -509,7 +527,7 @@ class ToolFeatureDelegate(QStyledItemDelegate):
         """Returns editor."""
         model = index.model()
         item = model.item_from_index(index)
-        if item.item_type in ("feature", "tool_feature required", "tool_feature_method"):
+        if item.item_type in ("feature", "tool_feature", "tool_feature required", "tool_feature_method"):
             editor = SearchBarEditor(self.parent(), parent)
             index_data = self._get_index_data(item, index)
             names = self._get_names(item, model)
@@ -517,15 +535,15 @@ class ToolFeatureDelegate(QStyledItemDelegate):
                 return None
             editor.set_data(index_data, names)
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
-            return editor
-        editor = CustomLineEditor(parent)
-        editor.set_data(index.data(Qt.EditRole))
+        else:
+            editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
         return editor
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
         item = index.model().item_from_index(index)
-        if item.item_type in ("feature", "tool_feature required", "tool_feature_method"):
+        if item.item_type in ("feature", "tool_feature", "tool_feature required", "tool_feature_method"):
             size = option.rect.size()
             if item.item_type == "tool_feature required":
                 dx = QFontMetrics(index.data(Qt.FontRole)).horizontalAdvance("required:")
@@ -545,39 +563,71 @@ class AlternativeScenarioDelegate(QStyledItemDelegate):
 
     data_committed = Signal(QModelIndex, object)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._alternative_ids = {}
+
     def setModelData(self, editor, model, index):
         """Send signal."""
-        if editor.data() == index.data():
+        item = index.model().item_from_index(index)
+        index_data = self._get_index_data(item, index)
+        editor_data = editor.data()
+        if editor_data == index_data:
             return
-        self.data_committed.emit(index, editor.data())
+        if item.item_type == "scenario_alternative":
+            editor_data = self._alternative_ids.get(editor_data)
+            if editor_data is None:
+                return
+        self.data_committed.emit(index, editor_data)
 
     def setEditorData(self, editor, index):
         """Do nothing. We're setting editor data right away in createEditor."""
+
+    def _get_names(self, item, model):
+        if item.item_type == "scenario_alternative":
+            self._alternative_ids = {
+                x["name"]: x["id"]
+                for x in item.db_mngr.get_items(item.db_map, "alternative")
+                if x["id"] not in item.parent_item.alternative_id_list
+            }
+            return list(self._alternative_ids)
+        if item.item_type == "scenario active":
+            return ["yes", "no"]
+
+    @staticmethod
+    def _get_index_data(item, index):
+        index_data = index.data(Qt.EditRole)
+        if item.item_type == "scenario active":
+            return index_data.split(": ")[1]
+        return index_data
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
         model = index.model()
         item = model.item_from_index(index)
-        if item.item_type != "scenario active":
+        if item.item_type in ("scenario active", "scenario_alternative"):
+            editor = SearchBarEditor(self.parent(), parent)
+            index_data = self._get_index_data(item, index)
+            names = self._get_names(item, model)
+            if names is None:
+                return None
+            editor.set_data(index_data, names)
+            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
-            return editor
-        editor = SearchBarEditor(self.parent(), parent)
-        active = index.data(Qt.EditRole).split(": ")[1]
-        editor.set_data(active, ["yes", "no"])
-        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
         item = index.model().item_from_index(index)
-        if item.item_type == "scenario active":
+        if item.item_type in ("scenario active", "scenario_alternative"):
             size = option.rect.size()
-            fm = QFontMetrics(index.data(Qt.FontRole))
-            dx = fm.horizontalAdvance("active:")
-            size.setWidth(size.width() - dx)
+            if item.item_type == "scenario active":
+                dx = QFontMetrics(index.data(Qt.FontRole)).horizontalAdvance("active:")
+                size.setWidth(size.width() - dx)
+                editor.set_base_offset(QPoint(dx, 0))
             editor.set_base_size(size)
-            editor.set_base_offset(QPoint(dx, 0))
             editor.update_geometry()
 
     def _close_editor(self, editor, index):
@@ -594,6 +644,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
 
     def setModelData(self, editor, model, index):
         """Send signal."""
+        self.closeEditor.emit(editor)
         if editor.data() == index.data(Qt.EditRole):
             return
         self.data_committed.emit(index, editor.data())
@@ -605,7 +656,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
         """Returns editor."""
         model = index.model()
         item = model.item_from_index(index)
-        if item.item_type != "value":
+        if item.item_type != "list_value":
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
             return editor

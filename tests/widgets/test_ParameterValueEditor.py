@@ -93,7 +93,7 @@ class TestParameterValueEditor(unittest.TestCase):
         self._check_parent_model_updated_when_closed(duration)
 
     def test_editor_sets_time_pattern_in_parent_model(self):
-        indexes = ["1-3m", "4-12m"]
+        indexes = ["M1-3", "M4-12"]
         values = np.array([23.0, 5.0])
         pattern = TimePattern(indexes, values)
         self._check_parent_model_updated_when_closed(pattern)

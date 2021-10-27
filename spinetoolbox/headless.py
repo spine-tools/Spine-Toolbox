@@ -92,9 +92,9 @@ class HeadlessLogger(QObject):
         logging.error(title + ": " + message)
 
 
-class ExecuteProject(QObject):
+class ActionsWithProject(QObject):
     """
-    A 'task' which opens and executes a Toolbox project when triggered to do so.
+    A 'task' which opens Toolbox project and operates on it.
 
     The execution of this task is triggered by sending it a 'startup' QEvent using e.g. QCoreApplication.postEvent()
     """
@@ -115,89 +115,135 @@ class ExecuteProject(QObject):
         self._startup_event_type = startup_event_type
         self._start.connect(self._execute)
         self._node_messages = dict()
+        self._project_dir = None
+        self._app_settings = None
+        self._item_dicts = None
+        self._specification_dicts = None
+        self._plugin_specifications = None
+        self._connection_dicts = None
+        self._jump_dicts = None
+        self._dag_handler = None
 
     @Slot()
     def _execute(self):
         """Executes this task."""
+        if not self._args.project:
+            self._logger.msg_error.emit("project missing from command line arguments.")
+            QCoreApplication.instance().exit(Status.ARGUMENT_ERROR)
+            return
         try:
-            status = self._open_and_execute_project()
-            QCoreApplication.instance().exit(status)
+            status = self._open_project()
+            if status != Status.OK:
+                QCoreApplication.instance().exit(status)
+                return
+            if self._args.list_items:
+                for dag_number, dag in enumerate(self._dag_handler.dags()):
+                    print(f"DAG {dag_number + 1}/{len(self._dag_handler.dags())}:")
+                    print(" ".join(sorted(dag.nodes)))
+            if self._args.execute_only:
+                status = self._execute_project()
+                if status != Status.OK:
+                    QCoreApplication.instance().exit(status)
+                    return
         except Exception:
-            QCoreApplication.instance().exit(_Status.ERROR)
+            QCoreApplication.instance().exit(Status.ERROR)
             raise
+        QCoreApplication.instance().exit(Status.OK)
 
-    def _open_and_execute_project(self):
+    def _open_project(self):
         """Opens a project and executes all DAGs in that project.
 
         Returns:
-            _Status: status code
+            Status: status code
         """
-        app_settings = QSettings("SpineProject", "Spine Toolbox")
+        self._app_settings = QSettings("SpineProject", "Spine Toolbox")
         spec_factories = load_item_specification_factories("spine_items")
-        plugin_specifications = dict()
-        for plugin_dir in plugins_dirs(app_settings):
+        self._plugin_specifications = dict()
+        for plugin_dir in plugins_dirs(self._app_settings):
             plugin_dict = load_plugin_dict(plugin_dir, self._logger)
             if plugin_dict is None:
                 continue
-            specs = load_plugin_specifications(plugin_dict, spec_factories, app_settings, self._logger)
+            specs = load_plugin_specifications(plugin_dict, spec_factories, self._app_settings, self._logger)
             if specs is None:
                 continue
             for spec_list in specs.values():
                 for spec in spec_list:
-                    plugin_specifications.setdefault(spec.item_type, []).append(spec)
-        project_dir = pathlib.Path(self._args.project).resolve()
-        project_file_path = project_dir / ".spinetoolbox" / "project.json"
+                    self._plugin_specifications.setdefault(spec.item_type, []).append(spec)
+        self._project_dir = pathlib.Path(self._args.project).resolve()
+        project_file_path = self._project_dir / ".spinetoolbox" / "project.json"
         try:
             with project_file_path.open() as project_file:
                 try:
                     project_dict = json.load(project_file)
                 except json.decoder.JSONDecodeError:
                     self._logger.msg_error.emit(f"Error in project file {project_file_path}. Invalid JSON.")
-                    return _Status.ERROR
+                    return Status.ERROR
         except OSError:
             self._logger.msg_error.emit(f"Project file {project_file_path} missing")
-            return _Status.ERROR
-        item_dicts, specification_dicts, connection_dicts, dag_handler = open_project(
-            project_dict, project_dir, self._logger
+            return Status.ERROR
+        self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts, self._dag_handler = open_project(
+            project_dict, self._project_dir, self._logger
         )
-        for item_type, plugin_specs in plugin_specifications.items():
+        return Status.OK
+
+    def _execute_project(self):
+        """Executes all DAGs in a project.
+
+        Returns:
+            Status: status code
+        """
+        for item_type, plugin_specs in self._plugin_specifications.items():
             for spec in plugin_specs:
                 spec_dict = spec.to_dict()
                 spec_dict["definition_file_path"] = spec.definition_file_path
-                specification_dicts.setdefault(item_type, []).append(spec_dict)
-        dags = dag_handler.dags()
-        settings = make_settings_dict_for_engine(app_settings)
+                self._specification_dicts.setdefault(item_type, []).append(spec_dict)
+        dags = self._dag_handler.dags()
+        settings = make_settings_dict_for_engine(self._app_settings)
+        selected = {name for name_list in self._args.select for name in name_list} if self._args.select else None
         for dag in dags:
-            node_successors = dag_handler.node_successors(dag)
+            item_names_in_dag = set(dag.nodes)
+            node_successors = self._dag_handler.node_successors(dag)
             if not node_successors:
                 self._logger.msg_error.emit("The project contains a graph that is not a Directed Acyclic Graph.")
-                return _Status.ERROR
-            execution_permits = {item_name: True for item_name in dag.nodes}
+                return Status.ERROR
+            item_dicts_in_dag = {
+                name: item_dict for name, item_dict in self._item_dicts.items() if name in item_names_in_dag
+            }
+            if selected:
+                execution_permits = {item_name: item_name in selected for item_name in dag.nodes}
+                selected = selected - item_names_in_dag
+            else:
+                execution_permits = {item_name: True for item_name in item_names_in_dag}
             engine_data = {
-                "items": item_dicts,
-                "specifications": specification_dicts,
-                "connections": connection_dicts,
+                "items": item_dicts_in_dag,
+                "specifications": self._specification_dicts,
+                "connections": self._connection_dicts,
+                "jumps": self._jump_dicts,
                 "node_successors": node_successors,
                 "execution_permits": execution_permits,
                 "items_module_name": "spine_items",
                 "settings": settings,
-                "project_dir": project_dir,
+                "project_dir": self._project_dir,
             }
-            engine_server_address = app_settings.value("appSettings/engineServerAddress", defaultValue="")
+            engine_server_address = self._app_settings.value("appSettings/engineServerAddress", defaultValue="")
             engine_manager = make_engine_manager(engine_server_address)
             try:
                 engine_manager.run_engine(engine_data)
             except EngineInitFailed as error:
                 self._logger.msg_error.emit(f"Engine failed to start: {error}")
-                return _Status.ERROR
+                return Status.ERROR
             while True:
                 event_type, data = engine_manager.get_engine_event()
                 self._process_engine_event(event_type, data)
                 if event_type == "dag_exec_finished":
                     if data == SpineEngineState.FAILED:
-                        return _Status.ERROR
+                        return Status.ERROR
                     break
-        return _Status.OK
+        if selected:
+            self._logger.msg_warning.emit(
+                f"The following selected items didn't exist in the project: {', '.join(selected)}"
+            )
+        return Status.OK
 
     def _process_engine_event(self, event_type, data):
         handler = {
@@ -296,7 +342,7 @@ def headless_main(args):
     """
     application = QCoreApplication(sys.argv)
     startup_event_type = QEvent.Type(QEvent.registerEventType())
-    task = ExecuteProject(args, startup_event_type, application)
+    task = ActionsWithProject(args, startup_event_type, application)
     application.postEvent(task, QEvent(startup_event_type))
     return application.exec_()
 
@@ -307,10 +353,10 @@ def open_project(project_dict, project_dir, logger):
 
     Args:
         project_dict (dict): a serialized project dictionary
-        project_dir (str): path to a directory containing the ``.spinetoolbox`` dir
+        project_dir (Path): path to a directory containing the ``.spinetoolbox`` dir
         logger (LoggerInterface): a logger
     Returns:
-        tuple: item dicts, specification dicts, connection dicts and a DagHandler object
+        tuple: item dicts, specification dicts, connection dicts, jump dicts and a DagHandler object
     """
     specification_dicts = _specification_dicts(project_dict, project_dir, logger)
     item_dicts = dict()
@@ -322,7 +368,13 @@ def open_project(project_dict, project_dir, logger):
         from_name = connection["from"][0]
         to_name = connection["to"][0]
         dag_handler.add_graph_edge(from_name, to_name)
-    return project_dict["items"], specification_dicts, project_dict["project"]["connections"], dag_handler
+    return (
+        project_dict["items"],
+        specification_dicts,
+        project_dict["project"]["connections"],
+        project_dict["project"]["jumps"],
+        dag_handler,
+    )
 
 
 def _specification_dicts(project_dict, project_dir, logger):
@@ -358,8 +410,9 @@ def _specification_dicts(project_dict, project_dir, logger):
 
 
 @unique
-class _Status(IntEnum):
+class Status(IntEnum):
     """Status codes returned from headless execution."""
 
     OK = 0
     ERROR = 1
+    ARGUMENT_ERROR = 2

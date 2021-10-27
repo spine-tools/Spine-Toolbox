@@ -72,7 +72,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         entity_class_id = item.get(self.entity_class_id_key)
         if entity_class_id is None:
             return False
-        model = self._create_single_model(db_map, entity_class_id)
+        model = self._create_single_model(db_map, entity_class_id, committed=None)
         return self.filter_accepts_model(model) and model.filter_accepts_item(item)
 
     def fetch_id(self):
@@ -156,6 +156,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def init_model(self):
         """Initializes the model."""
         super().init_model()
+        self._filter_class_ids = {}
         self.empty_model.fetchMore(QModelIndex())
         self._make_auto_filter_menus()
 
@@ -378,26 +379,39 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for db_map, items in db_map_data.items():
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
-                ids = [item["id"] for item in class_items]
-                self._add_parameter_data(db_map, entity_class_id, ids)
+                ids_committed = list()
+                ids_uncommitted = list()
+                for item in class_items:
+                    if item.get("commit_id") is not None:
+                        ids_committed.append(item["id"])
+                    else:
+                        ids_uncommitted.append(item["id"])
+                self._add_parameter_data(db_map, entity_class_id, ids_committed, committed=True)
+                self._add_parameter_data(db_map, entity_class_id, ids_uncommitted, committed=False)
                 self._do_add_data_to_filter_menus(db_map, class_items)
         self.empty_model.receive_parameter_data_added(db_map_data)
 
-    def _create_single_model(self, db_map, entity_class_id):
-        model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id)
+    def _get_insert_position(self, model):
+        if model.committed:
+            return super()._get_insert_position(model)
+        return len(self.single_models)
+
+    def _create_single_model(self, db_map, entity_class_id, committed):
+        model = self._single_model_type(self.header, self.db_mngr, db_map, entity_class_id, committed)
         self._connect_single_model(model)
         for field in self._auto_filter:
             self._set_single_auto_filter(model, field)
         return model
 
-    def _add_parameter_data(self, db_map, entity_class_id, ids):
-        existing = next(
-            (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
-        )
-        if existing is not None:
-            existing.add_rows(ids)
-            return
-        model = self._create_single_model(db_map, entity_class_id)
+    def _add_parameter_data(self, db_map, entity_class_id, ids, committed):
+        if committed:
+            existing = next(
+                (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+            )
+            if existing is not None:
+                existing.add_rows(ids)
+                return
+        model = self._create_single_model(db_map, entity_class_id, committed)
         model.reset_model(ids)
 
     def receive_parameter_data_updated(self, db_map_data):
@@ -581,8 +595,8 @@ class CompoundParameterValueMixin:
             if model.set_filter_alternative_ids(alternative_ids):
                 self._invalidate_filter()
 
-    def _create_single_model(self, db_map, entity_class_id):
-        model = super()._create_single_model(db_map, entity_class_id)
+    def _create_single_model(self, db_map, entity_class_id, committed):
+        model = super()._create_single_model(db_map, entity_class_id, committed)
         model.set_filter_entity_ids(self._filter_entity_ids)
         model.set_filter_alternative_ids(self._filter_alternative_ids)
         return model

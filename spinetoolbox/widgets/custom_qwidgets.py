@@ -166,10 +166,10 @@ class CustomWidgetAction(QWidgetAction):
     def _handle_hovered(self):
         """Hides other menus that might be shown in the parent widget and repaints it.
         This is to emulate the behavior of QAction."""
-        for menu in self.parentWidget().findChildren(QMenu):
+        for menu in self.parent().findChildren(QMenu):
             if menu.isVisible():
                 menu.hide()
-        self.parentWidget().update(self.parentWidget().geometry())
+        self.parent().update(self.parent().geometry())
 
 
 class ToolBarWidgetAction(CustomWidgetAction):
@@ -179,8 +179,6 @@ class ToolBarWidgetAction(CustomWidgetAction):
         tool_bar (QToolBar)
     """
 
-    _parent_key_press_event = None
-
     def __init__(self, text, parent=None, compact=False):
         """Class constructor.
 
@@ -188,6 +186,7 @@ class ToolBarWidgetAction(CustomWidgetAction):
             parent (QMenu): the widget's parent
         """
         super().__init__(parent)
+        self._parent_key_press_event = None
         widget = MenuItemToolBarWidget(text, parent=parent, compact=compact)
         self.setDefaultWidget(widget)
         self.tool_bar = widget.tool_bar

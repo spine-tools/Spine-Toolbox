@@ -16,7 +16,7 @@ Classes to represent alternative and scenario items in a tree.
 :date:    17.6.2020
 """
 from PySide2.QtCore import Qt
-from .tree_item_utility import LastGrayMixin, EditableMixin, RootItem, EmptyChildRootItem, LeafItem, NonLazyTreeItem
+from .tree_item_utility import GrayIfLastMixin, EditableMixin, EmptyChildRootItem, LeafItem, StandardTreeItem
 
 _ALTERNATIVE_ICON = "\uf277"  # map-signs
 _SCENARIO_ICON = "\uf008"  # film
@@ -27,7 +27,7 @@ class AlternativeRootItem(EmptyChildRootItem):
 
     @property
     def item_type(self):
-        return "alternative root"
+        return "alternative"
 
     @property
     def display_data(self):
@@ -40,17 +40,13 @@ class AlternativeRootItem(EmptyChildRootItem):
     def empty_child(self):
         return AlternativeLeafItem()
 
-    def fetch_more(self):
-        super().fetch_more()
-        self.db_mngr.fetch_more(self.db_map, "alternative")
-
 
 class ScenarioRootItem(EmptyChildRootItem):
     """A scenario root item."""
 
     @property
     def item_type(self):
-        return "scenario root"
+        return "scenario"
 
     @property
     def display_data(self):
@@ -63,12 +59,8 @@ class ScenarioRootItem(EmptyChildRootItem):
     def empty_child(self):
         return ScenarioLeafItem()
 
-    def fetch_more(self):
-        super().fetch_more()
-        self.db_mngr.fetch_more(self.db_map, "scenario")
 
-
-class AlternativeLeafItem(LastGrayMixin, EditableMixin, LeafItem):
+class AlternativeLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     """An alternative leaf item."""
 
     @property
@@ -77,7 +69,10 @@ class AlternativeLeafItem(LastGrayMixin, EditableMixin, LeafItem):
 
     @property
     def tool_tip(self):
-        return "<p>Drag this item and drop it onto a <b>scenario_alternative</b> item below to create a scenario alternative</p>"
+        return (
+            "<p>Drag this item and drop it onto a <b>scenario_alternative</b> item below to create a scenario"
+            " alternative</p>"
+        )
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_alternatives({self.db_map: [db_item]})
@@ -89,7 +84,7 @@ class AlternativeLeafItem(LastGrayMixin, EditableMixin, LeafItem):
         return super().flags(column) | Qt.ItemIsDragEnabled
 
 
-class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
+class ScenarioLeafItem(GrayIfLastMixin, EditableMixin, LeafItem):
     """A scenario leaf item."""
 
     @property
@@ -106,18 +101,18 @@ class ScenarioLeafItem(LastGrayMixin, EditableMixin, LeafItem):
     def scenario_alternative_root_item(self):
         return self.child(1)
 
-    def fetch_more(self):
+    def _do_finalize(self):
         if not self.id:
             return
+        super()._do_finalize()
         self.append_children([ScenarioActiveItem(), ScenarioAlternativeRootItem()])
-        self._fetched = True
 
     def handle_updated_in_db(self):
         super().handle_updated_in_db()
         self.scenario_alternative_root_item.update_alternative_id_list()
 
 
-class ScenarioActiveItem(NonLazyTreeItem):
+class ScenarioActiveItem(StandardTreeItem):
     @property
     def item_type(self):
         return "scenario active"
@@ -130,10 +125,7 @@ class ScenarioActiveItem(NonLazyTreeItem):
 
     def data(self, column, role=Qt.DisplayRole):
         if column == 0 and role in (Qt.DisplayRole, Qt.EditRole):
-            try:
-                active = "yes" if self.parent_item.item_data["active"] else "no"
-            except KeyError as e:
-                print(e)
+            active = "yes" if self.parent_item.item_data["active"] else "no"
             return "active: " + active
         return super().data(column, role)
 
@@ -148,12 +140,15 @@ class ScenarioActiveItem(NonLazyTreeItem):
         return False
 
 
-class ScenarioAlternativeRootItem(RootItem):
+class ScenarioAlternativeRootItem(EmptyChildRootItem):
     """A scenario alternative root item."""
+
+    def empty_child(self):
+        return ScenarioAlternativeLeafItem()
 
     @property
     def item_type(self):
-        return "scenario_alternative root"
+        return "scenario_alternative"
 
     @property
     def display_data(self):
@@ -174,12 +169,9 @@ class ScenarioAlternativeRootItem(RootItem):
     def flags(self, column):
         return super().flags(column) | Qt.ItemIsDropEnabled
 
-    def fetch_more(self):
-        self.db_mngr.fetch_more(self.db_map, "scenario_alternative")
-
     def update_alternative_id_list(self):
         alt_count = len(self.alternative_id_list)
-        curr_alt_count = self.child_count()
+        curr_alt_count = len(self.non_empty_children)
         if alt_count > curr_alt_count:
             added_count = alt_count - curr_alt_count
             children = [ScenarioAlternativeLeafItem() for _ in range(added_count)]
@@ -189,19 +181,28 @@ class ScenarioAlternativeRootItem(RootItem):
             self.remove_children(alt_count, removed_count)
 
 
-class ScenarioAlternativeLeafItem(LeafItem):
+class ScenarioAlternativeLeafItem(GrayIfLastMixin, LeafItem):
     """A scenario alternative leaf item."""
 
     @property
     def item_type(self):
-        return "alternative"
+        return "scenario_alternative"
 
     @property
     def tool_tip(self):
         return "<p>Drag and drop this item to reorder scenario alternatives</p>"
 
+    def _make_item_data(self):
+        return {"name": f"Type scenario alternative name here...", "description": ""}
+
     @property
-    def id(self):
+    def item_data(self):
+        if not self.alternative_id:
+            return self._make_item_data()
+        return self.db_mngr.get_item(self.db_map, "alternative", self.alternative_id)
+
+    @property
+    def alternative_id(self):
         try:
             return self.parent_item.alternative_id_list[self.child_number()]
         except IndexError:
@@ -214,4 +215,24 @@ class ScenarioAlternativeLeafItem(LeafItem):
         raise NotImplementedError()
 
     def flags(self, column):
-        return super().flags(column) | Qt.ItemIsDragEnabled
+        flags = super().flags(column)
+        if self.alternative_id:
+            flags |= Qt.ItemIsDragEnabled
+        else:
+            flags |= Qt.ItemIsEditable
+        return flags
+
+    def set_data(self, column, value, role=Qt.EditRole):
+        if role != Qt.EditRole or value == self.data(column, role):
+            return False
+        if self.alternative_id:
+            return False
+        if column == 0:
+            alternative_id_list = self.parent_item.alternative_id_list
+            alternative_id_list.append(value)
+            db_item = {
+                "id": self.parent_item.parent_item.id,
+                "alternative_id_list": ",".join([str(id_) for id_ in alternative_id_list]),
+            }
+            self.db_mngr.set_scenario_alternatives({self.db_map: [db_item]})
+        return True

@@ -16,10 +16,10 @@ Contains FilterExecutionModel.
 :date:   26.11.2020
 """
 
-from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
-class FilterExecutionModel(QAbstractItemModel):
+class FilterExecutionModel(QAbstractListModel):
 
     _item = None
 
@@ -30,29 +30,22 @@ class FilterExecutionModel(QAbstractItemModel):
         self._item = item
         self.endResetModel()
 
-    def index(self, row, column, parent=QModelIndex()):
-        return self.createIndex(row, column)
-
-    def parent(self, index):
-        return QModelIndex()
-
-    def columnCount(self, parent=QModelIndex()):
-        return 1
-
     def rowCount(self, parent=QModelIndex()):
-        if parent.isValid() or self._item is None:
+        if self._item is None:
             return 0
         return len(self._item.filter_log_documents)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if section == 0 and orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return "Executions"
+        return None
 
     def data(self, index, role=Qt.DisplayRole):
-        if self._item is None:
+        if self._item is None or not index.isValid():
             return None
         if role == Qt.DisplayRole:
             return list(self._item.filter_log_documents.keys())[index.row()]
+        return None
 
     def get_log_document(self, filter_id):
         return self._item.filter_log_documents[filter_id]

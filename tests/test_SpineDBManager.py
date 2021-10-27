@@ -105,19 +105,19 @@ class TestParameterValueFormatting(unittest.TestCase):
         self.assertIsNone(self.get_value(Qt.ToolTipRole))
 
     def test_time_pattern_in_display_role(self):
-        value = TimePattern(["1-12m"], [5.0])
+        value = TimePattern(["M1-12"], [5.0])
         self.db_mngr.get_item.return_value = dict(zip(("value", "type"), to_database(value)))
         formatted = self.get_value(Qt.DisplayRole)
         self.assertEqual(formatted, "Time pattern")
 
     def test_time_pattern_in_edit_role(self):
-        value = TimePattern(["1-12m"], [5.0])
+        value = TimePattern(["M1-12"], [5.0])
         self.db_mngr.get_item.return_value = dict(zip(("value", "type"), to_database(value)))
         formatted = self.get_value(Qt.EditRole)
         self.assertEqual(formatted, join_value_and_type(*to_database(value)))
 
     def test_time_pattern_in_tool_tip_role(self):
-        value = TimePattern(["1-12m"], [5.0])
+        value = TimePattern(["M1-12"], [5.0])
         self.db_mngr.get_item.return_value = dict(zip(("value", "type"), to_database(value)))
         self.assertIsNone(self.get_value(Qt.ToolTipRole))
 

@@ -36,7 +36,7 @@ from spine_items import resources_icons_rc  # pylint: disable=unused-import
 
 from .ui_main import ToolboxUI
 from .version import __version__
-from .headless import headless_main
+from .headless import headless_main, Status
 from .helpers import pyside2_version_check
 
 
@@ -54,8 +54,11 @@ def main():
     _add_pywin32_system32_to_path()
     parser = _make_argument_parser()
     args = parser.parse_args()
-    if args.execute_only:
-        return headless_main(args)
+    if args.execute_only or args.list_items:
+        return_code = headless_main(args)
+        if return_code == Status.ARGUMENT_ERROR:
+            parser.print_usage()
+        return return_code
     app = QApplication(sys.argv)
     app.setApplicationName("Spine Toolbox")
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
@@ -74,8 +77,12 @@ def _make_argument_parser():
     parser = ArgumentParser()
     version = f"Spine Toolbox {__version__}"
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("--execute-only", help="execute given project only, do not open the GUI", action="store_true")
+    parser.add_argument("--list-items", help="list project items' names, do not open the GUI", action="store_true")
+    parser.add_argument("--execute-only", help="execute given project, do not open the GUI", action="store_true")
     parser.add_argument("project", help="project to open at startup", nargs="?", default="")
+    parser.add_argument(
+        "-s", "--select", action="append", help="select project item ITEM for execution", nargs="*", metavar="ITEM"
+    )
     return parser
 
 

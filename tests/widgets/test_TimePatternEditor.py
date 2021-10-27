@@ -31,12 +31,12 @@ class TestTimePatternEditor(unittest.TestCase):
     def test_initial_value(self):
         editor = TimePatternEditor()
         value = editor.value()
-        self.assertEqual(value, TimePattern(["1-7d"], [0.0]))
+        self.assertEqual(value, TimePattern(["D1-7"], [0.0]))
 
     def test_value_access(self):
         editor = TimePatternEditor()
-        editor.set_value(TimePattern(["1,5d", "2-4,6,7d"], [2.2, 2.1]))
-        self.assertEqual(editor.value(), TimePattern(["1,5d", "2-4,6,7d"], [2.2, 2.1]))
+        editor.set_value(TimePattern(["D1-5", "D6-10"], [2.2, 2.1]))
+        self.assertEqual(editor.value(), TimePattern(["D1-5", "D6-10"], [2.2, 2.1]))
 
 
 if __name__ == '__main__':

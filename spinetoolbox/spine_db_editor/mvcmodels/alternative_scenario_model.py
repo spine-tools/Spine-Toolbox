@@ -17,53 +17,50 @@ Models to represent alternatives, scenarios and scenario alternatives in a tree.
 import json
 from PySide2.QtCore import QMimeData, Qt
 from .tree_model_base import TreeModelBase
-from .tree_item_utility import NonLazyDBItem
+from .tree_item_utility import StandardDBItem
 from .alternative_scenario_item import AlternativeRootItem, ScenarioRootItem, AlternativeLeafItem, ScenarioLeafItem
 
 
 class AlternativeScenarioModel(TreeModelBase):
-    """A model to display alternatives and scenarios in a tree view.
-    """
+    """A model to display alternatives and scenarios in a tree view."""
 
     @staticmethod
     def _make_db_item(db_map):
-        return NonLazyDBItem(db_map)
+        return StandardDBItem(db_map)
 
     @staticmethod
     def _top_children():
         return [AlternativeRootItem(), ScenarioRootItem()]
 
-    def _scenario_ids_per_root_item(self, db_map_data):
-        return self._ids_per_root_item(db_map_data, root_number=1)
+    def _scenarios_per_root(self, db_map_data):
+        return self._items_per_root(db_map_data, root_number=1)
 
-    def _alternative_ids_per_root_item(self, db_map_data):
-        return self._ids_per_root_item(db_map_data, root_number=0)
+    def _alternatives_per_root(self, db_map_data):
+        return self._items_per_root(db_map_data, root_number=0)
 
     def add_alternatives(self, db_map_data):
-        for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
-            children = [AlternativeLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, children)
+        for root_item, items in self._alternatives_per_root(db_map_data).items():
+            self._insert_items(root_item, items, AlternativeLeafItem)
 
     def add_scenarios(self, db_map_data):
-        for root_item, ids in self._scenario_ids_per_root_item(db_map_data).items():
-            children = [ScenarioLeafItem(id_) for id_ in ids]
-            root_item.insert_children(root_item.child_count() - 1, children)
+        for root_item, items in self._scenarios_per_root(db_map_data).items():
+            self._insert_items(root_item, items, ScenarioLeafItem)
 
     def update_alternatives(self, db_map_data):
-        for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
-            self._update_leaf_items(root_item, ids)
+        for root_item, items in self._alternatives_per_root(db_map_data).items():
+            self._update_leaf_items(root_item, [x["id"] for x in items])
 
     def update_scenarios(self, db_map_data):
-        for root_item, ids in self._scenario_ids_per_root_item(db_map_data).items():
-            self._update_leaf_items(root_item, ids)
+        for root_item, items in self._scenarios_per_root(db_map_data).items():
+            self._update_leaf_items(root_item, [x["id"] for x in items])
 
     def remove_alternatives(self, db_map_data):
-        for root_item, ids in self._alternative_ids_per_root_item(db_map_data).items():
-            self._remove_leaf_items(root_item, ids)
+        for root_item, items in self._alternatives_per_root(db_map_data).items():
+            self._remove_leaf_items(root_item, [x["id"] for x in items])
 
     def remove_scenarios(self, db_map_data):
-        for root_item, ids in self._scenario_ids_per_root_item(db_map_data).items():
-            self._remove_leaf_items(root_item, ids)
+        for root_item, items in self._scenarios_per_root(db_map_data).items():
+            self._remove_leaf_items(root_item, [x["id"] for x in items])
 
     def supportedDropActions(self):
         return Qt.CopyAction | Qt.MoveAction
@@ -81,7 +78,7 @@ class AlternativeScenarioModel(TreeModelBase):
             parent_item = item.parent_item
             db_row = self.db_row(parent_item)
             parent_type = parent_item.item_type
-            scen_row = parent_item.parent_item.child_number() if parent_type == "scenario_alternative root" else None
+            scen_row = parent_item.parent_item.child_number() if parent_type == "scenario_alternative" else None
             master_key = ";;".join([str(db_row), parent_type, str(scen_row)])
             d.setdefault(master_key, []).append(item.child_number())
         data = json.dumps(d)
@@ -106,13 +103,13 @@ class AlternativeScenarioModel(TreeModelBase):
         master_key = next(iter(data))
         db_row, parent_type, scen_row = master_key.split(";;")
         db_row = int(db_row)
-        if parent_type not in ("alternative root", "scenario_alternative root"):
+        if parent_type not in ("alternative", "scenario_alternative"):
             return False
         # Check that target is in the same db as source
         scen_alt_root_item = self.item_from_index(parent)
         if db_row != self.db_row(scen_alt_root_item):
             return False
-        if parent_type == "scenario_alternative root":
+        if parent_type == "scenario_alternative":
             # Check that reordering only happens within the same scenario
             scen_row = int(scen_row)
             if scen_row != scen_alt_root_item.parent_item.child_number():
@@ -127,12 +124,12 @@ class AlternativeScenarioModel(TreeModelBase):
         master_key, alternative_rows = json.loads(data.text()).popitem()
         db_row, parent_type, _parent_row = master_key.split(";;")
         db_row = int(db_row)
-        if parent_type == "alternative root":
+        if parent_type == "alternative":
             alt_root_item = self._invisible_root_item.child(db_row).child(0)
             alternative_ids = [alt_root_item.child(row).id for row in alternative_rows]
             alternative_ids = [id_ for id_ in alternative_ids if id_ not in set(alternative_id_list) | {None}]
-        elif parent_type == "scenario_alternative root":
-            alternative_ids = [scen_alt_root_item.child(row).id for row in alternative_rows]
+        elif parent_type == "scenario_alternative":
+            alternative_ids = [scen_alt_root_item.child(row).alternative_id for row in alternative_rows]
             alternative_id_list = [id_ for id_ in alternative_id_list if id_ not in alternative_ids]
         alternative_id_list[row:row] = alternative_ids
         db_item = {

@@ -55,7 +55,7 @@ from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, CacheItem
+from .helpers import get_upgrade_db_promt_text, CacheItem, signal_waiter
 
 
 @busy_effect
@@ -670,7 +670,7 @@ class SpineDBManager(QObject):
             dict
         """
         item = self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
-        if only_visible:
+        if only_visible and item:
             return item
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types={item_type})
@@ -695,7 +695,9 @@ class SpineDBManager(QObject):
             return items
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types={item_type})
-        return items + list(fetcher.cache.get(item_type, {}).values())
+        return list(self._cache.get(db_map, {}).get(item_type, {}).values()) + list(
+            fetcher.cache.get(item_type, {}).values()
+        )
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
         """Returns a list of items of the given type in the given db map that have the given value
@@ -877,13 +879,6 @@ class SpineDBManager(QObject):
             return parsed_value
         return None
 
-    @staticmethod
-    def _split_and_parse_value_list(item):
-        if "split_value_list" not in item:
-            item["split_value_list"] = item["value_list"].split(";")
-        if "split_parsed_value_list" not in item:
-            item["split_parsed_value_list"] = [json.loads(value) for value in item["split_value_list"]]
-
     def get_value_list_item(self, db_map, id_, index, role=Qt.DisplayRole):
         """Returns one value item of a parameter_value_list.
 
@@ -896,7 +891,7 @@ class SpineDBManager(QObject):
         item = self.get_item(db_map, "parameter_value_list", id_)
         if not item:
             return None
-        self._split_and_parse_value_list(item)
+        _split_and_parse_value_list(item)
         if index < 0 or index >= len(item["split_value_list"]):
             return None
         if role == Qt.EditRole:
@@ -914,7 +909,7 @@ class SpineDBManager(QObject):
         item = self.get_item(db_map, "parameter_value_list", id_)
         if not item:
             return []
-        self._split_and_parse_value_list(item)
+        _split_and_parse_value_list(item)
         if role == Qt.EditRole:
             return item["split_value_list"]
         return [self._format_value(parsed_value, role) for parsed_value in item["split_parsed_value_list"]]
@@ -955,11 +950,15 @@ class SpineDBManager(QObject):
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
                 if to_add:
                     add_cmd = AddItemsCommand(self, db_map, to_add, item_type, parent=macro, check=False)
-                    add_cmd.redo()
+                    with signal_waiter(add_cmd.completed_signal) as waiter:
+                        add_cmd.redo()
+                        waiter.wait()
                     child_cmds.append(add_cmd)
                 if to_update:
                     upd_cmd = UpdateItemsCommand(self, db_map, to_update, item_type, parent=macro, check=False)
-                    upd_cmd.redo()
+                    with signal_waiter(upd_cmd.completed_signal) as waiter:
+                        upd_cmd.redo()
+                        waiter.wait()
                     child_cmds.append(upd_cmd)
             if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
                 # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
@@ -1777,6 +1776,11 @@ class SpineDBManager(QObject):
     def get_metadata_per_parameter_value(self, db_map, parameter_value_ids):
         return self._worker.get_metadata_per_parameter_value(db_map, parameter_value_ids)
 
+    def get_items_for_commit(self, db_map, commit_id):
+        fetcher = self._get_fetcher(db_map)
+        fetcher.fetch_all()
+        return fetcher.commit_cache.get(commit_id, {})
+
     @staticmethod
     def get_all_multi_spine_db_editors():
         """Yields all instances of MultiSpineDBEditor currently open.
@@ -1970,3 +1974,10 @@ class CombinedCache:
 
     def get(self, key, default):
         return {**self._d1.get(key, default), **self._d2.get(key, default)}
+
+
+def _split_and_parse_value_list(item):
+    if "split_value_list" not in item:
+        item["split_value_list"] = item["value_list"].split(";")
+    if "split_parsed_value_list" not in item:
+        item["split_parsed_value_list"] = [json.loads(value) for value in item["split_value_list"]]

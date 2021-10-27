@@ -58,14 +58,15 @@
                     }
                 }
             }
-        ]
+        ],
+        "jumps": []
     },
     "items": {
         "Data store": {
             "type": "Data Store",
             "description": "",
-            "x": 53.737819155539626,
-            "y": 2.499629194101132,
+            "x": 53.7378191555396,
+            "y": 2.749629194101132,
             "url": {
                 "dialect": "sqlite",
                 "username": "",
@@ -83,8 +84,8 @@
         "Input data": {
             "type": "Data Connection",
             "description": "",
-            "x": -196.59913736619953,
-            "y": 2.4947982762267387,
+            "x": -196.59913736619956,
+            "y": 2.7447982762267387,
             "references": [
                 {
                     "type": "path",
@@ -96,8 +97,8 @@
         "Output writer": {
             "type": "Tool",
             "description": "",
-            "x": 183.09913736619956,
-            "y": 1.5003708058988678,
+            "x": 183.09913736619953,
+            "y": 1.7503708058988678,
             "specification": "Write values",
             "execute_in_work": true,
             "cmd_line_args": [
@@ -110,8 +111,8 @@
         "Importer": {
             "type": "Importer",
             "description": "",
-            "x": -68.55686683479854,
-            "y": 2.499629194101132,
+            "x": -68.55686683479857,
+            "y": 2.749629194101132,
             "specification": "Input data mapping",
             "cancel_on_error": false,
             "file_selection": [
