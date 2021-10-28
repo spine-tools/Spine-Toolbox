@@ -18,7 +18,8 @@ Unit tests for FilePackager class.
 import unittest
 
 import os
-import sys 
+import sys
+
 sys.path.append('./../../../spinetoolbox/server/util')
 
 from FilePackager import FilePackager
@@ -26,40 +27,40 @@ from FilePackager import FilePackager
 
 class TestFilePackager(unittest.TestCase):
 
-#    def test_folder_packaging(self):
-#        ret=FilePackager.package('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testfolder','/home/ubuntu/sw/Spine-Toolbox/tests/server/util/','testing')
-#        self.assertEqual(os.path.isfile('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testing.zip'),True)
-#        os.remove('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testing.zip')
+    #    def test_folder_packaging(self):
+    #        ret=FilePackager.package('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testfolder','/home/ubuntu/sw/Spine-Toolbox/tests/server/util/','testing')
+    #        self.assertEqual(os.path.isfile('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testing.zip'),True)
+    #        os.remove('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testing.zip')
 
     def test_folder_packaging_relative_folder(self):
-        FilePackager.package('./testfolder','./','testing')
-        self.assertEqual(os.path.isfile('./testing.zip'),True)
+        FilePackager.package('./testfolder', './', 'testing')
+        self.assertEqual(os.path.isfile('./testing.zip'), True)
         os.remove('./testing.zip')
 
     def test_source_folder_notexists(self):
         with self.assertRaises(ValueError):
-            FilePackager.package('./testfolder2','./','testing')
+            FilePackager.package('./testfolder2', './', 'testing')
 
     def test_sourcefolder_invalid1(self):
         with self.assertRaises(ValueError):
-            FilePackager.package(None,'./','testing')
+            FilePackager.package(None, './', 'testing')
 
     def test_dest_folder_invalid1(self):
         with self.assertRaises(ValueError):
-            FilePackager.package('./testfolder','','testing')
+            FilePackager.package('./testfolder', '', 'testing')
 
     def test_dest_folder_invalid2(self):
         with self.assertRaises(ValueError):
-            FilePackager.package('./testfolder',None,'testing')
+            FilePackager.package('./testfolder', None, 'testing')
 
     def test_nofilename(self):
         with self.assertRaises(ValueError):
-            FilePackager.package('./testfolder','./','')
+            FilePackager.package('./testfolder', './', '')
 
-    def test_packaging_removing(self): 
-        FilePackager.package('./testfolder','./','testing')
+    def test_packaging_removing(self):
+        FilePackager.package('./testfolder', './', 'testing')
         FilePackager.deleteFile('./testing.zip')
-        self.assertEqual(os.path.isfile('./testing.zip'),False)
+        self.assertEqual(os.path.isfile('./testing.zip'), False)
 
 
 if __name__ == '__main__':
