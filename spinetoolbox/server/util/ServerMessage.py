@@ -15,9 +15,9 @@ Contains a helper class for JSON-based messages exchanged between server and cli
 :date:   23.08.2021
 """
 
-class ServerMessage:
 
-    def __init__(self,command,id,data,files):
+class ServerMessage:
+    def __init__(self, command, id, data, files):
         """
         Args:
             command (str):command to be executed at the server
@@ -25,18 +25,18 @@ class ServerMessage:
             data(str): associated data
             files(list[str]): a list of file names to be associated with the message (optional)  
         """
-        if command==None or id==None or data==None:
+        if command == None or id == None or data == None:
             raise ValueError("invalid input to ServerMessage")
-        if len(command)==0 or len(id)==0:
-            raise ValueError("invalid input to ServerMessage, len data: %d"%len(data))
+        if len(command) == 0 or len(id) == 0:
+            raise ValueError("invalid input to ServerMessage, len data: %d" % len(data))
 
-        self._command=command
-        self._id=id
-        self._data=data
-        self._files=[]
+        self._command = command
+        self._id = id
+        self._data = data
+        self._files = []
 
-        if files!=None:
-            if len(files)>0:
+        if files != None:
+            if len(files) > 0:
                 self._files.extend(files)
 
     def getCommand(self):
@@ -56,34 +56,32 @@ class ServerMessage:
         Returns:
             the class as a JSON string
         """
-        jsonFileNames=self._getJSONFileNames()
-        #print("ServerMessage.toJSON(): %s"%jsonFileNames)
-        retStr=""
-        retStr+="{\n"
-        retStr+="   \"command\": \""+self._command+"\",\n"
-        retStr+="   \"id\":\""+self._id+"\",\n"
+        jsonFileNames = self._getJSONFileNames()
+        # print("ServerMessage.toJSON(): %s"%jsonFileNames)
+        retStr = ""
+        retStr += "{\n"
+        retStr += "   \"command\": \"" + self._command + "\",\n"
+        retStr += "   \"id\":\"" + self._id + "\",\n"
 
-        if len(self._data)==0:
-            retStr+="   \"data\":\"\",\n"
+        if len(self._data) == 0:
+            retStr += "   \"data\":\"\",\n"
         else:
-            retStr+="   \"data\":"+self._data+",\n"
-        retStr+="   \"files\": "+jsonFileNames
-        retStr+="}"
+            retStr += "   \"data\":" + self._data + ",\n"
+        retStr += "   \"files\": " + jsonFileNames
+        retStr += "}"
         return retStr
-
 
     def _getJSONFileNames(self):
-        fileNameCount=len(self._files)
-        if fileNameCount==0:
+        fileNameCount = len(self._files)
+        if fileNameCount == 0:
             return "{}\n"
-        retStr='{\n'
-        i=0
+        retStr = '{\n'
+        i = 0
         for fName in self._files:
-            if i+1 < fileNameCount:
-                retStr=retStr+"    \"name-"+str(i)+"\": \""+fName+"\",\n"
+            if i + 1 < fileNameCount:
+                retStr = retStr + "    \"name-" + str(i) + "\": \"" + fName + "\",\n"
             else:
-                retStr=retStr+"    \"name-"+str(i)+"\": \""+fName+"\"\n"
-            i+=1
-        retStr=retStr+"    }\n"
+                retStr = retStr + "    \"name-" + str(i) + "\": \"" + fName + "\"\n"
+            i += 1
+        retStr = retStr + "    }\n"
         return retStr
-

@@ -18,8 +18,8 @@ Parser for JSON-based messages exchanged between server and clients.
 import json
 from spinetoolbox.server.util.ServerMessage import ServerMessage
 
+
 class ServerMessageParser:
-  
     @staticmethod
     def parse(message):
         """
@@ -28,30 +28,30 @@ class ServerMessageParser:
         Returns:
             Parsed message as a ServerMessage
         """
-        if message==None:
+        if message == None:
             raise ValueError("invalid input to ServerMessageParser.parse()")
-        if len(message)==0:
+        if len(message) == 0:
             raise ValueError("invalid input to ServerMessageParser.parse()")
 
-        parsedMsg=json.loads(message)
-        #print("ServerMessageParser.parse() parsed msg type:")
-        #print(parsedMsg)
-        fileNames=parsedMsg['files']
-        #print("number of file names: %d"%len(fileNameStr))
+        parsedMsg = json.loads(message)
+        # print("ServerMessageParser.parse() parsed msg type:")
+        # print(parsedMsg)
+        fileNames = parsedMsg['files']
+        # print("number of file names: %d"%len(fileNameStr))
 
-        #parse file names
-        #print("ServerMessageParser.parse() type of data: ")
-        #print(type(json.dumps(parsedMsg['data'])))
-        #dataStr=json.dumps(parsedMsg['data'])
-        dataStr=parsedMsg['data']
-        #print("ServerMessageParser.parse() Data: %s"%dataStr)
+        # parse file names
+        # print("ServerMessageParser.parse() type of data: ")
+        # print(type(json.dumps(parsedMsg['data'])))
+        # dataStr=json.dumps(parsedMsg['data'])
+        dataStr = parsedMsg['data']
+        # print("ServerMessageParser.parse() Data: %s"%dataStr)
 
-        parsedFileNames=[]
-        if len(fileNames)>0:
+        parsedFileNames = []
+        if len(fileNames) > 0:
             for f in fileNames:
-                #print(fileNames[f])
+                # print(fileNames[f])
                 parsedFileNames.append(fileNames[f])
-            msg=ServerMessage(parsedMsg['command'],parsedMsg['id'],dataStr,parsedFileNames)
+            msg = ServerMessage(parsedMsg['command'], parsedMsg['id'], dataStr, parsedFileNames)
         else:
-            msg=ServerMessage(parsedMsg['command'],parsedMsg['id'],dataStr,None)
+            msg = ServerMessage(parsedMsg['command'], parsedMsg['id'], dataStr, None)
         return msg

@@ -26,6 +26,7 @@ from enum import unique, Enum
 from spinetoolbox.server.util.ServerMessage import ServerMessage
 from spinetoolbox.server.util.ServerMessageParser import ServerMessageParser
 from spinetoolbox.server.util.EventDataConverter import EventDataConverter
+
 # from spinetoolbox.server.RemoteSpineEngineManager2 import ZMQSecurityModelState
 
 
@@ -35,7 +36,7 @@ class ZMQSecurityModelState(Enum):
     STONEHOUSE = 1  # stonehouse-security model of Zero-MQ
 
 
-#used, when connectivity is tested during initialisation
+# used, when connectivity is tested during initialisation
 @unique
 class ZMQClientConnectionState(Enum):
     CONNECTED = 0
@@ -52,15 +53,15 @@ class ZMQClient:
             secModel: see: ZMQSecurityModelState
             secFolder: folder, where security files have been stored.
         """
-        self.connectivity_testing=True
+        self.connectivity_testing = True
 
         if secModel == ZMQSecurityModelState.NONE:
             self._context = zmq.Context()
             self._socket = self._context.socket(zmq.REQ)
             self._socket.setsockopt(zmq.LINGER, 1)
-            ret = self._socket.connect(protocol+"://"+remoteHost+":"+str(remotePort))
+            ret = self._socket.connect(protocol + "://" + remoteHost + ":" + str(remotePort))
             # print(f"ZMQClient(): socket.connect() return value: {ret}")
-            #print("ZMQClient(): Connection established to %s:%d" % (remoteHost, remotePort))
+            # print("ZMQClient(): Connection established to %s:%d" % (remoteHost, remotePort))
         elif secModel == ZMQSecurityModelState.STONEHOUSE:
             self._context = zmq.Context()
             self._socket = self._context.socket(zmq.REQ)
@@ -70,7 +71,7 @@ class ZMQClient:
             # prepare folders
             base_dir = secFolder
             # base_dir = os.path.dirname("/home/ubuntu/sw/spine/dev/zmq_server_certs/")
-            #print("ZMQClient(): security folder %s"%base_dir)
+            # print("ZMQClient(): security folder %s"%base_dir)
             secret_keys_dir = os.path.join(base_dir, 'private_keys')
             keys_dir = os.path.join(base_dir, 'certificates')
             public_keys_dir = os.path.join(base_dir, 'public_keys')
@@ -89,24 +90,23 @@ class ZMQClient:
             server_public, _ = zmq.auth.load_certificate(server_public_file)
             self._socket.curve_serverkey = server_public
 
-            ret = self._socket.connect(protocol+"://"+remoteHost+":"+str(remotePort))
+            ret = self._socket.connect(protocol + "://" + remoteHost + ":" + str(remotePort))
             # print("ZMQClient(): socket.connect() return value: %d"%ret)
-            #print("ZMQClient(): Connection established with security to %s:%d"%(remoteHost,remotePort))
+            # print("ZMQClient(): Connection established with security to %s:%d"%(remoteHost,remotePort))
 
-        #test connectivity
-        if self.connectivity_testing==True:
-            connectivity=self._check_connectivity(1000)
-            #print("ZMQClient._init() connectivity: %s"%connectivity)
-            if connectivity==True:
-                self._connection_state=ZMQClientConnectionState.CONNECTED
+        # test connectivity
+        if self.connectivity_testing == True:
+            connectivity = self._check_connectivity(1000)
+            # print("ZMQClient._init() connectivity: %s"%connectivity)
+            if connectivity == True:
+                self._connection_state = ZMQClientConnectionState.CONNECTED
             else:
-                self._connection_state=ZMQClientConnectionState.DISCONNECTED
+                self._connection_state = ZMQClientConnectionState.DISCONNECTED
 
         else:
-            self._connection_state=ZMQClientConnectionState.CONNECTED
+            self._connection_state = ZMQClientConnectionState.CONNECTED
 
-        self._closed=False  #for tracking multiple closing calls
-
+        self._closed = False  # for tracking multiple closing calls
 
     def getConnectionState(self):
         """
@@ -115,7 +115,6 @@ class ZMQClient:
             ZMQClientConnectionState
         """
         return self._connection_state
-
 
     def send(self, text, fileLocation, fileName):
         """
@@ -128,68 +127,66 @@ class ZMQClient:
             a list of tuples containing events+data
         """
         # check if folder and file exist
-        #print("ZMQClient.send(): path %s exists: %s file %s exists: %s." % (fileLocation, os.path.isdir(fileLocation), fileName, os.path.exists(fileLocation+fileName)))
-        if not os.path.isdir(fileLocation) or not os.path.exists(os.path.join(fileLocation,fileName)):
+        # print("ZMQClient.send(): path %s exists: %s file %s exists: %s." % (fileLocation, os.path.isdir(fileLocation), fileName, os.path.exists(fileLocation+fileName)))
+        if not os.path.isdir(fileLocation) or not os.path.exists(os.path.join(fileLocation, fileName)):
             # print("ZMQClient.send(): invalid path or file.")
             raise ValueError("invalid path or file.")
         if not text:
             raise ValueError("invalid input text")
         # Read file content
-        f = open(os.path.join(fileLocation,fileName), 'rb')
+        f = open(os.path.join(fileLocation, fileName), 'rb')
         fileData = f.read()
         f.close()
         # create message content
         randomId = random.randrange(10000000)
         msg_parts = []
         listFiles = [fileName]
-        msg=ServerMessage("execute", str(randomId), text, listFiles)
+        msg = ServerMessage("execute", str(randomId), text, listFiles)
         print("ZMQClient(): msg to be sent : %s" % msg.toJSON())
         part1Bytes = bytes(msg.toJSON(), 'utf-8')
         msg_parts.append(part1Bytes)
         msg_parts.append(fileData)
         # transfer
         self._socket.send_multipart(msg_parts)
-        #print("ZMQClient(): listening to a reply.")
+        # print("ZMQClient(): listening to a reply.")
         message = self._socket.recv()
         # decode
-        msgStr=message.decode('utf-8')
-        #print("ZMQClient()..Received reply %s" %msgStr)
-        parsedMsg=ServerMessageParser.parse(msgStr)
-        #get and decode events+data
-        data=parsedMsg.getData()
-        #print(type(data))
-        jsonData=json.dumps(data)
-        dataEvents=EventDataConverter.convertJSON(jsonData,True)
+        msgStr = message.decode('utf-8')
+        # print("ZMQClient()..Received reply %s" %msgStr)
+        parsedMsg = ServerMessageParser.parse(msgStr)
+        # get and decode events+data
+        data = parsedMsg.getData()
+        # print(type(data))
+        jsonData = json.dumps(data)
+        dataEvents = EventDataConverter.convertJSON(jsonData, True)
         return dataEvents
 
     def close(self):
 
-        if self._closed==False:
+        if self._closed == False:
             self._socket.close()
             self._context.term()
             print("ZMQClient(): Connection closed.")
-            self._closed=True
+            self._closed = True
         else:
             print("ZMQClient(): Connection was closed before.")
 
-
-    def _check_connectivity(self,delayMs):
-        startTimeMs=round(time.time()*1000.0) #debugging
-        msg_parts=[]
+    def _check_connectivity(self, delayMs):
+        startTimeMs = round(time.time() * 1000.0)  # debugging
+        msg_parts = []
         randomId = random.randrange(10000000)
-        pingMsg=ServerMessage("ping",str(randomId),"",None)
-        pingAsJson=pingMsg.toJSON()
-        pingInBytes= bytes(pingAsJson, 'utf-8')
+        pingMsg = ServerMessage("ping", str(randomId), "", None)
+        pingAsJson = pingMsg.toJSON()
+        pingInBytes = bytes(pingAsJson, 'utf-8')
         msg_parts.append(pingInBytes)
-        sendRet=self._socket.send_multipart(msg_parts,flags=zmq.NOBLOCK)
-        event=self._socket.poll(timeout=delayMs)
+        sendRet = self._socket.send_multipart(msg_parts, flags=zmq.NOBLOCK)
+        event = self._socket.poll(timeout=delayMs)
         if event == 0:
-            #print("ZMQClient._check_connectivity(): timeout occurred, no reply will be listened to")
+            # print("ZMQClient._check_connectivity(): timeout occurred, no reply will be listened to")
             return False
         else:
-            msg=self._socket.recv()
-            msgStr=msg.decode("utf-8")
-            stopTimeMs=round(time.time()*1000.0) #debugging
-            print("ZMQClient._check_connectivity(): ping message was received, RTT: %d ms"%(stopTimeMs-startTimeMs))
+            msg = self._socket.recv()
+            msgStr = msg.decode("utf-8")
+            stopTimeMs = round(time.time() * 1000.0)  # debugging
+            print("ZMQClient._check_connectivity(): ping message was received, RTT: %d ms" % (stopTimeMs - startTimeMs))
             return True
-

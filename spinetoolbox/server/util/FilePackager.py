@@ -26,17 +26,18 @@ class FilePackager:
         destinationFolder(string):destination folder of the ZIP-file to be created
         zipFileName(string): name of the ZIP-file to be created
     """
+
     @staticmethod
     def package(sourceFolder, destinationFolder, zipFileName):
         if not destinationFolder or not zipFileName or not sourceFolder:
             raise ValueError("source folder,destination folder or file name were invalid")
         # check if the source folder exists
         if not os.path.isdir(sourceFolder):
-            raise ValueError("provided sourceFolder %s doesn't exist."%sourceFolder)
-        zipPath=os.path.join(destinationFolder,zipFileName)
-        #print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, destinationFolder + zipFileName,))
+            raise ValueError("provided sourceFolder %s doesn't exist." % sourceFolder)
+        zipPath = os.path.join(destinationFolder, zipFileName)
+        # print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, destinationFolder + zipFileName,))
         print('FilePackager.package() source folder: %s, dest-folder+file name: %s' % (sourceFolder, zipPath))
-        #shutil.make_archive(destinationFolder + zipFileName, 'zip', sourceFolder)
+        # shutil.make_archive(destinationFolder + zipFileName, 'zip', sourceFolder)
         shutil.make_archive(zipPath, 'zip', sourceFolder)
 
     @staticmethod
@@ -51,5 +52,5 @@ class FilePackager:
             raise ValueError('invalid input to FileExtractor.deleteFile()')
         if not os.path.exists(file):
             raise ValueError("provided file %s doesn't exist" % file)
-        os.remove(file) 
+        os.remove(file)
         print("FileExtractor.deleteFile(): Removed file: %s" % file)
