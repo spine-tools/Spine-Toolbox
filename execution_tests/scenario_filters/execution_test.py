@@ -33,19 +33,38 @@ class ScenarioFilters(unittest.TestCase):
         self.assertEqual(completed.returncode, 0)
         self.assertTrue(self._tool_output_path.exists())
         self.assertEqual(len(list(self._tool_output_path.iterdir())), 2)
-        self.assertEqual(self._tool_output_path.rglob("failed"), [])
-        results_path = self._tool_output_path / "database.sqlite with scenario_1"
-        self._check_out_file(results_path, ["-1.0"])
-        results_path = self._tool_output_path / "database.sqlite with scenario_2"
-        self._check_out_file(results_path, ["-2.0"])
+        scenario_1_checked = False
+        scenario_2_checked = False
+        for results_path in self._tool_output_path.iterdir():
+            self.assertEqual(list(results_path.rglob("failed")), [])
+            filter_id = self._read_filter_id(results_path)
+            if filter_id == "scenario_1 - Data store":
+                self.assertFalse(scenario_1_checked)
+                self._check_out_file(results_path, ["-1.0"])
+                scenario_1_checked = True
+            elif filter_id == "scenario_2 - Data store":
+                self.assertFalse(scenario_2_checked)
+                self._check_out_file(results_path, ["-2.0"])
+                scenario_2_checked = True
+            else:
+                self.fail("Unexpected filter id in Output Writer's output directory.")
+        self.assertTrue(scenario_1_checked and scenario_2_checked)
 
     def _check_out_file(self, fork_path, expected_file_contests):
-        self.assertTrue(fork_path.exists())
-        out_path = next(fork_path.iterdir()) / "out.dat"
-        self.assertTrue(out_path.exists())
-        with open(out_path) as out_file:
-            contents = out_file.readlines()
-        self.assertEqual(contents, expected_file_contests)
+        for path in fork_path.iterdir():
+            if path.is_dir():
+                out_path = path / "out.dat"
+                self.assertTrue(out_path.exists())
+                with open(out_path) as out_file:
+                    contents = out_file.readlines()
+                self.assertEqual(contents, expected_file_contests)
+                return
+        self.fail("Could not find out.dat.")
+
+    @staticmethod
+    def _read_filter_id(path):
+        with (path / ".filter_id").open() as filter_id_file:
+            return filter_id_file.readline().strip()
 
 
 if __name__ == '__main__':
