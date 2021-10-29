@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 import shutil
 import subprocess
@@ -28,9 +29,11 @@ class ScenarioFilters(unittest.TestCase):
 
     def test_execution(self):
         this_file = Path(__file__)
-        completed = subprocess.run(("python", "-m", "spinetoolbox", "--execute-only", str(this_file.parent)))
+        completed = subprocess.run((sys.executable, "-m", "spinetoolbox", "--execute-only", str(this_file.parent)))
         self.assertEqual(completed.returncode, 0)
         self.assertTrue(self._tool_output_path.exists())
+        self.assertEqual(len(list(self._tool_output_path.iterdir())), 2)
+        self.assertEqual(self._tool_output_path.rglob("failed"), [])
         results_path = self._tool_output_path / "database.sqlite with scenario_1"
         self._check_out_file(results_path, ["-1.0"])
         results_path = self._tool_output_path / "database.sqlite with scenario_2"
