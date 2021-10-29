@@ -52,7 +52,8 @@ class GraphViewMixin:
         layout.addWidget(self._progress_bar)
         self._persistent = False
         self._owes_graph = False
-        self.scene = None
+        self.scene = CustomGraphicsScene(self)
+        self.ui.graphicsView.setScene(self.scene)
         self.object_items = list()
         self.relationship_items = list()
         self.arc_items = list()
@@ -78,10 +79,8 @@ class GraphViewMixin:
         self._extending_graph = False
 
     def init_models(self):
+        self.scene.clear()
         super().init_models()
-        self.scene = CustomGraphicsScene(self)
-        self.ui.graphicsView.setScene(self.scene)
-        self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
 
     def connect_signals(self):
         """Connects signals."""
@@ -89,6 +88,7 @@ class GraphViewMixin:
         self.ui.treeView_object.tree_selection_changed.connect(self.rebuild_graph)
         self.ui.treeView_relationship.tree_selection_changed.connect(self.rebuild_graph)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
+        self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
 
     def receive_objects_added(self, db_map_data):
         """Runs when objects are added to the db.

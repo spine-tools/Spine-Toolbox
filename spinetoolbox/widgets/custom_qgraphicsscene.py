@@ -37,9 +37,6 @@ class CustomGraphicsScene(QGraphicsScene):
     item_move_finished = Signal(QGraphicsItem)
     """Emitted when an item has finished moving."""
 
-    item_removed = Signal(QGraphicsItem)
-    """Emitted when an item has been removed."""
-
     def center_items(self):
         """Centers toplevel items in the scene."""
         rect = self.itemsBoundingRect()

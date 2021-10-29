@@ -15,7 +15,7 @@ Unit tests for :class:`AlternativeScenarioModel`.
 :date:    21.1.2021
 """
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from PySide2.QtCore import QModelIndex
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_scenario_model import AlternativeScenarioModel
@@ -37,8 +37,15 @@ class TestAlternativeScenarioModel(unittest.TestCase):
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 
     def tearDown(self):
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
+            "spinetoolbox.spine_db_manager.QMessageBox"
+        ):
+            self._db_editor.close()
         self._db_mngr.close_all_sessions()
+        while not self._db_map.connection.closed:
+            QApplication.processEvents()
         self._db_mngr.clean_up()
+        self._db_editor.deleteLater()
 
     def test_initial_state(self):
         model = AlternativeScenarioModel(self._db_editor, self._db_mngr, self._db_map)
