@@ -485,15 +485,18 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if item is None:
             return ""
         database = self.index(index.row(), self.columnCount() - 1).data() if len(self.db_maps) > 1 else None
-        entity_name_key = {
+        name_key = {
             "parameter_definition": {
                 "object_class": "object_class_name",
                 "relationship_class": "relationship_class_name",
             },
             "parameter_value": {"object_class": "object_name", "relationship_class": "object_name_list"},
         }[self.item_type][self.entity_class_type]
-        entity_names = item[entity_name_key].split(",")
-        return parameter_identifier(database, item["parameter_name"], item["alternative_name"], entity_names)
+        names = item[name_key].split(",")
+        alternative_name = {"parameter_definition": lambda x: None, "parameter_value": lambda x: x["alternative_name"]}[
+            self.item_type
+        ](item)
+        return parameter_identifier(database, item["parameter_name"], names, alternative_name)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
