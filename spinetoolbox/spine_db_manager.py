@@ -318,7 +318,7 @@ class SpineDBManager(QObject):
     def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types=item_types, only_descendants=only_descendants, include_ancestors=include_ancestors)
-        return CombinedCache(self._cache.setdefault(db_map, {}), fetcher.cache)
+        return self._cache.setdefault(db_map, {})
 
     def get_icon_mngr(self, db_map):
         """Returns an icon manager for given db_map.
@@ -666,7 +666,7 @@ class SpineDBManager(QObject):
             return item
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types={item_type})
-        return item or fetcher.get_item(item_type, id_)
+        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
 
     def get_field(self, db_map, item_type, id_, field, only_visible=True):
         return self.get_item(db_map, item_type, id_, only_visible=only_visible).get(field)
@@ -687,9 +687,7 @@ class SpineDBManager(QObject):
             return items
         fetcher = self._get_fetcher(db_map)
         fetcher.fetch_all(item_types={item_type})
-        return list(self._cache.get(db_map, {}).get(item_type, {}).values()) + list(
-            fetcher.cache.get(item_type, {}).values()
-        )
+        return list(self._cache.get(db_map, {}).get(item_type, {}).values())
 
     def get_items_by_field(self, db_map, item_type, field, value, only_visible=True):
         """Returns a list of items of the given type in the given db map that have the given value
@@ -1954,18 +1952,6 @@ class SpineDBManager(QObject):
             item["parameter_value_list_name"] = par_val_lst["name"]
             item["required"] = item.get("required", False)
         return item
-
-
-class CombinedCache:
-    def __init__(self, d1, d2):
-        self._d1 = d1
-        self._d2 = d2
-
-    def __getitem__(self, key):
-        return self.get(key, {})
-
-    def get(self, key, default):
-        return {**self._d1.get(key, default), **self._d2.get(key, default)}
 
 
 def _split_and_parse_value_list(item):

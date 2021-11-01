@@ -140,8 +140,8 @@ class EntityClassItem(MultiDBTreeItem):
             self._group_child_count -= removed_child_count
         return True
 
-    def filter_query(self, query, db_map):
-        return query.filter_by(class_id=self.db_map_id(db_map))
+    def filter_query(self, query, subquery, db_map):
+        return query.filter(subquery.c.class_id == self.db_map_id(db_map))
 
     def set_data(self, column, value, role):
         """See base class."""
@@ -184,11 +184,11 @@ class ObjectRelationshipClassItem(RelationshipClassItem):
         """See base class."""
         return False
 
-    def filter_query(self, query, db_map):
+    def filter_query(self, query, subquery, db_map):
         object_id = self.parent_item.db_map_id(db_map)
         ids = (x.id for x in db_map.query(db_map.relationship_sq).filter_by(object_id=object_id))
-        query = query.filter(db_map.in_(db_map.wide_relationship_sq.c.id, ids))
-        return super().filter_query(query, db_map)
+        query = query.filter(db_map.in_(subquery.c.id, ids))
+        return super().filter_query(query, subquery, db_map)
 
 
 class MemberObjectClassItem(ObjectClassItem):
@@ -216,9 +216,9 @@ class MemberObjectClassItem(ObjectClassItem):
             self.first_db_map, super().item_type, self.db_map_id(self.first_db_map), for_group=False
         )
 
-    def filter_query(self, query, db_map):
-        query = query.filter_by(group_id=self.parent_item.db_map_id(db_map))
-        return super().filter_query(query, db_map)
+    def filter_query(self, query, subquery, db_map):
+        query = query.filter(subquery.c.group_id == self.parent_item.db_map_id(db_map))
+        return super().filter_query(query, subquery, db_map)
 
     @property
     def child_item_class(self):
@@ -287,10 +287,10 @@ class ObjectItem(EntityItem):
             database=self.first_db_map.codename,
         )
 
-    def filter_query(self, query, db_map):
+    def filter_query(self, query, subquery, db_map):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         ids = (x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id))
-        return query.filter(db_map.in_(db_map.wide_relationship_class_sq.c.id, ids))
+        return query.filter(db_map.in_(subquery.c.id, ids))
 
 
 class MemberObjectItem(ObjectItem):

@@ -1399,5 +1399,5 @@ class FetchParent:
     def fetch_item_type(self):
         raise NotImplementedError
 
-    def filter_query(self, query, db_map):
+    def filter_query(self, query, subquery, db_map):
         return query
