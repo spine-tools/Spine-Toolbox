@@ -16,7 +16,7 @@ from pygments.token import Token
 from PySide2.QtCore import Qt, QRunnable, QObject, Signal, QThreadPool, Slot
 from PySide2.QtWidgets import QApplication, QPlainTextEdit
 from PySide2.QtGui import QFontDatabase, QTextCharFormat, QFont
-from spinetoolbox.helpers import CustomSyntaxHighlighter
+from spinetoolbox.helpers import CustomSyntaxHighlighter, make_settings_dict_for_engine
 from spinetoolbox.spine_engine_manager import make_engine_manager
 
 
@@ -198,8 +198,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """
         if self._history_index == 0:
             self._history_item_zero = text
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        app_settings = make_settings_dict_for_engine(self._toolbox.qsettings())
+        engine_mngr = make_engine_manager(app_settings)
         self._history_index += step
         if self._history_index < 1:
             self._history_index = 0
@@ -218,8 +218,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
             text (str)
             partial_text (str)
         """
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        engine_mngr = make_engine_manager(engine_server_address)
+        app_settings = make_settings_dict_for_engine(self._toolbox.qsettings())
+        engine_mngr = make_engine_manager(app_settings)
         completions = engine_mngr.get_persistent_completions(self._key, partial_text)
         if len(completions) > 1:
             # Multiple options: Print them to stdout and add new prompt
@@ -247,8 +247,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         Args:
             text (str)
         """
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        issuer = CommandIssuer(engine_server_address, self._key, text)
+        app_settings = make_settings_dict_for_engine(self._toolbox.qsettings())
+        issuer = CommandIssuer(app_settings, self._key, text)
         if not self._has_prompt:
             issuer.stdin_msg.connect(self.add_stdin)
         else:
@@ -342,16 +342,16 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """Restarts underlying persistent process."""
         self.clear()
         self._line_edit.clear()
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        restarter = Restarter(engine_server_address, self._key)
+        app_settings = make_settings_dict_for_engine(self._toolbox.qsettings())
+        restarter = Restarter(app_settings, self._key)
         restarter.finished.connect(self._add_prompt)
         self._thread_pool.start(restarter)
 
     @Slot(bool)
     def _interrupt_persistent(self, _=False):
         """Interrupts underlying persistent process."""
-        engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-        interrupter = Interrupter(engine_server_address, self._key)
+        app_settings = make_settings_dict_for_engine(self._toolbox.qsettings())
+        interrupter = Interrupter(app_settings, self._key)
         self._thread_pool.start(interrupter)
 
     def paintEvent(self, ev):
@@ -387,15 +387,15 @@ class PersistentRunnableBase(QRunnable):
     class Signals(QObject):
         finished = Signal()
 
-    def __init__(self, engine_server_address, persistent_key):
+    def __init__(self, app_settings, persistent_key):
         """
         Args:
-            engine_server_address (str): address of the remote engine, currently should always be an empty string
+            app_settings (dict): App settings in a dictionary (not QSettings)
             persistent_key (tuple): persistent process identifier
         """
         super().__init__()
         self._persistent_key = persistent_key
-        self._engine_mngr = make_engine_manager(engine_server_address)
+        self._engine_mngr = make_engine_manager(app_settings)
         self._signals = self.Signals()
         self.finished = self._signals.finished
 
@@ -425,14 +425,14 @@ class CommandIssuer(PersistentRunnableBase):
         stdout_msg = Signal(str)
         stderr_msg = Signal(str)
 
-    def __init__(self, engine_server_address, persistent_key, command):
+    def __init__(self, app_settings, persistent_key, command):
         """
         Args:
-            engine_server_address (str): address of the remote engine, currently should always be an empty string
+            app_settings (dict): App settings in a dictionary (not QSettings)
             persistent_key (tuple): persistent process identifier
             command (str): command to execute
         """
-        super().__init__(engine_server_address, persistent_key)
+        super().__init__(app_settings, persistent_key)
         self._command = command
         self.stdin_msg = self._signals.stdin_msg
         self.stdout_msg = self._signals.stdout_msg

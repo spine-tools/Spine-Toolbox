@@ -29,8 +29,7 @@ from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
 from spinetoolbox.widgets.kernel_editor import find_kernels
 from spinetoolbox.spine_engine_manager import make_engine_manager
-from spinetoolbox.widgets.settings_widget import resolve_conda_executable
-from spine_engine.execution_managers.conda_kernel_spec_manager import CondaKernelSpecManager
+from spinetoolbox.helpers import make_settings_dict_for_engine
 
 # Set logging level for jupyter loggers
 traitlets_logger = logging.getLogger("traitlets")
@@ -92,13 +91,15 @@ class JupyterConsoleWidget(RichJupyterWidget):
         Context menu restart action handler."""
         if self._engine_connection_file:
             self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
-            engine_server_address = self._toolbox.qsettings().value("appSettings/engineServerAddress", defaultValue="")
-            engine_mngr = make_engine_manager(engine_server_address)
+            print("hello there")
+            settings = make_settings_dict_for_engine(self._toolbox.qsettings())
+            engine_mngr = make_engine_manager(settings)
             engine_mngr.restart_kernel(self._engine_connection_file)
             self._replace_client()
             return
         if self.kernel_manager and self.kernel_name == self._target_kernel_name:
             # Restart current kernel
+            print("Base Python Console")
             self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
             self._toolbox.msg.emit(f"*** Restarting {self._target_kernel_name} ***")
             # Restart kernel manager
