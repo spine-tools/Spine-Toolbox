@@ -308,7 +308,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
         protocol = "tcp"  # Zero-MQ protocol
         host = app_settings.get("appSettings/remoteHost", "")  # Host name
         port = app_settings.get("appSettings/remotePort", "49152")  # Host port
-        sec_model = app_settings.get("appSettings/remoteSecurityModel", "")  # ZOM security model
+        sec_model = app_settings.get("appSettings/remoteSecurityModel", "")  # ZQM security model
         security = ZMQSecurityModelState.NONE if not sec_model else ZMQSecurityModelState.STONEHOUSE
         sec_folder = (
             ""
