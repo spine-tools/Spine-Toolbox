@@ -78,6 +78,10 @@ class Ui_SettingsForm(object):
         icon3.addFile(u":/icons/wrench.svg", QSize(), QIcon.Normal, QIcon.Off)
         __qlistwidgetitem3 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem3.setIcon(icon3);
+        icon4 = QIcon()
+        icon4.addFile(u":/icons/tractor.svg", QSize(), QIcon.Normal, QIcon.Off)
+        __qlistwidgetitem4 = QListWidgetItem(self.listWidget)
+        __qlistwidgetitem4.setIcon(icon4);
         self.listWidget.setObjectName(u"listWidget")
         sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy2.setHorizontalStretch(1)
@@ -191,9 +195,9 @@ class Ui_SettingsForm(object):
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
         self.toolButton_browse_work.setSizePolicy(sizePolicy5)
-        icon4 = QIcon()
-        icon4.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.toolButton_browse_work.setIcon(icon4)
+        icon5 = QIcon()
+        icon5.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
+        self.toolButton_browse_work.setIcon(icon5)
 
         self.horizontalLayout_6.addWidget(self.toolButton_browse_work)
 
@@ -337,7 +341,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_gams = QToolButton(self.groupBox_gams)
         self.toolButton_browse_gams.setObjectName(u"toolButton_browse_gams")
-        self.toolButton_browse_gams.setIcon(icon4)
+        self.toolButton_browse_gams.setIcon(icon5)
 
         self.gridLayout_4.addWidget(self.toolButton_browse_gams, 2, 1, 1, 1)
 
@@ -385,7 +389,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
         self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
-        self.toolButton_browse_julia.setIcon(icon4)
+        self.toolButton_browse_julia.setIcon(icon5)
 
         self.horizontalLayout_8.addWidget(self.toolButton_browse_julia)
 
@@ -403,7 +407,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_julia_project = QToolButton(self.groupBox_julia)
         self.toolButton_browse_julia_project.setObjectName(u"toolButton_browse_julia_project")
-        self.toolButton_browse_julia_project.setIcon(icon4)
+        self.toolButton_browse_julia_project.setIcon(icon5)
 
         self.horizontalLayout_7.addWidget(self.toolButton_browse_julia_project)
 
@@ -510,7 +514,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_python = QToolButton(self.groupBox_python)
         self.toolButton_browse_python.setObjectName(u"toolButton_browse_python")
-        self.toolButton_browse_python.setIcon(icon4)
+        self.toolButton_browse_python.setIcon(icon5)
 
         self.horizontalLayout_10.addWidget(self.toolButton_browse_python)
 
@@ -558,7 +562,7 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_conda = QToolButton(self.groupBox_2)
         self.toolButton_browse_conda.setObjectName(u"toolButton_browse_conda")
-        self.toolButton_browse_conda.setIcon(icon4)
+        self.toolButton_browse_conda.setIcon(icon5)
 
         self.horizontalLayout_2.addWidget(self.toolButton_browse_conda)
 
@@ -658,6 +662,63 @@ class Ui_SettingsForm(object):
         self.verticalLayout_11.addWidget(self.groupBox)
 
         self.stackedWidget.addWidget(self.SpecificationEditors)
+        self.Engine = QWidget()
+        self.Engine.setObjectName(u"Engine")
+        self.verticalLayout_10 = QVBoxLayout(self.Engine)
+        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
+        self.groupBox_3 = QGroupBox(self.Engine)
+        self.groupBox_3.setObjectName(u"groupBox_3")
+        self.verticalLayout_2 = QVBoxLayout(self.groupBox_3)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.automatic_engine_process_limit_radio_button = QRadioButton(self.groupBox_3)
+        self.engine_processes_button_group = QButtonGroup(SettingsForm)
+        self.engine_processes_button_group.setObjectName(u"engine_processes_button_group")
+        self.engine_processes_button_group.addButton(self.automatic_engine_process_limit_radio_button)
+        self.automatic_engine_process_limit_radio_button.setObjectName(u"automatic_engine_process_limit_radio_button")
+
+        self.verticalLayout_2.addWidget(self.automatic_engine_process_limit_radio_button)
+
+        self.user_defined_engine_process_limit_radio_button = QRadioButton(self.groupBox_3)
+        self.engine_processes_button_group.addButton(self.user_defined_engine_process_limit_radio_button)
+        self.user_defined_engine_process_limit_radio_button.setObjectName(u"user_defined_engine_process_limit_radio_button")
+
+        self.verticalLayout_2.addWidget(self.user_defined_engine_process_limit_radio_button)
+
+        self.engine_process_limit_controls = QWidget(self.groupBox_3)
+        self.engine_process_limit_controls.setObjectName(u"engine_process_limit_controls")
+        self.engine_process_limit_controls.setEnabled(False)
+        self.horizontalLayout_13 = QHBoxLayout(self.engine_process_limit_controls)
+        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Fixed, QSizePolicy.Minimum)
+
+        self.horizontalLayout_13.addItem(self.horizontalSpacer_2)
+
+        self.label_2 = QLabel(self.engine_process_limit_controls)
+        self.label_2.setObjectName(u"label_2")
+
+        self.horizontalLayout_13.addWidget(self.label_2)
+
+        self.engine_process_limit_spin_box = QSpinBox(self.engine_process_limit_controls)
+        self.engine_process_limit_spin_box.setObjectName(u"engine_process_limit_spin_box")
+        self.engine_process_limit_spin_box.setMinimum(1)
+
+        self.horizontalLayout_13.addWidget(self.engine_process_limit_spin_box)
+
+        self.horizontalSpacer_3 = QSpacerItem(205, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_13.addItem(self.horizontalSpacer_3)
+
+
+        self.verticalLayout_2.addWidget(self.engine_process_limit_controls)
+
+        self.verticalSpacer_4 = QSpacerItem(20, 337, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_2.addItem(self.verticalSpacer_4)
+
+
+        self.verticalLayout_10.addWidget(self.groupBox_3)
+
+        self.stackedWidget.addWidget(self.Engine)
         self.splitter.addWidget(self.stackedWidget)
 
         self.verticalLayout_7.addWidget(self.splitter)
@@ -724,7 +785,7 @@ class Ui_SettingsForm(object):
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(1)
+        self.stackedWidget.setCurrentIndex(4)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -743,6 +804,8 @@ class Ui_SettingsForm(object):
         ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None));
         ___qlistwidgetitem3 = self.listWidget.item(3)
         ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Spec. editors", None));
+        ___qlistwidgetitem4 = self.listWidget.item(4)
+        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsForm", u"Engine", None));
         self.listWidget.setSortingEnabled(__sortingEnabled)
 
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"General", None))
@@ -903,5 +966,9 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.checkBox_save_spec_before_closing.setText(QCoreApplication.translate("SettingsForm", u"Save specification before closing", None))
         self.checkBox_spec_show_undo.setText(QCoreApplication.translate("SettingsForm", u"Show undo notifications", None))
+        self.groupBox_3.setTitle(QCoreApplication.translate("SettingsForm", u"Parallel Engine processes", None))
+        self.automatic_engine_process_limit_radio_button.setText(QCoreApplication.translate("SettingsForm", u"Limit to available CPU cores", None))
+        self.user_defined_engine_process_limit_radio_button.setText(QCoreApplication.translate("SettingsForm", u"User defined limit:", None))
+        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"Max parallel processes:", None))
     # retranslateUi
 

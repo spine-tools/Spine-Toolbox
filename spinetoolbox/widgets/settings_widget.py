@@ -275,6 +275,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
         self.ui.radioButton_use_python_jupyter_console.toggled.connect(self._update_python_widgets_enabled)
         self.ui.radioButton_use_julia_jupyter_console.toggled.connect(self._update_julia_widgets_enabled)
+        self.ui.user_defined_engine_process_limit_radio_button.toggled.connect(
+            self.ui.engine_process_limit_controls.setEnabled
+        )
 
     @Slot(bool)
     def _update_python_widgets_enabled(self, state):
@@ -581,6 +584,21 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.Checked)
         if spec_show_undo == 2:
             self.ui.checkBox_spec_show_undo.setChecked(True)
+        self._read_engine_settings()
+
+    def _read_engine_settings(self):
+        """Reads Engine settings and sets the corresponding UI elements."""
+        engine_parallel_process_limit_choice = self._qsettings.value(
+            "engineSettings/processLimiter", defaultValue="auto"
+        )
+        engine_parallel_process_limit = int(
+            self._qsettings.value("engineSettings/maxProcesses", defaultValue=os.cpu_count())
+        )
+        if engine_parallel_process_limit_choice == "auto":
+            self.ui.automatic_engine_process_limit_radio_button.setChecked(True)
+        else:
+            self.ui.user_defined_engine_process_limit_radio_button.setChecked(True)
+        self.ui.engine_process_limit_spin_box.setValue(engine_parallel_process_limit)
 
     @Slot()
     def save_settings(self):
@@ -676,6 +694,21 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.set_work_directory(work_dir)
         # Check if something in the app needs to be updated
         self._toolbox.show_datetime = self._toolbox.update_datetime()
+        if not self._save_engine_settings():
+            return False
+        return True
+
+    def _save_engine_settings(self):
+        """Stores Engine settings to application settings.
+
+        Returns:
+            bool: True if settings were stored successfully, False otherwise
+        """
+        if self.ui.automatic_engine_process_limit_radio_button.isChecked():
+            self._qsettings.setValue("engineSettings/processLimiter", "auto")
+        else:
+            self._qsettings.setValue("engineSettings/processLimiter", "user")
+        self._qsettings.setValue("engineSettings/maxProcesses", str(self.ui.engine_process_limit_spin_box.value()))
         return True
 
     def _get_julia_settings(self):
