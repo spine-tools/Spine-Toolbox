@@ -37,7 +37,6 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
 from PySide2.QtGui import QPainter, QFontMetrics, QKeyEvent, QFontDatabase, QFont
-from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from ..helpers import format_log_message
 
@@ -134,20 +133,6 @@ class FilterWidgetBase(QWidget):
         """
         self._search_text = new_text
         self._search_timer.start(self.search_delay)
-
-
-class SimpleFilterWidget(FilterWidgetBase):
-    def __init__(self, parent, show_empty=True):
-        """Init class.
-
-        Args:
-            parent (QWidget)
-        """
-        super().__init__(parent)
-        self._filter_model = SimpleFilterCheckboxListModel(self, show_empty=show_empty)
-        self._filter_model.set_list(self._filter_state)
-        self._ui_list.setModel(self._filter_model)
-        self.connect_signals()
 
 
 class CustomWidgetAction(QWidgetAction):

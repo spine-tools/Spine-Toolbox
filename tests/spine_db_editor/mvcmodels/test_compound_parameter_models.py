@@ -16,7 +16,7 @@ Unit tests for the models in ``compound_parameter_models`` module.
 :date:   28.1.2021
 """
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from PySide2.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
@@ -42,8 +42,15 @@ class TestCompoundObjectParameterDefinitionModel(unittest.TestCase):
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 
     def tearDown(self):
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
+            "spinetoolbox.spine_db_manager.QMessageBox"
+        ):
+            self._db_editor.close()
         self._db_mngr.close_all_sessions()
+        while not self._db_map.connection.closed:
+            QApplication.processEvents()
         self._db_mngr.clean_up()
+        self._db_editor.deleteLater()
 
     def test_horizontal_header(self):
         model = CompoundObjectParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -88,8 +95,15 @@ class TestCompoundRelationshipParameterDefinitionModel(unittest.TestCase):
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
 
     def tearDown(self):
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
+            "spinetoolbox.spine_db_manager.QMessageBox"
+        ):
+            self._db_editor.close()
         self._db_mngr.close_all_sessions()
+        while not self._db_map.connection.closed:
+            QApplication.processEvents()
         self._db_mngr.clean_up()
+        self._db_editor.deleteLater()
 
     def test_horizontal_header(self):
         model = CompoundRelationshipParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -137,8 +151,15 @@ class TestCompoundObjectParameterValueModel(unittest.TestCase):
         self._db_mngr.fetch_all(self._db_map)
 
     def tearDown(self):
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
+            "spinetoolbox.spine_db_manager.QMessageBox"
+        ):
+            self._db_editor.close()
         self._db_mngr.close_all_sessions()
+        while not self._db_map.connection.closed:
+            QApplication.processEvents()
         self._db_mngr.clean_up()
+        self._db_editor.deleteLater()
 
     def test_horizontal_header(self):
         model = CompoundObjectParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -198,8 +219,15 @@ class TestCompoundRelationshipParameterValueModel(unittest.TestCase):
         self._db_mngr.fetch_all(self._db_map)
 
     def tearDown(self):
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
+            "spinetoolbox.spine_db_manager.QMessageBox"
+        ):
+            self._db_editor.close()
         self._db_mngr.close_all_sessions()
+        while not self._db_map.connection.closed:
+            QApplication.processEvents()
         self._db_mngr.clean_up()
+        self._db_editor.deleteLater()
 
     def test_horizontal_header(self):
         model = CompoundRelationshipParameterValueModel(self._db_editor, self._db_mngr, self._db_map)

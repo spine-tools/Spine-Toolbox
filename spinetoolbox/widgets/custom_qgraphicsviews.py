@@ -162,7 +162,6 @@ class CustomQGraphicsView(QGraphicsView):
         """
         super().setScene(scene)
         scene.item_move_finished.connect(self._handle_item_move_finished)
-        scene.item_removed.connect(lambda _item: self._set_preferred_scene_rect())
         self.viewport().setCursor(Qt.ArrowCursor)
 
     @Slot(QGraphicsItem)
