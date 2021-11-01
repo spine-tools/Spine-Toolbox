@@ -29,7 +29,7 @@ import pathlib
 import bisect
 from contextlib import contextmanager
 import matplotlib
-from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide2.QtCore import Qt, Signal, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QFileIconProvider, QStyle, QFileDialog, QInputDialog
@@ -1390,3 +1390,14 @@ def bisect_chunks(current_data, new_data, key=None):
         chunk = [item]
         lo = row + count
     yield chunk, lo
+
+
+class FetchParent:
+    fully_fetched = Signal()
+
+    @property
+    def fetch_item_type(self):
+        raise NotImplementedError
+
+    def filter_query(self, query, db_map):
+        return query

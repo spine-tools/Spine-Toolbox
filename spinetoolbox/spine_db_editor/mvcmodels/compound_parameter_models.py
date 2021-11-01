@@ -19,7 +19,7 @@ These models concatenate several 'single' models and one 'empty' model.
 from PySide2.QtCore import Qt, Slot, QTimer, QModelIndex
 from PySide2.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
-from ...helpers import rows_to_row_count_tuples, parameter_identifier
+from ...helpers import rows_to_row_count_tuples, parameter_identifier, FetchParent
 from ..widgets.custom_menus import ParameterViewFilterMenu
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .empty_parameter_models import (
@@ -36,7 +36,7 @@ from .single_parameter_models import (
 )
 
 
-class CompoundParameterModel(CompoundWithEmptyTableModel):
+class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
     """A model that concatenates several single parameter models
     and one empty parameter model.
     """
@@ -61,12 +61,16 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._filter_timer.setInterval(100)
         self._filter_timer.timeout.connect(self.refresh)
 
+    @property
+    def fetch_item_type(self):
+        return self.item_type
+
     def canFetchMore(self, _parent):
-        return any(self.db_mngr.can_fetch_more(db_map, self.item_type, parent=self) for db_map in self.db_maps)
+        return any(self.db_mngr.can_fetch_more(db_map, self) for db_map in self.db_maps)
 
     def fetchMore(self, _parent):
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
+            self.db_mngr.fetch_more(db_map, self)
 
     def filter_query(self, qry, db_map):
         return qry

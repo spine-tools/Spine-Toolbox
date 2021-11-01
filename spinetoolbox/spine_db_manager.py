@@ -48,14 +48,13 @@ from spinedb_api import (
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .spine_db_icon_manager import SpineDBIconManager
-from .helpers import busy_effect
 from .spine_db_signaller import SpineDBSignaller
 from .spine_db_fetcher import SpineDBFetcher
 from .spine_db_worker import SpineDBWorker
 from .spine_db_commands import AgedUndoCommand, AgedUndoStack, AddItemsCommand, UpdateItemsCommand, RemoveItemsCommand
 from .mvcmodels.shared import PARSED_ROLE
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import get_upgrade_db_promt_text, CacheItem, signal_waiter
+from .helpers import get_upgrade_db_promt_text, CacheItem, signal_waiter, busy_effect
 
 
 @busy_effect
@@ -134,8 +133,8 @@ class SpineDBManager(QObject):
         super().__init__(parent)
         self.qsettings = settings
         self._db_maps = {}
-        # self._worker_thread = QThread()
-        self._worker_thread = qApp.thread()
+        self._worker_thread = QThread()
+        # self._worker_thread = qApp.thread()
         self._worker = SpineDBWorker(self)
         self._fetchers = {}
         self.undo_stack = {}
@@ -248,38 +247,30 @@ class SpineDBManager(QObject):
             self._fetchers[db_map] = SpineDBFetcher(self, db_map)
         return self._fetchers[db_map]
 
-    def can_fetch_more(self, db_map, item_type, parent=None):
+    def can_fetch_more(self, db_map, parent):
         """Whether or not we can fetch more items of given type from given db.
 
         Args:
             db_map (DiffDatabaseMapping)
-            item_type (str): the type of items to fetch, e.g. "object_class"
-            parent (object, optional): The object that requests the fetching.
-                Can implement ``fetch_successful``, i.e., a function that receives a db_map and a dictionary-item
-                and returns a Boolean indicating whether or not to stop fetching.
+            parent (FetchParent): The object that requests the fetching.
 
         Returns:
             bool
         """
         if db_map.connection.closed:
             return False
-        return self._get_fetcher(db_map).can_fetch_more(item_type, parent=parent)
+        return self._get_fetcher(db_map).can_fetch_more(parent)
 
-    def fetch_more(self, db_map, item_type, parent=None):
+    def fetch_more(self, db_map, parent):
         """Fetches more items of given type from given db.
 
         Args:
             db_map (DiffDatabaseMapping)
-            item_type (str): the type of items to fetch, e.g. "object_class"
-            parent (object, optional): The object that requests the fetching.
-                Can implement ``fetch_successful``, i.e., a function that receives a db_map and a dictionary-item
-                and returns a Boolean indicating whether or not to stop fetching.
-                If not implemented, then fetching is stopped immediately after one step.
-                Can also provide ``fully_fetched``, a ``Signal`` that gets emitted whenever fetching is complete.
+            parent (FetchParent): The object that requests the fetching.
         """
         if db_map.connection.closed:
             return
-        self._get_fetcher(db_map).fetch_more(item_type, parent=parent)
+        self._get_fetcher(db_map).fetch_more(parent)
 
     def cache_items_for_fetching(self, db_map, item_type, items):
         self._get_fetcher(db_map).cache_items(item_type, items)

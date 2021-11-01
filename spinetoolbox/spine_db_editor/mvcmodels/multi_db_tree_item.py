@@ -16,11 +16,11 @@ Base classes to represent items from multiple databases in a tree.
 :date:    17.6.2020
 """
 from PySide2.QtCore import Qt
-from ...helpers import rows_to_row_count_tuples, bisect_chunks
+from ...helpers import rows_to_row_count_tuples, bisect_chunks, FetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
 
 
-class MultiDBTreeItem(TreeItem):
+class MultiDBTreeItem(FetchParent, TreeItem):
     """A tree item that may belong in multiple databases."""
 
     item_type = None
@@ -39,6 +39,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
+        self.fully_fetched.connect(self._handle_fully_fetched)
 
     def set_data(self, column, value, role):
         raise NotImplementedError()
@@ -211,12 +212,6 @@ class MultiDBTreeItem(TreeItem):
         for chunk, pos in bisect_chunks(self.children, new_children, key=lambda c: c.display_id):
             self.insert_children(pos, chunk)
 
-    def fetch_successful(self, db_map, item):  # pylint: disable=no-self-use
-        return True
-
-    def filter_query(self, qry, db_map):  # pylint: disable=no-self-use
-        return qry
-
     def _handle_fully_fetched(self):
         """Notifies the view that the model's layout has changed.
         This triggers a repaint so this item may be painted gray if no children."""
@@ -229,32 +224,14 @@ class MultiDBTreeItem(TreeItem):
     def can_fetch_more(self):
         if self.fetch_item_type is None:
             return False
-        return any(
-            self.db_mngr.can_fetch_more(db_map, self.fetch_item_type, parent=self)
-            or self._get_pending_children_ids(db_map)
-            for db_map in self.db_maps
-        )
+        return any(self.db_mngr.can_fetch_more(db_map, self) for db_map in self.db_maps)
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
         if self.fetch_item_type is None:
             return
         for db_map in self.db_maps:
-            self.db_mngr.fetch_more(db_map, self.fetch_item_type, parent=self)
-        # Create and append children from SpineDBManager cache, in case the db items were fetched elsewhere.
-        # This is needed for object items that are created *after* the relationship classes are fetched.
-        db_map_ids = {db_map: self._get_pending_children_ids(db_map) for db_map in self.db_maps}
-        self.append_children_by_id(db_map_ids)
-
-    def _get_pending_children_ids(self, db_map):
-        """Returns a list of children ids that are in the cache but not added."""
-        if self.fetch_item_type is None:
-            return []
-        return [
-            x["id"]
-            for x in self.db_mngr.get_items(db_map, self.fetch_item_type)
-            if x["id"] not in self._child_map.get(db_map, {}) and self.fetch_successful(db_map, x)
-        ]
+            self.db_mngr.fetch_more(db_map, self)
 
     def fetch_more_if_possible(self):
         if self.can_fetch_more():
