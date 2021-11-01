@@ -29,7 +29,7 @@ class EntityRootItem(MultiDBTreeItem):
 
     @property
     def display_id(self):
-        """"See super class."""
+        """ "See super class."""
         return "root"
 
     @property
@@ -38,7 +38,7 @@ class EntityRootItem(MultiDBTreeItem):
 
     @property
     def display_data(self):
-        """"See super class."""
+        """ "See super class."""
         return "root"
 
     def set_data(self, column, value, role):
@@ -143,6 +143,9 @@ class EntityClassItem(MultiDBTreeItem):
     def fetch_successful(self, db_map, item):
         return item["class_id"] == self.db_map_id(db_map)
 
+    def filter_query(self, qry, db_map):
+        return qry.filter_by(class_id=self.db_map_id(db_map))
+
     def set_data(self, column, value, role):
         """See base class."""
         return False
@@ -189,6 +192,11 @@ class ObjectRelationshipClassItem(RelationshipClassItem):
         return super().fetch_successful(db_map, item) and object_id in {
             int(id_) for id_ in item["object_id_list"].split(",")
         }
+
+    def filter_query(self, qry, db_map):
+        # object_id = self.parent_item.db_map_id(db_map)
+        # qry = qry.filter(db_map.relationship_sq.object_id == object_id)
+        return super().filter_query(qry, db_map)
 
 
 class MemberObjectClassItem(ObjectClassItem):
@@ -303,7 +311,7 @@ class MemberObjectItem(ObjectItem):
 
     @property
     def display_data(self):
-        """"Returns the name for display."""
+        """ "Returns the name for display."""
         return self.db_map_data_field(self.first_db_map, "member_name")
 
     def has_children(self):
@@ -330,7 +338,7 @@ class RelationshipItem(EntityItem):
 
     @property
     def display_data(self):
-        """"Returns the name for display."""
+        """ "Returns the name for display."""
         return DB_ITEM_SEPARATOR.join(
             [x for x in self.object_name_list.split(",") if x != self.parent_item.parent_item.display_data]
         )

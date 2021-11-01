@@ -68,6 +68,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for db_map in self.db_maps:
             self.db_mngr.fetch_more(db_map, self.item_type, parent=self)
 
+    def filter_query(self, qry, db_map):
+        return qry
+
     def fetch_successful(self, db_map, item):
         entity_class_id = item.get(self.entity_class_id_key)
         if entity_class_id is None:

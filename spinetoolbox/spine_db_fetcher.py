@@ -39,142 +39,49 @@ class SpineDBFetcher(QObject):
         super().__init__()
         self._db_mngr = db_mngr
         self._db_map = db_map
-        self._iterators = {
-            item_type: self._get_db_items(item_type)
-            for item_type in (
-                "object_class",
-                "relationship_class",
-                "parameter_definition",
-                "object",
-                "relationship",
-                "entity_group",
-                "parameter_value",
-                "parameter_value_list",
-                "alternative",
-                "scenario",
-                "scenario_alternative",
-                "feature",
-                "tool",
-                "tool_feature",
-                "tool_feature_method",
-                "commit",
-            )
-        }
-        self.cache = {}
+        self._iterators = {}
         self.commit_cache = {}
-        self._fetched = {item_type: False for item_type in self._iterators}
+        self._fetched = {}
         self._can_fetch_more_cache = {}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._fetch_all_requested.connect(self._fetch_all)
         self._parents = {}
 
-    def cache_items(self, item_type, items):
-        # NOTE: OrderedDict is so we can call `reversed()` in Python 3.7
-        self.cache.setdefault(item_type, OrderedDict()).update({x["id"]: CacheItem(**x) for x in items})
-
-    def get_item(self, item_type, id_):
-        return self.cache.get(item_type, {}).get(id_, {})
-
-    def _make_fetch_successful(self, parent):
-        try:
-            fetch_successful = parent.fetch_successful
-        except AttributeError:
-            return lambda _: True
-        return lambda item: fetch_successful(self._db_map, item)
-
-    def _can_fetch_more_from_cache(self, item_type, parent=None):
-        fetch_successful = self._make_fetch_successful(parent)
-        items = self.cache.get(item_type, OrderedDict())
-        key = (next(reversed(items), None), len(items))
-        try:
-            fetch_id = parent.fetch_id()
-        except AttributeError:
-            fetch_id = parent
-        cache_key, cache_result = self._can_fetch_more_cache.get((item_type, fetch_id), (None, None))
-        if key == cache_key:
-            return cache_result
-        try:
-            result = any(fetch_successful(x) for x in items.values())
-        except RuntimeError:
-            # OrderedDict mutated during iteration
-            # The DB thread added some stuff to the cache while we were looking at it,
-            # which means we need to start over
-            return self.can_fetch_more(item_type, parent=parent)
-        self._can_fetch_more_cache[item_type, fetch_id] = (key, result)
-        return result
-
     def can_fetch_more(self, item_type, parent=None):
-        if self._can_fetch_more_from_cache(item_type, parent=parent):
-            return True
-        return not self._fetched[item_type]
-
-    def _fetch_more_from_cache(self, item_type, parent=None, iter_chunk_size=1000):
-        fetch_successful = self._make_fetch_successful(parent)
-        items = self.cache.get(item_type, {})
-        args = [iter(items)] * iter_chunk_size
-        for keys in itertools.zip_longest(*args):
-            keys = set(keys) - {None}  # Remove fillvalues
-            chunk = [items[k] for k in keys]
-            if any(fetch_successful(x) for x in chunk):
-                for k in keys:
-                    del items[k]
-                signal = self._db_mngr.added_signals[item_type]
-                signal.emit({self._db_map: chunk})
-                return True
-        return False
+        return not self._fetched.get((item_type, parent), False)
 
     @busy_effect
-    def fetch_more(self, item_type, parent=None, iter_chunk_size=1000):
+    def fetch_more(self, item_type, parent=None):
         """Fetches items from the database.
 
         Args:
             item_type (str): the type of items to fetch, e.g. "object_class"
         """
-        if self._fetch_more_from_cache(item_type, parent=parent, iter_chunk_size=iter_chunk_size):
-            return
-        # Nothing found in cache.
-        # Add parent to the list of parents to refetch in case something is added to the cache
-        self._parents.setdefault(item_type, []).append(parent)
         self._fetch_more_requested.emit(item_type, parent)
 
     @Slot(str, object)
     def _fetch_more(self, item_type, parent):
         self._do_fetch_more(item_type, parent)
 
+    def _get_iterator(self, item_type, parent):
+        if (item_type, parent) not in self._iterators:
+            self._iterators[item_type, parent] = self._get_db_items(item_type, parent)
+        return self._iterators[item_type, parent]
+
     @busy_effect
     def _do_fetch_more(self, item_type, parent):
-        iterator = self._iterators.get(item_type)
+        iterator = self._get_iterator(item_type, parent)
         if iterator is None:
             return
-        fetch_successful = self._make_fetch_successful(parent)
-        while True:
-            chunk = next(iterator, [])
-            self._populate_commit_cache(item_type, chunk)
-            if not chunk:
-                self._fetched[item_type] = True
-                break
-            if any(fetch_successful(x) for x in chunk):
-                signal = self._db_mngr.added_signals[item_type]
-                signal.emit({self._db_map: chunk})
-                return
-            self.cache_items(item_type, chunk)
-            self._refetch_parents(item_type)
-        try:
-            parent.fully_fetched.emit()
-        except AttributeError:
-            pass
-
-    def _refetch_parents(self, item_type):
-        """Refetches parents that might have missed some content from the cache.
-        Called after adding items to the cache from the DB thread.
-
-        Args:
-            item_type (str)
-        """
-        for parent in self._parents.pop(item_type, []):
-            if self._can_fetch_more_from_cache(item_type, parent=parent):
-                self._fetch_more_from_cache(item_type, parent=parent)
+        chunk = next(iterator, [])
+        print(item_type, parent, len(chunk))
+        self._populate_commit_cache(item_type, chunk)
+        if not chunk:
+            self._fetched[item_type, parent] = True
+            return
+        signal = self._db_mngr.added_signals[item_type]
+        signal.emit({self._db_map: chunk})
 
     def fetch_all(self, item_types=None, only_descendants=False, include_ancestors=False):
         if item_types is None:
@@ -212,7 +119,7 @@ class SpineDBFetcher(QObject):
             self._do_fetch_more(item_type, parent)
         self._fetch_all_finished.emit()
 
-    def _get_db_items(self, item_type, order_by=("id",), query_chunk_size=1000, iter_chunk_size=1000):
+    def _get_db_items(self, item_type, parent, order_by=("id",), query_chunk_size=1000, iter_chunk_size=1000):
         """Runs the given query and yields results by chunks of given size.
 
         Args:
@@ -221,7 +128,7 @@ class SpineDBFetcher(QObject):
         Yields:
             list: chunk of items
         """
-        query = self._make_query(item_type, order_by=order_by)
+        query = self._make_query(item_type, parent, order_by=order_by)
         it = (x._asdict() for x in query.yield_per(query_chunk_size).enable_eagerloads(False))
         while True:
             chunk = list(itertools.islice(it, iter_chunk_size))
@@ -229,7 +136,7 @@ class SpineDBFetcher(QObject):
             if not chunk:
                 break
 
-    def _make_query(self, item_type, order_by=("id",)):
+    def _make_query(self, item_type, parent, order_by=("id",)):
         """Makes a database query for given item type.
 
         Args:
@@ -241,7 +148,10 @@ class SpineDBFetcher(QObject):
         """
         sq_name = self._db_map.cache_sqs[item_type]
         sq = getattr(self._db_map, sq_name)
-        return self._db_map.query(sq).order_by(*[getattr(sq.c, k) for k in order_by])
+        qry = self._db_map.query(sq).order_by(*[getattr(sq.c, k) for k in order_by])
+        if parent is not None:
+            qry = parent.filter_query(qry, self._db_map)
+        return qry
 
     def _populate_commit_cache(self, item_type, items):
         if item_type == "commit":

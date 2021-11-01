@@ -214,6 +214,9 @@ class MultiDBTreeItem(TreeItem):
     def fetch_successful(self, db_map, item):  # pylint: disable=no-self-use
         return True
 
+    def filter_query(self, qry, db_map):  # pylint: disable=no-self-use
+        return qry
+
     def _handle_fully_fetched(self):
         """Notifies the view that the model's layout has changed.
         This triggers a repaint so this item may be painted gray if no children."""
