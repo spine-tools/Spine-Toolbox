@@ -15,7 +15,6 @@ A Zero-MQ client for exchanging messages between the toolbox and the remote serv
 :date:   02.09.2021
 """
 
-
 import os
 import zmq
 import zmq.auth
@@ -26,8 +25,6 @@ from enum import unique, Enum
 from spinetoolbox.server.util.ServerMessage import ServerMessage
 from spinetoolbox.server.util.ServerMessageParser import ServerMessageParser
 from spinetoolbox.server.util.EventDataConverter import EventDataConverter
-
-# from spinetoolbox.server.RemoteSpineEngineManager2 import ZMQSecurityModelState
 
 
 @unique
@@ -162,7 +159,6 @@ class ZMQClient:
         return dataEvents
 
     def close(self):
-
         if self._closed == False:
             self._socket.close()
             self._context.term()

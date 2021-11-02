@@ -30,7 +30,7 @@ from pathlib import Path
 
 # from LocalSpineEngineManager import LocalSpineEngineManager
 from spinetoolbox.spine_engine_worker import SpineEngineWorker
-from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager2
+from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager
 
 
 class test_RemoteSpineEngineManager:
@@ -82,7 +82,7 @@ class test_RemoteSpineEngineManager:
         connDict["appSettings/remoteSecurityModel"] = ""
         # print("run_DAG() using dict as input for connecting: ")
         # print(connDict)
-        manager = RemoteSpineEngineManager2(connDict)
+        manager = RemoteSpineEngineManager(connDict)
         # prepare data
         dict_data = test_RemoteSpineEngineManager._dict_data(
             items={
@@ -155,7 +155,7 @@ class test_RemoteSpineEngineManager:
 
     # @staticmethod
     # def run_DAG_empty_response(protocol,host,port):
-    #    manager=RemoteSpineEngineManager2(protocol,host,port)
+    #    manager=RemoteSpineEngineManager(protocol,host,port)
     # prepare data
     #    dict_data = test_RemoteSpineEngineManager._dict_data(items={'helloworld': {'type': 'Tool', 'description': '', 'x': -91.6640625,
     #        'y': -5.609375, 'specification': 'helloworld2', 'execute_in_work': True, 'cmd_line_args': []},
@@ -198,7 +198,7 @@ class test_RemoteSpineEngineManager:
         connDict["appSettings/remoteHost"] = host
         connDict["appSettings/remotePort"] = port
         connDict["appSettings/remoteSecurityModel"] = ""
-        manager = RemoteSpineEngineManager2(connDict)
+        manager = RemoteSpineEngineManager(connDict)
         # prepare data
         dict_data = test_RemoteSpineEngineManager._dict_data(
             items={
@@ -272,7 +272,7 @@ class test_RemoteSpineEngineManager:
         connDict["appSettings/remotePort"] = port
         connDict["appSettings/remoteSecurityModel"] = ""
 
-        # manager=RemoteSpineEngineManager2(connDict)
+        # manager=RemoteSpineEngineManager(connDict)
         # prepare data
         dict_data = test_RemoteSpineEngineManager._dict_data(
             items={
@@ -328,7 +328,7 @@ class test_RemoteSpineEngineManager:
         # print("run_DAG(): sending request with data:")
         # print(dict_data)
         for x in range(0, 3):
-            manager = RemoteSpineEngineManager2(connDict)
+            manager = RemoteSpineEngineManager(connDict)
             manager.run_engine(dict_data)
             while True:
                 event, data = manager.get_engine_event()
@@ -349,7 +349,7 @@ class test_RemoteSpineEngineManager:
     @staticmethod
     def invalid_config():
         try:
-            manager = RemoteSpineEngineManager2(None, "", 3433)
+            manager = RemoteSpineEngineManager(None, "", 3433)
         except:
             print("exception raised as expected due to invalid input data")
             return 0
@@ -357,7 +357,7 @@ class test_RemoteSpineEngineManager:
     @staticmethod
     def invalid_config2():
         try:
-            manager = RemoteSpineEngineManager2("", "193.166.160.216", "", 3433)
+            manager = RemoteSpineEngineManager("", "193.166.160.216", "", 3433)
         except:
             print("exception raised as expected due to invalid input data")
             return 0

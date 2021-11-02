@@ -138,96 +138,6 @@ class SpineEngineManagerBase:
         raise NotImplementedError()
 
 
-class RemoteSpineEngineManager(SpineEngineManagerBase):
-    _ENCODING = "ascii"
-
-    def __init__(self, engine_server_address):
-        """
-        Args:
-            engine_server_address (str)
-        """
-        super().__init__()
-        self._engine_server_address = engine_server_address
-        self.request = None
-        self._engine_id = None
-
-    def run_engine(self, engine_data):
-        """See base class."""
-        self._engine_id = self._send("run_engine", engine_data)
-
-    def get_engine_event(self):
-        """See base class."""
-        return self._send("get_engine_event", self._engine_id)
-
-    def stop_engine(self):
-        """See base class."""
-        self._send("stop_engine", self._engine_id, receive=False)
-
-    def answer_prompt(self, item_name, accepted):
-        """See base class."""
-        raise NotImplementedError()
-
-    def restart_kernel(self, connection_file):
-        """See base class."""
-        self._send("restart_kernel", connection_file)
-
-    def shutdown_kernel(self, connection_file):
-        """See base class."""
-        self._send("shutdown_kernel", connection_file)
-
-    def issue_persistent_command(self, persistent_key, command):
-        """See base class."""
-        raise NotImplementedError()
-
-    def restart_persistent(self, persistent_key):
-        """See base class."""
-        raise NotImplementedError()
-
-    def interrupt_persistent(self, persistent_key):
-        """See base class."""
-        raise NotImplementedError()
-
-    def get_persistent_completions(self, persistent_key, text):
-        """See base class."""
-        raise NotImplementedError()
-
-    def _send(self, request, *args, receive=True):
-        """
-        Sends a request to the server with the given arguments.
-
-        Args:
-            request (str): One of the supported engine server requests
-            args: Request arguments
-            receive (bool, optional): If True (the default) also receives the response and returns it.
-
-        Returns:
-            str or NoneType: response, or None if receive is False
-        """
-        msg = json.dumps((request, args))
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.request:
-            self.request.connect(self._engine_server_address)
-            self.request.sendall(bytes(msg, "ascii"))
-            if receive:
-                response = self._recvall()
-                return json.loads(response)
-
-    def _recvall(self):
-        """
-        Receives and returns all data in the current request.
-
-        Returns:
-            str
-        """
-        BUFF_SIZE = 4096
-        fragments = []
-        while True:
-            chunk = str(self.request.recv(BUFF_SIZE), self._ENCODING)
-            fragments.append(chunk)
-            if len(chunk) < BUFF_SIZE:
-                break
-        return "".join(fragments)
-
-
 class LocalSpineEngineManager(SpineEngineManagerBase):
     def __init__(self):
         super().__init__()
@@ -294,7 +204,7 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         return get_persistent_history_item(persistent_key, index)
 
 
-class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
+class RemoteSpineEngineManager(SpineEngineManagerBase, threading.Thread):
     """Responsible for remote project execution."""
 
     ZipFileName = "project_package"  # ZIP-file name to be used
@@ -316,7 +226,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
             else app_settings.get("appSettings/remoteSecurityDirectory", "")
         )
         if not host:
-            raise ValueError("Engine server host name missing in RemoteSpineEngineManager2.")
+            raise ValueError("Engine server host name missing in RemoteSpineEngineManager.")
         threading.Thread.__init__(self)
         self.zmq_client = ZMQClient(protocol, host, port, security, sec_folder)
 
@@ -330,7 +240,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
         else:
             self._state = RemoteSpineEngineManagerState2.CLOSED
             print(
-                "RemoteSpineEngineManager2.__init__(): Client is disconnected from the server, check Remote "
+                "RemoteSpineEngineManager.__init__(): Client is disconnected from the server, check Remote "
                 "execution configuration (File->Settings->Remote execution)!"
             )
 
@@ -343,9 +253,9 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
         if self._state == RemoteSpineEngineManagerState2.IDLE and not self._requestPending:
             self._inputData = engine_data
             self._requestPending = True
-            # print("RemoteSpineEngineManager2.run_engine(): Pending request execution..")
+            # print("RemoteSpineEngineManager.run_engine(): Pending request execution..")
         else:
-            # print("RemoteSpineEngineManager2.run_engine(): Cannot execute due to pending request or state: %s"%str(self._state))
+            # print("RemoteSpineEngineManager.run_engine(): Cannot execute due to pending request or state: %s"%str(self._state))
             raise EngineInitFailed()
 
     def get_engine_event(self):
@@ -365,7 +275,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                 # print("get_engine_event() transforming data: %s"%eventData[1])
                 # handle execution state transformation, see returned data from SpineEngine._process_event()
                 if eventData[1].find('\'item_state\': <') != -1:
-                    dataDict = self._transformExecutionState(eventData[1])
+                    dataDict = self._transform_execution_state(eventData[1])
                 else:
                     dataDict = ast.literal_eval(eventData[1])
                 # dataDict=json.loads(eventData[1])
@@ -390,7 +300,7 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
         """Stops engine currently running."""
         self._state = RemoteSpineEngineManagerState2.CLOSED
         self.zmq_client.close()
-        print("RemoteSpineEngineManager2.stop_engine()")
+        print("RemoteSpineEngineManager.stop_engine()")
 
     def run(self):
         while self._state != RemoteSpineEngineManagerState2.CLOSED:
@@ -399,48 +309,48 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                 # debugging
                 runStartTimeMs = round(time.time() * 1000.0)
                 # change state
-                # print("RemoteSpineEngineManager2.run() Started running..")
+                # print("RemoteSpineEngineManager.run() Started running..")
                 self._state = RemoteSpineEngineManagerState2.RUNNING
                 # transform dict to JSON string
                 jsonTxt = json.dumps(self._inputData)
-                # print("RemoteSpineEngineManager2.run() Sending data: %s"%jsonTxt)
+                # print("RemoteSpineEngineManager.run() Sending data: %s"%jsonTxt)
                 runStartTimeMs = round(time.time() * 1000.0)
                 # Debugging
                 runStopTimeMs = round(time.time() * 1000.0)
                 print(
-                    "RemoteSpineEngineManager2.run() run time after JSON encoding %d ms"
+                    "RemoteSpineEngineManager.run() run time after JSON encoding %d ms"
                     % (runStopTimeMs - runStartTimeMs)
                 )
                 runStartTimeMs = round(time.time() * 1000.0)
                 # get folder from input data, and package it
-                print("RemoteSpineEngineManager2.run() Packaging folder %s.." % self._inputData['project_dir'])
+                print("RemoteSpineEngineManager.run() Packaging folder %s.." % self._inputData['project_dir'])
                 FilePackager.package(
                     self._inputData['project_dir'],
                     self._inputData['project_dir'],
-                    RemoteSpineEngineManager2.ZipFileName,
+                    RemoteSpineEngineManager.ZipFileName,
                 )
                 # Debugging
                 runStopTimeMs = round(time.time() * 1000.0)
                 print(
-                    "RemoteSpineEngineManager2.run() run time after packaging %d ms" % (runStopTimeMs - runStartTimeMs)
+                    "RemoteSpineEngineManager.run() run time after packaging %d ms" % (runStopTimeMs - runStartTimeMs)
                 )
                 runStartTimeMs = round(time.time() * 1000.0)
                 # send request to the remote client, and listen for a response
                 dataEvents = self.zmq_client.send(
-                    jsonTxt, self._inputData['project_dir'], RemoteSpineEngineManager2.ZipFileName + ".zip"
+                    jsonTxt, self._inputData['project_dir'], RemoteSpineEngineManager.ZipFileName + ".zip"
                 )
-                # print("RemoteSpineEngineManager2.run() received a response:")
+                # print("RemoteSpineEngineManager.run() received a response:")
                 # print(dataEvents)
-                # print("RemoteSpineEngineManager2.run() %d of event+data items received."%len(dataEvents))
+                # print("RemoteSpineEngineManager.run() %d of event+data items received."%len(dataEvents))
                 self._outputData = dataEvents
                 self._outputDataIteratorIndex = 0
                 # remove the transferred ZIP-file
                 FilePackager.deleteFile(
-                    os.path.join(self._inputData['project_dir'], RemoteSpineEngineManager2.ZipFileName + ".zip")
+                    os.path.join(self._inputData['project_dir'], RemoteSpineEngineManager.ZipFileName + ".zip")
                 )
                 # debugging
                 runStopTimeMs = round(time.time() * 1000.0)
-                print("RemoteSpineEngineManager2.run() duration of transfer %d ms" % (runStopTimeMs - runStartTimeMs))
+                print("RemoteSpineEngineManager.run() duration of transfer %d ms" % (runStopTimeMs - runStartTimeMs))
                 # change state to REPLY_RECEIVED
                 self._state = RemoteSpineEngineManagerState2.REPLY_RECEIVED
                 self._requestPending = False
@@ -448,14 +358,11 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
                 time.sleep(0.01)
         self.zmq_client.close()
 
-    def _transformExecutionState(self, data):
+    def _transform_execution_state(self, data):
         # first add quotes around execution state
-        # print("RemoteSpineEngineManager2._transformExecutionState() with data %s"%data)
         quotedStr = self._add_quotes_to_dict_string(data)
-        # print("RemoteSpineEngineManager2._transformExecutionState() Quoted str: %s"%quotedStr)
         tempDict = ast.literal_eval(quotedStr)
         stateStr = tempDict['item_state']
-        # print("RemoteSpineEngineManager2._transformExecutionState() state str: %s"%stateStr)
         state = None
         # transform string state into enum
         if stateStr == '<ItemExecutionFinishState.SUCCESS: 1>':
@@ -472,12 +379,51 @@ class RemoteSpineEngineManager2(SpineEngineManagerBase, threading.Thread):
             state = ItemExecutionFinishState.NEVER_FINISHED
         if state is not None:
             tempDict['item_state'] = state
-            # print("RemoteSpineEngineManager2._transformExecutionState() Returning transformed dict:")
-            # print(tempDict)
             return tempDict
         else:
-            print("RemoteSpineEngineManager2._transformExecutionState() Failure in parsing")
+            print("RemoteSpineEngineManager._transform_execution_state() Failure in parsing")
             return tempDict
+
+    def answer_prompt(self, item_name, accepted):
+        """See base class."""
+        raise NotImplementedError()
+
+    def restart_kernel(self, connection_file):
+        """See base class."""
+        self._send("restart_kernel", connection_file)
+
+    def shutdown_kernel(self, connection_file):
+        """See base class."""
+        self._send("shutdown_kernel", connection_file)
+
+    def issue_persistent_command(self, persistent_key, command):
+        """See base class."""
+        # TODO: Implementing this needs a new message type (with 'execute' and 'ping') that the server understands.
+        raise NotImplementedError()
+
+    def restart_persistent(self, persistent_key):
+        """See base class."""
+        raise NotImplementedError()
+
+    def interrupt_persistent(self, persistent_key):
+        """See base class."""
+        raise NotImplementedError()
+
+    def get_persistent_completions(self, persistent_key, text):
+        """See base class."""
+        raise NotImplementedError()
+
+    def get_persistent_history_item(self, persistent_key, index):
+        """Returns an item from persistent history.
+
+        Args:
+            persistent_key (tuple): persistent identifier
+            index (int): index of the history item, most recent first
+
+        Returns:
+            str: history item or empty string if none
+        """
+        raise NotImplementedError()
 
     @staticmethod
     def _add_quotes_to_dict_string(s):
@@ -494,4 +440,4 @@ def make_engine_manager(app_settings):
     """
     if app_settings.get("appSettings/remoteExecutionEnabled", "false") == "false":
         return LocalSpineEngineManager()
-    return RemoteSpineEngineManager2(app_settings)
+    return RemoteSpineEngineManager(app_settings)
