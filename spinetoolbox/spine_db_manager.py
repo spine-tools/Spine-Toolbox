@@ -274,9 +274,6 @@ class SpineDBManager(QObject):
             return
         self._get_fetcher(db_map).fetch_more(parent)
 
-    def cache_items_for_fetching(self, db_map, item_type, items):
-        self._get_fetcher(db_map).cache_items(item_type, items)
-
     def cache_items(self, item_type, db_map_data):
         """Caches data for a given type.
         It works for both insert and update operations.
@@ -305,11 +302,6 @@ class SpineDBManager(QObject):
                 ids = ids_per_type.get(item_type, [])
                 for id_ in ids:
                     item = self._pop_item(db_map, item_type, id_)
-                    if item:
-                        item["visible"] = True
-                        db_map_data.setdefault(db_map, []).append(item)
-                        continue
-                    item = self._get_fetcher(db_map).cache.get(item_type, {}).pop(id_, {})
                     if item:
                         db_map_data.setdefault(db_map, []).append(item)
             typed_db_map_data[item_type] = db_map_data

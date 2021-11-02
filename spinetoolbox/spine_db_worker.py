@@ -150,16 +150,7 @@ class SpineDBWorker(QObject):
         signal = getattr(self._db_mngr, signal_name)
         for db_map, items in db_map_data.items():
             getattr(db_map, method_name)(*items, readd=True)
-            visible = []
-            hidden = []
-            for item in items:
-                item = self._db_mngr.db_to_cache(db_map, item_type, item)
-                if item.pop("visible", True):
-                    visible.append(item)
-                else:
-                    hidden.append(item)
-            self._db_mngr.cache_items_for_fetching(db_map, item_type, hidden)
-            signal.emit({db_map: visible})
+            signal.emit({db_map: [self._db_mngr.db_to_cache(db_map, item_type, item) for item in items]})
 
     def remove_items(self, db_map_typed_ids):
         """Removes items from database.

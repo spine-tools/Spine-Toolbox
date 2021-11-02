@@ -47,10 +47,10 @@ class SpineDBSignaller(QObject):
 
     def _defer_notification(self, db_map, data, method):
         """Defer notification if db_map is paused, and returns True. Otherwise returns False."""
-        notifications = self._deferred_notifications.get(db_map)
-        if notifications is None:
+        deferred = self._deferred_notifications.get(db_map)
+        if deferred is None:
             return False
-        notifications.append((data, method))
+        deferred.append((data, method))
         return True
 
     def add_db_map_listener(self, db_map, listener):
