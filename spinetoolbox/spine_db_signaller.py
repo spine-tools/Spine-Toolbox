@@ -35,7 +35,7 @@ class SpineDBSignaller(QObject):
         self._deferred_notifications = dict()
 
     def pause(self, *db_maps):
-        """Defers notifications from db_maps to listeners until ``resume`` is called."""
+        """Defers notifications from db_maps until ``resume`` is called."""
         for db_map in db_maps:
             self._deferred_notifications.setdefault(db_map, [])
 
@@ -45,8 +45,8 @@ class SpineDBSignaller(QObject):
             for data, method in self._deferred_notifications.pop(db_map, []):
                 method({db_map: data})
 
-    def _defer_call(self, db_map, data, method):
-        """Appends call to deferred calls if db_map is paused, and returns True. Otherwise returns False."""
+    def _defer_notification(self, db_map, data, method):
+        """Defer notification if db_map is paused, and returns True. Otherwise returns False."""
         notifications = self._deferred_notifications.get(db_map)
         if notifications is None:
             return False
@@ -301,7 +301,7 @@ class SpineDBSignaller(QObject):
                 except AttributeError:
                     continue
                 for db_map, data in shared_db_map_data.items():
-                    if self._defer_call(db_map, data, method):
+                    if self._defer_notification(db_map, data, method):
                         continue
                     method({db_map: data})
 
