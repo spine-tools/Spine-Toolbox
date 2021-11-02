@@ -230,6 +230,8 @@ class SpineDBManager(QObject):
         self.scenario_alternatives_added.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_updated.connect(self._refresh_scenario_alternatives)
         self.scenario_alternatives_removed.connect(self._refresh_scenario_alternatives)
+        self.entity_groups_added.connect(self._cascade_refresh_objects_by_group)
+        self.entity_groups_added.connect(self._cascade_refresh_relationships_by_group)
         self._worker.session_rolled_back.connect(self._finish_rolling_back)
         self._worker.connect_signals()
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
@@ -935,6 +937,7 @@ class SpineDBManager(QObject):
             child_cmds = []
             # NOTE: we push the import macro before adding the children,
             # because we *need* to call redo() on the children one by one so the data gets in gradually
+            self.signaller.pause(db_map)
             self.undo_stack[db_map].push(macro)
             for item_type, (to_add, to_update, import_error_log) in data_for_import:
                 db_map_error_log.setdefault(db_map, []).extend([str(x) for x in import_error_log])
@@ -954,6 +957,7 @@ class SpineDBManager(QObject):
                 # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
                 macro.setObsolete(True)
                 self.undo_stack[db_map].undo()
+            self.signaller.resume(db_map)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
@@ -1536,6 +1540,22 @@ class SpineDBManager(QObject):
                 db_map_scenario_data.setdefault(db_map, []).append(scenario)
         self.scenarios_updated.emit(db_map_scenario_data)
 
+    def _cascade_refresh_objects_by_group(self, db_map_data):
+        self._cascade_refresh_entities_by_group(db_map_data, "object", self.objects_updated)
+
+    def _cascade_refresh_relationships_by_group(self, db_map_data):
+        self._cascade_refresh_entities_by_group(db_map_data, "relationship", self.relationships_updated)
+
+    def _cascade_refresh_entities_by_group(self, db_map_data, item_type, updated_signal):
+        db_map_entity_data = {}
+        for db_map, data in db_map_data.items():
+            for item in data:
+                entity = self.get_item(db_map, item_type, item["group_id"])
+                if entity:
+                    entity["group_id"] = item["group_id"]
+                    db_map_entity_data.setdefault(db_map, []).append(entity)
+        updated_signal.emit(db_map_entity_data)
+
     def _cascade_refresh_relationship_classes(self, db_map_data):
         """Refreshes cached relationship classes when updating object classes.
 
@@ -1857,6 +1877,7 @@ class SpineDBManager(QObject):
             item["display_icon"] = item.get("display_icon")
         elif item_type == "object":
             item["class_name"] = self.get_item(db_map, "object_class", item["class_id"])["name"]
+            item["group_id"] = self.get_item_by_field(db_map, "entity_group", "entity_id", item["id"]).get("entity_id")
         elif item_type == "relationship_class":
             item["object_class_name_list"] = ",".join(
                 self.get_item(db_map, "object_class", id_)["name"] for id_ in item["object_class_id_list"]
