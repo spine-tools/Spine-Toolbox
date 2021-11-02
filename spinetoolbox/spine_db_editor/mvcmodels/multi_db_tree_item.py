@@ -209,8 +209,12 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         if not new_children:
             return
         new_children = sorted(new_children, key=lambda x: x.display_id)
-        for chunk, pos in bisect_chunks(self.children, new_children, key=lambda c: c.display_id):
+        for chunk, pos in bisect_chunks(self.children, new_children, key=self._children_sort_key):
             self.insert_children(pos, chunk)
+
+    @property
+    def _children_sort_key(self):
+        return lambda item: item.display_id
 
     def _handle_fully_fetched(self):
         """Notifies the view that the model's layout has changed.

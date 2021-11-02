@@ -114,23 +114,22 @@ class SpineDBFetcher(QObject):
         self._fetched_parent[parent] = True
         parent.fully_fetched.emit()
 
-    def _make_query_for_parent(self, parent, order_by=("id",)):
+    def _make_query_for_parent(self, parent):
         """Makes a database query for given item type.
 
         Args:
             parent (object): the object that requests the fetching
-            order_by (Iterable): key for order by
 
         Returns:
             Query: database query
         """
-        query, subquery = self._make_query_for_item_type(parent.fetch_item_type, order_by=order_by)
+        query, subquery = self._make_query_for_item_type(parent.fetch_item_type)
         return parent.filter_query(query, subquery, self._db_map)
 
-    def _make_query_for_item_type(self, item_type, order_by=("id",)):
+    def _make_query_for_item_type(self, item_type):
         subquery_name = self._db_map.cache_sqs[item_type]
         subquery = getattr(self._db_map, subquery_name)
-        query = self._db_map.query(subquery).order_by(*[getattr(subquery.c, k) for k in order_by])
+        query = self._db_map.query(subquery)
         return query, subquery
 
     def _get_iterator(self, parent, query):

@@ -55,7 +55,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         self.db_maps = db_maps
         self._filter_class_ids = {}
         self._auto_filter_menus = {}
-        self._auto_filter = dict()  # Maps field to db map, to entity id, to *accepted* item ids
+        self._auto_filter = {}  # Maps field to db map, to entity id, to *accepted* item ids
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
         self._filter_timer.setInterval(100)
@@ -73,17 +73,9 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
             self.db_mngr.fetch_more(db_map, self)
 
     def filter_query(self, query, subquery, db_map):
-        return query.filter(getattr(subquery.c, self.entity_class_id_key).isnot(None))
-
-    def fetch_successful(self, db_map, item):
-        entity_class_id = item.get(self.entity_class_id_key)
-        if entity_class_id is None:
-            return False
-        model = self._create_single_model(db_map, entity_class_id, committed=None)
-        return self.filter_accepts_model(model) and model.filter_accepts_item(item)
-
-    def fetch_id(self):
-        return str(self.__dict__)
+        return query.filter(getattr(subquery.c, self.entity_class_id_key).isnot(None)).order_by(
+            subquery.c.entity_class_name
+        )
 
     def _make_header(self):
         raise NotImplementedError()
@@ -164,6 +156,7 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         """Initializes the model."""
         super().init_model()
         self._filter_class_ids = {}
+        self._auto_filter = {}
         self.empty_model.fetchMore(QModelIndex())
         self._make_auto_filter_menus()
 
