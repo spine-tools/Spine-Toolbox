@@ -37,29 +37,39 @@ class CustomFileSystemWatcher(QFileSystemWatcher):
 
     @Slot(str)
     def _handle_dir_changed(self, dirname):
+        """Adds, removes or renames watched files and emits corresponding signals.
+
+        Args:
+            dirname (str): path to changed directory
+        """
         is_watched_dir = dirname in self._watched_dirs
-        watched_files = self._watched_files.get(dirname, set())
+        watched_files = self._watched_files.setdefault(dirname, set())
         if not is_watched_dir and not watched_files:
             return
         snapshot = self._directory_snapshots[dirname]
         new_snapshot = self._directory_snapshots[dirname] = self._take_snapshot(dirname)
-        removed_filepath = next(iter(snapshot - new_snapshot), None)
-        if not is_watched_dir and removed_filepath not in watched_files:
-            return
-        added_filepath = next(iter(new_snapshot - snapshot), None)
-        try:
-            watched_files.remove(removed_filepath)
-            watched_files.add(added_filepath)
-        except KeyError:
-            pass
-        if removed_filepath and added_filepath:
-            self.file_renamed.emit(removed_filepath, added_filepath)
-            return
-        if removed_filepath:
-            self.file_removed.emit(removed_filepath)
-            return
-        if is_watched_dir:
-            self.file_added.emit(added_filepath)
+        removed_paths = snapshot - new_snapshot
+        added_paths = new_snapshot - snapshot
+        for old_path, new_path in zip(list(removed_paths), list(added_paths)):
+            # Assume files were renamed.
+            # If there was more than one rename, we choose the new name blindly but
+            # there doesn't seem to be a better way to do it.
+            # Maybe it doesn't even matter? In any case, usually there is just a single rename and nothing else.
+            removed_paths.remove(old_path)
+            added_paths.remove(new_path)
+            watched_files.remove(old_path)
+            watched_files.add(new_path)
+            self.file_renamed.emit(old_path, new_path)
+        for path in removed_paths:
+            if path not in watched_files:
+                continue
+            watched_files.remove(path)
+            self.file_removed.emit(path)
+        for path in added_paths:
+            watched_files.add(path)
+            self.file_added.emit(path)
+        if not watched_files:
+            del self._watched_files[dirname]
 
     def add_persistent_file_path(self, path):
         if not os.path.isfile(path):
