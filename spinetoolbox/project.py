@@ -836,7 +836,7 @@ class SpineToolboxProject(MetaObject):
             spec = project_item.specification()
             if spec is not None:
                 spec_dict = spec.to_dict().copy()
-                spec_dict["definition_file_path"] = spec.definition_file_path
+                spec_dict["definition_file_path"] = spec.definition_file_path.replace(os.sep, "/")
                 specifications.setdefault(project_item.item_type(), list()).append(spec_dict)
         connections = [c.to_dict() for c in self._connections]
         jumps = [j.to_dict() for j in self._jumps]
@@ -849,7 +849,7 @@ class SpineToolboxProject(MetaObject):
             "execution_permits": execution_permits,
             "items_module_name": "spine_items",
             "settings": settings,
-            "project_dir": self.project_dir,
+            "project_dir": self.project_dir.replace(os.sep, "/"),
         }
         worker = SpineEngineWorker(data, dag, dag_identifier, items_in_dag, self._logger)
         return worker
