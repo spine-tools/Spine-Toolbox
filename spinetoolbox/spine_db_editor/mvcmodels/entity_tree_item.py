@@ -136,6 +136,7 @@ class ObjectClassItem(EntityClassItem):
 
     @property
     def _children_sort_key(self):
+        """Reimplemented so groups are above non-groups."""
         return lambda item: (not item.is_group(), item.display_id)
 
 

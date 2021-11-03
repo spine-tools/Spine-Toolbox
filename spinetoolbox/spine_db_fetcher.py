@@ -77,14 +77,14 @@ class SpineDBFetcher(QObject):
         """Creates a query for parent. Stores both the query and the count."""
         if parent not in self._queries:
             query = self._make_query_for_parent(parent)
-            key = str(query.statement)
+            key = _query_key(query)
             if key not in self._query_counts:
                 self._query_counts[key] = query.count()
             self._queries[parent] = query
         return self._queries[parent]
 
     def _query_count(self, query):
-        return self._query_counts[str(query.statement)]
+        return self._query_counts[_query_key(query)]
 
     @busy_effect
     def fetch_more(self, parent):
@@ -196,3 +196,7 @@ def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
         yield chunk
         if not chunk:
             break
+
+
+def _query_key(query):
+    return str(query.statement.compile(compile_kwargs={"literal_binds": True}))
