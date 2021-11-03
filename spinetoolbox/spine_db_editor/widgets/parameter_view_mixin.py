@@ -35,9 +35,9 @@ class ParameterViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.filter_class_ids = {}
-        self.filter_entity_ids = {}
-        self.filter_alternative_ids = {}
+        self._filter_class_ids = {}
+        self._filter_entity_ids = {}
+        self._filter_alternative_ids = {}
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr)
         self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr)
@@ -134,13 +134,13 @@ class ParameterViewMixin:
             model.empty_model.set_default_row(**default_data)
             model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
 
-    def reset_filters(self):
+    def _reset_filters(self):
         """Resets filters."""
         for model in self._parameter_models:
-            model.set_filter_class_ids(self.filter_class_ids)
+            model.set_filter_class_ids(self._filter_class_ids)
         for model in self._parameter_value_models:
-            model.set_filter_entity_ids(self.filter_entity_ids)
-            model.set_filter_alternative_ids(self.filter_alternative_ids)
+            model.set_filter_entity_ids(self._filter_entity_ids)
+            model.set_filter_alternative_ids(self._filter_alternative_ids)
 
     @Slot(dict)
     def _handle_graph_selection_changed(self, selected_items):
@@ -156,14 +156,14 @@ class ParameterViewMixin:
             active_rels.setdefault(x.db_map, []).append(x.db_representation)
         for db_map, rels in cascading_rels.items():
             active_rels.setdefault(x.db_map, []).extend(rels)
-        self.filter_class_ids = {}
+        self._filter_class_ids = {}
         for db_map, items in active_objs.items():
-            self.filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
+            self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
         for db_map, items in active_rels.items():
-            self.filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self.filter_entity_ids = self.db_mngr.db_map_class_ids(active_objs)
-        self.filter_entity_ids.update(self.db_mngr.db_map_class_ids(active_rels))
-        self.reset_filters()
+            self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
+        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_objs)
+        self._filter_entity_ids.update(self.db_mngr.db_map_class_ids(active_rels))
+        self._reset_filters()
 
     @Slot(dict)
     def _handle_object_tree_selection_changed(self, selected_indexes):
@@ -176,18 +176,18 @@ class ParameterViewMixin:
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
         active_obj_inds = obj_inds | {ind.parent() for ind in active_rel_cls_inds}
         active_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in active_obj_inds}
-        self.filter_class_ids = self._db_map_ids(active_obj_cls_inds | active_rel_cls_inds)
-        self.filter_entity_ids = self._db_map_class_ids(active_obj_inds | active_rel_inds)
+        self._filter_class_ids = self._db_map_ids(active_obj_cls_inds | active_rel_cls_inds)
+        self._filter_entity_ids = self._db_map_class_ids(active_obj_inds | active_rel_inds)
         # Cascade (note that we carefuly select where to cascade from, to avoid 'circularity')
-        from_obj_cls_inds = obj_cls_inds | {ind.parent() for ind in obj_inds}
-        from_obj_inds = obj_inds | {ind.parent() for ind in rel_cls_inds}
-        cascading_rel_cls_inds = self.db_mngr.find_cascading_relationship_classes(self._db_map_ids(from_obj_cls_inds))
-        cascading_rel_inds = self.db_mngr.find_cascading_relationships(self._db_map_ids(from_obj_inds))
-        for db_map, ids in self.db_mngr.db_map_ids(cascading_rel_cls_inds).items():
-            self.filter_class_ids.setdefault(db_map, set()).update(ids)
-        for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rel_inds).items():
-            self.filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
-        self.reset_filters()
+        obj_cls_ids = self._db_map_ids(obj_cls_inds | {ind.parent() for ind in obj_inds})
+        obj_ids = self._db_map_ids(obj_inds | {ind.parent() for ind in rel_cls_inds})
+        cascading_rel_clss = self.db_mngr.find_cascading_relationship_classes(obj_cls_ids, only_visible=False)
+        cascading_rels = self.db_mngr.find_cascading_relationships(obj_ids, only_visible=False)
+        for db_map, ids in self.db_mngr.db_map_ids(cascading_rel_clss).items():
+            self._filter_class_ids.setdefault(db_map, set()).update(ids)
+        for (db_map, class_id), ids in self.db_mngr.db_map_class_ids(cascading_rels).items():
+            self._filter_entity_ids.setdefault((db_map, class_id), set()).update(ids)
+        self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_object.selectionModel().currentIndex())
 
     @Slot(dict)
@@ -196,16 +196,16 @@ class ParameterViewMixin:
         rel_cls_inds = set(selected_indexes.get("relationship_class", {}).keys())
         active_rel_inds = set(selected_indexes.get("relationship", {}).keys())
         active_rel_cls_inds = rel_cls_inds | {ind.parent() for ind in active_rel_inds}
-        self.filter_class_ids = self._db_map_ids(active_rel_cls_inds)
-        self.filter_entity_ids = self._db_map_class_ids(active_rel_inds)
-        self.reset_filters()
+        self._filter_class_ids = self._db_map_ids(active_rel_cls_inds)
+        self._filter_entity_ids = self._db_map_class_ids(active_rel_inds)
+        self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_relationship.selectionModel().currentIndex())
 
     @Slot(dict)
     def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):
         """Resets filter according to selection in alternative tree view."""
-        self.filter_alternative_ids = {db_map: alt_ids.copy() for db_map, alt_ids in selected_db_map_alt_ids.items()}
-        self.reset_filters()
+        self._filter_alternative_ids = {db_map: alt_ids.copy() for db_map, alt_ids in selected_db_map_alt_ids.items()}
+        self._reset_filters()
 
     def restore_ui(self):
         """Restores UI state from previous session."""
