@@ -52,6 +52,13 @@ class SpineDBFetcher(QObject):
         self._query_counts = {}
         self._queries = {}
 
+    def reset_queries(self, item_type):
+        affected_parents = [parent for parent in self._queries if parent.fetch_item_type == item_type]
+        for parent in affected_parents:
+            query = self._queries.pop(parent)
+            self._query_counts.pop(_query_key(query))
+            parent.restart_fetching()
+
     def can_fetch_more(self, parent):
         if self._fetched_parent.get(parent, False):
             return False
@@ -71,7 +78,8 @@ class SpineDBFetcher(QObject):
     def _do_init_query(self, parent):
         query = self._get_query(parent)
         if self._query_count(query) == 0:
-            self._set_parent_fetched(parent)
+            self._fetched_parent[parent] = True
+            parent.restart_fetching()
 
     def _get_query(self, parent):
         """Creates a query for parent. Stores both the query and the count."""
@@ -105,14 +113,10 @@ class SpineDBFetcher(QObject):
         iterator = self._get_iterator(parent, query)
         chunk = next(iterator, [])
         if not chunk:
-            self._set_parent_fetched(parent)
+            self._fetched_parent[parent] = True
             return
         signal = self._db_mngr.added_signals[parent.fetch_item_type]
         signal.emit({self._db_map: chunk})
-
-    def _set_parent_fetched(self, parent):
-        self._fetched_parent[parent] = True
-        parent.fully_fetched.emit()
 
     def _make_query_for_parent(self, parent):
         """Makes a database query for given item type.

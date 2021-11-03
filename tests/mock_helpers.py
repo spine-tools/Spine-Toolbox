@@ -21,7 +21,7 @@ from unittest import mock
 from PySide2.QtCore import QObject, Signal, Slot
 from PySide2.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
-from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.helpers import signal_waiter, ItemTypeFetchParent
 from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -311,7 +311,7 @@ class TestSpineDBManager(SpineDBManager):
     def fetch_all(self, db_map):
         fetcher = self._get_fetcher(db_map)
         for item_type in self.added_signals:
-            fetcher.fetch_more(item_type)
+            fetcher.fetch_more(ItemTypeFetchParent(item_type))
 
 
 @contextmanager

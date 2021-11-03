@@ -140,7 +140,15 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_objects(self):
         self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
         self._fetch()
-        item = {'id': 1, 'class_id': 1, 'class_name': 'oc', 'name': 'obj', 'description': None, 'commit_id': 2}
+        item = {
+            'id': 1,
+            'class_id': 1,
+            'class_name': 'oc',
+            'name': 'obj',
+            'description': None,
+            'group_id': None,
+            'commit_id': 2,
+        }
         self._listener.receive_objects_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "object", 1), item)
 

@@ -1393,14 +1393,32 @@ def bisect_chunks(current_data, new_data, key=None):
 
 
 class FetchParent:
-    fully_fetched = Signal()
-
     @property
     def fetch_item_type(self):
+        """Returns the type of item to fetch, e.g., "object_class".
+        Used to create an initial query for this item.
+
+        Returns:
+            str
+        """
         raise NotImplementedError
 
+    # pylint: disable=no-self-use
     def filter_query(self, query, subquery, db_map):
+        """Filters the initial query created using the ``fetch_item_type`` property.
+
+        Args:
+            query (Query): The query
+            subquery (Alias): The source of the query
+            db_map (DiffDatabaseMapping)
+
+        Returns:
+            Query
+        """
         return query
+
+    def restart_fetching(self):
+        """Restarts fetching this item. Can be called from a different thread than ``qApp.thread()``."""
 
 
 class ItemTypeFetchParent(FetchParent):

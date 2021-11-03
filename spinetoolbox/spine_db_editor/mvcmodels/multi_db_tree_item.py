@@ -15,7 +15,7 @@ Base classes to represent items from multiple databases in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:    17.6.2020
 """
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QTimer
 from ...helpers import rows_to_row_count_tuples, bisect_chunks, FetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
 
@@ -39,7 +39,6 @@ class MultiDBTreeItem(FetchParent, TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
-        self.fully_fetched.connect(self._handle_fully_fetched)
 
     def set_data(self, column, value, role):
         raise NotImplementedError()
@@ -216,10 +215,10 @@ class MultiDBTreeItem(FetchParent, TreeItem):
     def _children_sort_key(self):
         return lambda item: item.display_id
 
-    def _handle_fully_fetched(self):
+    def restart_fetching(self):
         """Notifies the view that the model's layout has changed.
         This triggers a repaint so this item may be painted gray if no children."""
-        self.model.layoutChanged.emit()
+        QTimer.singleShot(0, self.model.layoutChanged)
 
     @property
     def fetch_item_type(self):

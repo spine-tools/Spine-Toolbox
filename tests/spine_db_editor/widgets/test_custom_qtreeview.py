@@ -444,7 +444,6 @@ class TestRelationshipTreeViewWithInitiallyEmptyDatabase(_EntityTreeViewTestBase
         class_index = model.index(0, 0, root_index)
         self.assertEqual(model.rowCount(class_index), 1)
         relationship_index = model.index(0, 0, class_index)
-        mystic_index = model.index(0, 0, relationship_index)
         self.assertEqual(model.rowCount(relationship_index), 0)
         self.assertEqual(relationship_index.data(), "an_object")
         relationship_database_index = model.index(0, 1, class_index)
@@ -680,7 +679,9 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
-        self.assertEqual(model.rowCount(class_index), 1)
+        view.expand(class_index)
+        while model.rowCount(class_index) != 1:
+            QApplication.processEvents()
         relationship_index = model.index(0, 0, class_index)
         self.assertEqual(relationship_index.data(), "object_11 ǀ object_22")
         self._commit_changes_to_database("Remove object.")

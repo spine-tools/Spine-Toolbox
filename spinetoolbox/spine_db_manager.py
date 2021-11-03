@@ -304,6 +304,8 @@ class SpineDBManager(QObject):
                     item = self._pop_item(db_map, item_type, id_)
                     if item:
                         db_map_data.setdefault(db_map, []).append(item)
+                fetcher = self._get_fetcher(db_map)
+                fetcher.reset_queries(item_type)
             typed_db_map_data[item_type] = db_map_data
             signal.emit(db_map_data)
         self.items_removed_from_cache.emit(typed_db_map_data)
