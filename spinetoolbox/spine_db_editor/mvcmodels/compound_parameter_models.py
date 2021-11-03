@@ -404,6 +404,8 @@ class CompoundParameterModel(FetchParent, CompoundWithEmptyTableModel):
         return model
 
     def _add_parameter_data(self, db_map, entity_class_id, ids, committed):
+        if not ids:
+            return
         if committed:
             existing = next(
                 (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None

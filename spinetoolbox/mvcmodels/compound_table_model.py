@@ -335,8 +335,6 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     def _refresh_single_model(self, model):
         single_row_map = self._row_map_for_model(model)
-        if not single_row_map:
-            return
         pos = self.single_models.index(model) + 1
         self._insert_row_map(pos, single_row_map)
 
@@ -345,8 +343,6 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     def _insert_single_model(self, model):
         single_row_map = self._row_map_for_model(model)
-        if not single_row_map:
-            return
         pos = self._get_insert_position(model)
         self._insert_row_map(pos, single_row_map)
         self.sub_models.insert(pos, model)
@@ -359,6 +355,9 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         return self.rowCount()
 
     def _insert_row_map(self, pos, single_row_map):
+        if not single_row_map:
+            self.layoutChanged.emit()  # To trigger fetching
+            return
         row = self._get_row_for_insertion(pos)
         self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
         self._append_row_map(single_row_map)
