@@ -987,17 +987,21 @@ def make_settings_dict_for_engine(app_settings):
     Returns:
         dict: Engine-compatible settings
     """
-    # XXX: We may want to introduce a new group "executionSettings", for more clarity
+
+    def dump_group(group):
+        app_settings.beginGroup(group)
+        for key in app_settings.childKeys():
+            value = app_settings.value(key)
+            try:
+                json.dumps(value)
+            except (TypeError, json.decoder.JSONDecodeError):
+                continue
+            settings[f"{group}/{key}"] = value
+        app_settings.endGroup()
+
     settings = {}
-    app_settings.beginGroup("appSettings")
-    for key in app_settings.childKeys():
-        value = app_settings.value(key)
-        try:
-            json.dumps(value)
-        except (TypeError, json.decoder.JSONDecodeError):
-            continue
-        settings[f"appSettings/{key}"] = value
-    app_settings.endGroup()
+    dump_group("appSettings")
+    dump_group("engineSettings")
     if "appSettings/workDir" not in settings:
         # Headless mode may execute on a system where we don't have any Toolbox settings available.
         # Make sure we set a sane work directory for Tools, at least.

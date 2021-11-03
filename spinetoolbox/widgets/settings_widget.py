@@ -281,6 +281,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_use_julia_jupyter_console.toggled.connect(self._update_julia_widgets_enabled)
         self.ui.checkBox_enable_remote_exec.clicked.connect(self._update_remote_execution_page_widget_status)
         self.ui.lineEdit_host.textEdited.connect(self._edit_remote_host)
+        self.ui.user_defined_engine_process_limit_radio_button.toggled.connect(
+            self.ui.engine_process_limit_controls.setEnabled
+        )
 
     @Slot(bool)
     def _update_python_widgets_enabled(self, state):
@@ -521,12 +524,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         work_dir = self._qsettings.value("appSettings/workDir", defaultValue="")
         save_spec = int(self._qsettings.value("appSettings/saveSpecBeforeClosing", defaultValue="1"))  # tri-state
         spec_show_undo = int(self._qsettings.value("appSettings/specShowUndo", defaultValue="2"))
-        # Remote execution page
-        enable_remote_exec = self._qsettings.value("appSettings/remoteExecutionEnabled", defaultValue="false")
-        remote_host = self._qsettings.value("appSettings/remoteHost", defaultValue="")
-        remote_port = int(self._qsettings.value("appSettings/remotePort", defaultValue="49152"))
-        security = self._qsettings.value("appSettings/remoteSecurityModel", defaultValue="")
-        sec_folder = self._qsettings.value("appSettings/remoteSecurityDirectory", defaultValue="")
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt == 2:
@@ -608,6 +605,28 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.Checked)
         if spec_show_undo == 2:
             self.ui.checkBox_spec_show_undo.setChecked(True)
+        self._read_engine_settings()
+
+    def _read_engine_settings(self):
+        """Reads Engine settings and sets the corresponding UI elements."""
+        engine_parallel_process_limit_choice = self._qsettings.value(
+            "engineSettings/processLimiter", defaultValue="auto"
+        )
+        engine_parallel_process_limit = int(
+            self._qsettings.value("engineSettings/maxProcesses", defaultValue=os.cpu_count())
+        )
+        # Remote execution settings
+        enable_remote_exec = self._qsettings.value("engineSettings/remoteExecutionEnabled", defaultValue="false")
+        remote_host = self._qsettings.value("engineSettings/remoteHost", defaultValue="")
+        remote_port = int(self._qsettings.value("engineSettings/remotePort", defaultValue="49152"))
+        security = self._qsettings.value("engineSettings/remoteSecurityModel", defaultValue="")
+        sec_folder = self._qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
+        # Set UI elements
+        if engine_parallel_process_limit_choice == "auto":
+            self.ui.automatic_engine_process_limit_radio_button.setChecked(True)
+        else:
+            self.ui.user_defined_engine_process_limit_radio_button.setChecked(True)
+        self.ui.engine_process_limit_spin_box.setValue(engine_parallel_process_limit)
         if enable_remote_exec == "true":
             self.ui.checkBox_enable_remote_exec.setCheckState(Qt.Checked)
         self._edit_remote_host(remote_host)
@@ -712,17 +731,32 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.set_work_directory(work_dir)
         # Check if something in the app needs to be updated
         self._toolbox.show_datetime = self._toolbox.update_datetime()
-        # Remote execution
+        if not self._save_engine_settings():
+            return False
+        return True
+
+    def _save_engine_settings(self):
+        """Stores Engine settings to application settings.
+
+        Returns:
+            bool: True if settings were stored successfully, False otherwise
+        """
+        if self.ui.automatic_engine_process_limit_radio_button.isChecked():
+            self._qsettings.setValue("engineSettings/processLimiter", "auto")
+        else:
+            self._qsettings.setValue("engineSettings/processLimiter", "user")
+        self._qsettings.setValue("engineSettings/maxProcesses", str(self.ui.engine_process_limit_spin_box.value()))
+        # Remote execution settings
         remote_exec = "true" if int(self.ui.checkBox_enable_remote_exec.checkState()) else "false"
-        self._qsettings.setValue("appSettings/remoteExecutionEnabled", remote_exec)
-        self._qsettings.setValue("appSettings/remoteHost", self._remote_host)
-        self._qsettings.setValue("appSettings/remotePort", self.ui.spinBox_port.value())
+        self._qsettings.setValue("engineSettings/remoteExecutionEnabled", remote_exec)
+        self._qsettings.setValue("engineSettings/remoteHost", self._remote_host)
+        self._qsettings.setValue("engineSettings/remotePort", self.ui.spinBox_port.value())
         if self.ui.comboBox_security.currentIndex() == 0:
             sec_str = ""
         else:
             sec_str = self.ui.comboBox_security.currentText()
-        self._qsettings.setValue("appSettings/remoteSecurityModel", sec_str)
-        self._qsettings.setValue("appSettings/remoteSecurityDirectory", self.ui.lineEdit_secfolder.text())
+        self._qsettings.setValue("engineSettings/remoteSecurityModel", sec_str)
+        self._qsettings.setValue("engineSettings/remoteSecurityFolder", self.ui.lineEdit_secfolder.text())
         return True
 
     def _get_julia_settings(self):

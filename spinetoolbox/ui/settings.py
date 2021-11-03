@@ -47,9 +47,7 @@ class Ui_SettingsForm(object):
         SettingsForm.setContextMenuPolicy(Qt.NoContextMenu)
         SettingsForm.setAutoFillBackground(False)
         self.verticalLayout_7 = QVBoxLayout(SettingsForm)
-        self.verticalLayout_7.setSpacing(0)
         self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.verticalLayout_7.setContentsMargins(9, 9, 9, 9)
         self.splitter = QSplitter(SettingsForm)
         self.splitter.setObjectName(u"splitter")
         sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -79,7 +77,7 @@ class Ui_SettingsForm(object):
         __qlistwidgetitem3 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem3.setIcon(icon3);
         icon4 = QIcon()
-        icon4.addFile(u":/icons/menu_icons/server.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u":/icons/tractor.svg", QSize(), QIcon.Normal, QIcon.Off)
         __qlistwidgetitem4 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem4.setIcon(icon4);
         self.listWidget.setObjectName(u"listWidget")
@@ -662,66 +660,114 @@ class Ui_SettingsForm(object):
         self.verticalLayout_11.addWidget(self.groupBox)
 
         self.stackedWidget.addWidget(self.SpecificationEditors)
-        self.RemoteExecution = QWidget()
-        self.RemoteExecution.setObjectName(u"RemoteExecution")
-        self.verticalLayout_10 = QVBoxLayout(self.RemoteExecution)
-        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
-        self.groupBox_remote_execution = QGroupBox(self.RemoteExecution)
-        self.groupBox_remote_execution.setObjectName(u"groupBox_remote_execution")
-        self.verticalLayout_2 = QVBoxLayout(self.groupBox_remote_execution)
+        self.Engine = QWidget()
+        self.Engine.setObjectName(u"Engine")
+        self.verticalLayout_19 = QVBoxLayout(self.Engine)
+        self.verticalLayout_19.setObjectName(u"verticalLayout_19")
+        self.groupBox_3 = QGroupBox(self.Engine)
+        self.groupBox_3.setObjectName(u"groupBox_3")
+        self.verticalLayout_2 = QVBoxLayout(self.groupBox_3)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.checkBox_enable_remote_exec = QCheckBox(self.groupBox_remote_execution)
+        self.automatic_engine_process_limit_radio_button = QRadioButton(self.groupBox_3)
+        self.engine_processes_button_group = QButtonGroup(SettingsForm)
+        self.engine_processes_button_group.setObjectName(u"engine_processes_button_group")
+        self.engine_processes_button_group.addButton(self.automatic_engine_process_limit_radio_button)
+        self.automatic_engine_process_limit_radio_button.setObjectName(u"automatic_engine_process_limit_radio_button")
+
+        self.verticalLayout_2.addWidget(self.automatic_engine_process_limit_radio_button)
+
+        self.user_defined_engine_process_limit_radio_button = QRadioButton(self.groupBox_3)
+        self.engine_processes_button_group.addButton(self.user_defined_engine_process_limit_radio_button)
+        self.user_defined_engine_process_limit_radio_button.setObjectName(u"user_defined_engine_process_limit_radio_button")
+
+        self.verticalLayout_2.addWidget(self.user_defined_engine_process_limit_radio_button)
+
+        self.engine_process_limit_controls = QWidget(self.groupBox_3)
+        self.engine_process_limit_controls.setObjectName(u"engine_process_limit_controls")
+        self.engine_process_limit_controls.setEnabled(False)
+        self.horizontalLayout_13 = QHBoxLayout(self.engine_process_limit_controls)
+        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Fixed, QSizePolicy.Minimum)
+
+        self.horizontalLayout_13.addItem(self.horizontalSpacer_2)
+
+        self.label_2 = QLabel(self.engine_process_limit_controls)
+        self.label_2.setObjectName(u"label_2")
+
+        self.horizontalLayout_13.addWidget(self.label_2)
+
+        self.engine_process_limit_spin_box = QSpinBox(self.engine_process_limit_controls)
+        self.engine_process_limit_spin_box.setObjectName(u"engine_process_limit_spin_box")
+        self.engine_process_limit_spin_box.setMinimum(1)
+
+        self.horizontalLayout_13.addWidget(self.engine_process_limit_spin_box)
+
+        self.horizontalSpacer_3 = QSpacerItem(205, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_13.addItem(self.horizontalSpacer_3)
+
+
+        self.verticalLayout_2.addWidget(self.engine_process_limit_controls)
+
+
+        self.verticalLayout_19.addWidget(self.groupBox_3)
+
+        self.groupBox_4 = QGroupBox(self.Engine)
+        self.groupBox_4.setObjectName(u"groupBox_4")
+        self.verticalLayout_18 = QVBoxLayout(self.groupBox_4)
+        self.verticalLayout_18.setObjectName(u"verticalLayout_18")
+        self.checkBox_enable_remote_exec = QCheckBox(self.groupBox_4)
         self.checkBox_enable_remote_exec.setObjectName(u"checkBox_enable_remote_exec")
 
-        self.verticalLayout_2.addWidget(self.checkBox_enable_remote_exec)
+        self.verticalLayout_18.addWidget(self.checkBox_enable_remote_exec)
 
-        self.gridLayout_2 = QGridLayout()
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.label_6 = QLabel(self.groupBox_remote_execution)
-        self.label_6.setObjectName(u"label_6")
+        self.gridLayout_3 = QGridLayout()
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.label_12 = QLabel(self.groupBox_4)
+        self.label_12.setObjectName(u"label_12")
 
-        self.gridLayout_2.addWidget(self.label_6, 3, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.label_12, 3, 0, 1, 1)
 
-        self.horizontalLayout_13 = QHBoxLayout()
-        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
-        self.lineEdit_secfolder = QLineEdit(self.groupBox_remote_execution)
+        self.horizontalLayout_16 = QHBoxLayout()
+        self.horizontalLayout_16.setObjectName(u"horizontalLayout_16")
+        self.lineEdit_secfolder = QLineEdit(self.groupBox_4)
         self.lineEdit_secfolder.setObjectName(u"lineEdit_secfolder")
         self.lineEdit_secfolder.setCursor(QCursor(Qt.ArrowCursor))
         self.lineEdit_secfolder.setReadOnly(False)
         self.lineEdit_secfolder.setClearButtonEnabled(True)
 
-        self.horizontalLayout_13.addWidget(self.lineEdit_secfolder)
+        self.horizontalLayout_16.addWidget(self.lineEdit_secfolder)
 
-        self.toolButton_pick_secfolder = QToolButton(self.groupBox_remote_execution)
+        self.toolButton_pick_secfolder = QToolButton(self.groupBox_4)
         self.toolButton_pick_secfolder.setObjectName(u"toolButton_pick_secfolder")
         self.toolButton_pick_secfolder.setMinimumSize(QSize(22, 22))
         self.toolButton_pick_secfolder.setMaximumSize(QSize(22, 22))
         self.toolButton_pick_secfolder.setIcon(icon5)
 
-        self.horizontalLayout_13.addWidget(self.toolButton_pick_secfolder)
+        self.horizontalLayout_16.addWidget(self.toolButton_pick_secfolder)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout_13, 4, 2, 1, 1)
+        self.gridLayout_3.addLayout(self.horizontalLayout_16, 4, 2, 1, 1)
 
-        self.label_10 = QLabel(self.groupBox_remote_execution)
-        self.label_10.setObjectName(u"label_10")
+        self.label_13 = QLabel(self.groupBox_4)
+        self.label_13.setObjectName(u"label_13")
 
-        self.gridLayout_2.addWidget(self.label_10, 4, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.label_13, 4, 0, 1, 1)
 
-        self.horizontalLayout_15 = QHBoxLayout()
-        self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
-        self.lineEdit_host = QLineEdit(self.groupBox_remote_execution)
+        self.horizontalLayout_17 = QHBoxLayout()
+        self.horizontalLayout_17.setObjectName(u"horizontalLayout_17")
+        self.lineEdit_host = QLineEdit(self.groupBox_4)
         self.lineEdit_host.setObjectName(u"lineEdit_host")
         self.lineEdit_host.setClearButtonEnabled(True)
 
-        self.horizontalLayout_15.addWidget(self.lineEdit_host)
+        self.horizontalLayout_17.addWidget(self.lineEdit_host)
 
-        self.label_2 = QLabel(self.groupBox_remote_execution)
-        self.label_2.setObjectName(u"label_2")
+        self.label_14 = QLabel(self.groupBox_4)
+        self.label_14.setObjectName(u"label_14")
 
-        self.horizontalLayout_15.addWidget(self.label_2)
+        self.horizontalLayout_17.addWidget(self.label_14)
 
-        self.spinBox_port = QSpinBox(self.groupBox_remote_execution)
+        self.spinBox_port = QSpinBox(self.groupBox_4)
         self.spinBox_port.setObjectName(u"spinBox_port")
         self.spinBox_port.setFrame(True)
         self.spinBox_port.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
@@ -730,34 +776,34 @@ class Ui_SettingsForm(object):
         self.spinBox_port.setMinimum(49152)
         self.spinBox_port.setMaximum(65535)
 
-        self.horizontalLayout_15.addWidget(self.spinBox_port)
+        self.horizontalLayout_17.addWidget(self.spinBox_port)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout_15, 0, 2, 1, 1)
+        self.gridLayout_3.addLayout(self.horizontalLayout_17, 0, 2, 1, 1)
 
-        self.label_3 = QLabel(self.groupBox_remote_execution)
-        self.label_3.setObjectName(u"label_3")
+        self.label_15 = QLabel(self.groupBox_4)
+        self.label_15.setObjectName(u"label_15")
 
-        self.gridLayout_2.addWidget(self.label_3, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.label_15, 0, 0, 1, 1)
 
-        self.comboBox_security = QComboBox(self.groupBox_remote_execution)
+        self.comboBox_security = QComboBox(self.groupBox_4)
         self.comboBox_security.addItem("")
         self.comboBox_security.addItem("")
         self.comboBox_security.setObjectName(u"comboBox_security")
 
-        self.gridLayout_2.addWidget(self.comboBox_security, 3, 2, 1, 1)
+        self.gridLayout_3.addWidget(self.comboBox_security, 3, 2, 1, 1)
 
 
-        self.verticalLayout_2.addLayout(self.gridLayout_2)
-
-        self.verticalSpacer_4 = QSpacerItem(20, 271, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.verticalLayout_2.addItem(self.verticalSpacer_4)
+        self.verticalLayout_18.addLayout(self.gridLayout_3)
 
 
-        self.verticalLayout_10.addWidget(self.groupBox_remote_execution)
+        self.verticalLayout_19.addWidget(self.groupBox_4)
 
-        self.stackedWidget.addWidget(self.RemoteExecution)
+        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        self.verticalLayout_19.addItem(self.verticalSpacer_4)
+
+        self.stackedWidget.addWidget(self.Engine)
         self.splitter.addWidget(self.stackedWidget)
 
         self.verticalLayout_7.addWidget(self.splitter)
@@ -822,13 +868,7 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_auto_expand_objects)
         QWidget.setTabOrder(self.checkBox_auto_expand_objects, self.checkBox_save_spec_before_closing)
         QWidget.setTabOrder(self.checkBox_save_spec_before_closing, self.checkBox_spec_show_undo)
-        QWidget.setTabOrder(self.checkBox_spec_show_undo, self.checkBox_enable_remote_exec)
-        QWidget.setTabOrder(self.checkBox_enable_remote_exec, self.lineEdit_host)
-        QWidget.setTabOrder(self.lineEdit_host, self.spinBox_port)
-        QWidget.setTabOrder(self.spinBox_port, self.comboBox_security)
-        QWidget.setTabOrder(self.comboBox_security, self.lineEdit_secfolder)
-        QWidget.setTabOrder(self.lineEdit_secfolder, self.toolButton_pick_secfolder)
-        QWidget.setTabOrder(self.toolButton_pick_secfolder, self.listWidget)
+        QWidget.setTabOrder(self.checkBox_spec_show_undo, self.listWidget)
 
         self.retranslateUi(SettingsForm)
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
@@ -854,7 +894,7 @@ class Ui_SettingsForm(object):
         ___qlistwidgetitem3 = self.listWidget.item(3)
         ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Spec. editors", None));
         ___qlistwidgetitem4 = self.listWidget.item(4)
-        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsForm", u"Remote execution", None));
+        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsForm", u"Engine", None));
         self.listWidget.setSortingEnabled(__sortingEnabled)
 
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"General", None))
@@ -1015,24 +1055,28 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.checkBox_save_spec_before_closing.setText(QCoreApplication.translate("SettingsForm", u"Save specification before closing", None))
         self.checkBox_spec_show_undo.setText(QCoreApplication.translate("SettingsForm", u"Show undo notifications", None))
-        self.groupBox_remote_execution.setTitle(QCoreApplication.translate("SettingsForm", u"Remote execution", None))
+        self.groupBox_3.setTitle(QCoreApplication.translate("SettingsForm", u"Parallel Engine processes", None))
+        self.automatic_engine_process_limit_radio_button.setText(QCoreApplication.translate("SettingsForm", u"Limit to available CPU cores", None))
+        self.user_defined_engine_process_limit_radio_button.setText(QCoreApplication.translate("SettingsForm", u"User defined limit:", None))
+        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"Max parallel processes:", None))
+        self.groupBox_4.setTitle(QCoreApplication.translate("SettingsForm", u"Remote execution", None))
         self.checkBox_enable_remote_exec.setText(QCoreApplication.translate("SettingsForm", u"Enabled", None))
-        self.label_6.setText(QCoreApplication.translate("SettingsForm", u"Security", None))
+        self.label_12.setText(QCoreApplication.translate("SettingsForm", u"Security", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_secfolder.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Required for Stonehouse security. Given path should contain '/certificates', '/public_keys', and '/private_keys' directories. </p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_secfolder.setText("")
         self.lineEdit_secfolder.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Select certificate directory...", None))
-        self.label_10.setText(QCoreApplication.translate("SettingsForm", u"Certs", None))
+        self.label_13.setText(QCoreApplication.translate("SettingsForm", u"Certs", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_host.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Host name</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_host.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Enter host name...", None))
-        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"Port", None))
+        self.label_14.setText(QCoreApplication.translate("SettingsForm", u"Port", None))
 #if QT_CONFIG(tooltip)
         self.spinBox_port.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Limited to dynamic/private ports (49152-&gt;65535)</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_3.setText(QCoreApplication.translate("SettingsForm", u"Host", None))
+        self.label_15.setText(QCoreApplication.translate("SettingsForm", u"Host", None))
         self.comboBox_security.setItemText(0, QCoreApplication.translate("SettingsForm", u"None", None))
         self.comboBox_security.setItemText(1, QCoreApplication.translate("SettingsForm", u"Stonehouse", None))
 

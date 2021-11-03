@@ -59,21 +59,6 @@
    <bool>false</bool>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_7">
-   <property name="spacing">
-    <number>0</number>
-   </property>
-   <property name="leftMargin">
-    <number>9</number>
-   </property>
-   <property name="topMargin">
-    <number>9</number>
-   </property>
-   <property name="rightMargin">
-    <number>9</number>
-   </property>
-   <property name="bottomMargin">
-    <number>9</number>
-   </property>
    <item>
     <widget class="QSplitter" name="splitter">
      <property name="sizePolicy">
@@ -190,11 +175,11 @@
       </item>
       <item>
        <property name="text">
-        <string>Remote execution</string>
+        <string>Engine</string>
        </property>
        <property name="icon">
         <iconset resource="resources/resources_icons.qrc">
-         <normaloff>:/icons/menu_icons/server.svg</normaloff>:/icons/menu_icons/server.svg</iconset>
+         <normaloff>:/icons/tractor.svg</normaloff>:/icons/tractor.svg</iconset>
        </property>
       </item>
      </widget>
@@ -1166,14 +1151,95 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="RemoteExecution">
-       <layout class="QVBoxLayout" name="verticalLayout_10">
+      <widget class="QWidget" name="Engine">
+       <layout class="QVBoxLayout" name="verticalLayout_19">
         <item>
-         <widget class="QGroupBox" name="groupBox_remote_execution">
+         <widget class="QGroupBox" name="groupBox_3">
+          <property name="title">
+           <string>Parallel Engine processes</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <widget class="QRadioButton" name="automatic_engine_process_limit_radio_button">
+             <property name="text">
+              <string>Limit to available CPU cores</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">engine_processes_button_group</string>
+             </attribute>
+            </widget>
+           </item>
+           <item>
+            <widget class="QRadioButton" name="user_defined_engine_process_limit_radio_button">
+             <property name="text">
+              <string>User defined limit:</string>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">engine_processes_button_group</string>
+             </attribute>
+            </widget>
+           </item>
+           <item>
+            <widget class="QWidget" name="engine_process_limit_controls" native="true">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_13">
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::Fixed</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>Max parallel processes:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="engine_process_limit_spin_box">
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_3">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>205</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_4">
           <property name="title">
            <string>Remote execution</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_2">
+          <layout class="QVBoxLayout" name="verticalLayout_18">
            <item>
             <widget class="QCheckBox" name="checkBox_enable_remote_exec">
              <property name="text">
@@ -1182,16 +1248,16 @@
             </widget>
            </item>
            <item>
-            <layout class="QGridLayout" name="gridLayout_2">
+            <layout class="QGridLayout" name="gridLayout_3">
              <item row="3" column="0">
-              <widget class="QLabel" name="label_6">
+              <widget class="QLabel" name="label_12">
                <property name="text">
                 <string>Security</string>
                </property>
               </widget>
              </item>
              <item row="4" column="2">
-              <layout class="QHBoxLayout" name="horizontalLayout_13">
+              <layout class="QHBoxLayout" name="horizontalLayout_16">
                <item>
                 <widget class="QLineEdit" name="lineEdit_secfolder">
                  <property name="cursor">
@@ -1237,14 +1303,14 @@
               </layout>
              </item>
              <item row="4" column="0">
-              <widget class="QLabel" name="label_10">
+              <widget class="QLabel" name="label_13">
                <property name="text">
                 <string>Certs</string>
                </property>
               </widget>
              </item>
              <item row="0" column="2">
-              <layout class="QHBoxLayout" name="horizontalLayout_15">
+              <layout class="QHBoxLayout" name="horizontalLayout_17">
                <item>
                 <widget class="QLineEdit" name="lineEdit_host">
                  <property name="toolTip">
@@ -1259,7 +1325,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLabel" name="label_2">
+                <widget class="QLabel" name="label_14">
                  <property name="text">
                   <string>Port</string>
                  </property>
@@ -1293,7 +1359,7 @@
               </layout>
              </item>
              <item row="0" column="0">
-              <widget class="QLabel" name="label_3">
+              <widget class="QLabel" name="label_15">
                <property name="text">
                 <string>Host</string>
                </property>
@@ -1318,21 +1384,21 @@
              </item>
             </layout>
            </item>
-           <item>
-            <spacer name="verticalSpacer_4">
-             <property name="orientation">
-              <enum>Qt::Vertical</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>271</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
           </layout>
          </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
       </widget>
@@ -1427,12 +1493,6 @@
   <tabstop>checkBox_auto_expand_objects</tabstop>
   <tabstop>checkBox_save_spec_before_closing</tabstop>
   <tabstop>checkBox_spec_show_undo</tabstop>
-  <tabstop>checkBox_enable_remote_exec</tabstop>
-  <tabstop>lineEdit_host</tabstop>
-  <tabstop>spinBox_port</tabstop>
-  <tabstop>comboBox_security</tabstop>
-  <tabstop>lineEdit_secfolder</tabstop>
-  <tabstop>toolButton_pick_secfolder</tabstop>
   <tabstop>listWidget</tabstop>
  </tabstops>
  <resources>
@@ -1456,4 +1516,7 @@
    </hints>
   </connection>
  </connections>
+ <buttongroups>
+  <buttongroup name="engine_processes_button_group"/>
+ </buttongroups>
 </ui>

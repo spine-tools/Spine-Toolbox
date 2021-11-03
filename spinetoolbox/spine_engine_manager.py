@@ -216,14 +216,14 @@ class RemoteSpineEngineManager(SpineEngineManagerBase, threading.Thread):
             app_settings (dict): Application settings
         """
         protocol = "tcp"  # Zero-MQ protocol
-        host = app_settings.get("appSettings/remoteHost", "")  # Host name
-        port = app_settings.get("appSettings/remotePort", "49152")  # Host port
-        sec_model = app_settings.get("appSettings/remoteSecurityModel", "")  # ZQM security model
+        host = app_settings.get("engineSettings/remoteHost", "")  # Host name
+        port = app_settings.get("engineSettings/remotePort", "49152")  # Host port
+        sec_model = app_settings.get("engineSettings/remoteSecurityModel", "")  # ZQM security model
         security = ZMQSecurityModelState.NONE if not sec_model else ZMQSecurityModelState.STONEHOUSE
         sec_folder = (
             ""
             if security == ZMQSecurityModelState.NONE
-            else app_settings.get("appSettings/remoteSecurityDirectory", "")
+            else app_settings.get("engineSettings/remoteSecurityFolder", "")
         )
         if not host:
             raise ValueError("Engine server host name missing in RemoteSpineEngineManager.")
@@ -438,6 +438,6 @@ def make_engine_manager(app_settings):
     Args:
         app_settings (dict): Application settings
     """
-    if app_settings.get("appSettings/remoteExecutionEnabled", "false") == "false":
+    if app_settings.get("engineSettings/remoteExecutionEnabled", "false") == "false":
         return LocalSpineEngineManager()
     return RemoteSpineEngineManager(app_settings)

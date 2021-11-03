@@ -77,9 +77,9 @@ class test_RemoteSpineEngineManager:
     def run_DAG(protocol, host, port):
         testSuccess = -1
         connDict = {}
-        connDict["appSettings/remoteHost"] = host
-        connDict["appSettings/remotePort"] = port
-        connDict["appSettings/remoteSecurityModel"] = ""
+        connDict["engineSettings/remoteHost"] = host
+        connDict["engineSettings/remotePort"] = port
+        connDict["engineSettings/remoteSecurityModel"] = ""
         # print("run_DAG() using dict as input for connecting: ")
         # print(connDict)
         manager = RemoteSpineEngineManager(connDict)
@@ -195,9 +195,9 @@ class test_RemoteSpineEngineManager:
     def run_DAG_noreading(protocol, host, port):
         testSuccess = -1
         connDict = {}
-        connDict["appSettings/remoteHost"] = host
-        connDict["appSettings/remotePort"] = port
-        connDict["appSettings/remoteSecurityModel"] = ""
+        connDict["engineSettings/remoteHost"] = host
+        connDict["engineSettings/remotePort"] = port
+        connDict["engineSettings/remoteSecurityModel"] = ""
         manager = RemoteSpineEngineManager(connDict)
         # prepare data
         dict_data = test_RemoteSpineEngineManager._dict_data(
@@ -268,9 +268,9 @@ class test_RemoteSpineEngineManager:
     def run_DAG_loop(protocol, host, port):
         testSuccess = -1
         connDict = {}
-        connDict["appSettings/remoteHost"] = host
-        connDict["appSettings/remotePort"] = port
-        connDict["appSettings/remoteSecurityModel"] = ""
+        connDict["engineSettings/remoteHost"] = host
+        connDict["engineSettings/remotePort"] = port
+        connDict["engineSettings/remoteSecurityModel"] = ""
 
         # manager=RemoteSpineEngineManager(connDict)
         # prepare data
