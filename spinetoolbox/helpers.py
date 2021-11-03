@@ -1401,3 +1401,12 @@ class FetchParent:
 
     def filter_query(self, query, subquery, db_map):
         return query
+
+
+class ItemTypeFetchParent(FetchParent):
+    def __init__(self, fetch_item_type):
+        self._fetch_item_type = fetch_item_type
+
+    @property
+    def fetch_item_type(self):
+        return self._fetch_item_type

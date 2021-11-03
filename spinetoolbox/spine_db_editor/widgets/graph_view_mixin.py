@@ -21,7 +21,7 @@ from PySide2.QtCore import Slot, QTimer, QThreadPool
 from PySide2.QtWidgets import QHBoxLayout
 from spinedb_api import from_database
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ...helpers import get_save_file_name_in_last_dir
+from ...helpers import get_save_file_name_in_last_dir, ItemTypeFetchParent
 from ..graphics_items import (
     EntityItem,
     ObjectItem,
@@ -73,6 +73,8 @@ class GraphViewMixin:
         self._extend_graph_timer.setInterval(100)
         self._extend_graph_timer.timeout.connect(self.build_graph)
         self._extending_graph = False
+        self._object_fetch_parent = ItemTypeFetchParent("object")
+        self._relationship_fetch_parent = ItemTypeFetchParent("relationship")
 
     @Slot(bool)
     def _stop_extending_graph(self, _=False):
@@ -310,9 +312,9 @@ class GraphViewMixin:
         """
         if "root" in self.selected_tree_inds:
             for db_map in self.db_maps:
-                for item_type in ("object", "relationship"):
-                    if self.db_mngr.can_fetch_more(db_map, item_type):
-                        self.db_mngr.fetch_more(db_map, item_type)
+                for fetch_parent in (self._object_fetch_parent, self._relationship_fetch_parent):
+                    if self.db_mngr.can_fetch_more(db_map, fetch_parent):
+                        self.db_mngr.fetch_more(db_map, fetch_parent)
             return (
                 set((db_map, x["id"]) for db_map in self.db_maps for x in self.db_mngr.get_items(db_map, "object")),
                 set(),
@@ -346,7 +348,7 @@ class GraphViewMixin:
         return [
             (db_map, x)
             for db_map in self.db_maps
-            for x in self.db_mngr.get_items(db_map, "relationship")
+            for x in self.db_mngr.get_items(db_map, "relationship", only_visible=False)
             if cond([(db_map, int(id_)) in object_ids for id_ in x["object_id_list"].split(",")])
         ] + [(db_map, self.db_mngr.get_item(db_map, "relationship", id_)) for db_map, id_ in relationship_ids]
 
