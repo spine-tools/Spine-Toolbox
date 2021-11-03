@@ -781,7 +781,15 @@ class SpineToolboxProject(MetaObject):
         Args:
             dags (Sequence(DiGraph))
             execution_permits (Sequence(dict))
+            msg (str): Message depending on execution mode (project or selected)
         """
+        if len(dags) > 1:  # Remote execution does not support multi-dag execution
+            if self._settings.value("engineSettings/RemoteExecutionEnabled", defaultvalue="false") == "true":
+                self._logger.msg_warning.emit(
+                    "Remote execution does not support multiple DAG execution. Please select just one "
+                    "DAG to execute or execute a project with a single DAG."
+                )
+                return
         self.project_execution_about_to_start.emit()
         self._logger.msg.emit("")
         self._logger.msg.emit("-------------------------------------------------")
