@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A Zero-MQ client for exchanging messages between the toolbox and the remote server.
+A Zero-MQ client for exchanging messages between the toolbox client and the remote server.
 :author: P. Pääkkönen (VTT)
 :date:   02.09.2021
 """
@@ -64,7 +64,7 @@ class ZMQClient:
             self._socket = self._context.socket(zmq.REQ)
             self._socket.setsockopt(zmq.LINGER, 1)
             # security configs
-            # implementation belows based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
+            # implementation below based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
             # prepare folders
             base_dir = secFolder
             # base_dir = os.path.dirname("/home/ubuntu/sw/spine/dev/zmq_server_certs/")
@@ -90,19 +90,16 @@ class ZMQClient:
             ret = self._socket.connect(protocol + "://" + remoteHost + ":" + str(remotePort))
             # print("ZMQClient(): socket.connect() return value: %d"%ret)
             # print("ZMQClient(): Connection established with security to %s:%d"%(remoteHost,remotePort))
-
         # test connectivity
-        if self.connectivity_testing == True:
-            connectivity = self._check_connectivity(1000)
-            # print("ZMQClient._init() connectivity: %s"%connectivity)
-            if connectivity == True:
+        if self.connectivity_testing:
+            connected = self._check_connectivity(1000)
+            if connected:
                 self._connection_state = ZMQClientConnectionState.CONNECTED
             else:
                 self._connection_state = ZMQClientConnectionState.DISCONNECTED
 
         else:
             self._connection_state = ZMQClientConnectionState.CONNECTED
-
         self._closed = False  # for tracking multiple closing calls
 
     def getConnectionState(self):
@@ -159,7 +156,7 @@ class ZMQClient:
         return dataEvents
 
     def close(self):
-        if self._closed == False:
+        if not self._closed:
             self._socket.close()
             self._context.term()
             print("ZMQClient(): Connection closed.")
@@ -167,7 +164,11 @@ class ZMQClient:
         else:
             print("ZMQClient(): Connection was closed before.")
 
-    def _check_connectivity(self, delayMs):
+    def _check_connectivity(self, timeout):
+        """
+        Args:
+            timeout (int): Time to wait before giving up [ms]
+        """
         startTimeMs = round(time.time() * 1000.0)  # debugging
         msg_parts = []
         randomId = random.randrange(10000000)
@@ -176,9 +177,9 @@ class ZMQClient:
         pingInBytes = bytes(pingAsJson, 'utf-8')
         msg_parts.append(pingInBytes)
         sendRet = self._socket.send_multipart(msg_parts, flags=zmq.NOBLOCK)
-        event = self._socket.poll(timeout=delayMs)
+        event = self._socket.poll(timeout=timeout)
         if event == 0:
-            # print("ZMQClient._check_connectivity(): timeout occurred, no reply will be listened to")
+            print("ZMQClient._check_connectivity(): timeout occurred, no reply will be listened to")
             return False
         else:
             msg = self._socket.recv()

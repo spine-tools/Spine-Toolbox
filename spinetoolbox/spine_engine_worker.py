@@ -19,7 +19,7 @@ import copy
 from PySide2.QtCore import Signal, Slot, QObject, QThread
 from PySide2.QtWidgets import QMessageBox
 
-from spine_engine.exception import EngineInitFailed
+from spine_engine.exception import EngineInitFailed, RemoteEngineFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from .spine_engine_manager import make_engine_manager
 from .helpers import get_upgrade_db_promt_text
@@ -205,6 +205,12 @@ class SpineEngineWorker(QObject):
             self._engine_mngr.run_engine(self._engine_data)
         except EngineInitFailed as error:
             self._logger.msg_error.emit(f"Failed to start engine: {error}")
+            self._engine_final_state = str(SpineEngineState.FAILED)
+            self._all_items_failed.emit(list(self._project_items.values()))
+            self.finished.emit()
+            return
+        except RemoteEngineFailed as error:
+            self._logger.msg_error.emit(f"Connecting to Engine server failed. {error}")
             self._engine_final_state = str(SpineEngineState.FAILED)
             self._all_items_failed.emit(list(self._project_items.values()))
             self.finished.emit()

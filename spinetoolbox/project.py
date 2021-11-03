@@ -936,7 +936,6 @@ class SpineToolboxProject(MetaObject):
             return
         self._logger.msg.emit("Stopping...")
         self._execution_stopped = True
-        # Stop experimental engines
         for worker in self._engine_workers:
             worker.stop_engine()
 

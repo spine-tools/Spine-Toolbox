@@ -267,10 +267,10 @@ class test_RemoteSpineEngineManager:
     @staticmethod
     def run_DAG_loop(protocol, host, port):
         testSuccess = -1
-        connDict = {}
-        connDict["engineSettings/remoteHost"] = host
-        connDict["engineSettings/remotePort"] = port
-        connDict["engineSettings/remoteSecurityModel"] = ""
+        # connDict = {}
+        # connDict["engineSettings/remoteHost"] = host
+        # connDict["engineSettings/remotePort"] = port
+        # connDict["engineSettings/remoteSecurityModel"] = ""
 
         # manager=RemoteSpineEngineManager(connDict)
         # prepare data
@@ -328,7 +328,7 @@ class test_RemoteSpineEngineManager:
         # print("run_DAG(): sending request with data:")
         # print(dict_data)
         for x in range(0, 3):
-            manager = RemoteSpineEngineManager(connDict)
+            manager = RemoteSpineEngineManager()
             manager.run_engine(dict_data)
             while True:
                 event, data = manager.get_engine_event()

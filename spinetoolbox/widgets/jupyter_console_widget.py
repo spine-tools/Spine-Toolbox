@@ -91,7 +91,6 @@ class JupyterConsoleWidget(RichJupyterWidget):
         Context menu restart action handler."""
         if self._engine_connection_file:
             self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
-            print("hello there")
             settings = make_settings_dict_for_engine(self._toolbox.qsettings())
             engine_mngr = make_engine_manager(settings)
             engine_mngr.restart_kernel(self._engine_connection_file)
@@ -99,7 +98,6 @@ class JupyterConsoleWidget(RichJupyterWidget):
             return
         if self.kernel_manager and self.kernel_name == self._target_kernel_name:
             # Restart current kernel
-            print("Base Python Console")
             self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
             self._toolbox.msg.emit(f"*** Restarting {self._target_kernel_name} ***")
             # Restart kernel manager
