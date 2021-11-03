@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication
 from spinedb_api.import_functions import import_data
-from .mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBFetcher(unittest.TestCase):
@@ -140,7 +140,15 @@ class TestSpineDBFetcher(unittest.TestCase):
     def test_fetch_objects(self):
         self._import_data(object_classes=("oc",), objects=(("oc", "obj"),))
         self._fetch()
-        item = {'id': 1, 'class_id': 1, 'class_name': 'oc', 'name': 'obj', 'description': None, 'commit_id': 2}
+        item = {
+            'id': 1,
+            'class_id': 1,
+            'class_name': 'oc',
+            'name': 'obj',
+            "group_id": None,
+            'description': None,
+            'commit_id': 2,
+        }
         self._listener.receive_objects_added.assert_any_call({self._db_map: [item]})
         self.assertEqual(self._db_mngr.get_item(self._db_map, "object", 1), item)
 
