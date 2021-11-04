@@ -35,7 +35,8 @@ from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 from spinetoolbox.link import Link
 from spinetoolbox.project_tree_item import RootProjectTreeItem
 from spinetoolbox.resources_icons_rc import qInitResources
-from .mock_helpers import clean_up_toolbox, create_toolboxui, create_project, add_ds, add_dc
+from .mock_helpers import clean_up_toolbox, create_toolboxui, create_project, \
+    add_ds, add_dc, qsettings_value_side_effect
 
 
 # noinspection PyUnusedLocal,DuplicatedCode
@@ -251,11 +252,11 @@ class TestToolboxUI(unittest.TestCase):
         add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
         self.toolbox.save_project()
         self.assertTrue(self.toolbox.undo_stack.isClean())
-        with mock.patch("spinetoolbox.ui_main.make_settings_dict_for_engine") as mock_settings_dict:
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             # Make sure that the test uses LocalSpineEngineManager
-            mock_settings_dict.return_value = dict()
+            mock_qsettings_value.side_effect = qsettings_value_side_effect
             self.assertTrue(self.toolbox.close_project())
-            mock_settings_dict.assert_called_once()
+            mock_qsettings_value.assert_called_once()
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
         ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
@@ -272,11 +273,11 @@ class TestToolboxUI(unittest.TestCase):
         with TemporaryDirectory() as project_dir:
             create_project(self.toolbox, project_dir)
             self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
-            with mock.patch("spinetoolbox.ui_main.make_settings_dict_for_engine") as mock_engine_settings:
+            with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
                 # Make sure that the test uses LocalSpineEngineManager
-                mock_engine_settings.return_value = dict()
+                mock_qsettings_value.side_effect = qsettings_value_side_effect
                 self.assertTrue(self.toolbox.close_project())
-                mock_engine_settings.assert_called_once()
+                mock_qsettings_value.assert_called_once()
         self.assertIsNone(self.toolbox.project())
 
     def test_selection_in_project_item_list_1(self):
