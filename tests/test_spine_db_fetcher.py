@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication
 from spinedb_api.import_functions import import_data
-from .mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBFetcher(unittest.TestCase):

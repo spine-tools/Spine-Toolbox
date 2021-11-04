@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from argparse import ArgumentParser
 import sys
 import locale
 import logging
@@ -14,17 +15,11 @@ from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpin
 
 
 def main():
-    """Launches Spine Db Editor as it's own application.
-
-    Args:
-        argv (list): Command line arguments
-    """
+    """Launches Spine Db Editor as it's own application."""
     if not pyside2_version_check():
         return 1
-    try:
-        urls = sys.argv[1:]
-    except IndexError:
-        return 2
+    parser = _make_argument_parser()
+    args = parser.parse_args()
     app = QApplication(sys.argv)
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
@@ -32,10 +27,27 @@ def main():
     locale.setlocale(locale.LC_NUMERIC, 'C')
     settings = QSettings("SpineProject", "Spine Toolbox")
     db_mngr = SpineDBManager(settings, None)
-    editor = MultiSpineDBEditor(db_mngr, {url: None for url in urls})
+    editor = MultiSpineDBEditor(db_mngr)
+    if args.separate_tabs:
+        for url in args.url:
+            editor.add_new_tab({url: None})
+    else:
+        editor.add_new_tab({url: None for url in args.url})
     editor.show()
     return_code = app.exec_()
     return return_code
+
+
+def _make_argument_parser():
+    """Builds a command line argument parser.
+
+    Returns:
+        ArgumentParser: parser
+    """
+    parser = ArgumentParser()
+    parser.add_argument("-s", "--separate-tabs", action="store_true", help="open databases in separate tabs")
+    parser.add_argument("url", nargs="+", help="database URL")
+    return parser
 
 
 if __name__ == '__main__':

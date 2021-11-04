@@ -40,7 +40,7 @@ class GraphViewMixin:
 
     VERTEX_EXTENT = 64
     _ARC_WIDTH = 0.15 * VERTEX_EXTENT
-    _ARC_LENGTH_HINT = 1.5 * VERTEX_EXTENT
+    _ARC_LENGTH_HINT = 1.0 * VERTEX_EXTENT
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

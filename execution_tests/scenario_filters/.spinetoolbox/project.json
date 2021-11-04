@@ -111,13 +111,13 @@
         "Importer": {
             "type": "Importer",
             "description": "",
-            "x": -68.55686683479857,
-            "y": 2.749629194101132,
+            "x": -73.61763156168624,
+            "y": 0.7253233033460731,
             "specification": "Input data mapping",
             "cancel_on_error": false,
             "file_selection": [
                 [
-                    "input_data.csv",
+                    "<project>/input_data.csv",
                     true
                 ]
             ]
