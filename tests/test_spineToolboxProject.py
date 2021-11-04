@@ -39,6 +39,7 @@ from .mock_helpers import (
     add_gimlet,
     add_exporter,
     add_data_transformer,
+    qsettings_value_side_effect,
 )
 
 
@@ -238,10 +239,16 @@ class TestSpineToolboxProject(unittest.TestCase):
     def _execute_project(self):
         waiter = SignalWaiter()
         self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-        with mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_app_settings_for_engine:
-            mock_app_settings_for_engine.return_value = dict()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, \
+                mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_settings_dict:
+            # Make sure that the test uses LocalSpineEngineManager
+            # This mocks the check for engineSettings/remoteEngineEnabled in SpineToolboxProject.execute_dags()
+            mock_qsettings_value.side_effect = qsettings_value_side_effect
+            # This mocks the call to make_settings_dict_for_engine in SpineToolboxProject._execute_dags()
+            mock_settings_dict.return_value = dict()
             self.toolbox.project().execute_project()
-            mock_app_settings_for_engine.assert_called_once()
+            mock_qsettings_value.assert_called_once()
+            mock_settings_dict.assert_called_once()
         waiter.wait()
         self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
 
