@@ -49,8 +49,8 @@ class FilePackager:
         """
         # check input
         if not file:
-            raise ValueError('invalid input to FileExtractor.deleteFile()')
+            raise ValueError('invalid input to FilePackager.deleteFile()')
         if not os.path.exists(file):
             raise ValueError("provided file %s doesn't exist" % file)
         os.remove(file)
-        print("FileExtractor.deleteFile(): Removed file: %s" % file)
+        print("FilePackager.deleteFile(): Removed file: %s" % file)
