@@ -22,9 +22,9 @@ import json
 import time
 import random
 from enum import unique, Enum
-from spinetoolbox.server.util.ServerMessage import ServerMessage
-from spinetoolbox.server.util.ServerMessageParser import ServerMessageParser
-from spinetoolbox.server.util.EventDataConverter import EventDataConverter
+from spine_engine.server.util.ServerMessage import ServerMessage
+from spine_engine.server.util.ServerMessageParser import ServerMessageParser
+from spine_engine.server.util.EventDataConverter import EventDataConverter
 
 
 @unique
