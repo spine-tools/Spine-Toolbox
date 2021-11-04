@@ -21,11 +21,7 @@ import zmq
 import json
 from pathlib import Path
 import os
-
-sys.path.append('./../../../spinetoolbox/server/connectivity')
-sys.path.append('./../../../spinetoolbox/server/util')
-from ZMQClient import ZMQClient
-from ZMQClient import ZMQSecurityModelState
+from spinetoolbox.server.connectivity.zmq_client import ZMQClient, ZMQSecurityModelState
 
 
 class test_ZMQClient:

@@ -16,21 +16,11 @@ Unit tests for FilePackager class.
 """
 
 import unittest
-
 import os
-import sys
-
-sys.path.append('./../../../spinetoolbox/server/util')
-
-from FilePackager import FilePackager
+from spinetoolbox.server.util.file_packager import FilePackager
 
 
 class TestFilePackager(unittest.TestCase):
-
-    #    def test_folder_packaging(self):
-    #        ret=FilePackager.package('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testfolder','/home/ubuntu/sw/Spine-Toolbox/tests/server/util/','testing')
-    #        self.assertEqual(os.path.isfile('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testing.zip'),True)
-    #        os.remove('/home/ubuntu/sw/Spine-Toolbox/tests/server/util/testing.zip')
 
     def test_folder_packaging_relative_folder(self):
         FilePackager.package('./testfolder', './', 'testing')

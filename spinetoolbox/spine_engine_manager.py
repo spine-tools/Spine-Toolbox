@@ -23,8 +23,8 @@ import json
 import ast
 import os
 from enum import Enum
-from spinetoolbox.server.util.FilePackager import FilePackager
-from spinetoolbox.server.connectivity.ZMQClient import ZMQClient, ZMQSecurityModelState, ZMQClientConnectionState
+from spinetoolbox.server.util.file_packager import FilePackager
+from spinetoolbox.server.connectivity.zmq_client import ZMQClient, ZMQSecurityModelState, ZMQClientConnectionState
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.exception import EngineInitFailed, RemoteEngineFailed
 
