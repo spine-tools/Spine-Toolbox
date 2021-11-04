@@ -62,12 +62,12 @@ def create_toolboxui_with_project(project_dir):
 
 def clean_up_toolbox(toolbox):
     """Cleans up toolbox and project."""
-    with mock.patch("spinetoolbox.ui_main.make_settings_dict_for_engine") as mock_app_settings_at_cleanup:
-        mock_app_settings_at_cleanup.return_value = dict()
+    with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+        mock_qsettings_value.side_effect = qsettings_value_side_effect
         if toolbox.project():
             toolbox.close_project(ask_confirmation=False)
             QApplication.processEvents()  # Makes sure Design view animations finish properly.
-            mock_app_settings_at_cleanup.assert_called_once()
+            mock_qsettings_value.assert_called_once()  # The call in _shutdown_engine_kernels()
     toolbox.db_mngr.close_all_sessions()
     toolbox.db_mngr.clean_up()
     toolbox.db_mngr = None
@@ -88,7 +88,9 @@ def qsettings_value_side_effect(key, defaultValue="0"):
         defaultValue (QVariant): Default value if key is missing
     """
     if key == "appSettings/openPreviousProject":
-        return "0"  # Do not open previos project when instantiating ToolboxUI
+        return "0"  # Do not open previous project when instantiating ToolboxUI
+    elif key == "engineSettings/remoteExecutionEnabled":
+        return "false"
     return defaultValue
 
 
