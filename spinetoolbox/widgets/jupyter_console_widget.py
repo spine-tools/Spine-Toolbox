@@ -91,8 +91,8 @@ class JupyterConsoleWidget(RichJupyterWidget):
         Context menu restart action handler."""
         if self._engine_connection_file:
             self._kernel_starting = True  # This flag is unset when a correct msg is received from iopub_channel
-            settings = make_settings_dict_for_engine(self._toolbox.qsettings())
-            engine_mngr = make_engine_manager(settings)
+            exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+            engine_mngr = make_engine_manager(exec_remotely)
             engine_mngr.restart_kernel(self._engine_connection_file)
             self._replace_client()
             return

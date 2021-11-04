@@ -228,7 +228,9 @@ class ActionsWithProject(QObject):
                 "settings": settings,
                 "project_dir": self._project_dir,
             }
-            engine_manager = make_engine_manager(settings)
+            # exec_remotely is forced to False (see above)
+            exec_remotely = settings.get("engineSettings/remoteExecutionEnabled", "false") == "true"
+            engine_manager = make_engine_manager(exec_remotely)
             try:
                 engine_manager.run_engine(engine_data)
             except EngineInitFailed as error:

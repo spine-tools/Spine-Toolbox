@@ -121,7 +121,8 @@ class SpineEngineWorker(QObject):
         """
         super().__init__()
         self._engine_data = engine_data
-        self._engine_mngr = make_engine_manager(engine_data["settings"])
+        exec_remotely = engine_data["settings"].get("engineSettings/remoteExecutionEnabled", "false") == "true"
+        self._engine_mngr = make_engine_manager(exec_remotely)
         self.dag = dag
         self.dag_identifier = dag_identifier
         self._engine_final_state = "UNKNOWN"

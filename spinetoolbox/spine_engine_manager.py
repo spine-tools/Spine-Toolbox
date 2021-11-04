@@ -417,15 +417,16 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
         return ret_str
 
 
-def make_engine_manager(app_settings):
+def make_engine_manager(remote_execution_enabled=False):
     """Returns either a Local or a remote Spine Engine Manager based on settings.
 
     Args:
-        app_settings (dict): Application settings
+        remote_execution_enabled (bool): True returns a local Spine Engine Manager instance,
+        False returns a remote Spine Engine Manager instance
     """
-    if app_settings.get("engineSettings/remoteExecutionEnabled", "false") == "false":
-        return LocalSpineEngineManager()
-    return RemoteSpineEngineManager()
+    if remote_execution_enabled:
+        return RemoteSpineEngineManager()
+    return LocalSpineEngineManager()
 
 
 class RemoteEngineWorker(threading.Thread):

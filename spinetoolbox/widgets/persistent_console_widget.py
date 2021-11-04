@@ -198,8 +198,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """
         if self._history_index == 0:
             self._history_item_zero = text
-        app_settings = make_settings_dict_for_engine(self._toolbox.qsettings())
-        engine_mngr = make_engine_manager(app_settings)
+        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        engine_mngr = make_engine_manager(exec_remotely)
         self._history_index += step
         if self._history_index < 1:
             self._history_index = 0
@@ -218,8 +218,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
             text (str)
             partial_text (str)
         """
-        app_settings = make_settings_dict_for_engine(self._toolbox.qsettings())
-        engine_mngr = make_engine_manager(app_settings)
+        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        engine_mngr = make_engine_manager(exec_remotely)
         completions = engine_mngr.get_persistent_completions(self._key, partial_text)
         if len(completions) > 1:
             # Multiple options: Print them to stdout and add new prompt
@@ -395,7 +395,8 @@ class PersistentRunnableBase(QRunnable):
         """
         super().__init__()
         self._persistent_key = persistent_key
-        self._engine_mngr = make_engine_manager(app_settings)
+        exec_remotely = app_settings.get("engineSettings/remoteExecutionEnabled", "false") == "true"
+        self._engine_mngr = make_engine_manager(exec_remotely)
         self._signals = self.Signals()
         self.finished = self._signals.finished
 
