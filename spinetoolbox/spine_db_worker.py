@@ -175,7 +175,7 @@ class SpineDBWorker(QObject):
                 continue
         if any(db_map_error_log.values()):
             self._db_mngr.error_msg.emit(db_map_error_log)
-        self._db_mngr.uncache_items(db_map_typed_ids)
+        self._db_mngr.items_removed.emit(db_map_typed_ids)
 
     def commit_session(self, dirty_db_maps, commit_msg, cookie=None):
         """Initiates commit session action for given database maps in the worker thread.

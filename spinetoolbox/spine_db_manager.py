@@ -100,6 +100,7 @@ class SpineDBManager(QObject):
     tools_removed = Signal(object)
     tool_features_removed = Signal(object)
     tool_feature_methods_removed = Signal(object)
+    items_removed = Signal(object)
     # Updated
     scenarios_updated = Signal(object)
     alternatives_updated = Signal(object)
@@ -202,6 +203,8 @@ class SpineDBManager(QObject):
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
         for item_type, signal in self.updated_signals.items():
             signal.connect(lambda db_map_data, item_type=item_type: self.cache_items(item_type, db_map_data))
+        # Uncache
+        self.items_removed.connect(self.uncache_items)
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
@@ -300,15 +303,16 @@ class SpineDBManager(QObject):
             db_map_data = {}
             for db_map, ids_per_type in db_map_typed_ids.items():
                 ids = ids_per_type.get(item_type, [])
-                for id_ in ids:
-                    item = self._pop_item(db_map, item_type, id_)
-                    if item:
-                        db_map_data.setdefault(db_map, []).append(item)
-                fetcher = self._get_fetcher(db_map)
-                fetcher.reset_queries(item_type)
-            typed_db_map_data[item_type] = db_map_data
-            signal.emit(db_map_data)
-        self.items_removed_from_cache.emit(typed_db_map_data)
+                items = [item for item in (self._pop_item(db_map, item_type, id_) for id_ in ids) if item]
+                if items:
+                    db_map_data[db_map] = items
+                    fetcher = self._get_fetcher(db_map)
+                    fetcher.reset_queries(item_type)
+            if db_map_data:
+                typed_db_map_data[item_type] = db_map_data
+                signal.emit(db_map_data)
+        if typed_db_map_data:
+            self.items_removed_from_cache.emit(typed_db_map_data)
 
     @busy_effect
     def get_db_map_cache(self, db_map, item_types=None, only_descendants=False, include_ancestors=False):
