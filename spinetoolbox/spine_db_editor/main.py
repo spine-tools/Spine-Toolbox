@@ -46,7 +46,7 @@ def _make_argument_parser():
     """
     parser = ArgumentParser()
     parser.add_argument("-s", "--separate-tabs", action="store_true", help="open databases in separate tabs")
-    parser.add_argument("url", nargs="+", help="database URL")
+    parser.add_argument("url", nargs="*", help="database URL")
     return parser
 
 
