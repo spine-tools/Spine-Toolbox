@@ -17,7 +17,7 @@ SpineDBFetcher class.
 """
 
 import itertools
-from PySide2.QtCore import Signal, Slot, QObject
+from PySide2.QtCore import Signal, Slot, QObject, QTimer
 from spinetoolbox.helpers import busy_effect, signal_waiter
 
 
@@ -25,6 +25,7 @@ class SpineDBFetcher(QObject):
     """Fetches content from a Spine database."""
 
     _fetch_more_requested = Signal(object)
+    _chunk_available = Signal(object, list)
     _init_query_requested = Signal(object)
     _can_fetch_more_finished = Signal()
     _fetch_all_requested = Signal(set)
@@ -42,12 +43,15 @@ class SpineDBFetcher(QObject):
         self._db_map = db_map
         self._iterators = {}
         self.commit_cache = {}
+        self._busy_parents = set()
         self._fetched_parents = set()
         self._fetched_item_types = set()
+        self._buffer = _Buffer(self)
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._init_query_requested.connect(self._init_query)
         self._fetch_all_requested.connect(self._fetch_all)
+        self._chunk_available.connect(self._buffer.pass_chunk)
         self._parents = {}
         self._query_counts = {}
         self._queries = {}
@@ -61,7 +65,7 @@ class SpineDBFetcher(QObject):
             parent.restart_fetching()
 
     def can_fetch_more(self, parent):
-        if parent in self._fetched_parents:
+        if parent in self._fetched_parents | self._busy_parents:
             return False
         query = self._queries.get(parent)
         if query is None:
@@ -101,6 +105,7 @@ class SpineDBFetcher(QObject):
         Args:
             parent (object)
         """
+        self._busy_parents.add(parent)
         self._fetch_more_requested.emit(parent)
 
     @Slot(object)
@@ -112,11 +117,15 @@ class SpineDBFetcher(QObject):
         query = self._get_query(parent)
         iterator = self._get_iterator(parent, query)
         chunk = next(iterator, [])
-        if not chunk:
+        self._chunk_available.emit(parent, chunk)
+
+    def receive_chunk(self, parent, chunk):
+        if chunk:
+            signal = self._db_mngr.added_signals[parent.fetch_item_type]
+            signal.emit({self._db_map: chunk})
+        else:
             self._fetched_parents.add(parent)
-            return
-        signal = self._db_mngr.added_signals[parent.fetch_item_type]
-        signal.emit({self._db_map: chunk})
+        QTimer.singleShot(0, lambda parent=parent: self._busy_parents.remove(parent))
 
     def _make_query_for_parent(self, parent):
         """Makes a database query for given item type.
@@ -183,6 +192,15 @@ class SpineDBFetcher(QObject):
             return
         for item in items:
             self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
+
+
+class _Buffer(QObject):
+    def __init__(self, fetcher):
+        super().__init__()
+        self._fetcher = fetcher
+
+    def pass_chunk(self, parent, chunk):
+        self._fetcher.receive_chunk(parent, chunk)
 
 
 def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
