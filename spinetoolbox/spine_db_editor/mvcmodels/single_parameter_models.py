@@ -42,6 +42,9 @@ class HalfSortedTableModel(MinimalTableModel):
         self.endResetModel()
 
     def add_rows(self, data):
+        data = [item for item in data if item not in self._main_data]
+        if not data:
+            return
         self.beginResetModel()
         self._main_data += data
         self._main_data.sort(key=self._sort_key)
