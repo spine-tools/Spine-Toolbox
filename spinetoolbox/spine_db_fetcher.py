@@ -46,12 +46,12 @@ class SpineDBFetcher(QObject):
         self._busy_parents = set()
         self._fetched_parents = set()
         self._fetched_item_types = set()
-        self._buffer = _Buffer(self)
+        self._result_buffer = _ResultBuffer(self)
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._init_query_requested.connect(self._init_query)
         self._fetch_all_requested.connect(self._fetch_all)
-        self._chunk_available.connect(self._buffer.pass_chunk)
+        self._chunk_available.connect(self._result_buffer.forward_chunk)
         self._parents = {}
         self._query_counts = {}
         self._queries = {}
@@ -194,12 +194,14 @@ class SpineDBFetcher(QObject):
             self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
 
 
-class _Buffer(QObject):
+class _ResultBuffer(QObject):
+    """Forwards query results from DB thread to GUI thread, thus preventing infinite fetching loop."""
+
     def __init__(self, fetcher):
         super().__init__()
         self._fetcher = fetcher
 
-    def pass_chunk(self, parent, chunk):
+    def forward_chunk(self, parent, chunk):
         self._fetcher.receive_chunk(parent, chunk)
 
 

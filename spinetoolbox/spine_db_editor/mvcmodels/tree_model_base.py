@@ -126,6 +126,8 @@ class TreeModelBase(MinimalTreeModel):
         ids_committed = []
         ids_uncommitted = []
         for item in db_items:
+            if item["id"] in parent_item.children_ids:
+                continue
             ids = ids_committed if item.get("commit_id") is not None else ids_uncommitted
             ids.append(item["id"])
         children_committed = [make_child(id_) for id_ in ids_committed]

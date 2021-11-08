@@ -466,6 +466,8 @@ class ToolFeatureTreeView(ItemTreeView):
                         db_map_typed_data_to_rm[db_item.db_map]["tool_feature"].add(tool_feat_item.id)
                         continue
                     tool_feat_meth_root_item = tool_feat_item.child(1)
+                    if tool_feat_meth_root_item is None:
+                        continue
                     for tool_feat_meth_item in reversed(tool_feat_meth_root_item.children):
                         if tool_feat_meth_item in items:
                             db_map_typed_data_to_rm[db_item.db_map]["tool_feature_method"].add(tool_feat_meth_item.id)

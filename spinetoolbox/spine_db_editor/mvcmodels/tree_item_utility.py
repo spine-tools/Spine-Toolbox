@@ -70,6 +70,14 @@ class StandardTreeItem(FetchParent, TreeItem):
     def non_empty_children(self):
         return self.children
 
+    @property
+    def children_ids(self):
+        for child in self.non_empty_children:
+            try:
+                yield child.id
+            except AttributeError:
+                pass
+
 
 class EditableMixin:
     def flags(self, column):
