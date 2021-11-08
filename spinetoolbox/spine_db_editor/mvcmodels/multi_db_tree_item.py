@@ -40,6 +40,16 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         self._db_map_ids = db_map_ids
         self._child_map = dict()  # Maps db_map to id to row number
 
+    def child_number(self):
+        try:
+            db_map, id_ = next(iter(self._db_map_ids.items()))
+        except StopIteration:
+            return -1
+        try:
+            return self.parent_item.find_row(db_map, id_)
+        except AttributeError:
+            return super().child_number()
+
     def set_data(self, column, value, role):
         raise NotImplementedError()
 
@@ -293,8 +303,8 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         db_map_ids_to_add = dict()
         for db_map, ids in db_map_ids.items():
             for id_ in ids:
-                row = self._child_map.get(db_map, {}).get(id_, None)
-                if row is not None:
+                row = self.find_row(db_map, id_)
+                if row != -1:
                     rows_to_update.add(row)
                 else:
                     db_map_ids_to_add.setdefault(db_map, set()).add(id_)
@@ -362,6 +372,9 @@ class MultiDBTreeItem(FetchParent, TreeItem):
                 id_ = child.db_map_id(db_map)
                 self._child_map.setdefault(db_map, dict())[id_] = row
 
+    def find_row(self, db_map, id_):
+        return self._child_map.get(db_map, {}).get(id_, -1)
+
     def find_children_by_id(self, db_map, *ids, reverse=True):
         """Generates children with the given ids in the given db_map.
         If the first id is None, then generates *all* children with the given db_map."""
@@ -381,8 +394,8 @@ class MultiDBTreeItem(FetchParent, TreeItem):
         else:
             # Yield all children with the db_map *and* the id
             for id_ in ids:
-                row = self._child_map.get(db_map, {}).get(id_, None)
-                if row is not None:
+                row = self.find_row(db_map, id_)
+                if row != -1:
                     yield row
 
     def data(self, column, role=Qt.DisplayRole):
