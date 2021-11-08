@@ -24,7 +24,7 @@ from PySide2.QtGui import QIcon
 from spinedb_api.helpers import fix_name_ambiguity
 from .custom_menus import TabularViewFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from ...helpers import busy_effect, CharIconEngine
+from ...helpers import busy_effect, CharIconEngine, preferred_row_height
 from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ParameterValuePivotTableModel,
@@ -33,7 +33,6 @@ from ..mvcmodels.pivot_table_models import (
     ScenarioAlternativePivotTableModel,
 )
 from ..mvcmodels.frozen_table_model import FrozenTableModel
-from ...helpers import busy_effect, preferred_row_height
 
 # FIXME: only_visible=False???
 
@@ -531,6 +530,7 @@ class TabularViewMixin:
         if self.pivot_table_model:
             self.pivot_table_model.clear_model()
             self.pivot_table_proxy.clear_filter()
+            self.pivot_table_model = None
         if self.frozen_table_model:
             self.frozen_table_model.clear_model()
 
@@ -557,6 +557,8 @@ class TabularViewMixin:
 
     @Slot()
     def _resize_pivot_header_columns(self):
+        if not self.pivot_table_model:
+            return
         top_indexes, _ = self.pivot_table_model.top_left_indexes()
         for index in top_indexes:
             self.ui.pivot_table.resizeColumnToContents(index.column())
