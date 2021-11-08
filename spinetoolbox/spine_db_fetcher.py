@@ -42,8 +42,8 @@ class SpineDBFetcher(QObject):
         self._db_map = db_map
         self._iterators = {}
         self.commit_cache = {}
-        self._fetched_parent = {}
-        self._fetched_item_type = {}
+        self._fetched_parents = set()
+        self._fetched_item_types = set()
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._init_query_requested.connect(self._init_query)
@@ -55,12 +55,13 @@ class SpineDBFetcher(QObject):
     def reset_queries(self, item_type):
         affected_parents = [parent for parent in self._queries if parent.fetch_item_type == item_type]
         for parent in affected_parents:
+            self._iterators.pop(parent, None)
             query = self._queries.pop(parent)
             self._query_counts.pop(_query_key(query))
             parent.restart_fetching()
 
     def can_fetch_more(self, parent):
-        if self._fetched_parent.get(parent, False):
+        if parent in self._fetched_parents:
             return False
         query = self._queries.get(parent)
         if query is None:
@@ -78,7 +79,7 @@ class SpineDBFetcher(QObject):
     def _do_init_query(self, parent):
         query = self._get_query(parent)
         if self._query_count(query) == 0:
-            self._fetched_parent[parent] = True
+            self._fetched_parents.add(parent)
             parent.restart_fetching()
 
     def _get_query(self, parent):
@@ -94,7 +95,6 @@ class SpineDBFetcher(QObject):
     def _query_count(self, query):
         return self._query_counts[_query_key(query)]
 
-    @busy_effect
     def fetch_more(self, parent):
         """Fetches items from the database.
 
@@ -113,7 +113,7 @@ class SpineDBFetcher(QObject):
         iterator = self._get_iterator(parent, query)
         chunk = next(iterator, [])
         if not chunk:
-            self._fetched_parent[parent] = True
+            self._fetched_parents.add(parent)
             return
         signal = self._db_mngr.added_signals[parent.fetch_item_type]
         signal.emit({self._db_map: chunk})
@@ -154,7 +154,7 @@ class SpineDBFetcher(QObject):
             item_types |= {
                 ancestor for item_type in item_types for ancestor in self._db_map.ancestor_tablenames.get(item_type, ())
             }
-        item_types = {item_type for item_type in item_types if not self._fetched_item_type.get(item_type, False)}
+        item_types -= self._fetched_item_types
         if not item_types:
             qApp.processEvents()  # pylint: disable=undefined-variable
             return
@@ -173,7 +173,7 @@ class SpineDBFetcher(QObject):
             for chunk in _make_iterator(query):
                 self._populate_commit_cache(item_type, chunk)
                 self._db_mngr.cache_items(item_type, {self._db_map: chunk})
-            self._fetched_item_type[item_type] = True
+            self._fetched_item_types.add(item_type)
         self._fetch_all_finished.emit()
 
     def _populate_commit_cache(self, item_type, items):
