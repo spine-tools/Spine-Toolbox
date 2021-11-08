@@ -41,27 +41,29 @@ class SpineDBFetcher(QObject):
         super().__init__()
         self._db_mngr = db_mngr
         self._db_map = db_map
+        self._parents = {}
+        self._queries = {}
+        self._query_counts = {}
+        self._query_keys = {}
         self._iterators = {}
-        self.commit_cache = {}
         self._busy_parents = set()
         self._fetched_parents = set()
         self._fetched_item_types = set()
-        self._result_buffer = _ResultBuffer(self)
+        self._forwarder = _ChunkForwarder(self)
+        self.commit_cache = {}
         self.moveToThread(db_mngr.worker_thread)
         self._fetch_more_requested.connect(self._fetch_more)
         self._init_query_requested.connect(self._init_query)
         self._fetch_all_requested.connect(self._fetch_all)
-        self._chunk_available.connect(self._result_buffer.forward_chunk)
-        self._parents = {}
-        self._query_counts = {}
-        self._queries = {}
+        self._chunk_available.connect(self._forwarder.forward_chunk)
 
     def reset_queries(self, item_type):
         affected_parents = [parent for parent in self._queries if parent.fetch_item_type == item_type]
         for parent in affected_parents:
             self._iterators.pop(parent, None)
             query = self._queries.pop(parent)
-            self._query_counts.pop(_query_key(query))
+            key = self._query_keys.pop(query)
+            self._query_counts.pop(key, None)
             parent.restart_fetching()
 
     def can_fetch_more(self, parent):
@@ -90,14 +92,19 @@ class SpineDBFetcher(QObject):
         """Creates a query for parent. Stores both the query and the count."""
         if parent not in self._queries:
             query = self._make_query_for_parent(parent)
-            key = _query_key(query)
+            key = self._make_query_key(query)
             if key not in self._query_counts:
                 self._query_counts[key] = query.count()
             self._queries[parent] = query
         return self._queries[parent]
 
     def _query_count(self, query):
-        return self._query_counts[_query_key(query)]
+        return self._query_counts[self._make_query_key(query)]
+
+    def _make_query_key(self, query):
+        if query not in self._query_keys:
+            self._query_keys[query] = str(query.statement.compile(compile_kwargs={"literal_binds": True}))
+        return self._query_keys[query]
 
     def fetch_more(self, parent):
         """Fetches items from the database.
@@ -125,7 +132,7 @@ class SpineDBFetcher(QObject):
             signal.emit({self._db_map: chunk})
         else:
             self._fetched_parents.add(parent)
-        QTimer.singleShot(0, lambda parent=parent: self._busy_parents.remove(parent))
+        QTimer.singleShot(0, lambda parent=parent: self._busy_parents.discard(parent))
 
     def _make_query_for_parent(self, parent):
         """Makes a database query for given item type.
@@ -194,8 +201,8 @@ class SpineDBFetcher(QObject):
             self.commit_cache.setdefault(item["commit_id"], {}).setdefault(item_type, list()).append(item["id"])
 
 
-class _ResultBuffer(QObject):
-    """Forwards query results from DB thread to GUI thread, thus preventing infinite fetching loop."""
+class _ChunkForwarder(QObject):
+    """Forwards query results from DB thread to GUI thread. This prevents an infinite fetching loop."""
 
     def __init__(self, fetcher):
         super().__init__()
@@ -220,7 +227,3 @@ def _make_iterator(query, query_chunk_size=1000, iter_chunk_size=1000):
         yield chunk
         if not chunk:
             break
-
-
-def _query_key(query):
-    return str(query.statement.compile(compile_kwargs={"literal_binds": True}))
