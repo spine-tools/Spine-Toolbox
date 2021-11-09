@@ -950,7 +950,7 @@ class SpineDBManager(QObject):
                         upd_cmd.redo()
                         waiter.wait()
                     child_cmds.append(upd_cmd)
-            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+            if not child_cmds or all(cmd.isObsolete() for cmd in child_cmds):
                 # Nothing imported. Set the macro obsolete and call undo() on the stack to removed it
                 macro.setObsolete(True)
                 self.undo_stack[db_map].undo()
@@ -1252,13 +1252,17 @@ class SpineDBManager(QObject):
             items_to_add, ids_to_remove = db_map.get_data_to_set_scenario_alternatives(*data, cache=cache)
             if ids_to_remove:
                 rm_cmd = RemoveItemsCommand(self, db_map, {"scenario_alternative": ids_to_remove}, parent=macro)
-                rm_cmd.redo()
+                with signal_waiter(rm_cmd.completed_signal) as waiter:
+                    rm_cmd.redo()
+                    waiter.wait()
                 child_cmds.append(rm_cmd)
             if items_to_add:
                 add_cmd = AddItemsCommand(self, db_map, items_to_add, "scenario_alternative", parent=macro)
-                add_cmd.redo()
+                with signal_waiter(add_cmd.completed_signal) as waiter:
+                    add_cmd.redo()
+                    waiter.wait()
                 child_cmds.append(add_cmd)
-            if child_cmds and all(cmd.isObsolete() for cmd in child_cmds):
+            if not child_cmds or all(cmd.isObsolete() for cmd in child_cmds):
                 macro.setObsolete(True)
                 self.undo_stack[db_map].undo()
 
@@ -1510,7 +1514,7 @@ class SpineDBManager(QObject):
                     db_map_cascading_data.setdefault(db_map, []).append(item)
         return db_map_cascading_data
 
-    def _refresh_scenario_alternatives(self, db_map_data, only_visible=True):
+    def _refresh_scenario_alternatives(self, db_map_data):
         """Refreshes cached scenarios when updating scenario alternatives.
 
         Args:
@@ -1518,20 +1522,19 @@ class SpineDBManager(QObject):
         """
         db_map_scenario_data = {}
         for db_map, data in db_map_data.items():
-            alternative_id_lists = {}
-            for item in data:
-                alternative_id_list = alternative_id_lists.setdefault(item["scenario_id"], {})
-                item = self.get_item(db_map, "scenario_alternative", item["id"], only_visible=only_visible)
-                if item:
-                    alternative_id_list[item["rank"]] = item["alternative_id"]
-            for scenario_id, alternative_id_list in alternative_id_lists.items():
-                sorted_ranks = sorted(alternative_id_list)
-                alternative_id_list = [alternative_id_list[r] for r in sorted_ranks]
+            scenario_ids = {item["scenario_id"] for item in data}
+            for scenario_id in scenario_ids:
+                sorted_scenario_alternatives = sorted(
+                    self.get_items_by_field(
+                        db_map, "scenario_alternative", "scenario_id", scenario_id, only_visible=False
+                    ),
+                    key=lambda x: x["rank"],
+                )
+                alternative_id_list = [x["alternative_id"] for x in sorted_scenario_alternatives]
                 alternative_name_list = [
-                    self.get_item(db_map, "alternative", id_, only_visible=only_visible)["name"]
-                    for id_ in alternative_id_list
+                    self.get_item(db_map, "alternative", id_, only_visible=False)["name"] for id_ in alternative_id_list
                 ]
-                scenario = self.get_item(db_map, "scenario", scenario_id, only_visible=only_visible)
+                scenario = self.get_item(db_map, "scenario", scenario_id, only_visible=False)
                 scenario["alternative_id_list"] = ",".join(str(id_) for id_ in alternative_id_list)
                 scenario["alternative_name_list"] = ",".join(alternative_name_list)
                 db_map_scenario_data.setdefault(db_map, []).append(scenario)
