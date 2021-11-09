@@ -679,7 +679,7 @@ class TestRelationshipTreeViewWithExistingData(_EntityTreeViewTestBase):
         while model.rowCount(root_index) != 1:
             QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
-        view.expand(class_index)
+        model.fetchMore(class_index)
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
         relationship_index = model.index(0, 0, class_index)
